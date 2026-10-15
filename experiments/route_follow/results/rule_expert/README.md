@@ -46,6 +46,46 @@ them); 87 scenes nudge around 146 parked boxes.
 Box: `$DATA_DIR/runs/route_follow/rule_expert/` (pack_held, smoke/, report/XP-L12-E{46,60}), reads
 `$DATA_DIR/runs/route_mem/read/RSG-L18-s0-XP-L12-E{46,60}`.
 
-## PAI 281 (Tokyo)
+## PAI 281 (Tokyo, gains 20, the reference's 8 chunk lists; card 1 only, another lane held card 0; 15 381 s)
 
-Pending: queued behind another lane's spin_v9 reads on both cards (`/data/runs/route_night/expert/wait_run.sh`, tmux jev:xp-wait).
+| | XP-L12-E46 | RSG-L18-s0 (r281/rsg) |
+|:--|--:|--:|
+| **strict-36 turns completed** | **29 / 36** | 5 / 36 |
+| d293 shape gate (completed and within the class gate) | 24 | 1 |
+| 22 runway turns completed | 15 | 3 |
+| exam turn scenes completed (72, 18 with a strict turn) | 14 | 3 |
+| all 281: mean / zeros (collision / offroad / corridor) | 0.7646 / 36 (7 / 8 / 21) | 0.5720 / 70 (9 / 14 / 47) |
+| paired mean vs RSG, all 281 | +0.193 [+0.136, +0.250] | |
+| exam 72: mean / zeros | 0.6872 / 16 | 0.3348 / 38 |
+| control 75 (E3): mean / zeros | 0.8116 / 8 | 0.7779 / 0 |
+| rear-ended / handoff spins (all 281) | 49 / 2 | 77 / 2 |
+
+- **E2 passes, at the line** (29 / 36 >= 29). Gained 26 strict turns, lost 2 (382a7247, d90fe123).
+- **E3 passes**: control 75 +0.034 [-0.062, +0.129] (line >= -0.05), but with 8 zeros where RSG has none (6 corridor).
+- Runway turns (rf_appread, [pai_XP-L12-E46/runway.md](pai_XP-L12-E46/runway.md)): entry speed median 4.57 vs RSG 7.38 m/s (human
+  4.99), speed excess over the human from entry - 26 m -1.13 m/s [-1.99, -0.45], inward offset at entry - 20 m +0.29 m [+0.12, +0.51]
+  (RSG sat 0.44 m toward the outside). The approach state the earlier lines tried to teach (d298 / d303) is what the expert produces.
+- Zeros: 21 shared with RSG, 49 of RSG's removed, 15 new (corridor 8, offroad 4, at-fault collision 3); 9 of the 15 are at or past
+  the human log's end station (the same artefact as on held).
+- Per-turn failure list ([pai_XP-L12-E46/xp_turns.md](pai_XP-L12-E46/xp_turns.md)), 7 failed:
+  - **speed 4** (6fd8cf30, abd45a30, d90fe123, e37aa159): stopped for long stretches by the yield rule (63-174 yield decisions) and
+    then rear-ended (`short_rear`) or out of clip (`short_slow`). The swept-footprint yield stops 1.5 m short of where a slow lead is
+    now, not of where it will be: correct for crossing / oncoming boxes, too conservative behind same-direction traffic.
+  - **corridor 2** (1e8e939e, a174faed): offroad on the chain, on the sweeping bend after the turn / 50 m after the exit. PAI has no road
+    area layer and narrow lane polygons; pure pursuit at 1.2 s lookahead cuts the inside of a long bend.
+  - **collision 1** (382a7247): at-fault collision at the turn entry while yielding (105 yield decisions).
+  - No wrong lane chain (all 36 route turns matched, route-to-chain distance <= 1.6 m).
+  - 403d558a completes its turn and then has an at-fault collision (counted completed, as for every label).
+- Figure [figs/rule_expert_pai_fails.png](../../figs/rule_expert_pai_fails.png): the 8 strict-turn scenes with a failure or a zero.
+  Look at the red yield dots along the approach in the four speed panels (the expert waits, the human did not), and at the red X
+  placements in 1e8e939e / a174faed: on the chain, but off the PAI road.
+
+## Verdict (prereg rule)
+
+**E1 and E2 both pass: the expert qualifies as a teacher** (E3 passes on both sets). Held 22 / 24 (RSG 16 / 14), PAI strict 29 / 36
+(RSG 5), every failure on both sets is speed / yield or PAI corridor geometry, none is a wrong lane chain. Caveats: E2 sits exactly on
+its line; the expert is privileged (map, human speeds, the replayed boxes 3 s ahead); stop lines are ignored, which costs zeros past the
+log's end (held 10, PAI 9) and 8 control zeros; one run per set. Weak points to fix before using its labels: same-direction yield
+(follow the lead's future box, not its current one) and the PAI off-road margin on long bends.
+
+Tokyo: `/data/runs/route_night/expert/` (pack_pai, smoke/, XP-L12-E46 with read.md, follow.pkl, turns.json, xp/).

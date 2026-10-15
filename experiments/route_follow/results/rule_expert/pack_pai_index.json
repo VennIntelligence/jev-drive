@@ -1,0 +1,10295 @@
+{
+ "scenes": {
+  "clipgt-000525f6-3999-4812-9924-8adff40ca514": {
+   "scene": "clipgt-000525f6-3999-4812-9924-8adff40ca514",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 3,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.059,
+   "path_m": 503.3441616839329,
+   "turns": [
+    [
+     254.1,
+     264.1,
+     -90.3
+    ]
+   ],
+   "objects": 99,
+   "vlog_known": 0.4489593657086224,
+   "route_turns": [
+    [
+     221.0,
+     231.5,
+     -90.3,
+     0.05,
+     true,
+     253.9
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-009c69f0-6e5d-4716-b623-fb45f378fae4": {
+   "scene": "clipgt-009c69f0-6e5d-4716-b623-fb45f378fae4",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 440.36004103577494,
+   "turns": [],
+   "objects": 57,
+   "vlog_known": 0.3401360544217687,
+   "route_turns": [],
+   "nudges": [
+    [
+     "81",
+     217.6,
+     0.94
+    ],
+    [
+     "97",
+     217.7,
+     0.84
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3": {
+   "scene": "clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 437.6148751330621,
+   "turns": [
+    [
+     134.5,
+     194.0,
+     127.8
+    ]
+   ],
+   "objects": 55,
+   "vlog_known": 0.35347776510832385,
+   "route_turns": [
+    [
+     104.5,
+     165.0,
+     127.3,
+     0.48,
+     true,
+     134.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-032b6f21-6799-4ad8-8712-0405f087ac4a": {
+   "scene": "clipgt-032b6f21-6799-4ad8-8712-0405f087ac4a",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 481.5035657578842,
+   "turns": [],
+   "objects": 371,
+   "vlog_known": 0.44559585492227977,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02": {
+   "scene": "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 415.4987424054118,
+   "turns": [],
+   "objects": 106,
+   "vlog_known": 0.31850961538461536,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-05855d57-2dbf-4ca7-a04d-94feb64a6e11": {
+   "scene": "clipgt-05855d57-2dbf-4ca7-a04d-94feb64a6e11",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 787.0001725867472,
+   "turns": [],
+   "objects": 186,
+   "vlog_known": 0.6649746192893401,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-06b3e399-a820-49ef-9e69-134cfdb7652a": {
+   "scene": "clipgt-06b3e399-a820-49ef-9e69-134cfdb7652a",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 976.0005384996122,
+   "turns": [],
+   "objects": 86,
+   "vlog_known": 0.7169907881269192,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-074e5ee3-d209-438e-8de4-40032539c331": {
+   "scene": "clipgt-074e5ee3-d209-438e-8de4-40032539c331",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.014,
+   "path_m": 575.8817774911989,
+   "turns": [],
+   "objects": 63,
+   "vlog_known": 0.5247181266261925,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0786d456-c40d-4f71-ac75-46dd8d0886d2": {
+   "scene": "clipgt-0786d456-c40d-4f71-ac75-46dd8d0886d2",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.167,
+   "path_m": 385.26589402403783,
+   "turns": [],
+   "objects": 20,
+   "vlog_known": 0.3005181347150259,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-09528162-2142-4082-a31b-decf787c8ada": {
+   "scene": "clipgt-09528162-2142-4082-a31b-decf787c8ada",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 5,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 413.2482290976349,
+   "turns": [
+    [
+     59.5,
+     71.0,
+     -100.7
+    ],
+    [
+     238.0,
+     261.5,
+     79.9
+    ]
+   ],
+   "objects": 203,
+   "vlog_known": 0.3442028985507246,
+   "route_turns": [
+    [
+     32.4,
+     42.4,
+     -92.7,
+     0.16,
+     true,
+     61.3
+    ],
+    [
+     208.4,
+     231.9,
+     75.5,
+     0.06,
+     true,
+     237.3
+    ]
+   ],
+   "nudges": [
+    [
+     "18",
+     0.0,
+     0.06
+    ],
+    [
+     "20",
+     37.5,
+     0.15
+    ],
+    [
+     "36",
+     42.9,
+     0.16
+    ],
+    [
+     "8",
+     25.1,
+     0.1
+    ]
+   ],
+   "log_s": [
+    30.0,
+    50.4
+   ]
+  },
+  "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560": {
+   "scene": "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 441.7397014825431,
+   "turns": [
+    [
+     167.0,
+     185.0,
+     -97.8
+    ]
+   ],
+   "objects": 142,
+   "vlog_known": 0.32429378531073444,
+   "route_turns": [
+    [
+     136.5,
+     154.0,
+     -97.2,
+     0.76,
+     true,
+     166.7
+    ]
+   ],
+   "nudges": [
+    [
+     "155",
+     186.5,
+     0.76
+    ],
+    [
+     "241",
+     202.3,
+     0.59
+    ],
+    [
+     "246",
+     213.6,
+     0.68
+    ],
+    [
+     "45",
+     111.1,
+     0.63
+    ],
+    [
+     "249",
+     225.8,
+     0.51
+    ],
+    [
+     "125",
+     152.8,
+     0.41
+    ],
+    [
+     "144",
+     0.0,
+     1.49
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-098e2482-6db2-473b-b08a-2a80be9320f3": {
+   "scene": "clipgt-098e2482-6db2-473b-b08a-2a80be9320f3",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 310.99988512735894,
+   "turns": [],
+   "objects": 57,
+   "vlog_known": 0.1508828250401284,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0a228e44-2e22-40fa-a4da-9dcded392963": {
+   "scene": "clipgt-0a228e44-2e22-40fa-a4da-9dcded392963",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 380.08102485493913,
+   "turns": [
+    [
+     131.5,
+     144.0,
+     -70.8
+    ]
+   ],
+   "objects": 172,
+   "vlog_known": 0.30183727034120733,
+   "route_turns": [
+    [
+     101.5,
+     114.0,
+     -70.8,
+     0.09,
+     true,
+     131.5
+    ]
+   ],
+   "nudges": [
+    [
+     "354",
+     336.8,
+     -0.85
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0b72d117-bf5c-4999-b625-09f4d8e51911": {
+   "scene": "clipgt-0b72d117-bf5c-4999-b625-09f4d8e51911",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 542.0000206007546,
+   "turns": [],
+   "objects": 366,
+   "vlog_known": 0.507366482504604,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-0caa8f1a-3c23-4520-98b2-28be9697fbf4": {
+   "scene": "clipgt-0caa8f1a-3c23-4520-98b2-28be9697fbf4",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 417.56367534204094,
+   "turns": [],
+   "objects": 85,
+   "vlog_known": 0.3727598566308244,
+   "route_turns": [],
+   "nudges": [
+    [
+     "45",
+     145.1,
+     0.3
+    ],
+    [
+     "1",
+     18.3,
+     0.27
+    ],
+    [
+     "7",
+     91.7,
+     0.6
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0cc7fa67-c767-443b-97b7-29539591dbaa": {
+   "scene": "clipgt-0cc7fa67-c767-443b-97b7-29539591dbaa",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 487.5001877190739,
+   "turns": [],
+   "objects": 38,
+   "vlog_known": 0.42681678607983625,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0d79a6a0-4aa7-4eb1-aea1-31fd55bd71d7": {
+   "scene": "clipgt-0d79a6a0-4aa7-4eb1-aea1-31fd55bd71d7",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 502.6436145585374,
+   "turns": [],
+   "objects": 182,
+   "vlog_known": 0.42502482621648463,
+   "route_turns": [],
+   "nudges": [
+    [
+     "396",
+     387.4,
+     0.77
+    ],
+    [
+     "325",
+     209.4,
+     0.13
+    ],
+    [
+     "317",
+     244.1,
+     0.11
+    ],
+    [
+     "313",
+     258.2,
+     0.38
+    ],
+    [
+     "395",
+     299.7,
+     0.28
+    ],
+    [
+     "170",
+     203.6,
+     0.16
+    ],
+    [
+     "381",
+     281.2,
+     0.31
+    ],
+    [
+     "314",
+     224.5,
+     0.41
+    ],
+    [
+     "301",
+     155.7,
+     0.32
+    ],
+    [
+     "31",
+     147.9,
+     0.52
+    ],
+    [
+     "390",
+     335.2,
+     0.29
+    ],
+    [
+     "332",
+     321.5,
+     0.27
+    ],
+    [
+     "33",
+     105.2,
+     0.5
+    ],
+    [
+     "293",
+     219.4,
+     0.45
+    ],
+    [
+     "370",
+     293.9,
+     0.28
+    ],
+    [
+     "255",
+     111.0,
+     0.42
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-0e05cb0c-9cfc-4e81-b801-0216fde5cd20": {
+   "scene": "clipgt-0e05cb0c-9cfc-4e81-b801-0216fde5cd20",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.007,
+   "path_m": 916.000008943265,
+   "turns": [],
+   "objects": 253,
+   "vlog_known": 0.7137404580152672,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0": {
+   "scene": "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 479.04715551264457,
+   "turns": [],
+   "objects": 293,
+   "vlog_known": 0.45625,
+   "route_turns": [],
+   "nudges": [
+    [
+     "110",
+     202.3,
+     1.54
+    ],
+    [
+     "228",
+     138.1,
+     1.51
+    ],
+    [
+     "293",
+     210.4,
+     1.37
+    ],
+    [
+     "41",
+     83.6,
+     1.46
+    ],
+    [
+     "420",
+     275.0,
+     1.78
+    ],
+    [
+     "197",
+     117.2,
+     1.57
+    ],
+    [
+     "359",
+     274.9,
+     1.79
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-0feb3afa-28c0-4a48-b74c-636676892966": {
+   "scene": "clipgt-0feb3afa-28c0-4a48-b74c-636676892966",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 816.4192112172279,
+   "turns": [],
+   "objects": 105,
+   "vlog_known": 0.6352509179926561,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd": {
+   "scene": "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 392.9989335155955,
+   "turns": [],
+   "objects": 171,
+   "vlog_known": 0.33672172808132145,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb": {
+   "scene": "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 371.5019286742755,
+   "turns": [],
+   "objects": 127,
+   "vlog_known": 0.2979865771812081,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-1316f5fa-9b99-4979-90eb-1a8d56b32a73": {
+   "scene": "clipgt-1316f5fa-9b99-4979-90eb-1a8d56b32a73",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 4,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 391.2167002882522,
+   "turns": [],
+   "objects": 106,
+   "vlog_known": 0.31760204081632654,
+   "route_turns": [],
+   "nudges": [
+    [
+     "120",
+     182.9,
+     0.44
+    ],
+    [
+     "25",
+     13.7,
+     0.48
+    ],
+    [
+     "195",
+     241.7,
+     0.25
+    ],
+    [
+     "27",
+     158.3,
+     0.66
+    ],
+    [
+     "196",
+     247.2,
+     0.21
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-132ae6cb-1e58-42aa-8bf3-4381eb958e43": {
+   "scene": "clipgt-132ae6cb-1e58-42aa-8bf3-4381eb958e43",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.017,
+   "path_m": 499.01076011003136,
+   "turns": [
+    [
+     55.5,
+     82.5,
+     90.1
+    ]
+   ],
+   "objects": 98,
+   "vlog_known": 0.443,
+   "route_turns": [
+    [
+     26.0,
+     52.5,
+     90.1,
+     0.13,
+     true,
+     56.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-13d646af-4ff3-48e4-9a88-012a58eb6cd6": {
+   "scene": "clipgt-13d646af-4ff3-48e4-9a88-012a58eb6cd6",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 4,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 577.5638595019986,
+   "turns": [],
+   "objects": 68,
+   "vlog_known": 0.5203111495246326,
+   "route_turns": [],
+   "nudges": [
+    [
+     "231",
+     460.6,
+     0.79
+    ],
+    [
+     "218",
+     432.9,
+     0.15
+    ],
+    [
+     "252",
+     445.5,
+     0.41
+    ],
+    [
+     "223",
+     439.3,
+     0.47
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-16300901-6733-4d2e-addd-456cc090153b": {
+   "scene": "clipgt-16300901-6733-4d2e-addd-456cc090153b",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 725.0001249132614,
+   "turns": [],
+   "objects": 31,
+   "vlog_known": 0.609504132231405,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-17ca33eb-7b09-4f93-93b3-9583ab693228": {
+   "scene": "clipgt-17ca33eb-7b09-4f93-93b3-9583ab693228",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.043,
+   "path_m": 320.49997492578734,
+   "turns": [],
+   "objects": 93,
+   "vlog_known": 0.1822429906542056,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c": {
+   "scene": "clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 646.2304391823579,
+   "turns": [
+    [
+     370.5,
+     403.0,
+     86.6
+    ]
+   ],
+   "objects": 24,
+   "vlog_known": 0.5432766615146831,
+   "route_turns": [
+    [
+     340.0,
+     374.5,
+     85.7,
+     1.2,
+     true,
+     370.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-1a5da90a-b970-412c-b97a-a1111119b456": {
+   "scene": "clipgt-1a5da90a-b970-412c-b97a-a1111119b456",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 712.5000324155362,
+   "turns": [],
+   "objects": 17,
+   "vlog_known": 0.5760336370007008,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-1a69f757-4f33-4fd7-98a6-3a026c88b571": {
+   "scene": "clipgt-1a69f757-4f33-4fd7-98a6-3a026c88b571",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 424.9494804972164,
+   "turns": [],
+   "objects": 15,
+   "vlog_known": 0.3384253819036428,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-1bfad87c-4f52-4353-9f42-763a6ab8fbf5": {
+   "scene": "clipgt-1bfad87c-4f52-4353-9f42-763a6ab8fbf5",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.017,
+   "path_m": 493.8405880176956,
+   "turns": [],
+   "objects": 3,
+   "vlog_known": 0.4691607684529828,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-1c0c89e4-807f-4a5e-ac16-c52ef00dd313": {
+   "scene": "clipgt-1c0c89e4-807f-4a5e-ac16-c52ef00dd313",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.017,
+   "path_m": 502.9992879718596,
+   "turns": [],
+   "objects": 261,
+   "vlog_known": 0.4657398212512413,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-1e31b2ad-e61b-42b9-8c13-d40630d50172": {
+   "scene": "clipgt-1e31b2ad-e61b-42b9-8c13-d40630d50172",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.013,
+   "path_m": 656.5015859596178,
+   "turns": [],
+   "objects": 155,
+   "vlog_known": 0.5741444866920152,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca": {
+   "scene": "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 2,
+   "change": 3,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.091,
+   "path_m": 471.73099930956556,
+   "turns": [
+    [
+     113.5,
+     138.4,
+     -51.1
+    ]
+   ],
+   "objects": 19,
+   "vlog_known": 0.4306878306878307,
+   "route_turns": [
+    [
+     83.0,
+     107.9,
+     -50.6,
+     0.74,
+     true,
+     113.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-21829be5-61af-4627-8758-7170324a3236": {
+   "scene": "clipgt-21829be5-61af-4627-8758-7170324a3236",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.059,
+   "path_m": 273.0001472657678,
+   "turns": [],
+   "objects": 533,
+   "vlog_known": 0.1624087591240876,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-229791a5-ecf5-45ea-94af-dcc1cec726ef": {
+   "scene": "clipgt-229791a5-ecf5-45ea-94af-dcc1cec726ef",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.036,
+   "path_m": 344.6888411022267,
+   "turns": [],
+   "objects": 129,
+   "vlog_known": 0.17800289435600578,
+   "route_turns": [],
+   "nudges": [
+    [
+     "10",
+     16.2,
+     -1.54
+    ]
+   ],
+   "log_s": [
+    30.2,
+    60.5
+   ]
+  },
+  "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38": {
+   "scene": "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 7,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.038,
+   "path_m": 335.1011886602015,
+   "turns": [
+    [
+     38.5,
+     53.5,
+     90.5
+    ]
+   ],
+   "objects": 108,
+   "vlog_known": 0.13541666666666666,
+   "route_turns": [
+    [
+     8.5,
+     24.5,
+     90.6,
+     1.1,
+     true,
+     38.5
+    ]
+   ],
+   "nudges": [
+    [
+     "108",
+     78.5,
+     0.71
+    ],
+    [
+     "113",
+     87.5,
+     0.9
+    ],
+    [
+     "134",
+     103.6,
+     1.07
+    ],
+    [
+     "135",
+     129.0,
+     1.04
+    ],
+    [
+     "138",
+     153.0,
+     0.93
+    ],
+    [
+     "141",
+     183.9,
+     0.77
+    ],
+    [
+     "3",
+     63.6,
+     1.08
+    ],
+    [
+     "4",
+     59.4,
+     0.72
+    ],
+    [
+     "93",
+     72.4,
+     1.04
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-23666aa2-ecb8-4c76-9524-fd3b0c615db0": {
+   "scene": "clipgt-23666aa2-ecb8-4c76-9524-fd3b0c615db0",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 308.98140547062326,
+   "turns": [
+    [
+     97.5,
+     113.0,
+     88.7
+    ]
+   ],
+   "objects": 90,
+   "vlog_known": 0.14862681744749595,
+   "route_turns": [
+    [
+     67.5,
+     83.0,
+     88.7,
+     0.02,
+     true,
+     97.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2466266e-73bd-4eb4-b881-4e56ab62e0a7": {
+   "scene": "clipgt-2466266e-73bd-4eb4-b881-4e56ab62e0a7",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 385.80961219826014,
+   "turns": [
+    [
+     150.0,
+     174.0,
+     115.5
+    ]
+   ],
+   "objects": 152,
+   "vlog_known": 0.2858990944372574,
+   "route_turns": [
+    [
+     118.0,
+     144.0,
+     115.6,
+     1.59,
+     true,
+     148.1
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-26004ca8-cf2f-4f1e-b7aa-07761e139d7e": {
+   "scene": "clipgt-26004ca8-cf2f-4f1e-b7aa-07761e139d7e",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 798.030279749551,
+   "turns": [],
+   "objects": 75,
+   "vlog_known": 0.6508135168961201,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde": {
+   "scene": "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 352.1563184746889,
+   "turns": [
+    [
+     21.5,
+     50.0,
+     -88.4
+    ]
+   ],
+   "objects": 131,
+   "vlog_known": 0.21671388101983002,
+   "route_turns": [
+    [
+     6.5,
+     19.5,
+     -88.5,
+     0.12,
+     false,
+     36.7
+    ]
+   ],
+   "nudges": [
+    [
+     "153",
+     7.1,
+     -1.65
+    ],
+    [
+     "172",
+     1.1,
+     -1.45
+    ],
+    [
+     "173",
+     3.9,
+     -1.67
+    ]
+   ],
+   "log_s": [
+    30.2,
+    60.5
+   ]
+  },
+  "clipgt-28621273-20ed-4570-98d1-cd0dcf451fc1": {
+   "scene": "clipgt-28621273-20ed-4570-98d1-cd0dcf451fc1",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.014,
+   "path_m": 593.5001727788468,
+   "turns": [],
+   "objects": 96,
+   "vlog_known": 0.5441547518923465,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    29.7,
+    60.0
+   ]
+  },
+  "clipgt-288829f8-8808-46dc-a7e0-29ed1f7fddbc": {
+   "scene": "clipgt-288829f8-8808-46dc-a7e0-29ed1f7fddbc",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 434.4999367956062,
+   "turns": [],
+   "objects": 142,
+   "vlog_known": 0.364367816091954,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2a0efada-f32d-4757-9901-88fb8bfb501e": {
+   "scene": "clipgt-2a0efada-f32d-4757-9901-88fb8bfb501e",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 0,
+   "cov": 0.9975903614457832,
+   "fallback": false,
+   "on_route": 0.013,
+   "path_m": 595.0852907167884,
+   "turns": [],
+   "objects": 52,
+   "vlog_known": 0.5176174496644296,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2a47ea01-3cd8-4282-b834-76430b013c4c": {
+   "scene": "clipgt-2a47ea01-3cd8-4282-b834-76430b013c4c",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 406.98641962650174,
+   "turns": [],
+   "objects": 68,
+   "vlog_known": 0.3398773006134969,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2a882d89-eadc-42a4-a15c-5977361845f6": {
+   "scene": "clipgt-2a882d89-eadc-42a4-a15c-5977361845f6",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 1,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 438.86874397613826,
+   "turns": [
+    [
+     36.0,
+     59.5,
+     57.0
+    ],
+    [
+     178.5,
+     212.5,
+     -77.9
+    ]
+   ],
+   "objects": 94,
+   "vlog_known": 0.39362912400455063,
+   "route_turns": [
+    [
+     4.0,
+     33.4,
+     61.5,
+     1.16,
+     true,
+     33.7
+    ],
+    [
+     147.9,
+     181.9,
+     -77.9,
+     0.1,
+     true,
+     178.4
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2b4b2e84-cff4-4697-a4b5-ccb706f69438": {
+   "scene": "clipgt-2b4b2e84-cff4-4697-a4b5-ccb706f69438",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 455.0010021670017,
+   "turns": [],
+   "objects": 145,
+   "vlog_known": 0.4144736842105263,
+   "route_turns": [],
+   "nudges": [
+    [
+     "223",
+     47.1,
+     0.07
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2b577fc2-dbfb-4d08-8093-6c48a3d372f9": {
+   "scene": "clipgt-2b577fc2-dbfb-4d08-8093-6c48a3d372f9",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 342.49969314082387,
+   "turns": [],
+   "objects": 147,
+   "vlog_known": 0.1793002915451895,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2b9447b3-24ec-4d03-94c2-87e5901c0ec5": {
+   "scene": "clipgt-2b9447b3-24ec-4d03-94c2-87e5901c0ec5",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 440.49999433657973,
+   "turns": [],
+   "objects": 75,
+   "vlog_known": 0.39909297052154197,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2bbf1efc-55e9-4d87-bf74-0740353e8268": {
+   "scene": "clipgt-2bbf1efc-55e9-4d87-bf74-0740353e8268",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.054,
+   "path_m": 290.31353630658185,
+   "turns": [
+    [
+     82.5,
+     105.0,
+     87.7
+    ]
+   ],
+   "objects": 95,
+   "vlog_known": 0.04639175257731959,
+   "route_turns": [
+    [
+     52.5,
+     75.0,
+     87.7,
+     1.0,
+     true,
+     82.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    43.3
+   ]
+  },
+  "clipgt-2c0ef536-8175-462d-8268-cbaa62ec6f99": {
+   "scene": "clipgt-2c0ef536-8175-462d-8268-cbaa62ec6f99",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.04,
+   "path_m": 318.7654830936223,
+   "turns": [
+    [
+     83.5,
+     107.5,
+     115.3
+    ]
+   ],
+   "objects": 99,
+   "vlog_known": 0.13458528951486698,
+   "route_turns": [
+    [
+     51.0,
+     77.0,
+     115.4,
+     1.61,
+     true,
+     81.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2c263e19-6fd3-4e33-a76a-308bf4f7641f": {
+   "scene": "clipgt-2c263e19-6fd3-4e33-a76a-308bf4f7641f",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 396.52676219698395,
+   "turns": [
+    [
+     165.0,
+     184.5,
+     -90.3
+    ],
+    [
+     216.0,
+     242.5,
+     82.8
+    ]
+   ],
+   "objects": 17,
+   "vlog_known": 0.23773584905660378,
+   "route_turns": [
+    [
+     135.0,
+     154.5,
+     -90.3,
+     0.02,
+     true,
+     165.0
+    ],
+    [
+     189.0,
+     212.0,
+     83.1,
+     1.68,
+     true,
+     218.9
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2d023524-451d-4dff-89aa-0ec40f42e456": {
+   "scene": "clipgt-2d023524-451d-4dff-89aa-0ec40f42e456",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 390.499988692553,
+   "turns": [],
+   "objects": 79,
+   "vlog_known": 0.2391304347826087,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2d10a08d-2f60-49fe-94e8-9d2797a289d2": {
+   "scene": "clipgt-2d10a08d-2f60-49fe-94e8-9d2797a289d2",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 452.4997502263502,
+   "turns": [],
+   "objects": 173,
+   "vlog_known": 0.41280353200883,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2eaf1872-7780-43df-bdf1-9f48975e6436": {
+   "scene": "clipgt-2eaf1872-7780-43df-bdf1-9f48975e6436",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 815.5008654042249,
+   "turns": [],
+   "objects": 58,
+   "vlog_known": 0.6687078995713411,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226": {
+   "scene": "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.033,
+   "path_m": 345.989484044582,
+   "turns": [
+    [
+     59.0,
+     70.0,
+     -68.0
+    ]
+   ],
+   "objects": 212,
+   "vlog_known": 0.21645021645021645,
+   "route_turns": [
+    [
+     29.0,
+     40.0,
+     -68.0,
+     0.01,
+     true,
+     59.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-2fb5b2b5-a3cc-43ad-b0ac-995dc7c1cd22": {
+   "scene": "clipgt-2fb5b2b5-a3cc-43ad-b0ac-995dc7c1cd22",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.035,
+   "path_m": 351.50104822347475,
+   "turns": [],
+   "objects": 26,
+   "vlog_known": 0.2127659574468085,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-2fe500f7-de7e-4291-83b0-4db00357016f": {
+   "scene": "clipgt-2fe500f7-de7e-4291-83b0-4db00357016f",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 748.0000243904809,
+   "turns": [],
+   "objects": 138,
+   "vlog_known": 0.6288384512683578,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-300465f7-0025-4f39-ac20-9f0eaa36ea68": {
+   "scene": "clipgt-300465f7-0025-4f39-ac20-9f0eaa36ea68",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 395.3500004469766,
+   "turns": [
+    [
+     119.5,
+     143.5,
+     198.7
+    ]
+   ],
+   "objects": 102,
+   "vlog_known": 0.2727272727272727,
+   "route_turns": [
+    [
+     97.5,
+     113.0,
+     198.6,
+     0.81,
+     true,
+     127.9
+    ]
+   ],
+   "nudges": [
+    [
+     "18",
+     214.8,
+     0.6
+    ],
+    [
+     "19",
+     221.2,
+     0.98
+    ],
+    [
+     "2",
+     73.1,
+     0.8
+    ],
+    [
+     "31",
+     384.4,
+     0.45
+    ],
+    [
+     "3",
+     89.8,
+     0.69
+    ],
+    [
+     "74",
+     102.2,
+     0.64
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a": {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 1,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.122,
+   "path_m": 433.56141452026776,
+   "turns": [
+    [
+     64.5,
+     79.5,
+     181.3
+    ]
+   ],
+   "objects": 113,
+   "vlog_known": 0.38895281933256615,
+   "route_turns": [
+    [
+     34.0,
+     49.0,
+     181.4,
+     0.51,
+     true,
+     64.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    25.0
+   ]
+  },
+  "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e": {
+   "scene": "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 5,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 422.74295208702523,
+   "turns": [
+    [
+     121.0,
+     140.0,
+     -90.4
+    ]
+   ],
+   "objects": 133,
+   "vlog_known": 0.3282172373081464,
+   "route_turns": [
+    [
+     90.0,
+     110.0,
+     -90.3,
+     0.47,
+     true,
+     120.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-3294623f-68ef-44aa-a233-49d8fc8e80a9": {
+   "scene": "clipgt-3294623f-68ef-44aa-a233-49d8fc8e80a9",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 516.512488142921,
+   "turns": [],
+   "objects": 1,
+   "vlog_known": 0.4647342995169082,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-32be03e4-a072-4da5-b597-114cffa52af8": {
+   "scene": "clipgt-32be03e4-a072-4da5-b597-114cffa52af8",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 0,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.049,
+   "path_m": 1026.7202951567515,
+   "turns": [
+    [
+     551.0,
+     579.4,
+     -52.4
+    ]
+   ],
+   "objects": 26,
+   "vlog_known": 0.71338199513382,
+   "route_turns": [
+    [
+     542.0,
+     548.5,
+     -52.6,
+     0.79,
+     false,
+     572.8
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-339deecd-ef83-4e22-8bc9-2b6cf2a5f9b4": {
+   "scene": "clipgt-339deecd-ef83-4e22-8bc9-2b6cf2a5f9b4",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 728.0000542916631,
+   "turns": [],
+   "objects": 110,
+   "vlog_known": 0.6015089163237312,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14": {
+   "scene": "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 393.48374672770785,
+   "turns": [
+    [
+     34.0,
+     54.0,
+     110.6
+    ]
+   ],
+   "objects": 124,
+   "vlog_known": 0.2906091370558376,
+   "route_turns": [
+    [
+     5.0,
+     24.5,
+     107.1,
+     0.03,
+     true,
+     35.0
+    ]
+   ],
+   "nudges": [
+    [
+     "190",
+     215.3,
+     0.01
+    ]
+   ],
+   "log_s": [
+    29.8,
+    60.0
+   ]
+  },
+  "clipgt-35e082a4-8543-4fce-ac06-006b2da0f144": {
+   "scene": "clipgt-35e082a4-8543-4fce-ac06-006b2da0f144",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.053,
+   "path_m": 293.74263764246564,
+   "turns": [],
+   "objects": 113,
+   "vlog_known": 0.10696095076400679,
+   "route_turns": [],
+   "nudges": [
+    [
+     "22",
+     107.1,
+     0.58
+    ],
+    [
+     "216",
+     124.0,
+     0.19
+    ],
+    [
+     "29",
+     39.0,
+     0.33
+    ],
+    [
+     "263",
+     41.0,
+     1.15
+    ],
+    [
+     "32",
+     27.5,
+     0.48
+    ],
+    [
+     "84",
+     124.1,
+     1.08
+    ],
+    [
+     "230",
+     160.6,
+     0.72
+    ],
+    [
+     "38",
+     10.7,
+     0.53
+    ],
+    [
+     "130",
+     113.1,
+     0.8
+    ],
+    [
+     "244",
+     124.7,
+     0.14
+    ],
+    [
+     "30",
+     33.4,
+     0.48
+    ],
+    [
+     "27",
+     51.4,
+     0.48
+    ],
+    [
+     "28",
+     45.4,
+     0.35
+    ],
+    [
+     "94",
+     58.1,
+     0.47
+    ],
+    [
+     "21",
+     4.0,
+     0.34
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-36a2ab7f-ef6d-48c3-8975-1250e2524a02": {
+   "scene": "clipgt-36a2ab7f-ef6d-48c3-8975-1250e2524a02",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 626.9410805560509,
+   "turns": [],
+   "objects": 119,
+   "vlog_known": 0.5721115537848606,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2": {
+   "scene": "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 460.3631010659948,
+   "turns": [
+    [
+     51.5,
+     65.5,
+     -85.3
+    ]
+   ],
+   "objects": 283,
+   "vlog_known": 0.3926247288503254,
+   "route_turns": [
+    [
+     21.5,
+     35.5,
+     -85.3,
+     0.04,
+     true,
+     51.5
+    ]
+   ],
+   "nudges": [
+    [
+     "121",
+     107.4,
+     0.68
+    ],
+    [
+     "126",
+     114.1,
+     0.39
+    ],
+    [
+     "128",
+     120.4,
+     0.25
+    ],
+    [
+     "136",
+     170.2,
+     0.46
+    ],
+    [
+     "223",
+     190.9,
+     0.27
+    ],
+    [
+     "239",
+     184.8,
+     0.44
+    ],
+    [
+     "387",
+     370.2,
+     1.14
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78": {
+   "scene": "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 454.4998542291038,
+   "turns": [
+    [
+     57.5,
+     79.5,
+     86.6
+    ]
+   ],
+   "objects": 97,
+   "vlog_known": 0.3721185510428101,
+   "route_turns": [
+    [
+     27.5,
+     49.5,
+     86.6,
+     0.05,
+     true,
+     57.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b": {
+   "scene": "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 362.33327873708754,
+   "turns": [
+    [
+     35.0,
+     49.5,
+     88.8
+    ]
+   ],
+   "objects": 61,
+   "vlog_known": 0.3085399449035813,
+   "route_turns": [
+    [
+     5.5,
+     20.0,
+     85.8,
+     0.13,
+     true,
+     35.5
+    ]
+   ],
+   "nudges": [
+    [
+     "29",
+     108.0,
+     1.09
+    ],
+    [
+     "41",
+     113.3,
+     1.04
+    ],
+    [
+     "62",
+     214.2,
+     1.29
+    ],
+    [
+     "75",
+     246.4,
+     0.54
+    ],
+    [
+     "86",
+     226.1,
+     1.45
+    ],
+    [
+     "88",
+     220.4,
+     1.31
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-3ce13eed-f97b-4c37-8716-a590569fab77": {
+   "scene": "clipgt-3ce13eed-f97b-4c37-8716-a590569fab77",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 6,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.144,
+   "path_m": 382.52966582049686,
+   "turns": [
+    [
+     48.0,
+     59.0,
+     -99.7
+    ]
+   ],
+   "objects": 223,
+   "vlog_known": 0.29726205997392435,
+   "route_turns": [
+    [
+     16.5,
+     28.5,
+     -100.1,
+     0.72,
+     true,
+     46.5
+    ]
+   ],
+   "nudges": [
+    [
+     "115",
+     7.7,
+     0.24
+    ],
+    [
+     "339",
+     57.8,
+     0.26
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-3fa5e06b-22df-4c1c-9ed2-4ba3ab06e7d4": {
+   "scene": "clipgt-3fa5e06b-22df-4c1c-9ed2-4ba3ab06e7d4",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.007,
+   "path_m": 981.0000487531522,
+   "turns": [],
+   "objects": 2,
+   "vlog_known": 0.725050916496945,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5": {
+   "scene": "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.067,
+   "path_m": 260.9996515609188,
+   "turns": [],
+   "objects": 19,
+   "vlog_known": 0.0019120458891013384,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    30.0
+   ]
+  },
+  "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c": {
+   "scene": "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 470.99850253029746,
+   "turns": [],
+   "objects": 85,
+   "vlog_known": 0.37857900318133614,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-403d558a-788a-4c46-a525-d8faabc9c417": {
+   "scene": "clipgt-403d558a-788a-4c46-a525-d8faabc9c417",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.033,
+   "path_m": 346.76673415237633,
+   "turns": [
+    [
+     67.0,
+     92.0,
+     -106.1
+    ]
+   ],
+   "objects": 231,
+   "vlog_known": 0.2316546762589928,
+   "route_turns": [
+    [
+     37.0,
+     59.5,
+     -105.8,
+     1.61,
+     true,
+     67.0
+    ]
+   ],
+   "nudges": [
+    [
+     "238",
+     101.4,
+     1.46
+    ],
+    [
+     "239",
+     106.8,
+     1.4
+    ],
+    [
+     "242",
+     111.5,
+     1.38
+    ],
+    [
+     "255",
+     116.6,
+     1.25
+    ],
+    [
+     "258",
+     121.5,
+     1.31
+    ],
+    [
+     "318",
+     177.7,
+     0.13
+    ],
+    [
+     "346",
+     168.2,
+     0.35
+    ],
+    [
+     "349",
+     177.9,
+     0.09
+    ],
+    [
+     "361",
+     185.1,
+     0.33
+    ],
+    [
+     "92",
+     93.9,
+     0.86
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-404541da-5297-4c32-b0af-21740de150b0": {
+   "scene": "clipgt-404541da-5297-4c32-b0af-21740de150b0",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 442.5004764223403,
+   "turns": [],
+   "objects": 776,
+   "vlog_known": 0.31905298759864714,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-404cc92f-193e-4948-b600-77ddc425dcf0": {
+   "scene": "clipgt-404cc92f-193e-4948-b600-77ddc425dcf0",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 536.0004292697378,
+   "turns": [],
+   "objects": 79,
+   "vlog_known": 0.4823091247672253,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-415e950b-f30b-4686-9b29-66846c8ad043": {
+   "scene": "clipgt-415e950b-f30b-4686-9b29-66846c8ad043",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.016,
+   "path_m": 514.9615817684827,
+   "turns": [],
+   "objects": 398,
+   "vlog_known": 0.486905916585839,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-4176f31d-dfb3-4af2-93f3-2ac1e41092cf": {
+   "scene": "clipgt-4176f31d-dfb3-4af2-93f3-2ac1e41092cf",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.04,
+   "path_m": 316.9999978787571,
+   "turns": [],
+   "objects": 83,
+   "vlog_known": 0.16692913385826771,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-422c7297-849e-4d02-9ee7-c696f42d4b82": {
+   "scene": "clipgt-422c7297-849e-4d02-9ee7-c696f42d4b82",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.013,
+   "path_m": 601.2168459417411,
+   "turns": [],
+   "objects": 80,
+   "vlog_known": 0.5564784053156147,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18": {
+   "scene": "clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 394.48370027853974,
+   "turns": [
+    [
+     145.5,
+     166.0,
+     99.6
+    ]
+   ],
+   "objects": 146,
+   "vlog_known": 0.2645569620253165,
+   "route_turns": [
+    [
+     115.5,
+     136.0,
+     99.6,
+     0.02,
+     true,
+     145.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09": {
+   "scene": "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 368.50134525703123,
+   "turns": [],
+   "objects": 249,
+   "vlog_known": 0.22462787550744248,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-450d5c8d-ed6b-419e-a995-6e707a6fd83b": {
+   "scene": "clipgt-450d5c8d-ed6b-419e-a995-6e707a6fd83b",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 704.5014716262125,
+   "turns": [],
+   "objects": 191,
+   "vlog_known": 0.5931963146704465,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-478d6ec4-f02b-4c82-97af-ddc0fbe5027f": {
+   "scene": "clipgt-478d6ec4-f02b-4c82-97af-ddc0fbe5027f",
+   "route_err": 0,
+   "pieces": 25,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 813.6412268489547,
+   "turns": [],
+   "objects": 17,
+   "vlog_known": 0.6758747697974218,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0": {
+   "scene": "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 379.9688548062044,
+   "turns": [
+    [
+     159.0,
+     198.5,
+     -138.9
+    ]
+   ],
+   "objects": 117,
+   "vlog_known": 0.3088042049934297,
+   "route_turns": [
+    [
+     129.0,
+     168.5,
+     -138.9,
+     0.03,
+     true,
+     159.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66": {
+   "scene": "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 686.5027532305194,
+   "turns": [],
+   "objects": 2,
+   "vlog_known": 0.6036363636363636,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-4a863a41-f6b3-4323-9a54-848d8c3d15a9": {
+   "scene": "clipgt-4a863a41-f6b3-4323-9a54-848d8c3d15a9",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 725.0003326126105,
+   "turns": [],
+   "objects": 23,
+   "vlog_known": 0.6349862258953168,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-4b5a7c8b-40d7-4fd4-bc6e-b22b5f7ace44": {
+   "scene": "clipgt-4b5a7c8b-40d7-4fd4-bc6e-b22b5f7ace44",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.016,
+   "path_m": 566.6461587709902,
+   "turns": [],
+   "objects": 60,
+   "vlog_known": 0.4889867841409692,
+   "route_turns": [],
+   "nudges": [
+    [
+     "99",
+     0.0,
+     1.56
+    ]
+   ],
+   "log_s": [
+    30.2,
+    60.5
+   ]
+  },
+  "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e": {
+   "scene": "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.006,
+   "path_m": 1040.5002314377257,
+   "turns": [],
+   "objects": 23,
+   "vlog_known": 0.7345175228036486,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-4cb7f7ac-edf4-4857-b841-2d0f46eb43f7": {
+   "scene": "clipgt-4cb7f7ac-edf4-4857-b841-2d0f46eb43f7",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 379.5100012482377,
+   "turns": [],
+   "objects": 336,
+   "vlog_known": 0.2890932982917214,
+   "route_turns": [],
+   "nudges": [
+    [
+     "466",
+     298.8,
+     0.29
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-4e454838-a16b-4f7a-929f-b6e047dd8170": {
+   "scene": "clipgt-4e454838-a16b-4f7a-929f-b6e047dd8170",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 441.99999890419724,
+   "turns": [],
+   "objects": 5,
+   "vlog_known": 0.4101694915254237,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8": {
+   "scene": "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.215,
+   "path_m": 304.74346837477555,
+   "turns": [
+    [
+     105.0,
+     132.5,
+     -91.3
+    ]
+   ],
+   "objects": 267,
+   "vlog_known": 0.3076923076923077,
+   "route_turns": [
+    [
+     75.9,
+     105.2,
+     -91.3,
+     1.26,
+     true,
+     104.7
+    ]
+   ],
+   "nudges": [
+    [
+     "470",
+     185.6,
+     -1.14
+    ],
+    [
+     "502",
+     200.3,
+     0.0
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-4e8c8f9e-f530-49d1-ba11-d05c96acba1d": {
+   "scene": "clipgt-4e8c8f9e-f530-49d1-ba11-d05c96acba1d",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 8,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 475.4820129691373,
+   "turns": [
+    [
+     263.0,
+     280.0,
+     90.6
+    ]
+   ],
+   "objects": 94,
+   "vlog_known": 0.4411764705882353,
+   "route_turns": [
+    [
+     233.0,
+     250.0,
+     90.3,
+     0.02,
+     true,
+     263.0
+    ]
+   ],
+   "nudges": [
+    [
+     "199",
+     221.2,
+     0.08
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb": {
+   "scene": "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 497.50329007795773,
+   "turns": [],
+   "objects": 306,
+   "vlog_known": 0.45336008024072216,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    29.7,
+    60.0
+   ]
+  },
+  "clipgt-4f7cb072-89c6-40f5-b6a5-d8c775784c2a": {
+   "scene": "clipgt-4f7cb072-89c6-40f5-b6a5-d8c775784c2a",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 731.5009147429447,
+   "turns": [],
+   "objects": 91,
+   "vlog_known": 0.6327645051194539,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-51242b4d-d47f-495e-943e-569541f15fb9": {
+   "scene": "clipgt-51242b4d-d47f-495e-943e-569541f15fb9",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 1,
+   "change": 4,
+   "brk": 0,
+   "blended": 4,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.087,
+   "path_m": 418.41193089652137,
+   "turns": [
+    [
+     176.0,
+     208.5,
+     73.4
+    ]
+   ],
+   "objects": 61,
+   "vlog_known": 0.34009546539379476,
+   "route_turns": [
+    [
+     146.3,
+     181.3,
+     79.8,
+     2.18,
+     true,
+     173.8
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-51400458-f276-4c16-902f-484bbf8a05a6": {
+   "scene": "clipgt-51400458-f276-4c16-902f-484bbf8a05a6",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.033,
+   "path_m": 362.61232954773607,
+   "turns": [
+    [
+     133.5,
+     144.5,
+     -80.6
+    ]
+   ],
+   "objects": 125,
+   "vlog_known": 0.2696011004126547,
+   "route_turns": [
+    [
+     103.0,
+     115.0,
+     -80.6,
+     0.26,
+     true,
+     133.0
+    ]
+   ],
+   "nudges": [
+    [
+     "12",
+     17.6,
+     0.59
+    ],
+    [
+     "13",
+     8.6,
+     0.35
+    ],
+    [
+     "204",
+     147.4,
+     -0.09
+    ],
+    [
+     "213",
+     153.2,
+     -0.19
+    ],
+    [
+     "225",
+     159.3,
+     -0.23
+    ],
+    [
+     "230",
+     159.0,
+     -0.15
+    ],
+    [
+     "23",
+     43.3,
+     0.28
+    ],
+    [
+     "246",
+     165.5,
+     -0.16
+    ],
+    [
+     "251",
+     170.7,
+     -0.1
+    ],
+    [
+     "5",
+     28.3,
+     0.42
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-51aee21d-dbab-40e8-8238-9b641a89244b": {
+   "scene": "clipgt-51aee21d-dbab-40e8-8238-9b641a89244b",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 556.0523963649708,
+   "turns": [],
+   "objects": 342,
+   "vlog_known": 0.4578096947935368,
+   "route_turns": [],
+   "nudges": [
+    [
+     "85",
+     97.1,
+     0.34
+    ],
+    [
+     "107",
+     119.4,
+     0.31
+    ],
+    [
+     "114",
+     190.2,
+     0.14
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-52003cee-c163-41b2-9bc7-7bf4cc46d505": {
+   "scene": "clipgt-52003cee-c163-41b2-9bc7-7bf4cc46d505",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.08,
+   "path_m": 379.5064775058482,
+   "turns": [
+    [
+     142.0,
+     152.5,
+     -90.4
+    ]
+   ],
+   "objects": 82,
+   "vlog_known": 0.3180026281208936,
+   "route_turns": [
+    [
+     110.0,
+     123.0,
+     -90.5,
+     1.04,
+     true,
+     140.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-524089d2-9ef6-4529-a3e3-6bdcda7ed3c6": {
+   "scene": "clipgt-524089d2-9ef6-4529-a3e3-6bdcda7ed3c6",
+   "route_err": 0,
+   "pieces": 27,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 712.0003525272989,
+   "turns": [],
+   "objects": 64,
+   "vlog_known": 0.6157082748948106,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-5266c7c9-e038-4555-b0b1-407521a5ec51": {
+   "scene": "clipgt-5266c7c9-e038-4555-b0b1-407521a5ec51",
+   "route_err": 0,
+   "pieces": 3,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.05,
+   "path_m": 288.499999273616,
+   "turns": [],
+   "objects": 47,
+   "vlog_known": 0.08996539792387544,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    56.0
+   ]
+  },
+  "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4": {
+   "scene": "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 349.9987450749537,
+   "turns": [],
+   "objects": 310,
+   "vlog_known": 0.17806267806267806,
+   "route_turns": [],
+   "nudges": [
+    [
+     "103",
+     138.8,
+     -0.16
+    ],
+    [
+     "104",
+     191.6,
+     -0.48
+    ],
+    [
+     "10",
+     81.5,
+     -0.41
+    ],
+    [
+     "11",
+     93.9,
+     -0.2
+    ],
+    [
+     "13",
+     100.3,
+     -0.26
+    ],
+    [
+     "20",
+     115.8,
+     -0.16
+    ],
+    [
+     "21",
+     133.4,
+     -0.12
+    ],
+    [
+     "222",
+     121.1,
+     -0.12
+    ],
+    [
+     "22",
+     143.8,
+     -0.35
+    ],
+    [
+     "251",
+     172.8,
+     -0.21
+    ],
+    [
+     "27",
+     88.1,
+     -0.24
+    ],
+    [
+     "352",
+     105.5,
+     -0.09
+    ],
+    [
+     "367",
+     127.3,
+     -0.03
+    ],
+    [
+     "398",
+     155.1,
+     -0.19
+    ],
+    [
+     "46",
+     42.5,
+     -0.11
+    ],
+    [
+     "470",
+     162.3,
+     -0.29
+    ],
+    [
+     "479",
+     149.9,
+     -0.34
+    ],
+    [
+     "47",
+     36.8,
+     -0.25
+    ],
+    [
+     "480",
+     196.7,
+     -0.03
+    ],
+    [
+     "537",
+     248.3,
+     -0.7
+    ],
+    [
+     "53",
+     29.7,
+     -0.14
+    ],
+    [
+     "553",
+     204.6,
+     -0.43
+    ],
+    [
+     "564",
+     273.7,
+     0.39
+    ],
+    [
+     "578",
+     273.8,
+     0.13
+    ],
+    [
+     "73",
+     110.8,
+     -0.14
+    ],
+    [
+     "76",
+     186.1,
+     -0.38
+    ],
+    [
+     "531",
+     214.4,
+     -0.63
+    ]
+   ],
+   "log_s": [
+    30.3,
+    60.5
+   ]
+  },
+  "clipgt-559d4ad6-aed7-4065-b25c-cff64aba28c0": {
+   "scene": "clipgt-559d4ad6-aed7-4065-b25c-cff64aba28c0",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.036,
+   "path_m": 348.5013995736657,
+   "turns": [],
+   "objects": 176,
+   "vlog_known": 0.22031473533619456,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-55b7be99-88a0-41b7-b46b-e96509c2d38c": {
+   "scene": "clipgt-55b7be99-88a0-41b7-b46b-e96509c2d38c",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.013,
+   "path_m": 593.0000654355579,
+   "turns": [],
+   "objects": 31,
+   "vlog_known": 0.5404040404040404,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798": {
+   "scene": "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 514.5187550776806,
+   "turns": [
+    [
+     251.5,
+     287.0,
+     77.1
+    ]
+   ],
+   "objects": 19,
+   "vlog_known": 0.4772065955383123,
+   "route_turns": [
+    [
+     222.0,
+     257.0,
+     77.3,
+     0.2,
+     true,
+     252.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-593ebf97-e555-4571-bb85-49ba33432b97": {
+   "scene": "clipgt-593ebf97-e555-4571-bb85-49ba33432b97",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.033,
+   "path_m": 347.23269125010586,
+   "turns": [],
+   "objects": 59,
+   "vlog_known": 0.21408045977011494,
+   "route_turns": [],
+   "nudges": [
+    [
+     "59",
+     162.7,
+     -1.57
+    ],
+    [
+     "111",
+     171.9,
+     -1.16
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e": {
+   "scene": "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 827.4481733628334,
+   "turns": [],
+   "objects": 177,
+   "vlog_known": 0.6388888888888888,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-599c94eb-1fa0-4abd-bd5a-2cb2910fc39a": {
+   "scene": "clipgt-599c94eb-1fa0-4abd-bd5a-2cb2910fc39a",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 5,
+   "change": 3,
+   "brk": 0,
+   "blended": 3,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.273,
+   "path_m": 377.5090503312631,
+   "turns": [],
+   "objects": 496,
+   "vlog_known": 0.2747688243064729,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-5b5f9d86-b5c3-4612-bdc5-c1d877e0ae20": {
+   "scene": "clipgt-5b5f9d86-b5c3-4612-bdc5-c1d877e0ae20",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 443.9999495926025,
+   "turns": [],
+   "objects": 130,
+   "vlog_known": 0.38245219347581555,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-5c4a277a-dfc2-46de-828a-e80eb658f68e": {
+   "scene": "clipgt-5c4a277a-dfc2-46de-828a-e80eb658f68e",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 342.499992643101,
+   "turns": [],
+   "objects": 96,
+   "vlog_known": 0.16909620991253643,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7": {
+   "scene": "clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 0.9952830188679245,
+   "fallback": false,
+   "on_route": 0.097,
+   "path_m": 390.56387788116774,
+   "turns": [],
+   "objects": 130,
+   "vlog_known": 0.280970625798212,
+   "route_turns": [],
+   "nudges": [
+    [
+     "130",
+     198.1,
+     0.99
+    ],
+    [
+     "145",
+     219.0,
+     0.7
+    ],
+    [
+     "163",
+     63.8,
+     0.35
+    ],
+    [
+     "1",
+     159.7,
+     0.56
+    ],
+    [
+     "244",
+     311.0,
+     0.79
+    ],
+    [
+     "2",
+     146.8,
+     0.63
+    ],
+    [
+     "90",
+     63.2,
+     0.63
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-5fcb2ba7-6a4b-4ce1-887b-8eafa677b4f0": {
+   "scene": "clipgt-5fcb2ba7-6a4b-4ce1-887b-8eafa677b4f0",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.048,
+   "path_m": 293.99999694243274,
+   "turns": [],
+   "objects": 77,
+   "vlog_known": 0.001697792869269949,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    30.0
+   ]
+  },
+  "clipgt-6027da62-8d21-4895-a583-1de455ea9803": {
+   "scene": "clipgt-6027da62-8d21-4895-a583-1de455ea9803",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 8,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 379.32284786846003,
+   "turns": [],
+   "objects": 146,
+   "vlog_known": 0.26973684210526316,
+   "route_turns": [],
+   "nudges": [
+    [
+     "30",
+     140.9,
+     -1.62
+    ],
+    [
+     "180",
+     149.3,
+     -1.6
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-60cc35db-1c6f-4aef-b86f-ffca69fbc3cb": {
+   "scene": "clipgt-60cc35db-1c6f-4aef-b86f-ffca69fbc3cb",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 406.9273837279839,
+   "turns": [
+    [
+     55.5,
+     71.0,
+     -58.7
+    ],
+    [
+     240.5,
+     254.0,
+     82.1
+    ]
+   ],
+   "objects": 74,
+   "vlog_known": 0.3128834355828221,
+   "route_turns": [
+    [
+     25.4,
+     41.4,
+     -58.9,
+     0.05,
+     true,
+     55.2
+    ],
+    [
+     208.9,
+     223.9,
+     82.0,
+     1.09,
+     true,
+     238.9
+    ]
+   ],
+   "nudges": [
+    [
+     "124",
+     171.1,
+     0.94
+    ],
+    [
+     "133",
+     196.5,
+     0.82
+    ],
+    [
+     "135",
+     177.5,
+     0.54
+    ],
+    [
+     "137",
+     228.7,
+     1.08
+    ],
+    [
+     "138",
+     184.9,
+     0.57
+    ],
+    [
+     "148",
+     196.4,
+     0.9
+    ],
+    [
+     "149",
+     228.6,
+     1.03
+    ],
+    [
+     "150",
+     184.8,
+     0.68
+    ],
+    [
+     "151",
+     177.6,
+     0.81
+    ],
+    [
+     "22",
+     0.5,
+     1.31
+    ],
+    [
+     "23",
+     0.2,
+     -0.55
+    ],
+    [
+     "98",
+     104.6,
+     1.21
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-61e73e86-05de-43af-b992-1fec947ee626": {
+   "scene": "clipgt-61e73e86-05de-43af-b992-1fec947ee626",
+   "route_err": 0,
+   "pieces": 29,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 938.0000483307117,
+   "turns": [],
+   "objects": 46,
+   "vlog_known": 0.7263045793397231,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-6250146a-7f9f-4508-851e-e25b7d9dc36a": {
+   "scene": "clipgt-6250146a-7f9f-4508-851e-e25b7d9dc36a",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 450.40664388907015,
+   "turns": [],
+   "objects": 224,
+   "vlog_known": 0.3736141906873614,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839": {
+   "scene": "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 394.35209759320094,
+   "turns": [
+    [
+     137.0,
+     159.5,
+     -56.5
+    ],
+    [
+     176.0,
+     193.5,
+     87.8
+    ]
+   ],
+   "objects": 132,
+   "vlog_known": 0.3341772151898734,
+   "route_turns": [
+    [
+     107.0,
+     129.5,
+     -56.5,
+     0.07,
+     true,
+     136.9
+    ],
+    [
+     146.5,
+     163.5,
+     87.5,
+     0.03,
+     true,
+     176.4
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-65907a2b-e934-4920-9580-c8f14fee5164": {
+   "scene": "clipgt-65907a2b-e934-4920-9580-c8f14fee5164",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 311.98191045668347,
+   "turns": [],
+   "objects": 82,
+   "vlog_known": 0.1584,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-66b15fbe-cae1-4e82-a592-2ea55b56dd93": {
+   "scene": "clipgt-66b15fbe-cae1-4e82-a592-2ea55b56dd93",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 437.9999364154735,
+   "turns": [],
+   "objects": 49,
+   "vlog_known": 0.39680729760547323,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc": {
+   "scene": "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.029,
+   "path_m": 371.003528381337,
+   "turns": [],
+   "objects": 149,
+   "vlog_known": 0.2768817204301075,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3": {
+   "scene": "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.041,
+   "path_m": 314.7261477793555,
+   "turns": [
+    [
+     44.0,
+     68.0,
+     115.2
+    ]
+   ],
+   "objects": 99,
+   "vlog_known": 0.16323296354992076,
+   "route_turns": [
+    [
+     11.5,
+     38.0,
+     115.3,
+     1.58,
+     true,
+     41.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-6d8226d4-3e08-4754-871a-fcc4c6f1c11b": {
+   "scene": "clipgt-6d8226d4-3e08-4754-871a-fcc4c6f1c11b",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 474.50200922291094,
+   "turns": [],
+   "objects": 242,
+   "vlog_known": 0.4426919032597266,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    29.7,
+    60.0
+   ]
+  },
+  "clipgt-6e6cbe67-bccd-4d4d-9943-933a272b7bf0": {
+   "scene": "clipgt-6e6cbe67-bccd-4d4d-9943-933a272b7bf0",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.036,
+   "path_m": 740.7945912252397,
+   "turns": [],
+   "objects": 199,
+   "vlog_known": 0.624409979770735,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231": {
+   "scene": "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 801.5001082881013,
+   "turns": [],
+   "objects": 101,
+   "vlog_known": 0.67601246105919,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-6ee9ee78-cb61-4a1c-a45f-2d808f311c7f": {
+   "scene": "clipgt-6ee9ee78-cb61-4a1c-a45f-2d808f311c7f",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 374.9976574380911,
+   "turns": [],
+   "objects": 51,
+   "vlog_known": 0.25033288948069243,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-6f3be572-0c6a-407c-b9fa-136cce998e3c": {
+   "scene": "clipgt-6f3be572-0c6a-407c-b9fa-136cce998e3c",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 339.4999925101806,
+   "turns": [],
+   "objects": 55,
+   "vlog_known": 0.11764705882352941,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-6fb661c5-8780-401d-9798-745ad08a66f5": {
+   "scene": "clipgt-6fb661c5-8780-401d-9798-745ad08a66f5",
+   "route_err": 0,
+   "pieces": 26,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 475.9006698486509,
+   "turns": [],
+   "objects": 170,
+   "vlog_known": 0.4155299055613851,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-6fd8cf30-6ccf-4dad-9dee-14df4a9ba97a": {
+   "scene": "clipgt-6fd8cf30-6ccf-4dad-9dee-14df4a9ba97a",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 388.48457803877824,
+   "turns": [
+    [
+     72.0,
+     83.0,
+     -86.7
+    ]
+   ],
+   "objects": 199,
+   "vlog_known": 0.2686375321336761,
+   "route_turns": [
+    [
+     41.0,
+     53.0,
+     -90.2,
+     0.26,
+     true,
+     71.0
+    ]
+   ],
+   "nudges": [
+    [
+     "3",
+     32.5,
+     0.73
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-71ea5d51-b936-4cd6-bb3a-e7f528927ca0": {
+   "scene": "clipgt-71ea5d51-b936-4cd6-bb3a-e7f528927ca0",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 350.9990880065741,
+   "turns": [],
+   "objects": 434,
+   "vlog_known": 0.2332859174964438,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7381c9fa-1857-430f-aee9-22c59685656e": {
+   "scene": "clipgt-7381c9fa-1857-430f-aee9-22c59685656e",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 3,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 0.9672131147540983,
+   "fallback": false,
+   "on_route": 0.082,
+   "path_m": 363.11337439200724,
+   "turns": [
+    [
+     33.3,
+     47.2,
+     142.8
+    ],
+    [
+     104.7,
+     139.7,
+     105.4
+    ]
+   ],
+   "objects": 201,
+   "vlog_known": 0.18406593406593408,
+   "route_turns": [
+    [
+     2.4,
+     16.3,
+     149.0,
+     0.62,
+     true,
+     32.9
+    ],
+    [
+     75.8,
+     111.3,
+     105.7,
+     0.8,
+     true,
+     106.2
+    ]
+   ],
+   "nudges": [
+    [
+     "27",
+     5.7,
+     1.53
+    ],
+    [
+     "41",
+     20.5,
+     -0.49
+    ]
+   ],
+   "log_s": [
+    31.1,
+    61.2
+   ]
+  },
+  "clipgt-76f7e025-e86a-47d9-ba21-f5aa5834322c": {
+   "scene": "clipgt-76f7e025-e86a-47d9-ba21-f5aa5834322c",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.029,
+   "path_m": 369.9859861555851,
+   "turns": [
+    [
+     192.5,
+     205.0,
+     -60.8
+    ]
+   ],
+   "objects": 98,
+   "vlog_known": 0.29284750337381915,
+   "route_turns": [
+    [
+     162.5,
+     174.5,
+     -60.1,
+     0.02,
+     true,
+     192.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55": {
+   "scene": "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 428.04097677150406,
+   "turns": [],
+   "objects": 50,
+   "vlog_known": 0.534965034965035,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd": {
+   "scene": "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 411.8662675546331,
+   "turns": [],
+   "objects": 109,
+   "vlog_known": 0.35878787878787877,
+   "route_turns": [],
+   "nudges": [
+    [
+     "11",
+     117.7,
+     1.05
+    ],
+    [
+     "12",
+     155.4,
+     0.59
+    ],
+    [
+     "136",
+     277.7,
+     0.41
+    ],
+    [
+     "14",
+     214.9,
+     0.64
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7b403b05-e309-4dfd-b1be-4fa98fb3c3fa": {
+   "scene": "clipgt-7b403b05-e309-4dfd-b1be-4fa98fb3c3fa",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 379.50000499465074,
+   "turns": [],
+   "objects": 37,
+   "vlog_known": 0.19842312746386334,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39": {
+   "scene": "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 340.5004350899603,
+   "turns": [],
+   "objects": 210,
+   "vlog_known": 0.20351390922401172,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-7c346fd5-4223-40da-8785-c49fe69f06a1": {
+   "scene": "clipgt-7c346fd5-4223-40da-8785-c49fe69f06a1",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 739.0004870268106,
+   "turns": [],
+   "objects": 57,
+   "vlog_known": 0.6405405405405405,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7c6529f6-c6cf-465d-affe-b2bb30f3716d": {
+   "scene": "clipgt-7c6529f6-c6cf-465d-affe-b2bb30f3716d",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.056,
+   "path_m": 276.99986008518124,
+   "turns": [],
+   "objects": 73,
+   "vlog_known": 0.043243243243243246,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    29.5,
+    41.6
+   ]
+  },
+  "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99": {
+   "scene": "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 488.5088918228929,
+   "turns": [],
+   "objects": 102,
+   "vlog_known": 0.45556690500510727,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7d16a9a9-e4c6-4cc1-be75-507c64b0bb90": {
+   "scene": "clipgt-7d16a9a9-e4c6-4cc1-be75-507c64b0bb90",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.045,
+   "path_m": 312.5015537727745,
+   "turns": [],
+   "objects": 112,
+   "vlog_known": 0.13237639553429026,
+   "route_turns": [],
+   "nudges": [
+    [
+     "128",
+     193.7,
+     0.14
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726": {
+   "scene": "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 370.50024681012223,
+   "turns": [],
+   "objects": 78,
+   "vlog_known": 0.26379542395693134,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-7dc59d0d-7582-48b2-a6f9-2d7288b2c556": {
+   "scene": "clipgt-7dc59d0d-7582-48b2-a6f9-2d7288b2c556",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.008,
+   "path_m": 831.5003125714187,
+   "turns": [],
+   "objects": 170,
+   "vlog_known": 0.6624624624624624,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-8120803d-0cca-49c5-afc7-c87529d87ce7": {
+   "scene": "clipgt-8120803d-0cca-49c5-afc7-c87529d87ce7",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 871.5000527742612,
+   "turns": [],
+   "objects": 252,
+   "vlog_known": 0.6601719197707736,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-81dc4ece-fa69-40dc-bffc-1f8606e8b3a2": {
+   "scene": "clipgt-81dc4ece-fa69-40dc-bffc-1f8606e8b3a2",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.051,
+   "path_m": 296.48320913380593,
+   "turns": [
+    [
+     58.0,
+     77.0,
+     90.4
+    ]
+   ],
+   "objects": 50,
+   "vlog_known": 0.07407407407407407,
+   "route_turns": [
+    [
+     28.0,
+     47.0,
+     90.4,
+     0.02,
+     true,
+     58.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    51.7
+   ]
+  },
+  "clipgt-82f505c9-6a41-4984-b72e-1d71254c4bd9": {
+   "scene": "clipgt-82f505c9-6a41-4984-b72e-1d71254c4bd9",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 402.6509288845103,
+   "turns": [],
+   "objects": 232,
+   "vlog_known": 0.3469640644361834,
+   "route_turns": [],
+   "nudges": [
+    [
+     "540",
+     226.2,
+     1.24
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-875e79d9-194f-478a-a4ec-e130649bde17": {
+   "scene": "clipgt-875e79d9-194f-478a-a4ec-e130649bde17",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.165,
+   "path_m": 343.4406730542194,
+   "turns": [],
+   "objects": 168,
+   "vlog_known": 0.2369186046511628,
+   "route_turns": [],
+   "nudges": [
+    [
+     "2",
+     14.3,
+     0.38
+    ],
+    [
+     "202",
+     266.1,
+     -0.04
+    ],
+    [
+     "16",
+     101.5,
+     0.16
+    ],
+    [
+     "57",
+     88.9,
+     0.27
+    ],
+    [
+     "14",
+     95.3,
+     0.34
+    ],
+    [
+     "12",
+     83.5,
+     0.09
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-87a3b6d4-fd0f-487f-b409-f8ef2fe53681": {
+   "scene": "clipgt-87a3b6d4-fd0f-487f-b409-f8ef2fe53681",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 712.5011399282972,
+   "turns": [],
+   "objects": 90,
+   "vlog_known": 0.606166783461808,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-88bbf0c9-9ba5-45b4-bc15-9dca85ca84b9": {
+   "scene": "clipgt-88bbf0c9-9ba5-45b4-bc15-9dca85ca84b9",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.013,
+   "path_m": 642.500292551989,
+   "turns": [],
+   "objects": 18,
+   "vlog_known": 0.5765345765345765,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-8a143cb2-4805-452c-97a2-8461062def2d": {
+   "scene": "clipgt-8a143cb2-4805-452c-97a2-8461062def2d",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.082,
+   "path_m": 391.72200530890626,
+   "turns": [
+    [
+     33.0,
+     43.0,
+     -80.6
+    ]
+   ],
+   "objects": 226,
+   "vlog_known": 0.310828025477707,
+   "route_turns": [
+    [
+     3.0,
+     13.0,
+     -77.6,
+     0.04,
+     true,
+     33.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26": {
+   "scene": "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 456.9125914627094,
+   "turns": [],
+   "objects": 106,
+   "vlog_known": 0.4054644808743169,
+   "route_turns": [],
+   "nudges": [
+    [
+     "123",
+     306.4,
+     0.31
+    ],
+    [
+     "46",
+     133.8,
+     0.57
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-8e62a884-5667-4cd0-961e-7220d88159ec": {
+   "scene": "clipgt-8e62a884-5667-4cd0-961e-7220d88159ec",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 638.0000207005987,
+   "turns": [],
+   "objects": 217,
+   "vlog_known": 0.5438184663536776,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-8f9634bb-b35a-4743-be67-9c16ddfa4d48": {
+   "scene": "clipgt-8f9634bb-b35a-4743-be67-9c16ddfa4d48",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 444.00177262543485,
+   "turns": [],
+   "objects": 129,
+   "vlog_known": 0.38202247191011235,
+   "route_turns": [],
+   "nudges": [
+    [
+     "229",
+     0.0,
+     0.19
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-901c2cff-f4a4-4f21-8ba2-f2f357be7bb8": {
+   "scene": "clipgt-901c2cff-f4a4-4f21-8ba2-f2f357be7bb8",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 729.0000524593476,
+   "turns": [],
+   "objects": 65,
+   "vlog_known": 0.5979452054794521,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-903731dd-809b-4bae-9ebd-a53e5d49dbbd": {
+   "scene": "clipgt-903731dd-809b-4bae-9ebd-a53e5d49dbbd",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 442.4999897325591,
+   "turns": [],
+   "objects": 240,
+   "vlog_known": 0.3927765237020316,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-90ab8c24-2d85-4e52-8a57-3554c418cef2": {
+   "scene": "clipgt-90ab8c24-2d85-4e52-8a57-3554c418cef2",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.01,
+   "path_m": 774.5000517086879,
+   "turns": [],
+   "objects": 58,
+   "vlog_known": 0.6279819471308833,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-91d84204-d511-464e-b986-6cab844794cc": {
+   "scene": "clipgt-91d84204-d511-464e-b986-6cab844794cc",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 631.0001134651731,
+   "turns": [],
+   "objects": 142,
+   "vlog_known": 0.5640822784810127,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-92af888e-acdd-45e9-b8bb-06406f232300": {
+   "scene": "clipgt-92af888e-acdd-45e9-b8bb-06406f232300",
+   "route_err": 0,
+   "pieces": 3,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.052,
+   "path_m": 285.99999108331644,
+   "turns": [],
+   "objects": 63,
+   "vlog_known": 0.08900523560209424,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    55.6
+   ]
+  },
+  "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac": {
+   "scene": "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 535.0001041264171,
+   "turns": [
+    [
+     108.5,
+     128.0,
+     -93.0
+    ]
+   ],
+   "objects": 3,
+   "vlog_known": 0.480410447761194,
+   "route_turns": [
+    [
+     78.0,
+     98.0,
+     -93.0,
+     0.08,
+     true,
+     108.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-9827beca-da31-4711-bc94-9a807091c0b9": {
+   "scene": "clipgt-9827beca-da31-4711-bc94-9a807091c0b9",
+   "route_err": 0,
+   "pieces": 7,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.047,
+   "path_m": 306.59306037138253,
+   "turns": [
+    [
+     140.0,
+     149.5,
+     -84.9
+    ]
+   ],
+   "objects": 102,
+   "vlog_known": 0.15121951219512195,
+   "route_turns": [
+    [
+     109.0,
+     119.0,
+     -90.6,
+     0.33,
+     true,
+     139.1
+    ]
+   ],
+   "nudges": [
+    [
+     "11",
+     69.1,
+     0.79
+    ],
+    [
+     "10",
+     63.1,
+     0.51
+    ],
+    [
+     "9",
+     58.2,
+     0.45
+    ],
+    [
+     "134",
+     112.1,
+     0.33
+    ],
+    [
+     "105",
+     96.3,
+     0.81
+    ],
+    [
+     "98",
+     97.9,
+     1.32
+    ],
+    [
+     "7",
+     82.9,
+     -0.77
+    ],
+    [
+     "121",
+     76.3,
+     1.62
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-984b2242-ddb6-4c71-b98a-8cc87972d974": {
+   "scene": "clipgt-984b2242-ddb6-4c71-b98a-8cc87972d974",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 472.9023406500955,
+   "turns": [],
+   "objects": 379,
+   "vlog_known": 0.440337909186906,
+   "route_turns": [],
+   "nudges": [
+    [
+     "517",
+     313.7,
+     1.75
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-98f88a4e-6b92-4f69-9ef8-58641f5c9e1f": {
+   "scene": "clipgt-98f88a4e-6b92-4f69-9ef8-58641f5c9e1f",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 1,
+   "change": 3,
+   "brk": 0,
+   "blended": 3,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.08,
+   "path_m": 623.4853486952233,
+   "turns": [
+    [
+     303.8,
+     309.3,
+     47.8
+    ]
+   ],
+   "objects": 88,
+   "vlog_known": 0.5820656525220176,
+   "route_turns": [
+    [
+     274.0,
+     279.4,
+     49.9,
+     0.6,
+     true,
+     304.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-9b6c68b4-1f13-46ec-a2cd-5023a8e9341d": {
+   "scene": "clipgt-9b6c68b4-1f13-46ec-a2cd-5023a8e9341d",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.033,
+   "path_m": 363.4930217187906,
+   "turns": [
+    [
+     112.5,
+     141.0,
+     -102.5
+    ]
+   ],
+   "objects": 179,
+   "vlog_known": 0.25686813186813184,
+   "route_turns": [
+    [
+     82.5,
+     111.0,
+     -102.5,
+     0.03,
+     true,
+     112.5
+    ]
+   ],
+   "nudges": [
+    [
+     "108",
+     36.5,
+     0.02
+    ],
+    [
+     "43",
+     0.0,
+     0.17
+    ],
+    [
+     "7",
+     13.2,
+     0.16
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-9d9052bd-2579-477a-89ba-822a1438905d": {
+   "scene": "clipgt-9d9052bd-2579-477a-89ba-822a1438905d",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 630.9995710046326,
+   "turns": [],
+   "objects": 69,
+   "vlog_known": 0.5890736342042755,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c": {
+   "scene": "clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.017,
+   "path_m": 499.25424564199557,
+   "turns": [],
+   "objects": 106,
+   "vlog_known": 0.467,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    29.8,
+    60.0
+   ]
+  },
+  "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a": {
+   "scene": "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 415.5032748427262,
+   "turns": [
+    [
+     36.0,
+     59.5,
+     -85.4
+    ],
+    [
+     93.0,
+     115.5,
+     74.7
+    ]
+   ],
+   "objects": 155,
+   "vlog_known": 0.3457382953181273,
+   "route_turns": [
+    [
+     6.5,
+     29.5,
+     -84.5,
+     0.1,
+     true,
+     36.5
+    ],
+    [
+     63.0,
+     85.5,
+     74.7,
+     0.04,
+     true,
+     93.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-9f8acd00-e8f5-467a-867d-b205f8d4d75d": {
+   "scene": "clipgt-9f8acd00-e8f5-467a-867d-b205f8d4d75d",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 428.9794786738956,
+   "turns": [],
+   "objects": 227,
+   "vlog_known": 0.3818393480791618,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-9fa1d6eb-7e0f-417f-8fa6-7dd38b28b8f9": {
+   "scene": "clipgt-9fa1d6eb-7e0f-417f-8fa6-7dd38b28b8f9",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.051,
+   "path_m": 297.50151327045916,
+   "turns": [],
+   "objects": 363,
+   "vlog_known": 0.11725293132328309,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a100665e-9a77-4778-99df-19f6af19a196": {
+   "scene": "clipgt-a100665e-9a77-4778-99df-19f6af19a196",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 8,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.048,
+   "path_m": 304.4797718331778,
+   "turns": [
+    [
+     68.5,
+     87.5,
+     89.9
+    ]
+   ],
+   "objects": 186,
+   "vlog_known": 0.03770491803278689,
+   "route_turns": [
+    [
+     38.5,
+     57.5,
+     89.9,
+     0.02,
+     true,
+     68.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    41.3
+   ]
+  },
+  "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9": {
+   "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 5,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.177,
+   "path_m": 366.0774399932043,
+   "turns": [
+    [
+     72.0,
+     82.5,
+     -90.2
+    ]
+   ],
+   "objects": 114,
+   "vlog_known": 0.2724795640326976,
+   "route_turns": [
+    [
+     41.5,
+     53.0,
+     -90.2,
+     0.49,
+     true,
+     71.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677": {
+   "scene": "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 322.4862198490977,
+   "turns": [
+    [
+     40.0,
+     63.5,
+     91.2
+    ]
+   ],
+   "objects": 319,
+   "vlog_known": 0.17182662538699692,
+   "route_turns": [
+    [
+     10.0,
+     33.5,
+     91.2,
+     0.08,
+     true,
+     40.0
+    ]
+   ],
+   "nudges": [
+    [
+     "322",
+     21.2,
+     0.08
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd": {
+   "scene": "clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.034,
+   "path_m": 358.50225084862353,
+   "turns": [],
+   "objects": 213,
+   "vlog_known": 0.2726008344923505,
+   "route_turns": [],
+   "nudges": [
+    [
+     "44",
+     0.0,
+     -0.19
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-a2b415d5-2d72-4cc2-a77d-868248d0ba22": {
+   "scene": "clipgt-a2b415d5-2d72-4cc2-a77d-868248d0ba22",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 643.0000223455439,
+   "turns": [],
+   "objects": 5,
+   "vlog_known": 0.5496894409937888,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a2c5ae46-0d99-4b7f-b1f2-e7443fd457e2": {
+   "scene": "clipgt-a2c5ae46-0d99-4b7f-b1f2-e7443fd457e2",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 3,
+   "change": 4,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.09,
+   "path_m": 515.079396739865,
+   "turns": [],
+   "objects": 94,
+   "vlog_known": 0.4786821705426357,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a309e228-26e1-423e-a44c-cb00aa7378cb": {
+   "scene": "clipgt-a309e228-26e1-423e-a44c-cb00aa7378cb",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.029,
+   "path_m": 372.0010426208463,
+   "turns": [],
+   "objects": 197,
+   "vlog_known": 0.2520107238605898,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d": {
+   "scene": "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.1,
+   "path_m": 389.063794566617,
+   "turns": [
+    [
+     103.5,
+     121.5,
+     113.7
+    ],
+    [
+     181.5,
+     196.4,
+     -92.5
+    ]
+   ],
+   "objects": 198,
+   "vlog_known": 0.3038461538461538,
+   "route_turns": [
+    [
+     73.5,
+     91.0,
+     113.7,
+     0.08,
+     true,
+     103.5
+    ],
+    [
+     152.3,
+     167.8,
+     -92.5,
+     0.03,
+     true,
+     181.1
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a5599793-5d03-4104-ad6e-1925cefded72": {
+   "scene": "clipgt-a5599793-5d03-4104-ad6e-1925cefded72",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 396.00812003554057,
+   "turns": [],
+   "objects": 285,
+   "vlog_known": 0.30730478589420657,
+   "route_turns": [],
+   "nudges": [
+    [
+     "150",
+     132.4,
+     0.66
+    ],
+    [
+     "16",
+     75.5,
+     0.61
+    ],
+    [
+     "17",
+     99.7,
+     0.42
+    ],
+    [
+     "18",
+     115.9,
+     0.75
+    ],
+    [
+     "236",
+     179.5,
+     0.17
+    ],
+    [
+     "250",
+     206.2,
+     0.55
+    ],
+    [
+     "291",
+     206.2,
+     0.58
+    ],
+    [
+     "292",
+     159.7,
+     0.38
+    ],
+    [
+     "295",
+     200.0,
+     0.39
+    ],
+    [
+     "298",
+     122.9,
+     0.49
+    ],
+    [
+     "301",
+     166.2,
+     0.23
+    ],
+    [
+     "313",
+     260.0,
+     0.55
+    ],
+    [
+     "318",
+     250.9,
+     0.5
+    ],
+    [
+     "324",
+     251.0,
+     0.37
+    ],
+    [
+     "330",
+     288.8,
+     0.42
+    ],
+    [
+     "33",
+     1.3,
+     0.42
+    ],
+    [
+     "343",
+     221.8,
+     0.63
+    ],
+    [
+     "350",
+     214.6,
+     0.62
+    ],
+    [
+     "360",
+     302.2,
+     0.14
+    ],
+    [
+     "364",
+     245.3,
+     0.22
+    ],
+    [
+     "50",
+     0.0,
+     0.18
+    ],
+    [
+     "5",
+     21.2,
+     0.47
+    ],
+    [
+     "78",
+     159.9,
+     0.4
+    ],
+    [
+     "7",
+     27.6,
+     0.52
+    ],
+    [
+     "8",
+     33.1,
+     0.46
+    ],
+    [
+     "93",
+     129.0,
+     0.62
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a64b1333-89c8-4eea-bf9a-890703edf9c1": {
+   "scene": "clipgt-a64b1333-89c8-4eea-bf9a-890703edf9c1",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 400.5710807339909,
+   "turns": [
+    [
+     222.5,
+     238.5,
+     90.4
+    ]
+   ],
+   "objects": 134,
+   "vlog_known": 0.4919053549190536,
+   "route_turns": [
+    [
+     193.0,
+     208.5,
+     90.4,
+     0.74,
+     true,
+     223.0
+    ]
+   ],
+   "nudges": [
+    [
+     "71",
+     201.8,
+     0.74
+    ],
+    [
+     "100",
+     177.1,
+     0.32
+    ],
+    [
+     "132",
+     171.8,
+     0.13
+    ],
+    [
+     "9",
+     68.1,
+     0.2
+    ],
+    [
+     "198",
+     290.1,
+     -0.52
+    ],
+    [
+     "30",
+     29.6,
+     0.2
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-a686c7d0-8de6-47dc-90e6-be4c918a4e76": {
+   "scene": "clipgt-a686c7d0-8de6-47dc-90e6-be4c918a4e76",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 368.50205882428753,
+   "turns": [],
+   "objects": 161,
+   "vlog_known": 0.2679296346414073,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a68ad579-8a04-45b9-89f9-89ec3c1893bb": {
+   "scene": "clipgt-a68ad579-8a04-45b9-89f9-89ec3c1893bb",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.014,
+   "path_m": 606.3193278569363,
+   "turns": [],
+   "objects": 1,
+   "vlog_known": 0.5057660626029654,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44": {
+   "scene": "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.007,
+   "path_m": 917.608886890986,
+   "turns": [],
+   "objects": 97,
+   "vlog_known": 0.7071311921611323,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-a6ce300f-2b02-4e0b-b51c-5f2fa6eb7ab5": {
+   "scene": "clipgt-a6ce300f-2b02-4e0b-b51c-5f2fa6eb7ab5",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 404.4878785259305,
+   "turns": [],
+   "objects": 130,
+   "vlog_known": 0.2802469135802469,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-a95fd3b2-ae3e-4c4a-8e24-f543bb0e3db0": {
+   "scene": "clipgt-a95fd3b2-ae3e-4c4a-8e24-f543bb0e3db0",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 6,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 452.11372498216195,
+   "turns": [],
+   "objects": 84,
+   "vlog_known": 0.423841059602649,
+   "route_turns": [],
+   "nudges": [
+    [
+     "63",
+     275.4,
+     0.96
+    ]
+   ],
+   "log_s": [
+    29.7,
+    60.0
+   ]
+  },
+  "clipgt-a9c7f2c7-b1b6-4aa5-85b8-5daf04b6e94a": {
+   "scene": "clipgt-a9c7f2c7-b1b6-4aa5-85b8-5daf04b6e94a",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 868.5004296154691,
+   "turns": [],
+   "objects": 39,
+   "vlog_known": 0.684301322599195,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade": {
+   "scene": "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 454.2325684497463,
+   "turns": [
+    [
+     150.0,
+     169.0,
+     90.4
+    ]
+   ],
+   "objects": 369,
+   "vlog_known": 0.3626373626373626,
+   "route_turns": [
+    [
+     120.0,
+     139.0,
+     90.4,
+     0.05,
+     true,
+     150.0
+    ]
+   ],
+   "nudges": [
+    [
+     "452",
+     259.8,
+     1.21
+    ],
+    [
+     "558",
+     260.4,
+     0.75
+    ],
+    [
+     "560",
+     357.0,
+     0.43
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-ad69dd31-6d89-4869-90a9-3a4da4b35843": {
+   "scene": "clipgt-ad69dd31-6d89-4869-90a9-3a4da4b35843",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 424.00004899321635,
+   "turns": [],
+   "objects": 186,
+   "vlog_known": 0.37176470588235294,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ada590cf-e6eb-4d6b-bed7-ecbc1f5ad9cd": {
+   "scene": "clipgt-ada590cf-e6eb-4d6b-bed7-ecbc1f5ad9cd",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 410.50003810966615,
+   "turns": [],
+   "objects": 70,
+   "vlog_known": 0.33292831105710813,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3": {
+   "scene": "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 442.9820953875778,
+   "turns": [
+    [
+     210.5,
+     226.5,
+     -90.0
+    ]
+   ],
+   "objects": 289,
+   "vlog_known": 0.3765501691093574,
+   "route_turns": [
+    [
+     180.5,
+     196.5,
+     -90.0,
+     0.02,
+     true,
+     210.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    29.8,
+    60.0
+   ]
+  },
+  "clipgt-afcb2149-4598-4d79-bd7e-62b8be932173": {
+   "scene": "clipgt-afcb2149-4598-4d79-bd7e-62b8be932173",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 729.5000083475582,
+   "turns": [],
+   "objects": 22,
+   "vlog_known": 0.6358658453114305,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-b1d93f58-d8dd-4a84-959c-aaea3aa0701b": {
+   "scene": "clipgt-b1d93f58-d8dd-4a84-959c-aaea3aa0701b",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 451.0753166773339,
+   "turns": [
+    [
+     240.0,
+     258.0,
+     90.7
+    ]
+   ],
+   "objects": 172,
+   "vlog_known": 0.4170353982300885,
+   "route_turns": [
+    [
+     210.0,
+     228.0,
+     90.7,
+     0.02,
+     true,
+     240.1
+    ]
+   ],
+   "nudges": [
+    [
+     "152",
+     64.7,
+     1.14
+    ],
+    [
+     "34",
+     69.7,
+     1.11
+    ],
+    [
+     "36",
+     48.1,
+     1.07
+    ],
+    [
+     "38",
+     35.2,
+     1.09
+    ],
+    [
+     "41",
+     24.5,
+     1.1
+    ],
+    [
+     "42",
+     18.6,
+     1.15
+    ],
+    [
+     "43",
+     13.7,
+     1.26
+    ],
+    [
+     "44",
+     8.9,
+     1.31
+    ],
+    [
+     "45",
+     3.2,
+     1.35
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-b2591a17-9951-49f6-9ae9-c0addeb3acb1": {
+   "scene": "clipgt-b2591a17-9951-49f6-9ae9-c0addeb3acb1",
+   "route_err": 0,
+   "pieces": 33,
+   "amb": 5,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.062,
+   "path_m": 679.5769034606412,
+   "turns": [],
+   "objects": 245,
+   "vlog_known": 0.6024981631153563,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-b27b3375-5028-44bc-bec7-64785793734a": {
+   "scene": "clipgt-b27b3375-5028-44bc-bec7-64785793734a",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 690.0004843824579,
+   "turns": [],
+   "objects": 135,
+   "vlog_known": 0.5933429811866859,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-b40f4729-29c4-4846-a04b-72c78832a062": {
+   "scene": "clipgt-b40f4729-29c4-4846-a04b-72c78832a062",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 9,
+   "change": 8,
+   "brk": 0,
+   "blended": 8,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.114,
+   "path_m": 337.09065144737565,
+   "turns": [
+    [
+     39.0,
+     49.5,
+     -89.6
+    ]
+   ],
+   "objects": 94,
+   "vlog_known": 0.22781065088757396,
+   "route_turns": [
+    [
+     9.0,
+     20.0,
+     -90.3,
+     0.13,
+     true,
+     39.0
+    ]
+   ],
+   "nudges": [
+    [
+     "9",
+     9.8,
+     0.53
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2": {
+   "scene": "clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 1,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 363.5347806098139,
+   "turns": [
+    [
+     128.4,
+     142.9,
+     91.3
+    ]
+   ],
+   "objects": 226,
+   "vlog_known": 0.2729766803840878,
+   "route_turns": [
+    [
+     97.9,
+     112.4,
+     91.3,
+     0.36,
+     true,
+     128.4
+    ]
+   ],
+   "nudges": [
+    [
+     "199",
+     119.8,
+     0.25
+    ],
+    [
+     "1",
+     96.8,
+     0.24
+    ],
+    [
+     "175",
+     101.7,
+     0.2
+    ],
+    [
+     "6",
+     74.6,
+     0.3
+    ],
+    [
+     "22",
+     55.5,
+     0.29
+    ],
+    [
+     "49",
+     11.8,
+     -1.6
+    ],
+    [
+     "178",
+     124.4,
+     0.28
+    ],
+    [
+     "47",
+     109.2,
+     0.36
+    ],
+    [
+     "19",
+     42.2,
+     0.36
+    ],
+    [
+     "2",
+     91.6,
+     0.31
+    ],
+    [
+     "187",
+     115.1,
+     0.28
+    ],
+    [
+     "50",
+     50.3,
+     0.37
+    ],
+    [
+     "5",
+     81.7,
+     0.26
+    ],
+    [
+     "23",
+     60.4,
+     0.2
+    ],
+    [
+     "20",
+     37.3,
+     0.46
+    ],
+    [
+     "9",
+     69.6,
+     0.23
+    ]
+   ],
+   "log_s": [
+    31.1,
+    61.4
+   ]
+  },
+  "clipgt-b4a3c975-340a-4a0d-9d28-d96b4bc7dc23": {
+   "scene": "clipgt-b4a3c975-340a-4a0d-9d28-d96b4bc7dc23",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 365.0988104072706,
+   "turns": [
+    [
+     121.0,
+     129.5,
+     -83.1
+    ]
+   ],
+   "objects": 71,
+   "vlog_known": 0.23770491803278687,
+   "route_turns": [
+    [
+     91.0,
+     99.5,
+     -83.1,
+     0.1,
+     true,
+     121.0
+    ]
+   ],
+   "nudges": [
+    [
+     "48",
+     116.9,
+     0.09
+    ],
+    [
+     "53",
+     97.4,
+     0.08
+    ],
+    [
+     "57",
+     92.3,
+     0.02
+    ],
+    [
+     "7",
+     66.9,
+     -0.02
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-b5f5259f-03a9-4853-a0cc-884d74722657": {
+   "scene": "clipgt-b5f5259f-03a9-4853-a0cc-884d74722657",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 508.50055697149696,
+   "turns": [],
+   "objects": 95,
+   "vlog_known": 0.4445534838076546,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-b65e55e9-f3d5-4445-bdbd-325b07a5c493": {
+   "scene": "clipgt-b65e55e9-f3d5-4445-bdbd-325b07a5c493",
+   "route_err": 0,
+   "pieces": 25,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 685.9985026024804,
+   "turns": [],
+   "objects": 13,
+   "vlog_known": 0.6212672978878369,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0": {
+   "scene": "clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 371.16930660778536,
+   "turns": [],
+   "objects": 392,
+   "vlog_known": 0.27956989247311825,
+   "route_turns": [],
+   "nudges": [
+    [
+     "100",
+     111.4,
+     0.05
+    ],
+    [
+     "18",
+     39.0,
+     0.06
+    ],
+    [
+     "268",
+     95.6,
+     0.15
+    ],
+    [
+     "28",
+     106.4,
+     0.11
+    ],
+    [
+     "659",
+     246.7,
+     0.3
+    ],
+    [
+     "667",
+     246.7,
+     0.43
+    ],
+    [
+     "67",
+     173.8,
+     0.11
+    ],
+    [
+     "680",
+     261.5,
+     1.61
+    ],
+    [
+     "684",
+     252.1,
+     0.86
+    ],
+    [
+     "692",
+     73.2,
+     0.5
+    ],
+    [
+     "540",
+     73.9,
+     -1.02
+    ],
+    [
+     "27",
+     89.3,
+     0.31
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633": {
+   "scene": "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 358.5348602794892,
+   "turns": [
+    [
+     95.5,
+     109.5,
+     89.4
+    ]
+   ],
+   "objects": 170,
+   "vlog_known": 0.22253129346314326,
+   "route_turns": [
+    [
+     64.5,
+     80.0,
+     90.8,
+     0.9,
+     true,
+     94.6
+    ]
+   ],
+   "nudges": [
+    [
+     "127",
+     111.7,
+     0.28
+    ],
+    [
+     "21",
+     28.9,
+     1.3
+    ],
+    [
+     "232",
+     123.6,
+     0.21
+    ],
+    [
+     "318",
+     203.5,
+     0.07
+    ],
+    [
+     "330",
+     226.7,
+     0.24
+    ],
+    [
+     "33",
+     83.0,
+     0.9
+    ],
+    [
+     "37",
+     51.3,
+     0.94
+    ],
+    [
+     "38",
+     41.1,
+     0.9
+    ],
+    [
+     "5",
+     19.2,
+     1.58
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-b727530b-d0d4-4ad0-885c-15d14d3a871e": {
+   "scene": "clipgt-b727530b-d0d4-4ad0-885c-15d14d3a871e",
+   "route_err": 0,
+   "pieces": 27,
+   "amb": 7,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 483.91835885048545,
+   "turns": [
+    [
+     306.0,
+     314.5,
+     -85.5
+    ]
+   ],
+   "objects": 201,
+   "vlog_known": 0.5603715170278638,
+   "route_turns": [
+    [
+     276.5,
+     284.5,
+     -85.8,
+     0.04,
+     true,
+     306.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-b88aa3d5-aab8-43d6-82f4-f2334d57be18": {
+   "scene": "clipgt-b88aa3d5-aab8-43d6-82f4-f2334d57be18",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 631.9769014874228,
+   "turns": [
+    [
+     414.0,
+     437.0,
+     -63.1
+    ],
+    [
+     450.5,
+     477.0,
+     111.1
+    ]
+   ],
+   "objects": 42,
+   "vlog_known": 0.5849802371541502,
+   "route_turns": [
+    [
+     384.0,
+     407.0,
+     -63.3,
+     0.02,
+     true,
+     414.0
+    ],
+    [
+     420.5,
+     446.5,
+     108.1,
+     0.02,
+     true,
+     450.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd": {
+   "scene": "clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 6,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.038,
+   "path_m": 335.468599795859,
+   "turns": [
+    [
+     112.0,
+     129.0,
+     90.3
+    ]
+   ],
+   "objects": 87,
+   "vlog_known": 0.20238095238095238,
+   "route_turns": [
+    [
+     82.0,
+     99.0,
+     90.4,
+     0.02,
+     true,
+     112.0
+    ]
+   ],
+   "nudges": [
+    [
+     "7",
+     53.8,
+     0.25
+    ],
+    [
+     "9",
+     39.1,
+     0.06
+    ],
+    [
+     "10",
+     7.1,
+     0.35
+    ],
+    [
+     "4",
+     60.8,
+     0.45
+    ],
+    [
+     "72",
+     70.5,
+     0.01
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc": {
+   "scene": "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 472.5390284313378,
+   "turns": [
+    [
+     198.0,
+     233.0,
+     85.3
+    ]
+   ],
+   "objects": 13,
+   "vlog_known": 0.4118268215417107,
+   "route_turns": [
+    [
+     168.5,
+     203.0,
+     86.1,
+     0.3,
+     true,
+     198.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494": {
+   "scene": "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 393.4558320328156,
+   "turns": [
+    [
+     160.5,
+     193.0,
+     136.8
+    ]
+   ],
+   "objects": 15,
+   "vlog_known": 0.3147208121827411,
+   "route_turns": [
+    [
+     130.5,
+     163.0,
+     136.8,
+     0.02,
+     true,
+     160.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-bbc1699d-be16-42e4-9723-14a45c9c5f59": {
+   "scene": "clipgt-bbc1699d-be16-42e4-9723-14a45c9c5f59",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 451.5001950567475,
+   "turns": [],
+   "objects": 74,
+   "vlog_known": 0.4022099447513812,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f": {
+   "scene": "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+   "route_err": 0,
+   "pieces": 24,
+   "amb": 0,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.052,
+   "path_m": 983.6640012434876,
+   "turns": [
+    [
+     304.5,
+     333.4,
+     -52.7
+    ],
+    [
+     337.9,
+     343.3,
+     46.1
+    ]
+   ],
+   "objects": 63,
+   "vlog_known": 0.7094972067039106,
+   "route_turns": [
+    [
+     296.5,
+     302.5,
+     -52.9,
+     0.78,
+     false,
+     327.3
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-bc309fd6-f660-43eb-84aa-c514bffa305e": {
+   "scene": "clipgt-bc309fd6-f660-43eb-84aa-c514bffa305e",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 311.07990560765546,
+   "turns": [],
+   "objects": 106,
+   "vlog_known": 0.14743589743589744,
+   "route_turns": [],
+   "nudges": [
+    [
+     "10",
+     0.0,
+     1.12
+    ],
+    [
+     "11",
+     11.0,
+     0.6
+    ],
+    [
+     "13",
+     21.9,
+     0.28
+    ],
+    [
+     "25",
+     28.1,
+     0.06
+    ],
+    [
+     "27",
+     2.1,
+     0.92
+    ],
+    [
+     "9",
+     0.0,
+     1.47
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-bd97de34-6f59-455a-93c5-9f469f243b4a": {
+   "scene": "clipgt-bd97de34-6f59-455a-93c5-9f469f243b4a",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 1,
+   "change": 3,
+   "brk": 0,
+   "blended": 3,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.092,
+   "path_m": 488.6913824483599,
+   "turns": [
+    [
+     160.0,
+     174.9,
+     46.6
+    ],
+    [
+     217.4,
+     234.9,
+     101.8
+    ]
+   ],
+   "objects": 107,
+   "vlog_known": 0.4198161389172625,
+   "route_turns": [
+    [
+     139.0,
+     145.5,
+     47.7,
+     0.6,
+     true,
+     168.9
+    ],
+    [
+     187.4,
+     205.9,
+     99.9,
+     0.86,
+     true,
+     217.2
+    ]
+   ],
+   "nudges": [
+    [
+     "195",
+     351.9,
+     0.56
+    ],
+    [
+     "179",
+     271.2,
+     0.77
+    ],
+    [
+     "193",
+     332.6,
+     0.84
+    ],
+    [
+     "176",
+     265.3,
+     0.97
+    ],
+    [
+     "194",
+     351.9,
+     0.4
+    ],
+    [
+     "142",
+     253.7,
+     0.86
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-be0d3628-098d-4ac7-a52c-36b71c50e293": {
+   "scene": "clipgt-be0d3628-098d-4ac7-a52c-36b71c50e293",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.014,
+   "path_m": 566.0000185105567,
+   "turns": [],
+   "objects": 175,
+   "vlog_known": 0.4638447971781305,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-bf1847a9-3112-4ff8-a4dc-8613ad8b2a5b": {
+   "scene": "clipgt-bf1847a9-3112-4ff8-a4dc-8613ad8b2a5b",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 397.999272169048,
+   "turns": [],
+   "objects": 91,
+   "vlog_known": 0.3224592220828105,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-bf56fd00-f06d-4af9-903a-2cf8d0e0589d": {
+   "scene": "clipgt-bf56fd00-f06d-4af9-903a-2cf8d0e0589d",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 4,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 0.99644128113879,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 458.78155034822163,
+   "turns": [],
+   "objects": 328,
+   "vlog_known": 0.4232861806311208,
+   "route_turns": [],
+   "nudges": [
+    [
+     "439",
+     213.7,
+     0.51
+    ],
+    [
+     "469",
+     209.0,
+     0.1
+    ],
+    [
+     "471",
+     314.4,
+     0.35
+    ],
+    [
+     "531",
+     319.7,
+     0.86
+    ],
+    [
+     "622",
+     332.0,
+     0.9
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-c0c88642-b952-47a4-957c-c6ed4d66b2d9": {
+   "scene": "clipgt-c0c88642-b952-47a4-957c-c6ed4d66b2d9",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.011,
+   "path_m": 747.4999947863253,
+   "turns": [],
+   "objects": 141,
+   "vlog_known": 0.6216577540106952,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-c4100c5d-aa42-4e68-a7e8-1704768a453d": {
+   "scene": "clipgt-c4100c5d-aa42-4e68-a7e8-1704768a453d",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 487.9963039835434,
+   "turns": [
+    [
+     309.0,
+     333.0,
+     -53.9
+    ]
+   ],
+   "objects": 79,
+   "vlog_known": 0.46059365404298874,
+   "route_turns": [
+    [
+     279.0,
+     302.0,
+     -52.7,
+     0.01,
+     true,
+     309.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e": {
+   "scene": "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 11,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 0.9975369458128078,
+   "fallback": false,
+   "on_route": 0.047,
+   "path_m": 584.526448947105,
+   "turns": [
+    [
+     261.0,
+     280.5,
+     -87.1
+    ],
+    [
+     426.0,
+     435.0,
+     -69.0
+    ]
+   ],
+   "objects": 100,
+   "vlog_known": 0.5209222886421861,
+   "route_turns": [
+    [
+     230.0,
+     237.9,
+     -49.1,
+     1.23,
+     true,
+     260.0
+    ],
+    [
+     396.3,
+     404.8,
+     -55.0,
+     0.03,
+     true,
+     425.6
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-c5da4975-f324-48bc-823c-885d1e1ae0ea": {
+   "scene": "clipgt-c5da4975-f324-48bc-823c-885d1e1ae0ea",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 407.43496592924157,
+   "turns": [],
+   "objects": 15,
+   "vlog_known": 0.3541666666666667,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-c6a47fa1-6d26-449e-a544-3c5be1051dfd": {
+   "scene": "clipgt-c6a47fa1-6d26-449e-a544-3c5be1051dfd",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 376.0797733031159,
+   "turns": [],
+   "objects": 193,
+   "vlog_known": 0.26790450928381965,
+   "route_turns": [],
+   "nudges": [
+    [
+     "109",
+     153.3,
+     1.03
+    ],
+    [
+     "306",
+     122.8,
+     0.33
+    ],
+    [
+     "203",
+     186.3,
+     0.62
+    ],
+    [
+     "219",
+     170.3,
+     0.61
+    ],
+    [
+     "253",
+     220.2,
+     1.08
+    ],
+    [
+     "248",
+     228.9,
+     1.18
+    ],
+    [
+     "207",
+     175.1,
+     0.67
+    ],
+    [
+     "226",
+     248.2,
+     0.69
+    ],
+    [
+     "225",
+     214.6,
+     0.94
+    ],
+    [
+     "202",
+     248.4,
+     0.59
+    ],
+    [
+     "151",
+     204.0,
+     0.82
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-c7956ed6-0be6-44f2-8066-da068a6352b4": {
+   "scene": "clipgt-c7956ed6-0be6-44f2-8066-da068a6352b4",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 1,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 372.5054656862433,
+   "turns": [],
+   "objects": 205,
+   "vlog_known": 0.24364123159303883,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-c8641276-c887-465d-b88e-df70bd7214b6": {
+   "scene": "clipgt-c8641276-c887-465d-b88e-df70bd7214b6",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 406.8773868560661,
+   "turns": [],
+   "objects": 124,
+   "vlog_known": 0.36319018404907977,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-c8cab401-90c0-4e8c-809d-28d7411119de": {
+   "scene": "clipgt-c8cab401-90c0-4e8c-809d-28d7411119de",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 340.9999945653099,
+   "turns": [],
+   "objects": 232,
+   "vlog_known": 0.13030746705710103,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-c92137b4-0ce7-4d65-a44c-414d7c104b76": {
+   "scene": "clipgt-c92137b4-0ce7-4d65-a44c-414d7c104b76",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 3,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 524.7408818040961,
+   "turns": [
+    [
+     326.5,
+     343.5,
+     -99.2
+    ]
+   ],
+   "objects": 78,
+   "vlog_known": 0.47573739295908657,
+   "route_turns": [
+    [
+     295.0,
+     312.5,
+     -101.9,
+     1.15,
+     true,
+     325.8
+    ]
+   ],
+   "nudges": [
+    [
+     "102",
+     201.5,
+     1.34
+    ],
+    [
+     "1",
+     77.4,
+     1.59
+    ],
+    [
+     "24",
+     63.3,
+     1.39
+    ],
+    [
+     "28",
+     46.8,
+     1.29
+    ],
+    [
+     "2",
+     58.0,
+     1.43
+    ],
+    [
+     "32",
+     97.3,
+     1.39
+    ],
+    [
+     "37",
+     147.9,
+     0.45
+    ],
+    [
+     "46",
+     106.2,
+     1.4
+    ],
+    [
+     "4",
+     31.2,
+     1.41
+    ],
+    [
+     "52",
+     127.8,
+     1.66
+    ],
+    [
+     "55",
+     111.4,
+     1.45
+    ],
+    [
+     "60",
+     147.9,
+     1.32
+    ],
+    [
+     "77",
+     289.4,
+     1.45
+    ],
+    [
+     "78",
+     204.6,
+     1.44
+    ],
+    [
+     "79",
+     138.7,
+     1.34
+    ],
+    [
+     "80",
+     294.6,
+     1.15
+    ],
+    [
+     "81",
+     300.5,
+     0.67
+    ],
+    [
+     "9",
+     19.7,
+     1.52
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-ca173de1-7cc2-4bf9-865a-57c9af85bb8c": {
+   "scene": "clipgt-ca173de1-7cc2-4bf9-865a-57c9af85bb8c",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 428.49957010426573,
+   "turns": [],
+   "objects": 124,
+   "vlog_known": 0.3822843822843823,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-ca481583-5812-4288-ad42-82643cfb7097": {
+   "scene": "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.031,
+   "path_m": 700.5638674684777,
+   "turns": [],
+   "objects": 187,
+   "vlog_known": 0.624376336421953,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ca7accbc-3505-4fe3-9ef8-ad1e5a5041e4": {
+   "scene": "clipgt-ca7accbc-3505-4fe3-9ef8-ad1e5a5041e4",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.039,
+   "path_m": 332.5083742136719,
+   "turns": [],
+   "objects": 33,
+   "vlog_known": 0.1199400299850075,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8": {
+   "scene": "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+   "route_err": 0,
+   "pieces": 4,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 299.9860738892791,
+   "turns": [],
+   "objects": 80,
+   "vlog_known": 0.03993344425956739,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    42.0
+   ]
+  },
+  "clipgt-cbd87234-9d85-48cc-a65c-726c75c7d11b": {
+   "scene": "clipgt-cbd87234-9d85-48cc-a65c-726c75c7d11b",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 402.1687407169731,
+   "turns": [
+    [
+     154.0,
+     167.5,
+     -88.7
+    ]
+   ],
+   "objects": 74,
+   "vlog_known": 0.3200992555831266,
+   "route_turns": [
+    [
+     124.0,
+     137.5,
+     -90.0,
+     0.3,
+     true,
+     154.1
+    ]
+   ],
+   "nudges": [
+    [
+     "61",
+     202.6,
+     0.99
+    ],
+    [
+     "84",
+     236.1,
+     0.13
+    ],
+    [
+     "78",
+     195.0,
+     0.72
+    ],
+    [
+     "114",
+     76.2,
+     1.08
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-cdf95fd1-c0eb-490c-b0a1-42f3244b1bf1": {
+   "scene": "clipgt-cdf95fd1-c0eb-490c-b0a1-42f3244b1bf1",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 4,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.093,
+   "path_m": 493.79715719667604,
+   "turns": [
+    [
+     229.5,
+     237.5,
+     67.4
+    ],
+    [
+     244.8,
+     268.6,
+     62.0
+    ]
+   ],
+   "objects": 145,
+   "vlog_known": 0.4696969696969697,
+   "route_turns": [
+    [
+     199.5,
+     207.9,
+     70.0,
+     0.84,
+     true,
+     229.5
+    ],
+    [
+     214.1,
+     240.3,
+     57.2,
+     0.84,
+     true,
+     243.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ce161092-a921-432d-b2d0-2d50fd7779a6": {
+   "scene": "clipgt-ce161092-a921-432d-b2d0-2d50fd7779a6",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 366.5002195589716,
+   "turns": [
+    [
+     83.5,
+     107.5,
+     89.5
+    ]
+   ],
+   "objects": 355,
+   "vlog_known": 0.291156462585034,
+   "route_turns": [
+    [
+     53.5,
+     77.5,
+     89.5,
+     0.09,
+     true,
+     83.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-ce63741d-b346-433d-8874-c916660180f8": {
+   "scene": "clipgt-ce63741d-b346-433d-8874-c916660180f8",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.039,
+   "path_m": 320.0230132311227,
+   "turns": [
+    [
+     96.5,
+     113.5,
+     91.0
+    ]
+   ],
+   "objects": 98,
+   "vlog_known": 0.16822429906542055,
+   "route_turns": [
+    [
+     66.5,
+     83.5,
+     90.4,
+     0.02,
+     true,
+     96.5
+    ]
+   ],
+   "nudges": [
+    [
+     "30",
+     55.0,
+     0.15
+    ],
+    [
+     "11",
+     45.5,
+     0.49
+    ],
+    [
+     "22",
+     0.0,
+     0.84
+    ],
+    [
+     "12",
+     38.6,
+     0.37
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-d08a71c4-70e9-46aa-8d16-07e42a5560f5": {
+   "scene": "clipgt-d08a71c4-70e9-46aa-8d16-07e42a5560f5",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 8,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 477.16084744613147,
+   "turns": [],
+   "objects": 122,
+   "vlog_known": 0.4476987447698745,
+   "route_turns": [],
+   "nudges": [
+    [
+     "76",
+     179.6,
+     0.41
+    ],
+    [
+     "207",
+     260.5,
+     0.32
+    ],
+    [
+     "212",
+     373.5,
+     0.05
+    ],
+    [
+     "78",
+     118.2,
+     0.26
+    ],
+    [
+     "61",
+     147.8,
+     0.46
+    ],
+    [
+     "176",
+     251.8,
+     0.47
+    ],
+    [
+     "199",
+     272.2,
+     0.47
+    ],
+    [
+     "112",
+     217.5,
+     0.9
+    ],
+    [
+     "113",
+     212.4,
+     0.59
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-d2a7ae02-b6ed-4ffc-b245-be1b4b676c8f": {
+   "scene": "clipgt-d2a7ae02-b6ed-4ffc-b245-be1b4b676c8f",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.007,
+   "path_m": 997.5011179353158,
+   "turns": [],
+   "objects": 40,
+   "vlog_known": 0.7185778668002003,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-d32206ef-c011-47be-8d14-aa3936347008": {
+   "scene": "clipgt-d32206ef-c011-47be-8d14-aa3936347008",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 5,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 427.5380197020548,
+   "turns": [
+    [
+     218.0,
+     231.5,
+     92.0
+    ]
+   ],
+   "objects": 80,
+   "vlog_known": 0.38039673278879815,
+   "route_turns": [
+    [
+     187.0,
+     201.5,
+     92.0,
+     1.36,
+     true,
+     217.1
+    ]
+   ],
+   "nudges": [
+    [
+     "26",
+     142.1,
+     1.23
+    ],
+    [
+     "28",
+     67.2,
+     1.28
+    ],
+    [
+     "32",
+     95.5,
+     1.1
+    ],
+    [
+     "3",
+     85.8,
+     1.05
+    ],
+    [
+     "6",
+     51.7,
+     1.39
+    ],
+    [
+     "71",
+     192.4,
+     1.36
+    ],
+    [
+     "82",
+     157.3,
+     1.08
+    ],
+    [
+     "91",
+     172.9,
+     1.4
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-d5f0f729-9fd0-48b4-9c3d-6aa7ba4d0b61": {
+   "scene": "clipgt-d5f0f729-9fd0-48b4-9c3d-6aa7ba4d0b61",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 8,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.018,
+   "path_m": 517.6331595337656,
+   "turns": [],
+   "objects": 128,
+   "vlog_known": 0.46383799421407906,
+   "route_turns": [],
+   "nudges": [
+    [
+     "14",
+     52.4,
+     0.25
+    ],
+    [
+     "189",
+     263.0,
+     0.29
+    ],
+    [
+     "129",
+     184.0,
+     0.33
+    ],
+    [
+     "251",
+     384.7,
+     0.39
+    ],
+    [
+     "154",
+     221.8,
+     0.49
+    ],
+    [
+     "147",
+     221.6,
+     0.56
+    ],
+    [
+     "207",
+     273.1,
+     0.31
+    ],
+    [
+     "188",
+     351.0,
+     0.45
+    ],
+    [
+     "134",
+     148.2,
+     0.25
+    ],
+    [
+     "148",
+     201.2,
+     0.27
+    ],
+    [
+     "247",
+     278.3,
+     0.06
+    ],
+    [
+     "64",
+     170.3,
+     0.33
+    ],
+    [
+     "49",
+     58.0,
+     0.09
+    ],
+    [
+     "161",
+     206.8,
+     0.2
+    ],
+    [
+     "155",
+     216.8,
+     0.12
+    ],
+    [
+     "8",
+     0.0,
+     0.93
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-d5f732f6-eb2a-4aec-98f0-14d9204091b9": {
+   "scene": "clipgt-d5f732f6-eb2a-4aec-98f0-14d9204091b9",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 341.39221844607835,
+   "turns": [],
+   "objects": 301,
+   "vlog_known": 0.26900584795321636,
+   "route_turns": [],
+   "nudges": [
+    [
+     "540",
+     252.6,
+     0.32
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-d641893f-158c-4c51-bce1-2e7bba558496": {
+   "scene": "clipgt-d641893f-158c-4c51-bce1-2e7bba558496",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.051,
+   "path_m": 297.48550645489445,
+   "turns": [
+    [
+     99.0,
+     119.0,
+     97.3
+    ]
+   ],
+   "objects": 164,
+   "vlog_known": 0.04865771812080537,
+   "route_turns": [
+    [
+     69.0,
+     89.0,
+     97.3,
+     0.02,
+     true,
+     99.0
+    ]
+   ],
+   "nudges": [
+    [
+     "94",
+     192.6,
+     -0.03
+    ]
+   ],
+   "log_s": [
+    30.0,
+    44.6
+   ]
+  },
+  "clipgt-d8bfaaf2-add3-4ed8-8fe6-744c059bbccf": {
+   "scene": "clipgt-d8bfaaf2-add3-4ed8-8fe6-744c059bbccf",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 492.5018549011068,
+   "turns": [],
+   "objects": 8,
+   "vlog_known": 0.4690982776089159,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9": {
+   "scene": "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 4,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 432.0078527363544,
+   "turns": [
+    [
+     127.0,
+     150.5,
+     89.5
+    ]
+   ],
+   "objects": 280,
+   "vlog_known": 0.3972286374133949,
+   "route_turns": [
+    [
+     96.5,
+     120.5,
+     89.5,
+     0.09,
+     true,
+     126.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-db53f106-deda-49d6-828e-8fe911e82d0e": {
+   "scene": "clipgt-db53f106-deda-49d6-828e-8fe911e82d0e",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.032,
+   "path_m": 367.79504164756264,
+   "turns": [],
+   "objects": 165,
+   "vlog_known": 0.24559023066485752,
+   "route_turns": [],
+   "nudges": [
+    [
+     "354",
+     276.9,
+     1.53
+    ],
+    [
+     "1",
+     32.9,
+     0.3
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-db8693db-cd5a-45ab-9bce-6092b8086e1c": {
+   "scene": "clipgt-db8693db-cd5a-45ab-9bce-6092b8086e1c",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 412.1178543056817,
+   "turns": [
+    [
+     251.5,
+     260.0,
+     84.0
+    ]
+   ],
+   "objects": 61,
+   "vlog_known": 0.33777239709443097,
+   "route_turns": [
+    [
+     221.0,
+     230.5,
+     82.3,
+     1.34,
+     true,
+     251.1
+    ]
+   ],
+   "nudges": [
+    [
+     "55",
+     176.2,
+     -0.56
+    ],
+    [
+     "5",
+     19.8,
+     0.25
+    ],
+    [
+     "60",
+     225.6,
+     1.33
+    ],
+    [
+     "67",
+     217.4,
+     1.22
+    ],
+    [
+     "6",
+     7.2,
+     0.13
+    ],
+    [
+     "76",
+     180.7,
+     -0.38
+    ],
+    [
+     "9",
+     13.4,
+     0.46
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90": {
+   "scene": "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.048,
+   "path_m": 294.02013355914437,
+   "turns": [
+    [
+     109.5,
+     122.5,
+     89.7
+    ]
+   ],
+   "objects": 64,
+   "vlog_known": 0.06440677966101695,
+   "route_turns": [
+    [
+     79.5,
+     92.5,
+     89.7,
+     0.03,
+     true,
+     109.5
+    ]
+   ],
+   "nudges": [
+    [
+     "91",
+     57.2,
+     0.54
+    ]
+   ],
+   "log_s": [
+    30.0,
+    48.6
+   ]
+  },
+  "clipgt-dc222bc3-c7bc-47f8-8106-778b3059c53e": {
+   "scene": "clipgt-dc222bc3-c7bc-47f8-8106-778b3059c53e",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 4,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 548.0009731275552,
+   "turns": [],
+   "objects": 164,
+   "vlog_known": 0.4899817850637523,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-dc24d086-af16-4524-9f81-2808b37f2153": {
+   "scene": "clipgt-dc24d086-af16-4524-9f81-2808b37f2153",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 455.5837045530302,
+   "turns": [],
+   "objects": 84,
+   "vlog_known": 0.4140197152245345,
+   "route_turns": [],
+   "nudges": [
+    [
+     "3",
+     145.2,
+     0.9
+    ],
+    [
+     "133",
+     286.6,
+     0.9
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-dc401449-4b7b-42da-86a1-76b903e2290d": {
+   "scene": "clipgt-dc401449-4b7b-42da-86a1-76b903e2290d",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 0,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 429.816549683233,
+   "turns": [],
+   "objects": 68,
+   "vlog_known": 0.3948896631823461,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-dd0f84df-9be3-4e13-91ad-28b83a8669a3": {
+   "scene": "clipgt-dd0f84df-9be3-4e13-91ad-28b83a8669a3",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 1,
+   "change": 3,
+   "brk": 0,
+   "blended": 3,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.224,
+   "path_m": 299.9077425346269,
+   "turns": [
+    [
+     138.0,
+     148.5,
+     -84.5
+    ]
+   ],
+   "objects": 244,
+   "vlog_known": 0.09151414309484193,
+   "route_turns": [
+    [
+     107.4,
+     117.9,
+     -80.6,
+     0.06,
+     true,
+     137.4
+    ]
+   ],
+   "nudges": [
+    [
+     "362",
+     100.3,
+     0.12
+    ]
+   ],
+   "log_s": [
+    30.7,
+    58.3
+   ]
+  },
+  "clipgt-ddb6a43a-f63e-477d-9fa8-bb282fed7454": {
+   "scene": "clipgt-ddb6a43a-f63e-477d-9fa8-bb282fed7454",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 550.9988303208861,
+   "turns": [
+    [
+     33.0,
+     48.0,
+     60.3
+    ]
+   ],
+   "objects": 16,
+   "vlog_known": 0.5058930190389845,
+   "route_turns": [
+    [
+     3.5,
+     18.0,
+     57.7,
+     0.01,
+     true,
+     33.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4": {
+   "scene": "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 502.50147336725684,
+   "turns": [
+    [
+     32.0,
+     51.5,
+     -71.4
+    ]
+   ],
+   "objects": 27,
+   "vlog_known": 0.43495531281032773,
+   "route_turns": [
+    [
+     2.5,
+     22.0,
+     -66.7,
+     0.09,
+     true,
+     32.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d": {
+   "scene": "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 0.9924812030075187,
+   "fallback": false,
+   "on_route": 0.042,
+   "path_m": 310.77130035524385,
+   "turns": [
+    [
+     55.0,
+     73.0,
+     -93.7
+    ]
+   ],
+   "objects": 183,
+   "vlog_known": 0.12520064205457465,
+   "route_turns": [
+    [
+     27.4,
+     44.4,
+     -90.3,
+     0.06,
+     true,
+     56.3
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    29.2,
+    59.5
+   ]
+  },
+  "clipgt-df99cdc4-fef4-43c8-9b16-008239e04c82": {
+   "scene": "clipgt-df99cdc4-fef4-43c8-9b16-008239e04c82",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 398.90341901272313,
+   "turns": [
+    [
+     217.5,
+     229.0,
+     183.0
+    ]
+   ],
+   "objects": 220,
+   "vlog_known": 0.3304130162703379,
+   "route_turns": [
+    [
+     187.5,
+     199.5,
+     183.1,
+     0.04,
+     true,
+     217.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4": {
+   "scene": "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4",
+   "route_err": 0,
+   "pieces": 11,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.027,
+   "path_m": 385.1993817299902,
+   "turns": [
+    [
+     101.5,
+     115.0,
+     -90.0
+    ]
+   ],
+   "objects": 120,
+   "vlog_known": 0.25777202072538863,
+   "route_turns": [
+    [
+     71.5,
+     85.0,
+     -90.0,
+     0.07,
+     true,
+     101.6
+    ]
+   ],
+   "nudges": [
+    [
+     "158",
+     211.9,
+     0.28
+    ],
+    [
+     "177",
+     211.9,
+     0.29
+    ],
+    [
+     "176",
+     150.2,
+     1.06
+    ],
+    [
+     "12",
+     0.0,
+     1.0
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd": {
+   "scene": "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+   "route_err": 0,
+   "pieces": 31,
+   "amb": 5,
+   "change": 5,
+   "brk": 0,
+   "blended": 4,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 517.2428667512752,
+   "turns": [],
+   "objects": 22,
+   "vlog_known": 0.47876447876447875,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e37aa159-7300-4529-a519-0308ddd61134": {
+   "scene": "clipgt-e37aa159-7300-4529-a519-0308ddd61134",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 375.99510697236946,
+   "turns": [
+    [
+     68.5,
+     95.5,
+     88.4
+    ]
+   ],
+   "objects": 136,
+   "vlog_known": 0.2735723771580345,
+   "route_turns": [
+    [
+     38.5,
+     65.5,
+     88.4,
+     0.01,
+     true,
+     68.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf": {
+   "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.026,
+   "path_m": 411.839824056434,
+   "turns": [
+    [
+     88.5,
+     135.5,
+     180.4
+    ]
+   ],
+   "objects": 385,
+   "vlog_known": 0.3563636363636364,
+   "route_turns": [
+    [
+     58.5,
+     105.5,
+     180.8,
+     0.2,
+     true,
+     88.5
+    ]
+   ],
+   "nudges": [
+    [
+     "603",
+     314.2,
+     0.32
+    ],
+    [
+     "617",
+     321.2,
+     1.33
+    ],
+    [
+     "637",
+     311.0,
+     -0.11
+    ],
+    [
+     "681",
+     321.2,
+     1.4
+    ]
+   ],
+   "log_s": [
+    30.0,
+    44.0
+   ]
+  },
+  "clipgt-e632cf52-630f-40df-9f06-d22582feecd0": {
+   "scene": "clipgt-e632cf52-630f-40df-9f06-d22582feecd0",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 464.9999917451932,
+   "turns": [],
+   "objects": 148,
+   "vlog_known": 0.38131041890440387,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e682c5d7-042f-4d5a-8425-f44a68ce8f95": {
+   "scene": "clipgt-e682c5d7-042f-4d5a-8425-f44a68ce8f95",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.015,
+   "path_m": 546.0004495098123,
+   "turns": [],
+   "objects": 372,
+   "vlog_known": 0.4625228519195612,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-e7551f4e-464a-4529-923a-711aa86f125f": {
+   "scene": "clipgt-e7551f4e-464a-4529-923a-711aa86f125f",
+   "route_err": 0,
+   "pieces": 6,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 312.40891020491983,
+   "turns": [
+    [
+     109.5,
+     141.0,
+     189.9
+    ]
+   ],
+   "objects": 61,
+   "vlog_known": 0.17092651757188498,
+   "route_turns": [
+    [
+     78.5,
+     114.5,
+     190.4,
+     1.57,
+     true,
+     109.0
+    ]
+   ],
+   "nudges": [
+    [
+     "1",
+     172.9,
+     0.99
+    ],
+    [
+     "2",
+     57.0,
+     0.24
+    ],
+    [
+     "30",
+     64.9,
+     0.59
+    ],
+    [
+     "3",
+     51.4,
+     0.26
+    ],
+    [
+     "47",
+     162.1,
+     0.43
+    ],
+    [
+     "50",
+     147.0,
+     0.52
+    ],
+    [
+     "62",
+     95.8,
+     0.51
+    ],
+    [
+     "67",
+     77.1,
+     0.39
+    ],
+    [
+     "71",
+     102.4,
+     0.89
+    ],
+    [
+     "81",
+     111.7,
+     0.88
+    ],
+    [
+     "84",
+     119.2,
+     1.54
+    ],
+    [
+     "88",
+     125.6,
+     0.88
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e7db8971-2a3d-4c9a-8968-100852d5acb5": {
+   "scene": "clipgt-e7db8971-2a3d-4c9a-8968-100852d5acb5",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 841.5003299437154,
+   "turns": [],
+   "objects": 29,
+   "vlog_known": 0.6688427299703265,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e7ddb7f0-1f6f-4076-9e02-7765abda065a": {
+   "scene": "clipgt-e7ddb7f0-1f6f-4076-9e02-7765abda065a",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 350.12740670531036,
+   "turns": [
+    [
+     184.5,
+     198.0,
+     86.3
+    ]
+   ],
+   "objects": 426,
+   "vlog_known": 0.198005698005698,
+   "route_turns": [
+    [
+     154.0,
+     167.5,
+     82.1,
+     0.04,
+     true,
+     184.1
+    ]
+   ],
+   "nudges": [
+    [
+     "650",
+     121.2,
+     -0.52
+    ],
+    [
+     "355",
+     8.7,
+     -1.41
+    ]
+   ],
+   "log_s": [
+    30.1,
+    60.5
+   ]
+  },
+  "clipgt-e848c843-d275-4f60-a194-61cc7f699124": {
+   "scene": "clipgt-e848c843-d275-4f60-a194-61cc7f699124",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.024,
+   "path_m": 406.5216768994596,
+   "turns": [
+    [
+     86.5,
+     98.0,
+     -90.4
+    ]
+   ],
+   "objects": 178,
+   "vlog_known": 0.3226993865030675,
+   "route_turns": [
+    [
+     57.0,
+     68.0,
+     -90.2,
+     0.19,
+     true,
+     87.0
+    ]
+   ],
+   "nudges": [
+    [
+     "248",
+     73.8,
+     0.19
+    ],
+    [
+     "208",
+     59.4,
+     0.16
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e87c973b-6ac7-45a1-a58f-fd5d8ac749e5": {
+   "scene": "clipgt-e87c973b-6ac7-45a1-a58f-fd5d8ac749e5",
+   "route_err": 0,
+   "pieces": 23,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 531.9986966980082,
+   "turns": [],
+   "objects": 453,
+   "vlog_known": 0.5014084507042254,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-e904e9c0-9c48-4635-9611-2250d5527d43": {
+   "scene": "clipgt-e904e9c0-9c48-4635-9611-2250d5527d43",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.118,
+   "path_m": 483.9548313433919,
+   "turns": [
+    [
+     231.3,
+     257.8,
+     -54.7
+    ]
+   ],
+   "objects": 162,
+   "vlog_known": 0.4268041237113402,
+   "route_turns": [
+    [
+     201.9,
+     206.4,
+     -47.7,
+     0.82,
+     true,
+     231.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e9384415-5802-47d9-ac6b-d61d48f40dd4": {
+   "scene": "clipgt-e9384415-5802-47d9-ac6b-d61d48f40dd4",
+   "route_err": 0,
+   "pieces": 8,
+   "amb": 2,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 382.5679523108745,
+   "turns": [
+    [
+     185.5,
+     208.0,
+     92.3
+    ]
+   ],
+   "objects": 81,
+   "vlog_known": 0.27249022164276404,
+   "route_turns": [
+    [
+     155.5,
+     178.0,
+     92.3,
+     0.9,
+     true,
+     185.6
+    ]
+   ],
+   "nudges": [
+    [
+     "36",
+     97.4,
+     0.3
+    ],
+    [
+     "47",
+     133.6,
+     0.85
+    ],
+    [
+     "94",
+     157.1,
+     0.9
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-e9990bdd-c70a-4078-9f56-a406d8c43f98": {
+   "scene": "clipgt-e9990bdd-c70a-4078-9f56-a406d8c43f98",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.03,
+   "path_m": 381.88336350437703,
+   "turns": [],
+   "objects": 209,
+   "vlog_known": 0.2901960784313726,
+   "route_turns": [],
+   "nudges": [
+    [
+     "10",
+     23.1,
+     0.39
+    ],
+    [
+     "12",
+     45.8,
+     0.3
+    ],
+    [
+     "132",
+     130.2,
+     0.07
+    ],
+    [
+     "14",
+     50.5,
+     0.34
+    ],
+    [
+     "18",
+     75.7,
+     0.24
+    ],
+    [
+     "21",
+     89.4,
+     0.31
+    ],
+    [
+     "240",
+     183.5,
+     0.47
+    ],
+    [
+     "244",
+     147.3,
+     0.26
+    ],
+    [
+     "247",
+     191.7,
+     0.12
+    ],
+    [
+     "24",
+     136.6,
+     0.31
+    ],
+    [
+     "250",
+     295.6,
+     0.39
+    ],
+    [
+     "252",
+     232.5,
+     0.17
+    ],
+    [
+     "253",
+     142.3,
+     0.4
+    ],
+    [
+     "259",
+     312.1,
+     0.51
+    ],
+    [
+     "265",
+     197.1,
+     0.25
+    ],
+    [
+     "273",
+     203.0,
+     0.07
+    ],
+    [
+     "28",
+     8.6,
+     0.19
+    ],
+    [
+     "29",
+     31.8,
+     0.54
+    ],
+    [
+     "31",
+     3.5,
+     0.25
+    ],
+    [
+     "52",
+     0.0,
+     0.16
+    ],
+    [
+     "59",
+     115.6,
+     0.34
+    ],
+    [
+     "65",
+     54.8,
+     0.2
+    ],
+    [
+     "75",
+     109.7,
+     0.18
+    ],
+    [
+     "82",
+     171.9,
+     0.35
+    ],
+    [
+     "83",
+     207.6,
+     0.37
+    ],
+    [
+     "93",
+     104.4,
+     0.01
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8": {
+   "scene": "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.028,
+   "path_m": 374.98231058069797,
+   "turns": [
+    [
+     40.5,
+     61.5,
+     -85.8
+    ]
+   ],
+   "objects": 149,
+   "vlog_known": 0.2982689747003995,
+   "route_turns": [
+    [
+     12.5,
+     31.5,
+     -83.0,
+     0.18,
+     true,
+     42.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b": {
+   "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 399.55906555983984,
+   "turns": [
+    [
+     84.5,
+     98.0,
+     -89.6
+    ]
+   ],
+   "objects": 139,
+   "vlog_known": 0.33707865168539325,
+   "route_turns": [
+    [
+     54.5,
+     68.0,
+     -90.0,
+     0.36,
+     true,
+     84.5
+    ]
+   ],
+   "nudges": [
+    [
+     "170",
+     252.7,
+     0.42
+    ],
+    [
+     "158",
+     191.8,
+     0.2
+    ],
+    [
+     "75",
+     123.7,
+     0.53
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-ec1d0b2b-c6d5-4b3d-8990-7e2fff7ad05b": {
+   "scene": "clipgt-ec1d0b2b-c6d5-4b3d-8990-7e2fff7ad05b",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 3,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 437.67688109423074,
+   "turns": [],
+   "objects": 209,
+   "vlog_known": 0.38540478905359177,
+   "route_turns": [],
+   "nudges": [
+    [
+     "440",
+     345.6,
+     0.79
+    ],
+    [
+     "454",
+     358.3,
+     -0.94
+    ]
+   ],
+   "log_s": [
+    29.9,
+    60.0
+   ]
+  },
+  "clipgt-eeba2aa9-2cbe-4cb0-8da5-7d9d831a442e": {
+   "scene": "clipgt-eeba2aa9-2cbe-4cb0-8da5-7d9d831a442e",
+   "route_err": 0,
+   "pieces": 13,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.0,
+   "path_m": 652.9999955327838,
+   "turns": [],
+   "objects": 137,
+   "vlog_known": 0.5600612088752869,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-f1069db5-593f-4a28-adef-a1b8bff97c3a": {
+   "scene": "clipgt-f1069db5-593f-4a28-adef-a1b8bff97c3a",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 457.50012697088977,
+   "turns": [],
+   "objects": 142,
+   "vlog_known": 0.36205016357688113,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-f1575120-c0b8-45f3-9bc7-c7bcd76703f1": {
+   "scene": "clipgt-f1575120-c0b8-45f3-9bc7-c7bcd76703f1",
+   "route_err": 0,
+   "pieces": 31,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 875.237616180714,
+   "turns": [],
+   "objects": 102,
+   "vlog_known": 0.696917808219178,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-f18c6340-ab0d-4f06-8185-260b90430062": {
+   "scene": "clipgt-f18c6340-ab0d-4f06-8185-260b90430062",
+   "route_err": 0,
+   "pieces": 3,
+   "amb": 1,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.102,
+   "path_m": 238.74449913875924,
+   "turns": [],
+   "objects": 179,
+   "vlog_known": 0.081419624217119,
+   "route_turns": [],
+   "nudges": [
+    [
+     "1",
+     104.8,
+     1.42
+    ]
+   ],
+   "log_s": [
+    30.0,
+    49.5
+   ]
+  },
+  "clipgt-f3a87e7a-e663-446d-bc27-1cab0c7789d9": {
+   "scene": "clipgt-f3a87e7a-e663-446d-bc27-1cab0c7789d9",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 5,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.019,
+   "path_m": 468.08217803314454,
+   "turns": [],
+   "objects": 139,
+   "vlog_known": 0.4253731343283582,
+   "route_turns": [],
+   "nudges": [
+    [
+     "174",
+     277.2,
+     0.75
+    ],
+    [
+     "262",
+     282.0,
+     0.73
+    ],
+    [
+     "268",
+     271.6,
+     0.63
+    ],
+    [
+     "110",
+     215.0,
+     0.37
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-f65aa80b-eb72-459f-86bb-42e363007e13": {
+   "scene": "clipgt-f65aa80b-eb72-459f-86bb-42e363007e13",
+   "route_err": 0,
+   "pieces": 15,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.025,
+   "path_m": 424.4686058305718,
+   "turns": [],
+   "objects": 120,
+   "vlog_known": 0.3736780258519389,
+   "route_turns": [],
+   "nudges": [
+    [
+     "253",
+     321.6,
+     -1.04
+    ],
+    [
+     "281",
+     355.5,
+     1.2
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-f7ded74f-fbd2-4e57-9ee6-fab842eda85c": {
+   "scene": "clipgt-f7ded74f-fbd2-4e57-9ee6-fab842eda85c",
+   "route_err": 0,
+   "pieces": 17,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 794.0000375877914,
+   "turns": [],
+   "objects": 108,
+   "vlog_known": 0.6477987421383647,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-f8ee31cb-cf0f-45ef-bce5-1b43bd6a4d25": {
+   "scene": "clipgt-f8ee31cb-cf0f-45ef-bce5-1b43bd6a4d25",
+   "route_err": 0,
+   "pieces": 10,
+   "amb": 5,
+   "change": 1,
+   "brk": 0,
+   "blended": 1,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.037,
+   "path_m": 339.98598416642693,
+   "turns": [],
+   "objects": 212,
+   "vlog_known": 0.22173274596182085,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-f9121c36-20d3-42f4-8859-bd9ff300dbe9": {
+   "scene": "clipgt-f9121c36-20d3-42f4-8859-bd9ff300dbe9",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.022,
+   "path_m": 454.8090686929927,
+   "turns": [],
+   "objects": 59,
+   "vlog_known": 0.42151481888035125,
+   "route_turns": [],
+   "nudges": [
+    [
+     "48",
+     310.3,
+     0.98
+    ],
+    [
+     "49",
+     316.2,
+     1.34
+    ],
+    [
+     "83",
+     387.5,
+     -0.95
+    ],
+    [
+     "66",
+     387.7,
+     -0.72
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db": {
+   "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+   "route_err": 0,
+   "pieces": 12,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.023,
+   "path_m": 438.4918240631766,
+   "turns": [
+    [
+     87.5,
+     100.5,
+     -80.7
+    ]
+   ],
+   "objects": 91,
+   "vlog_known": 0.35990888382687924,
+   "route_turns": [
+    [
+     57.5,
+     70.5,
+     -80.8,
+     0.02,
+     true,
+     87.5
+    ]
+   ],
+   "nudges": [
+    [
+     "122",
+     156.3,
+     0.06
+    ],
+    [
+     "133",
+     250.2,
+     0.05
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-fb138448-e925-4205-b3c6-913ac99f186f": {
+   "scene": "clipgt-fb138448-e925-4205-b3c6-913ac99f186f",
+   "route_err": 0,
+   "pieces": 19,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.02,
+   "path_m": 454.0005143066384,
+   "turns": [],
+   "objects": 120,
+   "vlog_known": 0.38571428571428573,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-fbd72c7a-95d0-4c0a-9a4f-e82aea9d3fae": {
+   "scene": "clipgt-fbd72c7a-95d0-4c0a-9a4f-e82aea9d3fae",
+   "route_err": 0,
+   "pieces": 16,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.012,
+   "path_m": 677.5062423593869,
+   "turns": [],
+   "objects": 142,
+   "vlog_known": 0.6138540899042004,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-fbf97438-2a2d-48ed-97a9-a57547dd1fcb": {
+   "scene": "clipgt-fbf97438-2a2d-48ed-97a9-a57547dd1fcb",
+   "route_err": 0,
+   "pieces": 20,
+   "amb": 1,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.054,
+   "path_m": 562.4001506879392,
+   "turns": [],
+   "objects": 111,
+   "vlog_known": 0.5284191829484902,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034": {
+   "scene": "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 2,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.021,
+   "path_m": 441.85710017079,
+   "turns": [
+    [
+     161.5,
+     181.0,
+     -91.7
+    ]
+   ],
+   "objects": 187,
+   "vlog_known": 0.3107344632768362,
+   "route_turns": [
+    [
+     129.5,
+     149.0,
+     -90.0,
+     1.53,
+     true,
+     159.5
+    ]
+   ],
+   "nudges": [
+    [
+     "267",
+     190.3,
+     1.46
+    ],
+    [
+     "255",
+     182.3,
+     1.5
+    ],
+    [
+     "20",
+     56.9,
+     0.1
+    ]
+   ],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-fcd8cc77-7679-47e1-a439-dffef2eaa260": {
+   "scene": "clipgt-fcd8cc77-7679-47e1-a439-dffef2eaa260",
+   "route_err": 0,
+   "pieces": 21,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.008,
+   "path_m": 911.0004127370105,
+   "turns": [],
+   "objects": 90,
+   "vlog_known": 0.7012061403508771,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f": {
+   "scene": "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f",
+   "route_err": 0,
+   "pieces": 5,
+   "amb": 0,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.047,
+   "path_m": 308.5000935825544,
+   "turns": [],
+   "objects": 242,
+   "vlog_known": 0.1050080775444265,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.0
+   ]
+  },
+  "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49": {
+   "scene": "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49",
+   "route_err": 0,
+   "pieces": 14,
+   "amb": 2,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.017,
+   "path_m": 535.0521604200101,
+   "turns": [
+    [
+     36.5,
+     51.5,
+     98.3
+    ]
+   ],
+   "objects": 45,
+   "vlog_known": 0.44402985074626866,
+   "route_turns": [
+    [
+     6.5,
+     20.5,
+     98.2,
+     0.74,
+     true,
+     36.5
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-fda39805-f188-4751-81cb-9de1c5071b5d": {
+   "scene": "clipgt-fda39805-f188-4751-81cb-9de1c5071b5d",
+   "route_err": 0,
+   "pieces": 9,
+   "amb": 7,
+   "change": 2,
+   "brk": 0,
+   "blended": 2,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.041,
+   "path_m": 314.5065534936046,
+   "turns": [
+    [
+     47.0,
+     68.0,
+     -89.3
+    ]
+   ],
+   "objects": 60,
+   "vlog_known": 0.14421553090332806,
+   "route_turns": [
+    [
+     16.0,
+     37.5,
+     -89.4,
+     0.67,
+     true,
+     46.0
+    ]
+   ],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  },
+  "clipgt-ffe5b17d-92bd-4f55-bf77-ad4b0b6e31a3": {
+   "scene": "clipgt-ffe5b17d-92bd-4f55-bf77-ad4b0b6e31a3",
+   "route_err": 0,
+   "pieces": 18,
+   "amb": 7,
+   "change": 0,
+   "brk": 0,
+   "blended": 0,
+   "cov": 1.0,
+   "fallback": false,
+   "on_route": 0.009,
+   "path_m": 805.0005302167463,
+   "turns": [],
+   "objects": 8,
+   "vlog_known": 0.6718362282878412,
+   "route_turns": [],
+   "nudges": [],
+   "log_s": [
+    30.0,
+    60.5
+   ]
+  }
+ },
+ "errors": []
+}

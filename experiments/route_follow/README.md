@@ -387,9 +387,12 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   matcher, pure pursuit, human-speed cruise with a 26 m ramp to 4.6 m/s at every >= 45 deg turn, swept-footprint yield on the replayed
   boxes, a nudge around parked boxes; stop lines ignored) replaces the model's plan in the unchanged AlpaSim loop; a teacher check for
   DAgger, no training. **Held 460: E1 passes, 22 / 24 held turns** (RSG-L18 16 / 14; both failures speed, no zero), mean 0.918 vs 0.881,
-  zeros 22 vs 26, at-fault 13 vs 21, E3 passes. PAI 281: pending. Look at [figs/rule_expert_smoke.png](figs/rule_expert_smoke.png)
+  zeros 22 vs 26, at-fault 13 vs 21, E3 passes. **PAI 281: E2 passes at the line, 29 / 36 strict turns** (RSG 5; shape gate 24 vs 1,
+  runway 15 / 22 vs 3, entry speed 4.6 vs 7.4 m/s), all-281 mean +0.193 [+0.136, +0.250]; failures speed / yield 4, PAI corridor 2,
+  collision 1, wrong chain 0. **Verdict: qualifies as a teacher** (caveats: privileged, stop lines ignored, E2 on the line). Look at [figs/rule_expert_smoke.png](figs/rule_expert_smoke.png)
   (the expert's red path on the dashed chain against the human's blue path through six turns RSG fails or barely makes) and the per-turn
-  list `results/rule_expert/held_XP-L12-E46/xp_turns.md`. Scripts `rf_expert.py` (pack | fig | report), `rf_expert.sh`.
+  list `results/rule_expert/held_XP-L12-E46/xp_turns.md`; [figs/rule_expert_pai_fails.png](figs/rule_expert_pai_fails.png) for the
+  PAI failures (yield waits behind same-direction traffic). Scripts `rf_expert.py` (pack | fig | report), `rf_expert.sh`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane
