@@ -267,6 +267,27 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   straight-through rows sit at 0 and jump, the orange rows scatter around 1.
   Reading 2 (FLOW1's flow head vs its regression twin in closed loop) is in [../flowhead/README.md](../flowhead/README.md): the flow head
   completes 0.5 / 24 held turns vs 11, F1 / F2 refuted.
+- [results/switching/](results/switching/switching.md): PLAN SWITCHING (prereg `plans/2026-10-15-plan-switching-prereg.md`, Amendment 1
+  post hoc; `scripts/rf_switching.py read` on the RECEDING extracts, CPU). Window entry - 20 .. entry + 20 m to the first zero. Per decision:
+  r = plan / route heading over the plan's own arc, j = jump of the plan's 2 s point off the previous plan's path (+ inside), e = the car's
+  offset from the plan of 1 s earlier (+ inside). Gates pass: anchor = controller pose to 0.000 m; the human log treated as a plan switches
+  0.000 with |j_h| 0.015 m. **The plan does not switch.** There are 0 switching pairs (r >= 0.6 next to r <= 0.3) in 1 596 PAI RSG-L18-s0 pairs,
+  1 in 1 580 on APP1X and 0 on every held set. So S1 is 0 / 0, inconclusive by the registered rule. APP1X's "supported" is degenerate
+  (0.001 vs 0). **S2 is refuted** on PAI RSG: median |j| is 0.030 vs 0.058 m, ratio 0.53 [0.21, 1.02]. It is also refuted on RV2a,
+  RV2b, APP1X and held RSG. Failed plans are smoother than completed ones. The car follows each plan closely: |e| is 0.02 vs 0.03 m.
+  d307 M4's 31 % straight / partial was measured against the human's 4 s. On the arc-matched r, failed turns 0-10 m before the entry are
+  S 0.09 / P 0.04 / F 0.86, and 76 % of the variance lies between turns: straight-through turns stay straight throughout. S3 by the
+  registered rule reads "averages the sequence" on PAI (executed / route = 0.83 x mean r - 0.09, R^2 0.73, vs p90 r slope 0.49). The
+  sequence is smooth, though, so the average is just the plans themselves, under-executed. Amendment 1 finds what does separate the
+  groups: **plan creep**. Each new plan starts from the car's actual pose. In failed PAI turns its 2 s point lies outside the previous
+  plan's path by -0.063 vs -0.015 m per metre of travel (diff -0.048 [-0.104, -0.016]); summed over the window that is -2.1 vs -0.4 m
+  (-1.70 [-4.86, -0.81]). In late-wide turns it is -0.133 m / m and -3.7 m. The control, 40-80 m before the entry, is +0.003. Over-turn
+  zeros creep inward (+0.14 m / m). Over the next 2 s the car turns 2.5 deg less than each plan asks, against 1.6 deg more in completed
+  turns (diff -4.1 [-6.6, -2.3] deg). Replications point the same way but the CIs reach 0 (APP1X at matched approach speed: -0.041 vs
+  -0.007 m / m). Late-wide on all 4 PAI checkpoints: -0.100 [-0.138, -0.034]; the 6 held late-wide turns: -0.104. Look at
+  [figs/plan_switching.png](figs/plan_switching.png). Row 1: failed r traces are smooth and never jump between the shaded bands. Row 2:
+  failed j stays small and below 0, while completed j is larger and scatters around 0. Row 4: summed j falls steadily to about -2 m in
+  the failed turns and stays near 0 in the completed ones (382a7247 creeps inward).
 - [results/rule_expert/](results/rule_expert/README.md): RULE EXPERT (prereg `plans/2026-10-15-rule-expert-prereg.md`, Amendment 1): a
   privileged map-based rule planner (`experiments/alpasim/lib/rule_expert.py`, `JEV_EXPERT`: the route-lane chain from rf_corridor's
   matcher, pure pursuit, human-speed cruise with a 26 m ramp to 4.6 m/s at every >= 45 deg turn, swept-footprint yield on the replayed
