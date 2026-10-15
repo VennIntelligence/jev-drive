@@ -237,7 +237,7 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   R 零分 −1.5、均分 +0.018 [+0.006, +0.030]、护栏均分 +0.007 [+0.001, +0.013]，但 GT +0.060（线 +0.03）不过；s1 的 follow 只读到 12 个弯，转弯数不完整。
   LF GT −0.142 m 但护栏均分 −0.013（线 −0.01）不过、held 均分 −0.021；L 零分 +4.0。合成里 R 与 L 的零分代价相抵（R −1.5、L +4.0、RL +0.5）。
   RLF / RLF5k / RLF10k / RLFD 与所有 PAI 读数还在跑；报告在盒上 runs/route_follow/recovery_envelope/RCV*/lines.md。
-- 10-16 07:55 JST：DAGGER-CHECK（两个离线读数，不训练，`experiments/route_follow/results/dagger_check/dagger_check.md`）。
+- 10-16 08:55 JST（盒上 07:43–07:52 CST）：DAGGER-CHECK（两个离线读数，不训练，`experiments/route_follow/results/dagger_check/dagger_check.md`）。
   **读数 A**：on1_RCVall 的 952 行里 k = h（策略在交接决策上自己的状态）82 行、k > h 870 行。留出 log 的 k = h（11 行 / 4 log）上 R / RL / RLF 六个 checkpoint 的模仿 ADE 只变 −0.2 至 −1.5 %（CI 全含 0），plan 动了 0.34–0.47 m，但只有 2–12 % 朝专家；离专家仍是 ADE 3.0 m、4 s 6.0 m、横向 2.6–2.7 m、航向 11–12°。
   训练 log 的 k = h（71 行）降 15–20 %（动的约 80 % 朝专家），仍差 ADE 2.6–2.7 m。k > h：留出 −18 至 −22 %、训练 −27 至 −29 %。**R 学到并迁移的是「接着专家的好轨迹走」，不是「从自己漂出去的地方回来」**。等弧长转弯 R +0.03 / +0.23°，RL +0.21 / +0.53°，RLF +0.55 / +0.95°（同时 4 s 弧长短 0.65–1.08 m）。
   **读数 B**：规则专家（XP-L12-E46）在 on1_L18RSG 全部 17 474 行上从行自己的位姿、实测速度规划（用 d319 各 stage 的包，1 019 / 1 020 场景，无需打包；回放行帧对齐 0 m）。
