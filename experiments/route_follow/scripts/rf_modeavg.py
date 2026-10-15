@@ -586,7 +586,8 @@ def flow(a):
     K = pd.DataFrame(krows)
     res["K"] = {}
     if len(K):
-        K = K.merge(D[["tag", "scene", "d_e", "delta", "delta_arc"]], on=["tag", "scene", "d_e"], how="left")
+        okk = K.h_dpsi >= H_MIN
+        K["delta"] = np.where(okk, np.clip(1 - K.dpsi / K.h_dpsi.where(okk, np.nan), -1, 2), np.nan)
         K.to_csv(out / "ksamples.csv.gz", index=False)
         for nm, z in (("failing", K[~K.completed & (K.delta >= 0.5)]), ("failed_all", K[~K.completed & (K.k_full >= 0)]),
                       ("completed", K[K.completed & (K.k_full >= 0)])):
@@ -598,6 +599,14 @@ def flow(a):
                                 hist={int(c): int(n) for c, n in z.k_full.value_counts().sort_index().items()}, k_sd=float(z.k_sd.median()),
                                 any_full_arc=float((z[z.k_full_arc >= 0].k_full_arc >= 1).mean()) if (z.k_full_arc >= 0).any() else np.nan,
                                 reading="mode exists, selection missing" if share >= 0.5 else "mode absent" if share < 0.1 else "partial")
+    # Amendment 4: the served noise row's lateral bias on straight decisions (all decisions of the strict-turn rollouts)
+    if thk:
+        X = np.concatenate([v["th_k"] for v in thk.values()])
+        m = (np.abs(np.degrees(np.median(X[:, :, -1, 2], axis=1))) < 3.0) & (np.median(X[:, :, -1, 0], axis=1) > 10.0)
+        Y = X[m][:, :, -1, 1]
+        res["row_bias"] = dict(n=int(m.sum()), y4_mean=Y.mean(0).round(3).tolist(), dev_from_median=np.abs(Y - np.median(Y, 1, keepdims=True)).mean(0).round(3).tolist())
+    if a.fig and len(K):
+        fig_flow(K, res, a.fig)
     # F3 from ol_confirm
     if a.confirm:
         cj = json.load(open(a.confirm))
@@ -607,7 +616,7 @@ def flow(a):
     fl = lambda v, p=2: f"{v[0]:+.{p}f} [{v[1]:+.{p}f}, {v[2]:+.{p}f}]"  # noqa: E731
     md = ["# FLOW1 in closed loop: flow head (FMH-F) vs its regression twin (RGH-F), held 460 @18", "",
           "Prereg `experiments/route_follow/plans/2026-10-15-mode-averaging-prereg.md` (Reading 2). Served by the AlpaSim sh30 driver with the "
-          "trajectory head (thead.pt); G-eq passed on all four tags (see `gate.json`). Paired by scene, CIs clustered by log, B 10 000.", "",
+          "trajectory head (thead.pt); G-eq passed on all four tags (`gate.txt`: served vs bench head poses, mean max 0.003-0.004 m, p99 0.012-0.015 m). Paired by scene, CIs clustered by log, B 10 000.", "",
           f"**F1** (strict held turns completed, {res['F1']['turns']} turns, {res['F1']['seeds']}-seed mean): FM {res['F1']['fm_mean']:.1f}, RG "
           f"{res['F1']['rg_mean']:.1f}, FM - RG {fl(res['F1']['diff'], 1)}: **{res['F1']['verdict']}**. Per seed: "
           + "; ".join(f"{k} {fl(v, 0)}" for k, v in res["F1"]["per_seed"].items()) + ". Completed per tag: "
@@ -624,8 +633,40 @@ def flow(a):
         if z.get("n"):
             md.append(f"- {nm}: {z['n']} decisions ({z['turns']} turns), >= 1 full sample on {z['any_full']:.2f} (arc-matched {z['any_full_arc']:.2f}), "
                       f"mean full samples {z['mean_full']:.2f} of 8, histogram {z['hist']}, median sample sd {z['k_sd']:.1f} deg: {z['reading']}")
+    if res.get("row_bias"):
+        b = res["row_bias"]
+        md += ["", f"Amendment 4 (post-hoc, descriptive): on the {b['n']} straight decisions (median sample heading change < 3 deg, > 10 m ahead) of the FM "
+               "strict-turn rollouts, the 4 s lateral offset (left +) per noise row 0-7 is " + ", ".join(f"{v:+.2f}" for v in b["y4_mean"]) +
+               " m; mean distance from the 8 samples' median " + ", ".join(f"{v:.2f}" for v in b["dev_from_median"]) + " m (row 0 is the served plan)."]
     (out / "cl.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
+
+
+def fig_flow(K, res, png):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fg, ax = plt.subplots(1, 2, figsize=(12, 4.6))
+    for nm, z, col in (("failing (served deficit >= 0.5)", K[~K.completed & (K.delta >= 0.5)], "#eb6834"),
+                       ("all failed-turn window decisions", K[~K.completed & (K.k_full >= 0)], "#2a78d6")):
+        h = np.bincount(z.k_full[z.k_full >= 0].astype(int), minlength=9) / max((z.k_full >= 0).sum(), 1)
+        ax[0].step(np.arange(9), h, where="mid", lw=2, color=col, label=f"{nm} ({int((z.k_full >= 0).sum())})")
+    ax[0].set(xlabel="flow samples (of 8) asking >= 0.6 of the human's 4 s heading change", ylabel="share of decisions",
+              title="Is the full turn among the flow head's samples?")
+    ax[0].legend(fontsize=8, frameon=False)
+    b = res.get("row_bias")
+    if b:
+        ax[1].bar(np.arange(8), b["y4_mean"], color=["#eb6834"] + ["#9a9a9a"] * 7, width=0.6)
+        ax[1].axhline(0, color="#555", lw=1)
+        ax[1].set(xticks=np.arange(8), xticklabels=["0 (served)"] + [str(i) for i in range(1, 8)], xlabel="noise row",
+                  ylabel="mean lateral offset at 4 s (m, left +)", title=f"Straight decisions ({b['n']}): served row vs the others")
+    for a_ in ax:
+        a_.grid(alpha=0.25)
+        a_.spines[["top", "right"]].set_visible(False)
+    fg.tight_layout()
+    Path(png).parent.mkdir(parents=True, exist_ok=True)
+    fg.savefig(png, dpi=130)
+    print("figure ->", png)
 
 
 if __name__ == "__main__":
@@ -639,6 +680,6 @@ if __name__ == "__main__":
     r.add_argument("--out", required=True), r.add_argument("--fig", default="")
     f = sp.add_parser("flow")
     f.add_argument("--follow", required=True), f.add_argument("--held", required=True), f.add_argument("--thk", default="")
-    f.add_argument("--confirm", default=""), f.add_argument("--out", required=True)
+    f.add_argument("--confirm", default=""), f.add_argument("--out", required=True), f.add_argument("--fig", default="")
     a = ap.parse_args()
     {"thk": thk, "read": read, "flow": flow}[a.cmd](a)

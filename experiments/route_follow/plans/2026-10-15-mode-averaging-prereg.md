@@ -109,3 +109,6 @@ the figure next to it, a README paragraph in experiments/flowhead. research/deci
    change / the route's own heading change over the plan's 4 s arc a4 from the ego's station (decisions with that route change >= 15 deg),
    its delta_arc, and M4's shares on r_arc, per distance bin and failed / completed. Reading 2's F2 stays as registered (human 4 s);
    the arc-matched version is reported next to it.
+4. (After the Reading 2 read; F1-F3 and the K counts were seen.) Added, descriptive: the 4 s lateral offset of each of the 8 logged flow
+   samples (noise rows 0-7) on the FM rollouts' straight decisions (median sample heading change < 3 deg, > 10 m ahead), to see whether the
+   served fixed noise row carries a lateral bias. Figure `experiments/flowhead/results/closed_loop/cl_samples.png`. Nothing registered changes.

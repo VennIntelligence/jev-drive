@@ -265,6 +265,16 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   the entry. Middle: late-wide's ratio against the human (dashed, piled at 0) moves to about 0.8-0.9 against the road over its own arc
   (solid), while straight-through (green) stays at 0 with a second cluster near 0.45. Right: each turn's decisions; the green
   straight-through rows sit at 0 and jump, the orange rows scatter around 1.
+  Reading 2 (FLOW1's flow head vs its regression twin in closed loop) is in [../flowhead/README.md](../flowhead/README.md): the flow head
+  completes 0.5 / 24 held turns vs 11, F1 / F2 refuted.
+- [results/rule_expert/](results/rule_expert/README.md): RULE EXPERT (prereg `plans/2026-10-15-rule-expert-prereg.md`, Amendment 1): a
+  privileged map-based rule planner (`experiments/alpasim/lib/rule_expert.py`, `JEV_EXPERT`: the route-lane chain from rf_corridor's
+  matcher, pure pursuit, human-speed cruise with a 26 m ramp to 4.6 m/s at every >= 45 deg turn, swept-footprint yield on the replayed
+  boxes, a nudge around parked boxes; stop lines ignored) replaces the model's plan in the unchanged AlpaSim loop; a teacher check for
+  DAgger, no training. **Held 460: E1 passes, 22 / 24 held turns** (RSG-L18 16 / 14; both failures speed, no zero), mean 0.918 vs 0.881,
+  zeros 22 vs 26, at-fault 13 vs 21, E3 passes. PAI 281: pending. Look at [figs/rule_expert_smoke.png](figs/rule_expert_smoke.png)
+  (the expert's red path on the dashed chain against the human's blue path through six turns RSG fails or barely makes) and the per-turn
+  list `results/rule_expert/held_XP-L12-E46/xp_turns.md`. Scripts `rf_expert.py` (pack | fig | report), `rf_expert.sh`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane
@@ -295,5 +305,5 @@ and `labels/{held,zero}.parquet` (decision 275).
 - `rf_cf.py` (scripts): ROUTE-FOLLOW counterfactual
 - `pai_driver.py` (experiments/alpasim/lib): The SH30 family as an AlpaSim PAI-track …
 
-[results/](results/) 84 result files · [figs/](figs/) 32 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 7 entry points
+[results/](results/) 668 result files · [figs/](figs/) 79 figures · [plans/](plans/) 30 live plans · [scripts/](scripts/) 94 entry points
 <!-- files:end -->
