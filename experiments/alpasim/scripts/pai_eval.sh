@@ -5,7 +5,7 @@
 #   pai_eval.sh <out root> <checkpoint tag> <scene list>...      lists: pai_scenes.py tsv (stage <= 1 rows) or plain scene ids
 #   tmux new-window -d -t jev -n pai "bash experiments/alpasim/scripts/pai_eval.sh /data/runs/alpasim/pai_full2 P2H10S-F-s1 /data/runs/alpasim/pai_full/s_*.tsv"
 # Env: CARDS ("0 1"), CONC (4 rollouts per card), NRE_CACHE (pai_run.sh), CHUNK (scenes per stack start, 48: a start costs ~2 min, a failed
-#   chunk is rerun once and loses at most its own scenes), SERVE (driver switches, default the served configuration
+#   chunk is rerun once and loses at most its own scenes), SERVE (driver switches, default the served configuration (JEV_TRACK unset = gate since decision 309; -e JEV_TRACK=0 for the old path)
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), WIZ (extra wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"),
 #   IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
 #   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,

@@ -26,7 +26,8 @@ Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run 
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
 the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; v9 adds the handoff
-guard, which reads the time since the session's first drive call and whether the lead limit cuts the served speed; off by default), JEV_VHIST
+guard, which reads the time since the session's first drive call and whether the lead limit cuts the served speed; **default `gate`** since
+decision 309, JEV_TRACK=0 = the old path; off by default with JEV_EXPERT / JEV_TURN_GAIN), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
 row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
@@ -48,6 +49,12 @@ import time
 from pathlib import Path
 
 import numpy as np
+
+# Serve default (decision 309): JEV_TRACK unset -> `gate` (track_ref v8); JEV_TRACK=0 (or empty) is the old path, the plan handed to the
+# controller as is. Not with the rule expert or the turn gain, which replace or reshape the plan and assert JEV_TRACK off. Set before
+# sh30_driver is imported (it imports track_ref, which reads the environment once).
+if "JEV_TRACK" not in os.environ and not os.environ.get("JEV_EXPERT") and float(os.environ.get("JEV_TURN_GAIN") or 1.0) == 1.0:
+    os.environ["JEV_TRACK"] = "gate"
 
 import sh30_driver as S
 from sh30_driver import common_pb2, egodriver_pb2, egodriver_pb2_grpc, grpc
@@ -411,7 +418,7 @@ def main() -> None:
     if XP.ON:
         LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
     LOG.info("JEV_RM_SC %s", RM_SC or "unset")
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.MODE,
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.NAME,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
