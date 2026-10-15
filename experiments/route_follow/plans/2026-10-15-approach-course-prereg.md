@@ -103,3 +103,23 @@ public guard ~2 card-h per checkpoint. Total ~7 card-h on the box.
 - Identity fails: nothing runs until fixed.
 - Pilot: no weight passes -> stop and report.
 - H1 fails on either seed -> no PAI read, no public guard, not adopted (whatever H2 says).
+
+## Amendment 1 (rows built, identity read; before any pilot read, 2026-10-15 10:30)
+
+- Bit identity (every flag off, 50 eager steps of RSG-L18-s0's command, this code vs `107e2002`): 109 net + 97 adapter tensors identical,
+  dev ADE 0.5284 -> 0.5320 in both (`$DATA_DIR/runs/route_follow/approach/ident.json`, `ident_dev.txt`). PASS.
+- Route consistency (section 1) by geometry, not by the entry point: the PAI route labels (on1_PAIonp route.npz) carry the 40 m near gap
+  and arc offsets shifted from the ego's foot, so "the human's entry point <= 2.5 m from the route" rejected 478 PAI turn rows whose route
+  polyline lies on the human path. Now: the route's valid points within 15 m of the human's entry point (else within 60 m of the ego) have
+  a median distance to the human path <= 2.5 m (rf_apppool.route_check). PAI turn rows 430 -> 769, nuPlan 2 583 -> 2 628.
+- Dev split and clusters by the nuPlan log file, not the log unit (the unit split left 4 dev clusters). PAI: the scene.
+- Counts (`results/approach/rows.md`): train turn rows 3 091 (nuPlan 2 379 in 300 scenes / 63 logs; PAI 712 in 17 scenes), 40-20 m 1 075,
+  20-0 m 2 016, speed term on 1 620; negatives 773; dev 306 turn rows (nuPlan 249 / 11 logs, PAI 57 / 2 scenes) + 313 negatives.
+  >= 1 500: no log-handover supplement. Pool on1_APP = 17 429 S rows + 3 864 approach rows, --on-weight app=turn:2.4288,app=neg:2.4288
+  (~7 approach rows per batch of 128; ~3.5 of the pilot's 64).
+- Human entry state of the train turn rows (median): nuPlan 4.0 m/s, +0.14 m toward the inside of the route, +2.5 deg; PAI 3.3 m/s,
+  -0.52 m, +1.8 deg (PAI lateral is to the PAI route label, see the near-gap note).
+- Held 460 caveat (read from RSG-L18-s0's stored rf_follow, before any new read): the 24 held turns start a median 5.0 m (q25 3.8, q75 7.0)
+  before the entry; the approach course has at most a few metres of runway there. H2 stays as registered; the PAI 281 read (rollouts from
+  well before the entry) is where the approach is exercised.
+- Pilots launched: APP1P1 / APP1P3-L18-s0 (W 1 / 3) and the control APP1P0-L18-s0 (W 0, same pool and draws).
