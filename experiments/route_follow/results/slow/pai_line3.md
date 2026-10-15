@@ -26,7 +26,7 @@ Reading (facts only; the decision is the main session's):
 - S2 and S3 add 6 zeros over the reference (77 vs 71, line +3), with fewer collision zeros (-2) and fewer rear-endings (-7 to -10); the exam-72 CI is wide (about +-0.06) in every arm.
 - Together with lines 1-2 (`lines12.md`: S1, S2 fail both, S3 fails line 1) no arm is adopted by prereg line 4.
 
-Run notes: RSGS1 ran 00:07-00:47 JST on cards 0 1 (8062 s). RSGS2 collided with the spin_v9 jlon read on card 1 (chunks c001-c007 failed twice within seconds,
+Run notes: RSGS1 ran 22:33-00:47 JST on cards 0 1 (8062 s). RSGS2 collided with the spin_v9 jlon read on card 1 (chunks c001-c007 failed twice within seconds,
 OOM / port clash, logs under `v2pai/RSGS2-L18-s0-gate/failed/`); it was resumed in the same run dir (card 0 from 01:09 JST, card 1 joined at 02:44 when jlon finished),
 so all 8 chunks are complete reads of the same checkpoint and the 281 scenes are paired as above. RSGS3 ran 04:21-06:37 JST on both cards (8196 s).
 Line 3 extracted with the Tokyo queue `/data/runs/route_follow/slow/queue_night.sh` (rf_tax extract + decision slim + `rf_londiag.py pai` in a numpy/pandas venv,

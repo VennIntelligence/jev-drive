@@ -296,6 +296,8 @@ def cmd_b(a):
         df["stop_legal"] = ~(df.stop_ex_xp > 0.05)
         df["disagree"] = (df.d2 > D2_M) | (df.dh4.abs() > H4_DEG)
         df["cand"] = df.xp_free & df.stop_legal & df.disagree
+        df["cand_nohit"] = df.cand & (df.xp_hits == 0)                     # the expert's plan not shortened by its yield rule
+        df["cand_lat"] = df.xp_free & df.stop_legal & ((df.lat2.abs() > D2_M) | (df.dh4.abs() > H4_DEG))   # lateral / heading only
         # failure windows: decision 319's units and route_dominance's states
         U = list(csv.DictReader(open(R_ / "experiments/route_follow/results/rewind_onpol_all/units.csv")))
         at = {(s, int(kk)): i for i, (s, kk) in enumerate(zip(scene.tolist(), k.tolist()))}
@@ -350,7 +352,11 @@ def cmd_b(a):
                         yield_rows=int(e.cand.sum()), yield_scenes=int(e[e.cand].scene.nunique()), yield_logs=int(e[e.cand].log.nunique()),
                         yield_train_rows=int((e.cand & ~e.dev).sum()), yield_train_scenes=int(e[e.cand & ~e.dev].scene.nunique()),
                         yield_train_logs=int(e[e.cand & ~e.dev].log.nunique()), yield_own=int((e.cand & ~e.replay).sum()),
-                        yield_share=float(e.cand.mean()), n_logs_ci=len(set(g)))
+                        yield_share=float(e.cand.mean()), n_logs_ci=len(set(g)), xp_hit_share=float((e.xp_hits > 0).mean()),
+                        yield_nohit_rows=int(e.cand_nohit.sum()), yield_nohit_scenes=int(e[e.cand_nohit].scene.nunique()),
+                        yield_lat_rows=int(e.cand_lat.sum()), yield_lat_scenes=int(e[e.cand_lat].scene.nunique()),
+                        yield_lat_logs=int(e[e.cand_lat].log.nunique()), yield_lat_train_rows=int((e.cand_lat & ~e.dev).sum()),
+                        lat2_med=float(e.lat2.abs().median()), lon2_med=float(e.lon2.abs().median()), lon4_med_signed=float(e.lon4.median()))
         rec = dict(pool="on1_L18RSG", rows=N, scenes=int(len(set(scene))), packs=len(pack), scenes_no_pack=len(miss), no_pack=miss[:50],
                    expert_rows=int(has.sum()), expert_errors=int((info[:, 5] == 1).sum()), served_vs_tab=chk_served,
                    frame_check_replay_k01=dict(median=float(np.nanmedian(dlog[k <= 1])), p95=float(np.nanpercentile(dlog[k <= 1], 95)),
