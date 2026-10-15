@@ -100,3 +100,35 @@ spins), rf_appread.py (the 22 runway turns, results/approach/pai_runway22.txt).
 - Held rollouts are 18 decisions (9 s): an expert slower than the human through a turn can end `short` (the human finished the turn by
   construction of the turn set). This is counted as a speed failure, not excused.
 - One run per set (the simulator is deterministic per chunk list; d215's cm-level numerics remain).
+
+## Amendment 1 (2026-10-15, after the smoke, before any full read)
+
+Smoke runs: box `$DATA_DIR/runs/route_follow/rule_expert/smoke/XP-L12-E46{,-n1,-n2}`, Tokyo `/data/runs/route_night/expert/smoke/XP-L12-E46{,-n1,-n2}`;
+figure `figs/rule_expert_smoke.png` (n2; red = expert, orange = RSG-L18-s0, blue = human log, dashed = the expert's path, circle / square =
+turn entry / exit, red dots = decisions with a yield contact). Three fixes, each from one smoke scene:
+
+1. **Chain start (pack).** e14711ef: the human starts inside the junction, the first log samples match no lane and the chain began on the
+   neighbouring lane's connector about 4 m to the side. Fix: the path is the chain only where it lies within 2.5 m of the route at the same
+   route station; elsewhere (or where no piece exists) the route polyline itself (the log prefix before the route start), bad stretches
+   dilated 5 m, weight smoothed over 10 m (`rf_expert.merge_route`, index `on_route`: held 389 / 460 scenes use the route somewhere, mean
+   share 0.145 of the stations, mostly beyond the 150 m lane extract at the route's far end; PAI 263 / 281, 0.032).
+2. **Parked boxes (pack).** 22fa5c92: the expert waited behind a parked car standing 0.7 m into the exit lane until the clip ended
+   (`short_slow`); the human passed it. Fix: the path is shifted sideways around replayed boxes whose centre moves < 1 m over their whole
+   track and whose corners reach within (ego half width + 0.3 m) of the path: the smaller of the left / right shifts that clears it by 0.3 m,
+   none above 1.8 m (blocked lane: the yield rule stops), held from 12 m before to 8 m after the box with 10 m cosine ramps
+   (`rf_expert.nudge`; held 87 scenes / 146 boxes, PAI 87 scenes / 478 boxes).
+3. **Yield as registered.** The first implementation tested contact at equal times (plan pose at t vs box at t). In 22fa5c92 (run n1) it let
+   the ego creep into a left turn's conflict zone and stop there, and the oncoming car turning across hit its front (`collision_at_fault`).
+   Now the registered rule: the plan's swept footprint within 3 s (poses at 0.1 s, the current pose excluded) against the boxes ahead at
+   any time within the same 3 s; stop 1.5 m before the first intersected pose. "Ahead" = box centre ahead of the ego box centre at t0
+   (followers and boxes beside are not yielded to), boxes appearing within 40 m during the window included, boxes touching the ego at t0
+   ignored.
+
+Smoke outcome with all three (n2): PAI 3 / 3 strict turns completed (22fa5c92 1.00, 3232fdb7 1.00, 9f393c8a 0.95; RSG 0 / 3, all zeros);
+held 2 / 3 completed (e14711ef 1.00 where RSG is an offroad zero, 77155a60 1.00; e9cfc98f `short`, 0.70: the human starts from rest and
+accelerates through that turn at 6-8 m/s, the expert holds V_E = 4.6 m/s and does not reach exit + 10 m within 18 decisions). No speed
+constant is changed: the full reads use the registered variant XP-L12-E46 with code `rf_expert.py` / `rule_expert.py` at this commit
+and packs rebuilt with fixes 1-2 (`pack_held`, `pack_pai`).
+
+Pre-declared exploratory read (cannot change the verdict): if the held per-turn list shows >= 2 `speed` failures, one held 460 read at
+`--expert-entry-v 6.0` (label XP-L12-E60), reported beside the registered one.

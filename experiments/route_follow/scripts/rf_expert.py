@@ -421,7 +421,7 @@ def fig(a):
                 ax.plot(*q, marker="o" if mk == "|" else "s", ms=5, mfc="none", mec="k", zorder=4)
         xs = [LP[:, 0]]
         ys = [LP[:, 1]]
-        title = [sc[:8]]
+        title = [sc[7:15] if sc.startswith("clipgt") else sc[-8:]]
         for (lab, D), col in zip(runs, colors):
             if sc not in D:
                 continue
