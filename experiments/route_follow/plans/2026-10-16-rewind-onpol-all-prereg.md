@@ -68,3 +68,16 @@
 - 结果：`experiments/route_follow/results/rewind_onpol_all/`（rewind_onpol_all.md、逐单元 CSV、units.csv、read.json / summary.json、from_D 文件）。
 - 盒：`$DATA_DIR/runs/route_follow/rewind_onpol_all/`（stage 目录、包、`rows.csv` = 训练器要的行清单：scene、k、Δ、h、闸标志、专家 session 的 run 目录 + rollout id）。
 - research/next-round/turn-night.md 一条、README 一段、决策文件 + decisions.md 一行。
+
+## 补记 1（读数之后，只记执行偏差，不改定义，2026-10-16 02:40 盒时间）
+
+- 场景数：存档 roll 的 results-summary 有 1 031 个场景（follow 表 / inventory 的 1 021 不含 18 决策时模拟器出错的 10 个）。按「一个不排除」全跑；30 决策下
+  17 个场景模拟器报错（route folds back on itself，没有 session），读数 1 014 个场景。
+- smoke（2 个）与 s50 在 smoke 读完后自动接上（--after），两者一起检查：交接前 plan / 轨迹 / v(h) 与 identity 逐位相同（s50 14 / 14），
+  tfail、包、D、read 都通；4109b79d 的日志在 token 后 6 s 结束（15 个决策），在 15 s 窗口下不是严格转弯。
+- rest 的 tfail 在 979 个场景里有 154 个 KeyError（`drive_records` 找不到 session；集中在列表末尾的 c27–c31，事后同一文件读得到，原因未查明，暂当瞬态）。
+  第一次合并读数（143 个转弯）因此不完整：发布的 `rows/` 改名 `rows_partial_0105/`（加 INCOMPLETE 标记；RCVL / RCVR0 没有用它）。
+  修补：在 rest 的 identity run 上重跑 tfail（`restb`，只剩那 17 个模拟器错误），只对新出现的 14 个 event / off 单元跑 D2 / D3（同包、同代码），
+  合并读数 smoke + s50 + rest + restb（restb 的单元覆盖 rest 的）。D 结果与 rest 已跑的单元不重复。
+- 代码在读数期间加了三处只影响读出的改动（rows 带 completed / zero_free / 闸标志并发布到 rows/；d316 重叠只算本读数覆盖的场景；完成但被后续零分排除的分解），
+  rollout 与单元定义未变。

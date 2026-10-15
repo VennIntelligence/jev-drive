@@ -211,3 +211,8 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   弯入口超速 −65 %、空路 plan / 喂入 +0.02、等弧长转弯 +0.42°），01:06 CST 起全量（RCVL-L18-s{0,1} → held / 公开 / 盒上 PAI 281 → 报告；盒上 PAI 要等 118 个场景下载和 RSG 盒上参照）。
   R0 在两个剂量下留出 log 的模仿只降 10.5 / 15.7 %（线 20 %），停；但它的 plan 在弯前多转 0.34–0.43°。RL0 未跑。R / RL 等全场景倒回（d319）的行。
   同输入转弯仪器离线复现了 APP1X 的欠转（−1.64°），新加的等弧长读数把「变慢少走」与「少转」分开。
+- 10-16 02:40：REWIND-ONPOL-ALL（d319，不训练）：d316 的倒回交接推广到整个 onpol-train（1 031 场景，17 个模拟器报错，读 1 014；30 决策，转弯窗口到决策 29）。
+  166 个严格转弯（d316 的 18 决策窗口下只有 64），失败 95，交接 78 个 event / off；专家 Δ 2 / 3 s 完成 0.65 / 0.68，h 后零分 25 / 23。
+  **标签行（完成且 h 后无零分，junction 段，2 Hz）1 064 行 / 49 个弯 / 36 log；过 PAI 闸 542（29 弯），过 nuPlan 重标定闸 493（26 弯）**，前 3 个弯占 11–23 %。
+  训练器行清单：盒上 `runs/route_follow/rewind_onpol_all/rows/rows.csv`（README 同目录；`label` 列 = 登记标签集，`rows_partial_0105/` 是不完整的第一次读数，勿用）。
+  `experiments/route_follow/results/rewind_onpol_all/rewind_onpol_all.md`。
