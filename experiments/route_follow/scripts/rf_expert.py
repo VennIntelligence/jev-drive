@@ -10,8 +10,10 @@ never written.
         (per scene: pieces, ambiguous samples, lane changes, breaks, fallback, path length, turns, objects; errors)
         Chain: rf_corridor.SceneMap.match on the log before the route start + AlpaSim's MAP route (40 m) generated along the log's 0.5 s
         poses, ambiguous candidates resolved toward the route points; pieces joined at the midpoint between their station ranges, a lane
-        change blended (smoothstep) over [mid - 15, mid + 15] m inside both pieces' overlap; resampled at 0.5 m; 30 m straight before the
-        start, 150 m after the end. No piece -> the route polyline itself (fallback).
+        change blended (smoothstep) over [mid - 15, mid + 15] m inside both pieces' overlap; Amendment 1: where the chain lies > 2.5 m from
+        the route at the same station (or is absent: the log prefix before a chain that starts late), the route polyline is used instead
+        (dilated 5 m, weight smoothed over 10 m; index `on_route` = that share); resampled at 0.5 m; 30 m straight before the start,
+        150 m after the end. No piece -> the route polyline itself (fallback).
   fig   (repo .venv / host python3 with matplotlib, shapely)
         rf_expert.py fig --pack DIR --runs LABEL=<run root | run dir>,.. ... --scenes s1,s2,.. --out PNG
         one panel per scene: road area / lanes (grey), the human log (blue), the expert chain (black dashed, turn entry / exit ticks),
@@ -34,7 +36,7 @@ import numpy as np  # noqa: E402
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE)] + ([str(HERE.parents[1] / "junction_eyes" / "lib")] if len(HERE.parents) > 2 else [])
 
-STEP, PRE_M, POST_M, BLEND = 0.5, 30.0, 150.0, 15.0
+STEP, PRE_M, POST_M, BLEND, ROUTE_TOL = 0.5, 30.0, 150.0, 15.0, 2.5
 TURN_WIN, TURN_DEG, CHORD = 30.0, 45.0, 5.0
 GEO_R = 60.0
 
@@ -75,7 +77,7 @@ def assemble(pieces):
     """rf_corridor.SceneMap.match pieces (ref: x, y, heading, route station) -> path (n, 2) in route-station order, lane changes blended."""
     P = [p for p in pieces if p.get("ref") is not None and len(p["ref"]) >= 2]
     if not P:
-        return None, 0
+        return None, None, 0
     lo, hi = P[0]["ref"][0, 3], P[-1]["ref"][-1, 3]
     g = np.arange(lo, hi, STEP)
     bnd = np.maximum.accumulate(np.array([0.5 * (P[k]["s1"] + P[k + 1]["s0"]) for k in range(len(P) - 1)]))
@@ -98,7 +100,26 @@ def assemble(pieces):
         w = (u * u * (3 - 2 * u))[:, None]
         xy[m] = (1 - w) * f(a, g[m]) + w * f(b, g[m])
         nlc += 1
-    return dedup(xy, 0.05), nlc
+    return g, xy, nlc
+
+
+def merge_route(g, xy, Rx, Sx):
+    """Amendment 1: the chain where it lies within ROUTE_TOL of the route at the same route station, else the route polyline itself (the
+    log prefix before the route start); the bad stretches dilated by 5 m, the weight smoothed over 10 m. -> path, share of stations on the
+    route."""
+    q = np.arange(0.0, Sx[-1], STEP)
+    R = np.c_[np.interp(q, Sx, Rx[:, 0]), np.interp(q, Sx, Rx[:, 1])]
+    C = R.copy()
+    good = np.zeros(len(q), bool)
+    if g is not None and len(g):
+        m = (q >= g[0]) & (q <= g[-1])
+        C[m] = np.c_[np.interp(q[m], g, xy[:, 0]), np.interp(q[m], g, xy[:, 1])]
+        good[m] = np.hypot(*(C[m] - R[m]).T) <= ROUTE_TOL
+    n = int(round(5.0 / STEP))
+    bad = np.convolve((~good).astype(float), np.ones(2 * n + 1), mode="same") > 0
+    w = np.convolve(np.pad((~bad).astype(float), 2 * n, mode="edge"), np.ones(4 * n + 1) / (4 * n + 1), mode="valid")
+    out = w[:, None] * C + (1 - w[:, None]) * R
+    return dedup(out, 0.05), float((w < 0.5).mean())
 
 
 def extend(X):
@@ -228,11 +249,10 @@ def pack_job(job):
     Sx = stations(Rx)
     M = CO.SceneMap(sc)
     ch = M.match(Rx, Sx, Rx)
-    X, nlc = assemble(ch["pieces"])
+    g, xy, nlc = assemble(ch["pieces"])
+    X, on_route = merge_route(g, xy, Rx, Sx)
     meta.update(pieces=len(ch["pieces"]), amb=int(ch["n_amb"]), change=ch["trans"].count("change"), brk=ch["trans"].count("break"),
-                blended=nlc, cov=float(ch["cov"].mean()) if len(ch["cov"]) else 0.0, fallback=X is None or len(X) < 4)
-    if meta["fallback"]:
-        X = Rx
+                blended=nlc, cov=float(ch["cov"].mean()) if len(ch["cov"]) else 0.0, fallback=g is None, on_route=round(on_route, 3))
     P = extend(X)
     S = stations(P)
     h = heading(P, S)
