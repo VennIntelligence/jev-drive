@@ -281,6 +281,15 @@ def table(a):
                                                    r["outcome"], r["kind"], r.get("settle_s"), _f(r["v_win_end"]), _f(r["v_end"]), int(r["rear_after"]),
                                                    int(r["at_fault"]), int(r.get("shape_ok", False)), _f(r.get("pre_plan_maxdiff"), 6),
                                                    _f(r.get("pre_track_maxdiff"), 6), int(by[s].get("xp0", {}).get("completed", False)))))
+    L += ["", "Exploratory (Amendment 1): expert outcome per Delta, and completion among units the expert was not rear-ended in", "",
+          "| Delta | completed | event (collision / offroad / corridor) | off | short_rear | short_slow | completed / (n - short_rear) |", "|--:|--:|--:|--:|--:|--:|--:|"]
+    for d in DELTAS:
+        xr = [by[s][f"xpD{d}"] for s in fail if f"xpD{d}" in by[s] and not by[s][f"xpD{d}"].get("missing")]
+        c = _count(r["outcome"] for r in xr)
+        ev = _count(r["kind"] for r in xr if r["outcome"] == "event")
+        nr = len(xr) - c.get("short_rear", 0)
+        L.append(f"| {d} s | {c.get('completed', 0)} | {c.get('event', 0)} ({ev.get('collision', 0)} / {ev.get('offroad', 0)} / {ev.get('corridor', 0)}) | "
+                 f"{c.get('off', 0)} | {c.get('short_rear', 0)} | {c.get('short_slow', 0)} | {c.get('completed', 0)} / {nr} |")
     L += ["", "Read: units = strict turns the identity (RSG-L18-s0 alone, the same box session) failed (`event` / `off`) whose handover "
           "h = k_fail - 10 Delta is >= 17. Policy control = the identity rollout (box sessions are bit-identical, so the policy handed back the "
           "rewound state reproduces it; checked per session below). CI: bootstrap over scenes (10 000)."]
@@ -339,7 +348,7 @@ def fig(a):
     import matplotlib.pyplot as plt
     sys.path.insert(0, str(HERE.parents[2] / "research"))
     import plot_style as PS
-    PS.apply() if hasattr(PS, "apply") else None
+    PS.apply()
     X = {s["scene"][7:15]: s for s in json.loads(Path(a.read).read_text())["scenes"]}
     pick = a.scenes.split(",")
     figr, axs = plt.subplots(1, len(pick), figsize=(6.875, 6.875 / len(pick) + 0.4))
@@ -373,12 +382,12 @@ def fig(a):
         ax.set_xlim(c0[0] - r0, c0[0] + r0)
         ax.set_ylim(c0[1] - r0, c0[1] + r0)
         ax.set_aspect("equal")
+        ax.grid(False)
         ax.set_xticks([]); ax.set_yticks([])  # noqa: E702
         ax.text(0.02, 0.98, f"{s8} ({X[s8]['tfail']['outcome']})", transform=ax.transAxes, va="top", fontsize=7)
         ax.legend(fontsize=5.5, loc="lower right", frameon=False)
     figr.tight_layout()
-    figr.savefig(a.out, dpi=300)
-    figr.savefig(Path(a.out).with_suffix(".pdf"))
+    PS.save(figr, str(Path(a.out).with_suffix("")))
     print("->", a.out)
 
 

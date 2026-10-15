@@ -11,7 +11,7 @@
 #   rf_rewind.sh collect <root>                        read (all scenes) + table -> <root>/{read.json, rewind.md, rewind.csv}
 # Env: LIST (scene list, default results/pai281/strict36.txt), PACK (expert packs, $DATA_DIR/runs/route_follow/rewind/pack_pai: Tokyo's
 #   pack_pai of the 36 scenes), SMOKE (1: phase B adds `idB`, a second identity session), PRIO (pool priority, 6: below the running lanes),
-#   JEV_PY (python with numpy; jobs run from a worktree without .venv). Expert variant XP-L12-E46 (rule_expert defaults: lookahead 1.2 s,
+#   JEV_PY (python with numpy; jobs run from a worktree without .venv), RW_VRAM (pool declaration, 22; measured peak 19.3 GB = phase B's 3 launches), RW_HIST (history key, alpasim-p4c1). Expert variant XP-L12-E46 (rule_expert defaults: lookahead 1.2 s,
 #   entry 4.6 m/s). Serving as r281/rsg: SH30_TAG=RSG-L18-s0 JEV_VCONT=1.0 JEV_LEAD=1, gains 20, send_recording_ground_truth=true.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
@@ -84,8 +84,8 @@ PY
 )
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
   col=(); [[ $N == all ]] && col=(--collect "env JEV_PY=$PY bash $W/experiments/route_follow/scripts/rf_rewind.sh collect $O")
-  .venv/bin/python -m jevdrive.cl fanout --name rw --arms "$arms" --vram 22 --cpu 4 --ram 32 --timeout-h 3 --tries 2 --priority ${PRIO:-6} \
-    --env CL_HIST_KEY=alpasim-p4c1 --env "JEV_PY=$PY" --env "PACK=$PACK" --env "LIST=$LIST" ${SMOKE:+--env SMOKE=1} \
+  .venv/bin/python -m jevdrive.cl fanout --name rw --arms "$arms" --vram ${RW_VRAM:-22} --cpu 4 --ram 32 --timeout-h 3 --tries 2 --priority ${PRIO:-6} \
+    --env CL_HIST_KEY=${RW_HIST:-alpasim-p4c1} --env "JEV_PY=$PY" --env "PACK=$PACK" --env "LIST=$LIST" ${SMOKE:+--env SMOKE=1} \
     --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$W/experiments/route_follow/scripts/rf_rewind.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$(grep -o "clipgt-$a[0-9a-f-]*" "$LIST" | head -1); mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
 collect)
