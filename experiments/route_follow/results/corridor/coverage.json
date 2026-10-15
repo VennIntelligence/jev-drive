@@ -1,0 +1,199 @@
+{
+ "all decisions|held": {
+  "n": 48774,
+  "found": 0.9798868249477181,
+  "amb": 0.01867798417189486,
+  "found_h": 0.9803173822118342,
+  "rollouts": 2712,
+  "scenes": 452
+ },
+ "all decisions|pai": {
+  "n": 55693,
+  "found": 0.9998204442209973,
+  "amb": 0.35708257770276336,
+  "found_h": 0.999084265527086,
+  "rollouts": 281,
+  "scenes": 281
+ },
+ "all decisions|set held_APP1X_s0": {
+  "n": 8129,
+  "found": 0.9804403985730102,
+  "amb": 0.01882150325993357,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set held_RBSG2_s0": {
+  "n": 8129,
+  "found": 0.9790872186000739,
+  "amb": 0.01820642145405339,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set held_RSG_s0": {
+  "n": 8129,
+  "found": 0.9805634149341862,
+  "amb": 0.01882150325993357,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set held_RSG_s1": {
+  "n": 8129,
+  "found": 0.9803173822118342,
+  "amb": 0.018698486898757534,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set held_RV2c_s0": {
+  "n": 8129,
+  "found": 0.979702300405954,
+  "amb": 0.01882150325993357,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set held_RV2c_s1": {
+  "n": 8129,
+  "found": 0.9792102349612498,
+  "amb": 0.018698486898757534,
+  "found_h": 0.9803173822118342,
+  "rollouts": 452,
+  "scenes": 452
+ },
+ "all decisions|set pai": {
+  "n": 55693,
+  "found": 0.9998204442209973,
+  "amb": 0.35708257770276336,
+  "found_h": 0.999084265527086,
+  "rollouts": 281,
+  "scenes": 281
+ },
+ "strict-turn window (ego)|held": {
+  "n": 2108,
+  "found": 0.961100569259962,
+  "amb": 0.0,
+  "found_h": 0.9516129032258065,
+  "rollouts": 144,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|pai": {
+  "n": 3755,
+  "found": 1.0,
+  "amb": 0.6985352862849534,
+  "found_h": 1.0,
+  "rollouts": 35,
+  "scenes": 35
+ },
+ "strict-turn window (ego)|set held_APP1X_s0": {
+  "n": 361,
+  "found": 0.9556786703601108,
+  "amb": 0.0,
+  "found_h": 0.9473684210526315,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set held_RBSG2_s0": {
+  "n": 347,
+  "found": 0.9596541786743515,
+  "amb": 0.0,
+  "found_h": 0.9510086455331412,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set held_RSG_s0": {
+  "n": 360,
+  "found": 0.9611111111111111,
+  "amb": 0.0,
+  "found_h": 0.9527777777777777,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set held_RSG_s1": {
+  "n": 367,
+  "found": 0.9673024523160763,
+  "amb": 0.0,
+  "found_h": 0.9536784741144414,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set held_RV2c_s0": {
+  "n": 337,
+  "found": 0.9614243323442137,
+  "amb": 0.0,
+  "found_h": 0.9525222551928784,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set held_RV2c_s1": {
+  "n": 336,
+  "found": 0.9613095238095238,
+  "amb": 0.0,
+  "found_h": 0.9523809523809523,
+  "rollouts": 24,
+  "scenes": 24
+ },
+ "strict-turn window (ego)|set pai": {
+  "n": 3755,
+  "found": 1.0,
+  "amb": 0.6985352862849534,
+  "found_h": 1.0,
+  "rollouts": 35,
+  "scenes": 35
+ },
+ "rollouts": {
+  "held_APP1X_s0": {
+   "n": 452,
+   "with_change": 159,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "held_RBSG2_s0": {
+   "n": 452,
+   "with_change": 161,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "held_RSG_s0": {
+   "n": 452,
+   "with_change": 158,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "held_RSG_s1": {
+   "n": 452,
+   "with_change": 159,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "held_RV2c_s0": {
+   "n": 452,
+   "with_change": 162,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "held_RV2c_s1": {
+   "n": 452,
+   "with_change": 161,
+   "with_break": 1,
+   "with_amb": 15,
+   "dt0_med_s": -0.1
+  },
+  "pai": {
+   "n": 281,
+   "with_change": 99,
+   "with_break": 0,
+   "with_amb": 150,
+   "dt0_med_s": -0.1
+  }
+ },
+ "missing": {},
+ "errors": 0
+}

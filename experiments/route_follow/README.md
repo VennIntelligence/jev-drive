@@ -178,6 +178,20 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   - Held turns 8 / 24 vs 16 / 24. The car enters 0.17 m further inside; entry speed is unchanged.
   - Look at [held/confirm.md](results/approach/held/confirm.md) and [held/entry.md](results/approach/held/entry.md).
   - The PAI 281 mechanism read on the 22 runway turns is in `results/approach/pai/` (`scripts/rf_appread.py`).
+- [results/corridor/](results/corridor/check.md): ROUTE-LANE CORRIDOR labels and the offline check (turn-night.md section 6; prereg
+  `plans/2026-10-15-corridor-check-prereg.md`, Amendments 1-4; `scripts/rf_corridor.py` lanes | plans | build | check, `scripts/rf_corridor.sh`).
+  Labels: the route's own lane chain (entry lane -> connector -> exit lane, the target lane at a lane change) + 0.3 m, classes corridor /
+  adjacent same-direction / oncoming / off-road / other drivable, per decision a 48 x 48 R-B-frame grid and the corridor polygon (box
+  `$DATA_DIR/runs/route_follow/corridor/build/labels_*.pkl`); found on 0.98 of held and 1.00 of PAI decisions ([coverage.md](results/corridor/coverage.md)).
+  **Registered read: the label gate fails, so C1 / C2 are void.** The human's own 1-4 s footprint leaves the corridor into a hard class in
+  0.13 [0.04, 0.22] (held) and 0.33 [0.22, 0.45] (PAI) of strict-turn window decisions (line 0.05). Taken at face value, 0.86 of the
+  inside / oncoming / over-turn zeros have a hard-exit plan by t_f - 1 s (60 / 70), but so do 0.37 of the completed turns' decisions.
+  The exploratory sweep ([sweep.md](results/corridor/sweep.md), Amendment 4) shows the trade-off: at margins that make the held human pass
+  (1.0 m, or the axle line), C1 falls to 0.48-0.69 and held C2 stays at 0.12-0.18. PAI never passes (0.12-0.25; PAI lane polygons are
+  narrow and there is no road-area layer, so the human's corner cuts read as off-road). The hard-exit term does not separate failing plans
+  from the completed turns' plans. Look at [figs/corridor_bev.png](figs/corridor_bev.png): 1a69f757 and APP1X 53d37873 have plans in the
+  oncoming lane / off-road 2 s before the zero, but so does the completed held left turn 6f393be3. 382a7247 and de9db5dc are collision zeros
+  whose plans stay in the corridor.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane
