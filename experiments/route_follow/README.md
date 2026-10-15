@@ -139,6 +139,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   2-6 m) the ego reached 4 PAI + 4 held sites and shifted >= 2 m on 1 / 4 and 0 / 4 (in the route's lane after 2 / 4 each). `scripts/rf_laneoff.py`
   (`lanes` extractor + `report`), figure `figs/laneoff_bev.png` (look at the titles: offset / heading error at the triangle (entry - 20 m)
   and the square (entry); the failed turns start their turn from the lane or line away from the turn).
+- [results/pai281/RV2a-L18-s0.md](results/pai281/RV2a-L18-s0.md): route v2 arm a (ordered memory only) on PAI 281 vs RSG-L18-s0, gains 20
+  (read of record): +0.010 [-0.007, +0.028], zeros 67 vs 70 (offroad 16 vs 14, corridor 41 vs 47), spins 2 vs 2; exam 72 +0.030
+  [-0.005, +0.078], zeros 36 vs 38; strict turns 5 / 36 both (gained e848c843, ea468790; lost 132ae6cb, 382a7247), shape gate 3 vs 1.
+  Look at the all281 / exam72 rows and the per-scene table.
 - [results/pai281/RV2a-L18-s0_unreliable.md](results/pai281/RV2a-L18-s0_unreliable.md) and
   [RV2a_spins_unreliable.md](results/pai281/RV2a_spins_unreliable.md): the first RV2a-L18-s0 PAI 281 read and its spin reading.
   **Unreliable**: the run drove at the default controller gains, not gains 20 (route v2 prereg Amendment 18); its -0.035 / 87 zeros /
