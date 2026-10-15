@@ -36,3 +36,10 @@ or R while the route is straight (|heading change of the message's waypoints| < 
 lateral offset to the latched target (the latch-time waypoint carried into the current frame) drops below <m> (default 0.5) or 8 s pass.
 RSG-L18-s0 at gains 20 on the reached sites' scenes (validated + proxy, deduplicated); lines: at the validated sites, shifted >= 2 m AND in
 the route's lane after (RSG today 1 / 6, of 4 reached); no new zero on these scenes vs r281/rsg. Report both tables.
+
+## Amendment 1: result (2026-10-15 ~12:00 JST)
+
+Reading `results/lc_hyst/reading.md`, figure `figs/lc_hyst_timeline.png`, script `scripts/rf_lchyst.py` (extract on Tokyo, report on the Mac
+with the rf_tax extracts / rf_laneoff lc_map of the v2 lane reading). C1 on RSG-L18-s0: 0 sites (RV2a 0, RV2b 4); C2: none. Pilot gate
+(C1 >= 3 RSG sites) not met: no JEV_CMD_LATCH pilot. Flips occur with the command input just under 2 m while the ego has hardly moved;
+the drift-then-snap of 415e950b happens with L held throughout (policy, not command).

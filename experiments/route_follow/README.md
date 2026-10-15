@@ -150,6 +150,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/pai281/RV2b-L18-s1.md](results/pai281/RV2b-L18-s1.md): route v2 arm b (ordered memory + lane hinge) on PAI 281 vs RSG-L18-s0
   (gains 20): +0.010 [-0.012, +0.031], zeros 67 vs 70, spins 2 vs 2; exam 72 +0.023 [-0.025, +0.071], zeros 35 vs 38; strict turns 7 / 36
   vs 5 / 36, shape gate 4 vs 1. Look at the all281 / exam72 rows and the per-scene table.
+- [results/lc_hyst/reading.md](results/lc_hyst/reading.md): LC-HYSTERESIS (prereg `plans/2026-10-15-lc-hysteresis-prereg.md`): does the
+  3-way command flip L/R -> S mid lane change and the plan snap back? **No on RSG** (C1 0 sites; RV2b 4), so no command-latch pilot; the
+  command is a poor lane-change signal (8a143cb2 completes with cmd R / S only) and 415e950b drifts and snaps back with L held. Figure
+  `figs/lc_hyst_timeline.png` (look at the red plan line against the command dots around station 0).
 - [results/turn_gain/g1.25.md](results/turn_gain/g1.25.md): TURN-GAIN serve-side switch (diagnostic, not adopted; prereg
   `plans/2026-10-15-turn-gain-switch-prereg.md`, Amendment 1): RSG-L18-s0 + `JEV_TURN_GAIN=1.25` (plan yaw / course x1.25 whenever its 2 s turn
   is < 60 % of what its own route memory shows, from the policy's own states, no handover) on the 36 strict PAI turns + the 26 exam turn
