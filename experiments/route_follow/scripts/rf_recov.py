@@ -496,8 +496,22 @@ def turn_read(tag):
         t = min(near, key=lambda t: abs(st - t[0]))
         rel, sg = st - t[0], float(np.sign(t[2]))
         rows.append(dict(scene=sc, k=k, row=int(r), rel=rel, bin=str(pd.cut([rel], [-40, -20, -10, 0, 10, 30], right=False)[0]),
-                         h4=float(np.degrees(sg * P[j, 7, 2])), y4=float(sg * P[j, 7, 1]), log=str(m["log"][r])))
-    return pd.DataFrame(rows)
+                         h4=float(np.degrees(sg * P[j, 7, 2])), y4=float(sg * P[j, 7, 1]), log=str(m["log"][r]), sg=sg, j=j))
+    X = pd.DataFrame(rows)
+    X.attrs["P"] = P
+    return X
+
+
+def heading_at_arc(P, a):
+    """Plan poses (8, 3) from the row origin -> yaw at cumulative arc a (linear in arc; a beyond the plan: the end yaw)."""
+    q = np.concatenate([np.zeros((1, 3)), P.astype(np.float64)])
+    arc = np.r_[0.0, np.cumsum(np.hypot(*np.diff(q[:, :2], axis=0).T))]
+    return float(np.interp(a, arc, q[:, 2]))
+
+
+def arc4(P):
+    q = np.concatenate([np.zeros((1, 2)), P[:, :2].astype(np.float64)])
+    return float(np.hypot(*np.diff(q, axis=0).T).sum())
 
 
 def gate_turn(tag, base):
@@ -508,6 +522,19 @@ def gate_turn(tag, base):
     r = boot_diff(X.h4[win], X.h4_b[win], X.log[win])
     by = {b: dict(n=int(len(g)), dh_mean=float((g.h4 - g.h4_b).mean())) for b, g in X[win].groupby("bin")}
     out = dict(n=int(win.sum()), scenes=int(X[win].scene.nunique()), dh4_mean=float(dh.mean()), dh4_median=float(dh.median()), ci=[r["lo"], r["hi"]], by_bin=by)
+    # Amendment 3: the same heading at EQUAL ARC (a* = the shorter of the two 4 s plans): a slower plan reaches less far into the turn in 4 s,
+    # which lowers h4 without any change of the path's shape (APP1X's failure was at unchanged arc, decision 303 Amendment 5)
+    PA, PB = A.attrs["P"], B.attrs["P"]
+    ha, hb, da = [], [], []
+    for _, x in X[win].iterrows():
+        pa, pb = PA[int(x.j)], PB[int(x.j_b)]
+        a_ = min(arc4(pa), arc4(pb))
+        ha.append(np.degrees(x.sg * heading_at_arc(pa, a_)))
+        hb.append(np.degrees(x.sg * heading_at_arc(pb, a_)))
+        da.append(arc4(pa) - arc4(pb))
+    ha, hb = np.array(ha), np.array(hb)
+    r2 = boot_diff(ha, hb, X.log[win])
+    out["equal_arc"] = dict(dh_mean=float((ha - hb).mean()), dh_median=float(np.median(ha - hb)), ci=[r2["lo"], r2["hi"]], d_arc4_mean=float(np.mean(da)))
     return out, dict(turn=out["dh4_mean"] >= -0.3)
 
 
