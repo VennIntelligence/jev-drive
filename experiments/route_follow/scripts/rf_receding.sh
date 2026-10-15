@@ -21,7 +21,7 @@ held-extract)
   S=()
   for T in RSG-L18-s0 RSG-L18-s1; do S+=("$T=$L/ledger/held_$T.pkl"); done
   for T in RV2a-L18-s0 RV2a-L18-s1 RV2b-L18-s0 RV2b-L18-s1; do S+=("$T=$O/tax/held_$T.pkl"); done
-  exec python3 "$HERE/rf_receding.py" extract-held --set "${S[@]}" --follow $L/v2/report/follow/scenes.csv --read $M --out $O/held.pkl ;;
+  cd "$HERE/../../.."; exec .venv/bin/python "$HERE/rf_receding.py" extract-held --set "${S[@]}" --follow $L/v2/report/follow/scenes.csv --read $M --out $O/held.pkl ;;
 pai-extract)
   D=/data/runs/route_night; O=$D/receding; mkdir -p $O
   exec python3 "$HERE/rf_receding.py" extract-pai --strict "$HERE/../results/pai281/strict36.txt" --out $O/pai.pkl \
