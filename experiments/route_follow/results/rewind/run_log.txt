@@ -1,0 +1,188 @@
+2026-10-15 17:14:26 1e8e939e id: rc 0, 1 / 1 rollouts
+2026-10-15 17:14:38 22fa5c92 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:14:51 132ae6cb id: rc 0, 1 / 1 rollouts
+2026-10-15 17:14:55 09528162 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:08 22fa5c92 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:08 2f227f2c id: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:12 09528162 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:14 268949d2 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:28 132ae6cb xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:29 2f227f2c xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:30 1e8e939e xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:15:41 268949d2 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:19:32 22fa5c92 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:19:34 1e8e939e xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:19:38 09528162 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:19:50 132ae6cb xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:19:52 2f227f2c xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:05 268949d2 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:07 22fa5c92 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:12 09528162 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:21 1e8e939e xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:26 22fa5c92 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:32 09528162 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:34 1e8e939e xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:35 22fa5c92 done: event zero 82 {'1': 72, '2': 62, '3': 52}
+2026-10-15 17:20:38 09528162 done: event zero 56 {'1': 46, '2': 36, '3': 26}
+2026-10-15 17:20:39 2f227f2c xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:40 132ae6cb xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:41 1e8e939e done: event zero 65 {'1': 55, '2': 45, '3': 35}
+2026-10-15 17:20:41 268949d2 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:51 2f227f2c xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:53 268949d2 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:20:55 2f227f2c done: event zero 67 {'1': 57, '2': 47, '3': 37}
+2026-10-15 17:20:57 268949d2 done: off off 94 {'1': 84, '2': 74, '3': 64}
+2026-10-15 17:21:00 132ae6cb xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:21:08 132ae6cb done: off off 157 {'1': 147, '2': 137, '3': 127}
+2026-10-15 17:24:47 33c8976b id: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:11 33c8976b xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:15 302c5c99 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:25 3232fdb7 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:37 302c5c99 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:45 3232fdb7 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:25:57 37d660b1 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:26:05 37d660b1 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:28:50 33c8976b xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:29:18 33c8976b xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:29:26 302c5c99 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:29:33 33c8976b xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:29:39 33c8976b done: event zero 51 {'1': 41, '2': 31, '3': 21}
+2026-10-15 17:30:20 37d660b1 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:30:33 302c5c99 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:30:42 37d660b1 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:30:45 3232fdb7 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:31:01 3232fdb7 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:31:08 302c5c99 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:31:09 3232fdb7 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:31:17 302c5c99 done: event zero 77 {'1': 67, '2': 57, '3': 47}
+2026-10-15 17:31:28 3232fdb7 done: event zero 176 {'1': 166, '2': 156, '3': 146}
+2026-10-15 17:31:29 37d660b1 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:31:43 37d660b1 done: event zero 72 {'1': 62, '2': 52, '3': 42}
+2026-10-15 17:32:54 3c2822d9 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:32:55 382a7247 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:33:20 382a7247 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:33:28 3c2822d9 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:33:29 382a7247 done: completed None None {'1': None, '2': None, '3': None}
+2026-10-15 17:33:37 3c2822d9 done: completed None None {'1': None, '2': None, '3': None}
+2026-10-15 17:34:07 3ce13eed id: rc 0, 1 / 1 rollouts
+2026-10-15 17:34:39 3ce13eed xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:35:55 403d558a id: rc 0, 1 / 1 rollouts
+2026-10-15 17:36:03 68e53160 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:36:15 6fd8cf30 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:36:29 403d558a xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:36:31 68e53160 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:36:52 6fd8cf30 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:37:08 6fd8cf30 done: short_rear None None {'1': None, '2': None, '3': None}
+2026-10-15 17:37:25 94c1d722 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:37:56 94c1d722 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:38:10 8a143cb2 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:38:43 8a143cb2 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:38:51 3ce13eed xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:39:09 3ce13eed xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:39:28 3ce13eed xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:39:36 3ce13eed done: event zero 86 {'1': 76, '2': 66, '3': 56}
+2026-10-15 17:39:42 8a143cb2 done: completed None None {'1': None, '2': None, '3': None}
+2026-10-15 17:40:58 68e53160 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:09 94c1d722 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:13 403d558a xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:19 9f393c8a id: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:20 68e53160 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:40 68e53160 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:52 9f393c8a xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:41:52 94c1d722 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:42:05 68e53160 done: event zero 111 {'1': 101, '2': 91, '3': 81}
+2026-10-15 17:42:07 94c1d722 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:42:12 94c1d722 done: event zero 175 {'1': 165, '2': 155, '3': 145}
+2026-10-15 17:42:13 403d558a xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:42:21 403d558a done: event zero 41 {'1': 31, '2': 21, '3': None}
+2026-10-15 17:44:08 a174faed id: rc 0, 1 / 1 rollouts
+2026-10-15 17:44:31 a1b166cc id: rc 0, 1 / 1 rollouts
+2026-10-15 17:44:32 a174faed xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:45:17 a1b166cc xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:45:27 9f393c8a xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:45:55 9f393c8a xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:46:14 9f393c8a xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:46:19 9f393c8a done: event zero 49 {'1': 39, '2': 29, '3': 19}
+2026-10-15 17:46:31 abd45a30 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:46:38 b40f4729 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:46:49 a4d2f7cf id: rc 0, 1 / 1 rollouts
+2026-10-15 17:47:03 b40f4729 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:47:17 abd45a30 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:47:26 a4d2f7cf xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:47:27 abd45a30 done: short_rear None None {'1': None, '2': None, '3': None}
+2026-10-15 17:47:42 a4d2f7cf done: short_slow None None {'1': None, '2': None, '3': None}
+2026-10-15 17:48:46 a174faed xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:49:16 a174faed xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:49:29 a174faed xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:49:45 a1b166cc xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:49:51 a174faed done: event zero 107 {'1': 97, '2': 87, '3': 77}
+2026-10-15 17:50:09 a1b166cc xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:50:43 b40f4729 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:50:46 a1b166cc xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:51:01 a1b166cc done: event zero 116 {'1': 106, '2': 96, '3': 86}
+2026-10-15 17:51:11 c4a58f83 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:51:19 b40f4729 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:51:38 c4a58f83 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:51:52 ddc3e8df id: rc 0, 1 / 1 rollouts
+2026-10-15 17:52:06 c4a58f83 done: short_slow None None {'1': None, '2': None, '3': None}
+2026-10-15 17:52:08 ddc3e8df xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:52:09 b40f4729 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:52:12 e0f6ebe1 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:52:15 b40f4729 done: off off 62 {'1': 52, '2': 42, '3': 32}
+2026-10-15 17:52:49 e0f6ebe1 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:52:59 e37aa159 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:53:06 ce161092 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:53:21 e37aa159 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:53:25 d90fe123 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:53:40 ce161092 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:53:49 d90fe123 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:54:17 e5e47fd2 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:54:42 e5e47fd2 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:54:46 d90fe123 done: completed None None {'1': None, '2': None, '3': None}
+2026-10-15 17:55:28 e848c843 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:55:56 ddc3e8df xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:56:11 e848c843 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:56:36 ddc3e8df xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:56:38 e0f6ebe1 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:56:57 e0f6ebe1 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:02 ea468790 id: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:21 e0f6ebe1 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:21 e37aa159 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:24 eaba3f6a id: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:27 ddc3e8df xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:28 ea468790 xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:30 e0f6ebe1 done: off off 140 {'1': 130, '2': 120, '3': 110}
+2026-10-15 17:57:33 ddc3e8df done: event zero 61 {'1': 51, '2': 41, '3': 31}
+2026-10-15 17:57:40 ea468790 done: completed None None {'1': None, '2': None, '3': None}
+2026-10-15 17:57:44 eaba3f6a xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:57:46 e37aa159 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 17:58:16 e37aa159 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 17:58:37 e37aa159 done: event zero 151 {'1': 141, '2': 131, '3': 121}
+2026-10-15 17:59:10 f9e361aa id: rc 0, 1 / 1 rollouts
+2026-10-15 17:59:13 ce161092 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 17:59:26 f9e361aa xp0: rc 0, 1 / 1 rollouts
+2026-10-15 17:59:57 e848c843 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:01 ce161092 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:09 e5e47fd2 xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:23 e5e47fd2 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:24 e848c843 xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:34 e5e47fd2 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:38 ce161092 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:40 e5e47fd2 done: event zero 53 {'1': 43, '2': 33, '3': 23}
+2026-10-15 18:00:40 e848c843 xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:00:49 e848c843 done: off off 178 {'1': 168, '2': 158, '3': 148}
+2026-10-15 18:01:07 ce161092 done: event zero 138 {'1': 128, '2': 118, '3': 108}
+2026-10-15 18:01:34 fd01e9ab id: rc 0, 1 / 1 rollouts
+2026-10-15 18:01:40 eaba3f6a xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 18:01:49 fd01e9ab xp0: rc 0, 1 / 1 rollouts
+2026-10-15 18:02:00 eaba3f6a xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:02:21 eaba3f6a xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:02:31 eaba3f6a done: event zero 56 {'1': 46, '2': 36, '3': 26}
+2026-10-15 18:03:06 f9e361aa xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 18:03:27 f9e361aa xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:03:46 f9e361aa xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:03:54 f9e361aa done: event zero 66 {'1': 56, '2': 46, '3': 36}
+2026-10-15 18:05:20 fd01e9ab xpD1: rc 0, 1 / 1 rollouts
+2026-10-15 18:05:46 fd01e9ab xpD2: rc 0, 1 / 1 rollouts
+2026-10-15 18:06:03 fd01e9ab xpD3: rc 0, 1 / 1 rollouts
+2026-10-15 18:06:13 fd01e9ab done: event zero 78 {'1': 68, '2': 58, '3': 48}

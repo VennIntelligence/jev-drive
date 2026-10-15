@@ -55,6 +55,8 @@ k26 zeros -2.5 [-6.2, +0.5], score +0.0063 [-0.0001, +0.0140] (seed-0 gain mostl
 replicates in sign for all arms, and the 5.8x arm stays the weakest on score in both seeds. Open: the public 1491 / 10-decision guard read for the 2
 seeds of k51w1 is not run (lrsteps' held gain also replicated and then tied RSG-L18 on public 1491). See [results/onk/onk.md](results/onk/onk.md), prereg `plans/2026-10-15-onk-pilot-prereg.md`, chain `scripts/rf_onk.sh`.
 
+RECOVERY-EXPERT REWIND (2026-10-16, decision 312): no training. The box replays RSG-L18-s0's own failing PAI strict-turn sessions bit-identically up to 1 / 2 / 3 s before the failure, and from there the rule expert XP-L12-E46 drives. The expert takes over the policy's pose, speed and controller state; the rewind check passes on 80 / 80 sessions. Path JEV_TRACK 0. On the 27 failures (26 at 3 s) the expert completes 23 / 22 / 22, i.e. 85 / 81 / 85 %, against 0 for the policy. That passes the registered lines at every Delta. No creep: 92-100 % of rollouts keep >= 2 m/s 3 s after the handover. The d293 shape gate passes on 7 / 23, 15 / 22 and 16 / 22 of the completed paths, so Delta 1 s recoveries are hard pulls (lateral acceleration up to 8 m/s²). Caveats: the expert from the start already completes 24 of the 27, and at 2-3 s about half the handovers are before the entry. See [results/rewind/rewind.md](results/rewind/rewind.md), figure [figs/rewind_bev.png](figs/rewind_bev.png), prereg `plans/2026-10-16-recovery-rewind-prereg.md`.
+
 **Next.** Turning-school reads P0-P2 (`research/turning-school-checks.md`, to appear); the holdlead PAI exam read (coordinator exception);
 spin-fix lateral bound v2; Tokyo PAI 281: RB0-F-s0 (same-gains base reference), RBSGc-PAI.
 
