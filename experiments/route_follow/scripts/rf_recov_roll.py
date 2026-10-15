@@ -11,6 +11,9 @@ R (on1_RCVd316; the all-scene rewind later): the D2 / D3 expert handovers of a r
   rsel     (AlpaSim venv) --stage S --geo D2=<geo rows>,D3=<geo rows> --out S/sel.json   units = handover sessions with h as in from_D<d>.txt,
            no zero before h, the turn completed and no zero-score event at all (n-yield's label); rows = decisions k >= h whose rear-axle
            anchor is at most rf_follow's exit + 10 m on the session's own route (n-read pkl), before the first zero (none by the unit rule)
+           --rows-csv <n-yield rows.csv> --check S/check.json (the all-scene rewind): rows = exactly the source's label rows that were
+           within tolerance there, kept where the re-run is itself label-true and within tolerance of the source (identity: n-read's
+           within_tol; the source's own session: plans before h within 0.15 m)
 R rows train on the expert's served plan: tab `fut` = meta `poses` (the dump's served plan = the expert's from h on, asserted against the
 record's `expert` flag and `poses_model`); the log-path target on_rows wrote is kept as `fut_path`, the model's own plan as `served_model`.
 
@@ -169,6 +172,11 @@ def rsel(a):
     X = json.loads((S / "read.json").read_text())
     rd = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in X["scenes"]}
     srcs, units = [], []
+    allow = None
+    if a.rows_csv:                                       # the source's label rows (label AND within_tol): the row set to reproduce
+        import csv
+        allow = {(r["scene"], int(r["delta"]), int(r["k"])) for r in csv.DictReader(open(a.rows_csv)) if r["label"] == "True" and r["within_tol"] == "True"}
+    chk = {(u["scene"], u["D"]): u for u in json.loads(Path(a.check).read_text())["units"]} if a.check else {}
     for spec in a.geo.split(","):
         tag, g = spec.split("=")
         d = int(tag[1:])
@@ -185,6 +193,13 @@ def rsel(a):
                 kz = x.get("kz", -1)
                 valid = bool(x.get("h") == h and not x.get("zero_before_h"))
                 keep = bool(valid and x.get("completed") and kz < 0)
+                if a.check:                                  # within tolerance of the source's identity (n-read) and of the source's own session
+                    c = chk.get((sc, d), {})
+                    u["tol_source"] = bool(x.get("within_tol") and c.get("vs_prior_pre_max") is not None and c["vs_prior_pre_max"] <= 0.15)
+                    keep = keep and u["tol_source"]
+                if allow is not None:
+                    u["source_rows"] = sum((sc, d, q) in allow for q in range(60))
+                    keep = keep and u["source_rows"] > 0
                 u |= dict(valid=valid, completed=x.get("completed"), outcome=x.get("outcome"), kz=kz, keep=keep, within_tol=x.get("within_tol"),
                           stratum=x.get("stratum"), unit_src=x.get("unit_src"), geo_rows=len(idx))
                 if keep:
@@ -194,7 +209,8 @@ def rsel(a):
                     st = stations_of(np.asarray(pk["R"], float), recs)
                     rk = {int(r["k"]): r for r in recs}
                     lim = x["exit"] + PAST
-                    pick = [i for i in idx if kk[i] >= h and st.get(int(kk[i]), np.inf) <= lim]
+                    pick = ([i for i in idx if kk[i] >= h and (sc, d, int(kk[i])) in allow] if allow is not None else
+                            [i for i in idx if kk[i] >= h and st.get(int(kk[i]), np.inf) <= lim])
                     for i in pick:
                         r = rk[int(kk[i])]
                         xp_bad += int("expert" not in r)                         # the served plan from h on must be the expert's
@@ -545,6 +561,8 @@ def main():
     p.add_argument("--prior-runs", default="", help="stage dirs whose D<d>/c*/run hold the source's own D sessions")
     p = sp.add_parser("rsel")
     p.add_argument("--stage", required=True), p.add_argument("--geo", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--rows-csv", default="", help="a rewind n-yield rows.csv: keep exactly its label & within_tol rows (scene, delta, k)")
+    p.add_argument("--check", default="", help="S/check.json: units must be within 0.15 m of the source's own session before h")
     p = sp.add_parser("fsel")
     p.add_argument("--pool", default="L18RSG"), p.add_argument("--turns", required=True), p.add_argument("--out", required=True)
     p.add_argument("--turn-n", type=int, default=64, help="turn scenes (train64 first, then the pool in crc32 order)")

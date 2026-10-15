@@ -13,9 +13,13 @@
 #        d316 (on1_RCVd316):  T=$DATA_DIR/runs/route_follow/rewind_train64
 #          rf_recov_roll.sh recov $DATA_DIR/runs/route_follow/recov_roll RCVd316 $T $T/pilot10,$T/rest54 $T/pack \
 #            $DATA_DIR/datasets/alpasim_nuplan_long/after280_rw 2 $T/all/read.json
-#        all-scene rewind (decision 319; S = the rewind_onpol_all stage that holds from_D*.txt, tfail.json, pack/, id/, read.json):
-#          RF_K_END=29 rf_recov_roll.sh recov $DATA_DIR/runs/route_follow/recov_roll RCVall $S $S $S/pack \
-#            $DATA_DIR/datasets/alpasim_nuplan_long/after280_op 8 $S/read.json
+#        all-scene rewind (decision 319, on1_RCVall): its stages smoke / s50 / rest / restb merged by `srcall` into one source dir
+#          (all/from_D*.txt, the stages' tfail units, pack symlinks); rows = the source rows.csv label & within_tol rows (RR_ROWS_CSV):
+#          A=$DATA_DIR/runs/route_follow/rewind_onpol_all; RR=$DATA_DIR/runs/route_follow/recov_roll
+#          rf_recov_roll.sh srcall $RR $A $RR/src_all
+#          PRIO=7 RF_K_END=29 RR_ROWS_CSV=$A/rows/rows.csv rf_recov_roll.sh recov $RR RCVall $RR/src_all $A/restb,$A/rest,$A/s50,$A/smoke \
+#            $RR/src_all/pack $DATA_DIR/datasets/alpasim_nuplan_long/after280_op 8 $A/all/read.json
+#   rf_recov_roll.sh srcall <root> <rewind_onpol_all dir> <out dir>   the merged source dir (read-only on the rewind's files)
 #   rf_recov_roll.sh fast <root> stage <name> <count per class | all> <levels s,s,..> [chunks]
 #        fast approaches: (fsel once -> <root>/sel.json) -> stage list (scenes not in an earlier stage) + JEV_PERTURB files (g 1, arc scale s,
 #        NPUSH decisions, default 2, at k_p) -> `id` (no dump) and L<100 s> (dump) launches -> fread (<stage>/fread.json) -> <stage>/DONE
@@ -79,7 +83,7 @@ rowsR)  # <stage dir> <NAME> [prior read]: n-read + rewind check, geo of D2 / D3
   $APY "$here/rf_rewind.py" n-read --stage "$S" --ref "$S/tfail.json" --out "$S/read.json" --pkl "$S/pkl" --workers 32 || die "n-read"
   $PY "$X" rcheck --stage "$S" ${P:+--prior "$P"} --prior-runs "$(cat "$S/id_stages.txt")" || die "rcheck"
   for d in 2 3; do geo "$S/geo/D$d" "${N}_D${d}g" "$S"/D$d/c*/run; done
-  $APY "$X" rsel --stage "$S" --geo "D2=${N}_D2g,D3=${N}_D3g" --out "$S/sel.json" || die "rsel"
+  $APY "$X" rsel --stage "$S" --geo "D2=${N}_D2g,D3=${N}_D3g" --out "$S/sel.json" ${RR_ROWS_CSV:+--rows-csv "$RR_ROWS_CSV" --check "$S/check.json"} || die "rsel"
   $TR "$X" assemble --name "$N" --sel "$S/sel.json" || die "assemble"
   post_cpu "$N" "$(ls -d "$S"/D2/c*/run | head -1)" ;;
 rowsF)  # <rows dir> <NAME> <stage,stage..> <levels>: geo per level over the stages' pushed runs, rows k >= k_p, pool, labels
@@ -107,6 +111,27 @@ fprep)  # <stage dir> <count> <levels>
 fread)  # <stage dir>
   $APY "$X" fread --stage "$1" --sel "$O/sel.json" --out "$1/fread.json" || die "fread"
   date > "$1/DONE" ;;
+srcall) # <rewind_onpol_all dir> <out dir>
+  A=$1 OUT=$2; mkdir -p "$OUT/pack"; cp "$A"/all/from_D2.txt "$A"/all/from_D3.txt "$OUT/"
+  python3 - "$A" "$OUT" <<'PY' || die "srcall"
+import glob, json, os, sys
+A, OUT = sys.argv[1:]
+U, gate = {}, None
+for s in ("smoke", "s50", "rest", "restb"):
+    t = json.load(open(f"{A}/{s}/tfail.json"))
+    U.update(t["units"]); gate = gate or t["gate"]
+json.dump(dict(gate=gate, units=U), open(f"{OUT}/tfail.json", "w"), indent=1)
+n = 0
+for s in ("smoke", "s50", "rest"):
+    for f in glob.glob(f"{A}/{s}/pack/*.npz"):
+        d = f"{OUT}/pack/{os.path.basename(f)}"
+        if not os.path.lexists(d):
+            os.symlink(f, d); n += 1
+need = {l.split()[0] for d in (2, 3) for l in open(f"{OUT}/from_D{d}.txt") if l.strip()}
+miss = [x for x in need if not os.path.exists(f"{OUT}/pack/{x}.npz")]
+print(len(U), "units,", n, "packs,", len(need), "handover scenes, missing packs", len(miss)); sys.exit(len(miss) > 0)
+PY
+  ;;
 recov)
   N=${1:?NAME} FD=${2:?from dir} IDS=${3:?id stages} NP=${4:?pack} CA=${5:?cache} n=${6:-2} PRIOR=${7:-}; S=$O/$N
   [[ ! -e $S/SUBMITTED ]] || die "$S already submitted"
@@ -119,7 +144,7 @@ recov)
   for d in 2 3; do for c in $(seq 0 $((n - 1))); do
     sims+=($(nsub rcv-$N-D$d-c$c "${G[@]}" --log-dir "$S/pool/D$d-c$c" -- $XS nsim "$O" "$S/D$d/c$c/run" "$S/from_D$d.txt@$c/$n" "$CA" "xp=$S/from_D$d.txt" 1 "$NP")) || exit 1
   done; done
-  E=(--env "JEV_PY=$PY"); [[ -n ${RF_K_END:-} ]] && E+=(--env RF_K_END=$RF_K_END)
+  E=(--env "JEV_PY=$PY"); [[ -n ${RF_K_END:-} ]] && E+=(--env RF_K_END=$RF_K_END); [[ -n ${RR_ROWS_CSV:-} ]] && E+=(--env "RR_ROWS_CSV=$RR_ROWS_CSV")
   a=$(nsub rcv-$N-rowsA --after "$(IFS=,; echo "${sims[*]}")" "${E[@]}" --vram 0.5 --cpu 32 --ram 96 --timeout-h 2 --log-dir "$S/pool/rowsA" -- $XS rowsR "$O" "$S" "$N" "$PRIOR") || exit 1
   t=$(nsub rcv-$N-tok --after "$a" --vram 16 --cpu 16 --ram 64 --timeout-h 2 --log-dir "$S/pool/tok" -- $XS tok "$O" "$N") || exit 1
   nsub rcv-$N-rowsB --after "$t" --env "JEV_PY=$PY" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$S/pool/rowsB" -- \
