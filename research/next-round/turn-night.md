@@ -232,3 +232,8 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   据此 `sv9.sh jlon281`（RSG-L18-s0 PAI 281 在 gate + jlon_v=8 下，对 RSG-L18-s0-gate 配对）按 spin_v9 常规读排在 RSGS3 之后，06:35 起跑，两卡，预计 08:55 JST 前后完成。
 - 10-16 03:00：Tokyo 磁盘守卫（用户授权，`/data/runs/route_follow/slow/disk_guard.sh`，tmux `dguard`）：剩余 < 150 GB 时按固定顺序整目录删旧读（r281/rsgpai、rsg_holdlead、steer_long/spinfix、gains20、r281/ys0_g20、spin_read、spin_read2、exam_rsg_holdlead、onpol_pai/pass1）到 > 250 GB，
   每次删除记 `deleted.log`；截至 07:00 没有触发（最低剩余 296 GB）。
+- 10-16 07:20 JST（主会话，中期，不含 PAI）：RECOVERY-ENVELOPE held 452 / 公开护栏，seed 均值对 RSG-L18：
+  RL（合成 R + L）零分 +0.5、at-fault +0.0、GT −0.042 m、护栏零分 −10.5 [−19.3, −2.1]、held 转弯 −0.5 [−4.0, +3.0]：H1 与护栏都过，判词等 PAI。
+  R 零分 −1.5、均分 +0.018 [+0.006, +0.030]、护栏均分 +0.007 [+0.001, +0.013]，但 GT +0.060（线 +0.03）不过；s1 的 follow 只读到 12 个弯，转弯数不完整。
+  LF GT −0.142 m 但护栏均分 −0.013（线 −0.01）不过、held 均分 −0.021；L 零分 +4.0。合成里 R 与 L 的零分代价相抵（R −1.5、L +4.0、RL +0.5）。
+  RLF / RLF5k / RLF10k / RLFD 与所有 PAI 读数还在跑；报告在盒上 runs/route_follow/recovery_envelope/RCV*/lines.md。
