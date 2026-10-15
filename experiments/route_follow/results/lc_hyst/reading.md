@@ -7,9 +7,10 @@ Map lane-change sites with gap <= 6 m (rf_laneoff lc_map, d299 Amendment 3); val
 - **C1 on RSG-L18-s0 (the pilot policy): 0 sites** (15 reached sites, 10 with the side command, 5 flips to S; no flip is followed within 2
   decisions by a >= 50 % drop of the plan's 2 s lateral while the ego is >= 1.5 m from the target). Below the pilot gate (>= 3):
   **no JEV_CMD_LATCH pilot.** RV2a: 0. RV2b: 4 (26004ca8, 415e950b, 51242b4d, 6250146a; reported, not the gate).
-- **C2: 0 / 0 on RSG** (no C1 flip). Where flips happen (all runs) the command's own input y sits just under the threshold (1.21-1.99 m)
-  while the ego has moved little (median ~0.4 m; d_target 3.2-3.6 m at most flips): the flip comes from the 42 m waypoint's y hovering at
-  2 m (route geometry, ego yaw), not from the ego having moved 1.5-2.5 m toward the target.
+- **C2: 0 / 0 on RSG** (no C1 flip). Over all 24 flips of the three runs the command's own input y sits just under the threshold
+  (1.21-2.00 m) while the ego has moved a median 0.32 m toward the target (|move| < 0.5 m at 9 / 24); d_target at the flip median 2.42 m,
+  in [1.5, 2.5] at 6 / 24. The flip is the 2 m threshold acting on the 42 m waypoint, but mostly through route geometry and ego yaw, not
+  after a 1.5-2.5 m lateral move.
 
 Descriptive (validated sites, figure `figs/lc_hyst_timeline.png`: blue = d_target, red = plan 2 s lateral toward the side, dots = cmd):
 - The command is a poor lane-change signal: at 8a143cb2 (the one site RSG completes) the command is R then S throughout, never L; at
