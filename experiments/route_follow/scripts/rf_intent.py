@@ -4,9 +4,9 @@ read, never written. Runner: rf_intent.sh.
 
   replay  (Tokyo, python3)  --ref <identity root> --scenes <file> [--a 0.3]   open loop: intent_hold.step on every stored decision of the
           identity (its anchor, plan, fed speed, route memory, command): how often it would hold, why it resets, correction size, clips
-  ihcheck (Tokyo, python3)  --run <root> --ref <identity root>   the switch as logged: every decision recomputed in sequence with
-          intent_hold.step from the logged anchor / plan / ih.v / rmem / cmd (4-decimal logs: branch flips are listed), served = poses_ih on
-          every on-decision (max |diff|), and every plan up to a session's first on-decision equal to the identity's at the same k
+  ihcheck (Tokyo, python3)  --run <root> --ref <identity root>   the switch as logged: every decision's branch recomputed with intent_hold.step
+          from the logged anchor / plan / ih.v / rmem / cmd and the intent carried along the logged branches (4-decimal logs: near-threshold
+          branch flips are listed and do not desync the state), served = poses_ih on every hold (max |diff|), and every plan up to a session's first on-decision equal to the identity's at the same k
   extract (Tokyo, python3)  --set NAME=<follow pkl>:<label>:<root> ... --scenes <file> --out <pkl>   rf_receding.extract_pai per set, and
           per decision the served plan (poses_ih where the hold was on, else poses) and the logged `ih` record
   creep   (Mac, .venv)  --pkl <extract> --out DIR   rf_switching's per-turn measure (window entry -/+ 20 m before the first zero; j = the
@@ -84,6 +84,19 @@ def replay(a):
           f"|e0| p50 {np.median(e0):.3f} p90 {np.quantile(e0, 0.9):.3f} m; at the clip {int((cm >= IH.CLIP_M - 1e-6).sum())}")
 
 
+def follow_logged(st, r):
+    """Advance the intent state along the branch the driver logged (hold or reset); -> the served poses."""
+    if not r["ih"]["on"]:
+        st["I"] = IH.dense(IH.world(np.asarray(r["anchor"], float), r["poses"]))
+        return np.asarray(r["poses"], float)
+    far, IH.FAR_M = IH.FAR_M, np.inf
+    try:
+        srv, _ = IH.step(st, r["anchor"], r["poses"], 99.0, None, IH.LEFT, a=r["ih"]["a"])
+    finally:
+        IH.FAR_M = far
+    return srv
+
+
 def ihcheck(a):
     ref = {sc: {r["k"]: r["poses"] for r in recs} for sc, recs in sessions(a.ref).values()}
     n = flips = 0
@@ -97,13 +110,12 @@ def ihcheck(a):
         st = IH.new()
         for r in recs:
             n += 1
-            srv, q = IH.step(st, r["anchor"], r["poses"], r["ih"]["v"], r.get("rmem"), r["cmd"], a=r["ih"]["a"])
+            _, q = IH.step({"I": st["I"]}, r["anchor"], r["poses"], r["ih"]["v"], r.get("rmem"), r["cmd"], a=r["ih"]["a"])   # the branch
             if q["on"] != r["ih"]["on"] or q["why"] != r["ih"]["why"]:
                 flips += 1
                 print(f"  flip {sc[7:15]} k {r['k']}: logged {r['ih']}, recomputed {q}")
-                if r["ih"]["on"] and not q["on"]:                 # follow the logged branch from here: re-seed the state as logged
-                    st["I"] = None
-            if r["ih"]["on"] and q["on"]:
+            srv = follow_logged(st, r)                                 # the state always follows the logged branch (a flip does not desync it)
+            if r["ih"]["on"]:
                 dmax = max(dmax, float(np.abs(np.asarray(srv) - np.array(r["poses_ih"])).max()))
             if (k_on is None or r["k"] <= k_on) and r["k"] in ref.get(sc, {}):
                 pre_n += 1
@@ -261,7 +273,8 @@ def fig(a):
                              (rih, "#1b9e77", f"executed, intent hold ({'done' if rih['row'].get('completed') else rih['kind'] or 'failed'})")):
             C = rr["ctrl"]
             t = C["t"]
-            m = t <= min(rr["tz"], t[-1])
+            st_r, _ = F.track(Rr, S, np.c_[C["x"], C["y"]])
+            m = (t <= min(rr["tz"], t[-1])) & (st_r >= ent - 45) & (st_r <= ext + 25)
             axi.plot(C["x"][m], C["y"][m], color=col, lw=2.0, zorder=3, label=lab)
         P = rih["plans"]
         st = IH.new()
@@ -271,10 +284,7 @@ def fig(a):
         for i in range(len(P["t0"])):
             q = P["ih"][i] or {}
             I_prev = None if st["I"] is None else st["I"].copy()
-            if q.get("on"):
-                IH.step(st, P["anchor"][i], P["poses"][i], 99.0, None, IH.LEFT, a=q["a"])     # the logged branch: hold
-            else:
-                st["I"] = IH.dense(IH.world(np.asarray(P["anchor"][i]), P["poses"][i]))
+            follow_logged(st, dict(ih=q if q else dict(on=False), anchor=P["anchor"][i], poses=P["poses"][i]))
             t0 = P["t0"][i]
             if t0 >= rih["tz"]:
                 break
@@ -290,6 +300,8 @@ def fig(a):
             axi.plot(Ws[:, 0], Ws[:, 1], color="#e7298a", lw=1.2, label="served plan" if not n_drawn else None, **kw)
             axi.plot(*A0[:2], "o", color="#e7298a", ms=3, zorder=4)
             n_drawn += 1
+        lo, hi = Rr[win].min(0) - 12, Rr[win].max(0) + 12
+        axi.set_xlim(lo[0], hi[0]), axi.set_ylim(lo[1], hi[1])
         axi.set_aspect("equal")
         axi.set_title(f"{sc} ({rih['row']['side']} {rih['row']['turn_deg']:+.0f} deg); every 1 s while holding", fontsize=9)
         axi.tick_params(labelsize=7)

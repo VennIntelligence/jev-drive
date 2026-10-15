@@ -1,0 +1,4 @@
+ihcheck: 398 decisions, branch recomputed differs at 0; served vs recomputed max |diff| 1.6e-03 (4-decimal log); plans up to the first hold vs identity: 43 compared, max |diff| 0.0e+00
+09528162 session 545863d6 cell None: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.2847289105911731 / 0.2847289105911731: IDENTICAL
+132ae6cb session 544f1ccc cell None: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.04122700721552007 / 0.04122700721552007: IDENTICAL
+S1: 2 / 2 identity sessions bit-identical to the reference

@@ -174,6 +174,17 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   zeros became scored off-route finishes). No g = 1.5 run (needs >= 3 more). Look at the per-scene table: failures stay where they were
   (corridor / offroad 0-20 m past the entry, several entering at 10-14 m/s). `scripts/rf_v2pai.py` (`tgcheck`, `turns`, `table`),
   `scripts/rf_v2pai.sh tg`, switch `experiments/alpasim/lib/turn_gain.py`.
+- [results/intent_hold/intent_hold.md](results/intent_hold/intent_hold.md): INTENT HOLD serve-side switch (diagnostic, not adopted; prereg
+  `plans/2026-10-15-intent-hold-prereg.md`, Amendments 1-3): RSG-L18-s0 + `JEV_INTENT_HOLD=1` on PAI (49 scenes: the 47 above + d299's PAI
+  over-turn zeros; `JEV_TRACK=0`, the identity's no-gate path). While the route memory or the command shows a turn, the served path is held
+  to a world-frame intent I = (1 - a) I + a plan, matched by arc length from the rear axle, with a cosine ramp onto it over 1 s and a 1 m
+  guard; it resets on no turn, standing or a plan 1.5 m off I. Unswitched serving is bit-identical (2 / 2). **Completion lines fail for
+  both variants.** a 0.3: strict 8 / 36, runway 5 / 22, loses 8a143cb2. a 0.15: 7 / 36, 3 / 22, loses 382a7247 and 8a143cb2. Neither adds a
+  non-turn zero or a spin, and zeros fall from 33 to 30 / 27. The creep falls (failed turns -0.063 -> -0.038 / -0.029 m per m on the
+  served plan) but the model plan still widens at -0.034 to -0.047 with the car held on its intent. So decision 308's creep is mostly the
+  plan drifting against its own previous plan, which a hold only lags. Figure `figs/intent_hold_bev.png`: compare the dashed intent with the
+  grey model plan, which lie together at every snapshot. `scripts/rf_intent.py` (replay / ihcheck / extract / creep / lines / fig),
+  `scripts/rf_intent.sh` (chain / resume / read), switch `experiments/alpasim/lib/intent_hold.py`.
 - [results/approach/](results/approach/): APPROACH COURSE (prereg `plans/2026-10-15-approach-course-prereg.md`, Amendments 1-3): the
   policy's own states 0-40 m before a >= 45 deg turn (nuPlan RSG-L18-s0 rollouts on1_L18RSG + PAI train160 on1_PAIonp; 3 091 turn rows,
   773 straight negatives, [rows.md](results/approach/rows.md)) pulled toward the human's entry state (`onpol_nuplan/lib/on_approach.py`: L1

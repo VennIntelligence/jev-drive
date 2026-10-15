@@ -1,0 +1,2 @@
+ihcheck: 9735 decisions, branch recomputed differs at 1; served vs recomputed max |diff| 3.8e-03 (4-decimal log); plans up to the first hold vs identity: 873 compared, max |diff| 0.0e+00
+  flip fc9fde87 k 0: logged {'on': False, 'why': 'slow', 'd2': None, 'e0': None, 'cmax': 0.0, 'clip': 0, 'dr40': None, 'v': 1.0, 'a': 0.3}, recomputed {'on': False, 'why': 'noturn', 'd2': None, 'e0': 

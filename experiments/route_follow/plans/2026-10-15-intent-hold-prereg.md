@@ -97,3 +97,28 @@ interaction with the gate is a separate check.** The identity re-run (`id`, done
 the tree at c6cb69e5, which predates 7f85c4a7, so they served the no-gate path without the pin. The running chain was frozen (SIGSTOP) during
 the smoke before it could start an unpinned a-run, and replaced by `rf_intent.sh resume` (CARD 0): it waits for the smoke to end and runs
 the same checks and the a 0.3 / a 0.15 runs with the pin, back to back. Nothing else changes.
+
+## Amendment 2 (2026-10-15 16:55 JST): bit identity, before the a-runs
+
+- The first `resume` stopped on a wrong path: `rf_p4.py s1 --run` was given the pai_eval root and found 0 / 0 sessions. Rerun by hand on
+  the run dir, and fixed in rf_intent.sh (commit 896cc5ed): **S1 2 / 2 sessions bit-identical to r281/rsg** (09528162, 132ae6cb: 199 / 199
+  plans max |diff| 0, tracks 199 / 199 rows max 0, scores equal). The driver edit does not change serving when the switch is off.
+- Smoke (a 0.3, same 2 scenes): no crash; `ihcheck` over 398 decisions: branch recomputed from the logs equal at all 398, served =
+  the recomputation to 1.6e-3 m (4-decimal logs, the state carried through ~200 decisions), 43 plans up to each session's first hold
+  bit-identical to r281/rsg. First hold at k 1 (09528162) and k 40 (132ae6cb, after 45 standing decisions). Card 0 was idle for 30 s between
+  the stop and the restart; the a 0.3 run started at 16:55 with the JEV_TRACK=0 pin.
+
+## Amendment 3: result (2026-10-15 18:45 JST; read results/intent_hold/intent_hold.md)
+
+- a 0.3 (16:55-17:43, 49 scenes, card 0): strict **8 / 36** (FAIL, line 10), runway **5 / 22** (FAIL, line 6), lost 8a143cb2 (FAIL),
+  new non-turn zeros 0 (PASS), spins 0 (PASS), stop rule not fired; shape gate 3 vs 1; mechanism: served-plan creep in the completed turns
+  -0.027 m / m (PASS, n 8), failed -0.038 (identity -0.063); model-plan creep -0.047 / -0.043.
+- a 0.15 (17:43-18:31), read because a 0.3 failed lines: strict **7 / 36**, runway **3 / 22**, lost 382a7247 + 8a143cb2 (all FAIL), new
+  non-turn zeros 0, spins 0 (PASS); shape gate 4; zeros 33 -> 27, mean +0.107 [+0.011, +0.210]; mechanism -0.033 (FAIL, n 7), failed -0.029;
+  model-plan creep -0.044 / -0.034.
+- `ihcheck` was changed after the runs to carry the intent along the logged branches: at first it re-seeded the state wrongly after one
+  near-threshold flip (a 0.15, 1e8e939e k 70, 2 s distance 1.5002 vs 1.4995 m), which desynced 126 later decisions of that session (served
+  vs recomputed 1.4 m). With the fix: 1 / 2 flips, served = recomputed to 3.8e-3 / 3.9e-3 m. The runs are unchanged.
+- Verdict: holding the policy's own intent does not complete the turns (both variants fail the completion lines); the hold is harmless off
+  the turns. The creep is not the plan accepting the car's shortfall alone: with the car held, the model plan still widens at
+  -0.034 to -0.047 m per m. A diagnostic, not adopted.

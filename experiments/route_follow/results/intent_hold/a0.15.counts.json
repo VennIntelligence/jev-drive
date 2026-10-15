@@ -1,0 +1,27 @@
+{
+ "a_done": 5,
+ "b_done": 7,
+ "a_shape": 1,
+ "b_shape": 4,
+ "gained": [
+  "a1b166cc",
+  "ddc3e8df",
+  "e848c843",
+  "ea468790"
+ ],
+ "lost": [
+  "382a7247",
+  "8a143cb2"
+ ],
+ "new_zero_nonturn": [],
+ "new_offroad_pre": [],
+ "a_zero": 33,
+ "b_zero": 27,
+ "strict_n": 36,
+ "exam_n": 26,
+ "exam_done_a": 2,
+ "exam_done_b": 3,
+ "mean_a": 0.2513534475017909,
+ "mean_b": 0.35815463626728555,
+ "paired": 0.10680118876549465
+}

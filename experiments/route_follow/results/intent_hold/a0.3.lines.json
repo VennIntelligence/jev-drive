@@ -1,0 +1,36 @@
+{
+ "strict": [
+  8,
+  false
+ ],
+ "runway": [
+  5,
+  false
+ ],
+ "keep5": [
+  [
+   "8a143cb2"
+  ],
+  false
+ ],
+ "new_zero_nonturn": [
+  [],
+  true
+ ],
+ "spins": [
+  0,
+  true
+ ],
+ "stop": [
+  [],
+  false
+ ],
+ "creep_served": [
+  -0.027476799305819043,
+  true
+ ],
+ "creep_model": [
+  -0.04724494292926365,
+  false
+ ]
+}
