@@ -37,6 +37,8 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
   --on-road FILE    onpol_long Amendment 13: the pool rows' road raster from FILE instead of <POOL>/road.npz (same tokens, layout); '' = the pool's.
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
+  (a.on_lon_all, rm_train --on-lon-all; RECOVERY-ENVELOPE 2026-10-16) in `mixed`, the --on-lon terms on every pool row of the batch (the
+                    `self` rows too; without it `mixed` applies them to the `both` rows only). Off / other modes: no operation is added or moved.
 
 Logged per step under `on/` (on-policy rows of the batch): n_imit / n_hinge = rows that carry an imitation term / any hinge; imit, ade = their imitation
 loss and mean displacement to the target (m); agent_* / road_* (+ every --on-lon term) = _mean / _pos / _posmean as loss43 logs a family.
@@ -84,10 +86,23 @@ def losses_on():
         carries them; `imit` / `both`: plain imitation rows without a label in `hinge` and with agent2.ok False, so Losses43 adds the imitation
         term and nothing else; `both` then adds the two hinges here from on_aok (the pool's agent ok) and road.ok."""
 
-        def __init__(self, *a, on, mode, on_aok=None, on0=0, lon=None, pack=None, lon_lam=10.0, agent_off=False, **k):
+        def __init__(self, *a, on, mode, on_aok=None, on0=0, lon=None, pack=None, lon_lam=10.0, agent_off=False, lon_all=False, **k):
             super().__init__(*a, **k)
             self.on, self.mode, self.on_aok, self.on0, self.lon, self.pack, self.lon_lam = on, mode, on_aok, on0, lon, pack, lon_lam
-            self.agent_off = agent_off
+            self.agent_off, self.lon_all = agent_off, lon_all
+
+        def _lon_all(self, total, Ls, out, S, rows, anchor, h, m_all):
+            """--on-lon-all in `mixed` (RECOVERY-ENVELOPE RL): the --on-lon terms on EVERY pool row of the batch (self rows too), n_imit as
+            Losses43's; the rest of __call__ (both rows' hinges and logging) is unchanged."""
+            imit = ~h & ~anchor & S.has_fut[rows]
+            n_imit = imit.sum().clamp_min(1)
+            r = rows[m_all]
+            x, y, psi = T.rear(out.float()[m_all][:, self.pi].view(-1, 33, 15), S.cam_x[r], self.W)
+            for q, v in self.lon.loss(torch.stack([x, y, psi], -1), r - self.on0, self.pack).items():
+                Ls[f"on/{q}_ho"] = v.sum() / n_imit
+                total = total + self.ho_w * self.lon_lam * Ls[f"on/{q}_ho"]
+                Ls |= row_stats(v, f"on/{q}")
+            return total, Ls
 
         def __call__(self, out, S, rows, anchor):
             total, Ls = super().__call__(out, S, rows, anchor)
@@ -97,6 +112,9 @@ def losses_on():
             c = self.cfg
             Ls = {("on/" + q[7:] if q.startswith("fam/on/") else q): v for q, v in Ls.items()}
             h = self.ho[rows] if self.ho is not None else torch.zeros_like(m)
+            lon_all = self.lon_all and self.lon is not None and self.mode == "mixed"
+            if lon_all:                                                  # --on-lon-all: the terms on every pool row, computed here once
+                total, Ls = self._lon_all(total, Ls, out, S, rows, anchor, h, m)
             if self.mode == "mixed":                                     # the `self` rows are Losses43's hinge-only rows; the rest is `both`
                 m = m & ~h
                 if not m.any():
@@ -133,7 +151,7 @@ def losses_on():
             Ls["on/n_hinge"] = (m & hg).sum().float()
             if self.agent_off:                                           # --agent-on-only: offline rows that would enter the agent hinge
                 Ls["on/off_agent_rows"] = (~m & self.agent2.ok[rows]).sum().float()
-            if self.lon is not None and self.mode != "imit":
+            if self.lon is not None and self.mode != "imit" and not lon_all:
                 for q, v in self.lon.loss(torch.stack([x, y, psi], -1), r - self.on0, self.pack).items():
                     Ls[f"on/{q}_ho"] = v.sum() / n_imit
                     total = total + self.ho_w * self.lon_lam * Ls[f"on/{q}_ho"]
@@ -296,7 +314,8 @@ def setup(a, dev):
         sf = bool(sfr.any())                                         # family `on`: Losses43's own hinge-only rows
         return losses_on()(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None, ho=t(is_ho | sfr) if k_ho or sf else None,
                            fam=t(np.where(sfr, len(fams), fam)), fams=fams + ["on"] * sf, on=t(is_on), mode=md, on_aok=on_aok, on0=on0,
-                           lon=lon, pack=pack, lon_lam=a.on_lon_lam, agent_off=a.agent_on_only, **k43)
+                           lon=lon, pack=pack, lon_lam=a.on_lon_lam, agent_off=a.agent_on_only, **k43,
+                           **({"lon_all": True} if getattr(a, "on_lon_all", False) else {}))
     return SimpleNamespace(cfg=cfg, S=S, model=model, base=base, new=new, hinge=hinge, agent2=agent2, road=road, losses=losses, mode=mode, ho=ho, fams=fams,
                            kk=kk, pools=pools, nN=nN, k_ho=k_ho, k_on=k_on, n_on=n_on, on0=on0, nv=nv, tr_o=tr_o, dv_o=dv_o, sp=sp, trl=trl, excl=excl,
                            n_fb=n_fb, init=init, onrec=onrec, names=names, fam=fam, is_on=is_on, k_yr=k_yr, tr_t=tr_t, dv_t=dv_t, dv_rows=dv_rows)

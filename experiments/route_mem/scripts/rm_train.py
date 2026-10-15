@@ -112,6 +112,13 @@ Approach course (2026-10-15, experiments/route_follow/plans/2026-10-15-approach-
             term only with the ego inside the 26 m window, a symmetric speed term to the human on the straight negatives, the 2 s over-turn
             guard (10 deg); needs <POOL>/approach_v2.npz (rf_apppool.py v2). Off (default): on_approach exactly as v1.
 
+RECOVERY-ENVELOPE (2026-10-16, experiments/route_follow/plans/2026-10-16-recovery-envelope-prereg.md); off (default) = no operation added:
+  --env-lam W       the asymmetric longitudinal speed envelope of onpol_nuplan lib/on_envelope.py (envU: speed above the row's upper bound,
+            envL: below its lower bound; timing-only plan geometry) on the pool rows labelled in <POOL>/envelope.npz (rf_recov.py pack): sets
+            --on-lon on_envelope and --on-lon-lam 10 W (the --app-lam scale); refused together with another --on-lon module.
+  --on-lon-all      with --on-mode mixed: the --on-lon terms on every pool row of the batch (on_train LossesOn._lon_all), not only on the
+            `both` rows (the RL arm: envelope on the S / envelope self rows, recovery rows as `both`).
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -946,6 +953,8 @@ if __name__ == "__main__":
         p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
         p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--app-v2", action="store_true", help="approach course v2 terms (on_approach.configure; needs --app-lam)")
+        p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
+        p.add_argument("--on-lon-all", action="store_true", help="--on-mode mixed: the --on-lon terms on every pool row (self rows too)")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")
@@ -976,4 +985,10 @@ if __name__ == "__main__":
         assert a.app_lam > 0, "--app-v2: needs --app-lam"
         import on_approach
         print(f"rm_train: approach v2 {on_approach.configure(True)}", flush=True)
+    if getattr(a, "env_lam", 0.0) > 0:                               # RECOVERY-ENVELOPE L: on_envelope as the --on-lon module
+        assert a.on and a.on_lon in ("", "on_envelope") and a.app_lam == 0, "--env-lam: needs --on and no other --on-lon module"
+        a.on_lon, a.on_lon_lam = "on_envelope", 10.0 * a.env_lam
+        print(f"rm_train: --on-lon on_envelope, --on-lon-lam {a.on_lon_lam:g}", flush=True)
+    if getattr(a, "on_lon_all", False):
+        assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)
