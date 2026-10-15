@@ -7,7 +7,8 @@ from an rf_follow output dir (scenes.csv, decisions.parquet). CPU, AlpaSim venv 
 Per label x turn scene (rf_follow's turn: >= 60 deg, entry at 10 % of the change, on that label's own route), decisions before the first
 zero event only: v_entry = the speed where the station track first crosses the entry (rf_entryspeed.cross_speed: linear in station, else
 the nearest decision within 10 m); lat_entry / lat_m20 = the signed lateral offset to the route at the entry / 20 m before it, + toward
-the turn's inside (linear in station between decisions; NaN when the track does not reach the station before the zero). Pairs: scenes
+the turn's inside (linear in station between decisions; NaN when the track does not reach the station before the zero); lat_k0 / d_k0 =
+the same offset at the first decision and how far before the entry the rollout starts (held 18-decision reads start 3 - 19 m before it). Pairs: scenes
 that are turns in both labels; mean A - B with a log-clustered bootstrap (B 10 000, rng 0) and the median of the paired differences.
 """
 from __future__ import annotations
@@ -47,7 +48,8 @@ def main(a):
         ent = float(s.entry)
         rows.append(dict(label=s.label, scene=s.scene, log=s.log, side=s.side, completed=bool(s.completed), outcome=s.outcome,
                          v_entry=ES.cross_speed(d.st, d.v, ent) if len(d) else np.nan, lat_entry=sg * at(d.st, d.lat, ent),
-                         lat_m20=sg * at(d.st, d.lat, ent - 20.0)))
+                         lat_m20=sg * at(d.st, d.lat, ent - 20.0), lat_k0=sg * float(d.lat.iloc[0]) if len(d) else np.nan,
+                         d_k0=ent - float(d.st.iloc[0]) if len(d) else np.nan))
     R = pd.DataFrame(rows)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -55,12 +57,13 @@ def main(a):
     res = dict(labels={}, pairs={})
     for lb, g in R.groupby("label"):
         res["labels"][lb] = dict(turns=int(len(g)), completed=int(g.completed.sum()), v_entry=q(g.v_entry), lat_entry=q(g.lat_entry), lat_m20=q(g.lat_m20),
+                                 lat_k0=q(g.lat_k0), d_k0=q(g.d_k0),
                                  v_entry_n=int(g.v_entry.notna().sum()), lat_entry_n=int(g.lat_entry.notna().sum()))
     for p in a.pairs:
         A, B = p.split(":")
         m = R[R.label == A].merge(R[R.label == B], on=["scene", "log"], suffixes=("_a", "_b"))
         res["pairs"][p] = {}
-        for k in ("v_entry", "lat_entry", "lat_m20"):
+        for k in ("v_entry", "lat_entry", "lat_m20", "lat_k0"):
             x = m[[f"{k}_a", f"{k}_b", "log"]].dropna()
             dd = (x[f"{k}_a"] - x[f"{k}_b"]).to_numpy()
             if not len(dd):
@@ -78,8 +81,9 @@ def main(a):
     (out / "entry.json").write_text(json.dumps(res, indent=1, default=float))
     f = lambda v: " / ".join(f"{x:.2f}" for x in v)  # noqa: E731
     md = ["# Held turns: entry state per label (rf_appheld.py)", "", "Decisions before the first zero; lateral + toward the turn's inside; q25 / median / q75.", "",
-          "| label | turns | completed | v_entry m/s | lat_entry m | lat at entry - 20 m |", "|:--|--:|--:|:--|:--|:--|"]
-    md += [f"| {k} | {v['turns']} | {v['completed']} | {f(v['v_entry'])} (n {v['v_entry_n']}) | {f(v['lat_entry'])} (n {v['lat_entry_n']}) | {f(v['lat_m20'])} |"
+          "| label | turns | completed | v_entry m/s | lat_entry m | lat at entry - 20 m | lat at decision 0 | entry - station at decision 0 (m) |",
+          "|:--|--:|--:|:--|:--|:--|:--|:--|"]
+    md += [f"| {k} | {v['turns']} | {v['completed']} | {f(v['v_entry'])} (n {v['v_entry_n']}) | {f(v['lat_entry'])} (n {v['lat_entry_n']}) | {f(v['lat_m20'])} | {f(v['lat_k0'])} | {f(v['d_k0'])} |"
            for k, v in res["labels"].items()]
     if res["pairs"]:
         md += ["", "| pair | read | n | mean A - B [95 % CI] | median diff |", "|:--|:--|--:|:--|--:|"]
