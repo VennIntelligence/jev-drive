@@ -20,10 +20,12 @@ on_lon pack, 1 m from the route origin, the same arcs as the scene context):
         the human stopped at (ln_tstop finite). vuf(s) = sqrt(2 A_DEC (s_stop - s)) before s_stop = line - 1.0 m, 0 from it on.
   turn  the first strict turn (rf_follow.find_turn, >= 60 deg; rf_loninv.strict_turns on the context route) with its entry 0 .. 40 m ahead of
         the rear axle: vur(s) = the expert's profile (rf_loninv.proxy_profile = rule_expert.Scene.profile(V_E 4.6)) + 1.0 on [entry - 26, exit].
-  lead  rule_expert's yield on the A-eligible leads of the on_lon pack (vehicles within 1.5 m of the route, ahead, aligned or slow; 4
-        nearest): the expert's 1-D speed run from (front arc, v0) on its profile (A_ACC 1.5 / A_MAX 6 at 0.1 s, the A_DEC braking envelope)
-        for YIELD_T 3 s; when its front reaches sigma = the leads' least corner arc over [0, 3 s], stop = sigma - STOP_M 1.5 and
-        vuf(s) = sqrt(2 A_DEC (stop - s)) + 1.0 before it, 0 from it on.
+  lead  (Amendment 1) the A-eligible leads of the on_lon pack (vehicles within 1.5 m of the route, ahead, aligned or slow; 4 nearest), the
+        nearest within 40 m at t0: lsig(t) = their least corner arc at each dense step; on_envelope bounds the front bumper's speed at step t
+        by sqrt(2 A_DEC (lsig(t) - STOP_M 1.5 - sf(t))) + 1.0 (rule_expert's stop margin and braking envelope against the lead where it is at
+        the plan's own time). The registered form (rule_expert's yield: the least arc over [0, 3 s] whenever the expert's 1-D run reaches it)
+        is kept as `lead_lit` for the record: 90 % of the policy's own lead rows violated it by 2.95 m/s on average (a stop behind every moving
+        lead), so it is not trained on.
   feasibility  every upper bound >= sqrt(max(v0^2 - 2 A_MAX (s - s_ego), 0)) (the fastest stop the expert's controller allows is not charged).
   free  rf_lonol's free cell (no A-eligible lead <= 40 m, no stop line of any type in (-0.5, 60] m, route heading change over 60 m < 30 deg,
         v0 >= 2, the human's speed at the station known): vl(s) = 0.85 min(v_ref(s), sqrt(v0^2 + 2 A_ACC (s - s0))) on [s0, s0 + 60], v_ref =
@@ -101,7 +103,7 @@ def label_scene(job):
     onr = Z["ok"].astype(bool) & (np.abs(l0) <= LAT)
     out = dict(vuf=np.full((S, NR), BIG, np.float32), vur=np.full((S, NR), BIG, np.float32), vl=np.zeros((S, NR), np.float32))
     flags = {c: np.zeros(S, bool) for c in CLASSES}
-    info = dict(d_stop=np.full(S, np.nan), d_entry=np.full(S, np.nan), d_lead=np.full(S, np.nan), v_ref=np.full(S, np.nan))
+    info = dict(d_stop=np.full(S, np.nan), d_entry=np.full(S, np.nan), d_lead=np.full(S, np.nan), v_ref=np.full(S, np.nan), lead_lit=np.zeros(S, bool))
     # scene context
     Rg, vlog = X["route"].astype(np.float64), X["vlog"].astype(np.float64)
     vprox = LI.proxy_profile(Rg, vlog)
@@ -128,18 +130,22 @@ def label_scene(job):
     vuf = braking(s_stop, g)
     flags["stop"] = stop_ok
     info["d_stop"] = np.where(stop_ok, d, np.nan)
-    # ---- leads (rule_expert's yield on the A-eligible leads)
+    # ---- leads. As registered (rule_expert's yield: the least corner arc over [0, 3 s], `lead_lit`) the bound is kept for the record only;
+    # Amendment 1: the bound in time, lsig (S, 41) = the eligible leads' least corner arc at each dense step (on_envelope applies it)
     a_sig, a_val, a_lam, a_g0 = Z["a_sig"].astype(np.float64), Z["a_val"].astype(bool), Z["a_lam"].astype(np.float64), Z["a_g0"].astype(np.float64)
-    use = a_val[:, :, :31] & (np.abs(a_lam[:, :, :31]) <= 1.5) & (a_g0 > 0)[:, :, None]
-    sig = np.where(use, a_sig[:, :, :31], np.inf).min((1, 2))
+    use_t = a_val & (np.abs(a_lam) <= 1.5) & (a_g0 > 0)[:, :, None]
+    lsig = np.where(use_t, a_sig, np.inf).min(1)                                # (S, 41)
+    sig = lsig[:, :31].min(1)
     lead_stop = np.full(S, np.inf)
     for r in np.flatnonzero(onr & np.isfinite(sig)):
         arcs = expert_run(vreach, s0[r], v0[r]) + FRONT                           # the expert's front bumper (rear arc + FRONT along the route)
         if arcs.max() >= sig[r]:
             lead_stop[r] = max(sig[r] - STOP_M, sf0[r])
-    flags["lead"] = np.isfinite(lead_stop)
-    info["d_lead"] = np.where(flags["lead"], sig - sf0, np.nan)
-    vuf = np.minimum(vuf, braking(lead_stop, g, MARGIN_UP))
+    info["lead_lit"] = np.isfinite(lead_stop)
+    near = onr & (np.where(use_t[:, :, 0], a_g0, np.inf).min(1) <= 40.0)
+    flags["lead"] = near
+    info["d_lead"] = np.where(near, lsig[:, 0] - sf0, np.nan)
+    out["lsig"] = np.where(near[:, None] & np.isfinite(lsig), lsig, BIG).astype(np.float32)
     # ---- turn entry
     vur = np.full((S, NR), BIG)
     for r in np.flatnonzero(onr):
@@ -173,7 +179,7 @@ def label_scene(job):
     cls = np.full(S, "", "U8")
     for c in CLASSES[::-1]:
         cls[flags[c]] = c
-    return dict(idx=idx, cls=cls, flags=flags, info=info, **out)
+    return dict(idx=idx, cls=cls, flags=flags, info=info, sf0=sf0.astype(np.float32), **out)
 
 
 def cmd_label(a):
@@ -202,11 +208,12 @@ def cmd_label(a):
         L = dict(names=names, scene=scene, k=m["k"].astype(int), log=m["log"].astype(str), v0=tab["speed"].astype(np.float32),
                  route=Z["route"].astype(np.float32), vuf=np.full((N, NR), BIG, np.float32), vur=np.full((N, NR), BIG, np.float32),
                  vl=np.zeros((N, NR), np.float32), cls=np.full(N, "", "U8"), **{f"f_{c}": np.zeros(N, bool) for c in CLASSES},
+                 lsig=np.full((N, 41), BIG, np.float32), sf0=np.zeros(N, np.float32), lead_lit=np.zeros(N, bool),
                  **{k: np.full(N, np.nan, np.float32) for k in ("d_stop", "d_entry", "d_lead", "v_ref")})
         with ProcessPoolExecutor(a.workers) as ex:
             for res in run.tqdm(ex.map(label_scene, jobs, chunksize=4), total=len(jobs), desc="scenes"):
                 i = res["idx"]
-                for k in ("vuf", "vur", "vl", "cls"):
+                for k in ("vuf", "vur", "vl", "cls", "lsig", "sf0"):
                     L[k][i] = res[k]
                 for c in CLASSES:
                     L[f"f_{c}"][i] = res["flags"][c]
@@ -225,8 +232,7 @@ def cmd_label(a):
         # the stored served plans against the bounds (what the base already does on its own rows)
         import torch
         import on_envelope as OE
-        P = dict(route=torch.as_tensor(L["route"]), vuf=torch.as_tensor(L["vuf"]), vur=torch.as_tensor(L["vur"]), vl=torch.as_tensor(L["vl"]),
-                 ok=torch.as_tensor(L["ok"]))
+        P = {k: torch.as_tensor(L[k]) for k in ("route", "vuf", "vur", "vl", "ok", "lsig", "sf0", "v0")}
         T = OE.terms(torch.as_tensor(m["poses"].astype(np.float32)), torch.arange(N), P)
         for c in CLASSES:
             s = L["cls"] == c
@@ -284,12 +290,13 @@ def cmd_pack(a):
         N = len(names)
         NR = next(iter(labs.values()))[0]["route"].shape[1]
         E = dict(tokens=np.array([n[3:] for n in names.tolist()]), ok=np.zeros(N, bool), route=np.zeros((N, NR, 2), np.float32),
-                 vuf=np.full((N, NR), BIG, np.float32), vur=np.full((N, NR), BIG, np.float32), vl=np.zeros((N, NR), np.float32), cls=np.full(N, "", "U8"))
+                 vuf=np.full((N, NR), BIG, np.float32), vur=np.full((N, NR), BIG, np.float32), vl=np.zeros((N, NR), np.float32), cls=np.full(N, "", "U8"),
+                 lsig=np.full((N, 41), BIG, np.float32), sf0=np.zeros(N, np.float32), v0=np.zeros(N, np.float32))
         for pre, (Lb, keep) in labs.items():
             dst = np.flatnonzero(pool == pre)
             assert len(dst) == len(keep)
             assert Lb["route"].shape[1] == NR, "route grids differ between the envelope pools"
-            for k in ("ok", "route", "vuf", "vur", "vl", "cls"):
+            for k in ("ok", "route", "vuf", "vur", "vl", "cls", "lsig", "sf0", "v0"):
                 E[k][dst] = Lb[k][keep]
         np.savez(CR / f"on1_{a.out}" / "envelope.npz", **E)
         envt = M["env"]
@@ -416,8 +423,7 @@ def gate_envelope(tag, base):
     rr, Pt = plans("L18RSG", "dev-env", tag)
     rb, Pb = plans("L18RSG", "dev-env", base)
     assert np.array_equal(rr, rb)
-    pk = dict(route=torch.as_tensor(Lb["route"]), vuf=torch.as_tensor(Lb["vuf"]), vur=torch.as_tensor(Lb["vur"]), vl=torch.as_tensor(Lb["vl"]),
-              ok=torch.as_tensor(Lb["ok"]))
+    pk = {k: torch.as_tensor(Lb[k]) for k in ("route", "vuf", "vur", "vl", "ok", "lsig", "sf0", "v0")}
     Tt = OE.terms(torch.as_tensor(Pt), torch.as_tensor(rr), pk)
     Tb = OE.terms(torch.as_tensor(Pb), torch.as_tensor(rr), pk)
     cls, logs, v0 = Lb["cls"][rr], Lb["log"][rr], Lb["v0"][rr].astype(float)

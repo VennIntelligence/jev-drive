@@ -12,7 +12,10 @@ envelope.npz (experiments/route_follow/scripts/rf_recov.py label / pack):
     from the route origin), vuf (N, NR) f4 upper bound on the speed at the FRONT-BUMPER arc (stop lines, leads), vur (N, NR) upper bound at
     the REAR-AXLE arc (turn entry), vl (N, NR) lower bound at the rear-axle arc (free road); BIG (1e3) = no upper bound, 0 = no lower bound.
     The bounds already contain the margins and the feasibility floor (rf_recov.py); cls (N,) str the row's reason class (stop / turn / lead /
-    free / "") for the draw weights and the reads.
+    free / "") for the draw weights and the reads. Optional (Amendment 1, the lead bound in time): lsig (N, 41) f4 the nearest eligible lead's
+    least corner arc at each dense step (BIG none), sf0 (N,) the row's own front-bumper arc, v0 (N,) its fed speed: at step t the upper bound
+    min(.., lead(t)), lead(t) = sqrt(2 A_DEC rem) + 1.0 for rem = lsig(t) - STOP_M - sf(t) > 0, else 0, floored at sqrt(max(v0^2 - 2 A_MAX
+    (sf(t) - sf0), 0)) (rule_expert's stop margin and braking envelope against the lead where it is at the plan's own time).
 
 Per dense step t = 0.1 .. 4.0 s (on_lon's geometry: the plan through timing_only, i.e. every pose moves only along its own detached
 heading and the yaw gets no gradient; dense poses at 0.1 s; front-bumper / rear-axle arcs sf / sr on the row's route, detached for the grid
@@ -32,6 +35,7 @@ import on_lon as OL  # noqa: E402
 
 NAME = "envelope.npz"
 BIG, LAT_ROUTE = 1e3, 3.5
+A_DEC, A_MAX, STOP_M, MARGIN_UP = 3.0, 6.0, 1.5, 1.0
 
 
 def _bare(n: str) -> str:
@@ -55,13 +59,16 @@ def load(pool_dir, names, dev) -> dict:
     src = np.array([pos[_bare(names[i])] for i in dst], np.int64)
     if len(dst):
         R[dst], vuf[dst], vur[dst], vl[dst], ok[dst] = (z[k][src] for k in ("route", "vuf", "vur", "vl", "ok"))
+    lsig, sf0, v0 = np.full((N, 41), BIG, np.float32), np.zeros(N, np.float32), np.zeros(N, np.float32)
+    if len(dst) and "lsig" in z.files:
+        lsig[dst], sf0[dst], v0[dst] = z["lsig"][src], z["sf0"][src], z["v0"][src]
     cls = np.full(N, "", "U8")
     if len(dst) and "cls" in z.files:
         cls[dst] = z["cls"][src]
     print(f"on_envelope: {p}: {len(dst)} / {N} pool rows labelled, {int(ok.sum())} ok; classes "
           + ", ".join(f"{c} {int((ok & (cls == c)).sum())}" for c in ("stop", "turn", "lead", "free")), flush=True)
     t = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
-    return dict(route=t(R), vuf=t(vuf), vur=t(vur), vl=t(vl), ok=t(ok), names=names, path=str(p), cls=cls)
+    return dict(route=t(R), vuf=t(vuf), vur=t(vur), vl=t(vl), ok=t(ok), lsig=t(lsig), sf0=t(sf0), v0=t(v0), names=names, path=str(p), cls=cls)
 
 
 def _grid(V, s):
@@ -91,6 +98,12 @@ def terms(poses, rows, pack):
     tpos = torch.arange(OL.NS, device=x.device)[None] > 0
     on = tpos & (lr.abs() <= LAT_ROUTE) & (sr <= NR - 1) & (sf <= NR - 1) & pack["ok"][rows][:, None]
     vu = torch.minimum(_grid(pack["vuf"][rows], sf), _grid(pack["vur"][rows], sr))
+    if "lsig" in pack:                                                          # Amendment 1: the lead bound at the plan's own time
+        ls = pack["lsig"][rows]
+        rem = ls - STOP_M - sf
+        vlead = torch.where(rem > 0, torch.sqrt(2 * A_DEC * rem.clamp_min(0)) + MARGIN_UP, torch.zeros_like(rem))
+        floor = torch.sqrt((pack["v0"][rows][:, None] ** 2 - 2 * A_MAX * (sf - pack["sf0"][rows][:, None])).clamp_min(0))
+        vu = torch.minimum(vu, torch.where(ls < BIG / 2, torch.maximum(vlead, floor), torch.full_like(vu, BIG)))
     vlo = _grid(pack["vl"][rows], sr)
     bu = on & (vu < BIG / 2)
     bl = on & (vlo > 0)
