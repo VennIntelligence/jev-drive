@@ -26,7 +26,8 @@
 #   rf_app.sh report2 [tags]            the report stage into $O/v2/report
 #   rf_app.sh control <seed>            v2 Amendment 3, the W 0 control: APP0C-L18-s<seed> = 2 500 gentle steps on pool on1_APP, --app-lam 0
 #                                       (approach rows with the S hinges only), reported guard gates, held 460 read -> $O/w0/{reads,bases}.txt
-#                                       (bases: RSG-L18-s<seed> and APP2W05-L18-s0)
+#                                       (bases: RSG-L18-s<seed>, and APP2W05-L18-s0 for seed 0); report0 with both seeds adds the
+#                                       2-seed mean APP0C-L18 vs RSG-L18
 #   rf_app.sh report0 [tags]            the report stage into $O/w0/report (every base line of a tag is paired)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 O=${APP_O:-$DATA_DIR/runs/route_follow/approach}; O2=$DATA_DIR/runs/route_follow/approach/v2; O3=$DATA_DIR/runs/route_follow/approach/w0; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
@@ -89,7 +90,7 @@ control)
     sub app0-read-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
         -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6 >> $O3/reads.txt || exit 1
   done
-  printf '%s %s\n%s %s\n' $T $B $T APP2W05-L18-s0 >> $O3/bases.txt; tail -9 $O/jobs.txt ;;
+  echo "$T $B" >> $O3/bases.txt; [[ $s == 0 ]] && echo "$T APP2W05-L18-s0" >> $O3/bases.txt; tail -9 $O/jobs.txt ;;
 report0)
   shift; sub app0-report --after "$(paste -sd, $O3/reads.txt)" --env APP_O=$O3 --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1
   tail -1 $O/jobs.txt ;;

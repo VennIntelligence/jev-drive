@@ -190,3 +190,19 @@ The question: does the held harm shared by APP1X and APP2W05 come from the pool 
   better. The pool mix (approach rows as S-only rows, ~7 of 128 per batch) is harmless. The held harm of APP1X and APP2W05 comes from the
   approach gradient itself, in both term designs, together with the inward entry (+0.16 / +0.17 m). Stop; the line's verdict is the
   coordinator's.
+
+## Amendment 4 (coordinator, 2026-10-15 ~14:25, before any seed-1 read): seed 1 of the W 0 control
+
+Seed 0 of the W 0 control read 19 / 24 held turns and a mean score of +0.015 [+0.003, +0.027], with zeros -2. Seed 1 tests whether that
+is a cheap gain from "approach-window rows as S-only rows" or seed noise.
+- **Run.** APP0C-L18-s1 = the same recipe on RSG-L18-s1 (pool on1_APP, `--app-lam 0`, 2 500 gentle steps, seed 1), PRIO 8.
+  `rf_app.sh control 1`, then `rf_app.sh report0 APP0C-L18-s0 APP0C-L18-s1`.
+- **Held 460 reads.**
+  - Seed 1 paired vs RSG-L18-s1.
+  - The 2-seed mean APP0C-L18 vs RSG-L18 (ol_confirm --mean): zeros, at-fault zeros, mean score.
+  - 24-turn completion per seed and summed over 48.
+  - The entry table.
+- **Reading.**
+  - Seed 1 repeats seed 0 (score up, zeros not up, turns not down): a candidate for a public guard (the coordinator's call).
+  - Otherwise: seed noise.
+- Report and stop.
