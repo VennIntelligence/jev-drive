@@ -21,11 +21,12 @@ held-extract)
   S=()
   for T in RSG-L18-s0 RSG-L18-s1; do S+=("$T=$L/ledger/held_$T.pkl"); done
   for T in RV2a-L18-s0 RV2a-L18-s1 RV2b-L18-s0 RV2b-L18-s1; do S+=("$T=$O/tax/held_$T.pkl"); done
-  cd "$HERE/../../.."; exec .venv/bin/python "$HERE/rf_receding.py" extract-held --set "${S[@]}" --follow $L/v2/report/follow/scenes.csv --read $M --out $O/held.pkl ;;
+  cd "$HERE/../../.."; exec .venv/bin/python "$HERE/rf_receding.py" extract-held --set "${S[@]}" --follow $L/v2/report/follow/scenes.csv --read $M --out $O/held.pkl \
+    --zeros "$HERE/../results/progress/zeros.csv" --zmap RSG-L18-s0=held_s0 RSG-L18-s1=held_s1 ;;
 pai-extract)
   D=/data/runs/route_night; O=$D/receding; mkdir -p $O
   exec python3 "$HERE/rf_receding.py" extract-pai --strict "$HERE/../results/pai281/strict36.txt" --out $O/pai.pkl \
-    --set RSG-L18-s0=$D/pai_follow/r281.pkl:rsg:$D/r281/rsg RV2a-L18-s0=$D/v2pai/RV2a-L18-s0/follow.pkl:rv2a-l18-s0:$D/v2pai/RV2a-L18-s0 \
+    --zeros "$HERE/../results/progress/zeros.csv" --zmap RSG-L18-s0=pai --set RSG-L18-s0=$D/pai_follow/r281.pkl:rsg:$D/r281/rsg RV2a-L18-s0=$D/v2pai/RV2a-L18-s0/follow.pkl:rv2a-l18-s0:$D/v2pai/RV2a-L18-s0 \
           RV2b-L18-s1=$D/v2pai/RV2b-L18-s1/follow.pkl:rv2b-l18-s1:$D/v2pai/RV2b-L18-s1 APP1X-L18-s0=$D/v2pai/APP1X-L18-s0/follow.pkl:app1x-l18-s0:$D/v2pai/APP1X-L18-s0 ;;
 *) sed -n '2,6p' "$0"; exit 1 ;;
 esac

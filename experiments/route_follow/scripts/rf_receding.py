@@ -69,6 +69,22 @@ def plan_records(paths, rids):
     return res
 
 
+def over_zeros(a, name):
+    """Amendment 1: the d299 over-turn zeros (rf_progress zeros.csv, cls over_turn with a near turn) of the set mapped to NAME ->
+    {scene: (rid prefix, turn row, t_f)}."""
+    import csv
+    m = dict(x.split("=", 1) for x in (a.zmap or []))
+    if not a.zeros or name not in m:
+        return {}
+    out = {}
+    for r in csv.DictReader(open(a.zeros)):
+        if r["set"] == m[name] and r["cls"] == "over_turn" and r["near_turn"]:
+            d = float(r["turn_deg"])
+            out[r["scene"]] = (r["rid"], dict(turn=True, side="L" if d > 0 else "R", entry=float(r["turn_entry"]), exit=float(r["turn_exit"]),
+                                              outcome="event", completed=False, turn_deg=d, near_turn=r["near_turn"]), float(r["t_f"]))
+    return out
+
+
 def extract_pai(a):
     strict = [x.split()[0] for x in open(a.strict) if x.strip()]
     out = []
@@ -86,6 +102,12 @@ def extract_pai(a):
                              tz=o["tz"] if o["tz"] is not None and not o["score"] else np.inf, row=row, R=F.dedup(np.asarray(o["route"], float)),
                              ctrl={k: np.asarray(v, float) for k, v in o["ctrl"].items()}, log=dict(T=np.asarray(D[s]["log"]["T"], float),
                                                                                                     P=np.asarray(D[s]["log"]["P"], float))))
+        for s, (rid, row, tf) in over_zeros(a, name).items():
+            o = D[s]["rolls"][lab]
+            assert o["rid"].startswith(rid[:8]), (s, rid, o["rid"])
+            recs.append(dict(set=name, src="pai_x", scene=s, rid=o["rid"], score=float(o["score"] or 0), kind="", tz=tf, row=row, cls_force="over_turn",
+                             R=F.dedup(np.asarray(o["route"], float)), ctrl={k: np.asarray(v, float) for k, v in o["ctrl"].items()},
+                             log=dict(T=np.asarray(D[s]["log"]["T"], float), P=np.asarray(D[s]["log"]["P"], float))))
         files = glob.glob(os.path.join(root, "**", "driver", "drive.jsonl"), recursive=True)
         P = plan_records(files, {r["rid"] for r in recs})
         for r in recs:
@@ -103,7 +125,8 @@ def extract_held(a):
     for spec in a.set:
         name, pk = spec.split("=", 1)
         rows = {r["scene"]: r for r in fo if r["label"] == f"{name}@18" and r["turn"] == "True"}
-        rolls = {o["scene"]: o for o in pickle.load(open(pk, "rb"))["rolls"] if o["scene"] in rows}
+        X = over_zeros(a, name)
+        rolls = {o["scene"]: o for o in pickle.load(open(pk, "rb"))["rolls"] if o["scene"] in rows or o["scene"] in X}
         recs, by_run = [], {}
         for s, r in rows.items():
             o = rolls.get(s)
@@ -115,6 +138,13 @@ def extract_held(a):
             recs.append(dict(set=name, src="held", scene=s, rid=o["rid"], score=float(o["score"] or 0), kind="", row=row,
                              tz=float(T0_HELD + DT_HELD * kz) if kz >= 0 else np.inf, R=F.dedup(np.asarray(o["route"], float)),
                              ctrl={k: np.asarray(o["ctrl"][k], float) for k in ("t", "x", "y", "yaw", "vx")},
+                             log=dict(T=np.asarray(o["log"]["T"], float), P=np.asarray(o["log"]["P"], float)), run=o["run"]))
+            by_run.setdefault(o["run"], set()).add(o["rid"])
+        for s, (rid, row, tf) in X.items():
+            o = rolls[s]
+            assert o["rid"].startswith(rid[:8]), (s, rid, o["rid"])
+            recs.append(dict(set=name, src="held_x", scene=s, rid=o["rid"], score=float(o["score"] or 0), kind="", row=row, tz=tf, cls_force="over_turn",
+                             R=F.dedup(np.asarray(o["route"], float)), ctrl={k: np.asarray(o["ctrl"][k], float) for k in ("t", "x", "y", "yaw", "vx")},
                              log=dict(T=np.asarray(o["log"]["T"], float), P=np.asarray(o["log"]["P"], float)), run=o["run"]))
             by_run.setdefault(o["run"], set()).add(o["rid"])
         P = {}
@@ -272,7 +302,9 @@ def read_turn(rec, tax):
         d["inside"] = bool(ent <= d["s_e"] <= ext + 10.0 and d["pre"])
     # class
     done = bool(row.get("completed"))
-    if done:
+    if rec.get("cls_force"):
+        cls, src = rec["cls_force"], "d299"
+    elif done:
         cls, src = "completed", "-"
     elif rec["score"] > 0 or not np.isfinite(tf):
         cls, src = "no_zero", "-"
@@ -387,7 +419,7 @@ def read(a):
             recs += pickle.load(open(f, "rb"))
     TR, DR = [], []
     for r in recs:
-        key = ("pai_" if r["src"] == "pai" else "held_") + r["set"]
+        key = ("x_" if r["src"].endswith("_x") else "") + ("pai_" if r["src"].startswith("pai") else "held_") + r["set"]
         tr, dd = read_turn(r, taxes.get(key))
         if tr is None:
             continue
@@ -409,7 +441,6 @@ def read(a):
     P0 = T[T.key == "pai_RSG-L18-s0"]
     hs, hd = float(P0.h_slope.median()), float(P0.h_drift.abs().median())
     res["gates"]["human"] = dict(median_slope=hs, median_abs_drift=hd, n=int(P0.h_slope.notna().sum()), passed=bool(0.8 <= hs <= 1.2 and hd <= 3.0))
-    tc = T[(T.cls_src == "tax")]
     res["gates"]["rule_vs_tax"] = None
     # claims per set
     groups = {k: T[T.key == k] for k in keys} | {"held_pooled": H}
@@ -432,7 +463,7 @@ def read(a):
             for c in ("C1", "C2"):
                 r[c]["verdict"] = "inconclusive (G-human failed)"
     # classes
-    for k, x in list(groups.items()) + [("pai_all4", T[T.src == "pai"])]:
+    for k, x in list(groups.items()) + [("pai_all4", T[T.src == "pai"]), ("over0_d299", T[T.src.str.endswith("_x")])]:
         res["classes"][k] = {c: dict(n=int((x.cls == c).sum()), n_slope=int(x[x.cls == c].slope.notna().sum()),
                                      slope=float(x[x.cls == c].slope.median()), drift=float(x[x.cls == c].drift.median()),
                                      lag15=float(x[x.cls == c].lag15.median()), unseen=float(x[x.cls == c].unseen.median()),
@@ -447,7 +478,8 @@ def read(a):
                             for b, y in x[x.cls == c].groupby("bin", observed=False)} for c in CLASSES if (x.cls == c).any()}
     # C4: inside the turn
     I = Dx[Dx.inside]
-    for k, x in (("pai_RSG-L18-s0", I[I.key == "pai_RSG-L18-s0"]), ("pai_all4", I[I.src == "pai"]), ("held_all6", I[I.src == "held"])):
+    for k, x in (("pai_RSG-L18-s0", I[I.key == "pai_RSG-L18-s0"]), ("pai_all4", I[I.src == "pai"]), ("held_all6", I[I.src == "held"]),
+                 ("over0_d299", I[I.src.str.endswith("_x")])):
         res["c4"][k] = {}
         for c in CLASSES:
             y = x[x.cls == c]
@@ -474,7 +506,7 @@ def read(a):
     for rec in recs:
         key = ("pai_" if rec["src"] == "pai" else "held_") + rec["set"]
         tx = taxes.get(key)
-        if tx is None or not rec["row"].get("turn") or rec["row"].get("completed") or rec["score"] > 0 or not np.isfinite(rec["tz"]):
+        if rec["src"].endswith("_x") or tx is None or not rec["row"].get("turn") or rec["row"].get("completed") or rec["score"] > 0 or not np.isfinite(rec["tz"]):
             continue
         p = tx.get(rec["scene"])
         if p in TURN_CLS:
@@ -518,7 +550,7 @@ def write_md(out, res, T):
                                            for c in ("visible", "de_first_visible", "lag15", "unseen", "v_app_med", "n_app")) + " |")
     md += ["", "Fingerprint by class (turns, turns with a slope; medians):", "",
            "| set | class | n (slope) | slope | drift m | lag15 m | unseen | visible |", "|:--|:--|:--|:--|:--|:--|:--|:--|"]
-    for k in ("pai_RSG-L18-s0", "pai_all4", "held_pooled"):
+    for k in ("pai_RSG-L18-s0", "pai_all4", "held_pooled", "over0_d299"):
         for c, v in res["classes"].get(k, {}).items():
             md.append(f"| {k} | {c} | {v['n']} ({v['n_slope']}) | {f(v['slope'])} | {f(v['drift'], 1)} | {f(v['lag15'], 1)} | {f(v['unseen'])} | {f(v['visible'])} |")
     md += ["", "C3: plan heading change over 4 s toward the turn (deg, median) by distance to the entry; human log in brackets:", "",
@@ -590,9 +622,10 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     e = sp.add_parser("extract-pai")
     e.add_argument("--set", nargs="+", required=True), e.add_argument("--strict", required=True), e.add_argument("--out", required=True)
+    e.add_argument("--zeros", default=""), e.add_argument("--zmap", nargs="*")
     h = sp.add_parser("extract-held")
     h.add_argument("--set", nargs="+", required=True), h.add_argument("--follow", required=True), h.add_argument("--out", required=True)
-    h.add_argument("--read", default="")
+    h.add_argument("--read", default=""), h.add_argument("--zeros", default=""), h.add_argument("--zmap", nargs="*")
     r = sp.add_parser("read")
     r.add_argument("--pai", default=""), r.add_argument("--held", default=""), r.add_argument("--tax", nargs="*")
     r.add_argument("--runway", default=""), r.add_argument("--out", required=True), r.add_argument("--fig", default="")

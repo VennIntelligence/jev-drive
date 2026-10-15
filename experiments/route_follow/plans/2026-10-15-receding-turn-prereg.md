@@ -105,3 +105,10 @@ completed and 6 failed pai_RSG turns, the first two per class among late-wide / 
 the world-onset W_st - entry vs d_e), one README paragraph. research/decisions.md is not edited.
 
 ## Amendments (appended after the prereg commit; each says whether it came before or after a statistic was seen)
+
+1. (After the first read; C1 / C2 / C3 numbers were seen.) C4's registered population holds no over-turn: none of the failed strict
+   turns of the four PAI sets or the six held sets is classed over-turn (taxonomy or rule); the d299 over-turn zeros sit on turns outside
+   the strict lists. C4 (descriptive) is extended to the d299 over-turn zeros that have a near turn (`results/progress/zeros.csv`, cls
+   `over_turn`, near_turn set: PAI RSG-L18-s0 2, held RSG-L18-s0 5, RSG-L18-s1 4), with the zero-topology turn stored there (entry,
+   exit, degrees; side from the sign) and its stored t_f; their approach fingerprint is tabled as class `over0_d299`. They enter no C1 /
+   C2 / C3 statistic; nothing registered changes.
