@@ -73,7 +73,7 @@ def rmem_extract(a):
                 t0 = np.array([x[0] for x in rr], np.int64)
                 keep = np.r_[True, np.diff(t0) > 0]                         # one record per decision time
                 rr = [x for x, k in zip(rr, keep) if k]
-                F = np.asarray([x[3] for x in rr], np.float32).reshape(-1, N_PT, NF)
+                F = np.asarray([x[3][:N_PT * NF] for x in rr], np.float32).reshape(-1, N_PT, NF)   # ordered layout (route v2): + 3 scalars
                 out[sid] = dict(scene=want[sid], t0=np.array([x[0] for x in rr], np.int64), k=np.array([x[1] for x in rr], np.int32),
                                 anchor=np.asarray([x[2] for x in rr], np.float64), V=F[..., 0] > 0.5, XY=F[..., 1:3] * 20.0,
                                 cmd=np.array([-1 if x[4] is None else int(x[4]) for x in rr], np.int8))
