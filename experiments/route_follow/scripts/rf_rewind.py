@@ -1505,7 +1505,7 @@ def n_yield(a):
         old &= set(U) | set(X.get("nonturn", []))           # only the scenes this read covers
         L += ["", f"d316's 64 train turns (stored 18-decision units), those in this read: event / off units {len(old)}; also event / off here "
               f"{len(old & new)}; turn here but not failed {len({s for s in old if s in U and s not in new})}; no strict turn here {len(old - set(U))}."]
-    zl = {d: _count((r["zkind"], "after exit" if r["kz"] > (by[r["scene"]][f"D{d}"].get("rows_k") or [-1])[-1] else "in junction")
+    zl = {d: _count((r["zkind"], "after exit" if r["kz"] > (by[r["scene"]][f"D{d}"].get("rows_k") or [-1])[-1] + 1 else "in junction")
                     for r in out if r["delta"] == d and r["valid"] and r["completed"] and r["zero_after"]) for d in Ds}
     L += ["", "Completed but excluded by a zero after h (zero kind, after the last junction row or inside it): "
           + "; ".join(f"{d} s: " + (", ".join(f"{k[0]} {k[1]} {v}" for k, v in sorted(zl[d].items())) or "none") for d in Ds)]
