@@ -98,7 +98,7 @@ Handoff decisions k 17 .. 27 of both stored reads, CPU only.
   rule-expert lane's smoke). Both at gains 20 (wizard_cmd checked), `JEV_VCONT 1, JEV_LEAD 1`, CHUNK 24, RUNPFX v9-. A first card-0-only
   chain was stopped after 8 min (no rollout finished) to use card 1, and restarted from scratch.
 
-## Amendment 3 (2026-10-15 15:45 JST, after an interim look at the first chunk of each card, before the full read)
+## Amendment 3 (2026-10-15 15:30 JST, after an interim look at the first chunk of each card, before the full read)
 
 Interim (APP1X 24 of the 29 spin scenes, RSG 24 of the 90; sanity only, not a read): APP1X spins 1 / 24 (identity 24 / 24), RSG 0 / 11 on
 its spin-set scenes so far. The one left, 2fe500f7 (handoff + fast at 2.0 s), is a third regime: the model's plan **reverses** at 24 m/s
