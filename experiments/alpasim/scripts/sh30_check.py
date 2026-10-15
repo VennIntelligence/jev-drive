@@ -32,8 +32,9 @@ def main(a):
     tab = np.load(R / "op_parity/cache/lb_navtest/tab.npz")
     row = {t: k for k, t in enumerate(tab["names"].tolist())}
     front = np.load(R / "op_parity/cache/lb_navtest@warp/front.npy", mmap_mode="r")
-    pz = np.load(R / f"bench/ol/lb_navtest/plans/{a.tag}@warp.npz")
-    assert pz["names"].tolist() == tab["names"].tolist()
+    pzf = R / f"bench/ol/lb_navtest/plans/{a.tag}@warp.npz"            # absent for a trajectory-head checkpoint (bench `poses` stage)
+    pz = np.load(pzf) if pzf.exists() else None
+    assert pz is None or pz["names"].tolist() == tab["names"].tolist()
     pf = R / f"bench/ol/lb_navtest/preds/{a.tag}-warp__base.npz"
     preds = np.load(pf)["poses"] if pf.exists() else None
     cores = {c: C.Core(a.tag, cold=c) for c in C.COLD}
@@ -54,7 +55,7 @@ def main(a):
         rec = {"token": t, "v0": float(np.linalg.norm(vel[-1])), "cmd": int(np.argmax(e["cmd"][-1])),
                "tok_max": float(np.abs(tk - ref).max()), "tok_rel": float(np.linalg.norm(tk - ref) / np.linalg.norm(ref)),
                "ego_max": float(np.abs(full["ego"] - tab["ego"][r]).max()),
-               "mu_xy_max": float(np.abs(full["mu"][:, :2] - pz["plan_mu"][r][:, :2]).max()),
+               "mu_xy_max": float(np.abs(full["mu"][:, :2] - pz["plan_mu"][r][:, :2]).max()) if pz is not None else None,
                "pred_max": float(np.abs(full["poses"] - preds[r]).max()) if preds is not None else None,
                "full_fut": ade(full["poses"], fut) if not np.isnan(fut).any() else None}
         for m in (1, 2, 3):

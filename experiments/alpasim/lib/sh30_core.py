@@ -12,6 +12,9 @@ Per decision at t0, from the CAM_F0 keyframes at t0 - 1.5 / 1.0 / 0.5 / 0 s (as 
   tokens   Cinque's frozen vision encoder on the 8 pairs -> (8, 32, 512)
   policy   PModel: adapter bias from lib/parity_adapter.ego_features (command, vx, vy, ax, ay, 4 poses) + the trained plan pathway
   export   33 camera-frame plan points -> rear axle through the camera lever arm, linear resampling to 0.5 .. 4 s (8 poses)
+  thead    a checkpoint with a trajectory head (thead.pt next to ckpt-final.pt; lib/traj_head.py, experiments/flowhead) is served by
+           that head as jevdrive.bench serves it on navtest: tap select_4, the head's 8 rear-axle poses (flow head: noise row 0);
+           a flow head also returns its samples of noise rows 0 .. th_k - 1 (poses_k; SH30_THEAD_K, default 8)
 
 Closed-loop yaw damping (decision 205, off by default): the synthesised slots are the only place the model sees the ego's turning in the
 last 0.5 s (the newest image pair is one keyframe warped along the ego track), and its plan continues that yaw rate one to one, as the logs
@@ -26,6 +29,7 @@ Cold start (fewer than 4 keyframes; NAVSIM always has 4, so no rule was trained)
 from __future__ import annotations
 
 import io
+import os
 import pathlib
 import sys
 import time
@@ -234,6 +238,13 @@ class Core:
         else:
             self.model = T.load_pmodel(tag, self.dev)
         assert self.model.arm in ("P2", "P2L") and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
+        self.th, self.th_k = None, 1
+        th = T.proot("runs", tag) / "thead.pt"
+        if not self.rm and tag != "P0" and not tag.endswith("-init") and th.exists():
+            import traj_head as TH
+            self.th = TH.load(th, self.dev)
+            self.model.tap = TH.TAP
+            self.th_k = int(os.environ.get("SH30_THEAD_K", "8")) if self.th.kind == "fm" else 1
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)
 
@@ -247,7 +258,8 @@ class Core:
         unless base_out. One more policy forward on the tokens already encoded."""
         if not self.base_out:
             return {}
-        mu = self.model(H, ego, tc, inputs_on=False).float()[0, self.pi].reshape(33, 15).cpu().numpy()
+        o = self.model(H, ego, tc, inputs_on=False)
+        mu = (o[0] if isinstance(o, tuple) else o).float()[0, self.pi].reshape(33, 15).cpu().numpy()
         return {"poses_base": I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")}
 
     def _sync(self) -> float:
@@ -288,11 +300,18 @@ class Core:
                 rf = np.zeros(self.rm_dim, np.float32) if route is None else np.asarray(route, np.float32).reshape(self.rm_dim)
             fed = ego if ego_fn is None else ego_fn(ego)
             ego_t = torch.from_numpy((fed if rf is None else np.r_[fed, rf])[None]).to(self.dev)
-            out = (self._pol or self.model)(H, ego_t, tc).float()
+            out = (self._pol or self.model)(H, ego_t, tc)
+            out, h = out if self.th is not None else (out, None)
+            out = out.float()
+            th = {}
+            if self.th is not None:                       # the trajectory head's plan (bench thead-poses: noise row 0) and, fm, its samples
+                th["poses"] = self.th.sample(h.float(), k=0)[0].cpu().numpy().astype(np.float64)
+                if self.th_k > 1:
+                    th["poses_k"] = self.th.sample(h.float().expand(self.th_k, -1), noise=self.th.noise[:self.th_k]).cpu().numpy()
             t3 = self._sync()
             mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), {**self.leads(out), **self.base(H, ego_t, tc, cam_t)}
             cur = cur.cpu().numpy() if gpu else cur
-        poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
+        poses = th.pop("poses") if th else I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
-        return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0], **ld, **({"rmem": rf} if self.rm else {}),
+        return {"poses": poses, "mu": mu, **th, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0], **ld, **({"rmem": rf} if self.rm else {}),
                 **({"ego_fed": fed} if ego_fn is not None else {}), "ms": {"frames": 1e3 * (t1 - t0), "encode": 1e3 * (t2 - t1), "policy": 1e3 * (t3 - t2), "export": 1e3 * (t4 - t3)}}

@@ -346,6 +346,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                        **({"route_arcs": np.round(rG, 3).tolist()} if RP.NEED_GT and rG is not None else {}))
         if "rmem" in o:
             rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+        if "poses_k" in o:                                   # flow head (thead.pt): its samples of noise rows 0 .. K - 1
+            rec.update(th_k=np.asarray(o["poses_k"], np.float64).round(4).tolist())
         if bd is not None:
             rec.update(body=bd)
         if s.vh is not None:
@@ -427,6 +429,8 @@ def main() -> None:
         LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
     LOG.info("%s (%s, motion %.2f, synth %s, compiled %s, jpeg %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth,
              core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
+    if core.th is not None:
+        LOG.info("serving the trajectory head (thead.pt, kind %s, %d logged samples)", core.th.kind, core.th_k)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
     drv.decode = decode
     one = lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
