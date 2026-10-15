@@ -317,7 +317,7 @@ def md(r):
     L += [f"| {q} | {v['rows']} | {v['logs']} |" for q, v in r["cells"].items()]
     L += ["", "## (i) History gain (free straight rows)", "",
           "gamma = fixed-effects OLS slope of v_p on the scaled v_f over x 0.6 .. 1.4 (pooled within-row sums).", "",
-          "| human speed | rows | logs | gamma [95 % CI] | median per-row slope | median v_p / v_f at x 0.6 / 0.8 / 1.0 / 1.2 / 1.4 |", "|:--|--:|--:|:--|--:|:--|"]
+          "| human speed | rows | logs | gamma [95 % CI] | median per-row slope | median v_p / v (measured speed) at x 0.6 / 0.8 / 1.0 / 1.2 / 1.4 |", "|:--|--:|--:|:--|--:|:--|"]
     for k, v in r["history_gain"].items():
         if v is None:
             L.append(f"| {k} | 0 | | | | |")
