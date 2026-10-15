@@ -202,6 +202,12 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
     - 35 of its 50 new zeros are also APP1X's new zeros, so the harm is common to both term designs
 
   Look at the confirm table next to APP1X's [held/confirm.md](results/approach/held/confirm.md): the zero count and the kind split barely move.
+  - **W 0 control APP0C-L18-s0** (Amendment 3; same pool, `--app-lam 0`; [w0/held/confirm.md](results/approach/w0/held/confirm.md)) is level
+    with RSG-L18-s0:
+    - zeros 24 vs 26, -2 [-7, +3]; mean +0.015; held turns 19 / 24; dev ADE +0.0004
+    - against APP2W05: zeros -46 [-64, -30]
+
+    So the pool mix is harmless, and the held harm comes from the approach gradient itself, in both v1 and v2.
 - [results/corridor/](results/corridor/check.md): ROUTE-LANE CORRIDOR labels and the offline check (turn-night.md section 6; prereg
   `plans/2026-10-15-corridor-check-prereg.md`, Amendments 1-4; `scripts/rf_corridor.py` lanes | plans | build | check, `scripts/rf_corridor.sh`).
   Labels: the route's own lane chain (entry lane -> connector -> exit lane, the target lane at a lane change) + 0.3 m, classes corridor /

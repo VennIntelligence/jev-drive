@@ -169,3 +169,24 @@ The question: does the held harm shared by APP1X and APP2W05 come from the pool 
   - W 0 reproduces the +44 zeros: the harm is the pool mix (approach rows as S-only rows), and the approach terms are exonerated.
   - W 0 is level with RSG: the approach gradient, of either design, is the harm.
 - Either way: report and stop. The verdict on the approach line is the coordinator's.
+
+### Amendment 3 read (2026-10-15 ~14:20): W 0 is level with RSG, so the approach gradient is the harm
+
+- **APP0C-L18-s0 training** (`results/approach/w0/gate/APP0C-L18-s0.md`). Dev ADE 0.5288 (+0.0004). Every guard passes: G-ST 0.005 / 0.028,
+  G-over 0.0067, G-rely 0.0234.
+- **Held 460** (`results/approach/w0/held/confirm.md`, held18, 452 paired, 39 logs):
+
+  | read | RSG-L18-s0 | APP0C (W 0) | APP2W05 | W 0 - RSG [95 % CI] | W 0 - APP2W05 [95 % CI] |
+  |:--|--:|--:|--:|:--|:--|
+  | zeros | 26 | 24 | 70 | -2.0 [-7.0, +2.7] | -46.0 [-63.7, -29.5] |
+  | at-fault zeros | 21 | 20 | 45 | -1.0 [-4.6, +2.2] | -25.0 [-36.8, -13.3] |
+  | collision / offroad / corridor zeros | 4 / 17 / 6 | 4 / 16 / 5 | 11 / 34 / 27 | | |
+  | mean score | | | | +0.015 [+0.003, +0.027] | +0.057 [+0.019, +0.098] |
+  | GT distance (m) | 1.135 | 1.165 | 1.808 | +0.030 [-0.015, +0.073] | -0.643 [-0.798, -0.504] |
+  | held turns completed | 16 / 24 | 19 / 24 | 14 / 24 | | |
+  | inward offset at the entry (median m) | 0.34 | 0.34 | 0.58 | -0.01 [-0.03, +0.00] | -0.17 [-0.24, -0.09] |
+
+- **Reading, by the rule above.** W 0 is level with RSG: the zeros CI includes 0, and the score and the turns are, if anything, slightly
+  better. The pool mix (approach rows as S-only rows, ~7 of 128 per batch) is harmless. The held harm of APP1X and APP2W05 comes from the
+  approach gradient itself, in both term designs, together with the inward entry (+0.16 / +0.17 m). Stop; the line's verdict is the
+  coordinator's.
