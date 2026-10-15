@@ -22,7 +22,7 @@ human's speed when it passed each point (first passage), d_e = entry arc; l3 = t
 entry (rf_entryspeed VH_MIN; a human stopped there for traffic gives no speed target). Negatives: H = the route centreline, Hv NaN, d_e = a
 virtual entry drawn from the turn rows' d_e (rng [0, crc32(name)]), l3 False. Entry state of the human relative to the route (reported):
 signed lateral offset of the human's entry point to the route (+ toward the turn's inside), heading of the human path minus the route's,
-speed. Dev split: logs with crc32(log) % 100 < 15 (nuPlan log unit; PAI scene) are held out of the pool for the pilot gate.
+speed. Dev split: logs with crc32(log) % 100 < 15 (nuPlan log file; PAI scene) are held out of the pool for the pilot gate.
 nuPlan check: the human path G is rebuilt from the navsim log exactly as on_rows builds it (frame a = log index of sim time 0 - 10) and the
 ego's foot on it must reproduce meta s0 / e0 (max |diff| reported; label refuses > 1e-6).
 """
@@ -229,7 +229,7 @@ def label_nup(a):
     jobs = [(np.flatnonzero(M["scene"] == sc), Mx, RT) for sc in np.unique(M["scene"])]
     with Pool(a.workers or n_cpus()) as p:
         res = [r for rr in p.imap_unordered(nup_scene, jobs, chunksize=4) for r in rr]
-    save(a, res, tb, M["scene"], M["logu"], "nup")
+    save(a, res, tb, M["scene"], M["log"], "nup")                    # the nuPlan log file (finer than the log unit: 4 dev units only)
 
 
 # ---------------------------------------------------------------- PAI rows
