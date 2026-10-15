@@ -6,10 +6,12 @@
 #   S2   = S3 + S1's drop (open rows only; the PAITV rows carry no open label, so they are never dropped)
 # Box, repo root. Every GPU job through the pool; ids in $O/jobs.txt.
 #   rf_slow.sh gates          the bit-identity smokes (60 steps; old code = worktree at OLD_REV) + the merged pool + the compare job
+#   rf_slow.sh post           confirm / deficit / report again after the read jobs of ARMS (default S1 S3 S2: Sall stopped at the pilot)
 #   rf_slow.sh submit [ARMS]  pilots (1000 steps, seeds 0 / 1) -> trainings (2500, seeds 0 / 1, --after the arm's pilots) -> held 460 @18
 #                             (6 chunks) + public 1491 @10 guard (10 chunks) per training -> confirm, deficit, report (after every read)
 #   rf_slow.sh pilot          pilot gate table (prereg Amendment 3 lines) from the pilot runs -> $O/pilot.{md,json}
 #   rf_slow.sh report         lines 1 (held) and 2 (guard) pass / fail with numbers, from confirm / deficit outputs (+ rear-ended counts)
+#   rf_slow.sh request        the PAI read request text (stdout): the box writes $O/PAI_READ_REQUEST.md with it
 #   rf_slow.sh tokyo          ON TOKYO: pull the seed-0 checkpoints (+ sidecars) as they appear, md5 checked; write PAI_READ_REQUEST.md (+ box copy)
 #   rf_slow.sh smoke | train | pool | gatecmp | confirm | deficit     (job bodies)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/data}
@@ -18,19 +20,21 @@ CK=$DATA_DIR/runs/op_parity/runs; P=$DATA_DIR/third_party/alpasim/.venv/bin/pyth
 OLD_REV=${OLD_REV:-6c3a6ae2}; OLD=$O/code_old
 BASE="--init RB0-F-s0 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-k 13 --on-split alpasim_nuplan/onpol-train"
 RB="--on on1_L18RB0 --on-mode self"; OPEN="--ego-drop-speed 0.5 --ego-drop-open"; MP=on1_RSGPAITV; PK=runs/onpol_nuplan/rows/L18RB0/lon.npz
-ARMS=${ARMS:-"S1 Sall S3 S2"}
+ARMS=${ARMS:-"S1 S3 S2"}                                            # Sall stopped at the pilot (prereg Amendment 3); ARMS="S1 Sall S3 S2" for the full grid
 wv() { [[ -s $O/paitv_weight.txt ]] || { echo "no $O/paitv_weight.txt (rf_slow.sh pool)" >&2; exit 1; }; cat $O/paitv_weight.txt; }
 flags() { case $1 in
   S1) echo "$RB $OPEN" ;; Sall) echo "$RB --ego-drop-speed 0.5" ;;
   S3) echo "--on $MP --on-mode mixed --on-weight pool=v:$(wv)" ;;
   S2) echo "--on $MP --on-mode mixed --on-weight pool=v:$(wv) $OPEN --open-pack $PK" ;;
   *) echo "no arm $1" >&2; exit 2 ;; esac; }
-tag() { echo RSG$1${3:-}-L18-s$2; }                                   # tag ARM SEED [P (pilot)]
+tag() { echo RSG$1${3:-}-L18-s$2; }
+po() { for a in S1 S2 S3 Sall; do [[ " $ARMS " == *" $a "* ]] && echo $a; done | paste -sd' ' -; }   # PAI read order (Amendment 1), arms in ARMS                                   # tag ARM SEED [P (pilot)]
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority ${PRIO:-12} --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 dirs() { ls -d $1/$2/b*/ 2>/dev/null | sed 's#/$##' | paste -sd,; }
 hdirs() { ls -d $M/$1/c*/run 2>/dev/null | paste -sd,; }
-PAIRS=(RSGS1-L18:RSG-L18 RSGSall-L18:RSG-L18 RSGS3-L18:RSG-L18 RSGS2-L18:RSG-L18 RSGS1-L18:RSGSall-L18 RSGS2-L18:RSGS3-L18)
+PAIRS=(); for q in RSGS1-L18:RSG-L18 RSGSall-L18:RSG-L18 RSGS3-L18:RSG-L18 RSGS2-L18:RSG-L18 RSGS1-L18:RSGSall-L18 RSGS2-L18:RSGS3-L18; do  # pairs of arms in ARMS
+  ok=1; for x in ${q/:/ }; do y=${x%-L18}; y=${y#RSG}; [[ $x == RSG-L18 || " $ARMS " == *" $y "* ]] || ok=0; done; (( ok )) && PAIRS+=($q); done
 MEAN=(RSG-L18=RSG-L18-s0,RSG-L18-s1); for a in $ARMS; do MEAN+=(RSG$a-L18=RSG$a-L18-s0,RSG$a-L18-s1); done
 case $1 in
 # ---------------------------------------------------------------- gates (bit identity) and the merged pool
@@ -133,6 +137,13 @@ submit)
   d=$(sub slow-deficit --after "$a" --vram 0.5 --cpu 32 --ram 32 --timeout-h 1 -- bash $ME deficit) || exit 1
   sub slow-report --after "$c,$d" --vram 0.5 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME report > /dev/null || exit 1
   echo "submitted $(( ${#rr[@]} + 3 )) read / summary jobs after the trainings of: $ARMS"; tail -n 4 $O/jobs.txt ;;
+post)    # confirm / deficit / report again, --after the read jobs of the arms in ARMS (from $O/jobs.txt; e.g. after an arm's jobs were cancelled)
+  rr=$(for a in $ARMS; do for s in 0 1; do grep -E " slow-(held|g10)-$(tag $a $s)-[0-9]+$" $O/jobs.txt | cut -d' ' -f1; done; done | paste -sd,)
+  [[ -n $rr ]] || { echo "no read jobs for $ARMS" >&2; exit 1; }
+  c=$(sub slow-confirm --after "$rr" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME confirm) || exit 1
+  d=$(sub slow-deficit --after "$rr" --vram 0.5 --cpu 32 --ram 32 --timeout-h 1 -- bash $ME deficit) || exit 1
+  sub slow-report --after "$c,$d" --vram 0.5 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME report > /dev/null || exit 1
+  echo "confirm / deficit / report after $(echo $rr | tr , '\n' | wc -l) read jobs of: $ARMS"; tail -n 3 $O/jobs.txt ;;
 train)   # train ARM SEED [P]: P = the 1000-step pilot
   F=$(flags $2) || exit 2; N=2500; [[ ${4:-} == P ]] && N=1000
   exec $TR experiments/route_mem/scripts/rm_train.py train --tag $(tag $2 $3 ${4:-}) $BASE $F --steps $N --seed $3 ;;
@@ -239,8 +250,9 @@ for a in arms:
     md.append(f"| {a} | {f(h and h['zero'], 1)} | {f(h and h['gt'], 3)} | {f(h and h['score'])} | {'n/a' if rr is None else f'{rr[0]:.1f} / {rr[1]:.1f} = {rr[0] / max(rr[1], 1e-9):.2f}'} | "
               f"**{ {None: 'pending', True: 'PASS', False: 'FAIL'}[l1] }** | {f(c and c['score'])} | {f(c and c['zero'], 1)} | "
               f"{dtx} | **{ {None: 'pending', True: 'PASS', False: 'FAIL'}[l2] }** |")
-md += ["", "Interaction readings (Amendment 1): " + "; ".join(f"{k}: guard zeros {f(C.get(k, {}).get('zero'), 1)}, held zeros {f(H.get(k, {}).get('zero'), 1)}"
-                                                          for k in ("RSGS1-L18 - RSGSall-L18", "RSGS2-L18 - RSGS3-L18")), "",
+ia = lambda k: (f"{k}: not read (Sall stopped at the pilot, prereg Amendment 3)" if "Sall" in k and "Sall" not in arms  # noqa: E731
+                else f"{k}: guard zeros {f(C.get(k, {}).get('zero'), 1)}, held zeros {f(H.get(k, {}).get('zero'), 1)}")
+md += ["", "Interaction readings (Amendment 1): " + "; ".join(ia(k) for k in ("RSGS1-L18 - RSGSall-L18", "RSGS2-L18 - RSGS3-L18")), "",
        "Line 1: zeros <= RSG + 3 (point), GT <= RSG + 0.03 m (point; CI shown), rear-ended (collision_rear > 0, seed mean on the common scenes) <= 0.7 x RSG, "
        "mean score >= RSG (point; CI shown). Line 2: public mean-score difference CI low > -0.01, zeros <= RSG + 5 (point), plan 2 s short (rf_deficit, positive = "
        "less short) CI low > 0. Sources: held18/confirm.json, confirm/confirm.json, deficit/deficit.json under " + O]
@@ -249,10 +261,10 @@ json.dump(res, open(f"{O}/report.json", "w"), indent=1, default=float)
 print("\n".join(md))
 PY
   ;;
-tokyo)   # ON TOKYO (the box cannot reach it): pull the seed-0 final checkpoints of the four arms as they appear (poll every 5 min, WAIT=0: once),
-         # md5 equal on both sides; then the PAI read request, written here and on the box ($BOXD/runs/route_follow/slow/PAI_READ_REQUEST.md)
+tokyo)   # ON TOKYO (the box cannot reach it): pull the seed-0 final checkpoints of the arms in ARMS as they appear (poll every 5 min, WAIT=0:
+         # once), md5 equal on both sides; then the PAI read request, written here and on the box ($BOXD/runs/route_follow/slow/PAI_READ_REQUEST.md)
   BOX=${BOX:-autodl}; BOXD=${BOXD:-/root/autodl-tmp/ujs}; TD=/data/runs/op_parity/runs; O=/data/runs/route_follow/slow; mkdir -p $O; Q=$O/PAI_READ_REQUEST.md
-  done_=(); miss=(S1 S2 S3 Sall)
+  done_=(); miss=($(po))
   while :; do left=()
     for a in "${miss[@]}"; do T=$(tag $a 0)
       if ! ssh $BOX "test -f $BOXD/runs/op_parity/runs/$T/ckpt-final.pt -a -f $BOXD/runs/op_parity/runs/$T/route_mem.json"; then left+=($a); continue; fi
@@ -262,24 +274,41 @@ tokyo)   # ON TOKYO (the box cannot reach it): pull the seed-0 final checkpoints
         [[ -n $a1 && $a1 == $b1 ]] || { echo "md5 $T/$f differs ($a1 / $b1)" >&2; exit 1; }; echo "$(date '+%F %T') $T/$f md5 $a1 ok"
       done; done_+=($T); done
     miss=("${left[@]}"); (( ${#miss[@]} == 0 || ${WAIT:-1} == 0 )) && break; sleep 300; done
-  miss=$(for a in "${miss[@]}"; do tag $a 0; done | paste -sd' ')
-  {
-  echo "# SLOW S1 / S2: PAI 281 read request (prereg line 3, Amendment 1 order S1, S2, S3, Sall), written $(date '+%F %T') by rf_slow.sh tokyo"
+  COPIED="${done_[*]}" bash $0 request > $Q; cat $Q; rsync -a $Q $BOX:$BOXD/runs/route_follow/slow/ ;;
+request) # the PAI read request text (stdout); COPIED = tags already on Tokyo (md5-checked by `tokyo`)
+  TD=/data/runs/op_parity/runs; V=/data/runs/route_night/v2pai; R=$V/RSG-L18-s0-gate; X=/data/runs/route_follow/slow/line3
+  DK='docker run --rm --network none --user 0:0 --entrypoint bash -e DATA_DIR=/data -e PYTHONPATH=/data/third_party/alpasim/src/utils:/jev -v /data:/data:ro -v /data/datasets/nurec:/mnt/nre-data:ro -v '$X':'$X' -v $HOME/mycode/jev-drive:/jev:ro -w /repo alpasim-base:0.89.0 -c'
+  echo "# SLOW S1 / S2: PAI 281 read request (prereg line 3; Amendment 1 order S1, S2, S3, Sall; Sall stopped at the pilot, Amendment 3), $(date '+%F %T')"
   echo
-  echo "Checkpoints copied to Tokyo $TD/<tag>/ (ckpt-final.pt, adapter.pt, route_mem.json md5-checked): ${done_[*]:-none}${miss:+; not yet copied: $miss}."
-  echo "Serving = the reference /data/runs/route_night/v2pai/RSG-L18-s0-gate exactly (sv9.sh gateread, decision 309): pai_eval.sh with the default SERVE"
-  echo "(\"-e JEV_VCONT=1.0 -e JEV_LEAD=1\", JEV_TRACK unset = gate serve), WIZ gains 20, RUNPFX gate-, CHUNK 36, the reference's own 8 chunk lists, CONC 4;"
-  echo "seed 0 only. Tokyo cards are owned by the expert read: run these after it, in this order (one at a time on both cards, or one per card;"
-  echo "read as many as fit; the first ones are judged first). Line 3 after each (CPU, Tokyo repo):"
-  echo "  python3 experiments/route_follow/scripts/rf_londiag.py pai --run /data/runs/route_night/v2pai/<tag>-gate --ref /data/runs/route_night/v2pai/RSG-L18-s0-gate"
+  echo "Arms, seed 0, in this order: $(for a in $(po); do tag $a 0; done | paste -sd' ' -)."
+  echo "Checkpoints on Tokyo $TD (ckpt-final.pt, adapter.pt, route_mem.json; md5 equal to the box): ${COPIED:-none yet}."
+  echo "NOT YET COPIED: Tokyo /data was full on 2026-10-15 ~21:00 JST (rsync of RSGS1-L18-s0 failed with ENOSPC); the copy waits for the user to free space."
+  echo "Once there is room (~90 MB per checkpoint), on Tokyo: bash /data/runs/route_follow/slow/rf_slow.sh tokyo   (polls the box, md5-checks, rewrites this file)"
+  echo
+  echo "Serving = the reference $R exactly (sv9.sh gateread, decision 309): pai_eval.sh with the default SERVE (\"-e JEV_VCONT=1.0 -e JEV_LEAD=1\","
+  echo "JEV_TRACK unset = gate serve), WIZ gains 20, RUNPFX gate-, CHUNK 36, the reference's own 8 chunk lists, CONC 4. Tokyo cards are owned by the expert read:"
+  echo "queue these after it, in this order; read as many as fit, the first ones are judged first."
   echo
   echo '```bash'
   echo 'cd ~/mycode/jev-drive && git pull'
-  for a in S1 S2 S3 Sall; do T=$(tag $a 0); V=/data/runs/route_night/v2pai/$T-gate
-    echo "mkdir -p $V/chunks && cp /data/runs/route_night/v2pai/RSG-L18-s0-gate/chunks/*.txt $V/chunks/ && git log --oneline -1 > $V/COMMIT && \\"
-    echo "  RUNPFX=gate- CHUNK=36 CARDS=\"0 1\" WIZ=controller.gains.rel_front_steering_angle_weight=20 bash experiments/alpasim/scripts/pai_eval.sh $V $T /data/runs/route_night/test281.txt"
+  for a in $(po); do T=$(tag $a 0); O3=$V/$T-gate
+    echo "mkdir -p $O3/chunks && cp $R/chunks/*.txt $O3/chunks/ && git log --oneline -1 > $O3/COMMIT && \\"
+    echo "  RUNPFX=gate- CHUNK=36 CARDS=\"0 1\" WIZ=controller.gains.rel_front_steering_angle_weight=20 bash experiments/alpasim/scripts/pai_eval.sh $O3 $T /data/runs/route_night/test281.txt"
   done
   echo '```'
-  } > $Q; cat $Q; rsync -a $Q $BOX:$BOXD/runs/route_follow/slow/ ;;
+  echo
+  echo "Line 3 per read (CPU): the rf_tax extract (alpasim-base image, as the taxonomy; --asl-actors) and the decision slim of the read and, once, of the"
+  echo "reference; then rf_londiag.py pai with the stored PAI wait lines (the taxonomy's waitlines pkl, Mac tmp/tax/pai_wl.pkl; same 281 scenes)."
+  echo
+  echo '```bash'
+  echo "mkdir -p $X; cd ~/mycode/jev-drive"
+  for T in RSG-L18-s0-gate $(for a in $(po); do echo $(tag $a 0)-gate; done); do
+    echo "$DK \"/repo/.venv/bin/python /jev/experiments/route_follow/scripts/rf_tax.py extract --runs $V/$T/runs/* --out $X/$T.pkl --asl-actors --workers 8\""
+    echo "python3 experiments/route_follow/scripts/rf_londiag.py slim --runs $V/$T/runs/* --out $X/${T}_dec.pkl --workers 8"
+  done
+  for a in $(po); do T=$(tag $a 0)-gate
+    echo "python3 experiments/route_follow/scripts/rf_londiag.py pai --tax $X/$T.pkl --dec $X/${T}_dec.pkl --ref-tax $X/RSG-L18-s0-gate.pkl --ref-dec $X/RSG-L18-s0-gate_dec.pkl --wl <pai_wl.pkl> --out $X/$T.json"
+  done
+  echo '```' ;;
 *) sed -n 2,16p $0; exit 2 ;;
 esac

@@ -120,3 +120,9 @@ Sall 的 held 读也按 30 GB 内存。
 读 30 GB）约 7 块，读段约 3.4 h。从 19:45（盒上时间，CST）起，读完约 23:15，confirm / deficit / report 约 23:30 CST（= 00:30 JST）。卡时（按占卡）约 12，低于补记 1 的 32（读比估的快）。
 PAI：Tokyo 上的拷贝守护（`rf_slow.sh tokyo`，每 5 分钟看盒上 seed-0 checkpoint，md5 两边相等后拷贝）写 `PAI_READ_REQUEST.md`（Tokyo 与盒上 `runs/route_follow/slow/`），四条
 pai_eval.sh 命令按 S1、S2、S3、Sall；线 3 用 `rf_londiag.py pai`（r281/rsg 对自己：全部差 0，复现 0.589 / 0.867 / 碰撞零分 9 / 零分 70 / 追尾 111 / cor_route_end 17）。
+
+补记 3 续（同晚，主会话决定）：**Sall 按 pilot 规则停**（dev ADE 两个 seed 都 > 0.538）；主会话用 `cl cancel` 取消了 RSGSall 的全部 36 个 job（pilot 之后的训练、held、护栏，两 seed）。
+**S1 − Sall 的交互读法记为「未读」**（`rf_slow.sh report` 照此打印）；S2 − S3 照读。连带：原 confirm / deficit / report 三个 job 因依赖被取消而失败，
+`rf_slow.sh post` 按 S1、S3、S2 剩下的 96 块读重新提交（`ARMS` 默认改为 `S1 S3 S2`，配对只留四对：S1、S3、S2 各对 RSG-L18，S2 对 S3）。
+PAI：Tokyo `/data` 在约 21:00 JST 写满（RSGS1-L18-s0 的 rsync 报 ENOSPC），拷贝守护已停；**等用户腾出空间、主会话通知后才重拷**（Tokyo 上 `bash /data/runs/route_follow/slow/rf_slow.sh tokyo`）。
+`PAI_READ_REQUEST.md`（盒上 `runs/route_follow/slow/`，`rf_slow.sh request` 生成）按 S1、S2、S3 列出三条 pai_eval.sh 命令和线 3 的抽取与 `rf_londiag.py pai` 命令。
