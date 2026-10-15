@@ -540,7 +540,7 @@ def report(a):
     fe = DATA / "runs/route_mem/feat" / f"on1_{a.name}.npz"
     if fe.exists():
         f = np.load(fe)
-        rec["feat"] = dict(rows=int(len(f["names"])), ok=float(f["ok"].mean()), route0_share_005=float((f["route0_d"][f["ok"]] <= 0.05).mean()) if f["ok"].any() else None,
+        rec["feat"] = dict(rows=int(len(f["names"])), ok=float(f["ok"].mean()), route0_share_005=float((f["route0_d"][f["ok"]] <= 0.05).mean()) if f["ok"].any() and "route0_d" in f.files else None,
                            same_names=bool(np.array_equal(f["names"], tab["names"])))
     rz = CR / f"on1_{a.name}" / "route.npz"
     if rz.exists():
