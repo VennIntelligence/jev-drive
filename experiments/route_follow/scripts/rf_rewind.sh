@@ -79,7 +79,7 @@ train64() {
            echo "$id $name" >> "$O/jobs.txt"; echo "$id"; }
   case $sub in
   units)
-    python3 "$here/rf_rewind.py" n-units --follow $D/runs/route_follow/entry_speed/follow/scenes.csv --out "$O/units.txt" && cut -d' ' -f1 "$O/units.txt" > "$O/scenes.txt" ;;
+    $PY "$here/rf_rewind.py" n-units --follow $D/runs/route_follow/entry_speed/follow/scenes.csv --out "$O/units.txt" && cut -d' ' -f1 "$O/units.txt" > "$O/scenes.txt" ;;
   pack)
     nsub rwn-pack --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$O/pool/rwn-pack" -- \
       "$APY" "$repo/experiments/route_follow/scripts/rf_expert.py" pack --workers 16 --out "$NP" --scenes "$O/scenes.txt" --runs $(ls -d $P4/c*/run) ;;
