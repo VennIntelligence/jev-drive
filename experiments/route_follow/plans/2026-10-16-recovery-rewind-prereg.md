@@ -81,3 +81,15 @@ PAI 281 的 36 个严格转弯的专家读数在 Tokyo 跑（`research/next-roun
   图 `experiments/route_follow/figs/rewind_bev.png`（2–3 个场景：identity、xp0、三个 Δ 的路径与交接点）。
 - 盒：`$DATA_DIR/runs/route_follow/rewind/run`（每场景 launch 目录、a / all.pkl、tfail.json）。
 - README 一段、decisions.md 一行 + 决策文件。
+
+## 补记 1（smoke 之后、第一批正式读数之前，2026-10-15 17:10 盒时间）
+
+- smoke 场景 e37aa159（`$DATA_DIR/runs/route_follow/rewind/smoke`，提交 5a8beed6）：identity = event / corridor，t_fail 15.1 s，k_fail 151，h = 141 / 131 / 121。
+  **交接机制过闸**：三个 xpDΔ session 在 h 之前 served plan 与控制器轨迹与 identity 逐位相同（3 / 3，最大差 0），v(h) 与 identity 相同
+  （7.77 / 7.57 / 6.59 m/s，差 0）；第二个 identity（idB）分数相同。h 后 1 s 专家把车速降 2.7 / 2.5 / 1.7 m/s（向 V_E 4.6 m/s 减速，不超过
+  专家的 A_DEC 3 m/s²），不是跳变：速度确实从策略的状态带过去了。
+- smoke 的单场景数（不作判词）：Δ 1 s completed；Δ 2 / 3 s 都是 short_rear（专家减到 4.6 m/s 后被回放的后车追尾，PAI 在追尾处截断）；
+  xp0（专家从起点）也是 short_rear。可见「被追尾」可能是专家的主要失败方式。
+- 由此事先追加（探索性，不改登记线和判词）：按专家结局（completed / event / off / short_rear / short_slow）拆开每个 Δ 的计数；
+  「未被追尾时的完成率」= completed / (单元数 − short_rear) 单列，标为探索性。
+- 盒上 5 个缺失 usdz 已从 hf-mirror 下到（fetch.log 5 个 ok），36 个场景全部可跑。分阶段：10 个场景（17:10 提交），检查后再提交其余 26 个 + collect。
