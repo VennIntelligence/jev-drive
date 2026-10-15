@@ -100,3 +100,20 @@ held 460，18 决策（rm_chain.sh `read`，6 chunk，`CL_HIST_KEY=alpasim-read4
 
 链：[scripts/rf_onk.sh](../scripts/rf_onk.sh)（`first | rest | seed1 | report | train`）。
 结果：`results/onk/`（`onk.md` 表和按上面的线给的结论，`held18/confirm.md`，`held_raw.txt`，`follow.md`）。
+
+## 补记 1（2026-10-15 15:02，`first` 检查之后，任何 held 读数之前）：imit 检查的容差写错了
+
+**已看到的：** 只有 RSGk51-L18-s0 训练 log 的前 500 步，没有任何 held 读数。
+- 每 batch "64 normal, 13 yaw-rate, 51 on-policy"、pool 17 429 行、init dev ADE @0 0.5276（= RSG-L18-s0）、损失有限：**过**。
+- step 100 imit 0.8198 对 0.7552（+8.6 %），**按字面没过**"~5 %"这一条。step 100–500 的五个值：k51 0.8198 / 0.8403 / 0.8174 / 0.8040 / 0.8067
+  （均值 0.818），RSG-L18-s0 0.7552 / 0.7269 / 0.7598 / 0.7343 / 0.7247（均值 0.740）：是稳定的水平差，不是单步噪声。
+- dev ADE @500 0.5386 对 0.5372（+0.0014，同一批 dev 行），模型没有跑偏。
+
+**为什么是容差错了而不是配方坏了：** batch 的 `imit` 是 imitation 行上的均值。k 从 13 到 51 时 normal 行从 102 降到 64，yaw-rate 行固定 13，
+yaw-rate 行在 imitation 行里的占比从 13 / 89.5 = 14.5 % 升到 13 / 61 = 21.3 %；yaw-rate 行的误差更大（dev ot_ade 0.73 对 ade 0.53），所以
+batch imit 的水平必然上移。原来的 5 % 容差是照 lrsteps 抄的（那里 batch 组成不变），没算这一项。用两组均值解出每类的水平：normal ≈ 0.573、
+yaw-rate ≈ 1.72（这一偏移也可能有一部分是处理本身：5.8 倍 hinge 压力，这里不区分）。训练器接受了参数，行流没有出错，不改任何代码。
+
+**改为：** 检查项"imit 与 0.7552 在 ~5 % 内"换成"dev ADE @500 与 RSG-L18-s0 的 0.5372 在 0.02 m 内、最终 dev ADE 与 0.528 在 0.02 m 内"
+（lrsteps 的口径）。另登记一个可证伪的预测：k26 的 step 100–500 imit 均值 ≈ 0.760（按上面的两类水平和 yaw-rate 占比 13 / 79.75 = 16.3 %），
+落在 0.745–0.775 之外就在结果里报告。登记线（零分 / 均分 / 停止线）不变。随后提交 `rest`。
