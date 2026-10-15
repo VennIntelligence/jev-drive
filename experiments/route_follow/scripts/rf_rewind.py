@@ -415,6 +415,14 @@ N_TAGS = ("id", "idB", "xp0", "D1", "D2", "D3")
 TOL_PLAN, TOL_TRACK, TOL_V = 0.15, 0.05, 0.05                      # Amendment 2: handover check against the identity (m, m, m/s)                   # (force_gt_duration 0.5 s = decision 0); rf_follow's junction pre; d293 window
 
 
+def n_shape(t, xy, v, st, lo, hi, tz=np.inf, t_lo=-np.inf):
+    """rf_shape.track_shape, NaN when fewer than two samples lie before tz (a zero at the start; rf_shape.resample fails on an empty track)."""
+    import rf_shape as SH
+    if (np.asarray(t, float) < tz).sum() < 2:
+        return dict(kmax=np.nan, alat=np.nan, dk=np.nan, dec=np.nan, arc=0.0, st_kpk=np.nan, st_apk=np.nan, v_apk=np.nan)
+    return SH.track_shape(t, xy, v, st, lo, hi, tz, t_lo=t_lo)
+
+
 def n_gate():
     """Decision-293 thresholds for the nuPlan turns: no topo class here, so the all-turn human p95 (rf_p4.gate_of of a class below
     MIN_CLASS_N) and the default entry speed V_E_OTHER + 1 m/s."""
@@ -515,7 +523,7 @@ def n_violation(o, gt):
     v = SH.box5(C["vx"])
     lo, hi = row["entry"] - N_WIN, row["exit"]
     pre = t < o["tz"]
-    Rr = SH.resample(P[pre], dict(t=t[pre], v=v[pre], st=st[pre]))
+    Rr = SH.resample(P[pre], dict(t=t[pre], v=v[pre], st=st[pre])) if pre.sum() >= 2 else None
     hits = []
     if Rr is not None:
         s, g, E = Rr
@@ -635,10 +643,10 @@ def n_metrics(o, ido, u, gt):
             if u["stratum"] == "B":                           # B: the profile after h, expert against the identity over the same time span
                 for lab, tt, ll, PP, vv, ss, zz in (("xp", t, lat, P, vx, st, tz), ("id", ti, ido["lat"], np.c_[Ci["x"], Ci["y"]], np.asarray(Ci["vx"], float), ido["st"], ido["tz"])):
                     w = (tt >= th) & (tt < zz) & (ss >= ent - N_WIN) & (ss <= ext)
-                    sh = SH.track_shape(tt, PP, vv, ss, ent - N_WIN, ext, zz, t_lo=th)
+                    sh = n_shape(tt, PP, vv, ss, ent - N_WIN, ext, zz, t_lo=th)
                     x[f"post_{lab}"] = dict(lat_med=float(np.median(np.abs(ll[w]))) if w.any() else np.nan,
                                             lat_max=float(np.max(np.abs(ll[w]))) if w.any() else np.nan, kmax=sh["kmax"], dk=sh["dk"], alat=sh["alat"])
-    shp = SH.track_shape(t, P, vx, st, ent - N_WIN, ext, tz, t_lo=t_lo)
+    shp = n_shape(t, P, vx, st, ent - N_WIN, ext, tz, t_lo=t_lo)
     spd = SH.speeds(t, st, vx, ent, ext, tz)
     ent_after = not np.isfinite(t_lo) or (x.get("st_h_rel_entry") is not None and x["st_h_rel_entry"] < 0)
     gk = dict(kmax=bool(shp["kmax"] <= gt["kmax"]), dk=bool(shp["dk"] <= gt["dk"]), alat=bool(shp["alat"] <= gt["alat"]),
@@ -650,7 +658,7 @@ def n_metrics(o, ido, u, gt):
     x["rows_after"] = int(sum(d["k"] >= hh and d["k"] < kz for d in o["dec"]))
     if o.get("log") is not None:                             # calibration: the human log through the same gate
         L = o["log"]
-        lsh = SH.track_shape(L["t"], L["P"], L["v"], L["st"], ent - N_WIN, ext)
+        lsh = n_shape(L["t"], L["P"], L["v"], L["st"], ent - N_WIN, ext)
         lsp = SH.speeds(L["t"], L["st"], L["v"], ent, ext)
         x["log_gate"] = dict(kmax=bool(lsh["kmax"] <= gt["kmax"]), dk=bool(lsh["dk"] <= gt["dk"]), alat=bool(lsh["alat"] <= gt["alat"]),
                              v_entry=bool(np.isfinite(lsp["v_0"]) and lsp["v_0"] <= gt["v_entry"]))
