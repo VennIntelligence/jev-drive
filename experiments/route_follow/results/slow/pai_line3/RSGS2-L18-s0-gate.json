@@ -1,0 +1,59 @@
+{
+ "run": "/data/runs/route_follow/slow/line3/RSGS2-L18-s0-gate.pkl",
+ "ref": "/data/runs/route_follow/slow/line3/RSG-L18-s0-gate.pkl",
+ "new": {
+  "scenes": 281,
+  "mean": 0.5987388951951937,
+  "zeros": 77,
+  "coll_zeros": 10,
+  "rear_ended": 98,
+  "cor_route_end": 19,
+  "slow_ratio_median": 0.6450411239143558,
+  "slow_scenes": 72,
+  "handoff_ge16": 0.9226987690153012,
+  "handoff_rows": 194,
+  "handoff_scenes": 65
+ },
+ "ref_counts": {
+  "scenes": 281,
+  "mean": 0.5859756015411682,
+  "zeros": 71,
+  "coll_zeros": 12,
+  "rear_ended": 108,
+  "cor_route_end": 18,
+  "slow_ratio_median": 0.5865374846617877,
+  "slow_scenes": 73,
+  "handoff_ge16": 0.8668396674325219,
+  "handoff_rows": 197,
+  "handoff_scenes": 66
+ },
+ "diff": {
+  "scenes": 0,
+  "mean": 0.01276329365402551,
+  "zeros": 6,
+  "coll_zeros": -2,
+  "rear_ended": -10,
+  "cor_route_end": 1,
+  "slow_ratio_median": 0.058503639252568074,
+  "slow_scenes": -1,
+  "handoff_ge16": 0.05585910158277929,
+  "handoff_rows": -3,
+  "handoff_scenes": -1
+ },
+ "exam72_mean_diff": [
+  -0.007127450609801019,
+  -0.060983794001096825,
+  0.04330369777026867
+ ],
+ "exam_scenes": 72,
+ "lines": {
+  "slow_ratio": false,
+  "handoff": false,
+  "coll_zeros": true,
+  "zeros": false,
+  "exam": false,
+  "rear": false,
+  "cor_route_end": true
+ },
+ "line3": false
+}

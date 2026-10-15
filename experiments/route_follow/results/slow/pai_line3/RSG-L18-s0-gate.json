@@ -1,0 +1,59 @@
+{
+ "run": "/data/runs/route_follow/slow/line3/RSG-L18-s0-gate.pkl",
+ "ref": "/data/runs/route_follow/slow/line3/RSG-L18-s0-gate.pkl",
+ "new": {
+  "scenes": 281,
+  "mean": 0.5859756015411682,
+  "zeros": 71,
+  "coll_zeros": 12,
+  "rear_ended": 108,
+  "cor_route_end": 18,
+  "slow_ratio_median": 0.5865374846617877,
+  "slow_scenes": 73,
+  "handoff_ge16": 0.8668396674325219,
+  "handoff_rows": 197,
+  "handoff_scenes": 66
+ },
+ "ref_counts": {
+  "scenes": 281,
+  "mean": 0.5859756015411682,
+  "zeros": 71,
+  "coll_zeros": 12,
+  "rear_ended": 108,
+  "cor_route_end": 18,
+  "slow_ratio_median": 0.5865374846617877,
+  "slow_scenes": 73,
+  "handoff_ge16": 0.8668396674325219,
+  "handoff_rows": 197,
+  "handoff_scenes": 66
+ },
+ "diff": {
+  "scenes": 0,
+  "mean": 0.0,
+  "zeros": 0,
+  "coll_zeros": 0,
+  "rear_ended": 0,
+  "cor_route_end": 0,
+  "slow_ratio_median": 0.0,
+  "slow_scenes": 0,
+  "handoff_ge16": 0.0,
+  "handoff_rows": 0,
+  "handoff_scenes": 0
+ },
+ "exam72_mean_diff": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "exam_scenes": 72,
+ "lines": {
+  "slow_ratio": false,
+  "handoff": false,
+  "coll_zeros": true,
+  "zeros": true,
+  "exam": true,
+  "rear": false,
+  "cor_route_end": true
+ },
+ "line3": false
+}

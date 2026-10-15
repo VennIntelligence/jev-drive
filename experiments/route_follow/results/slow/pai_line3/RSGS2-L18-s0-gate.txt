@@ -1,0 +1,9 @@
+# SLOW line 3: /data/runs/route_follow/slow/line3/RSGS2-L18-s0-gate.pkl vs /data/runs/route_follow/slow/line3/RSG-L18-s0-gate.pkl (281 paired scenes)
+slow-scene speed ratio median (72 of 73 low_slow_free scenes): 0.645 vs 0.587 (d +0.059)  line >= 0.80: False
+handoff k 0-2 v_p / v_f, v_log >= 16 (194 decisions / 65 scenes): 0.923 vs 0.867 (d +0.056)  line >= 0.95: False
+collision zeros: 10 vs 12 (d -2)  line <= ref + 2: True
+all zeros: 77 vs 71 (d +6)  line <= ref + 3: False; mean score 0.5987 vs 0.5860 (d +0.0128)
+exam 72 mean-score difference -0.0071 [-0.0610, +0.0433]  line CI low > -0.02: False
+rear-ended: 98 vs 108 (d -10)  line <= 0.7 x ref: False
+cor_route_end: 19 vs 18 (d +1)  line <= ref + 2: True
+LINE 3: FAIL
