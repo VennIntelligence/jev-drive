@@ -85,3 +85,38 @@ PAI 281 的 Tokyo 读按 seed 0、顺序 S1、S2、S3、Sall（Tokyo 排在 expe
 - **S2 / S3 的「关掉 = S1」闸**改为：S1 的 flag 放在合并池上、`--on-mode mixed --on-weight pool=v:0`（权重 0 的尾部行不抽，抽取退化为对前 17 429 行的均匀抽取，rm_train 的新规则），
   与 S1 在 on1_L18RB0 上逐位比较（`rf_slow.sh gates`，G2）。
 - pilot 闸的补记顺延为补记 3。
+
+## 补记 3（实现会话，2026-10-15 晚）：逐位闸、pilot 闸、提交与估时
+
+**逐位闸**（`rf_slow.sh gates`，RSG-L18 配方 60 步，旧代码 = 6c3a6ae2 的 worktree；`runs/route_follow/slow/gates.json`）：标量（每 25 步的全部 loss / dev 指标）与最终权重（net + adapter + 路线分支）
+max |diff| 全是 **0**：G0 全部新 flag 关、旧对新，`on_hash_60` = RSG-L18-s0 存档的 ea8cacc3e451c577；G0 重复（新代码跑两遍）0；G1 只开 `--ego-drop-speed 0.5`、旧对新（`--ego-drop-open` 关）0；
+G2 S1 的 flag 在 `on1_L18RB0` 对同样 flag 在合并池 `on1_RSGPAITV --on-mode mixed --on-weight pool=v:0` 0（只差三个仅 self 模式记的日志标量）。
+S1 smoke 的置零：店里空路占比 离线 0.202 / 偏航率行 0.291 / 池行 0.371，60 步实得置零 0.119 = 0.5 × 空路占比 0.236 的 1.010 倍。
+
+**pilot**（1000 步，tag `RSG<臂>P-L18-s{0,1}`，正式 tag 留给 2500 步；`runs/route_follow/slow/pilot.md`）：
+
+| 臂 | seed | dev ADE @1000（≤ 0.538） | G-rely | 置零 / 期望（0.8–1.2） | 空路占比 离线 / yr / 池 | PAITV imit 前 100 步 → 后 100 步（≤ 0.8×） | 闸 |
+|:--|--:|--:|:--|:--|:--|:--|:--|
+| S1 | 0 | 0.5304 | 过（+0.0268，lo +0.0103） | 0.1164 / 0.1166 = 0.999 | 0.202 / 0.279 / 0.370 | – | 过 |
+| S1 | 1 | 0.5308 | 过 | 1.000 | 0.205 / 0.289 / 0.367 | – | 过 |
+| Sall | 0 | **0.5460** | 过（+0.0260，lo +0.0106） | – | – | – | **ADE 不过** |
+| Sall | 1 | **0.5502** | 过 | – | – | – | **ADE 不过** |
+| S3 | 0 | 0.5293 | 过 | – | – | 3.374 → 2.559（× 0.759） | 过 |
+| S3 | 1 | 0.5282 | 过 | – | – | 3.667 → 2.305（× 0.629） | 过 |
+| S2 | 0 | 0.5326 | 过 | 1.004 | 0.202 / 0.279 / 0.332 | 3.332 → 2.577（× 0.773） | 过 |
+| S2 | 1 | 0.5325 | 过 | 1.001 | 0.205 / 0.289 / 0.335 | 3.756 → 2.319（× 0.618） | 过 |
+
+- 按 seed 0 判：S1、S2、S3 过；**Sall 的 dev ADE 不过**（G-rely 过）。这是全行置零本身的代价（allrows 的 RSGallV 在 2500 步回到 0.538），Sall 是登记的对照臂；
+  闸文字「任一臂两条不过就停该臂」可读成「两条都不过才停」（Sall 只不过一条）或「任一条不过就停」，**由主会话定**；本会话没有取消任何 job。
+- imit 的口径：`loss/on/imit` = mixed 模式下 `both` 行（即 PAITV 行）的模仿损失（pp_train dist），每 25 步的均值；「起点」= 前 100 步、「终点」= 最后 100 步。起点 3.3–3.8 很大：
+  20–35 m/s 的人类 4 s 轨迹对模型是全新的速度段。
+
+**提交**（一次，全部 `--after`；ids 在盒上 `runs/route_follow/slow/jobs.txt`）：4 臂 × 2 seed pilot → 每臂的 2500 步训练（`--after` 该臂两个 pilot）→ 每个训练后 held 460 @18 的 6 块
+（`rm_chain.sh read`，与 rf_onk 一样直接用 job 体；`submit-read` 的 `--gpus 1,2,3,4,5 --pin-strict` 是旧 6 卡盒的，在 3 卡盒上会把读钉在卡 1、2，没用它，也没有 rm-cover job）与公开 1491 @10 的 10 块
+（rf_allrows 的 ol_chain readlist，`CL_HIST_KEY=alpasim-read4`）→ confirm（held18 对 RSG-L18-s0；all10 对 YR10m10-F-s0；均值与配对按补记 1 的六对）、deficit、report。资源：训练 28 GB / 6 核 / 70 GB，读 20 / 6 / 30。
+Sall 的 held 读也按 30 GB 内存。
+
+**估时**：训练实测约 7 分钟 / 2500 步、pilot 约 3 分钟；读一块实测约 11 分钟（held 77 个、公开 150 个 rollout）。128 块读 ≈ 23.5 job-h，加训练约 1.5 job-h；并发受内存限（85 % × 276 GB，
+读 30 GB）约 7 块，读段约 3.4 h。从 19:45（盒上时间，CST）起，读完约 23:15，confirm / deficit / report 约 23:30 CST（= 00:30 JST）。卡时（按占卡）约 12，低于补记 1 的 32（读比估的快）。
+PAI：Tokyo 上的拷贝守护（`rf_slow.sh tokyo`，每 5 分钟看盒上 seed-0 checkpoint，md5 两边相等后拷贝）写 `PAI_READ_REQUEST.md`（Tokyo 与盒上 `runs/route_follow/slow/`），四条
+pai_eval.sh 命令按 S1、S2、S3、Sall；线 3 用 `rf_londiag.py pai`（r281/rsg 对自己：全部差 0，复现 0.589 / 0.867 / 碰撞零分 9 / 零分 70 / 追尾 111 / cor_route_end 17）。
