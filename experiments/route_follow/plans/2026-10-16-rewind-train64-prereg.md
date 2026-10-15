@@ -79,3 +79,22 @@
 - 结果：`experiments/route_follow/results/rewind_train64/`（rewind_train64.md、逐单元 CSV、read.json），图 `experiments/route_follow/figs/` 下 A、B 各一张 BEV。
 - 盒：`$DATA_DIR/runs/route_follow/rewind_train64/`（stage 目录、pack、jobs.txt）。
 - README 一段、decisions.md 一行 + 决策文件。
+
+## 补记 1（smoke 之后，按登记规则停在 smoke，2026-10-15 18:50 盒时间）
+
+- smoke 1（`$DATA_DIR/runs/route_follow/rewind_train64/smoke`，00e12cf6；A 单元 4109b79d84ea5053 event k_z 13，h = 11 / 9 / 7；B 单元 537935a8 无违规）：
+  交接 session 在 h 前**不是**逐位相同：D1 / D2 的模型 plan 在 k 7 起与 identity 差 7.8 mm（同一 ego 行），h 时轨迹差 ≤ 5 mm、v(h) 差 ≤ 0.005 m/s；
+  D3（h = 7）逐位相同；idB 与 id 逐位相同。当时以为是 launch 的场景组成不同（D launch 只有 1 个场景、id 有 2 个），改成 D launch 跑 id chunk 自己的
+  场景表（0fecfb10，没有交接的场景重放 identity）。
+- smoke 2（`.../smoke2`，0fecfb10；同一 A 单元 + 两个完成转弯 537935a8、bba5d587，两者都无违规，B 层没有交接）：组成相同也不逐位相同：
+  3 个交接 session 在 h 前 plan 最大差 0.14 m、轨迹 3.5 cm、v(h) 0.029 m/s；D launch 里的 identity 重放 5 / 6 与 id 同分同结局。
+  原因在渲染器：第一个 plan 差异处，driver 收到的 CAM_F0 JPEG 字节数就不同（例如 4109b79d 在 ts 3.017 s），ego 行相同；这一次 idB、D1、D2
+  彼此逐位相同而 id 是不同的那个。即 nuPlan 路径（sh30 + NRE 渲染，RENDER_AGGREGATED）的同场景 session **跨 launch 不逐位可复现**，
+  偶尔渲染出不同帧（smoke 1 里 idB = id，smoke 2 里 idB ≠ id）。pipeline_profile.md 的「逐位相同」在这里不成立。
+- 量级：4109b79d 上 id 与其他 session 的锚点差 k 7 / 9 / 11 时 2 mm / 1.4 cm / 3.5 cm（idB 同样大），交接状态在 identity 的 run-to-run
+  散布之内；但这不是登记的逐位条件。
+- 判定：按「若 h 前不逐位相同：停在 smoke，报告，不改模拟器」停。没有提交 10 个和全部场景的读数；没有结果文件和决策条目。
+- smoke 附带看到的（单个单元，不作判词）：A 单元 Δ 1 s 专家 offroad，Δ 2 / 3 s 都是 short（专家减到 4.6 m/s，18 个决策 = 9 s 片段内到不了 exit + 10 m）；
+  xp0 在 3 个场景里只完成 1 个（2 个 short）。9 s 片段对按 4.6 m/s 过弯的专家可能太短，这会压低 A 与 C 的完成率，与倒回本身无关。
+- 恢复的选项（待用户定）：(a) 把登记条件放宽为「h 前与 identity 的差在 identity 自身 run-to-run 散布内」，对照取同 launch 的 identity 重放；
+  (b) 让渲染确定（模拟器 / 渲染器侧改动，超出本任务）；(c) 对每个单元在同一 launch 里同时跑 id 与 D（每场景多 rollout），仍受渲染器影响。
