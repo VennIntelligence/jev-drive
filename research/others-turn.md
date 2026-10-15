@@ -112,3 +112,5 @@ OPTED arXiv 2609.20756；SimScale arXiv 2511.23369（文献由子 agent 读网�
 别人「会转」的地方是 CARLA，那里的条件我们都没有：路口另一侧的几何目标点（只要朝它开就是转弯，每过一个点误差清零）、规则专家给的一致路口减速、60 % 是转弯的数据、
 转弯时绕开航点跟踪的输出或控制器。我们难，是因为三样东西叠在一起：路线只以 40 m 外一点的左右符号进来、人类日志里转弯少且速度不一致、plan → MPC 每步从自己的位姿重规划（欠量累积成蠕变）。
 这三样在 AlpaSim 里人人都有，所以人人都转不好。最便宜的借法是把几何目标点和独立弯速做成 adapter 输入 / 头，再在控制侧加横向加速度上限，Cinque 不动。
+
+> 对比页（24 个 held 转弯 × 6 个策略，BEV + 曲线 + 各策略自己的前视 clip，进入即全部自动播放、2 倍速）：[research/others-turn/page/index.html](others-turn/page/index.html)（52 MB 媒体不入 git，reader 直接显示工作树；Tokyo 桌面 `~/Desktop/others_turn/` 同一份）。
