@@ -149,3 +149,17 @@ APP1X = the v8 diagnostic run (`spin_v9/v8_APP1X-L18-s0`).
   `sv9_read.py` on all 281 for zero and at-fault paired CIs, `results/spin_v9/a6_jlon_281.md`).
   - If zeros and at-fault are level or better (95 % CI including 0 or below it), v8b replaces v8 as the PAI default.
   - Otherwise v8 stays.
+
+## Amendment 4 (decision 309 follow-up 1: gate is the PAI serve default; recorded 2026-10-15 20:45 JST)
+
+- Code (commits 7f85c4a7, 1e20cd16): `pai_driver.py` sets `JEV_TRACK=gate` when it is unset, before sh30_driver / track_ref are imported.
+  `JEV_TRACK=0` (or empty) is the old path. The old path is forced with JEV_EXPERT, JEV_TURN_GAIN != 1 or JEV_INTENT_HOLD, which assert
+  JEV_TRACK off. The nuPlan driver (sh30_driver) is unchanged. Documented in the driver docstring, `docs/alpasim.md` (switch table) and
+  `pai_eval.sh`.
+- Proof (`sv9.sh ident0` from the worktree at 79b27260, Tokyo card 1, 20:30-20:41 JST, `results/spin_v9/a4_ident0.log`): RSG-L18-s0 on
+  2 control scenes (the first two of ctrl_all.txt).
+  - `JEV_TRACK=0`: 396 / 396 served plans identical to the stored r281/rsg (max |diff| 0); driver.log `JEV_TRACK 0`.
+  - `JEV_TRACK` unset: driver.log `JEV_TRACK gate`, gate track records on 396 / 396 decisions.
+- Same-path rule (coordinator): every PAI result states its JEV_TRACK path in its header (`rf_v2pai.sh read` prints run and reference
+  paths and flags a mixed pairing) and pairs only with same-path references. The reference for path gate is `v2pai/RSG-L18-s0-gate`
+  (follow-up 2, running). The intent-hold lane pinned `-e JEV_TRACK=0` (19bbad9f). Tokyo's main tree was pulled only after that pin.

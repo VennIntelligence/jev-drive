@@ -1,0 +1,14 @@
+2026-10-15 20:30:14 RSG-L18-s0: 2 scenes in 1 chunks, cards 1, 4 concurrent per card
+2026-10-15 20:30:15 card 1: c000 (2 scenes), attempt 1
+2026-10-15 20:35:45 RSG-L18-s0: done: 2 scenes in 331 s
+2026-10-15 20:35:46 RSG-L18-s0: 2 scenes in 1 chunks, cards 1, 4 concurrent per card
+2026-10-15 20:35:46 card 1: c000 (2 scenes), attempt 1
+2026-10-15 20:40:59 RSG-L18-s0: done: 2 scenes in 313 s
+2026-10-15 11:35:51,861 INFO pai: serving: JEV_VCONT 1, JEV_LEAD 1, JEV_BASE 0, JEV_VHIST off, JEV_TURN_GAIN 1, JEV_TRACK gate {'AMIN': -5.0, 'AMAX': 3.0, 'ALAT': 4.0, 'JLAT': 10.0, 'KMAX': 0.2, 'KRATE': 0.1, 'TAU_LAT': 1.0, 'D_MIN': 4.0}
+2026-10-15 11:30:23,794 INFO pai: serving: JEV_VCONT 1, JEV_LEAD 1, JEV_BASE 0, JEV_VHIST off, JEV_TURN_GAIN 1, JEV_TRACK 0 
+2 scenes, 396 common decisions (a 55693, b 396): identical 396, max |diff| 0
+b: 0 track records, 0 with the v9 guard, k range None..None
+IDENT0: JEV_TRACK=0 identical to r281/rsg
+2 scenes, 396 common decisions (a 396, b 396): identical 36, max |diff| 12.4
+b: 396 track records, 0 with the v9 guard, k range None..None
+default: 396 / 396 decisions with a gate track record
