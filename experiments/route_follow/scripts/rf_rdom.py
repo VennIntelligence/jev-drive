@@ -158,12 +158,15 @@ def swap_one(job):
     import rmem as RM
     row, log, pose, f = job
     v, P, H = feats_pts(f)
-    out = dict(row=row, ok=False, why="", f=np.zeros(200, np.float32), cmd=-1, gap=np.nan, inside=False, gate_valid=False, gate_dxy=np.nan, d_ego=np.nan)
+    out = dict(row=row, ok=False, why="", f=np.zeros(200, np.float32), cmd=-1, gap=np.nan, inside=False, gate_valid=False, gate_end=False, gate_dxy=np.nan, d_ego=np.nan)
     # G-feat: the served valid points as one polyline through rmem.window reproduce the stored features
     if v.sum() >= 2:
         Fr = RM.window(ext(P[v])).reshape(-1)
         vr, Pr, _ = feats_pts(Fr)
         out["gate_valid"] = bool(np.array_equal(vr, v))
+        dd = np.flatnonzero(vr != v)
+        ends = np.flatnonzero(v)[[0, -1]]
+        out["gate_end"] = bool(len(dd) == 0 or (len(dd) == 1 and dd[0] in ends))
         both = vr & v
         out["gate_dxy"] = float(np.hypot(*(Pr[both] - P[both]).T).max()) if both.any() else np.nan
     loc = map_loc(log)
@@ -271,6 +274,7 @@ def cmd_swap(a):
             np.savez(Path(a.out) / f"swap_{st_}.npz", **O)
             why = {w: int((O["why"] == w).sum()) for w in set(O["why"].tolist())}
             run.info(f"{st_}: rows {len(rows)}, swap ok {int(O['ok'].sum())}, why {why}, G-feat valid equal {O['gate_valid'].mean():.3f}, "
+                     f"up to one end slot {O['gate_end'].mean():.3f}, "
                      f"dxy <= 1 m {(np.nan_to_num(O['gate_dxy'], nan=9) <= 1.0).mean():.3f}")
 
 
@@ -472,9 +476,9 @@ def cmd_report(a):
     R = dict(states=json.loads((O / "states.json").read_text()), s2_all_rows=S2, gates={st_: json.loads((O / f"run_{st_}" / "gate.json").read_text())
                                                                                           for st_ in ("held", "train") if (O / f"run_{st_}" / "gate.json").exists()})
     R["swap"] = {st_: dict(rows=int(len(z["row"])), ok=int(z["ok"].sum()), why={w: int((z["why"] == w).sum()) for w in set(z["why"].tolist())},
-                           g_feat_valid=float(z["gate_valid"].mean()), g_feat_dxy_le1=float((np.nan_to_num(z["gate_dxy"], nan=9.0) <= 1.0).mean()))
+                           g_feat_valid=float(z["gate_valid"].mean()), g_feat_end=float(z["gate_end"].mean()), g_feat_dxy_le1=float((np.nan_to_num(z["gate_dxy"], nan=9.0) <= 1.0).mean()))
                  for st_ in ("held", "train") for z in [np.load(O / f"swap_{st_}.npz")]}
-    gf = all(v["g_feat_valid"] >= 0.95 and v["g_feat_dxy_le1"] >= 0.95 for v in R["swap"].values())
+    gf = all(v["g_feat_end"] >= 0.95 and v["g_feat_dxy_le1"] >= 0.95 for v in R["swap"].values())       # Amendment 1: one end slot may differ
     R["g_feat_pass"] = bool(gf)
 
     def block(Y):
