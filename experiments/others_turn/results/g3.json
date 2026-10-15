@@ -1,0 +1,20 @@
+{
+ "ltf": {
+  "n": 24,
+  "zero_agree": 24,
+  "mean_new": 0.020098385255037588,
+  "mean_old": 0.020098385255037588
+ },
+ "dd": {
+  "n": 24,
+  "zero_agree": 23,
+  "mean_new": 0.0,
+  "mean_old": 0.02310763953714218
+ },
+ "garage": {
+  "n": 24,
+  "zero_agree": 24,
+  "mean_new": 0.25,
+  "mean_old": 0.25
+ }
+}

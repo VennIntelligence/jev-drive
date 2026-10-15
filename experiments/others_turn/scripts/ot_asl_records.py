@@ -9,7 +9,8 @@ py123d-garage driver), so rf_follow.py can read their turns (plans/2026-10-15-ot
 Per rollout.asl: the decisions are the driver_request messages in order; t0 of decision k = the latest pose of the driver's ego trajectory
 (driver_ego_trajectory, the poses the driver itself receives, local frame) at or before time_now; anchor = that pose (x, y, yaw); ego = the
 last dynamic state's linear velocity / acceleration (vx, vy, ax, ay: wajepa_driver.py's layout); poses = the returned trajectory at
-t0 + 0.5 .. 4.0 s in the anchor's frame (x, y, yaw), used by rf_follow only for its plan-deficit column.
+t0 + 0.5 .. 4.0 s in the anchor's frame (x, y, yaw; null past its end), used by rf_follow's plan-deficit column and the comparison page.
+session = the rollout id (the directory name).
 """
 from __future__ import annotations
 
@@ -46,6 +47,7 @@ def records(f: str) -> tuple[str, list[dict]]:
                 reqs[-1]["traj"] = traj(m.trajectory)
         return sess, ego, reqs
     sess, ego, reqs = asyncio.run(go())
+    sess = Path(f).parts[-2]                          # the rollout id (= the session uuid of our own drivers' logs)
     out = []
     for k, r in enumerate(reqs):
         if r["t0"] is None:
@@ -59,7 +61,9 @@ def records(f: str) -> tuple[str, list[dict]]:
             ok = tq <= T[-1, 0]
             c, s = np.cos(yaw), np.sin(yaw)
             dx, dy = np.interp(tq[ok], T[:, 0], T[:, 1]) - x, np.interp(tq[ok], T[:, 0], T[:, 2]) - y
-            rec["poses"] = np.c_[c * dx + s * dy, -s * dx + c * dy, np.interp(tq[ok], T[:, 0], np.unwrap(T[:, 3])) - yaw].round(4).tolist()
+            Q = np.full((8, 3), np.nan)                   # 0.5 .. 4 s; NaN past the end of the returned trajectory
+            Q[ok] = np.c_[c * dx + s * dy, -s * dx + c * dy, np.interp(tq[ok], T[:, 0], np.unwrap(T[:, 3])) - yaw]
+            rec["poses"] = [[None if not np.isfinite(v) else round(float(v), 4) for v in q] for q in Q]
         out.append(rec)
     return sess, out
 

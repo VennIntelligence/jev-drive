@@ -1,0 +1,42 @@
+{
+ "0": {
+  "scenes": 22,
+  "decisions": 396,
+  "matched": 396,
+  "own_decisions": 396,
+  "dpos_median": 0.0,
+  "dpos_max": 0.0,
+  "dyaw_median_deg": 0.0,
+  "dyaw_max_deg": 2.5444437451708134e-14
+ },
+ "1": {
+  "scenes": 21,
+  "decisions": 378,
+  "matched": 378,
+  "own_decisions": 378,
+  "dpos_median": 0.0,
+  "dpos_max": 0.0,
+  "dyaw_median_deg": 0.0,
+  "dyaw_max_deg": 2.5444437451708134e-14
+ },
+ "2": {
+  "scenes": 20,
+  "decisions": 357,
+  "matched": 357,
+  "own_decisions": 357,
+  "dpos_median": 0.0,
+  "dpos_max": 0.0,
+  "dyaw_median_deg": 0.0,
+  "dyaw_max_deg": 2.5444437451708134e-14
+ },
+ "3": {
+  "scenes": 22,
+  "decisions": 396,
+  "matched": 396,
+  "own_decisions": 396,
+  "dpos_median": 0.0,
+  "dpos_max": 0.0,
+  "dyaw_median_deg": 0.0,
+  "dyaw_max_deg": 2.5444437451708134e-14
+ }
+}
