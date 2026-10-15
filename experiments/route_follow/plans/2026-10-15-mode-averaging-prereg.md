@@ -91,3 +91,11 @@ ol_confirm (held18: score, zeros, at-fault), rf_follow (@18: strict held turns, 
 
 Outputs: `experiments/flowhead/scripts/flow_cl.sh` (pool chain), `experiments/flowhead/results/closed_loop/` (cl.md, cl.json, tables),
 the figure next to it, a README paragraph in experiments/flowhead. research/decisions.md is not edited by this lane.
+
+## Amendments (appended after the prereg commit; each says whether it came before or after a statistic was seen)
+
+1. (Before any Reading 1 statistic.) Lane code: rf_corridor's SceneMap.match needs the lane polygons and junction_eyes' je_ruler, which
+   the held lane extract does not carry; both populations use rf_pai_follow's lane-graph helpers on the same lane extracts instead
+   (`chains`: every successor chain from a lane's point nearest the route point, cap 256; end heading by the module's chord heading;
+   chains that end short of the arc L and are shorter than 25 m, the map extent's cut, are dropped as in rf_pai_follow MIN_CHAIN). The
+   matched lane = the nearest group lane within 2.5 m. Everything else in "Exits" is as registered.
