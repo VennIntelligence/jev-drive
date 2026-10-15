@@ -148,3 +148,36 @@ Scenes 90; strict turns = 36 (the identity's strict turns); exam turn scenes 72.
 | e904e9c0 | +exam |  |  | no turn (corridor) | no turn (corridor) |  |  |  |  /  |
 | f8ee31cb | +exam |  |  | no turn | no turn |  |  |  |  /  |
 | fc9fde87 | +exam |  |  | no turn (corridor) | no turn (corridor) |  |  |  |  /  |
+
+## Lane changes and the approach offset (rf_laneoff.py, d299's reading B instruments; added 2026-10-15 11:40 JST)
+
+Inputs: rf_tax extract and rf_progress rmem of this run (Tokyo `/data/runs/route_night/v2pai/lane/`), rf_tax report and rf_pai_follow report
+(Mac), the PAI lane pickle of d299; one `rf_laneoff.py report` over RSG (r281/rsg, d299's inputs) + RV2a-L18-s0 + RV2b-L18-s1 (RSG reproduces
+d299: reached 4, shifted 1, in lane 2). All three runs find the same 6 map-validated sites (route leaves its lane chain for an adjacent lane,
+the human moved 2-6 m to that side).
+
+Map-validated lane-change sites (R = ego reached the site; shift = ego's move toward the route's side in [s, s + 60] m, shifted = >= 2 m;
+L = in the route's lane (|lat| <= 1.75 m) somewhere in [s + 30, s + 60]):
+
+| scene | RSG-L18-s0 | RV2a-L18-s0 | RV2b-L18-s1 | human shift |
+|:--|:--|:--|:--|--:|
+| 1e8e939e | R +1.3 L | R +1.2 L | R +1.4 L | +2.9 |
+| 415e950b | R +0.3 | R +0.0 | R **+8.1** (not in lane after; score 0.39) | +4.7 |
+| 51242b4d | R +1.1 | R +1.0 | R +1.0 | +2.5 |
+| 8a143cb2 | R +4.0 L | R +3.9 L | R +4.1 L | +2.6 |
+| e904e9c0 | not reached (zero before) | not reached | not reached | +2.4 |
+| f8ee31cb | not reached (site at the start) | not reached | not reached | +3.0 |
+| **reached / shifted >= 2 m / in lane after** | **4 / 1 / 2** | **4 / 1 / 2** | **4 / 2 / 2** | |
+
+Strict turns at entry - 20 m (d299's exploratory lead; inward = signed lateral offset to the route toward the turn's inside, - = the side
+away from the turn; 22 of 36 turns defined in each run):
+
+| run | median inward all | failed (n) | completed (n) | >= 0.75 m outside | >= 1.75 m outside | paired vs RSG (22 turns), mean [95 % CI] |
+|:--|--:|:--|:--|--:|--:|:--|
+| RSG-L18-s0 | -0.45 | -0.48 (19) | +0.06 (3) | 7 | 3 | |
+| RV2a-L18-s0 | -0.44 | -0.44 (20) | -0.29 (2) | 7 | 3 | -0.01 [-0.03, +0.01] |
+| RV2b-L18-s1 | -0.44 | -0.46 (19) | +0.03 (3) | 7 | 3 | +0.01 [-0.02, +0.05] |
+
+Reading: lane changes did not improve. Neither arm makes a required lane change RSG misses; RV2b's one extra "shift" (415e950b) overshoots
+by 8 m and does not end in the route's lane. The approach offset before strict turns is unchanged (median within 0.01 m, paired mean
+within +-0.05 m): the lane hinge of arm b (weight 1) does not move the car toward the turn side on PAI.
