@@ -21,7 +21,11 @@ Per decision (rear-axle pose, speed, time):
 Stop lines and traffic lights are ignored (prereg).
 
 Environment: JEV_EXPERT (pack directory; unset = off), JEV_EXPERT_LA (lookahead time, s, default 1.2), JEV_EXPERT_EV (turn entry speed, m/s,
-default 4.6).
+default 4.6), JEV_EXPERT_FROM (sh30_driver.py only; unset = the expert serves every decision): the decision index k (the session's drive call
+count from 0, the record's `k`) from which the expert's plan is served, before it the model's plan as without JEV_EXPERT; one integer for every
+scene or a file of `<scene id> <k>` lines (a scene not in the file is never handed over). Same session, nothing restarted: at the handover the
+ego's pose, speed, controller state and the model's history are the policy's own (the nuPlan recovery rewind,
+experiments/route_follow/plans/2026-10-16-rewind-train64-prereg.md; the PAI version is onp_log_driver.py's `rew` cell).
 """
 from __future__ import annotations
 
@@ -36,6 +40,34 @@ ON = bool(PACK)
 LA_T = float(os.environ.get("JEV_EXPERT_LA", "") or 1.2)
 V_E = float(os.environ.get("JEV_EXPERT_EV", "") or 4.6)
 SUFFIX = f"-xp{LA_T:g}e{V_E:g}" if ON else ""
+
+
+def _from_table(v: str):
+    """JEV_EXPERT_FROM -> (k for every scene or None, {scene: k}, set)."""
+    if not v:
+        return None, {}, False
+    if v.strip().isdigit():
+        return int(v), {}, True
+    tab = {}
+    for line in open(v):
+        f = line.split("#")[0].split()
+        if len(f) >= 2:
+            tab[f[0]] = int(f[1])
+    return None, tab, True
+
+
+FROM_ALL, FROM, FROM_ON = _from_table(os.environ.get("JEV_EXPERT_FROM", "") or "")
+SUFFIX += "-from" if ON and FROM_ON else ""
+
+
+def active(scene_id: str, k: int) -> bool:
+    """Does the expert serve decision k of this scene (JEV_EXPERT_FROM; always when it is unset)?"""
+    if not ON:
+        return False
+    if not FROM_ON:
+        return True
+    k0 = FROM_ALL if FROM_ALL is not None else FROM.get(scene_id)
+    return k0 is not None and k >= k0
 
 LA_MIN, KMAX = 6.0, 0.2                      # m; 1/m (Pacifica: about 5 m minimum radius at the rear axle)
 DECEL_D, V_FLOOR, V_DEF = 26.0, 3.0, 12.0    # m (decision 293); m/s; m/s (no speed limit in the map)

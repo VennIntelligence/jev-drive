@@ -22,6 +22,20 @@ Delta in 1 / 2 / 3 s, with the policy's own pose, speed, controller state and hi
   table   (plain python3)  rf_rewind.py table --read <json> [--tokyo <turns.json>] --md <md> --csv <csv>   per Delta: expert vs policy, paired
           bootstrap, the registered lines.
   fig     (Mac .venv)      rf_rewind.py fig --pkl-dir <dir> --read <json> --scenes s8,s8,s8 --out <png>   BEV of recovered / failed paths.
+
+nuPlan train 64 (prereg experiments/route_follow/plans/2026-10-16-rewind-train64-prereg.md; runner rf_rewind.sh train64; driver
+experiments/alpasim/lib/sh30_driver.py with JEV_EXPERT + JEV_EXPERT_FROM): the held-read serving (rm_chain.sh readlist, 18 decisions at 2 Hz,
+plain RSG-L18-s0) on the 64 strict turns of the nuPlan @18 train pool. Launches per stage: `id` (+ `idB` in the smoke), `xp0` (the expert from
+the start, stratum C) and `D1` / `D2` / `D3` (the policy to h = k_ref - 2 Delta, the expert from h; A and B units share a launch).
+  n-units (plain python3)  rf_rewind.py n-units --follow <scenes.csv> --label RSG-L18-s0@18 --out <txt>   the 64 turn scenes with the stored outcome
+  n-tfail (AlpaSim venv)   rf_rewind.py n-tfail --runs <id run dirs, comma> --out <stage dir>   per turn scene of the identity: stratum A
+          (event / off / short) k_fail, stratum B (completed) k_viol = the decision of the first decision-293 shape violation, h per Delta;
+          writes tfail.json, from_D<d>.txt (`<scene> <h>`) and list_D<d>_c<i>.txt chunks
+  n-read  (AlpaSim venv)   rf_rewind.py n-read --stage <stage dir> --out <json> [--pkl <dir>]   every rollout of the stage: rf_follow.one (turn,
+          completed, outcome, k_z), the 10 Hz controller track on rf_follow's route, the rewind check, settle, creep, rear / at-fault, the gate
+          on the post-handover track, B's before / after profile, the row yield; --pkl keeps the per-scene tracks (figures)
+  n-table (plain python3)  rf_rewind.py n-table --read <json> --md <md> --csv <csv>   per stratum and Delta, the registered lines
+  n-fig   (Mac .venv)      rf_rewind.py n-fig --pkl <scene pkl> --read <json> --out <png>   BEV of one unit (id, xp0, D1-D3)
 """
 from __future__ import annotations
 
@@ -391,6 +405,454 @@ def fig(a):
     print("->", a.out)
 
 
+# ---------------------------------------------------------------- nuPlan train 64
+N_STEP, N_KEND, N_HMIN, N_PRE, N_WIN, N_PAST, N_LAT = 2, 17, 1, 20.0, 40.0, 10.0, 2.5   # 2 Hz; last decision of the read; first served decision
+N_TAGS = ("id", "idB", "xp0", "D1", "D2", "D3")                   # (force_gt_duration 0.5 s = decision 0); rf_follow's junction pre; d293 window
+
+
+def n_gate():
+    """Decision-293 thresholds for the nuPlan turns: no topo class here, so the all-turn human p95 (rf_p4.gate_of of a class below
+    MIN_CLASS_N) and the default entry speed V_E_OTHER + 1 m/s."""
+    import rf_p4 as P4
+    return P4.gate_of("other", json.loads((RES / "p3_branch" / "shape.json").read_text()))
+
+
+def n_units(a):
+    import csv as C
+    rows = [r for r in C.DictReader(open(a.follow)) if r["label"] == a.label and r["turn"] == "True"]
+    Path(a.out).write_text("".join(f"{r['scene']} {r['outcome']} {r['kz']}\n" for r in sorted(rows, key=lambda r: r["scene"])))
+    print(len(rows), "turn scenes ->", a.out)
+
+
+def n_roll(job):
+    """(tag, run dir, scene, cfg, want_log) -> one rollout: rf_follow's row and decisions, its route, the 10 Hz controller track on it,
+    zero time / kind, rear contact, the driver records (served plan, expert flag), optionally the human log on the same route."""
+    tag, D, scene, cfg, want_log = job
+    import rf_follow as RF
+    from ao_e1 import drive_records, loader
+    import long_read as LR  # noqa: F401  (rf_follow.one imports it)
+    recs = drive_records(D)[scene]
+    summ = {r["clipgt_id"]: r for r in json.loads((Path(D) / "aggregate/results-summary.json").read_text())["rollouts"]}[scene]
+    cap = {}
+    reg = RF.regen_full
+
+    def regen(*x):
+        cap["r"] = reg(*x)
+        return cap["r"]
+    RF.regen_full = regen
+    try:
+        row, dec = RF.one((tag, D, scene, recs, dict(score=summ.get("score"), **(summ.get("metrics") or {})), cfg, "none"))
+    finally:
+        RF.regen_full = reg
+    R = F.dedup(cap["r"][3])
+    S = F.stations(R)
+    C = F.ctrl(D, summ["rollout_id"])
+    o = dict(tag=tag, scene=scene, run=D, row=row, dec=dec, R=R, ctrl=C, rid=summ["rollout_id"],
+             drv=[dict(k=int(r["k"]), now=int(r["now"]), t0=int(r["t0"]), served=r["poses"], on="expert" in r,
+                       expert=r.get("expert")) for r in recs])
+    kz = row["kz"] if row["kz"] >= 0 else None
+    o["tz"] = RF.T0 + RF.DT * kz if kz is not None else np.inf
+    o["zkind"] = None
+    if kz is not None:                                   # the zero's kind at k_z from the evaluator series (rf_follow's rule: atf or corridor)
+        import polars as pl
+        f = glob.glob(f"{D}/rollouts/{scene}/*/metrics.parquet")
+        m = pl.read_parquet(f[0]).filter(pl.col("timestamps_us") == RF.T0 + RF.DT * kz).select("name", "values")
+        v = {n: (x or 0.0) > 0 for n, x in zip(m["name"].to_list(), m["values"].to_list())}
+        o["zkind"] = "collision" if v.get("collision_front") or v.get("collision_lateral") else "offroad" if v.get("offroad") else "corridor"
+    o["trear"] = F.events(D, scene, summ["rollout_id"])[2]
+    if C is not None:
+        o["st"], o["lat"] = F.track(R, S, np.c_[C["x"], C["y"]])
+    if want_log:
+        tr = loader(str(cfg)).get_data_source(scene).rig.trajectory
+        Tt, P = np.asarray(tr.timestamps_us, float), np.asarray(tr.positions, float)[:, :2]
+        v = np.r_[0.0, np.hypot(*np.diff(P, axis=0).T) / np.maximum(np.diff(Tt) * 1e-6, 1e-6)]
+        v[0] = v[1] if len(v) > 1 else 0.0
+        st, lat = F.track(R, S, P)
+        o["log"] = dict(t=Tt, P=P, v=v, st=st)
+    return o
+
+
+def n_runs(stage, tag):
+    return sorted(glob.glob(os.path.join(stage, tag, "c*", "run")))
+
+
+def n_jobs(stage, tags, log_tags=("id",)):
+    import ev as EV
+    jobs = []
+    for tag in tags:
+        for D in n_runs(stage, tag):
+            f = Path(D) / "aggregate" / "results-summary.json"
+            if not f.exists():
+                continue
+            for r in json.loads(f.read_text())["rollouts"]:
+                jobs.append((tag, D, r["clipgt_id"], EV.CFG, tag in log_tags))
+    return jobs
+
+
+def n_paths():
+    R_ = HERE.parents[2]
+    for d in ("lib", "experiments/route_mem/lib", "experiments/route_mem/scripts", "experiments/alpasim/scripts", "experiments/alpasim/lib",
+              "experiments/anchor_offset/scripts", "experiments/eyes_vs_head/scripts", "experiments/alpasim_long/scripts"):
+        if str(R_ / d) not in sys.path:
+            sys.path.append(str(R_ / d))
+    if str(R_) not in sys.path:
+        sys.path.insert(0, str(R_))
+
+
+def n_violation(o, gt):
+    """Completed identity turn -> (t of the first decision-293 shape violation inside [entry - 40, exit] before the zero, which items) or
+    (None, []). Per 10 Hz sample on rf_shape's 0.25 m arc grid: |kappa| > kmax, |dkappa/ds| > dk, v^2 |kappa| > alat; and the entry speed
+    (box-smoothed controller speed where the track first crosses the entry) > v_entry, timed at that crossing."""
+    import rf_shape as SH
+    C, row = o["ctrl"], o["row"]
+    t, P, st = np.asarray(C["t"], float), np.c_[C["x"], C["y"]], o["st"]
+    v = SH.box5(C["vx"])
+    lo, hi = row["entry"] - N_WIN, row["exit"]
+    pre = t < o["tz"]
+    Rr = SH.resample(P[pre], dict(t=t[pre], v=v[pre], st=st[pre]))
+    hits = []
+    if Rr is not None:
+        s, g, E = Rr
+        _, k, dk = SH.kappa_ops(s, g)
+        m = (E["st"] >= lo) & (E["st"] <= hi)
+        for name, x, thr in (("kmax", np.abs(k), gt["kmax"]), ("dk", np.abs(dk), gt["dk"]), ("alat", np.abs(E["v"] ** 2 * k), gt["alat"])):
+            j = np.flatnonzero(m & np.isfinite(x) & (x > thr))
+            if len(j):
+                hits.append((float(E["t"][j[0]]), name))
+    i = np.flatnonzero((st >= row["entry"]) & pre)
+    if len(i) and F.speed_at(t, st, v, row["entry"], o["tz"]) > gt["v_entry"]:
+        hits.append((float(t[i[0]]), "v_entry"))
+    if not hits:
+        return None, []
+    tv = min(h[0] for h in hits)
+    return tv, sorted({h[1] for h in hits if h[0] == tv})
+
+
+def n_ref(o, gt):
+    """Identity rollout -> the unit: stratum, k_ref (A: failure decision, B: violation decision), h per Delta (registered definitions)."""
+    row, dec = o["row"], o["dec"]
+    u = dict(scene=o["scene"], turn=bool(row.get("turn")), outcome=row.get("outcome"), kz=row["kz"], k_cross=row.get("k_cross"),
+             entry=row.get("entry"), exit=row.get("exit"), side=row.get("side"), stratum=None, k_ref=None, src=None, items=[],
+             h={str(d): None for d in DELTAS})
+    if not row.get("turn"):
+        return u
+    oc = row["outcome"]
+    if oc == "event":
+        u.update(stratum="A", k_ref=int(row["kz"]), src="zero")
+    elif oc == "off":
+        kz = row["kz"] if row["kz"] >= 0 else 10 ** 6
+        i = [d["k"] for d in dec if d["st"] >= row["entry"] - N_PRE and abs(d["lat"]) > N_LAT and d["k"] < kz]
+        if i:
+            u.update(stratum="A", k_ref=int(i[0]), src="off")
+        else:
+            u.update(stratum="A", k_ref=int(row["k_cross"]) if row.get("k_cross", -1) >= 0 else N_KEND, src="off_cross")
+    elif oc == "short":
+        u.update(stratum="A", k_ref=N_KEND, src="short_end")
+    elif oc == "completed":
+        u["stratum"] = "B"
+        tv, items = n_violation(o, gt) if o["ctrl"] is not None else (None, [])
+        if tv is not None:
+            ks = [d["k"] for d in o["drv"] if d["t0"] <= tv]
+            u.update(k_ref=int(ks[-1]) if ks else 0, src="viol", items=items, t_viol=tv)
+        else:
+            u["src"] = "clean"
+    if u["k_ref"] is not None:
+        u["h"] = {str(d): (u["k_ref"] - N_STEP * d if N_HMIN <= u["k_ref"] - N_STEP * d <= N_KEND else None) for d in DELTAS}
+    return u
+
+
+def n_tfail(a):
+    n_paths()
+    from jevdrive import par
+    stage = Path(a.stage)
+    res = par.pmap(n_roll, n_jobs(stage, ["id"], log_tags=()), workers=a.workers, desc="id rollouts")
+    if res.errors:
+        print("errors:", {res.items[i][2]: str(e)[-300:] for i, e in res.errors.items()}, file=sys.stderr)
+    gt = n_gate()
+    U = {o["scene"]: n_ref(o, gt) for o in res.values if o is not None}
+    (stage / "tfail.json").write_text(json.dumps(dict(gate=gt, units=U), indent=1, default=float))
+    for d in DELTAS:
+        hs = sorted((s, u["h"][str(d)]) for s, u in U.items() if u["h"][str(d)] is not None)
+        (stage / f"from_D{d}.txt").write_text("".join(f"{s} {h}\n" for s, h in hs))
+        for i in range(a.chunks):
+            (stage / f"list_D{d}_c{i}.txt").write_text("".join(f"{s}\n" for s, _ in hs[i::a.chunks]))
+    c = _count((u["stratum"], u["src"]) for u in U.values())
+    print(len(U), "units", c, {d: sum(u["h"][str(d)] is not None for u in U.values()) for d in DELTAS})
+
+
+def n_metrics(o, ido, u, gt):
+    """One rollout against its identity -> the read row (handover state, rewind check, recovery, gate, profile, yield)."""
+    import rf_shape as SH
+    row, C = o["row"], o["ctrl"]
+    x = dict(scene=o["scene"], tag=o["tag"], stratum=u["stratum"], unit_src=u["src"], score=row["score"], turn=bool(row.get("turn")),
+             completed=bool(row.get("completed")), outcome=row.get("outcome"), kz=row["kz"], zkind=o["zkind"],
+             at_fault=bool(o["zkind"] == "collision"), entry=row.get("entry"), exit=row.get("exit"), lat_cross=row.get("lat_cross"))
+    if C is None or not row.get("turn"):
+        x["missing"] = C is None
+        return x
+    t, P, vx, st, lat = np.asarray(C["t"], float), np.c_[C["x"], C["y"]], np.asarray(C["vx"], float), o["st"], o["lat"]
+    tz, ent, ext = o["tz"], row["entry"], row["exit"]
+    on = [d for d in o["drv"] if d["on"]]
+    h = on[0]["k"] if on and o["tag"] != "xp0" else (0 if o["tag"] == "xp0" else None)
+    x["h"] = h
+    t_lo = -np.inf
+    if h is not None and o["tag"] != "xp0":
+        dh = next(d for d in o["drv"] if d["k"] == h)
+        th = float(dh["now"])
+        t_lo = th
+        i = int(np.clip(np.searchsorted(t, th), 0, len(t) - 1))
+        x.update(t_h=th, t_h_rel_s=round((th - o["drv"][0]["now"]) * 1e-6, 2), v_h=interp(t, vx, th), lat_h=float(lat[i]),
+                 st_h_rel_entry=float(st[i]) - ent, v_trace=[interp(t, vx, th + q * 1e6) for q in (0.0, 0.25, 0.5, 0.75, 1.0)],
+                 v_win_end=interp(t, vx, th + WIN_END * 1e6), v_end=float(vx[-1]), t_left_s=round((t[-1] - th) * 1e-6, 2),
+                 rear_after=bool(o["trear"] is not None and o["trear"] >= th), zero_before_h=bool(np.isfinite(tz) and tz < th))
+        m = (t >= th) & (t < tz)
+        ok = (np.abs(lat) <= SETTLE_LAT) & m
+        run = np.convolve(ok.astype(int), np.ones(int(SETTLE_S * 10) + 1, int), "valid")
+        j = np.flatnonzero(run == int(SETTLE_S * 10) + 1)
+        x["settle_s"] = round((t[j[0]] - th) * 1e-6, 2) if len(j) else None
+        if ido is not None and ido["ctrl"] is not None:      # the rewind check against the identity of the same scene
+            Rd = {d["k"]: d for d in ido["drv"]}
+            pre = [d for d in o["drv"] if d["k"] < h and d["k"] in Rd]
+            x["pre_plan_maxdiff"] = max((float(np.max(np.abs(np.subtract(d["served"], Rd[d["k"]]["served"])))) for d in pre), default=None)
+            x["pre_n"] = len(pre)
+            Ci = ido["ctrl"]
+            ti = np.asarray(Ci["t"], float)
+            n = int(min(np.searchsorted(t, th, side="right"), np.searchsorted(ti, th, side="right")))
+            x["pre_track_maxdiff"] = float(max(np.abs(P[:n] - np.c_[Ci["x"], Ci["y"]][:n]).max(), np.abs(vx[:n] - np.asarray(Ci["vx"])[:n]).max())) if n else None
+            x["id_v_h"] = interp(ti, np.asarray(Ci["vx"], float), th)
+            x["id_v_trace"] = [interp(ti, np.asarray(Ci["vx"], float), th + q * 1e6) for q in (0.0, 0.25, 0.5, 0.75, 1.0)]
+            if u["stratum"] == "B":                           # B: the profile after h, expert against the identity over the same time span
+                for lab, tt, ll, PP, vv, ss, zz in (("xp", t, lat, P, vx, st, tz), ("id", ti, ido["lat"], np.c_[Ci["x"], Ci["y"]], np.asarray(Ci["vx"], float), ido["st"], ido["tz"])):
+                    w = (tt >= th) & (tt < zz) & (ss >= ent - N_WIN) & (ss <= ext)
+                    sh = SH.track_shape(tt, PP, vv, ss, ent - N_WIN, ext, zz, t_lo=th)
+                    x[f"post_{lab}"] = dict(lat_med=float(np.median(np.abs(ll[w]))) if w.any() else np.nan,
+                                            lat_max=float(np.max(np.abs(ll[w]))) if w.any() else np.nan, kmax=sh["kmax"], dk=sh["dk"], alat=sh["alat"])
+    shp = SH.track_shape(t, P, vx, st, ent - N_WIN, ext, tz, t_lo=t_lo)
+    spd = SH.speeds(t, st, vx, ent, ext, tz)
+    ent_after = not np.isfinite(t_lo) or (x.get("st_h_rel_entry") is not None and x["st_h_rel_entry"] < 0)
+    gk = dict(kmax=bool(shp["kmax"] <= gt["kmax"]), dk=bool(shp["dk"] <= gt["dk"]), alat=bool(shp["alat"] <= gt["alat"]),
+              v_entry=bool(not ent_after or (np.isfinite(spd["v_0"]) and spd["v_0"] <= gt["v_entry"])))
+    x.update(kmax=shp["kmax"], dk=shp["dk"], alat=shp["alat"], v_0=spd["v_0"], gate=gk, shape_ok=bool(x["completed"] and all(gk.values())))
+    kz = row["kz"] if row["kz"] >= 0 else 10 ** 6
+    hh = h if h is not None else 0
+    x["rows_turn"] = int(sum(d["k"] >= hh and d["k"] < kz and ent - N_PRE <= d["st"] <= ext + N_PAST for d in o["dec"]))  # rf_follow's junction stretch
+    x["rows_after"] = int(sum(d["k"] >= hh and d["k"] < kz for d in o["dec"]))
+    if o.get("log") is not None:                             # calibration: the human log through the same gate
+        L = o["log"]
+        lsh = SH.track_shape(L["t"], L["P"], L["v"], L["st"], ent - N_WIN, ext)
+        lsp = SH.speeds(L["t"], L["st"], L["v"], ent, ext)
+        x["log_gate"] = dict(kmax=bool(lsh["kmax"] <= gt["kmax"]), dk=bool(lsh["dk"] <= gt["dk"]), alat=bool(lsh["alat"] <= gt["alat"]),
+                             v_entry=bool(np.isfinite(lsp["v_0"]) and lsp["v_0"] <= gt["v_entry"]))
+        x["log_shape"] = dict(kmax=lsh["kmax"], dk=lsh["dk"], alat=lsh["alat"], v_0=lsp["v_0"])
+    return x
+
+
+def n_read(a):
+    n_paths()
+    from jevdrive import par
+    U, gt, jobs = {}, None, []
+    for stage in a.stage.split(","):                     # several stages (pilot + rest) read as one set
+        T = json.loads((Path(stage) / "tfail.json").read_text())
+        U.update(T["units"])
+        gt = T["gate"]
+        jobs += n_jobs(Path(stage), N_TAGS)
+    res = par.pmap(n_roll, jobs, workers=a.workers, desc="rollouts")
+    err = {f"{res.items[i][0]} {res.items[i][2]}": str(e)[-300:] for i, e in res.errors.items()}
+    by = {}
+    for o in res.values:
+        if o is not None:
+            by.setdefault(o["scene"], {})[o["tag"]] = o
+    out = []
+    for sc, R in sorted(by.items()):
+        u = U.get(sc)
+        if u is None or not u["turn"]:
+            continue
+        ido = R.get("id")
+        rows = [{k: (v.item() if isinstance(v, np.generic) else v) for k, v in n_metrics(o, ido, u, gt).items()} for _, o in sorted(R.items())]
+        out.append(dict(scene=sc, unit=u, rows=rows))
+        if a.pkl:
+            Path(a.pkl).mkdir(parents=True, exist_ok=True)
+            keep = {tg: dict(ctrl=o["ctrl"], R=o["R"], tz=o["tz"], log=o.get("log")) for tg, o in R.items()}
+            pickle.dump(dict(scene=sc, unit=u, rolls=keep), open(Path(a.pkl) / f"{sc}.pkl", "wb"), protocol=4)
+    Path(a.out).write_text(json.dumps(dict(gate=gt, errors=err, scenes=out), indent=1, default=float))
+    print(len(out), "units,", len(err), "errors ->", a.out)
+
+
+def n_table(a):
+    n_paths()
+    from jevdrive import stats
+    X = json.loads(Path(a.read).read_text())
+    gt = X["gate"]
+    by = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in X["scenes"]}
+    U = {s["scene"]: s["unit"] for s in X["scenes"]}
+    logs = lambda ss: np.array([s.rsplit("-", 1)[0] for s in ss])  # noqa: E731
+    br = lambda v, ss: stats.bootstrap(np.asarray(v, float), logs(ss), n_boot=10_000) if len(ss) else dict(n=0, mean=np.nan, lo=np.nan, hi=np.nan)  # noqa: E731
+    ci = lambda r: "-" if not r["n"] else f"{r['mean']:.2f} [{r['lo']:.2f}, {r['hi']:.2f}]"  # noqa: E731
+    A = sorted(s for s, u in U.items() if u["stratum"] == "A")
+    B = sorted(s for s, u in U.items() if u["stratum"] == "B")
+    Bv = [s for s in B if U[s]["src"] == "viol"]
+    L = [f"# Recovery-expert rewind on the nuPlan @18 train turns: RSG-L18-s0 (box, held-read serving), expert XP-L12-E46", "",
+         f"Turn scenes read {len(U)}; identity outcome " + ", ".join(f"{k} {v}" for k, v in sorted(_count(u["outcome"] for u in U.values()).items())) +
+         f". Stratum A (failed) {len(A)}: " + ", ".join(f"{k} {v}" for k, v in sorted(_count(U[s]["src"] for s in A).items())) +
+         f"; stratum B (completed) {len(B)}: first-violation {len(Bv)}, no violation (control) {len(B) - len(Bv)}. Gate thresholds: kmax "
+         f"{gt['kmax']:.3f} 1/m, dk {gt['dk']:.4f} 1/m^2, alat {gt['alat']:.2f} m/s^2, entry speed {gt['v_entry']:.1f} m/s.", ""]
+    hdr = ("| stratum | Delta | units (h >= 1) | expert completes [95 % CI] | policy | settle <= 1 m (n, median s) | v(h + 3 s) >= 2 m/s | "
+           "rear after h | at-fault zero | gate pass (of completed) | gate pass / handovers | rows in turn window after h (sum; completed + gated) |")
+    L += [hdr, "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    csv = ["scene,stratum,unit_src,id_outcome,k_ref,items,tag,h,lat_h,v_h,id_v_h,completed,outcome,zkind,settle_s,v_win_end,t_left_s,rear_after,"
+           "at_fault,shape_ok,gate_fail,rows_turn,rows_after,pre_plan_maxdiff,pre_track_maxdiff,xp0_completed"]
+    summ = {}
+    for st_, units in (("A", A), ("A-event", [s for s in A if U[s]["src"] == "zero"]), ("A-off", [s for s in A if U[s]["src"].startswith("off")]),
+                       ("A-short", [s for s in A if U[s]["src"] == "short_end"]), ("B", Bv)):
+        for d in DELTAS:
+            uu = [s for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing")]
+            xr = [by[s][f"D{d}"] for s in uu]
+            pc = [by[s]["id"]["completed"] for s in uu]
+            b = br([r["completed"] for r in xr], uu)
+            comp = [r for r in xr if r["completed"]]
+            gated = [r for r in comp if r.get("shape_ok")]
+            vw = [r["v_win_end"] for r in xr if r.get("v_win_end") is not None and np.isfinite(r["v_win_end"])]
+            stl = [r["settle_s"] for r in xr if r.get("settle_s") is not None]
+            summ[f"{st_}/{d}"] = dict(n=len(uu), n_units=len(units), xp=b, policy=float(np.mean(pc)) if pc else np.nan, n_comp=len(comp), n_gated=len(gated),
+                                     gate_share=len(gated) / len(uu) if uu else np.nan, creep=(sum(v >= V_CREEP for v in vw), len(vw)),
+                                     rows=sum(r.get("rows_turn", 0) for r in xr), rows_gated=sum(r.get("rows_turn", 0) for r in gated))
+            S_ = summ[f"{st_}/{d}"]
+            L.append(f"| {st_} | {d} s | {len(uu)} / {len(units)} | {sum(r['completed'] for r in xr)} = {ci(b)} | {sum(pc)} | "
+                     f"{len(stl)}, {np.median(stl) if stl else float('nan'):.1f} | {S_['creep'][0]} / {S_['creep'][1]} | {sum(r.get('rear_after', False) for r in xr)} | "
+                     f"{sum(r['at_fault'] for r in xr)} | {len(gated)} / {len(comp)} | {len(gated)} / {len(uu)} | {S_['rows']}; {S_['rows_gated']} |")
+    for s in sorted(A + B):
+        u = U[s]
+        for tg in ("D1", "D2", "D3", "xp0"):
+            r = by[s].get(tg)
+            if r is None or r.get("missing"):
+                continue
+            gf = "+".join(k for k, v in (r.get("gate") or {}).items() if not v)
+            csv.append(",".join(str(v) for v in (s, u["stratum"], u["src"], u["outcome"], u["k_ref"], "+".join(u.get("items") or []), tg, r.get("h"),
+                                                   _f(r.get("lat_h")), _f(r.get("v_h")), _f(r.get("id_v_h")), int(r["completed"]), r["outcome"], r["zkind"] or "",
+                                                   r.get("settle_s") if r.get("settle_s") is not None else "", _f(r.get("v_win_end")), r.get("t_left_s", ""),
+                                                   int(bool(r.get("rear_after"))), int(r["at_fault"]), int(bool(r.get("shape_ok"))), gf, r.get("rows_turn", ""),
+                                                   r.get("rows_after", ""), _f(r.get("pre_plan_maxdiff"), 6), _f(r.get("pre_track_maxdiff"), 6),
+                                                   int(by[s].get("xp0", {}).get("completed", False)))))
+    L += ["", "Read: units with h = k_ref - 2 Delta >= 1 (decision 0 is the runtime's forced-log step). Policy = the identity rollout (box "
+          "sessions are bit-identical; checked below), 0 by construction on A and 1 on B. CI: bootstrap over logs (scenes of one log drawn together), "
+          "10 000. Rows = expert decisions k >= h with route station in [entry - 20, exit + 10] m before any zero (rf_follow's junction stretch, 2 Hz).", ""]
+    L += ["## Expert outcomes per stratum and Delta", "", "| stratum | Delta | completed | event (collision / offroad / corridor) | off | short |", "|:--|--:|--:|--:|--:|--:|"]
+    for st_, units in (("A", A), ("B", Bv)):
+        for d in DELTAS:
+            xr = [by[s][f"D{d}"] for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing")]
+            c = _count(r["outcome"] for r in xr)
+            ev = _count(r["zkind"] for r in xr if r["outcome"] == "event")
+            L.append(f"| {st_} | {d} s | {c.get('completed', 0)} | {c.get('event', 0)} ({ev.get('collision', 0)} / {ev.get('offroad', 0)} / "
+                     f"{ev.get('corridor', 0)}) | {c.get('off', 0)} | {c.get('short', 0)} |")
+    # B profile
+    L += ["", "## Stratum B: the turn after the handover, expert against the identity over the same time span (median over handovers)", "",
+          "| Delta | n | median abs lateral id / expert (m) | max abs lateral id / expert (m) | p95-peak kappa id / expert (1/m) | peak a_lat id / expert (m/s^2) | "
+          "violated item at k_ref |", "|--:|--:|--:|--:|--:|--:|:--|"]
+    for d in DELTAS:
+        xr = [by[s][f"D{d}"] for s in Bv if f"D{d}" in by[s] and by[s][f"D{d}"].get("post_xp")]
+        md = lambda lab, k: float(np.nanmedian([r[f"post_{lab}"][k] for r in xr])) if xr else float("nan")  # noqa: E731
+        L.append(f"| {d} s | {len(xr)} | {md('id', 'lat_med'):.2f} / {md('xp', 'lat_med'):.2f} | {md('id', 'lat_max'):.2f} / {md('xp', 'lat_max'):.2f} | "
+                 f"{md('id', 'kmax'):.3f} / {md('xp', 'kmax'):.3f} | {md('id', 'alat'):.2f} / {md('xp', 'alat'):.2f} | "
+                 + ", ".join(f"{k} {v}" for k, v in sorted(_count("+".join(U[s]["items"]) for s in Bv).items())) + " |")
+    # C
+    C_ = sorted(s for s in by if "xp0" in by[s] and not by[s]["xp0"].get("missing"))
+    bc = br([by[s]["xp0"]["completed"] for s in C_], C_)
+    summ["C"] = dict(n=len(C_), xp=bc)
+    c0 = _count(by[s]["xp0"]["outcome"] for s in C_)
+    L += ["", "## Stratum C: the expert from the scene start (xp0) on every turn", "",
+          f"- expert completes {sum(by[s]['xp0']['completed'] for s in C_)} / {len(C_)} = {ci(bc)} (policy {sum(by[s]['id']['completed'] for s in C_)}); outcomes "
+          + ", ".join(f"{k} {v}" for k, v in sorted(c0.items())),
+          f"- on A units {sum(by[s]['xp0']['completed'] for s in A if s in C_)} / {len(A)}, on B units {sum(by[s]['xp0']['completed'] for s in B if s in C_)} / {len(B)}; "
+          f"gate pass (of completed) {sum(by[s]['xp0'].get('shape_ok', False) for s in C_)} / {sum(by[s]['xp0']['completed'] for s in C_)}"]
+    hum = [by[s]["id"]["log_gate"] for s in by if "id" in by[s] and by[s]["id"].get("log_gate")]
+    if hum:
+        L.append(f"- calibration, the human log through the same gate: all items {sum(all(g.values()) for g in hum)} / {len(hum)}; "
+                 + ", ".join(f"{k} {sum(g[k] for g in hum)}" for k in ("kmax", "dk", "alat", "v_entry")))
+    # rewind check
+    chk = [r for s in by for tg, r in by[s].items() if tg.startswith("D") and not r.get("missing") and r.get("h") is not None]
+    pm = [r["pre_plan_maxdiff"] for r in chk if r.get("pre_plan_maxdiff") is not None]
+    tm = [r["pre_track_maxdiff"] for r in chk if r.get("pre_track_maxdiff") is not None]
+    dv = [abs(r["v_h"] - r["id_v_h"]) for r in chk if r.get("id_v_h") is not None and np.isfinite(r["id_v_h"]) and np.isfinite(r["v_h"])]
+    L += ["", "## Rewind check (each D session against the identity of the same scene, before h)", "",
+          f"- sessions {len(chk)}; served plans before h bit-identical {sum(x == 0 for x in pm)} / {len(pm)} (max {max(pm, default=float('nan')):.2g}); "
+          f"controller track before h identical {sum(x == 0 for x in tm)} / {len(tm)} (max {max(tm, default=float('nan')):.2g}); "
+          f"|v(h) - v_id(h)| max {max(dv, default=float('nan')):.3g} m/s"]
+    ib = [s for s in by if "idB" in by[s]]
+    if ib:
+        L.append(f"- idB (second identity session): scores equal {sum(by[s]['idB']['score'] == by[s]['id']['score'] for s in ib)} / {len(ib)}, outcomes equal "
+                 f"{sum(by[s]['idB']['outcome'] == by[s]['id']['outcome'] for s in ib)} / {len(ib)}")
+    if a.stored:
+        import csv as C
+        st0 = {r["scene"]: r["outcome"] for r in C.DictReader(open(a.stored)) if r["label"] == "RSG-L18-s0@18" and r["turn"] == "True"}
+        ag = [s for s in U if s in st0]
+        L.append(f"- fresh identity vs the stored train-pool rollout (follow table): outcome equal {sum(st0[s] == U[s]['outcome'] for s in ag)} / {len(ag)}; "
+                 + ", ".join(f"{s[-8:]} {st0[s]}->{U[s]['outcome']}" for s in ag if st0[s] != U[s]["outcome"]))
+    # lines
+    a2, b2 = summ["A/2"], summ["B/2"]
+    L += ["", "## Registered lines", "",
+          f"- A (primary Delta 2 s): expert completion {ci(a2['xp'])} on {a2['n']} units (line >= 0.60): **{'PASS' if a2['n'] and a2['xp']['mean'] >= 0.6 else 'FAIL'}**; "
+          f"Delta 1 s {ci(summ['A/1']['xp'])}, 3 s {ci(summ['A/3']['xp'])}",
+          f"- B (Delta 2 s): gate pass on {b2['n_gated']} / {b2['n']} handovers = {b2['gate_share']:.2f} (line >= 0.5): **{'PASS' if b2['n'] and b2['gate_share'] >= 0.5 else 'FAIL'}**; "
+          f"Delta 1 s {summ['B/1']['n_gated']} / {summ['B/1']['n']}, 3 s {summ['B/3']['n_gated']} / {summ['B/3']['n']}",
+          f"- C: expert from start {ci(bc)} (line >= 0.80): **{'PASS' if bc['n'] and bc['mean'] >= 0.8 else 'FAIL'}**"]
+    if X.get("errors"):
+        L += ["", f"Read errors: {X['errors']}"]
+    Path(a.md).write_text("\n".join(L) + "\n")
+    Path(a.csv).write_text("\n".join(csv) + "\n")
+    Path(a.md).with_suffix(".json").write_text(json.dumps(summ, indent=1, default=float))
+    print("\n".join(L))
+
+
+def n_fig(a):
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, str(HERE.parents[2] / "research"))
+    import plot_style as PS
+    PS.apply()
+    X = {s["scene"]: s for s in json.loads(Path(a.read).read_text())["scenes"]}
+    pk = a.pkl.split(",")
+    figr, axs = plt.subplots(1, len(pk), figsize=(6.875, 6.875 / len(pk) + 0.4))
+    col = {"id": "#999999", "xp0": "#000000", "D1": "#E69F00", "D2": "#56B4E9", "D3": "#009E73"}
+    for ax, f in zip(np.atleast_1d(axs), pk):
+        sc = pickle.load(open(f, "rb"))
+        rows = {r["tag"]: r for r in X[sc["scene"]]["rows"]}
+        R = sc["rolls"]["id"]["R"]
+        ax.plot(R[:, 0], R[:, 1], color="#dddddd", lw=3.0, zorder=0, label="route")
+        L = sc["rolls"]["id"].get("log")
+        if L is not None:
+            ax.plot(L["P"][:, 0], L["P"][:, 1], color="#0072B2", lw=1.0, ls="--", label="human log", zorder=1)
+        lim = []
+        for tag in ("id", "xp0", "D3", "D2", "D1"):
+            o = sc["rolls"].get(tag)
+            if o is None or o.get("ctrl") is None or tag not in rows:
+                continue
+            C = o["ctrl"]
+            m = np.asarray(C["t"]) <= o["tz"]
+            r = rows[tag]
+            lab = {"id": "policy (identity)", "xp0": "expert from start"}.get(tag, f"expert from -{tag[-1]} s")
+            gate = " gated" if r.get("shape_ok") else ""
+            ax.plot(C["x"][m], C["y"][m], color=col[tag], lw=1.1, label=f"{lab}: {'done' + gate if r['completed'] else r['outcome']}", zorder=2)
+            if tag.startswith("D") and r.get("t_h") is not None:
+                i = int(np.searchsorted(C["t"], r["t_h"]))
+                ax.plot(C["x"][i], C["y"][i], "o", color=col[tag], ms=3, zorder=3)
+            if not m.all():
+                ax.plot(C["x"][m][-1], C["y"][m][-1], "x", color=col[tag], ms=4, zorder=3)
+            lim.append(np.c_[C["x"][m], C["y"][m]])
+        Q = np.concatenate(lim)
+        c0, r0 = Q.mean(0), max(np.ptp(Q, 0).max() / 2 + 5, 20)
+        ax.set_xlim(c0[0] - r0, c0[0] + r0)
+        ax.set_ylim(c0[1] - r0, c0[1] + r0)
+        ax.set_aspect("equal")
+        ax.grid(False)
+        ax.set_xticks([]); ax.set_yticks([])  # noqa: E702
+        u = sc["unit"]
+        ax.text(0.02, 0.98, f"{sc['scene'][-8:]} ({u['stratum']}: {u['outcome']}" + (f", {'+'.join(u['items'])}" if u.get("items") else "") + ")",
+                transform=ax.transAxes, va="top", fontsize=7)
+        ax.legend(fontsize=5.5, loc="lower right", frameon=False)
+    figr.tight_layout()
+    PS.save(figr, str(Path(a.out).with_suffix("")))
+    print("->", a.out)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -409,8 +871,21 @@ def main():
     p = sp.add_parser("fig")
     p.add_argument("--pkl-dir", required=True); p.add_argument("--read", required=True); p.add_argument("--scenes", required=True)  # noqa: E702
     p.add_argument("--out", required=True)
+    p = sp.add_parser("n-units")
+    p.add_argument("--follow", required=True); p.add_argument("--label", default="RSG-L18-s0@18"); p.add_argument("--out", required=True)  # noqa: E702
+    p = sp.add_parser("n-tfail")
+    p.add_argument("--stage", required=True); p.add_argument("--chunks", type=int, default=4); p.add_argument("--workers", type=int, default=16)  # noqa: E702
+    p = sp.add_parser("n-read")
+    p.add_argument("--stage", required=True); p.add_argument("--out", required=True); p.add_argument("--pkl", default="")  # noqa: E702
+    p.add_argument("--workers", type=int, default=16)
+    p = sp.add_parser("n-table")
+    p.add_argument("--read", required=True); p.add_argument("--md", required=True); p.add_argument("--csv", required=True)  # noqa: E702
+    p.add_argument("--stored", default="")
+    p = sp.add_parser("n-fig")
+    p.add_argument("--pkl", required=True); p.add_argument("--read", required=True); p.add_argument("--out", required=True)  # noqa: E702
     a = ap.parse_args()
-    dict(cells=cells, extract=extract, tfail=tfail, read=read, table=table, fig=fig)[a.cmd](a)
+    dict(cells=cells, extract=extract, tfail=tfail, read=read, table=table, fig=fig, **{"n-units": n_units, "n-tfail": n_tfail, "n-read": n_read,
+         "n-table": n_table, "n-fig": n_fig})[a.cmd](a)
 
 
 if __name__ == "__main__":

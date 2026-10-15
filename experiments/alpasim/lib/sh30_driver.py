@@ -27,7 +27,8 @@ frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 =
 built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), JEV_VHIST (off | hold | zero | holdlead: the speed history fed to the
 adapter, vhist.py; logged as drive.jsonl `vhist`, `ego` stays the measured row; off by default), JEV_ROUTE (off | own | log: the carried route as the
 served path with the plan's / the log's arc lengths, route_path.py; logged as drive.jsonl `route`, `route_path`, `poses_model`; off by default), JEV_EXPERT (a pack directory: the rule expert's plan
-replaces the model's, rule_expert.py; the model still runs and its plan is logged as `poses_model`, the expert's state as `expert`; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+replaces the model's, rule_expert.py; the model still runs and its plan is logged as `poses_model`, the expert's state as `expert`; off by default;
+JEV_EXPERT_FROM hands over from a per-scene decision k, the model's plan served before it: the recovery rewind), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -312,7 +313,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             else:
                 o["poses"], ri, rp = RP.serve(o["poses"], rM, float(np.hypot(*dyn[-1][0])), rG)
         xi = None
-        if XP.ON:                                            # JEV_EXPERT (rule_expert.py): the rule expert's plan replaces the model's
+        if XP.active(s.scene, s.count["drive"] - 1):        # JEV_EXPERT (rule_expert.py): the rule expert's plan replaces the model's
             o.setdefault("poses_model", o["poses"])
             try:
                 o["poses"], xi = XP.plan(req.session_uuid, s.scene, t0, (anchor.pose.vec.x, anchor.pose.vec.y, yaw0), float(np.hypot(*dyn[-1][0])))
@@ -426,7 +427,8 @@ def main() -> None:
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_ROUTE %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, RP.MODE)
     assert not (XP.ON and (FX.ON or TR.ON or RP.ON or BD)), "JEV_EXPERT replaces the plan: the other serving switches must be off"
     if XP.ON:
-        LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
+        LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s, from %s)", XP.PACK, XP.LA_T, XP.V_E,
+                 "decision 0" if not XP.FROM_ON else XP.FROM_ALL if XP.FROM_ALL is not None else f"a per-scene decision ({len(XP.FROM)} scenes)")
     LOG.info("%s (%s, motion %.2f, synth %s, compiled %s, jpeg %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth,
              core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     if core.th is not None:

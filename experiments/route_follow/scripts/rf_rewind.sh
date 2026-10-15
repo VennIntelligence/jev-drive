@@ -9,6 +9,15 @@
 #   rf_rewind.sh fanout <root> <N | all | s8,s8>        one pool job per scene of $LIST not yet submitted (staged: 1, ~10, all); `all` adds the
 #                                                      collect job
 #   rf_rewind.sh collect <root>                        read (all scenes) + table -> <root>/{read.json, rewind.md, rewind.csv}
+# nuPlan train 64 (prereg plans/2026-10-16-rewind-train64-prereg.md; rf_rewind.py n-*; driver sh30_driver.py with JEV_EXPERT + JEV_EXPERT_FROM;
+# the held-read serving: rm_chain.sh readlist, plain RSG-L18-s0, 18 decisions at 2 Hz):
+#   rf_rewind.sh train64 <root> units                  the 64 turn scenes of the stored train-pool follow table -> <root>/units.txt, scenes.txt
+#   rf_rewind.sh train64 <root> pack                   pool CPU job: expert packs of those scenes (rf_expert.py pack on the stored roll configs)
+#   rf_rewind.sh train64 <root> stage <name> <list> [chunks]   one stage, every job queued at once: `id` (+ `idB` with SMOKE=1) and `xp0`
+#                                                      (GPU, <chunks> jobs each) -> n-tfail (CPU, after id) -> D1 / D2 / D3 (GPU, after n-tfail)
+#                                                      -> read + table (CPU, after all) -> <root>/<name>/rewind_train64.{md,csv,json}
+#   rf_rewind.sh train64 <root> read <stage,stage..> <out dir>   the combined read of several stages (job body of a stage's read too)
+#   job body: train64 <root> nsim <run dir> <list> id|xp0|<from file>
 # Env: LIST (scene list, default results/pai281/strict36.txt), PACK (expert packs, $DATA_DIR/runs/route_follow/rewind/pack_pai: Tokyo's
 #   pack_pai of the 36 scenes), SMOKE (1: phase B adds `idB`, a second identity session), PRIO (pool priority, 6: below the running lanes),
 #   JEV_PY (python with numpy; jobs run from a worktree without .venv), RW_VRAM (pool declaration, 22; measured peak 19.3 GB = phase B's 3 launches), RW_HIST (history key, alpasim-p4c1). Expert variant XP-L12-E46 (rule_expert defaults: lookahead 1.2 s,
@@ -62,8 +71,56 @@ job() {
   echo "$(date '+%F %T') ${sc:7:8} done: $($PY -c "import json;t=json.load(open('$sd/tfail.json'));print(t['outcome'], t['src'], t['k_fail'], t['h'])")" >> "$O/log.txt"
 }
 
+train64() {
+  local sub=${1:?units|pack|stage|nsim|read}; shift
+  local P4=$D/runs/onpol_long/roll/RSG-L18-s0 NP=$O/pack W=$O/code
+  nsub() { local name=$1; shift; local id; id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --owner rewind-train64 --name "$name" --tries ${TRIES:-2} \
+           --priority ${PRIO:-6} --no-check "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
+           echo "$id $name" >> "$O/jobs.txt"; echo "$id"; }
+  case $sub in
+  units)
+    python3 "$here/rf_rewind.py" n-units --follow $D/runs/route_follow/entry_speed/follow/scenes.csv --out "$O/units.txt" && cut -d' ' -f1 "$O/units.txt" > "$O/scenes.txt" ;;
+  pack)
+    nsub rwn-pack --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$O/pool/rwn-pack" -- \
+      "$APY" "$repo/experiments/route_follow/scripts/rf_expert.py" pack --workers 16 --out "$NP" --scenes "$O/scenes.txt" --runs $(ls -d $P4/c*/run) ;;
+  stage)
+    local name=${1:?name} L=${2:?scene list} n=${3:-4} S i tg ids=() tf all=()
+    S=$O/$name; [[ ! -e $S/SUBMITTED ]] || { echo "$S already submitted" >&2; exit 1; }
+    [[ -d $W ]] || git -C "$repo" worktree add -q --detach "$W" HEAD || exit 1
+    echo "{\"served\": \"$W\", \"commit\": \"$(git -C "$W" rev-parse HEAD)\", \"dirty\": $(git -C "$W" status --porcelain -uno | grep -c .)}" > "$O/code.json"
+    mkdir -p "$S/lists"; for i in $(seq 0 $((n - 1))); do awk -v i=$i -v n=$n '(NR - 1) % n == i {print $1}' "$L" > "$S/lists/c$i.txt"; done
+    local X="bash $W/experiments/route_follow/scripts/rf_rewind.sh train64 $O"
+    local G=(--vram ${RW_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=${RW_HIST:-alpasim-read4} --env "JEV_PY=$PY")
+    for tg in id xp0 ${SMOKE:+idB}; do for i in $(seq 0 $((n - 1))); do
+      id=$(nsub rwn-$tg-c$i "${G[@]}" --log-dir "$S/pool/$tg-c$i" -- $X nsim "$S/$tg/c$i/run" "$S/lists/c$i.txt" ${tg/idB/id}) || exit 1
+      all+=("$id"); [[ $tg == id ]] && ids+=("$id")
+    done; done
+    tf=$(nsub rwn-tfail --after "$(IFS=,; echo "${ids[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$S/pool/tfail" -- \
+         "$APY" "$W/experiments/route_follow/scripts/rf_rewind.py" n-tfail --stage "$S" --chunks $n) || exit 1
+    for d in 1 2 3; do for i in $(seq 0 $((n - 1))); do
+      all+=($(nsub rwn-D$d-c$i --after "$tf" "${G[@]}" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/list_D${d}_c$i.txt" "$S/from_D$d.txt")) || exit 1
+    done; done
+    nsub rwn-read --after "$(IFS=,; echo "${all[*]}")" --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$S/pool/read" -- $X read "$S" > /dev/null || exit 1
+    date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 2 )) "$O/jobs.txt" ;;
+  nsim)   # <run dir> <list> id|xp0|<from file>: one 18-decision launch of the held-read serving, resumable
+    local R=$1 L=$2 M=$3 E=()
+    if [[ ! -s $L ]]; then mkdir -p "$R"; echo "empty list" > "$R/EMPTY"; exit 0; fi
+    [[ -f $R/aggregate/results-summary.json ]] && { echo "$R done"; exit 0; }
+    case $M in id) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM) ;; xp0) E=(-u JEV_EXPERT_FROM JEV_EXPERT=$NP) ;; *) E=(JEV_EXPERT=$NP JEV_EXPERT_FROM=$M) ;; esac
+    rm -rf "$R"; mkdir -p "$(dirname "$R")"
+    env "${E[@]}" bash "$repo/experiments/route_mem/scripts/rm_chain.sh" readlist RSG-L18-s0 "$L" "$R" ;;
+  read)   # <stage dir>[,<stage dir>..] [out dir, default the first stage]
+    local S=${2:-${1%%,*}}; mkdir -p "$S"
+    "$APY" "$here/rf_rewind.py" n-read --stage "$1" --out "$S/read.json" --pkl "$S/pkl" && \
+      $PY "$here/rf_rewind.py" n-table --read "$S/read.json" --md "$S/rewind_train64.md" --csv "$S/rewind_train64.csv" \
+        --stored $D/runs/route_follow/entry_speed/follow/scenes.csv > /dev/null && echo "-> $S/rewind_train64.md" ;;
+  *) sed -n '2,30p' "$0"; exit 2 ;;
+  esac
+}
+
 case $cmd in
 job) job "$1" ;;
+train64) train64 "$@" ;;
 fanout)
   N=${1:?N | all | s8,s8}; cd "$repo" || exit 1
   W=$O/code
