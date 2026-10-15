@@ -86,7 +86,10 @@ def cmd_a(a):
                                                                   for g in ("h", "post")}, groups={})
         for g in ("h", "post", "all"):
             m = (kk == g) if g != "all" else np.ones(len(rr), bool)
-            G = dict(n=int(m.sum()), logs=len(set(lg[m])), base=dict(ade=float(eb[m].mean()), e2=float(eb[m, 3].mean()), e4=float(eb[m, 7].mean())), tags={})
+            dec = lambda P: {f"{q}_abs": float(np.abs(v[m]).mean()) for q, v in disagree(P, f).items() if q in ("lat2", "lon2", "lat4", "lon4", "dh4")} \
+                | dict(lon4_signed=float(disagree(P, f)["lon4"][m].mean()))  # noqa: E731
+            G = dict(n=int(m.sum()), logs=len(set(lg[m])), base=dict(ade=float(eb[m].mean()), e2=float(eb[m, 3].mean()), e4=float(eb[m, 7].mean()), **dec(Pb)),
+                     tags={})
             for tag in TAGS:
                 try:
                     r2, Pt = RC.plans("RCVall", rset, tag)
@@ -99,7 +102,7 @@ def cmd_a(a):
                 G["tags"][tag] = dict(ade=float(et[m].mean()), e2=float(et[m, 3].mean()), e4=float(et[m, 7].mean()),
                                       drop=float(1 - et[m].mean() / eb[m].mean()), d_ade=[r["mean"], r["lo"], r["hi"]],
                                       move_mean=float(mv[m].mean()), move_e4=float(mv[m, 7].mean()),
-                                      toward=float((eb[m].mean(1) - et[m].mean(1)).mean() / max(mv[m].mean(), 1e-9)))
+                                      toward=float((eb[m].mean(1) - et[m].mean(1)).mean() / max(mv[m].mean(), 1e-9)), **dec(Pt))
             S["groups"][g] = G
         out["splits"][split] = S
     out["tags"] = [t for t in TAGS if t in out["splits"]["dev"]["groups"]["all"]["tags"]]
