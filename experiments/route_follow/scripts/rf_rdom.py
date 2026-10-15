@@ -595,8 +595,8 @@ def figure(X, O, fig, tag):
         b.set_title(f"zeroed moves 4 s end {p.zero_lat4:.2f} m; swap {p.swap_lat4:.2f} m", fontsize=9)
     fg.suptitle(f"ROUTE-DOMINANCE: {tag}, plans at fixed frames under served (blue), zeroed (orange), swapped (green) route memory; dots = route memory; "
                 "red = agent boxes at t0 (solid) / 2 s (faint); grey = road raster", fontsize=10)
-    fg.text(0.5, 0.005, "Panels 1-3: failing states 0.5-3 s before a turn zero; panel 4: a completed turn. 'contact' = the plan's footprint leaves the road raster "
-            "or overlaps an agent box within 4 s", fontsize=10)
+    fg.text(0.5, 0.004, ha="center", s="Panels 1-3: failing states 0.5-3 s before a turn zero; panel 4: a completed turn. 'contact' = the plan's footprint leaves the road raster "
+            "or overlaps an agent box within 4 s", fontsize=9)
     fg.tight_layout()
     fig.parent.mkdir(parents=True, exist_ok=True)
     fg.savefig(fig, dpi=110)
