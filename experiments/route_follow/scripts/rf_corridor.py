@@ -68,11 +68,15 @@ def _sims(root):
 def lanes_job(job):
     scene, cfg = job
     import logging
-    import shapely
     import rf_tax as TX
-    from eval.scorers.offroad import _get_lane_polygon, _repair_polygonal_geometry
     logging.disable(logging.WARNING)
-    ds = TX.loader(cfg).get_data_source(scene)
+    return scene, lanes_of(TX.loader(cfg).get_data_source(scene))
+
+
+def lanes_of(ds):
+    """A loaded scene data source -> the lanes extract of one scene (lanes_job)."""
+    import shapely
+    from eval.scorers.offroad import _get_lane_polygon, _repair_polygonal_geometry
     tr = ds.rig.trajectory
     T, P, Y = np.asarray(tr.timestamps_us, float), np.asarray(tr.positions, float)[:, :2], np.unwrap(np.asarray(tr.yaws, float))
     Q = P[::5]
@@ -92,7 +96,7 @@ def lanes_job(job):
             areas.append(shapely.to_wkb(_repair_polygonal_geometry(ds.map.get_road_area_polygon_2d(ra.id))))
     except Exception:  # noqa: BLE001  PAI maps have no road-area layer
         pass
-    return scene, dict(lanes=lanes, areas=areas, log=dict(T=T, P=P, Y=Y))
+    return dict(lanes=lanes, areas=areas, log=dict(T=T, P=P, Y=Y))
 
 
 def lanes_extract(a):

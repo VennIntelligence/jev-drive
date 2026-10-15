@@ -7,7 +7,7 @@
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/, pai_fetch.sh), IMG (driver image), BASE (trusted image),
 #   GPU (card of renderer + physics, default 1), DGPU (driver card, default $GPU), STAGE (rows of the tsv with stage <= this, default 1),
 #   CONC (concurrent rollouts, default 1), NRE_CACHE (scenes the renderer keeps loaded, default CONC + 1; about 3 GB of VRAM each), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
-#   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py; `-e JEV_TURN_GAIN=1.25`, lib/turn_gain.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
+#   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py; `-e JEV_TURN_GAIN=1.25`, lib/turn_gain.py; `-e JEV_EXPERT=<pack dir in the container> -v <packs>:<that dir>:ro`, lib/rule_expert.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
 #   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, usage.jsonl (2 s: per-process VRAM, per-container RAM / CPU), driver/ (drive.jsonl,
@@ -39,6 +39,7 @@ docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges
   -v "$lib/serve_fix.py:/app/jev-drive/experiments/alpasim/lib/serve_fix.py:ro" \
   -v "$lib/track_ref.py:/app/jev-drive/experiments/alpasim/lib/track_ref.py:ro" -v "$lib/vhist.py:/app/jev-drive/experiments/alpasim/lib/vhist.py:ro" \
   -v "$lib/turn_gain.py:/app/jev-drive/experiments/alpasim/lib/turn_gain.py:ro" \
+  -v "$lib/rule_expert.py:/app/jev-drive/experiments/alpasim/lib/rule_expert.py:ro" \
   -v "$here/../../../jevdrive/openpilot/lead_long.py:/app/jev-drive/jevdrive/openpilot/lead_long.py:ro" \
   -v "$here/../../route_mem/lib/rmem.py:/app/jev-drive/experiments/route_mem/lib/rmem.py:ro" \
   ${DRV_PY:+-v "$lib/$DRV_PY:/app/jev-drive/experiments/alpasim/lib/$DRV_PY:ro"} \

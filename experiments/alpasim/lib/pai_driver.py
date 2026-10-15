@@ -29,7 +29,9 @@ the controller is a feasible reference built from the plan and the ego state, ne
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
 row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
-turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default).
+turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default), JEV_EXPERT (a pack directory:
+the rule expert's plan replaces the model's, rule_expert.py, mounted by pai_run.sh; `poses` = the expert's plan, `poses_model` the model's,
+`expert` its state; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -52,6 +54,7 @@ import pai_core as PC
 import serve_fix as FX
 import track_ref as TR
 import turn_gain as TG
+import rule_expert as XP
 import vhist as VH
 from pai_core import C, I
 
@@ -169,6 +172,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         with self.lock:
             s = self.sessions.pop(req.session_uuid, None)
         if s is not None:
+            XP.close(req.session_uuid)
             self.out.write(json.dumps({"kind": "close", "t": time.time(), "session": req.session_uuid, "scene": s.scene, **s.count,
                                        "wh": s.maps.wh if s.maps else None, "coverage": s.maps.coverage if s.maps else None}) + "\n")
         return common_pb2.Empty()
@@ -285,7 +289,15 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
                 vec=common_pb2.Vec3(x=float(p0[0]), y=float(p0[1]), z=near.pose.vec.z),
                 quat=common_pb2.Quat(w=float(np.cos(p0[2] / 2)), x=0.0, y=0.0, z=float(np.sin(p0[2] / 2)))))
-            tgr = None
+            tgr = xi = None
+            if XP.ON:                                        # JEV_EXPERT (rule_expert.py): the rule expert's plan replaces the model's
+                o.setdefault("poses_model", o["poses"])
+                try:
+                    o["poses"], xi = XP.plan(req.session_uuid, s.scene, t0, p0, float(np.hypot(*V[-1])))
+                except Exception as e:
+                    s.count["inference_error"] += 1
+                    LOG.exception("rule expert failed, session %s t %d", req.session_uuid, now)
+                    ctx.abort(grpc.StatusCode.INTERNAL, f"rule expert failed: {e!r}")
             if TG.ON:                                        # JEV_TURN_GAIN (turn_gain.py): the plan's turn scaled while it under-takes the route's
                 served, tgr = TG.apply(rf, o["poses"])
             if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
@@ -307,6 +319,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                            "slots": round(1e3 * (t_q - t_f), 2), "wait": round(1e3 * (t_g - t_q), 2)})
             if fx is not None:
                 rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+            if xi is not None:
+                rec.update(expert=xi, poses_model=np.asarray(o["poses_model"]).round(4).tolist())
             if TR.ON:
                 rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
             if tgr is not None:
@@ -329,7 +343,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -373,6 +387,9 @@ def main() -> None:
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     assert not (TG.ON and TR.ON), "JEV_TURN_GAIN transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+    assert not (XP.ON and (FX.ON or TR.ON or TG.ON)), "JEV_EXPERT replaces the plan: the other serving switches must be off"
+    if XP.ON:
+        LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
     LOG.info("JEV_RM_SC %s", RM_SC or "unset")
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.MODE,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
