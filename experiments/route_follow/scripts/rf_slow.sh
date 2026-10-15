@@ -121,7 +121,7 @@ submit)
     for s in 0 1; do T=$(tag $a $s)
       t=$(sub slow-tr-$T --after $p0,$p1 --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- bash $ME train $a $s) || exit 1
       for i in 0 1 2 3 4 5; do
-        rr+=($(sub slow-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1
+        rr+=($(sub slow-held-$T-$i --after $t --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1
       done
       for i in $(seq 0 9); do
         rr+=($(sub slow-g10-$T-$i --after $t --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1

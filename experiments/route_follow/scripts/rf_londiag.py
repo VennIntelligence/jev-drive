@@ -14,6 +14,15 @@ stored PAI 281 rollouts (Tokyo /data/runs/route_night/r281/rsg). CPU only; the r
   slow     (Mac, .venv)   rf_londiag.py slow --tax ... --wl ... --dec ... [--frames DIR] [--parquet <decisions.parquet>]
       reading 2 -> results/lon_diag/slow.md, slow.json, onsets.csv, figs/lon_diag_fixed_point.png, figs/lon_diag_onsets.png
   picks    (Mac)   rf_londiag.py picks --tax ... --wl ... --dec ... --out <json>   the frame list for `frames` (route-end arrivals, onsets)
+  pai      (Mac / Tokyo, numpy + pandas)   rf_londiag.py pai --tax NEW.pkl --dec NEW_dec.pkl --ref-tax REF.pkl --ref-dec REF_dec.pkl --wl WL.pkl
+      SLOW prereg line 3 (experiments/route_follow/plans/2026-10-15-slow-s1s2-prereg.md) for one PAI 281 read against the reference, scene-paired:
+      speed ratio (rf_tax `speed_ratio`: median over the 0.5 s steps of ego speed / log speed at the ego's station) median on the reference
+      taxonomy's 73 `low_slow_free` scenes (results/taxonomy/pai281_rsg.csv) >= 0.80; handoff (R2a's rows: valid decisions k 0-2, v_f >= 1)
+      median v_p / v_f in the v_log >= 16 m/s bin >= 0.95; collision zeros (rf_tax zero_type `collision`: at-fault front / lateral) <= ref + 2;
+      all zeros <= ref + 3; exam 72 mean-score difference CI low > -0.02 (scene bootstrap B 10 000, seed 0); rear-ended (rf_tax `rear_hit`)
+      <= 0.7 x ref; `cor_route_end` primaries <= ref + 2. Inputs per read (Tokyo): `rf_tax.py extract --runs <read>/runs/* --out X.pkl
+      --asl-actors` (alpasim-base image, as the taxonomy) and `rf_londiag.py slim --runs <read>/runs/* --out X_dec.pkl`; WL = the stored
+      PAI wait lines (the taxonomy's `waitlines` pkl; same 281 scenes). --out F.json writes the numbers.
 
 Definitions (prereg): v_f = fed vx (ego[4] x 10, m/s); v_p = arc length of the served plan from the rear axle through its 0.5 .. 2.0 s poses
 / 2 s (rf_follow.plan_arc2 / 2); v_log = the log's speed at the ego's station on the log path (rf_tax.Roll alignment: rear-axle position
@@ -745,6 +754,85 @@ def picks(a):
     print(len(L), "frames ->", a.out)
 
 
+# ---------------------------------------------------------------- SLOW prereg line 3: one PAI read vs the reference
+def pai_one(job):
+    """One rollout -> (rf_tax classify row, handoff decisions k <= 2 with v_f, v_p, v_log, valid) (roll_table's definitions)."""
+    o, d, wl = job
+    TX = tx()
+    row, _, _ = TX.classify(o, None, wl)
+    out = []
+    if d is not None and "ctrl" in o and o.get("ser") is not None:
+        r = TX.Roll(o)
+        tr = t_trunc(TX, o, row, r)
+        m = d["k"] <= 2
+        t = d["now"][m].astype(float)
+        tc = np.clip(t, r.t[0], r.t[-1])
+        P = np.c_[np.interp(tc, r.t, r.x), np.interp(tc, r.t, r.y)]
+        vlog = np.interp(r.log_station(P), r.LS, r.Lv)
+        vf, vp = d["ego"][m, 4].astype(float) * 10.0, plan_arc2(d["poses"][m]) / 2.0
+        out = [dict(scene=o["scene"], k=int(k), v_f=f, v_p=q, v_log=v, valid=bool(tt <= tr)) for k, f, q, v, tt in zip(d["k"][m], vf, vp, vlog, t)]
+    keep = ("scene", "score", "zero_type", "primary", "speed_ratio", "rear_hit")
+    return {k: row.get(k) for k in keep}, out
+
+
+def pai_read(tax, dec, wl, workers):
+    import pandas as pd
+    from concurrent.futures import ProcessPoolExecutor
+    rolls = pickle.load(open(tax, "rb"))["rolls"]
+    D = pickle.load(open(dec, "rb"))
+    WL = pickle.load(open(wl, "rb"))
+    jobs = [(o, D.get(o["rid"]), WL.get(o["scene"], [])) for o in sorted(rolls, key=lambda o: o["scene"])]
+    with ProcessPoolExecutor(workers) as ex:
+        res = list(ex.map(pai_one, jobs, chunksize=4))
+    C = pd.DataFrame([r for r, _ in res]).set_index("scene")
+    H = pd.DataFrame([x for _, h in res for x in h])
+    return C, H
+
+
+def pai(a):
+    import pandas as pd
+    C1, H1 = pai_read(a.tax, a.dec, a.wl, a.workers)
+    C0, H0 = pai_read(a.ref_tax, a.ref_dec, a.wl, a.workers)
+    T = pd.read_csv(TAXCSV).set_index("scene")
+    slow = sorted(T.index[T.primary == "low_slow_free"])
+    exam = sorted(set(Path(EXAM).read_text().split()) & set(C1.index) & set(C0.index))
+    common = sorted(set(C1.index) & set(C0.index))
+
+    def hand(H):
+        V = H[H.valid & (H.k <= 2) & (H.v_f >= 1.0) & (H.v_log >= 16.0)]
+        return float((V.v_p / V.v_f).median()), int(len(V)), int(V.scene.nunique())
+
+    def counts(C):
+        C = C.loc[common]
+        sc = C.score.astype(float).fillna(0)
+        return dict(scenes=len(C), mean=float(sc.mean()), zeros=int((sc == 0).sum()), coll_zeros=int(((sc == 0) & (C.zero_type == "collision")).sum()),
+                    rear_ended=int(C.rear_hit.fillna(False).astype(bool).sum()), cor_route_end=int((C.primary == "cor_route_end").sum()),
+                    slow_ratio_median=float(C.reindex(slow).speed_ratio.astype(float).median()), slow_scenes=int(C.reindex(slow).speed_ratio.notna().sum()))
+    n, r = counts(C1), counts(C0)
+    n["handoff_ge16"], n["handoff_rows"], n["handoff_scenes"] = hand(H1)
+    r["handoff_ge16"], r["handoff_rows"], r["handoff_scenes"] = hand(H0)
+    d = (C1.loc[exam].score.astype(float).fillna(0) - C0.loc[exam].score.astype(float).fillna(0)).to_numpy()
+    rng = np.random.default_rng(0)
+    bs = d[rng.integers(0, len(d), (10_000, len(d)))].mean(1)
+    ex = [float(d.mean()), float(np.quantile(bs, 0.025)), float(np.quantile(bs, 0.975))]
+    lines = dict(slow_ratio=n["slow_ratio_median"] >= 0.80, handoff=n["handoff_ge16"] >= 0.95, coll_zeros=n["coll_zeros"] <= r["coll_zeros"] + 2,
+                 zeros=n["zeros"] <= r["zeros"] + 3, exam=ex[1] > -0.02, rear=n["rear_ended"] <= 0.7 * r["rear_ended"],
+                 cor_route_end=n["cor_route_end"] <= r["cor_route_end"] + 2)
+    res = dict(run=a.tax, ref=a.ref_tax, new=n, ref_counts=r, diff={k: n[k] - r[k] for k in n if isinstance(n[k], (int, float))},
+               exam72_mean_diff=ex, exam_scenes=len(exam), lines=lines, line3=all(lines.values()))
+    f = lambda k, p=3: f"{n[k]:.{p}f} vs {r[k]:.{p}f} (d {n[k] - r[k]:+.{p}f})" if isinstance(n[k], float) else f"{n[k]} vs {r[k]} (d {n[k] - r[k]:+d})"  # noqa: E731
+    print(f"# SLOW line 3: {a.tax} vs {a.ref_tax} ({len(common)} paired scenes)")
+    print(f"slow-scene speed ratio median ({n['slow_scenes']} of {len(slow)} low_slow_free scenes): {f('slow_ratio_median')}  line >= 0.80: {lines['slow_ratio']}")
+    print(f"handoff k 0-2 v_p / v_f, v_log >= 16 ({n['handoff_rows']} decisions / {n['handoff_scenes']} scenes): {f('handoff_ge16')}  line >= 0.95: {lines['handoff']}")
+    print(f"collision zeros: {f('coll_zeros')}  line <= ref + 2: {lines['coll_zeros']}")
+    print(f"all zeros: {f('zeros')}  line <= ref + 3: {lines['zeros']}; mean score {f('mean', 4)}")
+    print(f"exam {len(exam)} mean-score difference {ex[0]:+.4f} [{ex[1]:+.4f}, {ex[2]:+.4f}]  line CI low > -0.02: {lines['exam']}")
+    print(f"rear-ended: {f('rear_ended')}  line <= 0.7 x ref: {lines['rear']}")
+    print(f"cor_route_end: {f('cor_route_end')}  line <= ref + 2: {lines['cor_route_end']}")
+    print(f"LINE 3: {'PASS' if res['line3'] else 'FAIL'}")
+    if a.out:
+        Path(a.out).write_text(json.dumps(res, indent=1, default=float))
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -763,11 +851,16 @@ def main():
         q.add_argument("--parquet", default="tmp/lon_diag/decisions.parquet")
         q.add_argument("--frames", default="")
         q.add_argument("--out", default="")
+    q = sp.add_parser("pai")
+    for k in ("tax", "dec", "ref-tax", "ref-dec", "wl"):
+        q.add_argument(f"--{k}", required=True)
+    q.add_argument("--workers", type=int, default=8)
+    q.add_argument("--out", default="")
     f = sp.add_parser("frames")
     f.add_argument("--list", required=True)
     f.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"slim": slim, "frames": frames, "table": table, "route_end": route_end, "slow": slow, "picks": picks}[a.cmd](a)
+    {"slim": slim, "frames": frames, "table": table, "route_end": route_end, "slow": slow, "picks": picks, "pai": pai}[a.cmd](a)
 
 
 if __name__ == "__main__":
