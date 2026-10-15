@@ -216,3 +216,6 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   **标签行（完成且 h 后无零分，junction 段，2 Hz）1 064 行 / 49 个弯 / 36 log；过 PAI 闸 542（29 弯），过 nuPlan 重标定闸 493（26 弯）**，前 3 个弯占 11–23 %。
   训练器行清单：盒上 `runs/route_follow/rewind_onpol_all/rows/rows.csv`（README 同目录；`label` 列 = 登记标签集，`rows_partial_0105/` 是不完整的第一次读数，勿用）。
   `experiments/route_follow/results/rewind_onpol_all/rewind_onpol_all.md`。
+- 10-16 03:15（JST）：RECOVERY-ENVELOPE 续：L 全量 held / 公开读完：held 零分 +4.0 [−2.9, +10.7]（线 ≤ +3，**不过**）、at-fault +0.5、GT −0.027、转弯 −2；公开护栏过（零分 −5）。L 不可采用；盒上 PAI 281 等 118 个场景下载，只作机制读数。
+  LF（L + 推快的接近行）pilot 不过（ADE 0.5383）。全场景倒回的 R / RL（on1_RCVall 952 行）：其余闸全过，RL 的停止线 −28 %、等弧长转弯 +0.75°，但留出 log 的模仿只降 8.6–16.7 %（线 20 %），**按登记停**；
+  训练行上同一读数也只降 10–17.5 %：不是迁移问题，是 1 000 步内对专家目标本身动得少。20 % 这条线是否合适由主会话定。推快：窗末 +28 / +38 %，到线时已消失（3.6 对 3.5 m/s）。

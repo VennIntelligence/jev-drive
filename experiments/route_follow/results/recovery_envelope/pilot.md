@@ -59,6 +59,15 @@ held-out-log R rows drop >= 20 %. Dev rows: stop 127 (7 logs), turn 155 (9), lea
 | RCVLFP1l01 (LF: L + fast rows, upper 1, lower 0.1) | 0.5383 | +0.0247 | True | -0.69 | +0.71 [+0.51, +0.87] | 0.129 -> 0.059 (-54 %) | 0.0124 -> 0.0047, CI hi -0.0020 | 0.049 -> 0.029 (-39 %) | 0.615 -> 0.603 | 0.961 -> 0.955, -0.001 [-0.005, +0.005] | - | fail: dev ADE (0.5383), free |
 | RCVR0P (R0, 3 rows / batch) | 0.5285 | +0.0238 | True | +0.40 | +0.34 [+0.15, +0.51] | - | - | - | - | - | 1.548 -> 1.386 (-10.5 %) | fail: R imitation |
 | RCVR0Pk6 (R0, 6 rows / batch) | 0.5310 | +0.0167 | False | +0.99 | +0.43 [+0.16, +0.68] | - | - | - | - | - | 1.548 -> 1.305 (-15.7 %) | fail: R imitation, rely |
+| RCVRP (R, all-scene rows, 3 / batch) | 0.5284 | +0.0246 | True | +0.04 | +0.17 [+0.05, +0.28] | - | - | - | - | - | 1.377 -> 1.259 (-8.6 %) | fail: R imitation |
+| RCVRPk6 (R, 6 / batch) | 0.5309 | +0.0194 | True | +0.69 | +0.42 [+0.25, +0.57] | - | - | - | - | - | 1.377 -> 1.207 (-12.3 %) | fail: R imitation |
+| RCVRLP1l01 (RL, R 3 / batch, upper 1, lower 0.1) | 0.5366 | +0.0227 | True | -0.25 | +0.75 [+0.51, +0.96] | 0.129 -> 0.093 (-28 %) | 0.0124 -> 0.0031, CI hi -0.0027 | -> 0.039 (-20 %) | 0.615 -> 0.520 | 0.961 -> 0.972, +0.021 [+0.016, +0.028] | 1.377 -> 1.213 (-11.9 %) | fail: R imitation |
+| RCVRLPk6_1l01 (RL, R 6 / batch) | 0.5336 | +0.0219 | True | -0.03 | +0.73 [+0.37, +1.07] | 0.129 -> 0.094 (-27 %) | 0.0124 -> 0.0028, CI hi -0.0029 | -> 0.037 (-24 %) | 0.615 -> 0.509 | 0.961 -> 0.975, +0.025 [+0.020, +0.032] | 1.377 -> 1.147 (-16.7 %) | fail: R imitation |
+
+R / RL on the all-scene rewind rows (Amendment 4: on1_RCVall, 952 rows / 84 units / 35 logs, label == True, within_tol only, no shape gate; 809 train rows,
+143 dev rows / 4 logs). The same imitation read on the 809 TRAINING rows: RSG 1.448 m, R k3 -10.3 %, R k6 -16.5 %, RL k3 -11.3 %, RL k6 -17.5 %: the held-out
+drop equals the training-row drop, so the R line fails on how far 1 000 steps move the targets at all, not on transfer. The 20 % line is the main session's to
+revisit; by the registered rule R and RL stop and were not launched.
 
 Turning instrument check (same offline read, pilot - RSG-L18-s0, 4 s / equal arc): APP1X-L18-s0 -1.70 / -1.64 [-2.16, -1.00] (the closed-loop read was -1.0 to -1.5;
 by bin -1.48 at 0-10 m and -3.05 at 10-20 m before the entry against -1.5 / -3.1 in decision 303 Amendment 5), APP0C-L18-s0 (W 0 control) -0.31 / -0.21,
@@ -79,6 +88,16 @@ Reading:
   rows were not built when L passed; the user's instruction was to launch on pass). Then held 460 @18 (6 chunks / seed), public 1491 @10 (10 chunks / seed), PAI 281
   seed 0 on the box (8 chunks; waits for a 118-scene download and the box RSG-L18-s0-gate reference read), extracts, report -> `RCVL/lines.md`.
 - **R0 stopped** (fails its imitation gate at both doses). **RL0 not piloted** (Amendment 3: RL0 combines L's weight with R's chosen dose; R has none).
+- **LF not launched** (fails dev ADE by 0.0003 and the free-ratio gate). **R / RL (all-scene rows) not launched**: imitation -8.6 / -12.3 % and -11.9 / -16.7 % at k 3 / 6.
+- Launch commands if the main session overrides the R line: `PRIO=7 bash experiments/route_follow/scripts/rf_recov.sh full R k6` and
+  `... full RL k6_1l0.1` (each: 2 trainings + 42 read / PAI / report jobs, ~13 GPU job-h).
+
+## L full round (RCVL-L18-s{0,1}, 2 500 steps; partial report `RCVL/lines_partial.md`, PAI pending)
+
+Checkpoints: dev ADE 0.5362 / 0.5356, G-rely true. Held 452 (seed means vs RSG-L18): zeros **+4.0 [-2.9, +10.7] (line <= +3: FAIL)**, at-fault +0.5, GT -0.027 m,
+score +0.004; held turns 12 + 14 vs 16 + 14 (-2.0 [-4.5, +0.5]). Public guard: score -0.0016 [-0.0079, +0.0049], zeros -5.0: PASS. **Not adoptable (H1)**. The PAI 281
+seed-0 read (8 chunks) and the box reference RSG-L18-s0 read wait for the 118-scene download (job 1016-002200-fb8a); they answer the mechanism question only
+(cor_route_end, rear-ended), and the full report replaces lines_partial.md when they land.
 
 ## Cost
 
