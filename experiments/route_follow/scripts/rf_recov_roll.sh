@@ -118,7 +118,7 @@ rmerge) # <NAME> <pool:prefix,..>
   N=$1; ps=(); for x in ${2//,/ }; do ps+=("on1_$x"); done
   [[ ! -e $D/runs/op_parity/cache/on1_$N/tab.npz ]] || die "on1_$N exists"
   $TR "$here/rf_pait.py" merge --pools "${ps[@]}" --out "$N" || die "merge"
-  $PY "$X" report --name "$N" --out "$O" || die "report" ;;
+  $TR "$X" report --name "$N" --out "$O" || die "report" ;;
 srcall) # <rewind_onpol_all dir> <out dir>
   A=$1 OUT=$2; mkdir -p "$OUT/pack"; cp "$A"/all/from_D2.txt "$A"/all/from_D3.txt "$OUT/"
   python3 - "$A" "$OUT" <<'PY' || die "srcall"
