@@ -15,8 +15,8 @@ Rows (prereg section 1). Turn = rf_pai_follow.find_turn on the HUMAN's logged pa
 threshold at 45 deg); a turn row = the ego's foot on the human path is 0 < d_e <= 40 m before the first turn entry ahead. Straight
 negative = no turn entry in (-10, +80] m of the foot, the human path's heading within 10 deg of the foot's over the next 60 m, and the
 route (route.npz, the lane centreline the policy is given) equally straight. Both: ego speed >= 1 m/s (P4's G-crawl), |ego offset to the
-human path| <= 3 m, the row's route label ok and the human's entry point (turn rows) <= 2.5 m from the route (the route takes the
-human's turn); nuPlan: the pool's kept rows (on_rows excl ""); PAI: rows before any zero event (cache after_event False).
+human path| <= 3 m, the row's route label ok and (turn rows) the route takes the human's turn: its valid points near the human's entry
+point (else within 60 m) lie <= 2.5 m from the human path (route_check; prereg Amendment 1); nuPlan: the pool's kept rows (on_rows excl ""); PAI: rows before any zero event (cache after_event False).
 Labels (on_approach.py's approach.npz): turn rows H = the human path at arcs -10 .. +80 m (1 m) from the ego's foot, Hh its heading, Hv the
 human's speed when it passed each point (first passage), d_e = entry arc; l3 = the human's speed >= 2 m/s over the whole 26 m before the
 entry (rf_entryspeed VH_MIN; a human stopped there for traffic gives no speed target). Negatives: H = the route centreline, Hv NaN, d_e = a
@@ -86,6 +86,30 @@ def route_rel(poly, q, hq):
     i = int(np.clip(np.searchsorted(S, s) - 1, 0, len(P) - 2))
     hr = np.arctan2(*(P[i + 1] - P[i])[::-1])
     return lat, float(wrapd(hq - hr)), float(np.hypot(*(q - (P[i] + (s - S[i]) / max(S[i + 1] - S[i], 1e-9) * (P[i + 1] - P[i])))))
+
+
+def route_check(poly, H, Hh, de):
+    """Does the route label (row frame, NaN padded) take the human's turn? The route's valid points within 15 m of the human's entry point
+    (else within 60 m of the ego) have a median distance to the human path H <= ROUTE_TOL (the label's arc offsets are not used: PAI labels
+    carry the 40 m near gap and their offsets are shifted). -> (ok, signed lateral of the human's entry point to the route, heading of the
+    human path minus the route's there; NaN when the route has no segment near the entry)."""
+    import rf_pai_follow as PF
+    q = np.array([np.interp(de, GRID, H[:, 0]), np.interp(de, GRID, H[:, 1])])
+    R_ = poly[np.isfinite(poly).all(1)].astype(np.float64)
+    hv = H[np.isfinite(H).all(1)].astype(np.float64)
+    if len(R_) < 2 or len(hv) < 2:
+        return False, np.nan, np.nan
+    near = R_[np.hypot(*(R_ - q).T) <= 15.0]
+    pts = near if len(near) >= 2 else R_[np.hypot(*R_.T) <= 60.0]
+    if len(pts) < 2:
+        return False, np.nan, np.nan
+    Hd = PF.dedup(hv)
+    S = PF.stations(Hd)
+    d = np.median([abs(PF.project(Hd, S, p)[1]) for p in pts])
+    lat, dh, dist = route_rel(poly, q, float(np.interp(de, GRID, Hh)))
+    if not (np.isfinite(dist) and dist <= ROUTE_TOL):
+        lat, dh = np.nan, np.nan
+    return bool(d <= ROUTE_TOL), lat, dh
 
 
 def straight_route(poly):
@@ -178,8 +202,8 @@ def nup_scene(job):
                 out.append(r)
                 continue
             ve = float(np.interp(de, GRID, Hv))
-            lat, dh, dist = route_rel(poly, np.array([np.interp(de, GRID, H[:, 0]), np.interp(de, GRID, H[:, 1])]), float(np.interp(de, GRID, Hh)))
-            if not np.isfinite(dist) or dist > ROUTE_TOL:
+            okr, lat, dh = route_check(poly, H, Hh, de)
+            if not okr:
                 r["why"] = "route_mismatch"
                 out.append(r)
                 continue
@@ -260,8 +284,8 @@ def label_pai(a):
                 r["why"] = "path_short"
                 res.append(r)
                 continue
-            lat, dh, dist = route_rel(poly, np.array([np.interp(de, GRID, H[:, 0]), np.interp(de, GRID, H[:, 1])]), float(np.interp(de, GRID, Hh)))
-            if not np.isfinite(dist) or dist > ROUTE_TOL:
+            okr, lat, dh = route_check(poly, H, Hh, de)
+            if not okr:
                 r["why"] = "route_mismatch"
                 res.append(r)
                 continue
