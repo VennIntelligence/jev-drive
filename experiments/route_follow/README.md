@@ -240,6 +240,25 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   are equally flat until the last 5 m. The straight-through traces shown are the 2 of 8 whose plans turned often enough for a slope.
   Extracts: Tokyo `/data/runs/route_night/receding/pai.pkl`, box `$DATA_DIR/runs/route_follow/receding/held.pkl`
   (+ `tax/` for RV2a / RV2b, `decisions.parquet` = every decision's onset / dpsi / human values).
+- [results/mode_avg/](results/mode_avg/mode_avg.md): MODE AVERAGING, Reading 1 (prereg `plans/2026-10-15-mode-averaging-prereg.md`,
+  Amendments 1-3; `scripts/rf_modeavg.py read` on the RECEDING extracts, the rf_progress route-memory extracts and the lane extracts in
+  `tmp/progress/`). deficit = 1 - plan 4 s heading change / human 4 s heading change, 0-30 m before the entry; exits = distinct outgoing lane
+  directions (>= 20 deg apart) from the same-direction lanes at the junction mouth (gate: the route's own direction is among them on 97 % /
+  100 % of PAI / held turns). **Registered: M1 inconclusive, M2 untestable.** Exits: 3+ vs 2 exits differ by +0.01 [-0.49, +0.54] (PAI
+  RSG-L18-s0, 15 / 16 turns), +0.08 [-0.03, +0.20] (held RSG-L18-s0 / -s1), +0.05 [-0.06, +0.23] pooled; the 5 PAI curves with one exit fail
+  with a negative deficit. Command: inside 30 m the served command names the turn on every decision (PAI 1 980, held 290; never S). Where
+  a rollout starts far enough out, it switches from S to the turn at 36.6 m (median, 28.7-40.6). The plan's shortfall is therefore not
+  a weak command. Memory coverage of the junction has no consistent relation to the deficit once split by distance (M3). M4 (0-10 m, PAI
+  failed turns): straight 0.13, partial 0.18, full 0.69 of decisions, median ratio 0.85, read "mixed"; held near 1. **Amendment 3
+  changes the reading of d306's "heading deficit".** The failed turns approach slower, so their 4 s plan covers less road. Measured over
+  the plan's own arc, the late-wide plans follow the road: at 10-20 m the plan asks 5.3 deg, the human 27.6 deg, the route over the plan's
+  9.8 m arc (2.6 m/s) turns 3.5 deg. Their arc-matched ratio has median 0.83 and is full on 0.76 of decisions. no_zero turns read the same.
+  Only straight-through (8 turns) is a true heading miss: the route turns 68.5 deg over the plan's arc, and the plan asks 1.9 deg. Its
+  decisions split into two clusters, not a smear (10-20 m: straight 0.61 / partial 0.38 / full 0.01; 0-10 m: 0.60 / 0.09 / 0.31). That is
+  the shape of a choice between modes, not an average. Look at [figs/mode_hist.png](figs/mode_hist.png). Left: the registered ratio near
+  the entry. Middle: late-wide's ratio against the human (dashed, piled at 0) moves to about 0.8-0.9 against the road over its own arc
+  (solid), while straight-through (green) stays at 0 with a second cluster near 0.45. Right: each turn's decisions; the green
+  straight-through rows sit at 0 and jump, the orange rows scatter around 1.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

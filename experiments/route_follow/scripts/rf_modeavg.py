@@ -184,7 +184,8 @@ def turn_rows(recs, lanes_by, rmem_by, Dx, keys):
         sg = 1.0 if r["row"]["side"] == "L" else -1.0
         for _, x in w.iterrows():
             o = dict(popn=pop, key=k, scene=r["scene"], cluster=cl, cls=cls, completed=done, side=r["row"]["side"], d_e=float(x.d_e), t0=float(x.t0),
-                     dpsi=float(x.dpsi), h_dpsi=float(x.h_dpsi), cmd="-", n_past=np.nan, cov=np.nan)
+                     dpsi=float(x.dpsi), h_dpsi=float(x.h_dpsi), cmd="-", n_past=np.nan, cov=np.nan, a4=float(x.a4), v=float(x.v),
+                     route_arc=float(sg * np.degrees(np.interp(min(ent - x.d_e + x.a4, sh[-1]), sh, hh) - np.interp(ent - x.d_e, sh, hh))))
             if rm is not None:
                 j = int(np.searchsorted(rm["t0"], int(x.t0)))
                 if j < len(rm["t0"]) and rm["t0"][j] == int(x.t0):
@@ -209,6 +210,9 @@ def turn_rows(recs, lanes_by, rmem_by, Dx, keys):
     ok = D.h_dpsi >= H_MIN
     D["delta"] = np.where(ok, np.clip(1.0 - D.dpsi / D.h_dpsi.where(ok, np.nan), -1.0, 2.0), np.nan)
     D["r"] = np.where(ok, D.dpsi / D.h_dpsi.where(ok, np.nan), np.nan)
+    ok2 = D.route_arc >= H_MIN                                         # Amendment 3: the route's own turn over the plan's 4 s arc
+    D["delta_arc"] = np.where(ok2, np.clip(1.0 - D.dpsi / D.route_arc.where(ok2, np.nan), -1.0, 2.0), np.nan)
+    D["r_arc"] = np.where(ok2, D.dpsi / D.route_arc.where(ok2, np.nan), np.nan)
     T = pd.DataFrame(T)
     g = D[np.isfinite(D.delta)].groupby(["key", "scene"])
     T = T.merge(g.delta.median().rename("D").reset_index(), on=["key", "scene"], how="left").merge(
@@ -296,7 +300,7 @@ def read(a):
                                 by_cmd={c: dict(n=int((x.cmd == c).sum()), med=float(x[x.cmd == c].delta.median())) for c in ("L", "S", "R", "-") if (x.cmd == c).any()})
     for p, m in dpops.items():
         x = D[m & np.isfinite(D.delta)]
-        cb = pd.cut(x.cov, [-0.01, 0.0, 0.4999, 0.9999, 1.0], labels=["0", "(0,0.5)", "[0.5,1)", "1"])
+        cb = pd.cut(x["cov"], [-0.01, 0.0, 0.4999, 0.9999, 1.0], labels=["0", "(0,0.5)", "[0.5,1)", "1"])
         nb = pd.cut(x.n_past, [-1, 0, 5, 15, 99], labels=["0", "1-5", "6-15", ">15"])
         res["M3"][p] = {"cov": {str(c): dict(n=int(len(z)), med=float(z.delta.median()), failed=float(z[~z.completed].delta.median()),
                                              completed=float(z[z.completed].delta.median())) for c, z in x.groupby(cb, observed=False)},
@@ -308,10 +312,52 @@ def read(a):
         db = pd.cut(x.d_e, [0, 10, 20, 30.001], right=False, labels=["0-10", "10-20", "20-30"])
         res["dist"][p] = {str(c): {k: dict(n=int(len(z[z.cls == k])), med=float(z[z.cls == k].delta.median())) for k in sorted(x.cls.unique())}
                           for c, z in x.groupby(db, observed=False)}
+    res["post"] = post(D, Dx, recs, rmem_by)
     (out / "mode_avg.json").write_text(json.dumps(res, indent=1, default=float) + "\n")
     write_md(out, res, T, D)
     if a.fig:
         fig(T, D, a.fig)
+
+
+def post(D, Dx, recs, rmem_by):
+    """Amendment 2 (after the first read): M4's shares at 10-20 m, M3 by distance bin, the served command's onset distance per turn."""
+    import pandas as pd
+    res = {"m4_10_20": {}, "m3_by_dist": {}, "cmd_onset": {}, "arc": {}}
+    for p in ("pai", "held"):
+        res["arc"][p] = {}
+        for lo in (0, 10, 20):
+            x = D[(D.popn == p) & (D.d_e >= lo) & (D.d_e < lo + 10)]
+            res["arc"][p][f"{lo}-{lo + 10}"] = {c: dict(m4=m4_shares(z.r_arc), delta_arc=float(np.nanmedian(z.delta_arc)) if np.isfinite(z.delta_arc).any() else np.nan,
+                                                        delta=float(np.nanmedian(z.delta)) if np.isfinite(z.delta).any() else np.nan,
+                                                        a4=float(z.a4.median()), v=float(z.v.median()), dpsi=float(z.dpsi.median()), h=float(z.h_dpsi.median()),
+                                                        route=float(z.route_arc.median()))
+                                                for c, z in [("failed", x[~x.completed]), ("completed", x[x.completed])] +
+                                                ([(f"cls {k}", x[x.cls == k]) for k in ("late_wide", "straight", "no_zero")] if p == "pai" else []) if len(z)}
+        x = D[(D.popn == p) & (D.d_e >= 10) & (D.d_e < 20)]
+        res["m4_10_20"][p] = {"failed": m4_shares(x[~x.completed].r), "completed": m4_shares(x[x.completed].r)}
+        y = D[(D.popn == p) & np.isfinite(D.delta)]
+        db = pd.cut(y.d_e, [0, 10, 20, 30.001], right=False, labels=["0-10", "10-20", "20-30"])
+        cb = pd.cut(y["cov"], [-0.01, 0.0, 0.9999, 1.0], labels=["0", "(0,1)", "1"])
+        res["m3_by_dist"][p] = {f"{b}|{c}": dict(n=int(len(z)), med=float(z.delta.median())) for (b, c), z in y.groupby([db, cb], observed=False)}
+    for r in recs:
+        k = key_of(r)
+        if r["src"] not in ("pai", "held") or k.removeprefix("x_") not in rmem_by or not r["row"].get("turn"):
+            continue
+        m = rmem_by[k].get(r["rid"])
+        d = Dx[(Dx.key == k) & (Dx.scene == r["scene"]) & Dx.pre & (Dx.d_e >= 0)].sort_values("t0")
+        if m is None or not len(d):
+            continue
+        j = np.minimum(np.searchsorted(m["t0"], d.t0.to_numpy(np.int64)), len(m["t0"]) - 1)
+        c = np.where(m["t0"][j] == d.t0.to_numpy(np.int64), m["cmd"][j], -1)
+        de, ag = d.d_e.to_numpy(), c == (0 if r["row"]["side"] == "L" else 2)
+        bad = np.flatnonzero(~ag)
+        i = bad[-1] + 1 if len(bad) else 0
+        res["cmd_onset"][f"{k}|{r['scene']}"] = dict(start_de=float(de.max()), onset_de=float(de[i]) if i < len(de) else np.nan, n_S=int((c == 1).sum()),
+                                                     cls=str(d.cls.iloc[0]))
+    o = [v for v in res["cmd_onset"].values() if v["start_de"] > 45.0 and np.isfinite(v["onset_de"])]
+    res["cmd_onset_summary"] = dict(n_turns_starting_beyond_45m=len(o), onset_median=float(np.median([v["onset_de"] for v in o])) if o else np.nan,
+                                    onset_min=float(min(v["onset_de"] for v in o)) if o else np.nan, onset_max=float(max(v["onset_de"] for v in o)) if o else np.nan)
+    return res
 
 
 def f_(v, p=2):
@@ -363,6 +409,33 @@ def write_md(out, res, T, D):
     for p, v in res["dist"].items():
         for b, z in v.items():
             md.append(f"| {p} | {b} | " + " | ".join(f"{f_(z[c]['med'])} ({z[c]['n']})" if c in z else "-" for c in sorted(D.cls.unique())) + " |")
+    q = res["post"]
+    md += ["", "## Amendment 2 (post-hoc, descriptive)", "",
+           "Served command: in the 0-30 m window it names the turn's own direction on every decision (no S, no opposite). Turns whose rollout starts "
+           f"more than 45 m before the entry ({q['cmd_onset_summary']['n_turns_starting_beyond_45m']}): the command switches from S to the turn "
+           f"direction at {f_(q['cmd_onset_summary']['onset_median'], 1)} m (median; {f_(q['cmd_onset_summary']['onset_min'], 1)} to "
+           f"{f_(q['cmd_onset_summary']['onset_max'], 1)}) before the entry and stays there.", "",
+           "M4 shares at 10-20 m before the entry (where the late-wide deficit sits):", "",
+           "| pop | turns | decisions | straight | partial | full | median r | modal bin | reading |", "|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
+    for p, v in q["m4_10_20"].items():
+        for c, z in v.items():
+            if z.get("n"):
+                md.append(f"| {p} | {c} | {z['n']} | {z['straight']:.2f} | {z['partial']:.2f} | {z['full']:.2f} | {f_(z['median'])} | {z['mode_bin']} | {z['reading']} |")
+    md += ["", "M3 by distance (median delta (n); memory coverage of the junction 0 / (0, 1) / 1): " + "; ".join(
+        f"{p} {b}: " + ", ".join(f"{f_(v[f'{b}|{c}']['med'])} ({v[f'{b}|{c}']['n']})" for c in ("0", "(0,1)", "1"))
+        for p, v in q["m3_by_dist"].items() for b in ("0-10", "10-20", "20-30"))]
+    md += ["", "## Amendment 3 (post-hoc, descriptive): speed against geometry", "",
+           "The human's 4 s covers more road than a slower plan's 4 s. r_arc = plan heading change / the route's own heading change over the "
+           "plan's 4 s arc a4 (from the ego's station); decisions with that route change >= 15 deg. Medians.", "",
+           "| pop | d_e | turns | plan deg | human 4 s deg | route over plan arc deg | plan arc a4 m | ego v m/s | delta (human) | delta_arc | "
+           "straight / partial / full (r_arc) | median r_arc | reading |", "|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
+    for p, v in q["arc"].items():
+        for b, w in v.items():
+            for c, z in w.items():
+                m = z["m4"]
+                md.append(f"| {p} | {b} | {c} | {f_(z['dpsi'], 1)} | {f_(z['h'], 1)} | {f_(z['route'], 1)} | {f_(z['a4'], 1)} | {f_(z['v'], 1)} | "
+                          f"{f_(z['delta'])} | {f_(z['delta_arc'])} | " + (f"{m['straight']:.2f} / {m['partial']:.2f} / {m['full']:.2f} | {f_(m['median'])} | "
+                                                                          f"{m['reading']} |" if m.get("n") else "- | - | - |"))
     md += ["", "Per turn (pai):", "", "| scene | side deg | class | n_x (lane) | exit directions deg | route deg | D | window (deficit) |",
            "|:--|:--|:--|:--|:--|:--|:--|:--|"]
     for _, r in T[T.popn == "pai"].sort_values(["completed", "cls", "scene"]).iterrows():
@@ -376,26 +449,36 @@ def fig(T, D, png):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    C_F, C_C = "#eb6834", "#2a78d6"
+    C_F, C_C, C_S = "#eb6834", "#2a78d6", "#1baf7a"
     bins = np.arange(-0.5, 1.5001, 0.1)
-    fg, ax = plt.subplots(1, 3, figsize=(16, 5.2), gridspec_kw=dict(width_ratios=[1, 1, 1.15]))
-    for i, (p, ttl) in enumerate((("pai", "PAI 281, RSG-L18-s0"), ("held", "held 460 @18, RSG-L18-s0 / -s1"))):
-        x = D[(D["popn"] == p) & (D.d_e < 10) & np.isfinite(D.r)]
-        for done, col, lab in ((False, C_F, "failed turns"), (True, C_C, "completed turns")):
-            r = np.clip(x[x.completed == done].r, -0.499, 1.499)
-            if len(r):
-                ax[i].hist(r, bins=bins, weights=np.full(len(r), 1 / len(r)), histtype="step", lw=2, color=col,
-                           label=f"{lab} ({len(r)} decisions, {x[x.completed == done].scene.nunique()} turns)")
-        ax[i].set(xlabel="plan / human heading change over 4 s (0-10 m before the entry)", ylabel="share of decisions", title=ttl)
-        ax[i].legend(fontsize=8, frameon=False, loc="upper left")
-    x = D[(D["popn"] == "pai") & (D.d_e < 10) & np.isfinite(D.r)]
-    order = x.groupby("scene").r.median().sort_values().index.tolist()
-    done = x.groupby("scene").completed.first()
-    for j, s in enumerate(order):
-        r = np.clip(x[x.scene == s].r, -0.499, 1.499)
-        ax[2].plot(r, np.full(len(r), j), "o", ms=3, alpha=0.5, color=C_C if done[s] else C_F)
-    ax[2].set(xlabel="plan / human heading change, each decision 0-10 m before the entry", ylabel="PAI turn (sorted by median)", yticks=[],
-              title="Per turn: one value or two clusters?")
+    P = D[D["popn"] == "pai"]
+    fg, ax = plt.subplots(1, 3, figsize=(17, 5.4), gridspec_kw=dict(width_ratios=[1, 1, 1.15]))
+
+    def hist(a_, r, col, lab, ls="-"):
+        r = np.clip(np.asarray(r, float)[np.isfinite(r)], -0.499, 1.499)
+        if len(r):
+            a_.hist(r, bins=bins, weights=np.full(len(r), 1 / len(r)), histtype="step", lw=2, ls=ls, color=col, label=f"{lab} ({len(r)})")
+    x = P[P.d_e < 10]
+    hist(ax[0], x[~x.completed].r, C_F, "failed turns, decisions")
+    hist(ax[0], x[x.completed].r, C_C, "completed turns, decisions")
+    ax[0].set(xlabel="plan / human heading change over 4 s", ylabel="share of decisions", title="PAI RSG-L18-s0, 0-10 m before entry (M4)")
+    x = P[(P.d_e >= 10) & (P.d_e < 20)]
+    hist(ax[1], x[x.cls == "late_wide"].r, C_F, "late-wide, plan / human 4 s", ls="--")
+    hist(ax[1], x[x.cls == "late_wide"].r_arc, C_F, "late-wide, plan / route over the plan's own arc")
+    hist(ax[1], x[x.cls == "straight"].r_arc, C_S, "straight-through, plan / route over the plan's arc")
+    ax[1].set(xlabel="heading ratio", ylabel="share of decisions", title="10-20 m before entry: vs human 4 s, vs road")
+    x = P[(P.d_e < 20) & np.isfinite(P.r_arc)]
+    col = {"completed": C_C, "straight": C_S}
+    order = x.groupby("scene").r_arc.median().sort_values().index.tolist()
+    cls = x.groupby("scene").cls.first()
+    for k, s_ in enumerate(order):
+        r = np.clip(x[x.scene == s_].r_arc, -0.499, 1.499)
+        ax[2].plot(r, np.full(len(r), k), "o", ms=3, alpha=0.5, color=col.get(cls[s_], C_F))
+    for c_, lab in ((C_C, "completed"), (C_S, "straight-through"), (C_F, "other failed")):
+        ax[2].plot([], [], "o", color=c_, label=lab)
+    ax[2].legend(fontsize=8, frameon=False, loc="lower right")
+    ax[2].set(xlabel="plan / route heading over the plan's arc (0-20 m before entry)", ylabel="PAI turn (sorted by median)",
+              yticks=[], title="Per turn, each decision")
     for a_ in ax:
         for v in (0.25, 0.6):
             a_.axvline(v, color="#888", lw=0.8, ls=":")
@@ -403,12 +486,12 @@ def fig(T, D, png):
         a_.set_xlim(-0.5, 1.5)
         a_.grid(alpha=0.25)
         a_.spines[["top", "right"]].set_visible(False)
-    ax[2].text(1.02, len(order) * 0.02, "human", fontsize=8, color="#555")
+    for a_ in ax[:2]:
+        a_.legend(fontsize=8, frameon=False, loc="upper left")
     fg.tight_layout()
     Path(png).parent.mkdir(parents=True, exist_ok=True)
     fg.savefig(png, dpi=130)
     print("figure ->", png)
-
 
 
 if __name__ == "__main__":

@@ -99,3 +99,13 @@ the figure next to it, a README paragraph in experiments/flowhead. research/deci
    (`chains`: every successor chain from a lane's point nearest the route point, cap 256; end heading by the module's chord heading;
    chains that end short of the arc L and are shorter than 25 m, the map extent's cut, are dropped as in rf_pai_follow MIN_CHAIN). The
    matched lane = the nearest group lane within 2.5 m. Everything else in "Exits" is as registered.
+2. (After the first Reading 1 read; M1-M4 numbers were seen.) M2 cannot be tested: in the 0-30 m window the served command names the
+   turn's own direction on every decision of both populations (PAI 1980, held 290; no S, no opposite command). Added, descriptive, no
+   verdict: the command's onset distance per turn (the d_e from which every later decision carries the turn's direction), M4's shares at
+   10-20 m before the entry (where the late-wide deficit of d306 sits), and M3 split by distance bin (coverage and distance are confounded).
+   Nothing registered changes.
+3. (After the first Reading 1 read.) The registered deficit compares 4 s of the plan with 4 s of the human, and the failed turns approach
+   slower (d306: 3.3 vs 5.4 m/s), so part of the "deficit" can be distance, not heading. Added, descriptive: r_arc = the plan's heading
+   change / the route's own heading change over the plan's 4 s arc a4 from the ego's station (decisions with that route change >= 15 deg),
+   its delta_arc, and M4's shares on r_arc, per distance bin and failed / completed. Reading 2's F2 stays as registered (human 4 s);
+   the arc-matched version is reported next to it.
