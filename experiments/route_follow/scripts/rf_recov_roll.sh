@@ -20,6 +20,9 @@
 #          PRIO=7 RF_K_END=29 RR_ROWS_CSV=$A/rows/rows.csv rf_recov_roll.sh recov $RR RCVall $RR/src_all $A/restb,$A/rest,$A/s50,$A/smoke \
 #            $RR/src_all/pack $DATA_DIR/datasets/alpasim_nuplan_long/after280_op 8 $A/all/read.json
 #   rf_recov_roll.sh srcall <root> <rewind_onpol_all dir> <out dir>   the merged source dir (read-only on the rewind's files)
+#   rf_recov_roll.sh rmerge <root> <NAME> <pool:prefix,pool:prefix,..>   CPU job body: R pools merged (rf_pait.py merge, names on:<prefix>:..)
+#        -> on1_<NAME> + <root>/report_<NAME>.json; the data-scaled pool on1_RCVallD = RCVall (pass 0) + the perturbed passes' pools
+#        (results/rewind_onpol_all/passes.md; their rows come from rf_rewind.sh train64 ostage RW_ROWS, which runs rowsR / tok / rowsB)
 #   rf_recov_roll.sh fast <root> stage <name> <count per class | all> <levels s,s,..> [chunks]
 #        fast approaches: (fsel once -> <root>/sel.json) -> stage list (scenes not in an earlier stage) + JEV_PERTURB files (g 1, arc scale s,
 #        NPUSH decisions, default 2, at k_p) -> `id` (no dump) and L<100 s> (dump) launches -> fread (<stage>/fread.json) -> <stage>/DONE
@@ -111,6 +114,11 @@ fprep)  # <stage dir> <count> <levels>
 fread)  # <stage dir>
   $APY "$X" fread --stage "$1" --sel "$O/sel.json" --out "$1/fread.json" || die "fread"
   date > "$1/DONE" ;;
+rmerge) # <NAME> <pool:prefix,..>
+  N=$1; ps=(); for x in ${2//,/ }; do ps+=("on1_$x"); done
+  [[ ! -e $D/runs/op_parity/cache/on1_$N/tab.npz ]] || die "on1_$N exists"
+  $TR "$here/rf_pait.py" merge --pools "${ps[@]}" --out "$N" || die "merge"
+  $PY "$X" report --name "$N" --out "$O" || die "report" ;;
 srcall) # <rewind_onpol_all dir> <out dir>
   A=$1 OUT=$2; mkdir -p "$OUT/pack"; cp "$A"/all/from_D2.txt "$A"/all/from_D3.txt "$OUT/"
   python3 - "$A" "$OUT" <<'PY' || die "srcall"

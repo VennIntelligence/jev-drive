@@ -30,7 +30,8 @@ served path with the plan's / the log's arc lengths, route_path.py; logged as dr
 replaces the model's, rule_expert.py; the model still runs and its plan is logged as `poses_model`, the expert's state as `expert`; off by default;
 JEV_EXPERT_FROM hands over from a per-scene decision k, the model's plan served before it: the recovery rewind), JEV_PERTURB (a file of
 `<scene> <k> <g> <s> <n>` rows: for decisions k .. k + n - 1 the served plan is the model's transformed by curvature gain g and arc scale s,
-perturb.py; the self-rewind frontier read; logged as `perturb` with `poses_model`; off by default, exclusive with JEV_EXPERT), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+perturb.py; the self-rewind frontier read; logged as `perturb` with `poses_model`; off by default; with JEV_EXPERT only as JEV_EXPERT_FROM, the
+perturbation then acts only on decisions the expert does not serve: the perturbed recovery passes), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -324,7 +325,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 s.count["inference_error"] += 1
                 LOG.exception("rule expert failed, session %s t %d", req.session_uuid, now)
                 ctx.abort(grpc.StatusCode.INTERNAL, f"rule expert failed: {e!r}")
-        pt = PT.active(s.scene, s.count["drive"] - 1) if PT.ON else None
+        pt = PT.active(s.scene, s.count["drive"] - 1) if PT.ON and xi is None else None   # never on an expert decision (JEV_EXPERT_FROM)
         if pt is not None:                                   # JEV_PERTURB (perturb.py): the model's plan, transformed for n decisions
             o.setdefault("poses_model", o["poses"])
             o["poses"] = PT.branch_poses(o["poses"], pt[0], pt[1])
@@ -436,7 +437,8 @@ def main() -> None:
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_ROUTE %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, RP.MODE)
     assert not (XP.ON and (FX.ON or TR.ON or RP.ON or BD)), "JEV_EXPERT replaces the plan: the other serving switches must be off"
-    assert not (PT.ON and (XP.ON or TR.ON or RP.ON or BD)), "JEV_PERTURB transforms the model's own plan: exclusive with JEV_EXPERT(_FROM) / TRACK / ROUTE / STOP"
+    assert not (PT.ON and ((XP.ON and not XP.FROM_ON) or TR.ON or RP.ON or BD)), \
+        "JEV_PERTURB transforms the model's own plan: with JEV_EXPERT only as JEV_EXPERT_FROM; exclusive with TRACK / ROUTE / STOP"
     if PT.ON:
         LOG.info("serving JEV_PERTURB %s: %d scenes", PT.FILE, len(PT.TAB))
     if XP.ON:

@@ -6,6 +6,8 @@
 #   RL0  = R0 + L on one pool, --on-mode mixed --on-lon-all
 #   LF   = L + the pushed fast approaches (on1_RCVfast, envelope-labelled self rows), pool on1_RCVLF
 #   RLF  = RL + the pushed fast approaches: the combined candidate (Amendment 6), pool on1_RCVRLF
+#   RLFD = RLF with the data-scaled recovery pool on1_RCVallD (pass 0 + the perturbed passes, Amendment 7; REC_POOL_D), pool on1_RCVRLFD;
+#          the pack sets the per-row R weight from the pool's row count, so k6 = 6 recovery rows per batch as in RLF (same dose, more data)
 #   R / RL = the same with the all-scene rewind's recovery rows (decision 319), pool on1_RCVR / on1_RCVRL (REC_POOL=<rec pool>)
 # Box, repo root; every GPU job through the pool; ids in $O/jobs.txt.
 #   rf_recov.sh gates                       bit identity (60 steps; old code = worktree at OLD_REV): G0 every new flag off old vs new, G0 repeat
@@ -26,9 +28,9 @@ RB="--on on1_L18RB0 --on-k 13 --on-mode self"
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner recovery-envelope --name "$name" --tries 1 --priority ${PRIO:-2} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
-pool_of() { case $1 in L) echo RCVL ;; LF) echo RCVLF ;; R0) echo RCVR0 ;; RL0) echo RCVRL0 ;; R) echo RCVR ;; RL) echo RCVRL ;; RLF) echo RCVRLF ;; *) echo "no arm $1" >&2; exit 2 ;; esac; }
-kind_of() { case $1 in L|LF) echo L ;; R0|R) echo R ;; RL0|RL|RLF) echo RL ;; esac; }
-rec_of() { case $1 in R0|RL0) echo ${REC_POOL0:-RCVd316} ;; R|RL|RLF) echo ${REC_POOL:-RCVall} ;; *) echo "" ;; esac; }
+pool_of() { case $1 in L) echo RCVL ;; LF) echo RCVLF ;; R0) echo RCVR0 ;; RL0) echo RCVRL0 ;; R) echo RCVR ;; RL) echo RCVRL ;; RLF) echo RCVRLF ;; RLFD) echo RCVRLFD ;; *) echo "no arm $1" >&2; exit 2 ;; esac; }
+kind_of() { case $1 in L|LF) echo L ;; R0|R) echo R ;; RL0|RL|RLF|RLFD) echo RL ;; esac; }
+rec_of() { case $1 in R0|RL0) echo ${REC_POOL0:-RCVd316} ;; R|RL|RLF) echo ${REC_POOL:-RCVall} ;; RLFD) echo ${REC_POOL_D:-RCVallD} ;; *) echo "" ;; esac; }
 flags() {  # arm [W] -> the arm's trainer flags
   local f=$O/flags_$(pool_of $1).txt; [[ -s $f ]] || { echo "no $f (rf_recov.sh pack $1)" >&2; exit 1; }
   local F W=${2:-}; F=$(cat $f)
@@ -99,7 +101,7 @@ PY
 label)
   sub rcv-label-$2 --vram 0.5 --cpu 32 --ram 64 --timeout-h 1 ${AFTER:+--after $AFTER} -- $TR $PY label --pool $2 --workers 32 ;;
 pack)
-  A=$2; K=$(kind_of $A); EP=${ENV_POOLS:-L18RSG$([[ $A == LF || $A == RLF ]] && echo ,RCVfast)}
+  A=$2; K=$(kind_of $A); EP=${ENV_POOLS:-L18RSG$([[ $A == LF || $A == RLF || $A == RLFD ]] && echo ,RCVfast)}
   sub rcv-pack-$A --vram 0.5 --cpu 8 --ram 96 --timeout-h 1 ${AFTER:+--after $AFTER} -- $TR $PY pack --arm $K --out $(pool_of $A) --env-pools $EP --rec "$(rec_of $A)" ;;
 base)    # reference plans: RSG-L18-s0 (+ APP1X-L18-s0 on the held decisions 0 / 1, the turning instrument's wrong-model check)
   b1=$(sub rcv-fwd-base-held01 --vram 20 --cpu 6 --ram 64 --timeout-h 1 ${AFTER:+--after $AFTER} -- $TR $PY fwd --pool L18RSGallheld --rows held01 --tags RSG-L18-s0,APP1X-L18-s0) || exit 1

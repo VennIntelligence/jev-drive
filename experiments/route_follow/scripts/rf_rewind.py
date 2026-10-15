@@ -578,9 +578,11 @@ def n_ref(o, gt):
 def n_tfail(a):
     """Amendment 2: the units, strata and k_ref come from the STORED 18-decision train-pool rollouts of RSG-L18-s0 (--runs), once for
     every stage; writes <out>/tfail.json and from_D<d>.txt. rewind_onpol_all: --runs = the stage's own 30-decision identity runs, --kend 29
-    (with RF_K_END=29 in the env: rf_follow's turn window), --deltas 2,3, --rewind event,off (short and B listed, never handed over)."""
-    global N_KEND, DELTAS
-    N_KEND, DELTAS = a.kend, tuple(int(x) for x in a.deltas.split(","))
+    (with RF_K_END=29 in the env: rf_follow's turn window), --deltas 2,3, --rewind event,off (short and B listed, never handed over).
+    --hmin: the first decision a handover may start at (default 1; the perturbed recovery passes: the decision after the perturbation's
+    first, so that every handover state lies on the perturbed trajectory)."""
+    global N_KEND, DELTAS, N_HMIN
+    N_KEND, DELTAS, N_HMIN = a.kend, tuple(int(x) for x in a.deltas.split(",")), a.hmin
     n_paths()
     from jevdrive import par
     stage = Path(a.stage)
@@ -1561,7 +1563,7 @@ def main():
     p.add_argument("--stage", required=True); p.add_argument("--runs", required=True); p.add_argument("--scenes", required=True)  # noqa: E702
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--kend", type=int, default=N_KEND); p.add_argument("--deltas", default="1,2,3")  # noqa: E702
-    p.add_argument("--rewind", default="event,off,short,viol")
+    p.add_argument("--rewind", default="event,off,short,viol"); p.add_argument("--hmin", type=int, default=N_HMIN)  # noqa: E702
     p = sp.add_parser("n-yield")
     p.add_argument("--read", required=True); p.add_argument("--md", required=True); p.add_argument("--csv", required=True)  # noqa: E702
     p.add_argument("--units", required=True); p.add_argument("--rows", default=""); p.add_argument("--json", default="")  # noqa: E702

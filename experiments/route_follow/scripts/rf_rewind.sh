@@ -21,6 +21,11 @@
 #                                                      -> <root>/<name>/rewind_train64.{md,csv,json}
 #   rf_rewind.sh train64 <root> read <stage,stage..> <out dir>   the combined read of several stages (job body of a stage's read too)
 #   job body: train64 <root> nsim <run dir> <list> id|xp0|<from file>
+# Perturbed recovery passes (results/rewind_onpol_all/passes.md; rf_passes.py): `ostage` with RW_PERT="<k> <g> <s> <n>" serves every launch of
+#   the stage (id and D) with JEV_PERTURB = branch_poses(g, s) on decisions k .. k + n - 1 of every scene (D: only before h, the expert serves
+#   from h; handovers need h > k); RW_DUMP=1 runs the D launches with the frame dump (+ onpol_sim.pkl); RW_BASE=<stage,stage..> (the
+#   unperturbed pass 0) adds the dups job (units whose state before h is within the identity tolerance of pass 0's at the same h lose their
+#   label: the same data twice) and RW_ROWS=<NAME> the row chain rf_recov_roll.sh rowsR / tok / rowsB -> pool on1_<NAME> (RW_RR: its root).
 # Self rewind (prereg plans/2026-10-16-rewind-self-prereg.md; rf_rewind.py n-self-*; driver sh30_driver.py with JEV_PERTURB, perturb.py): the same
 # serving, cache and packs as train64 (<T64> = $DATA_DIR/runs/route_follow/rewind_train64); the policy drives to h = k_ref - 2 Delta (Delta 3 / 5 / 8 s),
 # its served plan is transformed (gain g, arc scale s) for N decisions, then its raw plan again; the expert from the same h for comparison.
@@ -138,22 +143,44 @@ train64() {
     for i in $(seq 0 $((n - 1))); do awk -v i=$i -v n=$n '(NR - 1) % n == i {print $1}' "$L" > "$S/lists/c$i.txt"; rr+=("$S/id/c$i/run"); done
     [[ -n ${AFTER:-} ]] && aft=(--after "$AFTER")
     local X="bash $W/experiments/route_follow/scripts/rf_rewind.sh train64 $O" K=(--env RF_K_END=29 --env "RW_CACHE=$CA" --env "RW_PACK=$S/pack")
+    local hmin=1 DU=()
+    if [[ -n ${RW_PERT:-} ]]; then         # the perturbed pass: <k> <g> <s> <n> on every scene of the list, handovers from k + 1
+      set -- $RW_PERT; awk -v k=$1 -v g=$2 -v s=$3 -v m=$4 'NF {print $1, k, g, s, m}' "$L" > "$S/perturb.txt"; hmin=$(( $1 + 1 ))
+      K+=(--env "RW_PERTURB=$S/perturb.txt")
+    fi
+    [[ ${RW_DUMP:-0} == 1 ]] && DU=(--env RW_DUMP=1)
     local G=(--vram ${RW_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=${RW_HIST:-alpasim-read4} --env "JEV_PY=$PY" "${K[@]}")
     for i in $(seq 0 $((n - 1))); do ids+=($(nsub rwo-id-c$i "${G[@]}" "${aft[@]}" --log-dir "$S/pool/id-c$i" -- $X nsim "$S/id/c$i/run" "$S/lists/c$i.txt" id)) || exit 1; done
     [[ -n ${SMOKE:-} ]] && { all+=($(nsub rwo-idB-c0 "${G[@]}" "${aft[@]}" --log-dir "$S/pool/idB-c0" -- $X nsim "$S/idB/c0/run" "$S/lists/c0.txt" id)) || exit 1; }
     local C=(--vram 0.5 --cpu 32 --ram 96 --timeout-h 2 --env "JEV_PY=$PY" "${K[@]}" --after "$(IFS=,; echo "${ids[*]}")")
     local tf pk
     tf=$(nsub rwo-tfail "${C[@]}" --log-dir "$S/pool/tfail" -- "$APY" "$W/experiments/route_follow/scripts/rf_rewind.py" n-tfail --stage "$S" \
-         --scenes "$S/list.txt" --runs "$(IFS=,; echo "${rr[*]}")" --kend 29 --deltas 2,3 --rewind event,off --workers 32) || exit 1
+         --scenes "$S/list.txt" --runs "$(IFS=,; echo "${rr[*]}")" --kend 29 --deltas 2,3 --rewind event,off --hmin $hmin --workers 32) || exit 1
     pk=$(nsub rwo-pack "${C[@]}" --log-dir "$S/pool/pack" -- "$APY" "$W/experiments/route_follow/scripts/rf_expert.py" pack --workers 32 \
          --out "$S/pack" --scenes "$S/list.txt" --runs "${rr[@]}") || exit 1
     all+=("${ids[@]}")
     for d in 2 3; do for i in $(seq 0 $((nd - 1))); do
-      all+=($(nsub rwo-D$d-c$i "${G[@]}" --after "$tf,$pk" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/from_D$d.txt@$i/$nd" "$S/from_D$d.txt")) || exit 1
+      all+=($(nsub rwo-D$d-c$i "${G[@]}" "${DU[@]}" --after "$tf,$pk" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/from_D$d.txt@$i/$nd" "$S/from_D$d.txt")) || exit 1
     done; done
-    nsub rwo-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --env RF_K_END=29 --vram 0.5 --cpu 32 --ram 96 --timeout-h 2 \
-      --log-dir "$S/pool/read" -- $X oread "$S" > /dev/null || exit 1
-    date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 3 )) "$O/jobs.txt" ;;
+    local rd rc=rows.csv
+    rd=$(nsub rwo-$name-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --env RF_K_END=29 --vram 0.5 --cpu 32 --ram 96 --timeout-h 2 \
+      --log-dir "$S/pool/read" -- $X oread "$S") || exit 1
+    if [[ -n ${RW_BASE:-} ]]; then         # units in the same state as pass 0's -> rows_dedup.csv; displacement against pass 0 -> disp.json
+      rd=$(nsub rwo-$name-dups --after "$rd" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 --log-dir "$S/pool/dups" -- \
+           "$PY" "$W/experiments/route_follow/scripts/rf_passes.py" dups --stage "$S" --base "$RW_BASE") || exit 1
+      rc=rows_dedup.csv
+    fi
+    if [[ -n ${RW_ROWS:-} ]]; then         # rows of the dumped D sessions (the stage is its own source: rcheck against itself)
+      local RR=${RW_RR:-$D/runs/route_follow/recov_roll} N=$RW_ROWS XS="bash $W/experiments/route_follow/scripts/rf_recov_roll.sh" ra tk
+      [[ ${RW_DUMP:-0} == 1 ]] || { echo "RW_ROWS needs RW_DUMP=1" >&2; exit 1; }
+      echo "$S" > "$S/id_stages.txt"
+      ra=$(nsub rwo-$name-rowsA --after "$rd" --env "JEV_PY=$PY" --env RF_K_END=29 --env "RR_ROWS_CSV=$S/$rc" --vram 0.5 --cpu 32 --ram 96 \
+           --timeout-h 2 --log-dir "$S/pool/rowsA" -- $XS rowsR "$RR" "$S" "$N") || exit 1
+      tk=$(nsub rwo-$name-tok --after "$ra" --vram 16 --cpu 16 --ram 64 --timeout-h 2 --log-dir "$S/pool/tok" -- $XS tok "$RR" "$N") || exit 1
+      nsub rwo-$name-rowsB --after "$tk" --env "JEV_PY=$PY" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$S/pool/rowsB" -- \
+        bash -c "$XS rowsB $RR $S $N $S/D2/c*/run $S/D3/c*/run" > /dev/null || exit 1
+    fi
+    date > "$S/SUBMITTED"; grep -A1000 -F "${ids[0]}" "$O/jobs.txt" ;;
   oread)  # <stage dir>[,<stage dir>..] [out dir, default the first stage]: n-read (units = each stage's tfail.json) + n-yield
     local S=${2:-${1%%,*}} refs; mkdir -p "$S"
     refs=$(for s in ${1//,/ }; do printf '%s,' "$s/tfail.json"; done); refs=${refs%,}
@@ -186,13 +213,18 @@ EOF
       awk -v i=${ij%/*} -v n=${ij#*/} '(NR - 1) % n == i {print $1}' "$f" > "$L"
     fi
     if [[ ! -s $L ]]; then mkdir -p "$R"; echo "empty list" > "$R/EMPTY"; exit 0; fi
-    [[ -f $R/aggregate/results-summary.json ]] && { echo "$R done"; exit 0; }
-    case $M in id) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM) ;; xp0) E=(-u JEV_EXPERT_FROM JEV_EXPERT=$NP) ;; *) E=(JEV_EXPERT=$NP JEV_EXPERT_FROM=$M) ;; esac
+    local DU=0 Pu=(-u JEV_PERTURB) Pa=()                   # RW_PERTURB: every launch of a perturbed pass; RW_DUMP=1: the D launches dump
+    [[ -n ${RW_PERTURB:-} ]] && { Pu=(); Pa=(JEV_PERTURB=$RW_PERTURB); }
+    [[ ${RW_DUMP:-0} == 1 && $M != id && $M != xp0 ]] && DU=1000000
+    [[ -f $R/aggregate/results-summary.json && ( $DU == 0 || -f $R/onpol_sim.pkl ) ]] && { echo "$R done"; exit 0; }
+    case $M in id) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM "${Pu[@]}" "${Pa[@]}") ;; xp0) E=(-u JEV_EXPERT_FROM -u JEV_PERTURB JEV_EXPERT=$NP) ;;
+               *) E=("${Pu[@]}" JEV_EXPERT=$NP JEV_EXPERT_FROM=$M "${Pa[@]}") ;; esac
     rm -rf "$R"; mkdir -p "$R"
     local B; B=$(cd "$repo" && python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print(" ".join(B.OVERRIDES))')
-    (cd "$repo" && env "${E[@]}" SH30_TAG=RSG-L18-s0 SH30_DUMP=0 bash experiments/alpasim/scripts/run.sh "$R" sh30 --scene-list "$L" $B \
+    (cd "$repo" && env "${E[@]}" SH30_TAG=RSG-L18-s0 SH30_DUMP=$DU bash experiments/alpasim/scripts/run.sh "$R" sh30 --scene-list "$L" $B \
        runtime.scene_provider.trajdata.cache_location=$CA runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=$AF) || exit 1
     [[ -f $R/aggregate/results-summary.json ]] || { echo "no results-summary" >&2; exit 1; }
+    if [[ $DU != 0 ]]; then "$APY" "$repo/experiments/alpasim/scripts/c1_extract.py" logs --run "$R" --out "$R/onpol_sim.pkl" --jobs 6 || exit 1; fi
     find "$R/rollouts" -name rollout.asl -delete ;;
   read)   # <stage dir>[,<stage dir>..] [out dir, default the first stage]
     local S=${2:-${1%%,*}}; mkdir -p "$S"
