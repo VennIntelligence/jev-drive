@@ -22,9 +22,8 @@ STRICT=experiments/route_follow/results/pai281/strict36.txt; WL=$O/pai_wl.pkl; R
 WIZ=controller.gains.rel_front_steering_angle_weight=20
 X=$O/post; mkdir -p $X                               # one-off jobs (fetch, reference) of this script; $O is shared with the training half
 kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
-NDRY=0
 sub() { local log=$1 name=$2; shift 2; local id
-  if [[ ${DRY:-0} == 1 ]]; then NDRY=$((NDRY + 1)); echo "DRY $name: cl submit --owner recovery-envelope --name $name --tries ${TRIES:-1} --priority ${PRIO:-6} $*" >&2; echo dry$NDRY; return; fi
+  if [[ ${DRY:-0} == 1 ]]; then echo "DRY $name: cl submit --owner recovery-envelope --name $name --tries ${TRIES:-1} --priority ${PRIO:-6} $*" >&2; echo dry:$name; return; fi
   id=$(.venv/bin/python -m jevdrive.cl submit --owner recovery-envelope --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-6} --no-check \
        --log-dir $(dirname $log)/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
   echo "$id $name" >> $log; echo "$id"; }
@@ -54,16 +53,16 @@ pdir() { local r i; for r in $O/read10 $RF/guard/read10 $RF/slow/read10 $RF/allr
   for i in $(seq 0 9); do [[ -f $r/$1/b$i/aggregate/results-summary.json ]] || continue 2; done; echo $r/$1; return 0; done; return 1; }
 pai_ok() { local n; n=$(ls $1/chunks/*.txt 2>/dev/null | wc -l); (( n > 0 )) && (( $(ls $1/runs/*/DONE 2>/dev/null | wc -l) == n )); }
 pai_submit() {  # <read dir> <tag> <log> <after ids>: one pool job per chunk (pai_box.sh run; pai_box.sh submit's job spec), echoes the ids
-  local R=$1 T=$2 log=$3 af=$4 f c r id ids=()
-  mkdir -p $R/chunks $R/runs; ls $R/chunks/*.txt > /dev/null 2>&1 || cp $CH/*.txt $R/chunks/
-  printf '%s\n' "SERVE=JEV_VCONT=1.0 JEV_LEAD=1" "WIZ=$WIZ" "CONC=4" "KEEP_VIDEO=0" "KEEP_ASL=0" "code=$(git rev-parse --short HEAD)" "chunks=$CH" > $R/config.txt
-  for f in $R/chunks/*.txt; do c=$(basename $f .txt); r=$R/runs/${T,,}_$c
+  local R=$1 T=$2 log=$3 af=$4 f c r id ids=() C=$1/chunks
+  if [[ ${DRY:-0} == 1 ]]; then C=$CH; else
+    mkdir -p $R/chunks $R/runs; ls $R/chunks/*.txt > /dev/null 2>&1 || cp $CH/*.txt $R/chunks/
+    printf '%s\n' "SERVE=JEV_VCONT=1.0 JEV_LEAD=1" "WIZ=$WIZ" "CONC=4" "KEEP_VIDEO=0" "KEEP_ASL=0" "code=$(git rev-parse --short HEAD)" "chunks=$CH" > $R/config.txt; fi
+  for f in $C/*.txt; do c=$(basename $f .txt); r=$R/runs/${T,,}_$c
     [[ -f $r/DONE ]] && continue
     [[ -f $r/SUBMITTED && ! -f $r/ERROR ]] && { ids+=($(cat $r/SUBMITTED)); continue; }
-    mkdir -p $r/pool
     id=$(sub $log pai-${T,,}-$c ${af:+--after $af} --vram 28 --cpu 6 --ram 40 --timeout-h 3 --env CL_HIST_KEY=pai-read4 --env CONC=4 --env "WIZ=$WIZ" \
          --env KEEP_VIDEO=0 --env KEEP_ASL=0 --env JEV_VCONT=1.0 --env JEV_LEAD=1 -- bash $PB run $R $T $c) || exit 1
-    [[ ${DRY:-0} == 1 ]] || echo $id > $r/SUBMITTED; ids+=($id)
+    [[ ${DRY:-0} == 1 ]] || { mkdir -p $r; echo $id > $r/SUBMITTED; }; ids+=($id)
   done
   (IFS=,; echo "${ids[*]}"); }
 case ${1:-} in
@@ -82,7 +81,7 @@ fetchjob)    # up to 3 passes of pai_fetch.sh from hf-mirror (direct, no proxy: 
   done; exit 1 ;;
 ref-pai)     # RSG-L18-s0 on the 281, the identical box path; its extracts -> $X/ref_paix.id (each arm's report waits for it)
   [[ -s $WL ]] || { echo "no $WL (the stored PAI wait lines, Mac tmp/tax/pai_wl.pkl): copy it first" >&2; exit 1; }
-  af=$(fetchdep) || exit 1; R=$O/pai/$REFT; mkdir -p $R
+  af=$(fetchdep) || exit 1; R=$O/pai/$REFT
   ids=$(pai_submit $R $REFT $R/jobs.txt "$af") || exit 1
   x=$(sub $R/jobs.txt paix-${REFT,,} ${ids:+--after $ids} --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME paix $R) || exit 1
   [[ ${DRY:-0} == 1 ]] || echo $x > $X/ref_paix.id; echo "reference PAI read $R: chunks ${ids:-all done}, extracts $x" ;;
@@ -95,7 +94,7 @@ submit)
   okafter ${JOBS[@]} || exit 1
   [[ -s $WL ]] || { echo "no $WL: copy the stored PAI wait lines first" >&2; exit 1; }
   af=$(fetchdep) || exit 1
-  A=$O/$ARM; mkdir -p $A/pool; LOG=$A/jobs.txt; rr=()
+  A=$O/$ARM; LOG=$A/jobs.txt; rr=(); [[ ! -e $LOG ]] || { echo "$ARM already submitted ($LOG)" >&2; exit 1; }; [[ ${DRY:-0} == 1 ]] || mkdir -p $A/pool
   for k in ${!TAGS[@]}; do T=${TAGS[$k]}; t=${JOBS[$k]}
     for i in 0 1 2 3 4 5; do
       rr+=($(sub $LOG rcv-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
@@ -111,7 +110,7 @@ submit)
   dep="$(IFS=,; echo "${rr[*]}"),$x"; [[ -s $X/ref_paix.id ]] && dep="$dep,$(cat $X/ref_paix.id)" || echo "warning: no reference PAI job ($X/ref_paix.id): PAI lines stay pending until ref-pai + post" >&2
   r=$(sub $LOG rcv-report-$ARM --after $dep --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 $T1) || exit 1
   echo "$ARM ($K): ${#rr[@]} held / public read jobs, $(echo $pids | tr , '\n' | grep -c .) PAI chunk jobs, extracts $x, report $r"
-  [[ ${DRY:-0} == 1 ]] && echo "DRY: $NDRY job specs printed, nothing submitted" || echo "ids in $LOG" ;;
+  [[ ${DRY:-0} == 1 ]] && echo "DRY: job specs above, nothing submitted" || echo "ids in $LOG" ;;
 post)
   ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:-}; kind $ARM > /dev/null || exit 1; mkdir -p $O/$ARM/pool
   sub $O/$ARM/jobs.txt rcv-report-$ARM --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 ${T1:--} ;;
