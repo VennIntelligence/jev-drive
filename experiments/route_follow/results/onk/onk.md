@@ -18,6 +18,19 @@ common scenes), [follow.md](follow.md) (24 held turns), [onk.json](onk.json).
 
 Read: d = arm - RSG-L18-s0 on the 452 paired scenes. Turn-completion pairs vs RSG-L18-s0: k26 +0.0, k51 -8.3 [-20.8, +9.1], k51w1 +4.2 [-10.5, +18.2] pp.
 
+**Lines (prereg).** Candidate = zeros CI high < 0 or score CI low > 0. Stop (no seed 1) = zeros CI low > +5.
+- k26: no gain (zeros -4.0 [-9.6, +1.2], score CI reaches 0). Not stopped.
+- k51: no gain (-1.0 [-6.4, +4.1], +0.0081 [-0.0044, +0.0215]). Not stopped.
+- k51w1: **candidate on the score clause** (+0.0130 [+0.0037, +0.0240]); zeros -3.0 [-7.7, +1.1] do not meet the zero line. Not stopped.
+- No arm is worse on zeros. All three go to seed 1.
+
+**Reading.** More on-policy rows per batch do not hurt the held read: every arm points to fewer zeros (-1 to -4) and a higher score (+0.008 to
++0.013), but only k51w1's score CI excludes 0. Of three comparisons at 95 %, one passing by chance is plausible; seed 1 is the guard. The arm with
+the most hinge pressure (k51 at ho-w 3, 5.8x) is the weakest of the three: least gain, the only drop in turn completion, and dev ADE +0.007
+(within the 0.02 line). The same 51 rows at a third of the weight (k51w1, 1.9x) are the best. So the share by itself is not the limit. The
+hinge pressure near 2x looks fine; near 6x the gain starts to fade. The k51w1 score gain has the same size as lrsteps' (0.03, 5000) +0.0139,
+whose held gain replicated in seed 1 but tied RSG-L18 on public 1491 (lrsteps.md, Amendment 2).
+
 ## Seed 1
 
 Paired against RSG-L18-s1 (same-seed pair, log-clustered 95 % CI on the 452 scenes), not against RSG-L18-s0.
@@ -32,32 +45,25 @@ Paired against RSG-L18-s1 (same-seed pair, log-clustered 95 % CI on the 452 scen
 Turn-completion pairs vs RSG-L18-s1: k26 +8.3 [-9.1, +27.3], k51 +4.2 [-13.8, +23.8], k51w1 +8.3 [-12.0, +27.8] pp. The 24-turn follow read exists for all four
 seed-1 tags ([follow.md](follow.md)); nothing was submitted.
 
-**Verdict (prereg line 1, seed 1 vs RSG-L18-s1).** No seed-1 arm meets the candidate line (zeros CI high < 0 or score CI low > 0): k26, k51 and k51w1 all have CIs that reach 0 on both.
+**Verdict (seed 1 alone, vs RSG-L18-s1).** No seed-1 arm meets the candidate line (zeros CI high < 0 or score CI low > 0): all three CIs reach 0 on both. k51w1 keeps the seed-0 sign and size (zeros -4.0, score +0.0104 vs +0.0130) but its score CI low is -0.0044. Seed-1 RSG-L18 itself is +0.0021 [-0.0097, +0.0137] above s0 on score, so the two bases differ by about a fifth of the k51w1 gain.
 
-## Two-seed
+## Two seeds
 
-Arm 2-seed mean minus RSG-L18 2-seed mean (s0, s1), 452 scenes, log-clustered 95 % CI (`ol_confirm --mean`; [held18_confirm.md](held18_confirm.md)).
+Per arm, same-seed pairs (s0 vs RSG-L18-s0, s1 vs RSG-L18-s1) and the 2-seed mean minus the RSG-L18 2-seed mean (s0, s1), 452 scenes, log-clustered 95 % CI (`ol_confirm --mean`; [held18_confirm.md](held18_confirm.md)). The RSG-L18 2-seed mean is 26.0 zeros, score 0.8820.
 
-| arm - RSG-L18 | zeros | at-fault | mean score | GT (m) |
-|:--|:--|:--|:--|:--|
-| RSGk26-L18 | -2.5 [-6.2, +0.5] | -1.5 [-5.2, +1.8] | +0.0063 [-0.0001, +0.0140] | -0.044 [-0.095, +0.012] |
-| RSGk51-L18 | -1.5 [-7.2, +4.7] | +0.0 [-6.2, +7.4] | +0.0063 [-0.0067, +0.0183] | +0.012 [-0.067, +0.087] |
-| RSGk51w1-L18 | -3.5 [-8.8, +1.8] | -2.5 [-7.8, +2.9] | **+0.0117 [+0.0015, +0.0222]** | +0.024 [-0.035, +0.084] |
+| arm | pressure x k13 | d zeros s0 | d zeros s1 | d zeros 2-seed mean [95 % CI] | d score s0 | d score s1 | d score 2-seed mean [95 % CI] | d at-fault 2-seed mean | d GT (m) 2-seed mean | turn completion s0 / s1 |
+|:--|--:|--:|--:|:--|--:|--:|:--|:--|:--|:--|
+| RSGk26-L18 (26, 3) | 2.24 | -4.0 | -1.0 | -2.5 [-6.2, +0.5] | +0.0101 | +0.0025 | +0.0063 [-0.0001, +0.0140] | -1.5 [-5.2, +1.8] | -0.044 [-0.095, +0.012] | 66.7 / 66.7 % |
+| RSGk51-L18 (51, 3) | 5.76 | -1.0 | -2.0 | -1.5 [-7.2, +4.7] | +0.0081 | +0.0045 | +0.0063 [-0.0067, +0.0183] | +0.0 [-6.2, +7.4] | +0.012 [-0.067, +0.087] | 58.3 / 62.5 % |
+| RSGk51w1-L18 (51, 1) | 1.92 | -3.0 | -4.0 | -3.5 [-8.8, +1.8] | +0.0130 | +0.0104 | **+0.0117 [+0.0015, +0.0222]** | -2.5 [-7.8, +2.9] | +0.024 [-0.035, +0.084] | 70.8 / 66.7 % |
 
-**Verdict (prereg line 3).** k51w1 replicates: the 2-seed mean reaches the candidate line on the score clause (+0.0117, CI low > 0) and seed 1 has the same sign (zeros -4.0, score +0.0104); k26 and k51 do not reach the line on the 2-seed mean (no gain).
+**Lines (prereg, on the 2-seed mean).** Candidate = zeros CI high < 0 or score CI low > 0.
+- k26: not a candidate (zeros -2.5 [-6.2, +0.5], score +0.0063 [-0.0001, +0.0140]; score CI low is -0.0001).
+- k51: not a candidate (zeros -1.5 [-7.2, +4.7], score +0.0063 [-0.0067, +0.0183]).
+- k51w1: **candidate on the score clause** (+0.0117 [+0.0015, +0.0222]); the zero clause is not met (-3.5 [-8.8, +1.8]).
+- No arm is worse than RSG-L18 on zeros in either seed.
 
-**Lines (prereg).** Candidate = zeros CI high < 0 or score CI low > 0. Stop (no seed 1) = zeros CI low > +5.
-- k26: no gain (zeros -4.0 [-9.6, +1.2], score CI reaches 0). Not stopped.
-- k51: no gain (-1.0 [-6.4, +4.1], +0.0081 [-0.0044, +0.0215]). Not stopped.
-- k51w1: **candidate on the score clause** (+0.0130 [+0.0037, +0.0240]); zeros -3.0 [-7.7, +1.1] do not meet the zero line. Not stopped.
-- No arm is worse on zeros. All three go to seed 1.
-
-**Reading.** More on-policy rows per batch do not hurt the held read: every arm points to fewer zeros (-1 to -4) and a higher score (+0.008 to
-+0.013), but only k51w1's score CI excludes 0. Of three comparisons at 95 %, one passing by chance is plausible; seed 1 is the guard. The arm with
-the most hinge pressure (k51 at ho-w 3, 5.8x) is the weakest of the three: least gain, the only drop in turn completion, and dev ADE +0.007
-(within the 0.02 line). The same 51 rows at a third of the weight (k51w1, 1.9x) are the best. So the share by itself is not the limit. The
-hinge pressure near 2x looks fine; near 6x the gain starts to fade. The k51w1 score gain has the same size as lrsteps' (0.03, 5000) +0.0139,
-whose held gain replicated in seed 1 but tied RSG-L18 on public 1491 (lrsteps.md, Amendment 2).
+**Reading.** The seed-0 direction replicates in sign for every arm: zeros are lower (-1 to -4) and score higher (+0.0025 to +0.0130) in both seeds, and no 2-seed zero CI excludes 0. The size does not replicate for k26: its score gain falls from +0.0101 to +0.0025, so its 2-seed CI low sits at -0.0001. k51w1 keeps its score clause on 2 seeds, narrowly (CI low +0.0015, against +0.0037 on seed 0), and each seed alone is a pair with the same sign but, in seed 1, a CI that includes 0. It is a pair of seeds with the same sign, not two independent passes. The pressure argument survives: the 5.76x arm (k51) is the weakest on score in both seeds (+0.0081 / +0.0045 against +0.0130 / +0.0104 for the 1.92x arm with the same 51 rows) and has the lowest turn completion of the three arms in both seeds (58.3 / 62.5 % against 70.8 / 66.7 % for k51w1 and 66.7 / 66.7 % for k26), while k26 (2.24x) has a gain that is mostly seed 0 (+0.0101 against +0.0025). The ordering holds in both seeds, but with 2 seeds and overlapping CIs between arms (not tested) it is a description, not an established pressure law. dev ADE final 0.5282-0.5355 in seed 1 against 0.5270 for RSG-L18-s1, inside the 0.02 line. Open: the public 1491 / 10-decision guard read for the 2 seeds of k51w1 is not run (lrsteps' held gain also replicated and then tied RSG-L18 on public 1491).
 
 **Checks.** Batch accounting logged as registered (64 / 13 / 51, 89 / 13 / 26; pool 17 429 rows); init dev ADE 0.5276 in every arm; dev ADE
 @500 0.5338-0.5386 vs 0.5372, final 0.5298-0.5355 vs 0.5284. Batch imit shifts up with k because the yaw-rate share of the imitation rows

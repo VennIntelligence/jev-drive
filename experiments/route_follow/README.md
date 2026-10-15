@@ -47,9 +47,13 @@ prereg `plans/2026-10-15-lrsteps-pilot-prereg.md`, chain `scripts/rf_lrsteps.sh`
 
 ON-K pilot (2026-10-15, decision 311): on-policy rows per batch on RSG-L18-s0's exact command, never varied before (13 = round(0.1 x 128)).
 Arms are `--on-k` 26 and 51 at ho-w 3 (hinge pressure 2.2x and 5.8x of k13, because n_imit shrinks as k grows) and 51 at ho-w 1 (1.9x). Held 452
-zeros vs RSG-L18-s0, seed 0: k26 -4.0 [-9.6, +1.2], k51 -1.0 [-6.4, +4.1], k51w1 -3.0 [-7.7, +1.1]. Score: k51w1 +0.0130 [+0.0037, +0.0240] is a
-candidate on the score clause, the others' CIs reach 0. More rows do not hurt. The 5.8x arm is the weakest (turn completion -8 pp). Seed 1 of all
-three is running. See [results/onk/onk.md](results/onk/onk.md), prereg `plans/2026-10-15-onk-pilot-prereg.md`, chain `scripts/rf_onk.sh`.
+zeros vs RSG-L18-s0, seed 0: k26 -4.0 [-9.6, +1.2], k51 -1.0 [-6.4, +4.1], k51w1 -3.0 [-7.7, +1.1]. Score: k51w1 +0.0130 [+0.0037, +0.0240] was a
+candidate on the score clause, the others' CIs reached 0; the 5.8x arm was the weakest (turn completion -8 pp). Seed 1 (vs RSG-L18-s1) did not repeat the
+size: zeros -1.0 / -2.0 / -4.0 and score +0.0025 / +0.0045 / +0.0104, all CIs reaching 0. Corrected on 2 seeds (2-seed mean minus RSG-L18 2-seed mean):
+k26 zeros -2.5 [-6.2, +0.5], score +0.0063 [-0.0001, +0.0140] (seed-0 gain mostly not replicated, no candidate); k51 -1.5 [-7.2, +4.7], +0.0063
+[-0.0067, +0.0183] (no gain); k51w1 -3.5 [-8.8, +1.8], **+0.0117 [+0.0015, +0.0222]** (keeps the score clause, narrowly; zero clause not met). Direction
+replicates in sign for all arms, and the 5.8x arm stays the weakest on score in both seeds. Open: the public 1491 / 10-decision guard read for the 2
+seeds of k51w1 is not run (lrsteps' held gain also replicated and then tied RSG-L18 on public 1491). See [results/onk/onk.md](results/onk/onk.md), prereg `plans/2026-10-15-onk-pilot-prereg.md`, chain `scripts/rf_onk.sh`.
 
 **Next.** Turning-school reads P0-P2 (`research/turning-school-checks.md`, to appear); the holdlead PAI exam read (coordinator exception);
 spin-fix lateral bound v2; Tokyo PAI 281: RB0-F-s0 (same-gains base reference), RBSGc-PAI.
