@@ -123,3 +123,20 @@ public guard ~2 card-h per checkpoint. Total ~7 card-h on the box.
   before the entry; the approach course has at most a few metres of runway there. H2 stays as registered; the PAI 281 read (rollouts from
   well before the entry) is where the approach is exercised.
 - Pilots launched: APP1P1 / APP1P3-L18-s0 (W 1 / 3) and the control APP1P0-L18-s0 (W 0, same pool and draws).
+
+## Amendment 2 (coordinator, 2026-10-15 ~10:45, before any pilot, held or PAI read): where H2 is read
+
+Held 460 rollouts start a median 5 m before the turn entry (Amendment 1), so held cannot test the approach.
+- Held 460 keeps H1 (no harm, unchanged) and the descriptive turn table (completion on the 24 held turns, entry speed and lateral via
+  rf_appheld.py). It no longer gates anything about turns.
+- H2 moves to PAI 281 (rf_v2pai.sh run / read, gains 20, paired against the stored r281/rsg = RSG-L18-s0). Primary subset: the strict
+  turns with >= 20 m of runway before the entry, i.e. the strict turns rf_laneoff.py (decision 299) could define at entry - 20 m
+  (results/laneoff/turns.csv, set pai, kind strict, point m20, why ok). That is **22** turns, not 19: decision 299's "19" counted only
+  the failed ones (19 failed + 3 completed). The list is `results/approach/pai_runway22.txt` (all 22 are in strict36). RSG-L18-s0
+  completes **3 / 22** there (132ae6cb, 382a7247, d90fe123) and 2 / 14 of the other strict turns (3c2822d9, 8a143cb2).
+  - H2 line: completion on the 22 >= RSG + 3 (>= 6 / 22).
+  - No loss on the other 14 strict turns (completion >= 2 / 14).
+  - Exam-72 zeros and the decision-293 shape gate count are reported. The old line "strict-36 >= 10" is reported too but does not gate.
+- Scheduling. A1-s0 and A2-s0 each go to Tokyo (one card each, in parallel) as soon as that checkpoint exists, provided the pilot gate passed
+  cleanly. The PAI run goes alongside the held read and is discarded if H1 then fails on held. Seed-1 PAI runs only for an arm that passes
+  the primary line on seed 0.
