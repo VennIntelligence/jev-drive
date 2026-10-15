@@ -1,0 +1,108 @@
+{
+ "pool": "L18RSG",
+ "rows": 17474,
+ "labelled": {
+  "rows": 14174,
+  "scenes": 984,
+  "logs": 97
+ },
+ "cls": {
+  "stop": {
+   "train": {
+    "rows": 1344,
+    "scenes": 120,
+    "logs": 50
+   },
+   "dev": {
+    "rows": 127,
+    "scenes": 10,
+    "logs": 7
+   },
+   "served_envU_mean": 0.10433368384838104,
+   "served_envL_mean": 0.0,
+   "served_violating": 0.10537049919366837
+  },
+  "turn": {
+   "train": {
+    "rows": 1988,
+    "scenes": 234,
+    "logs": 58
+   },
+   "dev": {
+    "rows": 155,
+    "scenes": 20,
+    "logs": 9
+   },
+   "served_envU_mean": 0.09120585024356842,
+   "served_envL_mean": 0.0,
+   "served_violating": 0.1451236605644226
+  },
+  "lead": {
+   "train": {
+    "rows": 4739,
+    "scenes": 406,
+    "logs": 71
+   },
+   "dev": {
+    "rows": 470,
+    "scenes": 41,
+    "logs": 11
+   },
+   "served_envU_mean": 0.08092638105154037,
+   "served_envL_mean": 0.0,
+   "served_violating": 0.06335189193487167
+  },
+  "free": {
+   "train": {
+    "rows": 4422,
+    "scenes": 440,
+    "logs": 72
+   },
+   "dev": {
+    "rows": 929,
+    "scenes": 82,
+    "logs": 15
+   },
+   "served_envU_mean": 0.0,
+   "served_envL_mean": 0.5898674130439758,
+   "served_violating": 0.5428891777992249
+  }
+ },
+ "flags": {
+  "stop": {
+   "rows": 1471,
+   "scenes": 130,
+   "logs": 57
+  },
+  "turn": {
+   "rows": 2234,
+   "scenes": 260,
+   "logs": 68
+  },
+  "lead": {
+   "rows": 7065,
+   "scenes": 542,
+   "logs": 83
+  },
+  "free": {
+   "rows": 5351,
+   "scenes": 522,
+   "logs": 87
+  }
+ },
+ "stop_speed_q50_q90_max": [
+  2.930586814880371,
+  6.688573837280273,
+  10.63754940032959
+ ],
+ "stop_ge3": {
+  "rows": 718,
+  "scenes": 99,
+  "logs": 51
+ },
+ "stop_ge6": {
+  "rows": 229,
+  "scenes": 61,
+  "logs": 39
+ }
+}

@@ -1,0 +1,58 @@
+{
+ "G0_everything_off": {
+  "a": "RCVG-old-off",
+  "b": "RCVG-new-off",
+  "note": "old code (prereg commit) vs new code, every new flag off (RSG-L18 recipe, 60 steps)",
+  "scalars": 89,
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.529079020023346,
+   0.529079020023346
+  ],
+  "identical": true,
+  "rsg_l18_s0_on_hash_60": "ea8cacc3e451c577"
+ },
+ "G0_repeat": {
+  "a": "RCVG-new-off",
+  "b": "RCVG-new-off2",
+  "note": "new code twice",
+  "scalars": 89,
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.529079020023346,
+   0.529079020023346
+  ],
+  "identical": true
+ },
+ "G2_lon_all": {
+  "a": "RCVG-new-envself",
+  "b": "RCVG-new-envmixall",
+  "note": "--env-lam 1 on on1_RCVL: --on-mode self vs --on-mode mixed --on-lon-all (every row self)",
+  "scalars": 38,
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "e478c6a76d3d5294",
+   "e478c6a76d3d5294"
+  ],
+  "dev_ade": [
+   0.5678312182426453,
+   0.5678312182426453
+  ],
+  "identical": true
+ },
+ "pass": true
+}

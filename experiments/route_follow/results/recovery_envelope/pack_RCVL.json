@@ -1,0 +1,27 @@
+{
+ "arm": "L",
+ "out": "RCVL",
+ "base": "L18RB0",
+ "parts": {
+  "e0": {
+   "pool": "L18RSG",
+   "rows": 12493,
+   "env": {
+    "free": 4422,
+    "lead": 4739,
+    "stop": 1344,
+    "turn": 1988
+   }
+  }
+ },
+ "env_draws_per_batch": {
+  "stop": 1.0,
+  "turn": 2.0,
+  "lead": 2.0,
+  "free": 2.0
+ },
+ "s_rows": 17429,
+ "rows": 29922,
+ "on_k": 20,
+ "flags": "--on on1_RCVL --on-k 20 --on-mode self --on-weight env=stop:0.99754,env=turn:1.34879,env=lead:0.56581,env=free:0.60637"
+}

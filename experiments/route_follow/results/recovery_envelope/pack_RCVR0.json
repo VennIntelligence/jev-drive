@@ -1,0 +1,24 @@
+{
+ "arm": "R",
+ "out": "RCVR0",
+ "base": "L18RB0",
+ "parts": {
+  "r": {
+   "pool": "RCVd316",
+   "rows": 246,
+   "dev_rows": 115,
+   "units": 26,
+   "kind": {
+    "h": 26,
+    "post": 220
+   }
+  }
+ },
+ "r_rows": 246,
+ "r_units": 10,
+ "r_cap": 0.1,
+ "s_rows": 17429,
+ "rows": 17675,
+ "on_k": 16,
+ "flags": "--on on1_RCVR0 --on-k 16 --on-mode mixed --on-weight pool=r:16.34991 --on-cap-scene 0.1 --on-cap-in pool=r"
+}
