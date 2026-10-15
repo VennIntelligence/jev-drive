@@ -61,6 +61,13 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 the scene is still loading for the first (P4 smoke try 1: 0.3 s of smeared frames, plans differ from k 0). So session n >= 1 of a
                 scene waits in start_session (before any of its renders) until session 0 of that scene has received ONP_WARM (10) frames of
                 its camera (at most 600 s); the wait is logged as p4.wait_s.
+                Rewind cells (src "rew", switch 0, `xp` = a decision index or null; the scene needs no route entry; experiments/route_follow/
+                plans/2026-10-16-recovery-rewind-prereg.md): the policy drives from decision 0 and from decision `xp` on the RULE EXPERT's
+                plan (rule_expert.plan from the anchor pose and the measured speed, the call pai_driver makes under JEV_EXPERT, packs from the
+                file's `xp_pack`) is served instead (`poses_branch`; `poses` stays the model's plan, which still runs). Same session, nothing
+                restarted: at the handover the ego's pose, speed, controller state and the model's history / route memory are the policy's
+                own. xp null = the policy alone (the control), xp 0 = the expert from the start. Records gain `p4` {tag, src, xp, v_meas,
+                lat (expert on), expert (its info dict)}.
 
 A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
 experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER,
@@ -116,10 +123,13 @@ CELLS = json.load(open(_CF)) if os.path.exists(_CF) else None
 if CELLS:
     import onp_p4 as Q
     assert not (BRANCH or SWITCH or SWITCH_ALL is not None or AFTER or P.TR.ON), "ONP_CELLS excludes ONP_BRANCH / ONP_SWITCH / ONP_AFTER / JEV_TRACK"
-    ROUTES = {sc: Q.Route(d) for sc, d in CELLS["scenes"].items()}
+    ROUTES = {sc: Q.Route(d) for sc, d in CELLS.get("scenes", {}).items()}
+    if CELLS.get("xp_pack"):                         # rewind cells: the expert's packs; the expert itself stays off (P.XP.ON) until a cell's xp
+        P.XP.PACK = CELLS["xp_pack"]
     for _sc, _cl in CELLS["cells"].items():
-        assert _sc in ROUTES and all(c["src"] in ("self", "log") and c["lon"] in ("raw", "ve", "ve08") and (c["src"] == "self") == (c["switch"] == 0)
-                                     for c in _cl), f"ONP_CELLS: bad cell list of {_sc}"
+        assert all((c["switch"] == 0 and (c["xp"] is None or (bool(CELLS.get("xp_pack")) and c["xp"] >= 0))) if c["src"] == "rew" else
+                   (_sc in ROUTES and c["src"] in ("self", "log") and c["lon"] in ("raw", "ve", "ve08") and (c["src"] == "self") == (c["switch"] == 0))
+                   for c in _cl), f"ONP_CELLS: bad cell list of {_sc}"
 
 
 def branch_poses(poses, g: float, s: float):
@@ -184,8 +194,23 @@ if "vhzero" in AFTER:
 TL = threading.local()
 
 
+def rew_step(st, k, t0, anchor, poses):
+    """Rewind cell (src "rew"): the policy's plan before decision xp, the rule expert's from xp on (see `cells` in the module docstring)."""
+    c, s = st["cell"], st["session"]
+    with s.lock:
+        v0 = float(np.hypot(*s.velocity(t0)[0]))
+    on = c["xp"] is not None and k >= c["xp"]
+    rec = dict(tag=c["tag"], src="rew", xp=c["xp"], wait_s=st["wait_s"], v_meas=round(v0, 5), lat=on, lon=False)
+    if on:
+        q = anchor.pose.quat
+        poses, rec["expert"] = P.XP.plan(st["uuid"], st["scene"], t0, (anchor.pose.vec.x, anchor.pose.vec.y, 2.0 * np.arctan2(q.z, q.w)), v0)
+    return poses, rec
+
+
 def p4_step(st, k, t0, anchor, poses):
     """P4 (ONP_CELLS): one decision of a session's cell -> (served poses, `p4` record fields). st = the session's cell state."""
+    if st["cell"]["src"] == "rew":
+        return rew_step(st, k, t0, anchor, poses)
     c, R, s = st["cell"], ROUTES[st["scene"]], st["session"]
     sig, dist = R.station((anchor.pose.vec.x, anchor.pose.vec.y), st["hint"])
     st["hint"] = sig
@@ -299,7 +324,7 @@ class LogDriver(P.Driver):
             t0 = time.time()
             if i > 0:
                 ev.wait(600.0)                               # the renderer race: see `cells` in the module docstring
-            s.p4 = dict(cell=cl[i], scene=s.scene, session=s, idx=i, h=None, hint=None, released=False, wait_s=round(time.time() - t0, 2))
+            s.p4 = dict(cell=cl[i], scene=s.scene, session=s, uuid=req.session_uuid, idx=i, h=None, hint=None, released=False, wait_s=round(time.time() - t0, 2))
         if s is not None and "rmem0" in AFTER and s.rt is not None:
             s.rt = MaskedMemory(s.rt)
         return r
