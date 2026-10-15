@@ -532,7 +532,7 @@ def gate_turn(tag, base):
     ha, hb = np.array(ha), np.array(hb)
     r2 = boot_diff(ha, hb, X.log[win])
     out["equal_arc"] = dict(dh_mean=float((ha - hb).mean()), dh_median=float(np.median(ha - hb)), ci=[r2["lo"], r2["hi"]], d_arc4_mean=float(np.mean(da)))
-    return out, dict(turn=out["dh4_mean"] >= -0.3)
+    return out, dict(turn=out["equal_arc"]["dh_mean"] >= -0.3)            # Amendment 3: the equal-arc read decides; h4 is reported
 
 
 def trainer_gates(tag):
