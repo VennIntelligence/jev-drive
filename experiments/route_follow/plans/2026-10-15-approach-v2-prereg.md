@@ -206,3 +206,25 @@ is a cheap gain from "approach-window rows as S-only rows" or seed noise.
   - Seed 1 repeats seed 0 (score up, zeros not up, turns not down): a candidate for a public guard (the coordinator's call).
   - Otherwise: seed noise.
 - Report and stop.
+
+### Amendment 4 read (2026-10-15 ~16:45): seed 1 does not repeat seed 0, so the gain was seed noise
+
+- **APP0C-L18-s1 training.** Dev ADE 0.5272 (RSG-L18-s1 0.5270). Every guard passes (`results/approach/w0/gate/APP0C-L18-s1.md`).
+- **Held 460** (`results/approach/w0/held/confirm.md`, held18, 452 paired, 39 logs; the mean labels are per-scene means of the two seeds):
+
+  | read | RSG-L18-s1 | APP0C-s1 | s1 paired [95 % CI] | RSG-L18 (2-seed) | APP0C-L18 (2-seed) | 2-seed paired [95 % CI] |
+  |:--|--:|--:|:--|--:|--:|:--|
+  | zeros | 26 | 29 | +3.0 [-4.1, +10.7] | 26 | 26.5 | +0.5 [-4.2, +5.2] |
+  | at-fault zeros | 19 | 22 | +3.0 [-3.8, +10.2] | 20 | 21 | +1.0 [-2.9, +4.9] |
+  | collision / offroad / corridor zeros | 6 / 13 / 8 | 5 / 17 / 7 | | 5 / 15 / 7 | 4.5 / 16.5 / 6 | |
+  | mean score | 0.8830 | 0.8869 | +0.004 [-0.015, +0.021] | 0.8819 | 0.8913 | +0.009 [-0.001, +0.021] |
+  | held turns completed | 14 / 24 | 14 / 24 | | 30 / 48 | 33 / 48 | |
+
+- **Entry table** (`held/entry.md`). Seed 1 against RSG-L18-s1: entry speed +0.06 [+0.03, +0.10] m/s, inward offset +0.02 [-0.00, +0.04] m.
+  Seed 0: +0.03 / -0.01.
+- **Reading, by the rule above.**
+  - Seed 1 does not repeat seed 0. Turns are level (14 vs 14), the score gain shrinks to +0.004 (CI includes 0), and zeros go +3 with the
+    CI upper bound +10.7.
+  - Over two seeds: score +0.009 (CI includes 0), zeros +0.5, turns 33 / 48 vs 30 / 48.
+  - So seed 0's 19 / 24 and +0.015 were seed noise. Approach-window rows as S-only rows are neutral: no harm and no gain shown.
+- Stop.

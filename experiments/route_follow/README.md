@@ -215,6 +215,8 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
     - against APP2W05: zeros -46 [-64, -30]
 
     So the pool mix is harmless, and the held harm comes from the approach gradient itself, in both v1 and v2.
+  - **Seed 1 of the control (Amendment 4)** does not repeat seed 0's gain: score +0.004, zeros +3 [-4, +11], turns 14 / 24 vs 14. Over two
+    seeds: score +0.009 [-0.001, +0.021], zeros +0.5, turns 33 / 48 vs 30 / 48. The control is neutral; seed 0's gain was seed noise.
 - [results/spin_v9/](results/spin_v9/README.md): SPIN v9 (prereg `plans/2026-10-15-spin-v9-prereg.md`, Amendments 1-3; serve side,
   `JEV_TRACK=v9` in `experiments/alpasim/lib/track_ref.py`; scripts `sv9_diag.py`, `sv9_check.py`, `sv9_read.py`, `sv9.sh`).
   - Mechanism: APP1X's 29 handoff spins come from a fed - plan speed gap of 7-12 m/s at the 1.7 s handoff. JEV_VCONT turns the gap into a
