@@ -144,9 +144,9 @@ def one(job):
         st, lat = project(Rl, S, a[:2], lo, hi)
         hint = st
         e = np.asarray(r["ego"], float)[:RM.EGO_DIM]
-        v = float(np.hypot(e[4], e[5]) * 10.0)
+        v = float(np.hypot(e[4], e[5]) * 10.0) if len(e) > 5 else float(np.hypot(e[0], e[1]))   # 4-wide ego: vx, vy (m/s) of third-party records
         dec.append(dict(label=label, scene=scene, k=int((r["t0"] - T0) // DT), drv_k=int(r["k"]), st=st, lat=lat, v=v,
-                        deficit=plan_arc2(r["poses"]) - 2.0 * v, g0=G0[r["k"]],
+                        deficit=plan_arc2(r["poses"]) - 2.0 * v if r.get("poses") else np.nan, g0=G0[r["k"]],
                         c20=(bool(RM.pts(F[r["k"]])[RM.I20, 0] > 0.5) if F is not None else None)))
     st = np.array([d["st"] for d in dec])
     ks = np.array([d["k"] for d in dec])
