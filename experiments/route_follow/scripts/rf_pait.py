@@ -26,6 +26,12 @@ exam hard_train half (experiments/alpasim/results/pai_exam/hard_train.txt); neve
           Gates: G-r1 (pool inputs bit-equal to the cache rows; the cache's G-id-ulp read is the pass's), G-route (route0_d <= 0.05 m on
           >= 99 % of rows), G-road (demo polyline crosses no road-edge segment on >= 99 % of rows), G-speed (demo chord arc at 4 s within 10 %
           of the log's on >= 99 % of rows; log arc < 1 m: within 0.1 m), G-bev (6-row sheet).
+          --window straight (SLOW S2, plans/2026-10-15-slow-s1s2-prereg.md Amendment 2; pool on1_PAITV): the same rows, target and gates, but
+          the window is the open fast straight road instead of a turn: t0 speed v0 >= --v-min (12 m/s), the route polyline turns < 30 deg over
+          the 60 m of arc ahead of the row (max |heading(s) - heading(s_row)|, 1 m steps; rows whose known route ends earlier are dropped), no
+          same-direction actor at t0 in the corridor (box centre within 2.0 m of the logged path 0 .. 40 m ahead of the rear axle, onp_rows'
+          `lead` distance, and its yaw within 45 deg of the path heading there; every box class counts); topo = "straight", d_entry nan.
+          --exclude <list files>: scenes never packed (hard_exam / hard_train / control), asserted absent from the output.
   merge   pools -> one (names prefixed on:<prefix>:..., feat merged, absent label files filled ok False; `src` kept, absent = "human";
           string tags of one pool kept, "" elsewhere; `pool` = the prefix, so rm_train --on-weight pool=<prefix>:W balances the parts).
   r1      GPU (or CPU) read of the pool rows: the pass's driver checkpoint on the pool's tokens + ego vs its logged poses_model, per-coordinate
@@ -55,6 +61,7 @@ sys.path[:0] = [str(R), str(R / "experiments/route_follow/scripts"), str(R / "ex
 D = Path(os.environ.get("DATA_DIR", "/data"))
 CR, FEAT = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
 PRE_S, APPROACH = 6.0, 40.0
+ST_TURN, ST_AHEAD, ST_CORR, ST_LAT, ST_YAW = 30.0, 60.0, 40.0, 2.0, 45.0      # --window straight
 ARC, R0TOL = 0.10, 0.05
 
 
@@ -280,6 +287,35 @@ def crosses(F, E, ok):
     return (x & ok[:, None]).any((1, 2))
 
 
+def turn_ahead(P, a, ahead=ST_AHEAD):
+    """Max |heading change| (deg) of polyline P (m, 2) over arc a .. a + ahead (1 m steps) for row arcs a (n,); nan where P ends earlier."""
+    d = np.diff(P, axis=0)
+    cum = np.r_[0.0, np.cumsum(np.hypot(*d.T))]
+    out = np.full(len(a), np.nan)
+    for i, s0 in enumerate(a):
+        if s0 + ahead > cum[-1]:
+            continue
+        s = s0 + np.arange(0.0, ahead + 1.0)
+        x, y = np.interp(s, cum, P[:, 0]), np.interp(s, cum, P[:, 1])
+        h = np.arctan2(np.diff(y), np.diff(x))
+        out[i] = np.degrees(np.abs(np.angle(np.exp(1j * (h - h[0])))).max())
+    return out
+
+
+def corridor_actor(T, idx):
+    """(n,) any actor box at t0 with its centre within ST_LAT of the logged path 0 .. ST_CORR m ahead (path index 20 = 0 m, 1 m steps) and its
+    yaw within ST_YAW deg of the path heading at the nearest path point (row frame)."""
+    j = slice(20, 21 + int(ST_CORR))
+    P, H, ok = T["path"][idx][:, j], T["path_h"][idx][:, j], T["path_ok"][idx][:, j]
+    B, bo = T["box"][idx][:, 0], T["box_ok"][idx][:, 0]                    # (n, K, 5), (n, K)
+    d = np.linalg.norm(B[:, :, None, :2] - P[:, None], axis=-1)              # (n, K, 41)
+    d = np.where(ok[:, None], d, np.inf)
+    q = d.argmin(-1)
+    hn = np.take_along_axis(np.broadcast_to(H[:, None], d.shape), q[..., None], -1)[..., 0]
+    same = np.degrees(np.abs(np.angle(np.exp(1j * (B[..., 2] - hn))))) <= ST_YAW
+    return (bo & (d.min(-1) <= ST_LAT) & same).any(1)
+
+
 def bev(path, rows, T, Zs, info):
     import matplotlib
     matplotlib.use("Agg")
@@ -321,7 +357,8 @@ def cmd_pack(a):
     scenes = T["scenes"][T["sid"]]
     want = scenes_of(a.scenes)
     rd = Path(a.route)
-    have = [s for s in want if s in set(T["scenes"].tolist()) and (rd / f"{s}.npz").exists()]
+    excl = set(scenes_of(a.exclude)) if a.exclude else set()
+    have = [s for s in want if s in set(T["scenes"].tolist()) and (rd / f"{s}.npz").exists() and s not in excl]
     sel, info, F, LB, TW, TP, DE = [], {}, [], [], [], [], []
     r0d = []
     for sc in have:
@@ -339,6 +376,15 @@ def cmd_pack(a):
         m = np.zeros(len(idx), bool)
         tid, tp, de = np.full(len(idx), -1), np.full(len(idx), "", "U20"), np.full(len(idx), np.nan, np.float32)
         used = []
+        if a.window == "straight":                                    # the open fast straight road (docstring), no turn window
+            tu = turn_ahead(P, arc)
+            ca = corridor_actor(T, idx)
+            v0 = T["v0"][idx]
+            m = good & (v0 >= a.v_min) & (tu < ST_TURN) & ~ca
+            tp[m] = "straight"
+            used.append(dict(good=int(good.sum()), fast=int((good & (v0 >= a.v_min)).sum()), turn_ok=int((good & (v0 >= a.v_min) & (tu < ST_TURN)).sum()),
+                             rows=int(m.sum())))
+            TT = []
         for q, (s_in, s_out, deg, cl) in enumerate(TT):
             rin = np.flatnonzero(arc >= s_in)
             if not len(rin) or arc[0] > s_out:                       # never reached by the log, or behind it at the start
@@ -370,6 +416,7 @@ def cmd_pack(a):
     assert len(set(names.tolist())) == n
     fut = T["imit"][sel].astype(np.float32)
     assert np.isfinite(fut).all()
+    assert not excl & set(sc.tolist()), "--exclude: an excluded scene in the pool"
     hard = set(scenes_of([a.hard])) if a.hard else set()
     part = np.array(["hard_train" if s in hard else "train160" for s in sc])
     # ---- gates
@@ -383,10 +430,10 @@ def cmd_pack(a):
              rows=n, scenes=int(len(np.unique(sc))), turns=int(sum(len(v["used"]) for v in info.values())),
              rows_by_part={p: int((part == p).sum()) for p in ("train160", "hard_train")},
              rows_by_topo={c: int((TP == c).sum()) for c in np.unique(TP)},
-             turns_by_topo={c: int(sum(u["topo"] == c for v in info.values() for u in v["used"])) for c in np.unique(TP)},
+             turns_by_topo={c: int(sum(u.get("topo") == c for v in info.values() for u in v["used"])) for c in np.unique(TP)},
              rows_by_d_entry={"> 40 m": int((DE > 40).sum()), "40 .. 20": int(((DE <= 40) & (DE > 20)).sum()), "20 .. 0": int(((DE <= 20) & (DE > 0)).sum()),
                               "in junction (<= 0)": int((DE <= 0).sum())},
-             human_entry_speed_median={f"v_log_{d}": float(np.nanmedian([u[f"v_log_{d}"] for v in info.values() for u in v["used"]] or [np.nan]))
+             human_entry_speed_median={f"v_log_{d}": float(np.nanmedian([u[f"v_log_{d}"] for v in info.values() for u in v["used"] if f"v_log_{d}" in u] or [np.nan]))
                                        for d in (40, 20, 0)},
              G_route=dict(rows_with_route0=int(np.isfinite(r0d).sum()), share_le_005=float((r0d[np.isfinite(r0d)] <= R0TOL).mean()),
                           max=float(np.nanmax(r0d)), feat_ok=float((F[:, 0::5].sum(1) > 0).mean())),
@@ -399,6 +446,8 @@ def cmd_pack(a):
     G["G_route"]["pass"] = G["G_route"]["share_le_005"] >= 0.99
     G["G_road"]["pass"] = G["G_road"]["demo_cross_share"] <= 0.01
     G["G_speed"]["pass"] = G["G_speed"]["within_10pct"] >= 0.99
+    v0s = T["v0"][sel].astype(float)
+    G["v0"] = dict(window=a.window, p50=float(np.median(v0s)), p90=float(np.quantile(v0s, 0.9)), max=float(v0s.max()), ge16=int((v0s >= 16).sum()))
     if not a.gates_only:
         pool, warp = CR / f"on1_{a.name}", CR / f"on1_{a.name}@warp"
         pool.mkdir(parents=True, exist_ok=True), warp.mkdir(parents=True, exist_ok=True), FEAT.mkdir(parents=True, exist_ok=True)
@@ -557,6 +606,9 @@ if __name__ == "__main__":
     p.add_argument("--name", default="PAIT"), p.add_argument("--cache", required=True), p.add_argument("--route", required=True)
     p.add_argument("--scenes", nargs="+", required=True), p.add_argument("--hard", default=""), p.add_argument("--out", required=True)
     p.add_argument("--gates-only", action="store_true")
+    p.add_argument("--window", default="turn", choices=("turn", "straight"), help="row window: the turn window (PAIT) or the open fast straight road (PAITV)")
+    p.add_argument("--v-min", type=float, default=12.0, help="--window straight: minimum t0 speed (m/s)")
+    p.add_argument("--exclude", nargs="*", default=[], help="scene list files never packed")
     p = sub.add_parser("merge")
     p.add_argument("--out", required=True), p.add_argument("--pools", nargs="+", required=True)
     p = sub.add_parser("r1")

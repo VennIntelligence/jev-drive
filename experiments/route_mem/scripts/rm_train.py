@@ -34,6 +34,19 @@ Next-round addition (2026-10-13, experiments/route_follow/plans/2026-10-13-allro
             (research/next-round/steer-long.md 4.4: the plan follows its own speed history). on_train's --ego-drop (the whole EGO_STATE,
             yaws included) stays refused here. 0 = off: no operation is added.
 
+SLOW S1 / S2 addition (2026-10-15, experiments/route_follow/plans/2026-10-15-slow-s1s2-prereg.md):
+  --ego-drop-open   with --ego-drop-speed P: the speed history is zeroed only on the drawn rows that are OPEN (the same draw from [seed, 0, 71],
+            then masked): pool rows by on_lon's `p_open_design` (no A-eligible actor, no eligible stop line, no eligible turn peak within 60 m)
+            from --open-pack (default on_lon.pack_path(<POOL>)), offline rows (normal and yaw-rate) by rf_lonol.py's `free` cell (no A-eligible
+            actor <= 40 m, no stop line of any type <= 60 m, route turn over 60 m < 30 deg, speed >= 2 m/s) joined by token from --open-cells;
+            a row without a label (no token match, a pool row absent from the pack, a demonstration pool's rows) is never dropped. Names of a
+            merged pool (on:<prefix>:<name>, tab `pool`) are matched without the prefix. Logged: the open / labelled share of every row class
+            in the store and per batch (non-anchor rows) and the dropped share, `drop/*` scalars, a summary block `ego_drop_open`. Off: the
+            --ego-drop-speed path exactly as before (no operation added).
+  --on-weight with weight 0   rows of weight 0 are never drawn; when they are the pool's last rows and every other weight is equal, the draw
+            is the uniform draw over the rest (orng.choice(n_rest, k)), i.e. bit for bit the draw of the pool without them (gate of the
+            merged on1_L18RB0 + on1_PAITV pool against S1).
+
 Turning-school addition (2026-10-13, experiments/route_follow/plans/2026-10-13-turning-school-prereg.md):
   --on-weight KEY=VALUE:W,...   pool rows are drawn with probability proportional to the product of W over the matching terms (string keys of
             the pool's tab.npz, e.g. src=synthetic:0.5,topo=straight_exit:2; a row without the key or value has factor 1): the expected
@@ -448,7 +461,7 @@ def draw_weights(tb, on_weight="", cap=0.0, cap_in=""):
         w[sel] = cap_share(w[sel], g, cap)
         assert abs(w[sel].sum() - m0) <= 1e-9 * m0
         rec = dict(cap=cap, cap_in=cap_in or "all", cap_rows=int(sel.sum()), scenes=len(before), before=before, after=group_shares(w[sel], g))
-    assert (w > 0).all(), "--on-weight / --on-cap-scene: weights"
+    assert (w >= 0).all() and w.sum() > 0, "--on-weight / --on-cap-scene: weights"
     if "pool" in tb.files:
         rec["pool_share"] = group_shares(w, tb["pool"])
     return w, rec
@@ -498,6 +511,65 @@ def cmd_draws(a):
     print(json.dumps(dict(pool=a.on, rows=len(tb["names"]), on_weight=a.on_weight, **rec), indent=1))
 
 
+def open_rows(a, ns, dev):
+    """--ego-drop-open: per store row OPEN.open (bool, unlabelled rows False) and OPEN.cls (0 offline normal, 1 yaw-rate, 2 pool) on dev, and the
+    store-level record (rows / labelled / open per class)."""
+    import torch
+    from types import SimpleNamespace
+    from jevdrive.common import data_dir
+    import on_lon
+    S, on0, n = ns.S, ns.on0, ns.S.n
+    names = S.tab["names"]
+    cls = np.zeros(n, np.int8)
+    cls[np.r_[ns.tr_t, ns.dv_t].astype(int)] = 1
+    cls[on0:] = 2
+    lab, opn = np.zeros(n, bool), np.zeros(n, bool)
+    C = np.load(a.open_cells if a.open_cells.startswith("/") else data_dir() / a.open_cells)
+    cn, cf = C["names"].astype(str), C["free"].astype(bool)
+    assert len(set(cn.tolist())) == len(cn), "cells: tokens not unique"
+    o = np.argsort(cn)
+    q = np.searchsorted(cn[o], names[:on0].astype(str)).clip(0, len(cn) - 1)
+    hit = cn[o][q] == names[:on0].astype(str)
+    lab[:on0], opn[:on0] = hit, hit & cf[o][q]
+    rec = dict(cells=str(a.open_cells), pack="")
+    if on0 < n:
+        from jevdrive.common import data_dir as dd_
+        pdir = dd_() / "runs/op_parity/cache" / a.on
+        tb = np.load(pdir / "tab.npz")
+        pk = _pl.Path(a.open_pack) if a.open_pack else on_lon.pack_path(pdir)
+        pk = pk if pk.is_absolute() else dd_() / pk
+        z = np.load(pk)
+        strip = lambda v: v[3:] if v.startswith("on:") else v  # noqa: E731
+        pos = {strip(x): i for i, x in enumerate(z["names"].astype(str).tolist())}
+        pn = tb["names"].astype(str).tolist()
+        if "pool" in tb.files:                                        # merged pool: on:<prefix>:<name>
+            pn = [x[len(f"on:{p}:"):] if x.startswith(f"on:{p}:") else strip(x) for x, p in zip(pn, tb["pool"].astype(str).tolist())]
+        else:
+            pn = [strip(x) for x in pn]
+        j = np.array([pos.get(x, -1) for x in pn])
+        po = z["p_open_design"].astype(bool)
+        lab[on0:], opn[on0:] = j >= 0, (j >= 0) & po[np.maximum(j, 0)]
+        rec["pack"] = str(pk)
+    for c, k in enumerate(("off", "yr", "pool")):
+        m = cls == c
+        rec[k] = dict(rows=int(m.sum()), labelled=int((lab & m).sum()), open=int((opn & m).sum()), open_share=float(opn[m].mean()) if m.any() else None)
+    t = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
+    return SimpleNamespace(open=t(opn), cls=t(cls.astype(np.int64))), rec
+
+
+def drop_rec(acc, p):
+    """Accumulated --ego-drop-open counts -> realised dropped share vs the expected p x open share, per class open shares."""
+    v = acc.cpu().numpy()
+    na, dr = v[0], v[1]
+    op = v[3] + v[5] + v[7]
+    out = dict(rows=int(na), dropped=int(dr), dropped_share=float(dr / max(na, 1)), open_share=float(op / max(na, 1)), expected=float(p * op / max(na, 1)))
+    out["ratio_to_expected"] = float(out["dropped_share"] / out["expected"]) if out["expected"] > 0 else None
+    for c, k in enumerate(("off", "yr", "pool")):
+        out[f"open_share_{k}"] = float(v[3 + 2 * c] / v[2 + 2 * c]) if v[2 + 2 * c] > 0 else None
+        out[f"rows_{k}"] = int(v[2 + 2 * c])
+    return out
+
+
 def cmd_train(a):
     import torch
     import pp_train as T
@@ -544,6 +616,12 @@ def cmd_train(a):
         assert len(tb["names"]) == ns.n_on, "--on-weight: pool rows"
         w, caprec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
         pw = w / w.sum()
+    upre = 0                                                          # weight-0 rows at the end, equal weights elsewhere: the plain uniform draw
+    if pw is not None and (pw == 0).any():
+        m0 = int((pw > 0).sum())
+        if (pw[:m0] > 0).all() and (pw[:m0] == pw[0]).all():
+            upre = m0
+    OPEN, orec = open_rows(a, ns, dev) if a.ego_drop_open else (None, {})
 
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
 
@@ -554,7 +632,8 @@ def cmd_train(a):
         an = rng.random(nB - k_ho - k_on) < cfg.d_frac
         an[nN:] = False
         if k_on:
-            i = orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None else orng.choice(ns.n_on, k_on, replace=True, p=pw)
+            i = (orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None else orng.choice(upre, k_on, replace=upre < k_on) if upre
+                 else orng.choice(ns.n_on, k_on, replace=True, p=pw))
             sha.update(i.astype("<i8").tobytes())
             r, an = np.concatenate([r, ns.on0 + i]), np.concatenate([an, np.zeros(k_on, bool)])
         if k_ho:
@@ -589,12 +668,17 @@ def cmd_train(a):
                  f"train {len(tr_o)} normal + {len(tr_t)} yaw-rate rows, dev {len(dv_o)} + {len(dv_t)}; per batch {nN} normal, {k_yr} yaw-rate, "
                  f"{k_on} on-policy (mode {ns.mode or 'off'}; {json.dumps(ns.onrec)}); feature rows ok {json.dumps(okc)}")
         if pw is not None:
-            run.info(f"--on-weight {a.on_weight}: pool row draw probability min {pw.min() * ns.n_on:.3f} / max {pw.max() * ns.n_on:.3f} x uniform")
+            run.info(f"--on-weight {a.on_weight}: pool row draw probability min {pw.min() * ns.n_on:.3f} / max {pw.max() * ns.n_on:.3f} x uniform"
+                     + (f"; weight 0 on the last {ns.n_on - upre} rows: uniform draw over the first {upre}" if upre else ""))
         if caprec:
             run.info(f"draw shares: {json.dumps(caprec)}")
             run.summary.update(draw_shares=caprec)
         if a.ego_drop_speed > 0:
-            run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]")
+            run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]"
+                     + (f"; OPEN rows only (--ego-drop-open): {json.dumps(orec)}" if a.ego_drop_open else ""))
+            if a.ego_drop_open:
+                run.summary.update(ego_drop_open=orec)
+                dacc = torch.zeros(8, dtype=torch.float64, device=dev)    # non-anchor rows / dropped / per class (off, yr, pool): rows, open
         run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
         if lane_on or lc_on:
             run.info(f"route v2: layout {'ordered' if ns.head.get('order') else 'old'}; lane {a.lane_lam} dz {a.lane_dz} neg {a.lane_neg} shift "
@@ -656,6 +740,12 @@ def cmd_train(a):
                     ego[idx, RM.EGO_DIM:] = fin.to(ego.dtype)
             if a.ego_drop_speed > 0:
                 dm = torch.as_tensor(erng.random(len(r)) < a.ego_drop_speed, device=dev)
+                if a.ego_drop_open:                                   # the same draw, masked to the open rows
+                    op, cl = OPEN.open[rows], OPEN.cls[rows]
+                    dm = dm & op
+                    na = ~anchor[:len(r)]
+                    bs_ = torch.stack([na.sum(), (dm & na).sum()] + [x for c in range(3) for x in ((na & (cl == c)).sum(), (na & op & (cl == c)).sum())]).double()
+                    dacc += bs_
                 ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
             out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
             if lc_on:
@@ -686,6 +776,12 @@ def cmd_train(a):
                         g_lc = torch.autograd.grad(scaler.scale(lc_term), ap_lc, retain_graph=True, allow_unused=True)
                     else:
                         total = total + lc_term
+            if a.ego_drop_speed > 0 and a.ego_drop_open:              # logging only
+                Ls["drop/share"] = bs_[1] / bs_[0].clamp_min(1)
+                for c, q in enumerate(("off", "yr", "pool")):
+                    if bs_[2 + 2 * c] > 0:
+                        Ls[f"drop/open_{q}"] = bs_[3 + 2 * c] / bs_[2 + 2 * c]
+                Ls["drop/open_all"] = (bs_[3] + bs_[5] + bs_[7]) / bs_[0].clamp_min(1)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
@@ -706,6 +802,10 @@ def cmd_train(a):
                 el = time.time() - t0
                 rn = float(model.adapter.route.out.weight.norm())
                 run.scalars({f"loss/{q}": v for q, v in mm.items()} | {"throughput/steps_per_s": (step + 1) / el, "route/out_norm": rn}, step + 1)
+                if a.ego_drop_open and a.ego_drop_speed > 0 and ((step + 1) % 500 == 0 or step + 1 == cfg.steps):
+                    dd = drop_rec(dacc, a.ego_drop_speed)
+                    run.info(f"ego-drop-open after {step + 1} steps: {json.dumps(dd)}")
+                    run.summary.update(ego_drop_open_realised=dd)
                 if (step + 1) % 100 == 0 or step + 1 == cfg.steps:
                     run.info(f"step {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in mm.items() if "/" not in q) + f"; route out |W| {rn:.4f}"
                              + (f"; on_hash {hsh}" if k_on else "") + f"; {(step + 1) / el:.2f} it/s, {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
@@ -820,6 +920,9 @@ if __name__ == "__main__":
         p.add_argument("--on-cap-scene", type=float, default=0.0, help="max share of one scene (tab `log`) in the cap subset's draws (0 = off)")
         p.add_argument("--on-cap-in", default="", help="KEY=VALUE: the pool rows the cap applies to (default: all pool rows)")
         p.add_argument("--ego-drop-speed", type=float, default=0.0, help="share of non-anchor rows with the ego speed history zeroed (training only)")
+        p.add_argument("--ego-drop-open", action="store_true", help="--ego-drop-speed only on OPEN rows (SLOW S1; docstring)")
+        p.add_argument("--open-cells", default="runs/route_follow/lon_diag/openloop/cells/cells.npz", help="rf_lonol cells (offline rows' `free`)")
+        p.add_argument("--open-pack", default="", help="on_lon pack with p_open_design for the pool rows (default on_lon.pack_path(<POOL>))")
         for t in ("lead", "curve", "stop"):
             p.add_argument(f"--lon-{t}", type=float, default=0.0, help=f"weight of on_lonsafe's {t} term on the pool rows (0 = off)")
         p.add_argument("--prefetch", type=int, default=4)
@@ -856,6 +959,7 @@ if __name__ == "__main__":
     assert not a.on_cap_scene or (a.on and 0 < a.on_cap_scene < 1), "--on-cap-scene: needs --on, a share in (0, 1)"
     assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop (--ego-drop-speed drops the speed history only)"
     assert 0 <= a.ego_drop_speed < 1, "--ego-drop-speed is a share in [0, 1)"
+    assert not getattr(a, "ego_drop_open", False) or a.ego_drop_speed > 0, "--ego-drop-open: needs --ego-drop-speed"
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False
