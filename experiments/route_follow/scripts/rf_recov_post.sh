@@ -29,12 +29,15 @@ sub() { local log=$1 name=$2; shift 2; local id
        --log-dir $(dirname $log)/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
   echo "$id $name" >> $log; echo "$id"; }
 jstate() { .venv/bin/python - "$@" <<'PY'
-import sys
+import sys, time
 from jevdrive.cl import pool as P
-st, _, inbox, _ = P.snapshot()
-ib = {x["id"] for x in inbox}
-for i in sys.argv[1:]:
-    print(i, st["jobs"][i]["state"] if i in st["jobs"] else ("inbox" if i in ib else "unknown"))
+for _ in range(12):     # the dispatcher unlinks an inbox file before it saves state.json: a fresh id can be in neither for a few s
+    s = P.job_states(sys.argv[1:])
+    if "unknown" not in s.values():
+        break
+    time.sleep(5)
+for i, v in s.items():
+    print(i, v)
 PY
 }
 okafter() {  # ids...: every id must be a known pool job that has not failed / been cancelled
