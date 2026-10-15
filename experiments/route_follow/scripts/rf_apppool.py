@@ -214,7 +214,8 @@ def label_pai(a):
     tb = np.load(CR / f"on1_{a.pool}" / "tab.npz")
     RT = dict(np.load(CR / f"on1_{a.pool}" / "route.npz"))
     assert np.array_equal(RT["tokens"], tb["names"])
-    C = np.load(a.cache)
+    Cz = np.load(a.cache)
+    C = {k: Cz[k] for k in ("scenes", "sid", "k", "ego_in", "e0", "v0", "path", "path_ok", "path_h", "path_v", "after_event")}   # npz members load per access
     names = tb["names"]
     key = {(sc, int(k)): i for i, (sc, k) in enumerate(zip(C["scenes"][C["sid"]].tolist(), C["k"].tolist()))}
     ci = np.array([key[(n.split(":")[2], int(n.split(":")[3]))] for n in names.tolist()])
