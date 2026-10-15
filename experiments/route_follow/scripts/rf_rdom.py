@@ -577,23 +577,26 @@ def figure(X, O, fig, tag):
                 pts = np.c_[x + c * cr[:, 0] - s * cr[:, 1], y + s * cr[:, 0] + c * cr[:, 1]]
                 b.plot(-pts[:, 1], pts[:, 0], color="tab:red", alpha=al, lw=1)
         v, P, _ = feats_pts(F)
-        b.plot(-P[v, 1], P[v, 0], ".", color="tab:blue", ms=3, alpha=0.5)
+        b.plot(-P[v, 1], P[v, 0], "o", color="tab:blue", ms=4, mfc="none", alpha=0.7, zorder=5)
         i = np.flatnonzero(SW["row"] == row)
         if len(i) and SW["ok"][i[0]]:
             vs, Ps, _ = feats_pts(SW["f"][i[0]])
-            b.plot(-Ps[vs, 1], Ps[vs, 0], ".", color="tab:green", ms=3, alpha=0.5)
+            b.plot(-Ps[vs, 1], Ps[vs, 0], "o", color="tab:green", ms=4, mfc="none", alpha=0.7, zorder=5)
         for c, col in (("served", "tab:blue"), ("zero", "tab:orange"), ("swap", "tab:green")):
             q = PL[c][row]
             if np.isfinite(q).all():
                 b.plot(-np.r_[0, q[:, 1]], np.r_[0, q[:, 0]], "-o", color=col, ms=3, lw=1.8, label=f"{c}{' contact' if p[c + '_any'] else ''}")
         b.add_patch(plt.Rectangle((-1.1485, -1.127), 2.297, 5.176, fc="none", ec="k"))
-        b.set_xlim(20, -20)
+        b.set_xlim(-20, 20)
+        b.set_xlabel("lateral (m, left to the left)")
         b.set_ylim(-8, 48)
         b.set_aspect("equal")
         b.legend(fontsize=7, loc="lower left")
         b.set_title(f"zeroed moves 4 s end {p.zero_lat4:.2f} m; swap {p.swap_lat4:.2f} m", fontsize=9)
     fg.suptitle(f"ROUTE-DOMINANCE: {tag}, plans at fixed frames under served (blue), zeroed (orange), swapped (green) route memory; dots = route memory; "
-                "red = agent boxes at t0 (solid) / 2 s (faint); grey line = road raster edge", fontsize=10)
+                "red = agent boxes at t0 (solid) / 2 s (faint); grey = road raster", fontsize=10)
+    fg.text(0.5, 0.005, "Panels 1-3: failing states 0.5-3 s before a turn zero; panel 4: a completed turn. 'contact' = the plan's footprint leaves the road raster "
+            "or overlaps an agent box within 4 s", fontsize=10)
     fg.tight_layout()
     fig.parent.mkdir(parents=True, exist_ok=True)
     fg.savefig(fig, dpi=110)
