@@ -5,6 +5,7 @@
 #                          identity re-run without the switch on 2 scenes (rf_p4.py s1 vs r281/rsg), smoke a 0.3 on the same 2 scenes
 #                          (rf_intent.py ihcheck), and only when both are clean the a 0.3 run and the a 0.15 run on the scene list (one
 #                          stack, back to back). Foreground: start it in tmux. State in $O/CHAIN.log; STOP on a failed check.
+#   rf_intent.sh resume    (CARD=<g>) wait for $O/smoke to end, then the checks and the a runs as in chain (prereg Amendment 1)
 #   rf_intent.sh read <a>  follow extract, rf_v2pai.py turns / table, spins, rf_intent.py extract (identity + run) -> $O/a<a>/ and the small
 #                          outputs to experiments/route_follow/results/intent_hold/ (Tokyo working tree: copy to the Mac, commit there)
 # Env: O (/data/runs/route_night/intent_hold), CARD (skip the wait: use this card).
@@ -38,9 +39,27 @@ waitcard() {  # -> a card free for 120 s on stdout
   done
 }
 
-serve() { echo "-e JEV_VCONT=1.0 -e JEV_LEAD=1${1:+ -e JEV_INTENT_HOLD=1 -e JEV_IH_A=$1}"; }
+# JEV_TRACK=0 pinned (prereg Amendment 1): decision 309 made `gate` the driver default; the identity r281/rsg is the no-gate path
+serve() { echo "-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e JEV_TRACK=0${1:+ -e JEV_INTENT_HOLD=1 -e JEV_IH_A=$1}"; }
 
-case ${1:?chain|read} in
+runs() {  # card $1: the identity / smoke checks, then a 0.3 and a 0.15 back to back
+  local g=$1 a R
+  python3 "$here/rf_p4.py" s1 --run "$O/id" --ref "$REF" > "$O/id/s1.txt" 2>&1
+  python3 "$here/rf_intent.py" ihcheck --run "$O/smoke" --ref "$REF" > "$O/smoke/ihcheck.txt" 2>&1
+  log "identity: $(tail -1 "$O/id/s1.txt")"; log "smoke: $(tail -1 "$O/smoke/ihcheck.txt")"
+  grep -q "S1: 2 / 2" "$O/id/s1.txt" || { log "STOP: identity re-run not bit-identical"; touch "$O/STOP"; exit 1; }
+  [[ -f $O/smoke/DONE ]] && grep -q "max |diff| 0.0e+00$" "$O/smoke/ihcheck.txt" || { log "STOP: smoke failed (no DONE or a pre-hold plan differs)"; touch "$O/STOP"; exit 1; }
+  for a in 0.3 0.15; do
+    R=$O/a$a; mkdir -p "$R"; git -C "$repo" log --oneline -1 > "$R/COMMIT"
+    log "a $a: $(wc -l < "$L") scenes on card $g, serve $(serve $a)"
+    SERVE="$(serve $a)" RUNPFX=ih${a#0.}- CHUNK=25 CARDS=$g bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$R" "$T" "$L" > "$R/eval.out" 2>&1
+    python3 "$here/rf_intent.py" ihcheck --run "$R" --ref "$REF" > "$R/ihcheck.txt" 2>&1
+    log "a $a done: $(tail -1 "$R/STATUS" 2>/dev/null); $(tail -1 "$R/ihcheck.txt")"
+  done
+  date > "$O/CHAIN_DONE"
+}
+
+case ${1:?chain|resume|read} in
 chain)
   g=${CARD:-$(log "waiting for a card" >&2; waitcard)}
   log "card $g free: identity + smoke start ($(git -C "$repo" log --oneline -1 | cut -c1-60))"
@@ -50,19 +69,13 @@ chain)
     SERVE="$(serve $([[ $x == smoke ]] && echo 0.3))" RUNPFX=ih${x:0:1}- CHUNK=2 CARDS=$g \
       bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$R" "$T" "$O/smoke2.txt" > "$R/eval.out" 2>&1
   done
-  python3 "$here/rf_p4.py" s1 --run "$O/id" --ref "$REF" > "$O/id/s1.txt" 2>&1
-  python3 "$here/rf_intent.py" ihcheck --run "$O/smoke" --ref "$REF" > "$O/smoke/ihcheck.txt" 2>&1
-  log "identity: $(tail -1 "$O/id/s1.txt")"; log "smoke: $(tail -1 "$O/smoke/ihcheck.txt")"
-  grep -q "S1: 2 / 2" "$O/id/s1.txt" || { log "STOP: identity re-run not bit-identical"; touch "$O/STOP"; exit 1; }
-  [[ -f $O/smoke/DONE ]] && grep -q "max |diff| 0.0e+00$" "$O/smoke/ihcheck.txt" || { log "STOP: smoke failed (no DONE or a pre-hold plan differs)"; touch "$O/STOP"; exit 1; }
-  for a in 0.3 0.15; do
-    R=$O/a$a; mkdir -p "$R"; git -C "$repo" log --oneline -1 > "$R/COMMIT"
-    log "a $a: $(wc -l < "$L") scenes on card $g"
-    SERVE="$(serve $a)" RUNPFX=ih${a#0.}- CHUNK=25 CARDS=$g bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$R" "$T" "$L" > "$R/eval.out" 2>&1
-    python3 "$here/rf_intent.py" ihcheck --run "$R" --ref "$REF" > "$R/ihcheck.txt" 2>&1
-    log "a $a done: $(cat "$R/STATUS" 2>/dev/null | tail -1); $(tail -1 "$R/ihcheck.txt")"
-  done
-  date > "$O/CHAIN_DONE"
+  runs "$g"
+  ;;
+resume)  # Amendment 1: after the smoke of an interrupted chain (card CARD), as soon as it ends: the checks and the a runs, no idle gap
+  g=${CARD:?CARD}
+  until [[ -f $O/smoke/DONE || -f $O/smoke/ERROR ]]; do sleep 5; done
+  log "resume on card $g ($(git -C "$repo" log --oneline -1 | cut -c1-60))"
+  runs "$g"
   ;;
 read)
   a=${2:?a}; R=$O/a$a; l=ih$a; W=$RES/intent_hold

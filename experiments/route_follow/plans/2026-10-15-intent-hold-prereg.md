@@ -87,3 +87,13 @@ mechanism passing -> the creep is removed but is not what stops the turns. Mecha
 loop; nothing is concluded about re-anchoring.
 
 Evidence ceiling: one checkpoint, one seed, 49 scenes; a serving-side diagnostic of where the turn fails, not a recipe.
+
+## Amendment 1 (2026-10-15 16:55 JST, before any a-run; the identity re-run and the smoke were running)
+
+Decision 309 (commit 7f85c4a7) made `JEV_TRACK=gate` (track_ref v8) the PAI driver default when JEV_TRACK is unset. The identity r281/rsg is
+a no-gate read (`JEV_TRACK` 0), and intent_hold asserts JEV_TRACK off. `rf_intent.sh serve()` now pins `-e JEV_TRACK=0` on every run of
+this diagnostic, so a later pull cannot change its serving mid-run: **this diagnostic compares against the no-gate reference; the
+interaction with the gate is a separate check.** The identity re-run (`id`, done 16:49) and the smoke (`smoke`, a 0.3) were launched from
+the tree at c6cb69e5, which predates 7f85c4a7, so they served the no-gate path without the pin. The running chain was frozen (SIGSTOP) during
+the smoke before it could start an unpinned a-run, and replaced by `rf_intent.sh resume` (CARD 0): it waits for the smoke to end and runs
+the same checks and the a 0.3 / a 0.15 runs with the pin, back to back. Nothing else changes.
