@@ -254,7 +254,7 @@ def cmd_b(a):
         assert (Z["names"] == names).all() and (Lb["names"] == names).all() and (tab["names"] == names).all()
         N = len(names)
         scene, k = M["scene"].astype(str), M["k"].astype(int)
-        logu = M["logu"].astype(str)
+        logu, logf = M["logu"].astype(str), M["log"].astype(str)
         served = M["poses"].astype(np.float32)
         chk_served = float(np.abs(served - tab["served"]).max())
         pack = {}
@@ -288,11 +288,14 @@ def cmd_b(a):
         stop_ex_e, stop_ex_s = np.full(N, np.nan, np.float32), np.full(N, np.nan, np.float32)
         stop_ex_e[stopr], stop_ex_s[stopr] = SC["expert"], SC["served"]
         Dg = disagree(served, E)
-        df = pd.DataFrame(dict(name=names, scene=scene, log=logu, k=k, dev=Lb["dev"].astype(bool), replay=k <= 1, seg=seg,
+        xh = np.degrees(E[:, 7, 2])
+        df = pd.DataFrame(dict(name=names, scene=scene, log=logf, logu=logu, k=k, dev=Lb["dev"].astype(bool), replay=k <= 1, seg=seg,
                                speed=M["speed"].astype(float), s0=s0, entry=ent, exit=ext, has=has, xp_s=info[:, 0], xp_lat=info[:, 1],
                                xp_stop=info[:, 2], xp_hits=info[:, 3], xp_vend=info[:, 4], xp_err=info[:, 5], dlog=dlog, okA=okA, okR=okR,
                                **{f"{c}_{q}": C[c][q] for c in ("served", "expert") for q in ("agent", "road", "agent2", "road2", "t0")},
-                               stop_ex_xp=stop_ex_e, stop_ex_sv=stop_ex_s, f_stop=Lb["f_stop"].astype(bool), d_stop=Lb["d_stop"], **Dg))
+                               stop_ex_xp=stop_ex_e, stop_ex_sv=stop_ex_s, xp_h4=xh,
+                               turn_dh4=np.where(np.abs(xh) > 10, np.sign(xh) * ((np.degrees(served[:, 7, 2]) - xh + 180) % 360 - 180), np.nan),
+                               turn_lat4=np.where(np.abs(xh) > 10, np.sign(xh) * Dg["lat4"], np.nan), f_stop=Lb["f_stop"].astype(bool), d_stop=Lb["d_stop"], **Dg))
         df["xp_free"] = df.has & ~df.expert_agent & ~df.expert_road & ~df.expert_t0
         df["xp_free2"] = df.has & ~df.expert_agent2 & ~df.expert_road2 & ~df.expert_t0
         df["sv_free"] = ~df.served_agent & ~df.served_road & ~df.served_t0
@@ -300,6 +303,7 @@ def cmd_b(a):
         df["disagree"] = (df.d2 > D2_M) | (df.dh4.abs() > H4_DEG)
         df["cand"] = df.xp_free & df.stop_legal & df.disagree
         df["cand_nohit"] = df.cand & (df.xp_hits == 0)                     # the expert's plan not shortened by its yield rule
+        df["fix"] = df.xp_free & df.stop_legal & ~df.sv_free                # the expert's plan is clean where the served plan contacts
         df["cand_lat"] = df.xp_free & df.stop_legal & ((df.lat2.abs() > D2_M) | (df.dh4.abs() > H4_DEG))   # lateral / heading only
         # failure windows: decision 319's units and route_dominance's states
         U = list(csv.DictReader(open(R_ / "experiments/route_follow/results/rewind_onpol_all/units.csv")))
@@ -359,6 +363,10 @@ def cmd_b(a):
                         yield_nohit_rows=int(e.cand_nohit.sum()), yield_nohit_scenes=int(e[e.cand_nohit].scene.nunique()),
                         yield_lat_rows=int(e.cand_lat.sum()), yield_lat_scenes=int(e[e.cand_lat].scene.nunique()),
                         yield_lat_logs=int(e[e.cand_lat].log.nunique()), yield_lat_train_rows=int((e.cand_lat & ~e.dev).sum()),
+                        fix_rows=int(e.fix.sum()), fix_scenes=int(e[e.fix].scene.nunique()), fix_logs=int(e[e.fix].log.nunique()),
+                        fix_share_of_sv_contact=float(e.fix.sum() / max((~e.sv_free).sum(), 1)),
+                        turning=int(e.turn_dh4.notna().sum()), turn_dh4_med=float(e.turn_dh4.median()), turn_dh4_ci=ci(e.turn_dh4, e.log.to_numpy()),
+                        turn_lat4_med=float(e.turn_lat4.median()),
                         lat2_med=float(e.lat2.abs().median()), lon2_med=float(e.lon2.abs().median()), lon4_med_signed=float(e.lon4.median()))
         rec = dict(pool="on1_L18RSG", rows=N, scenes=int(len(set(scene))), packs=len(pack), scenes_no_pack=len(miss), no_pack=miss[:50],
                    expert_rows=int(has.sum()), expert_errors=int((info[:, 5] == 1).sum()), served_vs_tab=chk_served,
