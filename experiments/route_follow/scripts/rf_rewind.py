@@ -460,8 +460,9 @@ def n_roll(job):
     R = F.dedup(cap["r"][3])
     S = F.stations(R)
     C = F.ctrl(D, summ["rollout_id"])
+    xs = any("expert" in r for r in recs)                 # the handover: the expert's first decision; the self rewind (no expert): the perturbation's
     o = dict(tag=tag, scene=scene, run=D, row=row, dec=dec, R=R, ctrl=C, rid=summ["rollout_id"],
-             drv=[dict(k=int(r["k"]), now=int(r["now"]), t0=int(r["t0"]), served=r["poses"], on="expert" in r or "perturb" in r,
+             drv=[dict(k=int(r["k"]), now=int(r["now"]), t0=int(r["t0"]), served=r["poses"], on="expert" in r if xs else "perturb" in r,
                        expert=r.get("expert"), perturb=r.get("perturb")) for r in recs])
     kz = row["kz"] if row["kz"] >= 0 else None
     o["tz"] = RF.T0 + RF.DT * kz if kz is not None else np.inf
