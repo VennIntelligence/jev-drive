@@ -494,6 +494,140 @@ def fig(T, D, png):
     print("figure ->", png)
 
 
+# ---------------------------------------------------------------- flow (Mac): Reading 2
+FM_TAGS, RG_TAGS = ("FMH-F-s0", "FMH-F-s1"), ("RGH-F-s0", "RGH-F-s1")
+
+
+def paired_sum(a, b, cl, n_boot=N_BOOT, seed=0):
+    """sum(a - b) over paired units with a cluster bootstrap -> [point, lo, hi]."""
+    d = np.asarray(a, float) - np.asarray(b, float)
+    u, inv = np.unique(cl, return_inverse=True)
+    per = np.bincount(inv, weights=d, minlength=len(u))
+    bs = per[np.random.default_rng(seed).integers(0, len(u), (n_boot, len(u)))].sum(1)
+    return [float(d.sum()), float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))]
+
+
+def paired_med(a, b, cl, n_boot=N_BOOT, seed=0):
+    """median(a) - median(b) over paired units with a cluster bootstrap -> [point, lo, hi]."""
+    a, b, cl = np.asarray(a, float), np.asarray(b, float), np.asarray(cl)
+    m = np.isfinite(a) & np.isfinite(b)
+    a, b, cl = a[m], b[m], cl[m]
+    if not len(a):
+        return [np.nan, np.nan, np.nan, 0]
+    u = np.unique(cl)
+    idx = {k: np.flatnonzero(cl == k) for k in u}
+    rng = np.random.default_rng(seed)
+    bs = [np.median(a[r]) - np.median(b[r]) for r in (np.concatenate([idx[k] for k in rng.choice(u, len(u))]) for _ in range(n_boot))]
+    return [float(np.median(a) - np.median(b)), float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5)), int(m.sum())]
+
+
+def flow(a):
+    import pandas as pd
+    import rf_receding as RC
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    res = {}
+    # F1: strict held turns completion
+    S = pd.read_csv(a.follow)
+    S = S[S.turn.astype(str) == "True"].copy()
+    S["tag"] = S.label.str.split("@").str[0]
+    comp = S.pivot_table(index="scene", columns="tag", values="completed", aggfunc="first").astype(float)
+    res["turns_per_tag"] = {t: int(comp[t].notna().sum()) for t in comp.columns}
+    res["completed_per_tag"] = {t: int(comp[t].sum()) for t in comp.columns}
+    fm, rg = [t for t in FM_TAGS if t in comp], [t for t in RG_TAGS if t in comp]
+    C = comp.dropna(subset=fm + rg)
+    cl = C.index.str.rsplit("-", n=1).str[0].to_numpy()
+    f1 = paired_sum(C[fm].mean(1), C[rg].mean(1), cl)
+    res["F1"] = dict(turns=int(len(C)), fm_mean=float(C[fm].mean(1).sum()), rg_mean=float(C[rg].mean(1).sum()), diff=f1, seeds=len(fm),
+                     per_seed={f"{x} - {y}": paired_sum(C[x], C[y], cl) for x, y in zip(fm, rg)},
+                     verdict="supported" if f1[0] >= 4 and f1[1] > 0 else "refuted" if f1[0] <= 1 or f1[2] < 4 else "inconclusive")
+    # F2 + K samples: per decision from the RECEDING held extract
+    recs = pickle.load(open(a.held, "rb"))
+    thk = pickle.load(open(a.thk, "rb")) if a.thk else {}
+    rows, krows = [], []
+    for r in recs:
+        tr, dd = RC.read_turn(r, None)
+        if tr is None:
+            continue
+        R = r["R"]
+        Sx = RC.F.stations(R)
+        sh, hh = RC.F.heading(R, Sx)
+        sg = 1.0 if r["row"]["side"] == "L" else -1.0
+        ent = float(r["row"]["entry"])
+        tk = thk.get(r["rid"])
+        for d in dd:
+            if not (d["approach"] and d["d_e"] <= WIN_M):
+                continue
+            ra = float(sg * np.degrees(np.interp(min(ent - d["d_e"] + d["a4"], sh[-1]), sh, hh) - np.interp(ent - d["d_e"], sh, hh)))
+            o = dict(tag=r["set"], scene=r["scene"], cluster=r["scene"].rsplit("-", 1)[0], completed=tr["completed"], cls=tr["cls"], d_e=d["d_e"],
+                     dpsi=d["dpsi"], h_dpsi=d["h_dpsi"], route_arc=ra, a4=d["a4"], v=d["v"])
+            rows.append(o)
+            if tk is not None:
+                j = int(np.searchsorted(tk["t0"], int(d["t0"])))
+                if j < len(tk["t0"]) and tk["t0"][j] == int(d["t0"]):
+                    ks = np.array([RC.onset(P, sg)[2] for P in tk["th_k"][j]])
+                    krows.append(o | dict(k_dpsi=ks.tolist(), k_sd=float(ks.std()), k_full=int((ks >= PFULL * d["h_dpsi"]).sum()) if d["h_dpsi"] >= H_MIN else -1,
+                                          k_full_arc=int((ks >= PFULL * ra).sum()) if ra >= H_MIN else -1))
+    D = pd.DataFrame(rows)
+    ok, ok2 = D.h_dpsi >= H_MIN, D.route_arc >= H_MIN
+    D["delta"] = np.where(ok, np.clip(1 - D.dpsi / D.h_dpsi.where(ok, np.nan), -1, 2), np.nan)
+    D["delta_arc"] = np.where(ok2, np.clip(1 - D.dpsi / D.route_arc.where(ok2, np.nan), -1, 2), np.nan)
+    D.to_csv(out / "decisions.csv.gz", index=False)
+    Tt = D.groupby(["tag", "scene"]).agg(D=("delta", "median"), D_arc=("delta_arc", "median"), completed=("completed", "first")).reset_index()
+    res["F2"] = {}
+    for col in ("D", "D_arc"):
+        P = Tt.pivot(index="scene", columns="tag", values=col)
+        x = paired_med(P[fm].mean(1), P[rg].mean(1), P.index.str.rsplit("-", n=1).str[0].to_numpy())
+        res["F2"][col] = dict(diff=x[:3], turns=x[3], fm=float(P[fm].mean(1).median()), rg=float(P[rg].mean(1).median()),
+                              per_tag={t: float(P[t].median()) for t in fm + rg})
+    f2 = res["F2"]["D"]["diff"]
+    res["F2"]["verdict"] = "supported" if f2[0] <= -0.3 and f2[2] < 0 else "refuted" if f2[1] > -0.3 else "inconclusive"
+    # K samples
+    K = pd.DataFrame(krows)
+    res["K"] = {}
+    if len(K):
+        K = K.merge(D[["tag", "scene", "d_e", "delta", "delta_arc"]], on=["tag", "scene", "d_e"], how="left")
+        K.to_csv(out / "ksamples.csv.gz", index=False)
+        for nm, z in (("failing", K[~K.completed & (K.delta >= 0.5)]), ("failed_all", K[~K.completed & (K.k_full >= 0)]),
+                      ("completed", K[K.completed & (K.k_full >= 0)])):
+            if not len(z):
+                res["K"][nm] = dict(n=0)
+                continue
+            share = float((z.k_full >= 1).mean())
+            res["K"][nm] = dict(n=int(len(z)), turns=int(z.scene.nunique()), any_full=share, mean_full=float(z.k_full.mean()),
+                                hist={int(c): int(n) for c, n in z.k_full.value_counts().sort_index().items()}, k_sd=float(z.k_sd.median()),
+                                any_full_arc=float((z[z.k_full_arc >= 0].k_full_arc >= 1).mean()) if (z.k_full_arc >= 0).any() else np.nan,
+                                reading="mode exists, selection missing" if share >= 0.5 else "mode absent" if share < 0.1 else "partial")
+    # F3 from ol_confirm
+    if a.confirm:
+        cj = json.load(open(a.confirm))
+        res["F3"] = {k: v for k, v in cj.get("held18", {}).items() if k in ("FMH-F - RGH-F", "FMH-F-s0 - RGH-F-s0", "FMH-F-s1 - RGH-F-s1", "FMH-F - RSG-L18",
+                                                                              "RGH-F - RSG-L18")}
+    (out / "cl.json").write_text(json.dumps(res, indent=1, default=float) + "\n")
+    fl = lambda v, p=2: f"{v[0]:+.{p}f} [{v[1]:+.{p}f}, {v[2]:+.{p}f}]"  # noqa: E731
+    md = ["# FLOW1 in closed loop: flow head (FMH-F) vs its regression twin (RGH-F), held 460 @18", "",
+          "Prereg `experiments/route_follow/plans/2026-10-15-mode-averaging-prereg.md` (Reading 2). Served by the AlpaSim sh30 driver with the "
+          "trajectory head (thead.pt); G-eq passed on all four tags (see `gate.json`). Paired by scene, CIs clustered by log, B 10 000.", "",
+          f"**F1** (strict held turns completed, {res['F1']['turns']} turns, {res['F1']['seeds']}-seed mean): FM {res['F1']['fm_mean']:.1f}, RG "
+          f"{res['F1']['rg_mean']:.1f}, FM - RG {fl(res['F1']['diff'], 1)}: **{res['F1']['verdict']}**. Per seed: "
+          + "; ".join(f"{k} {fl(v, 0)}" for k, v in res["F1"]["per_seed"].items()) + ". Completed per tag: "
+          + ", ".join(f"{t} {res['completed_per_tag'][t]} / {res['turns_per_tag'][t]}" for t in res["completed_per_tag"]) + ".", "",
+          f"**F2** (approach-window deficit, per-turn median, 2-seed mean per scene): FM {res['F2']['D']['fm']:+.2f}, RG {res['F2']['D']['rg']:+.2f}, "
+          f"FM - RG {fl(res['F2']['D']['diff'])} ({res['F2']['D']['turns']} turns): **{res['F2']['verdict']}**. Arc-matched (Amendment 3): FM "
+          f"{res['F2']['D_arc']['fm']:+.2f}, RG {res['F2']['D_arc']['rg']:+.2f}, FM - RG {fl(res['F2']['D_arc']['diff'])}.", ""]
+    if res.get("F3"):
+        md += ["**F3** (held 460 @18, FM - RG; mean score, zeros, at-fault zeros, GT distance m; from ol_confirm, see `held18.md`):", ""]
+        md += [f"- {k}: score {fl(v['score'], 4)}, zeros {fl(v['zero'], 1)}, at-fault {fl(v['z_atf'], 1)}, GT {fl(v['gt'], 3)}" for k, v in res["F3"].items()]
+        md.append("")
+    md += ["**K = 8 flow samples** (noise rows 0-7, logged at each closed-loop decision; full = sample dpsi >= 0.6 x human 4 s dpsi):", ""]
+    for nm, z in res["K"].items():
+        if z.get("n"):
+            md.append(f"- {nm}: {z['n']} decisions ({z['turns']} turns), >= 1 full sample on {z['any_full']:.2f} (arc-matched {z['any_full_arc']:.2f}), "
+                      f"mean full samples {z['mean_full']:.2f} of 8, histogram {z['hist']}, median sample sd {z['k_sd']:.1f} deg: {z['reading']}")
+    (out / "cl.md").write_text("\n".join(md) + "\n")
+    print("\n".join(md))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -503,5 +637,8 @@ if __name__ == "__main__":
     r.add_argument("--dec", required=True), r.add_argument("--pai", required=True), r.add_argument("--held", required=True)
     r.add_argument("--rmem", nargs="+", required=True), r.add_argument("--lanes", nargs="+", required=True)
     r.add_argument("--out", required=True), r.add_argument("--fig", default="")
+    f = sp.add_parser("flow")
+    f.add_argument("--follow", required=True), f.add_argument("--held", required=True), f.add_argument("--thk", default="")
+    f.add_argument("--confirm", default=""), f.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"thk": thk, "read": read}[a.cmd](a)
+    {"thk": thk, "read": read, "flow": flow}[a.cmd](a)
