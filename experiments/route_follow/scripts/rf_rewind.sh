@@ -21,6 +21,16 @@
 #                                                      -> <root>/<name>/rewind_train64.{md,csv,json}
 #   rf_rewind.sh train64 <root> read <stage,stage..> <out dir>   the combined read of several stages (job body of a stage's read too)
 #   job body: train64 <root> nsim <run dir> <list> id|xp0|<from file>
+# Self rewind (prereg plans/2026-10-16-rewind-self-prereg.md; rf_rewind.py n-self-*; driver sh30_driver.py with JEV_PERTURB, perturb.py): the same
+# serving, cache and packs as train64 (<T64> = $DATA_DIR/runs/route_follow/rewind_train64); the policy drives to h = k_ref - 2 Delta (Delta 3 / 5 / 8 s),
+# its served plan is transformed (gain g, arc scale s) for N decisions, then its raw plan again; the expert from the same h for comparison.
+#   rf_rewind.sh self <root> units                     pool CPU job: failed units (d316 A without short) + 10 controls -> <root>/self.json, scenes.txt
+#   rf_rewind.sh self <root> stage <name> <list>       one stage, every job queued at once: one GPU job per launch (`id`, + `idB` with SMOKE=1,
+#                                                      `xpD<d>`, `D<d>-g<g>s<s>`; each launch runs the scenes of its file), then read + check
+#                                                      (+ table) after all; AFTER=<job ids> gates the whole stage; VARIANTS / NPERT override
+#                                                      the variants (default g 0.7 / 0.85 / 1.15 / 1.3 x s 0.9 / 1.1, 2 decisions)
+#   rf_rewind.sh self <root> read <stage,stage..> [out dir]   the combined read + table (job body of a stage's read too)
+#   job body: self <root> nsim <run dir> <list> id | xp=<file> | pt=<file>
 # Env: LIST (scene list, default results/pai281/strict36.txt), PACK (expert packs, $DATA_DIR/runs/route_follow/rewind/pack_pai: Tokyo's
 #   pack_pai of the 36 scenes), SMOKE (1: phase B adds `idB`, a second identity session), PRIO (pool priority, 6: below the running lanes),
 #   JEV_PY (python with numpy; jobs run from a worktree without .venv), RW_VRAM (pool declaration, 22; measured peak 19.3 GB = phase B's 3 launches), RW_HIST (history key, alpasim-p4c1). Expert variant XP-L12-E46 (rule_expert defaults: lookahead 1.2 s,
@@ -131,9 +141,67 @@ train64() {
   esac
 }
 
+self_() {
+  local sub=${1:?units|stage|nsim|read}; shift
+  local T64=$D/runs/route_follow/rewind_train64 P4=$D/runs/onpol_long/roll/RSG-L18-s0 W=$O/code AF=280
+  local NP=$D/runs/route_follow/rewind_train64/pack CA=$D/datasets/alpasim_nuplan_long/after280_rw
+  nsub() { local name=$1; shift; local id; id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --owner rewind-self --name "$name" --tries ${TRIES:-2} \
+           --priority ${PRIO:-0} --no-check "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
+           echo "$id $name" >> "$O/jobs.txt"; echo "$id"; }
+  case $sub in
+  units)
+    nsub rws-units --tries 1 --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$O/pool/rws-units" -- \
+      "$APY" "$repo/experiments/route_follow/scripts/rf_rewind.py" n-self-units --out "$O" --scenes "$T64/scenes.txt" --tfail "$T64/tfail.json" \
+      --runs "$(ls -d $P4/c*/run | paste -sd,)" ;;
+  stage)
+    local name=${1:?name} L=${2:?scene list} S tag mode f id all=() aft=()
+    [[ -s $O/self.json && -d $CA ]] || { echo "run self units first (and train64 cache)" >&2; exit 1; }
+    S=$O/$name; [[ ! -e $S/SUBMITTED ]] || { echo "$S already submitted" >&2; exit 1; }
+    [[ -d $W ]] || git -C "$repo" worktree add -q --detach "$W" HEAD || exit 1
+    git -C "$W" checkout -q --detach "$(git -C "$repo" rev-parse HEAD)" || exit 1
+    echo "{\"served\": \"$W\", \"commit\": \"$(git -C "$W" rev-parse HEAD)\", \"dirty\": $(git -C "$W" status --porcelain -uno | grep -c .)}" > "$O/code.json"
+    mkdir -p "$S"; cp "$O/code.json" "$S/code.json"; cp "$L" "$S/list.txt"
+    $PY "$here/rf_rewind.py" n-self-files --units "$O/self.json" --list "$S/list.txt" --out "$S/files" ${VARIANTS:+--variants "$VARIANTS"} \
+      --n ${NPERT:-2} ${SMOKE:+--smoke} > /dev/null || exit 1
+    [[ -n ${AFTER:-} ]] && aft=(--after "$AFTER")
+    local X="bash $W/experiments/route_follow/scripts/rf_rewind.sh self $O"
+    local G=(--vram ${RW_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=${RW_HIST:-alpasim-read4} --env "JEV_PY=$PY" "${aft[@]}")
+    while read -r tag mode f; do
+      [[ $mode == id ]] || cut -d' ' -f1 "$f" > "${f%.txt}.list"
+      id=$(nsub "rws-$tag" "${G[@]}" --log-dir "$S/pool/$tag" -- $X nsim "$S/$tag/c0/run" "$([[ $mode == id ]] && echo "$f" || echo "${f%.txt}.list")" \
+           "$([[ $mode == id ]] && echo id || echo "$mode=$f")") || exit 1
+      all+=("$id")
+    done < "$S/files/launches.txt"
+    nsub rws-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --env "SMOKE=${SMOKE:-}" --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 \
+      --log-dir "$S/pool/read" -- $X read "$S" > /dev/null || exit 1
+    date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 1 )) "$O/jobs.txt" ;;
+  nsim)   # <run dir> <list> id | xp=<file> | pt=<file>: one 30-decision launch of the held-read serving, resumable
+    local R=$1 L=$2 M=$3 E=()
+    if [[ ! -s $L ]]; then mkdir -p "$R"; echo "empty list" > "$R/EMPTY"; exit 0; fi
+    [[ -f $R/aggregate/results-summary.json ]] && { echo "$R done"; exit 0; }
+    case $M in id) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM -u JEV_PERTURB) ;; xp=*) E=(-u JEV_PERTURB JEV_EXPERT=$NP JEV_EXPERT_FROM=${M#xp=}) ;;
+               pt=*) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM JEV_PERTURB=${M#pt=}) ;; *) echo "mode $M" >&2; exit 2 ;; esac
+    rm -rf "$R"; mkdir -p "$R"
+    local B; B=$(cd "$repo" && python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print(" ".join(B.OVERRIDES))')
+    (cd "$repo" && env "${E[@]}" SH30_TAG=RSG-L18-s0 SH30_DUMP=0 bash experiments/alpasim/scripts/run.sh "$R" sh30 --scene-list "$L" $B \
+       runtime.scene_provider.trajdata.cache_location=$CA runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=$AF) || exit 1
+    [[ -f $R/aggregate/results-summary.json ]] || { echo "no results-summary" >&2; exit 1; }
+    find "$R/rollouts" -name rollout.asl -delete ;;
+  read)   # <stage dir>[,<stage dir>..] [out dir, default the first stage]; the smoke (SMOKE=1) also reads d316's stored identities
+    local S=${2:-${1%%,*}} st=(); mkdir -p "$S"
+    [[ -n ${SMOKE:-} ]] && st=(--stored "$T64/pilot10,$T64/rest54")
+    "$APY" "$here/rf_rewind.py" n-self-read --stage "$1" --units "$O/self.json" --out "$S/read.json" --pkl "$S/pkl" "${st[@]}" || exit 1
+    $PY "$here/rf_rewind.py" n-self-table --read "$S/read.json" --md "$S/rewind_self.md" --csv "$S/rewind_self.csv" --d316 "$T64/all/read.json" > /dev/null || exit 1
+    $PY "$here/rf_rewind.py" n-self-check --read "$S/read.json" --out "$S/check.txt" \
+      $([[ $1 != *,* && -f ${1%%,*}/files/launches.txt ]] && echo "--launches ${1%%,*}/files/launches.txt") $([[ -z ${SMOKE:-} ]] && echo --stage) ;;
+  *) sed -n '2,45p' "$0"; exit 2 ;;
+  esac
+}
+
 case $cmd in
 job) job "$1" ;;
 train64) train64 "$@" ;;
+self) self_ "$@" ;;
 fanout)
   N=${1:?N | all | s8,s8}; cd "$repo" || exit 1
   W=$O/code

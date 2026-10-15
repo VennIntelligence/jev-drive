@@ -461,8 +461,8 @@ def n_roll(job):
     S = F.stations(R)
     C = F.ctrl(D, summ["rollout_id"])
     o = dict(tag=tag, scene=scene, run=D, row=row, dec=dec, R=R, ctrl=C, rid=summ["rollout_id"],
-             drv=[dict(k=int(r["k"]), now=int(r["now"]), t0=int(r["t0"]), served=r["poses"], on="expert" in r,
-                       expert=r.get("expert")) for r in recs])
+             drv=[dict(k=int(r["k"]), now=int(r["now"]), t0=int(r["t0"]), served=r["poses"], on="expert" in r or "perturb" in r,
+                       expert=r.get("expert"), perturb=r.get("perturb")) for r in recs])
     kz = row["kz"] if row["kz"] >= 0 else None
     o["tz"] = RF.T0 + RF.DT * kz if kz is not None else np.inf
     o["zkind"] = None
@@ -895,6 +895,471 @@ def n_fig(a):
     print("->", a.out)
 
 
+# ---------------------------------------------------------------- self rewind: the policy's own frontier (prereg plans/2026-10-16-rewind-self-prereg.md)
+S_DELTAS, S_NCTRL, S_N = (3, 5, 8), 10, 2                          # Delta (s); control units; perturbed decisions (2 Hz)
+S_VARIANTS = tuple((g, s) for g in (0.7, 0.85, 1.15, 1.3) for s in (0.9, 1.1))
+B_LAT, B_YAW, B_VR, B_DV0, B_V0 = 0.5, 5.0, 0.1, 0.1, 1.0          # bound at the window end: |lateral| m, |heading| deg, |v / v_id - 1|;
+                                                                     # |v - v_id| m/s when v_id < B_V0
+MOVED = (0.02, 0.2, 0.01)                                           # a variant that left the identity: lateral m, heading deg, speed ratio
+V_E_OTHER = 4.6                                                     # rf_p4.V_E_OTHER: the nuPlan (no topo class) entry speed
+V_CRAWL = 0.5 * V_E_OTHER                                           # G-crawl (d297, rf_selfpool CRAWL 0.5 v_e) on the approach after h
+
+
+def vtag(g, s):
+    return f"g{g:g}s{s:g}"
+
+
+def parse_variants(spec):
+    import re
+    return [(float(m[1]), float(m[2])) for m in re.finditer(r"g([\d.]+)s([\d.]+)", spec)] if spec else list(S_VARIANTS)
+
+
+def n_self_units(a):
+    """Units of the self read from the STORED 18-decision rollouts (as n-tfail): failed = d316's stratum A without `short` (k_ref as
+    d316); controls = the S_NCTRL completed turns with the latest entrance crossing (k_ref = the first decision whose route station
+    >= entry). h per Delta = k_ref - 2 Delta, 1 <= h. -> <out>/self.json, <out>/scenes.txt"""
+    n_paths()
+    from jevdrive import par
+    out = Path(a.out)
+    only = set(Path(a.scenes).read_text().split())
+    res = par.pmap(n_roll, n_jobs(out, ["ref18"], log_tags=(), dirs=a.runs.split(","), only=only), workers=a.workers, desc="stored rollouts")
+    if res.errors:
+        print("errors:", {res.items[i][2]: str(e)[-300:] for i, e in res.errors.items()}, file=sys.stderr)
+    gt = n_gate()
+    T64 = json.loads(Path(a.tfail).read_text())["units"]
+    U = {}
+    for o in res.values:
+        if o is None:
+            continue
+        u = n_ref(o, gt)
+        if not u["turn"]:
+            continue
+        ke = [d["k"] for d in o["dec"] if d["st"] >= o["row"]["entry"]]
+        u["k_entry"] = int(ke[0]) if ke else None
+        q = T64.get(o["scene"], {})
+        u["same_as_d316"] = bool(q.get("k_ref") == u["k_ref"] and q.get("src") == u["src"])
+        U[o["scene"]] = u
+    fail = sorted(s for s, u in U.items() if u["stratum"] == "A" and u["src"] != "short_end")
+    comp = sorted((s for s, u in U.items() if u["stratum"] == "B" and u["k_entry"] is not None), key=lambda s: (-U[s]["k_entry"], s))
+    ctrl = sorted(comp[:S_NCTRL])
+    units = {}
+    for s in fail + ctrl:
+        u = dict(U[s], role="fail" if s in fail else "ctrl")
+        if u["role"] == "ctrl":
+            u["k_ref"], u["src"] = u["k_entry"], "entry"
+        u["hs"] = {str(d): (u["k_ref"] - N_STEP * d if u["k_ref"] - N_STEP * d >= N_HMIN else None) for d in S_DELTAS}
+        units[s] = u
+    (out / "self.json").write_text(json.dumps(dict(gate=gt, units=units, completed_k_entry={s: U[s]["k_entry"] for s in comp},
+                                                   short=sorted(s for s, u in U.items() if u["src"] == "short_end")), indent=1, default=float))
+    (out / "scenes.txt").write_text("".join(f"{s}\n" for s in fail + ctrl))
+    print(len(fail), "failed,", len(ctrl), "controls (k_entry", [U[s]["k_entry"] for s in ctrl], ")", "same k_ref as d316:",
+          sum(u["same_as_d316"] for u in units.values()), "/", len(units),
+          {d: (sum(u["hs"][str(d)] is not None for u in units.values() if u["role"] == "fail"),
+               sum(u["hs"][str(d)] is not None for u in units.values() if u["role"] == "ctrl")) for d in S_DELTAS})
+
+
+def n_self_files(a):
+    """One stage's launches -> <out>/launches.txt (`tag mode file`: id = the policy alone on the list; xp = the expert from h
+    (JEV_EXPERT_FROM file); pt = one perturbation variant (JEV_PERTURB file)), the files beside it."""
+    T = json.loads(Path(a.units).read_text())["units"]
+    L = [x.split()[0] for x in open(a.list) if x.strip()]
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    lines = [f"id id {Path(a.list).resolve()}"] + ([f"idB id {Path(a.list).resolve()}"] if a.smoke else [])
+    for d in S_DELTAS:
+        hs = [(s, T[s]["hs"][str(d)]) for s in L if s in T and T[s]["hs"][str(d)] is not None]
+        if not hs:
+            continue
+        f = out / f"xp_D{d}.txt"
+        f.write_text("".join(f"{s} {h}\n" for s, h in hs))
+        lines.append(f"xpD{d} xp {f.resolve()}")
+        for g, sc in parse_variants(a.variants):
+            f = out / f"pt_D{d}_{vtag(g, sc)}.txt"
+            f.write_text("".join(f"{s} {h} {g:g} {sc:g} {a.n}\n" for s, h in hs))
+            lines.append(f"D{d}-{vtag(g, sc)} pt {f.resolve()}")
+    (out / "launches.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
+def s_state(C, tq):
+    return np.array([np.interp(tq, C["t"], C[k]) for k in ("x", "y", "yaw", "vx")])
+
+
+def s_disp(Ca, Cb, tq):
+    """Displacement of track a from the identity b at time tq: lateral / longitudinal in b's heading frame, heading (deg), speed ratio."""
+    a, b = s_state(Ca, tq), s_state(Cb, tq)
+    d = a[:2] - b[:2]
+    lat, lon = float(-np.sin(b[2]) * d[0] + np.cos(b[2]) * d[1]), float(np.cos(b[2]) * d[0] + np.sin(b[2]) * d[1])
+    yaw = float(np.degrees((a[2] - b[2] + np.pi) % (2 * np.pi) - np.pi))
+    vr = float(a[3] / b[3]) if b[3] >= B_V0 else np.nan
+    dv = float(a[3] - b[3])
+    spd_ok = abs(vr - 1) <= B_VR if np.isfinite(vr) else abs(dv) <= B_DV0
+    moved = abs(lat) > MOVED[0] or abs(yaw) > MOVED[1] or (abs(vr - 1) > MOVED[2] if np.isfinite(vr) else abs(dv) > MOVED[2])
+    return dict(lat=lat, lon=lon, yaw=yaw, vr=vr, dv=dv, v_id=float(b[3]), in_bound=bool(abs(lat) <= B_LAT and abs(yaw) <= B_YAW and spd_ok),
+                moved=bool(moved))
+
+
+def s_strict(o, th):
+    """Strict completion from a handover time: rf_follow completed AND v(th + 3 s) >= 2 m/s AND no G-crawl (box-smoothed speed below
+    0.5 v_e on the approach, route station < entry, after th and before any zero)."""
+    import rf_shape as SH
+    C, row = o["ctrl"], o["row"]
+    t, vx = np.asarray(C["t"], float), np.asarray(C["vx"], float)
+    vs = SH.box5(vx)
+    v3 = interp(t, vx, th + WIN_END * 1e6)
+    m = (t >= th) & (t < o["tz"]) & (o["st"] < row["entry"])
+    vmin = float(vs[m].min()) if m.any() else None
+    crawl = bool(vmin is not None and vmin < V_CRAWL)
+    return dict(v3=v3, crawl=crawl, v_min_approach=vmin,
+                strict=bool(row.get("completed") and np.isfinite(v3) and v3 >= V_CREEP and not crawl))
+
+
+def n_self_extra(o, ido, u, tg):
+    x = {}
+    if o["ctrl"] is None or not o["row"].get("turn"):
+        return x
+    if tg in ("id", "idB"):                                  # the policy's own continuation, read from every Delta's h
+        for d in S_DELTAS:
+            h = u["hs"][str(d)]
+            dh = next((r for r in o["drv"] if r["k"] == h), None) if h is not None else None
+            if dh is not None:
+                x[f"strict_D{d}"] = s_strict(o, float(dh["now"]))
+        return x
+    on = [r for r in o["drv"] if r["on"]]
+    if not on:
+        return dict(no_handover=True)
+    th = float(on[0]["now"])
+    x.update(s_strict(o, th))
+    p = on[0].get("perturb")
+    if p:
+        x.update(g=p["g"], s=p["s"], n=p["n"], k0=p["k0"], n_on=len(on), on_ks=[r["k"] for r in on])
+        rw = next((r for r in o["drv"] if r["k"] == p["k0"] + p["n"]), None)
+        tw = float(rw["now"]) if rw is not None else th + p["n"] * STEP * 5
+        x["t_w_rel_h_s"] = round((tw - th) * 1e-6, 2)
+        if ido is not None and ido.get("ctrl") is not None:
+            x["disp"] = s_disp(o["ctrl"], ido["ctrl"], tw)
+            x["disp_h"] = s_disp(o["ctrl"], ido["ctrl"], th)
+            x["disp_1s"] = s_disp(o["ctrl"], ido["ctrl"], tw + 1e6)
+    return x
+
+
+def s_vs(new, old, u):
+    """The new identity session against a reference identity (stored d316 or idB): before the largest h of the unit."""
+    hs = [h for h in u["hs"].values() if h is not None]
+    hmax = max(hs) if hs else u["k_ref"]
+    Rd = {d["k"]: d for d in old["drv"]}
+    pre = [d for d in new["drv"] if d["k"] < hmax and d["k"] in Rd]
+    plan = max((float(np.max(np.abs(np.subtract(d["served"], Rd[d["k"]]["served"])))) for d in pre), default=None)
+    dn = {d["k"]: float(d["now"]) for d in new["drv"]}
+    th = dn.get(hmax, np.inf)
+    Ca, Cb = new["ctrl"], old["ctrl"]
+    ta, tb = np.asarray(Ca["t"], float), np.asarray(Cb["t"], float)
+    n = int(min(np.searchsorted(ta, th, side="right"), np.searchsorted(tb, th, side="right")))
+    track = float(max(np.abs(np.c_[Ca["x"], Ca["y"]][:n] - np.c_[Cb["x"], Cb["y"]][:n]).max(), np.abs(np.asarray(Ca["vx"])[:n] - np.asarray(Cb["vx"])[:n]).max())) if n else None
+    dv = {d: abs(interp(ta, np.asarray(Ca["vx"], float), dn[h]) - interp(tb, np.asarray(Cb["vx"], float), dn[h])) for d, h in u["hs"].items() if h is not None and h in dn}
+    ok = (plan or 0.0) <= TOL_PLAN and (track or 0.0) <= TOL_TRACK and all(v <= TOL_V for v in dv.values())
+    return dict(hmax=hmax, pre_n=len(pre), plan_maxdiff=plan, track_maxdiff=track, dv_h=dv, within_tol=bool(ok),
+                outcome=new["row"].get("outcome"), ref_outcome=old["row"].get("outcome"), score=new["row"].get("score"), ref_score=old["row"].get("score"))
+
+
+def n_self_read(a):
+    n_paths()
+    from jevdrive import par
+    T = json.loads(Path(a.units).read_text())
+    U, gt, jobs = T["units"], T["gate"], []
+    for stage in a.stage.split(","):
+        tags = sorted({Path(p).parts[-3] for p in glob.glob(os.path.join(stage, "*", "c0", "run"))})
+        jobs += n_jobs(Path(stage), tags)
+    have = {j[2] for j in jobs}
+    for st in (a.stored.split(",") if a.stored else []):  # d316's identities (smoke: the unset switch against them)
+        jobs += [("id316", *j[1:3], j[3], False) for j in n_jobs(Path(st), ["id"], log_tags=(), only=have)]
+    res = par.pmap(n_roll, jobs, workers=a.workers, desc="rollouts")
+    err = {f"{res.items[i][0]} {res.items[i][2]}": str(e)[-300:] for i, e in res.errors.items()}
+    by = {}
+    for o in res.values:
+        if o is not None:
+            by.setdefault(o["scene"], {})[o["tag"]] = o
+    out = []
+    for sc, R in sorted(by.items()):
+        u = U.get(sc)
+        if u is None or "id" not in R:
+            continue
+        ido, uu, rows = R["id"], dict(u, stratum=u["role"]), []
+        for tg, o in sorted(R.items()):
+            if tg == "id316":
+                continue
+            x = n_metrics(o, ido, uu, gt)
+            x.update(n_self_extra(o, ido, u, tg))
+            rows.append({k: (v.item() if isinstance(v, np.generic) else v) for k, v in x.items()})
+        vs = {ref: s_vs(R["id"], R[ref], u) for ref in ("id316", "idB") if ref in R and R[ref]["ctrl"] is not None and ido["ctrl"] is not None}
+        out.append(dict(scene=sc, unit=u, rows=rows, vs=vs))
+        if a.pkl:
+            Path(a.pkl).mkdir(parents=True, exist_ok=True)
+            keep = {tg: dict(ctrl=o["ctrl"], R=o["R"], tz=o["tz"], log=o.get("log")) for tg, o in R.items() if tg != "id316"}
+            pickle.dump(dict(scene=sc, unit=u, rolls=keep), open(Path(a.pkl) / f"{sc}.pkl", "wb"), protocol=4)
+    Path(a.out).write_text(json.dumps(dict(gate=gt, errors=err, scenes=out), indent=1, default=float))
+    print(len(out), "units,", len(err), "errors ->", a.out)
+
+
+def s_rows(X):
+    by = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in X["scenes"]}
+    return by, {s["scene"]: s["unit"] for s in X["scenes"]}, {s["scene"]: s.get("vs", {}) for s in X["scenes"]}
+
+
+def s_ok(r):
+    """A variant in the registered denominator: perturbation applied, pre-h check within d316's tolerance, displacement inside the bound."""
+    return bool(r.get("disp") and r["disp"]["in_bound"] and r.get("within_tol"))
+
+
+def n_self_check(a):
+    """Smoke / pilot gate: exit 1 when the switch-off identity leaves d316's tolerance (smoke), a perturbed session's pre-h check fails
+    too often, or rollouts are missing."""
+    X = json.loads(Path(a.read).read_text())
+    by, U, VS = s_rows(X)
+    bad, L = [], []
+    want = [x.split()[0] for x in open(a.launches) if x.strip()] if a.launches else []
+    for s in by:
+        for ref, v in VS[s].items():
+            L.append(f"{s[-8:]} id vs {ref}: plan {v['plan_maxdiff']}, track {v['track_maxdiff']}, dv(h) {v['dv_h']}, within {v['within_tol']}, "
+                     f"outcome {v['outcome']} / {v['ref_outcome']}")
+            if ref == "id316" and not v["within_tol"]:
+                bad.append(f"{s[-8:]} id outside d316 tolerance against the stored identity")
+    pts = [(s, tg, r) for s in by for tg, r in by[s].items() if tg.startswith("D")]
+    tol = [r for _, _, r in pts if r.get("within_tol")]
+    inb = [r for _, _, r in pts if r.get("disp") and r["disp"]["in_bound"]]
+    for s, tg, r in sorted(pts):
+        d = r.get("disp") or {}
+        L.append(f"{s[-8:]} {tg}: h {r.get('h')} on {r.get('on_ks')} pre plan {_f(r.get('pre_plan_maxdiff'), 4)} track {_f(r.get('pre_track_maxdiff'), 4)} "
+                 f"dv {_f(r.get('dv_h'), 4)} | window end lat {_f(d.get('lat'))} yaw {_f(d.get('yaw'), 2)} vr {_f(d.get('vr'))} in_bound {d.get('in_bound')} "
+                 f"moved {d.get('moved')} | {r['outcome']} strict {r.get('strict')}")
+    missing = []
+    for s in by:                                             # every launch of the stage that should hold this scene
+        for w in want:
+            d = w[3:] if w.startswith("xpD") else w[1:].split("-")[0] if w.startswith("D") else None
+            if (d is None or U[s]["hs"].get(d) is not None) and w not in by[s]:
+                missing.append(f"{s[-8:]} {w}")
+    if pts and len(tol) < 0.8 * len(pts):
+        bad.append(f"pre-h check within tolerance {len(tol)} / {len(pts)} < 80 %")
+    if a.stage and pts and len(inb) < 0.5 * len(pts):
+        bad.append(f"in-bound variants {len(inb)} / {len(pts)} < 50 %")
+    if X.get("errors"):
+        bad.append(f"read errors {list(X['errors'])[:5]}")
+    if missing:
+        bad.append(f"{len(missing)} rollouts missing")
+    L.append(f"perturbed sessions {len(pts)}: pre-h within tolerance {len(tol)}, in bound {len(inb)}; missing {missing[:10]}")
+    L += [f"FAIL: {b}" for b in bad] or ["PASS"]
+    print("\n".join(L))
+    if a.out:
+        Path(a.out).write_text("\n".join(L) + "\n")
+    sys.exit(1 if bad else 0)
+
+
+def n_self_table(a):
+    n_paths()
+    from jevdrive import stats
+    X = json.loads(Path(a.read).read_text())
+    by, U, VS = s_rows(X)
+    d316 = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in json.loads(Path(a.d316).read_text())["scenes"]} if a.d316 else {}
+    logs = lambda ss: np.array([s.rsplit("-", 1)[0] for s in ss])  # noqa: E731
+    br = lambda v, ss: stats.bootstrap(np.asarray(v, float), logs(ss), n_boot=10_000) if len(ss) else dict(n=0, mean=np.nan, lo=np.nan, hi=np.nan)  # noqa: E731
+    ci = lambda r: "-" if not r["n"] else f"{r['mean']:.2f} [{r['lo']:.2f}, {r['hi']:.2f}]"  # noqa: E731
+    F_ = sorted(s for s in U if U[s]["role"] == "fail")
+    K_ = sorted(s for s in U if U[s]["role"] == "ctrl")
+    unit_csv = ["scene,role,src,k_ref,delta,h,variants,in_denominator,out_of_bound,out_of_tol,strict,plain,p_hat,p_hat_plain,gated,rows_strict,"
+                "id_strict,id_outcome,xp_strict,xp_completed,xp_outcome,d316_xp_completed"]
+    var_csv = ["scene,role,delta,tag,g,s,h,lat_w,yaw_w,vr_w,dv_w,lat_1s,in_bound,moved,within_tol,pre_plan_maxdiff,completed,outcome,zkind,v3,crawl,"
+               "v_min_approach,strict,shape_ok,rows_turn"]
+    P = {}                                                   # (scene, Delta) -> per-unit numbers
+    for s in F_ + K_:
+        for d in S_DELTAS:
+            if U[s]["hs"][str(d)] is None:
+                continue
+            V = {tg: r for tg, r in by[s].items() if tg.startswith(f"D{d}-")}
+            ok = [r for r in V.values() if s_ok(r)]
+            xp = by[s].get(f"xpD{d}", {})
+            idr = (by[s].get("id", {}).get(f"strict_D{d}") or {})
+            q = dict(n=len(V), ok=len(ok), oob=sum(bool(r.get("disp")) and not r["disp"]["in_bound"] for r in V.values()),
+                     oot=sum(not r.get("within_tol") for r in V.values()), strict=sum(r.get("strict", False) for r in ok),
+                     plain=sum(r["completed"] for r in ok), gated=sum(bool(r.get("strict") and r.get("shape_ok")) for r in ok),
+                     rows=sum(r.get("rows_turn", 0) for r in ok if r.get("strict")),
+                     rows_gated=sum(r.get("rows_turn", 0) for r in ok if r.get("strict") and r.get("shape_ok")),
+                     id_strict=bool(idr.get("strict")), id_outcome=by[s].get("id", {}).get("outcome"), xp_strict=xp.get("strict"),
+                     xp_completed=xp.get("completed"), xp_outcome=xp.get("outcome"),
+                     d316=(d316.get(s, {}).get("D3", {}).get("completed") if d == 3 else None), ok_rows=ok)
+            q["p"] = q["strict"] / q["ok"] if q["ok"] else np.nan
+            q["p_plain"] = q["plain"] / q["ok"] if q["ok"] else np.nan
+            P[s, d] = q
+            u = U[s]
+            unit_csv.append(",".join(str(v) for v in (s, u["role"], u["src"], u["k_ref"], d, u["hs"][str(d)], q["n"], q["ok"], q["oob"], q["oot"],
+                                                       q["strict"], q["plain"], _f(q["p"]), _f(q["p_plain"]), q["gated"], q["rows"], int(q["id_strict"]),
+                                                       q["id_outcome"], "" if q["xp_strict"] is None else int(q["xp_strict"]),
+                                                       "" if q["xp_completed"] is None else int(q["xp_completed"]), q["xp_outcome"] or "",
+                                                       "" if q["d316"] is None else int(q["d316"]))))
+            for tg, r in sorted(V.items()):
+                D_, D1 = r.get("disp") or {}, r.get("disp_1s") or {}
+                var_csv.append(",".join(str(v) for v in (s, u["role"], d, tg, r.get("g"), r.get("s"), r.get("h"), _f(D_.get("lat")), _f(D_.get("yaw"), 2),
+                                                          _f(D_.get("vr")), _f(D_.get("dv")), _f(D1.get("lat")), int(bool(D_.get("in_bound"))),
+                                                          int(bool(D_.get("moved"))), int(bool(r.get("within_tol"))), _f(r.get("pre_plan_maxdiff"), 4),
+                                                          int(r["completed"]), r["outcome"], r["zkind"] or "", _f(r.get("v3")), int(bool(r.get("crawl"))),
+                                                          _f(r.get("v_min_approach")), int(bool(r.get("strict"))), int(bool(r.get("shape_ok"))),
+                                                          r.get("rows_turn", ""))))
+    bins = (("0", lambda p: p == 0), ("(0, 0.2)", lambda p: 0 < p < 0.2), ("[0.2, 0.8]", lambda p: 0.2 <= p <= 0.8), ("(0.8, 1)", lambda p: 0.8 < p < 1),
+            ("1", lambda p: p == 1))
+    L = ["# Self rewind: does RSG-L18-s0 have a frontier on its own failed nuPlan @18 train turns?", "",
+         f"Units: {len(F_)} failed (d316 stratum A without short: " + ", ".join(f"{k} {v}" for k, v in sorted(_count(U[s]['src'] for s in F_).items())) +
+         f"), {len(K_)} controls (completed turns with the latest entrance crossing, k_ref = that decision). Variants per (unit, Delta): curvature gain g x "
+         f"arc scale s on the served plan for n decisions from h = k_ref - 2 Delta, then the raw plan. Strict completion = rf_follow completed AND "
+         f"v(h + 3 s) >= {V_CREEP:g} m/s AND no G-crawl (approach speed < {V_CRAWL:.1f} m/s after h). p-hat = strict completions / variants in the "
+         f"denominator (perturbation inside the bound at the window end: |lateral| <= {B_LAT} m, |heading| <= {B_YAW:g} deg, speed ratio "
+         f"{1 - B_VR:g}-{1 + B_VR:g}; and the pre-h check within d316's tolerance). CI: bootstrap over logs, 10 000.", ""]
+    summ = {}
+    L += ["## p-hat per Delta", "",
+          "| role | Delta | units rewindable / all | units with >= 1 variant in the denominator | p-hat bins 0 / (0, 0.2) / [0.2, 0.8] / (0.8, 1) / 1 | "
+          "mean p-hat [95 % CI] | mean plain p-hat | units with p-hat > 0 | identity strict (same h) | expert strict / plain at the same h | d316 expert (D3) |",
+          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for role, units in (("failed", F_), ("control", K_)):
+        for d in S_DELTAS:
+            uu = [s for s in units if (s, d) in P]
+            ud = [s for s in uu if P[s, d]["ok"]]
+            ps = [P[s, d]["p"] for s in ud]
+            b = br(ps, ud)
+            hb = " / ".join(str(sum(f(p) for p in ps)) for _, f in bins)
+            xs = [P[s, d] for s in uu if P[s, d]["xp_completed"] is not None]
+            dd = [P[s, d]["d316"] for s in uu if P[s, d]["d316"] is not None]
+            summ[f"{role}/{d}"] = dict(n=len(uu), n_all=len(units), n_den=len(ud), p=b, bins=hb, n_mid=sum(0.2 <= p <= 0.8 for p in ps),
+                                       n_pos=sum(p > 0 for p in ps), id_strict=sum(P[s, d]["id_strict"] for s in uu),
+                                       xp_strict=sum(bool(q["xp_strict"]) for q in xs), xp_plain=sum(bool(q["xp_completed"]) for q in xs), n_xp=len(xs),
+                                       p_plain=float(np.mean([P[s, d]["p_plain"] for s in ud])) if ud else np.nan)
+            S_ = summ[f"{role}/{d}"]
+            L.append(f"| {role} | {d} s | {len(uu)} / {len(units)} | {len(ud)} | {hb} | {ci(b)} | {S_['p_plain']:.2f} | {S_['n_pos']} | "
+                     f"{S_['id_strict']} / {len(uu)} | {S_['xp_strict']} / {S_['xp_plain']} of {len(xs)} | {sum(map(bool, dd))} / {len(dd) if dd else '-'} |")
+    L += ["", "Non-rewindable (unit, Delta) pairs (h < 1): " + ", ".join(
+        f"Delta {d} s: failed {sum(U[s]['hs'][str(d)] is None for s in F_)}, controls {sum(U[s]['hs'][str(d)] is None for s in K_)}" for d in S_DELTAS), ""]
+    # variant types (failed units)
+    L += ["## Completions by variant type (failed units, variants in the denominator)", "",
+          "| Delta | g < 1 | g > 1 | s < 1 | s > 1 | strict completions from s < 1 | strict + d293 gate | rows (strict; strict + gate) | units giving rows |",
+          "|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for d in S_DELTAS:
+        rr = [r for s in F_ if (s, d) in P for r in P[s, d]["ok_rows"]]
+        typ = lambda f: f"{sum(bool(r.get('strict')) for r in rr if f(r))} / {sum(1 for r in rr if f(r))}"  # noqa: E731
+        st = [r for r in rr if r.get("strict")]
+        slow = sum(r["s"] < 1 for r in st)
+        summ[f"failed/{d}"].update(n_strict=len(st), n_slow=slow, slow_share=slow / len(st) if st else np.nan,
+                                   gated=sum(bool(r.get("shape_ok")) for r in st),
+                                   rows=sum(P[s, d]["rows"] for s in F_ if (s, d) in P), rows_gated=sum(P[s, d]["rows_gated"] for s in F_ if (s, d) in P),
+                                   units_rows=sum(P[s, d]["rows"] > 0 for s in F_ if (s, d) in P))
+        S_ = summ[f"failed/{d}"]
+        L.append(f"| {d} s | {typ(lambda r: r['g'] < 1)} | {typ(lambda r: r['g'] > 1)} | {typ(lambda r: r['s'] < 1)} | {typ(lambda r: r['s'] > 1)} | "
+                 f"{slow} / {len(st)} | {S_['gated']} | {S_['rows']}; {S_['rows_gated']} | {S_['units_rows']} |")
+    # displacement
+    L += ["", "## Displacement from the identity at the end of the perturbation window (all units)", "",
+          "| Delta | variant | n | median / max abs lateral (m) | median / max abs heading (deg) | median speed ratio [min, max] | in bound | moved | "
+          "pre-h within tolerance | abs lateral 1 s later (median) |", "|--:|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    allv = [(d, tg.split("-", 1)[1], r) for s in by for tg, r in by[s].items() if tg.startswith("D") and (d := int(tg[1:].split("-")[0]))]
+    for d in S_DELTAS:
+        for v in sorted({v for dd, v, _ in allv if dd == d}):
+            rr = [r for dd, vv, r in allv if dd == d and vv == v and r.get("disp")]
+            if not rr:
+                continue
+            la, ya = np.abs([r["disp"]["lat"] for r in rr]), np.abs([r["disp"]["yaw"] for r in rr])
+            vr = np.array([r["disp"]["vr"] for r in rr], float)
+            l1 = np.abs([r["disp_1s"]["lat"] for r in rr if r.get("disp_1s")])
+            L.append(f"| {d} s | {v} | {len(rr)} | {np.median(la):.3f} / {la.max():.3f} | {np.median(ya):.2f} / {ya.max():.2f} | "
+                     f"{np.nanmedian(vr):.3f} [{np.nanmin(vr):.3f}, {np.nanmax(vr):.3f}] | {sum(r['disp']['in_bound'] for r in rr)} | "
+                     f"{sum(r['disp']['moved'] for r in rr)} | {sum(bool(r.get('within_tol')) for r in rr)} | {np.median(l1) if len(l1) else float('nan'):.3f} |")
+    # identity checks
+    v316 = [v["id316"] for v in VS.values() if "id316" in v]
+    if v316:
+        L += ["", f"Switch-off identity against d316's stored identity: within tolerance {sum(v['within_tol'] for v in v316)} / {len(v316)}; "
+              f"outcome equal {sum(v['outcome'] == v['ref_outcome'] for v in v316)} / {len(v316)}"]
+    vb = [v["idB"] for v in VS.values() if "idB" in v]
+    if vb:
+        L.append(f"idB against id: within tolerance {sum(v['within_tol'] for v in vb)} / {len(vb)}")
+    # registered lines
+    fr = [d for d in S_DELTAS if summ[f"failed/{d}"]["n_mid"] >= 8]
+    cpool = br([P[s, d]["p"] for s in K_ for d in S_DELTAS if (s, d) in P and P[s, d]["ok"]],
+               [s for s in K_ for d in S_DELTAS if (s, d) in P and P[s, d]["ok"]])
+    cm = {d: (summ[f"control/{d}"]["p"]["mean"] if summ[f"control/{d}"]["n_den"] else cpool["mean"]) for d in S_DELTAS}
+    front = [d for d in fr if cm[d] >= 0.7]
+    none = all(P[s, d]["p"] < 0.1 for s in F_ for d in S_DELTAS if (s, d) in P and P[s, d]["ok"])
+    st_front = [r for d in front for s in F_ if (s, d) in P for r in P[s, d]["ok_rows"] if r.get("strict")]
+    slow_share = sum(r["s"] < 1 for r in st_front) / len(st_front) if st_front else np.nan
+    verdict = ("SLOW-ONLY" if front and slow_share >= 0.8 else "FRONTIER" if front else "NONE" if none else "UNDECIDED")
+    summ["verdict"] = dict(verdict=verdict, frontier_deltas=front, mid_deltas=fr, control_mean=cm, control_pooled=cpool, slow_share=slow_share)
+    L += ["", "## Registered lines", "",
+          "- FRONTIER: at some Delta >= 8 failed units with p-hat in [0.2, 0.8] and the controls' mean p-hat >= 0.7 (same Delta; pooled over Delta when "
+          "no control is rewindable there). " + "; ".join(f"Delta {d} s: {summ[f'failed/{d}']['n_mid']} units in [0.2, 0.8], controls "
+                                                          f"{cm[d]:.2f}" + ("" if summ[f'control/{d}']['n_den'] else " (pooled)") for d in S_DELTAS),
+          f"- NONE: every failed unit p-hat < 0.1 at every Delta: {none}",
+          f"- SLOW-ONLY: frontier and >= 80 % of its strict completions from s < 1: share {slow_share:.2f}" if front else "- SLOW-ONLY: no frontier",
+          f"- controls pooled over Delta: {ci(cpool)}", "", f"**Verdict: {verdict}**"]
+    if X.get("errors"):
+        L += ["", f"Read errors: {X['errors']}"]
+    Path(a.md).write_text("\n".join(L) + "\n")
+    Path(a.csv).write_text("\n".join(unit_csv) + "\n")
+    Path(a.csv).with_name(Path(a.csv).stem + "_variants.csv").write_text("\n".join(var_csv) + "\n")
+    Path(a.md).with_suffix(".json").write_text(json.dumps(summ, indent=1, default=float))
+    print("\n".join(L))
+
+
+def n_self_fig(a):
+    """BEV of 2-3 units at one Delta each: route, human log, identity, the expert from h, the variants (solid = strict completion)."""
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, str(HERE.parents[2] / "research"))
+    import plot_style as PS
+    PS.apply()
+    X = {s["scene"]: s for s in json.loads(Path(a.read).read_text())["scenes"]}
+    items = [x.split(":") for x in a.units.split(",")]          # <pkl>:<Delta>
+    figr, axs = plt.subplots(1, len(items), figsize=(6.875, 6.875 / len(items) + 0.6))
+    for ax, (f, d) in zip(np.atleast_1d(axs), items):
+        sc = pickle.load(open(f, "rb"))
+        rows = {r["tag"]: r for r in X[sc["scene"]]["rows"]}
+        R = sc["rolls"]["id"]["R"]
+        ax.plot(R[:, 0], R[:, 1], color="#dddddd", lw=3.0, zorder=0, label="route")
+        lim = []
+        n_ok = n_st = 0
+        for tag, o in sorted(sc["rolls"].items()):
+            if not tag.startswith(f"D{d}-") or o.get("ctrl") is None or tag not in rows:
+                continue
+            r, C = rows[tag], o["ctrl"]
+            m = np.asarray(C["t"]) <= o["tz"]
+            good = bool(r.get("strict")) and s_ok(r)
+            n_ok += s_ok(r)
+            n_st += good
+            ax.plot(C["x"][m], C["y"][m], color="#009E73" if good else "#D55E00", lw=0.7, alpha=0.8, ls="-" if s_ok(r) else ":", zorder=2)
+            lim.append(np.c_[C["x"][m], C["y"][m]])
+        for tag, col, lab in (("id", "#555555", "policy (identity)"), (f"xpD{d}", "#000000", f"expert from -{d} s")):
+            o = sc["rolls"].get(tag)
+            if o is None or o.get("ctrl") is None or tag not in rows:
+                continue
+            C, r = o["ctrl"], rows[tag]
+            m = np.asarray(C["t"]) <= o["tz"]
+            ax.plot(C["x"][m], C["y"][m], color=col, lw=1.3, ls="--" if tag == "id" else "-", zorder=3,
+                    label=f"{lab}: {'strict done' if r.get('strict') or (tag == 'id' and (r.get(f'strict_D{d}') or {}).get('strict')) else r['outcome']}")
+            if not m.all():
+                ax.plot(C["x"][m][-1], C["y"][m][-1], "x", color=col, ms=4, zorder=4)
+            if tag != "id" and r.get("t_h") is not None:
+                i = int(np.searchsorted(C["t"], r["t_h"]))
+                ax.plot(C["x"][i], C["y"][i], "o", color="#0072B2", ms=4, zorder=5, label=f"h (k {r.get('h')})")
+            lim.append(np.c_[C["x"][m], C["y"][m]])
+        ax.plot([], [], color="#009E73", lw=0.7, label=f"self variants, strict done ({n_st} / {n_ok})")
+        ax.plot([], [], color="#D55E00", lw=0.7, label="self variants, failed")
+        Q = np.concatenate(lim)
+        c0, r0 = Q.mean(0), max(np.ptp(Q, 0).max() / 2 + 5, 20)
+        ax.set_xlim(c0[0] - r0, c0[0] + r0)
+        ax.set_ylim(c0[1] - r0, c0[1] + r0)
+        ax.set_aspect("equal")
+        ax.grid(False)
+        ax.set_xticks([]); ax.set_yticks([])  # noqa: E702
+        u = sc["unit"]
+        ax.text(0.02, 0.98, f"{sc['scene'][-8:]} ({u['role']}: {u['outcome']}, k_ref {u['k_ref']}, Delta {d} s)", transform=ax.transAxes, va="top", fontsize=7)
+        ax.legend(fontsize=5.0, loc="lower right", frameon=False)
+    figr.tight_layout()
+    PS.save(figr, str(Path(a.out).with_suffix("")))
+    print("->", a.out)
+
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -925,11 +1390,29 @@ def main():
     p = sp.add_parser("n-table")
     p.add_argument("--read", required=True); p.add_argument("--md", required=True); p.add_argument("--csv", required=True)  # noqa: E702
     p.add_argument("--stored", default="")
+    p = sp.add_parser("n-self-units")
+    p.add_argument("--out", required=True); p.add_argument("--runs", required=True); p.add_argument("--scenes", required=True)  # noqa: E702
+    p.add_argument("--tfail", required=True); p.add_argument("--workers", type=int, default=16)  # noqa: E702
+    p = sp.add_parser("n-self-files")
+    p.add_argument("--units", required=True); p.add_argument("--list", required=True); p.add_argument("--out", required=True)  # noqa: E702
+    p.add_argument("--variants", default=""); p.add_argument("--n", type=int, default=S_N); p.add_argument("--smoke", action="store_true")  # noqa: E702
+    p = sp.add_parser("n-self-read")
+    p.add_argument("--stage", required=True); p.add_argument("--units", required=True); p.add_argument("--out", required=True)  # noqa: E702
+    p.add_argument("--stored", default=""); p.add_argument("--pkl", default=""); p.add_argument("--workers", type=int, default=16)  # noqa: E702
+    p = sp.add_parser("n-self-check")
+    p.add_argument("--read", required=True); p.add_argument("--launches", default=""); p.add_argument("--out", default="")  # noqa: E702
+    p.add_argument("--stage", action="store_true")
+    p = sp.add_parser("n-self-table")
+    p.add_argument("--read", required=True); p.add_argument("--md", required=True); p.add_argument("--csv", required=True)  # noqa: E702
+    p.add_argument("--d316", default="")
+    p = sp.add_parser("n-self-fig")
+    p.add_argument("--read", required=True); p.add_argument("--units", required=True); p.add_argument("--out", required=True)  # noqa: E702
     p = sp.add_parser("n-fig")
     p.add_argument("--pkl", required=True); p.add_argument("--read", required=True); p.add_argument("--out", required=True)  # noqa: E702
     a = ap.parse_args()
     dict(cells=cells, extract=extract, tfail=tfail, read=read, table=table, fig=fig, **{"n-units": n_units, "n-tfail": n_tfail, "n-read": n_read,
-         "n-table": n_table, "n-fig": n_fig})[a.cmd](a)
+         "n-table": n_table, "n-fig": n_fig, "n-self-units": n_self_units, "n-self-files": n_self_files, "n-self-read": n_self_read,
+         "n-self-check": n_self_check, "n-self-table": n_self_table, "n-self-fig": n_self_fig})[a.cmd](a)
 
 
 if __name__ == "__main__":
