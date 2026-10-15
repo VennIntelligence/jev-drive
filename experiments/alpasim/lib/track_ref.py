@@ -89,6 +89,7 @@ V_MIN = 1.0                     # m/s, floor of v in the curvature limits
 DT_SIM, T_END, DT_OUT = 0.05, 4.0, 0.1
 HAND = 1.0 if NAME == "v9" else 0.0  # gate: the v9 handoff guard (JEV_TRACK=v9), 0 = v8
 H_T, H_V, H_AMIN = 2.7, 5.0, -2.5   # s since the session's first call, m/s, m/s^2 (see the module docstring)
+JLON_V = 0.0                        # m/s: the jerk limit JLON only while v0 >= JLON_V (spin v9 prereg Amendment 5 candidate; 0 = always, v8)
 H_FULL = 0.0                        # guard: 0 = v8's gate (curv, full where the gate / PP check opens) with H_AMIN, 1 = always full
 for _kv in filter(None, (os.environ.get("JEV_TRACK_CFG", "") or "").split(",")):
     _k, _v = _kv.split("=")
@@ -160,8 +161,10 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, t_s: flo
             return ref, {**info, "mode": "gate", "open": 0}
         ref, fi = build(poses, v0, wz, "full", a0, **kw)
         return ref, {**fi, "mode": "gate", "open": 1, "gate": info["gate"], **({"pp": info["pp"]} if "pp" in info else {})}
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW", "T_GATE", "GATE_V", "PP", "PP_V")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW, T_GATE, GATE_V, PP, PP_V = g.values()
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW", "T_GATE", "GATE_V", "PP", "PP_V", "JLON_V")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW, T_GATE, GATE_V, PP, PP_V, JLON_V = g.values()
+    if v0 < JLON_V:
+        JLON = 1e9
     kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None

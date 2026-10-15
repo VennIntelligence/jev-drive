@@ -1,0 +1,86 @@
+scene | decisions | changed | v0 range of changed | max change m | first changed k: v0, arc 1 s / 2 s plan, v8, candidate
+00fabf60 | 199 | 50 | 3.8-8.0 | 1.02 | (58, 8.0, '7.44/13.88', '7.56/14.05', '7.45/13.92') | 1 s arc minus the served plan's, mean over changed: v8 -0.170, candidate -0.090 m
+05855d57 | 199 | 73 | 3.2-7.9 | 0.55 | (100, 7.9, '7.17/12.28', '7.54/12.62', '7.26/12.51') | 1 s arc minus the served plan's, mean over changed: v8 +0.066, candidate +0.021 m
+06b3e399 | 190 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+09528162 | 199 | 80 | 2.0-7.9 | 0.37 | (17, 7.9, '7.50/13.60', '7.56/13.67', '7.52/13.69') | 1 s arc minus the served plan's, mean over changed: v8 +0.060, candidate +0.014 m
+0a228e44 | 199 | 20 | 0.8-7.9 | 0.99 | (159, 7.9, '6.26/9.18', '6.10/9.32', '6.55/9.94') | 1 s arc minus the served plan's, mean over changed: v8 -0.042, candidate +0.232 m
+0e05cb0c | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+132ae6cb | 199 | 112 | 0.0-6.1 | 0.18 | (2, 0.0, '0.13/0.81', '0.13/0.76', '0.13/0.79') | 1 s arc minus the served plan's, mean over changed: v8 -0.016, candidate -0.013 m
+16300901 | 199 | 42 | 2.6-7.9 | 0.81 | (149, 7.9, '7.01/12.24', '7.07/12.33', '7.07/12.41') | 1 s arc minus the served plan's, mean over changed: v8 +0.068, candidate +0.051 m
+1a5da90a | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+1bfad87c | 199 | 1 | 8.0-8.0 | 0.88 | (198, 8.0, '5.07/7.60', '5.38/7.18', '5.42/8.06') | 1 s arc minus the served plan's, mean over changed: v8 +0.313, candidate +0.352 m
+1e8e939e | 199 | 13 | 3.0-7.8 | 0.82 | (186, 7.8, '6.07/9.22', '6.08/9.07', '6.46/9.86') | 1 s arc minus the served plan's, mean over changed: v8 -0.160, candidate +0.257 m
+23666aa2 | 198 | 100 | 0.0-8.0 | 0.49 | (1, 7.3, '7.77/15.78', '7.61/15.67', '7.73/15.75') | 1 s arc minus the served plan's, mean over changed: v8 -0.017, candidate -0.008 m
+2466266e | 198 | 48 | 1.1-7.5 | 0.46 | (107, 7.5, '5.63/9.16', '5.05/8.57', '5.32/8.92') | 1 s arc minus the served plan's, mean over changed: v8 -0.067, candidate -0.001 m
+26004ca8 | 199 | 56 | 6.1-8.0 | 0.18 | (112, 8.0, '7.52/13.85', '7.57/13.93', '7.54/13.91') | 1 s arc minus the served plan's, mean over changed: v8 -0.000, candidate -0.006 m
+268949d2 | 199 | 107 | 0.0-8.0 | 0.71 | (0, 3.1, '1.88/1.97', '1.94/2.03', '2.02/2.20') | 1 s arc minus the served plan's, mean over changed: v8 -0.100, candidate -0.008 m
+2d10a08d | 198 | 20 | 0.6-7.7 | 1.01 | (169, 7.7, '5.36/7.62', '5.62/7.60', '6.05/8.56') | 1 s arc minus the served plan's, mean over changed: v8 -0.080, candidate +0.248 m
+2eaf1872 | 199 | 25 | 6.6-7.9 | 0.13 | (159, 7.9, '7.61/14.23', '7.65/14.28', '7.62/14.27') | 1 s arc minus the served plan's, mean over changed: v8 +0.010, candidate +0.003 m
+2fb5b2b5 | 199 | 75 | 0.8-7.9 | 1.15 | (0, 0.8, '1.67/4.77', '1.50/4.62', '1.51/4.52') | 1 s arc minus the served plan's, mean over changed: v8 -0.058, candidate +0.058 m
+300465f7 | 199 | 55 | 0.5-7.9 | 0.80 | (0, 5.5, '5.89/11.90', '5.84/11.90', '5.85/11.86') | 1 s arc minus the served plan's, mean over changed: v8 -0.112, candidate +0.016 m
+302c5c99 | 199 | 52 | 2.2-8.0 | 0.64 | (0, 2.2, '2.62/4.80', '2.58/4.86', '2.60/4.80') | 1 s arc minus the served plan's, mean over changed: v8 -0.137, candidate -0.023 m
+32be03e4 | 199 | 57 | 2.2-7.8 | 0.51 | (85, 7.8, '6.63/10.70', '6.81/10.78', '6.84/11.11') | 1 s arc minus the served plan's, mean over changed: v8 +0.031, candidate +0.042 m
+3fa5e06b | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+3ffad395 | 199 | 19 | 2.4-8.0 | 0.81 | (0, 7.8, '8.78/19.02', '8.63/18.86', '8.62/18.75') | 1 s arc minus the served plan's, mean over changed: v8 -0.105, candidate +0.027 m
+403d558a | 199 | 52 | 0.5-7.8 | 0.49 | (103, 7.8, '5.44/8.18', '5.23/7.85', '5.39/8.29') | 1 s arc minus the served plan's, mean over changed: v8 -0.094, candidate -0.012 m
+450d5c8d | 199 | 30 | 6.9-8.0 | 0.07 | (165, 8.0, '7.90/15.26', '7.90/15.31', '7.90/15.26') | 1 s arc minus the served plan's, mean over changed: v8 +0.007, candidate +0.000 m
+478d6ec4 | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+4a863a41 | 199 | 22 | 5.6-8.0 | 0.10 | (177, 8.0, '7.56/13.91', '7.64/13.95', '7.59/13.97') | 1 s arc minus the served plan's, mean over changed: v8 +0.079, candidate +0.027 m
+4cb05d65 | 199 | 1 | 6.1-6.1 | 1.94 | (0, 6.1, '6.98/14.91', '5.38/12.91', '6.85/14.75') | 1 s arc minus the served plan's, mean over changed: v8 -1.601, candidate -0.132 m
+4e8c8f9e | 198 | 20 | 2.6-7.9 | 0.53 | (0, 6.7, '6.29/11.73', '6.33/11.78', '6.30/11.76') | 1 s arc minus the served plan's, mean over changed: v8 -0.225, candidate -0.081 m
+4f7cb072 | 199 | 49 | 2.7-7.8 | 0.47 | (67, 7.8, '6.80/11.21', '6.76/11.17', '6.89/11.53') | 1 s arc minus the served plan's, mean over changed: v8 +0.076, candidate +0.029 m
+51400458 | 199 | 52 | 0.0-8.0 | 0.44 | (0, 7.8, '8.65/18.23', '8.49/18.10', '8.50/18.06') | 1 s arc minus the served plan's, mean over changed: v8 -0.119, candidate -0.030 m
+52003cee | 199 | 50 | 1.0-8.0 | 1.11 | (0, 5.8, '6.52/14.17', '6.30/13.98', '6.42/14.02') | 1 s arc minus the served plan's, mean over changed: v8 -0.152, candidate +0.037 m
+524089d2 | 197 | 65 | 6.0-7.9 | 0.31 | (80, 7.9, '7.51/13.84', '7.57/13.93', '7.53/13.90') | 1 s arc minus the served plan's, mean over changed: v8 -0.014, candidate -0.025 m
+596af0c7 | 199 | 8 | 7.7-8.0 | 0.04 | (167, 8.0, '7.95/15.42', '7.95/15.46', '7.95/15.42') | 1 s arc minus the served plan's, mean over changed: v8 +0.004, candidate -0.000 m
+60cc35db | 199 | 58 | 1.9-7.9 | 1.01 | (0, 6.3, '6.99/14.71', '6.76/14.51', '6.88/14.58') | 1 s arc minus the served plan's, mean over changed: v8 -0.059, candidate +0.020 m
+61e73e86 | 190 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+62cfe9d3 | 199 | 70 | 1.8-7.9 | 0.27 | (43, 7.9, '7.42/13.55', '7.51/13.59', '7.45/13.62') | 1 s arc minus the served plan's, mean over changed: v8 +0.079, candidate +0.025 m
+66b15fbe | 199 | 56 | 3.3-8.0 | 0.11 | (65, 8.0, '7.58/13.85', '7.63/13.87', '7.60/13.92') | 1 s arc minus the served plan's, mean over changed: v8 +0.029, candidate +0.009 m
+68c3be44 | 198 | 23 | 0.0-7.8 | 1.06 | (133, 7.8, '5.81/9.20', '5.85/8.99', '6.25/9.77') | 1 s arc minus the served plan's, mean over changed: v8 -0.064, candidate +0.211 m
+68e53160 | 198 | 157 | 0.0-7.2 | 0.75 | (0, 0.0, '0.02/0.57', '0.02/0.45', '0.02/0.53') | 1 s arc minus the served plan's, mean over changed: v8 -0.027, candidate -0.019 m
+6e7b42a3 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+7381c9fa | 199 | 108 | 1.9-8.0 | 0.79 | (1, 2.7, '2.90/6.17', '2.88/6.14', '2.89/6.17') | 1 s arc minus the served plan's, mean over changed: v8 -0.132, candidate -0.032 m
+7c346fd5 | 199 | 59 | 3.3-7.9 | 0.26 | (106, 7.9, '7.03/12.45', '7.14/12.40', '7.12/12.60') | 1 s arc minus the served plan's, mean over changed: v8 +0.041, candidate +0.012 m
+8120803d | 199 | 64 | 2.6-7.9 | 0.22 | (115, 7.9, '7.24/12.40', '7.52/12.59', '7.30/12.62') | 1 s arc minus the served plan's, mean over changed: v8 +0.038, candidate +0.011 m
+875e79d9 | 198 | 44 | 0.1-8.0 | 0.42 | (0, 6.3, '5.78/10.89', '5.82/10.98', '5.79/10.91') | 1 s arc minus the served plan's, mean over changed: v8 +0.079, candidate +0.068 m
+87a3b6d4 | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+901c2cff | 199 | 34 | 6.2-8.0 | 0.11 | (100, 8.0, '7.74/14.78', '7.76/14.89', '7.74/14.80') | 1 s arc minus the served plan's, mean over changed: v8 +0.008, candidate +0.000 m
+90ab8c24 | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+91d84204 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+9d9052bd | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+a4d2f7cf | 199 | 61 | 2.8-8.0 | 0.25 | (0, 7.7, '7.76/15.23', '7.76/15.25', '7.76/15.23') | 1 s arc minus the served plan's, mean over changed: v8 +0.093, candidate +0.014 m
+a68ad579 | 199 | 86 | 0.0-7.7 | 0.62 | (44, 7.7, '6.45/9.84', '6.59/9.98', '6.72/10.43') | 1 s arc minus the served plan's, mean over changed: v8 -0.023, candidate +0.034 m
+a6941bb6 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+a9c7f2c7 | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+afcb2149 | 198 | 53 | 3.9-8.0 | 0.15 | (123, 8.0, '7.62/14.18', '7.64/14.23', '7.63/14.23') | 1 s arc minus the served plan's, mean over changed: v8 +0.020, candidate +0.006 m
+b27b3375 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+b40f4729 | 199 | 89 | 1.6-7.9 | 0.89 | (0, 4.3, '5.26/12.25', '5.10/12.08', '5.08/11.91') | 1 s arc minus the served plan's, mean over changed: v8 -0.108, candidate -0.014 m
+b4a3c975 | 199 | 49 | 0.0-8.0 | 0.21 | (0, 0.0, '0.04/0.74', '0.04/0.73', '0.04/0.69') | 1 s arc minus the served plan's, mean over changed: v8 -0.105, candidate -0.037 m
+b727530b | 199 | 44 | 5.8-7.9 | 0.13 | (118, 7.9, '7.75/14.53', '7.77/14.59', '7.76/14.56') | 1 s arc minus the served plan's, mean over changed: v8 +0.026, candidate +0.007 m
+b88aa3d5 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+ba40be62 | 198 | 63 | 0.1-7.9 | 0.56 | (0, 7.9, '6.14/8.78', '6.51/9.12', '6.46/9.62') | 1 s arc minus the served plan's, mean over changed: v8 -0.027, candidate -0.029 m
+bbc53aa8 | 198 | 13 | 6.6-8.0 | 0.18 | (185, 8.0, '7.55/14.01', '7.61/14.07', '7.57/14.06') | 1 s arc minus the served plan's, mean over changed: v8 +0.105, candidate +0.028 m
+bc309fd6 | 199 | 34 | 0.0-8.0 | 0.69 | (112, 8.0, '6.38/11.45', '6.15/11.22', '6.63/11.71') | 1 s arc minus the served plan's, mean over changed: v8 -0.072, candidate +0.123 m
+c0c88642 | 198 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+c4a58f83 | 199 | 45 | 6.0-8.0 | 0.13 | (99, 7.9, '7.87/15.21', '7.87/15.27', '7.87/15.22') | 1 s arc minus the served plan's, mean over changed: v8 +0.013, candidate +0.003 m
+ce63741d | 198 | 90 | 0.5-8.0 | 1.25 | (0, 6.7, '7.25/14.85', '7.13/14.77', '7.19/14.79') | 1 s arc minus the served plan's, mean over changed: v8 -0.070, candidate -0.037 m
+d8bfaaf2 | 199 | 15 | 3.3-7.7 | 2.55 | (184, 7.7, '6.41/11.70', '6.14/11.49', '6.57/11.87') | 1 s arc minus the served plan's, mean over changed: v8 -0.556, candidate -0.117 m
+dc222bc3 | 199 | 57 | 2.3-7.7 | 0.27 | (102, 7.7, '6.92/12.84', '6.79/12.71', '6.99/12.92') | 1 s arc minus the served plan's, mean over changed: v8 +0.008, candidate +0.013 m
+dc401449 | 199 | 56 | 2.6-7.9 | 0.34 | (0, 7.6, '7.76/15.14', '7.74/15.18', '7.75/15.13') | 1 s arc minus the served plan's, mean over changed: v8 -0.091, candidate -0.079 m
+e0f6ebe1 | 197 | 77 | 3.8-7.9 | 0.19 | (0, 7.7, '7.19/13.08', '7.22/13.20', '7.20/13.16') | 1 s arc minus the served plan's, mean over changed: v8 -0.010, candidate -0.005 m
+e1c6ae9f | 199 | 24 | 2.1-7.8 | 0.64 | (159, 7.8, '5.25/7.47', '5.17/7.10', '5.30/7.74') | 1 s arc minus the served plan's, mean over changed: v8 -0.120, candidate -0.050 m
+e7db8971 | 199 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+e848c843 | 199 | 106 | 2.7-8.0 | 0.43 | (0, 8.0, '7.21/12.30', '7.66/12.78', '7.30/12.54') | 1 s arc minus the served plan's, mean over changed: v8 +0.012, candidate +0.003 m
+e9990bdd | 199 | 50 | 1.2-7.8 | 1.15 | (0, 7.8, '7.73/14.35', '7.73/14.40', '7.73/14.43') | 1 s arc minus the served plan's, mean over changed: v8 -0.017, candidate +0.067 m
+ea468790 | 199 | 99 | 0.2-4.4 | 0.17 | (0, 4.3, '3.65/5.89', '3.78/5.91', '3.69/5.99') | 1 s arc minus the served plan's, mean over changed: v8 -0.010, candidate -0.000 m
+eaba3f6a | 198 | 57 | 1.3-7.8 | 0.72 | (111, 7.8, '4.85/6.89', '5.16/6.53', '5.16/7.25') | 1 s arc minus the served plan's, mean over changed: v8 -0.038, candidate +0.004 m
+ec1d0b2b | 46 | 18 | 0.0-1.1 | 0.09 | (0, 0.0, '0.04/0.45', '0.04/0.32', '0.04/0.38') | 1 s arc minus the served plan's, mean over changed: v8 -0.017, candidate -0.013 m
+f1575120 | 190 | 0 | 0.0-0.0 | 0.00 | None | 1 s arc minus the served plan's, mean over changed: v8 +0.000, candidate +0.000 m
+f8ee31cb | 199 | 80 | 3.6-7.9 | 0.71 | (0, 6.0, '6.38/12.67', '6.33/12.65', '6.35/12.64') | 1 s arc minus the served plan's, mean over changed: v8 -0.091, candidate -0.024 m
+f9121c36 | 199 | 96 | 1.7-8.0 | 0.19 | (81, 8.0, '7.55/13.91', '7.60/13.99', '7.56/13.97') | 1 s arc minus the served plan's, mean over changed: v8 +0.013, candidate -0.001 m
+f9e361aa | 199 | 41 | 2.7-8.0 | 0.59 | (0, 7.0, '7.71/16.15', '7.52/15.99', '7.60/16.02') | 1 s arc minus the served plan's, mean over changed: v8 -0.127, candidate -0.012 m
+fc9fde87 | 198 | 32 | 0.4-7.8 | 0.71 | (0, 1.0, '1.89/5.89', '1.40/5.02', '1.66/5.38') | 1 s arc minus the served plan's, mean over changed: v8 -0.065, candidate +0.088 m
+fcd8cc77 | 198 | 75 | 1.4-7.9 | 0.50 | (108, 7.9, '7.28/12.67', '7.52/12.81', '7.34/12.86') | 1 s arc minus the served plan's, mean over changed: v8 +0.088, candidate +0.031 m
+ffe5b17d | 199 | 88 | 4.2-7.9 | 0.14 | (80, 7.9, '7.70/14.43', '7.70/14.44', '7.71/14.46') | 1 s arc minus the served plan's, mean over changed: v8 +0.005, candidate +0.001 m
+total: 3625 / 16511 decisions changed, 66 / 84 rollouts

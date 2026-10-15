@@ -110,3 +110,27 @@ Decision: the v9b content registered above (H_AMIN 0, H_FULL 1) would not touch 
 (> 2 spins on a spin set with a handoff-window onset): v9a + a reverse guard (the plan's path is cut at its first node that lies behind the
 previous one along the car's heading, and the reference stops there with the deceleration bound). If the trigger does not fire, the reverse
 guard is reported as the proposed next fix, not run.
+
+## Amendment 5 (2026-10-15 17:00 JST; decision 309 follow-up 3: v8's two low-speed control zeros, CPU only, stored logs)
+
+Stored reads: identity `r281/rsg` (path 0) against the d291 v8 read `r281/spin_read2` (path gate), RSG-L18-s0. Scripts: `sv9_check.py
+fixscreen` (offline rebuild of every logged gate call with the driver's v0 and the controller row's acceleration), output
+`results/spin_v9/a5_fixscreen84.txt`.
+- **268949d2** (identity 1.000, v8 0 corridor): the cars separate at 5.9 s while accelerating out of a right turn at 2 m/s, with the gate
+  closed (ratio 0.6). v8's reference sits 0.10 m behind the served plan at 1 s, averaged over its changed decisions. The car accelerates
+  slower than the identity's (3.9 vs 4.8 m/s at 7.6 s, 7.5 vs 9.7 at 10.6 s). The policy, fed its own lower speed, plans shorter (the
+  d285 ratchet) and on a slightly different line. It drifts 0.9 m off the identity's path by 10.6 s and leaves the corridor. The gate
+  opened only briefly (7.1-7.4 s and 7.7-7.8 s, ratio 1.0-1.19) and is not what starts it, contrary to d291's attribution.
+- **09528162** (identity 0.285, v8 0 corridor): the cars separate at 2.6 s while braking from 7.6 m/s into a -100 deg right turn. v8's
+  reference brakes later than the plan, +0.06 m ahead of it at 1 s on average and up to +0.28 m. The car enters the turn faster (3.1 vs
+  2.0 m/s at 5.1 s), runs 0.5-1.2 m wide at 7-8 s, and diverges from there.
+- Common cause: the jerk limit JLON (10 m/s^3, ramped from the measured acceleration). The constant ablation on the logged plans
+  (curvature speed limit off, JLON 100, AMAX 6) puts the lag on JLON in both scenes; the curvature limit plays no part (a 5 m/s floor on
+  it changes 6 decisions of 268949d2 by <= 6 cm). With JLON applied only at v0 >= 8 m/s (`JEV_TRACK_CFG=jlon_v=8`, knob added to
+  track_ref, default 0 = v8, bit-identical on 3000 x 4 random plans), the 1 s offset becomes -0.008 and +0.014 m.
+- JLON's own evidence: d291 run 6 added it for d8bfaaf2's "deceleration step"; d291 Amendment 3 reattributed that case to the simulator
+  pose fault. No surviving case needs JLON.
+- **Not narrow, not run.** jlon_v=8 changes 3 625 of 16 511 gate decisions in 66 of the 84 v8-read rollouts (every low-speed speed
+  change). It needs the full spin set + controls (84 scenes, about 45 min on one card) and a PAI 281 read against the gate reference, not
+  a 46-control job under 30 min. Proposed for the next PAI slot as v8b = gate + `jlon_v=8`, with the v9 lines (spins <= 2 on the 38; on the
+  controls, no new zero beyond d291's and mean not below the gate reference - 0.01) and the 281 read paired with `RSG-L18-s0-gate`.

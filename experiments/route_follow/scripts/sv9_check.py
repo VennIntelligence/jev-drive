@@ -10,7 +10,10 @@
                                (the flag-off smoke against the stored identity), and the guard records of b (track.hand)
   sv9_check.py screen --b <v9 root> --scenes <list>   per rollout: guard calls whose v9 reference differs from v8's (> 1 cm at 0.5 .. 4 s,
                                rebuilt from the logged plan, the driver's v0 and the controller row's acceleration; the v9 rebuild is checked
-                               against the logged reference). A rollout with no such call drove v8's closed loop."""
+                               against the logged reference). A rollout with no such call drove v8's closed loop.
+  sv9_check.py fixscreen --b <gate root> --scenes <list> --cfg jlon_v=8   Amendment 5: per rollout of a gate read, the decisions
+                               whose reference changes under the candidate (> 2 cm at 0.5 .. 2 s), their speed range, the largest change, and the
+                               1 s / 2 s arc of plan, v8 and candidate at the first changed decision"""
 import argparse, os, sys
 import numpy as np
 here = os.path.dirname(os.path.abspath(__file__))
@@ -106,6 +109,40 @@ def plans(a):
     return 0 if ks and max(d) == 0 else 1
 
 
+def fixscreen(a):
+    from sv9_diag import rollouts
+    kv = {k: float(v) for k, v in (x.split("=") for x in a.cfg.split(","))}
+    D = rollouts(a.b, set(open(a.scenes).read().split()))
+    arc = lambda X, Y, j: float(np.hypot(np.diff(X[:j + 1]), np.diff(Y[:j + 1])).sum())  # noqa: E731
+    tot = ch = nr = 0
+    print("scene | decisions | changed | v0 range of changed | max change m | first changed k: v0, arc 1 s / 2 s plan, v8, candidate")
+    for sc, d in sorted(D.items()):
+        g, R = d["rows"], d["recs"]
+        n = c = 0; vs, mx, first, g8, gc = [], 0.0, None, [], []
+        for k in sorted(R):
+            r = R[k]; tr = r.get("track")
+            if not tr:
+                continue
+            n += 1
+            i = int(np.abs(g["timestamp_us"] - r["t0"]).argmin())
+            P, a0 = np.asarray(r["poses"], float), float(g["acceleration"][i])
+            r8, _ = TR.build(P, tr["v0"], 0.0, mode="gate", a0=a0)
+            rc, _ = TR.build(P, tr["v0"], 0.0, mode="gate", a0=a0, **kv)
+            dd = float(max(np.hypot(r8[1][j] - rc[1][j], r8[2][j] - rc[2][j]) for j in (5, 10, 15, 20)))
+            if dd > 0.02:
+                c += 1; vs.append(tr["v0"]); mx = max(mx, dd)
+                s1 = float(np.hypot(*np.diff(np.r_[[[0.0, 0.0]], P[:2, :2]], axis=0).T).sum())
+                g8.append(arc(r8[1], r8[2], 10) - s1); gc.append(arc(rc[1], rc[2], 10) - s1)
+                if first is None:
+                    seg = np.hypot(*np.diff(np.r_[[[0.0, 0.0]], P[:, :2]], axis=0).T)
+                    first = (k, round(tr["v0"], 1), f"{seg[:2].sum():.2f}/{seg[:4].sum():.2f}", f"{arc(r8[1], r8[2], 10):.2f}/{arc(r8[1], r8[2], 20):.2f}",
+                             f"{arc(rc[1], rc[2], 10):.2f}/{arc(rc[1], rc[2], 20):.2f}")
+        tot += n; ch += c; nr += int(c > 0)
+        print(f"{sc[7:15]} | {n} | {c} | {min(vs, default=0):.1f}-{max(vs, default=0):.1f} | {mx:.2f} | {first} | "
+              f"1 s arc minus the served plan's, mean over changed: v8 {np.mean(g8) if g8 else 0:+.3f}, candidate {np.mean(gc) if gc else 0:+.3f} m")
+    print(f"total: {ch} / {tot} decisions changed, {nr} / {len(D)} rollouts")
+
+
 def screen(a):
     from sv9_diag import rollouts
     keep = set(open(a.scenes).read().split())
@@ -135,7 +172,8 @@ def screen(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("same", "replay", "plans", "screen"))
+    ap.add_argument("cmd", choices=("same", "replay", "plans", "screen", "fixscreen"))
+    ap.add_argument("--cfg")
     ap.add_argument("--a")
     ap.add_argument("--b")
     ap.add_argument("--run", nargs="+")
@@ -144,4 +182,4 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.cmd == "same":
         sys.exit(1 if same() else 0)
-    sys.exit(plans(a)) if a.cmd == "plans" else screen(a) if a.cmd == "screen" else replay(a)
+    sys.exit(plans(a)) if a.cmd == "plans" else screen(a) if a.cmd == "screen" else fixscreen(a) if a.cmd == "fixscreen" else replay(a)
