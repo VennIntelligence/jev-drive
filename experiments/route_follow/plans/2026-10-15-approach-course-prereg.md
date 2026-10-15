@@ -164,3 +164,20 @@ Diagnostic, not a gate (`*_trainrows.md`, `rf_appgate.py --rows train`, 2 000 of
 - So the terms are learnt but do not transfer to held-out logs, and they cost NAVSIM dev ADE. The held-out dev draw is easy: lateral
   0.27 m against 0.60 m on the nuPlan train rows, and the PAI dev has 2 scenes, only one with a speed read and no speed excess at all. A
   30 % drop was therefore hard to show there. This is a property of the split, recorded here, not a reason to move the line after reading.
+
+## Amendment 4 — EXPLORATORY (coordinator, 2026-10-15 ~11:50, after the failed pilot gate; not a registered arm, not a candidate)
+
+The prereg verdict stands: the pilot gate failed and there is no registered arm. One exploratory mechanism read follows, because the
+offline dev draw cannot exercise the approach (base already 0.27 m / 0.006 m/s there; PAI dev = 2 scenes) and PAI closed loop is the only
+place the approach is tested. G-real (+0.020 m at W 1) is the known harm proxy.
+- **Training.** EXPLORATORY APP1X-L18-s0 = arm A1 at W 1, seed 0 only, 2 500 gentle steps on RSG-L18-s0 (rf_app.sh train with
+  TAG_PREFIX=APP1X, PRIO 12). Gates are logged. The held 460 read gives H1 only.
+- **PAI 281.** Run on Tokyo in parallel with the held read, without waiting for H1: rf_v2pai.sh run / read, gains 20, both cards, paired
+  against r281/rsg.
+- **Primary read on PAI.**
+  1. Mechanism at the 22 runway turns (results/approach/pai_runway22.txt): entry speed; speed excess over the human from 26 m before the
+     entry; signed inward offset at entry - 20 m (rf_laneoff / rf_entryspeed machinery). Each paired with a CI.
+  2. Completion on the 22 (RSG 3) and on the other 14 (RSG 2); exam-72 zeros; the shape gate; spins; zeros by kind.
+- **Reading.**
+  - Speed excess and offset both within noise: the approach course as rows-plus-hinge is closed.
+  - Mechanism moves but completion does not: that is a finding about which entry state is not enough.
