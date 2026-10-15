@@ -1,0 +1,12 @@
+{
+ "dev_rows": 1789,
+ "deterministic_kernels": true,
+ "ade_equal_bitwise": true,
+ "ade_max_abs_diff": 0.0,
+ "dev_ade_rows_ade": 0.5284472107887268,
+ "dev_ade_mine": 0.5284472107887268,
+ "repeat_equal_bitwise": true,
+ "scale1_equal_bitwise": true,
+ "scale1_max_abs_diff_m": 0.0,
+ "f_changes_only_speed_cols": true
+}
