@@ -110,11 +110,11 @@ def served(a):
 
 
 def tg_stats(root):
-    """{scene: {n_on, n_dec, k_first, t0_first}} from drive.jsonl `tg` (turn_gain.py)."""
+    """{scene: {n_on, n_dec, k_first, t0_first}} from drive.jsonl `tg` (turn_gain.py) or `ih` (intent_hold.py, rf_intent.sh)."""
     out = {}
     for se, (sc, _, recs) in drive_recs(root).items():
-        on = [r for r in recs if (r.get("tg") or {}).get("on")]
-        out[sc] = dict(n_on=len(on), n_dec=len(recs), n_tg=sum("tg" in r for r in recs), k_first=on[0]["k"] if on else None,
+        on = [r for r in recs if (r.get("tg") or r.get("ih") or {}).get("on")]
+        out[sc] = dict(n_on=len(on), n_dec=len(recs), n_tg=sum("tg" in r or "ih" in r for r in recs), k_first=on[0]["k"] if on else None,
                        t0_first=on[0]["t0"] if on else None)
     return out
 

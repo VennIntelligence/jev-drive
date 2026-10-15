@@ -32,7 +32,9 @@ row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
 turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default), JEV_EXPERT (a pack directory:
 the rule expert's plan replaces the model's, rule_expert.py, mounted by pai_run.sh; `poses` = the expert's plan, `poses_model` the model's,
-`expert` its state; off by default).
+`expert` its state; off by default), JEV_INTENT_HOLD / JEV_IH_A (1 / <a>: the served path held to the policy's own earlier intent while the
+route memory or the command shows a turn, intent_hold.py, a diagnostic, imported only when set; logged as `ih`, and `poses_ih` while it holds,
+`poses` stays the plan; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -58,6 +60,10 @@ import turn_gain as TG
 import rule_expert as XP
 import vhist as VH
 from pai_core import C, I
+
+IH = None                                            # JEV_INTENT_HOLD (intent_hold.py): imported only when set, so other mounts need not carry it
+if os.environ.get("JEV_INTENT_HOLD", "") not in ("", "0"):
+    import intent_hold as IH
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py (mounted by pai_run.sh), set in main() for a branch checkpoint
 RM_SC = (os.environ.get("JEV_RM_SC", "") or "").strip().lower()   # ordered-memory scalar diagnostic (route v2 prereg Amendment 16), off by default
@@ -114,6 +120,7 @@ class Session:
         self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
         self.lock = threading.Lock()
         self.t_first = None                          # time_now of the session's first drive call (track_ref's v9 handoff guard)
+        self.ih = IH.new() if IH is not None else None   # JEV_INTENT_HOLD: the session's intent path
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
     def pose_at(self, ts: int):
@@ -304,6 +311,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                     ctx.abort(grpc.StatusCode.INTERNAL, f"rule expert failed: {e!r}")
             if TG.ON:                                        # JEV_TURN_GAIN (turn_gain.py): the plan's turn scaled while it under-takes the route's
                 served, tgr = TG.apply(rf, o["poses"])
+            ihr = None
+            if IH is not None:                               # JEV_INTENT_HOLD (intent_hold.py): the served path held to the policy's own intent
+                served, ihr = IH.step(s.ih, p0, o["poses"], float(np.hypot(*V[-1])), rf, int(np.argmax(cmd)))
             if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
                 ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]), t_s=(now - s.t_first) * 1e-6,
                                     lead=bool(((fx or {}).get("lead") or {}).get("cut", 0.0) > 0))
@@ -312,7 +322,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 if tilt:
                     tri["tilt"] = round(float((ax[2] - p0[2] + np.pi) % (2 * np.pi) - np.pi), 3)
             else:
-                s.plan = S.make_cached_plan(t0, s.anchor, served if TG.ON else o["poses"])
+                s.plan = S.make_cached_plan(t0, s.anchor, served if (TG.ON or IH is not None) else o["poses"])
         traj = S.build_trajectory_from_plan(s.plan, s.anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "tq": tq, "t0": t0, "k": k,
@@ -328,6 +338,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(expert=xi, poses_model=np.asarray(o["poses_model"]).round(4).tolist())
             if TR.ON:
                 rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
+            if ihr is not None:
+                rec.update(ih=ihr, **({"poses_ih": np.round(served, 4).tolist()} if ihr["on"] else {}))
             if tgr is not None:
                 rec.update(tg=tgr, **({"poses_branch": np.round(served, 4).tolist()} if tgr["on"] else {}))
             if "rmem" in o:
@@ -348,7 +360,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -393,6 +405,9 @@ def main() -> None:
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     assert not (TG.ON and TR.ON), "JEV_TURN_GAIN transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
     assert not (XP.ON and (FX.ON or TR.ON or TG.ON)), "JEV_EXPERT replaces the plan: the other serving switches must be off"
+    assert IH is None or not (TG.ON or TR.ON or XP.ON), "JEV_INTENT_HOLD transforms the plan handed to make_cached_plan: JEV_TURN_GAIN / JEV_TRACK / JEV_EXPERT must be off"
+    if IH is not None:
+        LOG.info("serving INTENT HOLD (a %g, turn %g deg within %g m, far %g m, clip %g m, v_min %g m/s)", IH.A, IH.TURN_DEG, IH.AHEAD_M, IH.FAR_M, IH.CLIP_M, IH.V_MIN)
     if XP.ON:
         LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
     LOG.info("JEV_RM_SC %s", RM_SC or "unset")
