@@ -18,6 +18,34 @@ common scenes), [follow.md](follow.md) (24 held turns), [onk.json](onk.json).
 
 Read: d = arm - RSG-L18-s0 on the 452 paired scenes. Turn-completion pairs vs RSG-L18-s0: k26 +0.0, k51 -8.3 [-20.8, +9.1], k51w1 +4.2 [-10.5, +18.2] pp.
 
+## Seed 1
+
+Paired against RSG-L18-s1 (same-seed pair, log-clustered 95 % CI on the 452 scenes), not against RSG-L18-s0.
+
+| arm (on-k, ho-w) | rows normal / yr / on | pressure x k13 | tag | zeros 452 | d zeros vs RSG-L18-s1 [95 % CI] | at-fault | d at-fault | col / off / cor | mean score | d score | turn completion (24) | dev ADE |
+|:--|:--|--:|:--|--:|:--|--:|:--|:--|--:|:--|--:|--:|
+| (13, 3) | 102 / 13 / 13 | 1.00 | RSG-L18-s1 | 26 | - | 19 | - | 6 / 13 / 8 | 0.8830 | - | 58.3 % | 0.5270 |
+| (26, 3) | 89 / 13 / 26 | 2.24 | RSGk26-L18-s1 | 25 | -1.0 [-5.8, +3.1] | 19 | +0.0 [-4.1, +3.8] | 5 / 14 / 6 | 0.8855 | +0.0025 [-0.0066, +0.0122] | 66.7 % | 0.5282 |
+| (51, 3) | 64 / 13 / 51 | 5.76 | RSGk51-L18-s1 | 24 | -2.0 [-9.6, +6.7] | 20 | +1.0 [-6.7, +10.1] | 7 / 13 / 4 | 0.8875 | +0.0045 [-0.0125, +0.0197] | 62.5 % | 0.5355 |
+| (51, 1) | 64 / 13 / 51 | 1.92 | RSGk51w1-L18-s1 | 22 | -4.0 [-10.9, +3.2] | 18 | -1.0 [-7.9, +6.1] | 6 / 12 / 4 | 0.8934 | +0.0104 [-0.0044, +0.0248] | 66.7 % | 0.5320 |
+
+Turn-completion pairs vs RSG-L18-s1: k26 +8.3 [-9.1, +27.3], k51 +4.2 [-13.8, +23.8], k51w1 +8.3 [-12.0, +27.8] pp. The 24-turn follow read exists for all four
+seed-1 tags ([follow.md](follow.md)); nothing was submitted.
+
+**Verdict (prereg line 1, seed 1 vs RSG-L18-s1).** No seed-1 arm meets the candidate line (zeros CI high < 0 or score CI low > 0): k26, k51 and k51w1 all have CIs that reach 0 on both.
+
+## Two-seed
+
+Arm 2-seed mean minus RSG-L18 2-seed mean (s0, s1), 452 scenes, log-clustered 95 % CI (`ol_confirm --mean`; [held18_confirm.md](held18_confirm.md)).
+
+| arm - RSG-L18 | zeros | at-fault | mean score | GT (m) |
+|:--|:--|:--|:--|:--|
+| RSGk26-L18 | -2.5 [-6.2, +0.5] | -1.5 [-5.2, +1.8] | +0.0063 [-0.0001, +0.0140] | -0.044 [-0.095, +0.012] |
+| RSGk51-L18 | -1.5 [-7.2, +4.7] | +0.0 [-6.2, +7.4] | +0.0063 [-0.0067, +0.0183] | +0.012 [-0.067, +0.087] |
+| RSGk51w1-L18 | -3.5 [-8.8, +1.8] | -2.5 [-7.8, +2.9] | **+0.0117 [+0.0015, +0.0222]** | +0.024 [-0.035, +0.084] |
+
+**Verdict (prereg line 3).** k51w1 replicates: the 2-seed mean reaches the candidate line on the score clause (+0.0117, CI low > 0) and seed 1 has the same sign (zeros -4.0, score +0.0104); k26 and k51 do not reach the line on the 2-seed mean (no gain).
+
 **Lines (prereg).** Candidate = zeros CI high < 0 or score CI low > 0. Stop (no seed 1) = zeros CI low > +5.
 - k26: no gain (zeros -4.0 [-9.6, +1.2], score CI reaches 0). Not stopped.
 - k51: no gain (-1.0 [-6.4, +4.1], +0.0081 [-0.0044, +0.0215]). Not stopped.

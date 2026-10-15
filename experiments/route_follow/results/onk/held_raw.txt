@@ -1,6 +1,9 @@
 common scenes 460
-RSG-L18-s0       n  460 mean 0.8656 zeros  34 gt 1.135 latgt 0.869  {'offroad': 17, 'left_corridor_laterally': 5, 'Waypoint 1 fails sanity check:': 5, 'collision_at_fault': 4, 'Waypoint 44 fails sanity check': 1}
+RSG-L18-s0       n  460 mean 0.8656 zeros  34 gt 1.135 latgt 0.869  {'offroad': 17, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 5, 'collision_at_fault': 4, 'Waypoint 44 fails sanity check': 1}
 RSGk26-L18-s0    n  460 mean 0.8755 zeros  30 gt 1.094 latgt 0.824  {'offroad': 11, 'collision_at_fault': 7, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 4, 'Waypoint 44 fails sanity check': 1}
-RSGk51-L18-s0    n  460 mean 0.8735 zeros  33 gt 1.184 latgt 0.814  {'offroad': 13, 'collision_at_fault': 7, 'left_corridor_laterally': 5, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 44 fails sanity check': 1}
-RSGk51w1-L18-s0  n  460 mean 0.8783 zeros  31 gt 1.182 latgt 0.829  {'offroad': 11, 'collision_at_fault': 6, 'left_corridor_laterally': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 44 fails sanity check': 1}
+RSGk51-L18-s0    n  460 mean 0.8735 zeros  33 gt 1.184 latgt 0.814  {'offroad': 13, 'collision_at_fault': 7, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 5, 'Waypoint 44 fails sanity check': 1}
+RSGk51w1-L18-s0  n  460 mean 0.8783 zeros  31 gt 1.182 latgt 0.829  {'offroad': 11, 'left_corridor_laterally': 6, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 44 fails sanity check': 1}
 RSG-L18-s1       n  460 mean 0.8676 zeros  34 gt 1.144 latgt 0.876  {'offroad': 13, 'left_corridor_laterally': 7, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 44 fails sanity check': 1}
+RSGk26-L18-s1    n  460 mean 0.8701 zeros  33 gt 1.096 latgt 0.822  {'offroad': 14, 'left_corridor_laterally': 6, 'Waypoint 1 fails sanity check:': 5, 'collision_at_fault': 5, 'Waypoint 44 fails sanity check': 1}
+RSGk51-L18-s1    n  460 mean 0.8721 zeros  32 gt 1.120 latgt 0.812  {'offroad': 13, 'collision_at_fault': 7, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 4, 'Waypoint 44 fails sanity check': 1}
+RSGk51w1-L18-s1  n  460 mean 0.8778 zeros  30 gt 1.145 latgt 0.817  {'offroad': 12, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 4, 'Waypoint 44 fails sanity check': 1}
