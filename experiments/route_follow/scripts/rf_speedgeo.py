@@ -30,7 +30,7 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE)]
+sys.path[:0] = [str(HERE), str(HERE.parents[2])]
 
 N_BOOT, SEED = 10_000, 0
 KH_MIN, V_MIN, SEG_MIN, K_FLOOR, ALAT_GATE = 0.02, 2.0, 0.3, 1e-3, 4.5
