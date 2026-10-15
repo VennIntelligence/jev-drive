@@ -177,7 +177,14 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   - Zeros 70 vs 26, +44 [+30, +58]; at-fault +26; offroad 41 vs 17.
   - Held turns 8 / 24 vs 16 / 24. The car enters 0.17 m further inside; entry speed is unchanged.
   - Look at [held/confirm.md](results/approach/held/confirm.md) and [held/entry.md](results/approach/held/entry.md).
-  - The PAI 281 mechanism read on the 22 runway turns is in `results/approach/pai/` (`scripts/rf_appread.py`).
+  - PAI 281 ([pai/mechanism_APP1X-L18-s0.md](results/approach/pai/mechanism_APP1X-L18-s0.md),
+    [pai281/APP1X-L18-s0.md](results/pai281/APP1X-L18-s0.md)). On the 22 runway turns the mechanism moves:
+    - entry speed -2.96 [-4.45, -1.54] m/s (7.38 -> 4.80, human 4.99)
+    - speed excess over the human -1.30 [-2.21, -0.56] m/s
+    - inward offset at entry - 20 m +0.29 [+0.05, +0.59] m
+  - Runway completion barely changes: 4 / 22 vs 3 / 22. The other 14 strict turns go 7 vs 2; strict 36 11 vs 5; shape gate 8 vs 1.
+  - Harm: all 281 -0.062 [-0.108, -0.016], spins 29 vs 2, offroad zeros 32 vs 14, control 75 6 zeros vs 0.
+  - Look at the per-scene table in the mechanism file: compare entry speed and completion on the runway rows.
 - [results/corridor/](results/corridor/check.md): ROUTE-LANE CORRIDOR labels and the offline check (turn-night.md section 6; prereg
   `plans/2026-10-15-corridor-check-prereg.md`, Amendments 1-4; `scripts/rf_corridor.py` lanes | plans | build | check, `scripts/rf_corridor.sh`).
   Labels: the route's own lane chain (entry lane -> connector -> exit lane, the target lane at a lane change) + 0.3 m, classes corridor /

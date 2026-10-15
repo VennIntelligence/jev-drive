@@ -197,3 +197,26 @@ place the approach is tested. G-real (+0.020 m at W 1) is the known harm proxy.
   - Inward offset at the entry +0.17 [+0.09, +0.25] m.
   - Reading: the plan is pushed inward and leaves the road, the RBSG2 direction.
 - **PAI 281** (mechanism read): below, when it lands.
+- **PAI 281** (EXPLORATORY, gains 20, paired against r281/rsg). Sources: `results/approach/pai/mechanism_APP1X-L18-s0.md` and
+  `results/pai281/APP1X-L18-s0.md`.
+  - **The mechanism moves.** On the 22 runway turns:
+
+    | read | RSG median | APP1X median | paired mean [95 % CI] |
+    |:--|--:|--:|:--|
+    | entry speed (n 15; human median 4.99) | 7.38 m/s | 4.80 m/s | -2.96 [-4.45, -1.54] m/s |
+    | speed excess over the human, last 26 m | 0.24 m/s | 0.00 m/s | -1.30 [-2.21, -0.56] m/s |
+    | inward offset at entry - 20 m | -0.44 m | -0.12 m | +0.29 [+0.05, +0.59] m |
+
+  - **Completion on the runway turns does not.** 4 / 22 vs 3 / 22 (gained e0f6ebe1, eaba3f6a, f9e361aa; lost 132ae6cb, d90fe123); the line
+    of Amendment 2 (>= 6) is not met.
+  - **The other 14 turns gain.** 7 / 14 vs 2 / 14. Strict 36: 11 vs 5. Shape gate: 8 vs 1. Exam turn scenes: 4 vs 3. Exam-72 zeros:
+    37 vs 38.
+  - **Broad harm.**
+    - All 281: -0.062 [-0.108, -0.016]; zeros 76 vs 70.
+    - Zeros by kind (collision / offroad / corridor): 16 / 32 / 28 vs 9 / 14 / 47.
+    - Handoff spins 29 vs 2.
+    - Control 75: 6 zeros vs 0, -0.131 [-0.183, -0.085].
+    - New non-turn zeros: 8, of which 7 offroad (the turn-gain stop rule of >= 3 fires).
+  - **Reading.** Entering slower, nearer the human's speed and less on the outside does not complete the runway turns. On the PAI turns that
+    start near the entry the slower entry does help. At W 1 the course costs held and PAI zeros, spins and offroad, so it is not a
+    candidate.

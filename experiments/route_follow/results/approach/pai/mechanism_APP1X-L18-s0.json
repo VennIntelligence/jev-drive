@@ -1,0 +1,1128 @@
+{
+ "a": "rsg",
+ "b": "app1x",
+ "scenes": {
+  "clipgt-09528162-2142-4082-a31b-decf787c8ada": {
+   "rsg": {
+    "scene": "clipgt-09528162-2142-4082-a31b-decf787c8ada",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 28.0,
+    "start_to_entry": 28.0,
+    "v_entry": 2.6472276319939287,
+    "v_h": 4.51675771285953,
+    "excess26": 0.0,
+    "inward20": -1.863476934917716
+   },
+   "app1x": {
+    "scene": "clipgt-09528162-2142-4082-a31b-decf787c8ada",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "R",
+    "entry": 28.0,
+    "start_to_entry": 28.0,
+    "v_entry": 2.2779579467497446,
+    "v_h": 4.51675771285953,
+    "excess26": 0.0,
+    "inward20": -1.863476934917716
+   }
+  },
+  "clipgt-132ae6cb-1e58-42aa-8bf3-4381eb958e43": {
+   "rsg": {
+    "scene": "clipgt-132ae6cb-1e58-42aa-8bf3-4381eb958e43",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "L",
+    "entry": 26.0,
+    "start_to_entry": 25.99940726338259,
+    "v_entry": 6.502456911623433,
+    "v_h": 8.212442239348904,
+    "excess26": 0.00012257579497085093,
+    "inward20": 0.10953359744568193
+   },
+   "app1x": {
+    "scene": "clipgt-132ae6cb-1e58-42aa-8bf3-4381eb958e43",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "L",
+    "entry": 26.0,
+    "start_to_entry": 25.99940726338259,
+    "v_entry": 4.990612033635093,
+    "v_h": 8.212442239348904,
+    "excess26": 0.00010106917286867931,
+    "inward20": 0.14849052717260677
+   }
+  },
+  "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca": {
+   "rsg": {
+    "scene": "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "R",
+    "entry": 102.0,
+    "start_to_entry": 99.91219635580588,
+    "v_entry": NaN,
+    "v_h": 4.6069836650162355,
+    "excess26": 8.024706153660306,
+    "inward20": -2.481860747222085
+   },
+   "app1x": {
+    "scene": "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 102.0,
+    "start_to_entry": 99.91219635580588,
+    "v_entry": 4.130468825852302,
+    "v_h": 4.6069836650162355,
+    "excess26": 1.360534859327737,
+    "inward20": -1.9477946883704547
+   }
+  },
+  "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38": {
+   "rsg": {
+    "scene": "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "L",
+    "entry": 9.0,
+    "start_to_entry": 8.999385960179435,
+    "v_entry": 2.552284899702303,
+    "v_h": 3.3632445488444396,
+    "excess26": 0.0018270296731783353,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "L",
+    "entry": 9.0,
+    "start_to_entry": 8.999385960179435,
+    "v_entry": 3.255823753572691,
+    "v_h": 3.3632445488444396,
+    "excess26": 0.13431691407256569,
+    "inward20": NaN
+   }
+  },
+  "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde": {
+   "rsg": {
+    "scene": "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 7.0,
+    "start_to_entry": 6.597759277261705,
+    "v_entry": 2.6542119256259102,
+    "v_h": 1.9398937618881866,
+    "excess26": 0.30440536893250886,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 7.0,
+    "start_to_entry": 6.597759277261705,
+    "v_entry": 2.678801171090578,
+    "v_h": 1.9398937618881866,
+    "excess26": 0.33764017098865146,
+    "inward20": NaN
+   }
+  },
+  "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226": {
+   "rsg": {
+    "scene": "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 30.0,
+    "start_to_entry": 29.98687030447922,
+    "v_entry": 10.687731187779844,
+    "v_h": 4.411720733397576,
+    "excess26": 2.486257882841468,
+    "inward20": -0.40780615260333924
+   },
+   "app1x": {
+    "scene": "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 30.0,
+    "start_to_entry": 29.98687030447922,
+    "v_entry": 5.208334009553454,
+    "v_h": 4.411720733397576,
+    "excess26": 0.9751812115398002,
+    "inward20": -0.33584462307207236
+   }
+  },
+  "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a": {
+   "rsg": {
+    "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 34.0,
+    "start_to_entry": 33.69342728020492,
+    "v_entry": 6.621179379363107,
+    "v_h": 3.7254522745945535,
+    "excess26": 0.2774057856204156,
+    "inward20": -0.14701128302949915
+   },
+   "app1x": {
+    "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 34.0,
+    "start_to_entry": 33.69342728020492,
+    "v_entry": 5.553393324693464,
+    "v_h": 3.7254522745945535,
+    "excess26": 0.10546090119810339,
+    "inward20": -0.0922689623151873
+   }
+  },
+  "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e": {
+   "rsg": {
+    "scene": "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 90.0,
+    "start_to_entry": 88.45214334351641,
+    "v_entry": NaN,
+    "v_h": 5.300602358458111,
+    "excess26": 0.06326485687575382,
+    "inward20": -1.894339035521507
+   },
+   "app1x": {
+    "scene": "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "R",
+    "entry": 90.0,
+    "start_to_entry": 88.45214334351641,
+    "v_entry": NaN,
+    "v_h": 5.300602358458111,
+    "excess26": 0.17223584784260476,
+    "inward20": 0.4189463477625728
+   }
+  },
+  "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14": {
+   "rsg": {
+    "scene": "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "offroad",
+    "side": "L",
+    "entry": 5.0,
+    "start_to_entry": 4.89947747997193,
+    "v_entry": 2.55182260062094,
+    "v_h": 1.3596231561355911,
+    "excess26": 0.2731352143356011,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "offroad",
+    "side": "L",
+    "entry": 5.0,
+    "start_to_entry": 4.89947747997193,
+    "v_entry": 2.7520602134970336,
+    "v_h": 1.3596231561355911,
+    "excess26": 0.31272037987720464,
+    "inward20": NaN
+   }
+  },
+  "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2": {
+   "rsg": {
+    "scene": "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 22.0,
+    "start_to_entry": 21.542015636399945,
+    "v_entry": 4.679897304652225,
+    "v_h": 5.512973167675991,
+    "excess26": 0.02477135489986427,
+    "inward20": 0.1762643479774242
+   },
+   "app1x": {
+    "scene": "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 22.0,
+    "start_to_entry": 21.542015636399945,
+    "v_entry": 5.634443849170548,
+    "v_h": 5.512973167675991,
+    "excess26": 0.028314818706464934,
+    "inward20": 0.1762643479774242
+   }
+  },
+  "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78": {
+   "rsg": {
+    "scene": "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "collision",
+    "side": "L",
+    "entry": 28.0,
+    "start_to_entry": 27.66816246341973,
+    "v_entry": 8.95067865244697,
+    "v_h": 8.379399262722423,
+    "excess26": 0.089402044799578,
+    "inward20": 0.05823588464636081
+   },
+   "app1x": {
+    "scene": "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "collision",
+    "side": "L",
+    "entry": 28.0,
+    "start_to_entry": 27.66816246341973,
+    "v_entry": 7.433471958619208,
+    "v_h": 8.379399262722423,
+    "excess26": 0.03514231751114017,
+    "inward20": 0.055721780030811394
+   }
+  },
+  "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b": {
+   "rsg": {
+    "scene": "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "L",
+    "entry": 4.0,
+    "start_to_entry": 4.0,
+    "v_entry": 6.483707357784038,
+    "v_h": 6.495062499001174,
+    "excess26": 0.8824138424829466,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "L",
+    "entry": 4.0,
+    "start_to_entry": 4.0,
+    "v_entry": 6.483707357784038,
+    "v_h": 6.495062499001174,
+    "excess26": 0.8824138424829466,
+    "inward20": NaN
+   }
+  },
+  "clipgt-3ce13eed-f97b-4c37-8716-a590569fab77": {
+   "rsg": {
+    "scene": "clipgt-3ce13eed-f97b-4c37-8716-a590569fab77",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 17.0,
+    "start_to_entry": 16.72545509623252,
+    "v_entry": 3.615098848071148,
+    "v_h": 3.3456038751929986,
+    "excess26": 0.03370394276604806,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-3ce13eed-f97b-4c37-8716-a590569fab77",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 17.0,
+    "start_to_entry": 16.72545509623252,
+    "v_entry": 3.038840255702046,
+    "v_h": 3.3456038751929986,
+    "excess26": 0.020765208736163724,
+    "inward20": NaN
+   }
+  },
+  "clipgt-403d558a-788a-4c46-a525-d8faabc9c417": {
+   "rsg": {
+    "scene": "clipgt-403d558a-788a-4c46-a525-d8faabc9c417",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 37.0,
+    "start_to_entry": 35.351115272316015,
+    "v_entry": 11.789199321985663,
+    "v_h": 6.189234434696093,
+    "excess26": 1.6155416337548136,
+    "inward20": -0.8290031625431094
+   },
+   "app1x": {
+    "scene": "clipgt-403d558a-788a-4c46-a525-d8faabc9c417",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "offroad",
+    "side": "R",
+    "entry": 37.0,
+    "start_to_entry": 35.351115272316015,
+    "v_entry": 5.860485167844066,
+    "v_h": 6.189234434696093,
+    "excess26": 0.0,
+    "inward20": -0.8290031625431094
+   }
+  },
+  "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3": {
+   "rsg": {
+    "scene": "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 12.0,
+    "start_to_entry": 12.0,
+    "v_entry": 5.0653468526619365,
+    "v_h": 4.5457753639093825,
+    "excess26": 0.02445785633821418,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 12.0,
+    "start_to_entry": 12.0,
+    "v_entry": 5.745374245721664,
+    "v_h": 4.5457753639093825,
+    "excess26": 0.10080294863149797,
+    "inward20": NaN
+   }
+  },
+  "clipgt-6fd8cf30-6ccf-4dad-9dee-14df4a9ba97a": {
+   "rsg": {
+    "scene": "clipgt-6fd8cf30-6ccf-4dad-9dee-14df4a9ba97a",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "R",
+    "entry": 42.0,
+    "start_to_entry": 41.98986225735989,
+    "v_entry": 2.609622705990152,
+    "v_h": 4.520770241252333,
+    "excess26": 0.0,
+    "inward20": -1.0003770745347453
+   },
+   "app1x": {
+    "scene": "clipgt-6fd8cf30-6ccf-4dad-9dee-14df4a9ba97a",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "R",
+    "entry": 42.0,
+    "start_to_entry": 41.98986225735989,
+    "v_entry": 2.692486052110141,
+    "v_h": 4.520770241252333,
+    "excess26": 0.0,
+    "inward20": -0.8125091144257989
+   }
+  },
+  "clipgt-8a143cb2-4805-452c-97a2-8461062def2d": {
+   "rsg": {
+    "scene": "clipgt-8a143cb2-4805-452c-97a2-8461062def2d",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 3.0,
+    "start_to_entry": 2.572412264456764,
+    "v_entry": 1.816583356844493,
+    "v_h": 1.7423288460999349,
+    "excess26": 0.025193941810246957,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-8a143cb2-4805-452c-97a2-8461062def2d",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 3.0,
+    "start_to_entry": 2.572412264456764,
+    "v_entry": 1.8084544364773882,
+    "v_h": 1.7423288460999349,
+    "excess26": 0.024611967469747247,
+    "inward20": NaN
+   }
+  },
+  "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac": {
+   "rsg": {
+    "scene": "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "offroad",
+    "side": "R",
+    "entry": 78.0,
+    "start_to_entry": 75.38401187392154,
+    "v_entry": 3.1980748540963613,
+    "v_h": 3.4842131605927564,
+    "excess26": 0.0,
+    "inward20": -0.8904083591873677
+   },
+   "app1x": {
+    "scene": "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "R",
+    "entry": 78.0,
+    "start_to_entry": 75.38401187392154,
+    "v_entry": 2.782719842595761,
+    "v_h": 3.4842131605927564,
+    "excess26": 0.0,
+    "inward20": -0.470547251264787
+   }
+  },
+  "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a": {
+   "rsg": {
+    "scene": "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "R",
+    "entry": 7.0,
+    "start_to_entry": 6.157134266228826,
+    "v_entry": 5.859050174174984,
+    "v_h": 5.874507412853933,
+    "excess26": 0.15128118707326307,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "collision",
+    "side": "R",
+    "entry": 7.0,
+    "start_to_entry": 6.157134266228826,
+    "v_entry": 5.859050174174984,
+    "v_h": 5.874507412853933,
+    "excess26": 0.15128118707326307,
+    "inward20": NaN
+   }
+  },
+  "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9": {
+   "rsg": {
+    "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 42.0,
+    "start_to_entry": 41.84077758969443,
+    "v_entry": 6.162974826108524,
+    "v_h": 4.5596753684693985,
+    "excess26": 0.3973936907845475,
+    "inward20": -0.479329588825659
+   },
+   "app1x": {
+    "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "R",
+    "entry": 42.0,
+    "start_to_entry": 41.84077758969443,
+    "v_entry": 3.073791637836732,
+    "v_h": 4.5596753684693985,
+    "excess26": 0.0,
+    "inward20": -0.020646431707971643
+   }
+  },
+  "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677": {
+   "rsg": {
+    "scene": "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 10.0,
+    "start_to_entry": 9.999509747779037,
+    "v_entry": 3.8066335106368525,
+    "v_h": 4.8904592033787,
+    "excess26": 0.0,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 10.0,
+    "start_to_entry": 9.999509747779037,
+    "v_entry": 5.468472503736207,
+    "v_h": 4.8904592033787,
+    "excess26": 0.09174228162232226,
+    "inward20": NaN
+   }
+  },
+  "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d": {
+   "rsg": {
+    "scene": "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "L",
+    "entry": 74.0,
+    "start_to_entry": 72.99879302179266,
+    "v_entry": 3.831018227380451,
+    "v_h": 4.100274009228013,
+    "excess26": 0.0,
+    "inward20": 0.0753614264504478
+   },
+   "app1x": {
+    "scene": "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "L",
+    "entry": 74.0,
+    "start_to_entry": 72.99879302179266,
+    "v_entry": NaN,
+    "v_h": 4.100274009228013,
+    "excess26": 0.0,
+    "inward20": 0.09591071046169453
+   }
+  },
+  "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade": {
+   "rsg": {
+    "scene": "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "L",
+    "entry": 120.0,
+    "start_to_entry": 118.34595745151415,
+    "v_entry": NaN,
+    "v_h": 6.168295228136325,
+    "excess26": 0.0,
+    "inward20": -0.12329893230392133
+   },
+   "app1x": {
+    "scene": "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "L",
+    "entry": 120.0,
+    "start_to_entry": 118.34595745151415,
+    "v_entry": NaN,
+    "v_h": 6.168295228136325,
+    "excess26": NaN,
+    "inward20": NaN
+   }
+  },
+  "clipgt-b40f4729-29c4-4846-a04b-72c78832a062": {
+   "rsg": {
+    "scene": "clipgt-b40f4729-29c4-4846-a04b-72c78832a062",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 9.0,
+    "start_to_entry": 8.444209053656744,
+    "v_entry": 2.969687297128748,
+    "v_h": 2.0082362980164596,
+    "excess26": 0.4278249837296419,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-b40f4729-29c4-4846-a04b-72c78832a062",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 9.0,
+    "start_to_entry": 8.444209053656744,
+    "v_entry": 2.799213497060416,
+    "v_h": 2.0082362980164596,
+    "excess26": 0.3887004898690213,
+    "inward20": NaN
+   }
+  },
+  "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e": {
+   "rsg": {
+    "scene": "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "R",
+    "entry": 231.0,
+    "start_to_entry": 228.31623998912127,
+    "v_entry": NaN,
+    "v_h": 7.766338714689325,
+    "excess26": NaN,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "R",
+    "entry": 231.0,
+    "start_to_entry": 228.31623998912127,
+    "v_entry": NaN,
+    "v_h": 7.766338714689325,
+    "excess26": NaN,
+    "inward20": NaN
+   }
+  },
+  "clipgt-ce161092-a921-432d-b2d0-2d50fd7779a6": {
+   "rsg": {
+    "scene": "clipgt-ce161092-a921-432d-b2d0-2d50fd7779a6",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "offroad",
+    "side": "L",
+    "entry": 53.0,
+    "start_to_entry": 53.0,
+    "v_entry": 8.058618341659399,
+    "v_h": 5.280191234772063,
+    "excess26": 1.1893468314195386,
+    "inward20": 0.01079055693161412
+   },
+   "app1x": {
+    "scene": "clipgt-ce161092-a921-432d-b2d0-2d50fd7779a6",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "L",
+    "entry": 53.0,
+    "start_to_entry": 53.0,
+    "v_entry": NaN,
+    "v_h": 5.280191234772063,
+    "excess26": 0.0,
+    "inward20": -0.15100620196373038
+   }
+  },
+  "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9": {
+   "rsg": {
+    "scene": "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "L",
+    "entry": 96.0,
+    "start_to_entry": 93.99394396553228,
+    "v_entry": 8.335180512894588,
+    "v_h": 6.0352899644099764,
+    "excess26": 1.4538106768878578,
+    "inward20": 0.018742056948859324
+   },
+   "app1x": {
+    "scene": "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_rear",
+    "kind": "",
+    "side": "L",
+    "entry": 96.0,
+    "start_to_entry": 93.99394396553228,
+    "v_entry": NaN,
+    "v_h": 6.0352899644099764,
+    "excess26": 0.0,
+    "inward20": NaN
+   }
+  },
+  "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4": {
+   "rsg": {
+    "scene": "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 3.0,
+    "start_to_entry": 2.6347175159857517,
+    "v_entry": 2.5759300692691363,
+    "v_h": 2.5437141725661876,
+    "excess26": 0.07864884886253246,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 3.0,
+    "start_to_entry": 2.6347175159857517,
+    "v_entry": 2.5759300692691363,
+    "v_h": 2.5437141725661876,
+    "excess26": 0.07864884886253246,
+    "inward20": NaN
+   }
+  },
+  "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4": {
+   "rsg": {
+    "scene": "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 72.0,
+    "start_to_entry": 69.68243361286926,
+    "v_entry": 7.6421213880877685,
+    "v_h": 4.717726670132055,
+    "excess26": 1.4001461803581374,
+    "inward20": -0.9014466618919296
+   },
+   "app1x": {
+    "scene": "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 72.0,
+    "start_to_entry": 69.68243361286926,
+    "v_entry": 4.3913366657110835,
+    "v_h": 4.717726670132055,
+    "excess26": 0.0,
+    "inward20": 0.8351200022379152
+   }
+  },
+  "clipgt-e37aa159-7300-4529-a519-0308ddd61134": {
+   "rsg": {
+    "scene": "clipgt-e37aa159-7300-4529-a519-0308ddd61134",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 38.0,
+    "start_to_entry": 36.70608350181573,
+    "v_entry": 7.375505758136821,
+    "v_h": 8.766249560792387,
+    "excess26": 0.0,
+    "inward20": -0.7203850339901539
+   },
+   "app1x": {
+    "scene": "clipgt-e37aa159-7300-4529-a519-0308ddd61134",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 38.0,
+    "start_to_entry": 36.70608350181573,
+    "v_entry": NaN,
+    "v_h": 8.766249560792387,
+    "excess26": 0.0,
+    "inward20": -1.2923412513998023
+   }
+  },
+  "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf": {
+   "rsg": {
+    "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 55.0,
+    "start_to_entry": 53.65988525438739,
+    "v_entry": 13.781396879143795,
+    "v_h": 6.467583059126758,
+    "excess26": 3.4409201386015456,
+    "inward20": -0.1058246351413867
+   },
+   "app1x": {
+    "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "L",
+    "entry": 55.0,
+    "start_to_entry": 53.65988525438739,
+    "v_entry": 5.377319968649224,
+    "v_h": 6.467583059126758,
+    "excess26": 0.0,
+    "inward20": -0.03420250701260081
+   }
+  },
+  "clipgt-e848c843-d275-4f60-a194-61cc7f699124": {
+   "rsg": {
+    "scene": "clipgt-e848c843-d275-4f60-a194-61cc7f699124",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 57.0,
+    "start_to_entry": 55.84098748610022,
+    "v_entry": 3.411132949602244,
+    "v_h": 3.094099052243518,
+    "excess26": 0.19438184125234326,
+    "inward20": -0.6012570252475888
+   },
+   "app1x": {
+    "scene": "clipgt-e848c843-d275-4f60-a194-61cc7f699124",
+    "turn": true,
+    "completed": false,
+    "outcome": "short_slow",
+    "kind": "",
+    "side": "R",
+    "entry": 57.0,
+    "start_to_entry": 55.84098748610022,
+    "v_entry": 2.5034510431455823,
+    "v_h": 3.094099052243518,
+    "excess26": 0.08590981012532482,
+    "inward20": -0.2720718393089999
+   }
+  },
+  "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8": {
+   "rsg": {
+    "scene": "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+    "turn": true,
+    "completed": false,
+    "outcome": "off",
+    "kind": "",
+    "side": "R",
+    "entry": 11.0,
+    "start_to_entry": 11.0,
+    "v_entry": 3.210528142829265,
+    "v_h": 2.460007390579595,
+    "excess26": 0.2546141215740947,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 11.0,
+    "start_to_entry": 11.0,
+    "v_entry": 3.2925062025663254,
+    "v_h": 2.460007390579595,
+    "excess26": 0.24268458152410555,
+    "inward20": NaN
+   }
+  },
+  "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b": {
+   "rsg": {
+    "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 55.0,
+    "start_to_entry": 52.582009244209324,
+    "v_entry": 12.506184276131389,
+    "v_h": 4.27190762322723,
+    "excess26": 7.04169749344274,
+    "inward20": -0.4705697998040193
+   },
+   "app1x": {
+    "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 55.0,
+    "start_to_entry": 52.582009244209324,
+    "v_entry": 4.612841176474102,
+    "v_h": 4.27190762322723,
+    "excess26": 1.0556737355062624,
+    "inward20": -0.16902839226802754
+   }
+  },
+  "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db": {
+   "rsg": {
+    "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "R",
+    "entry": 58.0,
+    "start_to_entry": 56.992660368790034,
+    "v_entry": 11.363680204732432,
+    "v_h": 5.253175630940194,
+    "excess26": 3.6273583781897476,
+    "inward20": 0.027994728995536063
+   },
+   "app1x": {
+    "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+    "turn": true,
+    "completed": true,
+    "outcome": "completed",
+    "kind": "",
+    "side": "R",
+    "entry": 58.0,
+    "start_to_entry": 56.992660368790034,
+    "v_entry": 5.835193584809872,
+    "v_h": 5.253175630940194,
+    "excess26": 0.2674916293777665,
+    "inward20": 0.10772659798895351
+   }
+  },
+  "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49": {
+   "rsg": {
+    "scene": "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 7.0,
+    "start_to_entry": 6.99995936589504,
+    "v_entry": 3.6488316231016014,
+    "v_h": 5.748810094940344,
+    "excess26": 0.007561880582099918,
+    "inward20": NaN
+   },
+   "app1x": {
+    "scene": "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49",
+    "turn": true,
+    "completed": false,
+    "outcome": "event",
+    "kind": "corridor",
+    "side": "L",
+    "entry": 7.0,
+    "start_to_entry": 6.99995936589504,
+    "v_entry": 4.0737961482038045,
+    "v_h": 5.748810094940344,
+    "excess26": 0.007177277681764198,
+    "inward20": NaN
+   }
+  }
+ },
+ "counts": {
+  "runway22": {
+   "rsg": 3,
+   "app1x": 4,
+   "n": 22
+  },
+  "other14": {
+   "rsg": 2,
+   "app1x": 7,
+   "n": 14
+  }
+ },
+ "paired": {
+  "v_entry": {
+   "n": 15,
+   "mean": -2.9550480141426507,
+   "lo": -4.4456807871979365,
+   "hi": -1.5433171893791484,
+   "median": -1.5172066938277613,
+   "a_median": 7.375505758136821,
+   "b_median": 4.801726605054598
+  },
+  "excess26": {
+   "n": 21,
+   "mean": -1.2971657770893121,
+   "lo": -2.210934894439895,
+   "hi": -0.5576455763020686,
+   "median": -0.17194488442231223,
+   "a_median": 0.23589381343637944,
+   "b_median": 0.0
+  },
+  "inward20": {
+   "n": 20,
+   "mean": 0.29411769525373804,
+   "lo": 0.0546373607868522,
+   "hi": 0.5909159734484584,
+   "median": 0.07179182883002638,
+   "a_median": -0.4391879762036793,
+   "b_median": -0.12163758213945884
+  },
+  "v_h_median": 4.985451150536124
+ }
+}
