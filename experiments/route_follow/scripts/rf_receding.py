@@ -586,22 +586,22 @@ def fig(T, Dx, png):
     import matplotlib.pyplot as plt
     col = {"completed": "#2a78d6", "late_wide": "#eb6834", "straight": "#1baf7a", "over_turn": "#eda100"}
     ls = {"completed": "-", "late_wide": "--", "straight": "-.", "over_turn": ":"}
-    x = T[(T.key == "pai_RSG-L18-s0")].sort_values("scene")
-    picks = list(x[x.completed].scene)
-    for c in ("late_wide", "straight", "over_turn"):
-        picks += list(x[(x.cls == c) & x.slope.notna()].scene[:2])
-    D = Dx[(Dx.key == "pai_RSG-L18-s0") & Dx.approach & Dx.scene.isin(picks)]
-    fg, ax = plt.subplots(1, 2, figsize=(13, 5.2))
-    for s in picks:
-        r = x[x.scene == s].iloc[0]
-        d = D[D.scene == s].sort_values("t0")
+    x = T[T.key.isin(["pai_RSG-L18-s0", "x_pai_RSG-L18-s0"])].sort_values("scene")
+    picks = [(s, "pai_RSG-L18-s0") for s in x[x.completed].scene]
+    for c in ("late_wide", "straight"):
+        picks += [(s, "pai_RSG-L18-s0") for s in x[(x.key == "pai_RSG-L18-s0") & (x.cls == c) & x.slope.notna()].scene[:2]]
+    picks += [(s, "x_pai_RSG-L18-s0") for s in x[x.key == "x_pai_RSG-L18-s0"].scene[:2]]      # Amendment 1: the d299 over-turn zeros
+    fg, ax = plt.subplots(1, 2, figsize=(13, 6.2))
+    for s, k in picks:
+        r = x[(x.scene == s) & (x.key == k)].iloc[0]
+        d = Dx[(Dx.key == k) & Dx.approach & (Dx.scene == s)].sort_values("t0")
         c = r.cls if r.cls in col else "late_wide"
-        lab = f"{s[7:15]} {r.cls} (slope {r.slope:+.2f})" if np.isfinite(r.slope) else f"{s[7:15]} {r.cls}"
+        lab = f"{s[7:15]} {r.cls}" + (f" (slope {r.slope:+.2f})" if np.isfinite(r.slope) else "")
         ax[0].plot(d.d_e, d.s_on, ls[c], color=col[c], lw=2, label=lab)
         ax[1].plot(d.d_e, d.W - r.entry, ls[c], color=col[c], lw=2)
     lim = [0, 40]
     ax[0].plot(lim, lim, color="#888", lw=1)
-    ax[0].text(30, 31.5, "onset at the entry (slope 1)", color="#52514e", fontsize=8, rotation=0)
+    ax[0].text(39, 24.0, "onset at the entry\n(slope 1)", color="#52514e", fontsize=8)
     ax[0].set(xlim=(40, 0), xlabel="ego distance to the turn entry d_e (m)", ylabel="plan onset arc s_on (m, 15 deg into the turn)",
               title="Served plan onset vs distance to the entry (PAI 281, RSG-L18-s0)")
     ax[1].axhline(0, color="#888", lw=1)
@@ -610,8 +610,8 @@ def fig(T, Dx, png):
     for a_ in ax:
         a_.grid(alpha=0.25)
         a_.spines[["top", "right"]].set_visible(False)
-    ax[0].legend(fontsize=7, loc="upper left", frameon=False)
-    fg.tight_layout()
+    fg.legend(*ax[0].get_legend_handles_labels(), fontsize=8, loc="lower center", ncol=4, frameon=False)
+    fg.tight_layout(rect=(0, 0.12, 1, 1))
     Path(png).parent.mkdir(parents=True, exist_ok=True)
     fg.savefig(png, dpi=130)
     print("figure ->", png)

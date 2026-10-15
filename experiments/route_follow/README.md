@@ -216,6 +216,30 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   from the completed turns' plans. Look at [figs/corridor_bev.png](figs/corridor_bev.png): 1a69f757 and APP1X 53d37873 have plans in the
   oncoming lane / off-road 2 s before the zero, but so does the completed held left turn 6f393be3. 382a7247 and de9db5dc are collision zeros
   whose plans stay in the corridor.
+- [results/receding/](results/receding/receding.md): RECEDING-TURN fingerprint (turn-night.md section 9; prereg
+  `plans/2026-10-15-receding-turn-prereg.md`, Amendment 1; `scripts/rf_receding.py` extract-pai | extract-held | read, `scripts/rf_receding.sh`).
+  Per strict turn, the slope of the served plan's 15 deg onset arc against the distance to the entry over the approach (1 = the onset stays
+  at one world point, 0 = it stays at one distance ahead of the car) and the world onset's forward drift. The human log read as a plan
+  gives 0.92 and 1.8 m (gate passed). **Registered: C1 inconclusive, C2 refuted.** On PAI RSG-L18-s0 the failed turns' median slope is 0.67
+  and the completed turns' 0.79 (21 / 3 turns with a slope; D -0.13 [-0.41, +0.33]). Drift is 3.3 vs 4.0 m. RV2a and RV2b refute C1 and C2.
+  APP1X is the only set in the predicted direction (0.53 vs 0.96, D -0.42 [-0.72, -0.19]), but its failed median is above the 0.3 line, so
+  it reads inconclusive. Held approaches are 3-19 m long (about 5 decisions at 2 Hz) and pooled they refute both claims (0.79 vs 0.57).
+  The plan does not push the turn ahead of the car. Within 15 m of the entry the plan's onset sits 1.1 m *before* the route's own 15 deg
+  point in failed turns (completed: 0.2 m before). The classes differ in other ways:
+  - **straight-through:** the plan never turns. Its onset is visible on 0.12 of the approach decisions. On every decision whose 4 s horizon
+    already covers the route's onset, the plan has no onset (unseen 1.00). Its 4 s heading change at 0-10 m is 5.6 deg; the human's is 74 deg.
+  - **late-wide:** the onset is in place (slope 0.70, lag -1.4 m), but the plan asks for too little heading. At 10-20 m the plan asks
+    5.3 deg vs the human's 27.6 deg. Inside the turn, the plan's remaining heading follows only half of the true remaining heading
+    (OLS 0.49; completed 0.93), and the car never reaches the exit heading.
+  - **over-turn** (the 11 d299 inside zeros, Amendment 1; none of the failed strict turns is one): the onset is fixed and early (slope 0.72,
+    lag -1.9 m). The zero comes before the car reaches the exit heading, and the plan then asks 5.4 deg less than the remaining heading.
+    Completed plans that pass the exit heading ask to turn back (-4.4 deg). So there is no evidence that the plan keeps asking for heading.
+  On the 22 runway turns APP1X's slope matches RSG's (0.72 vs 0.74, paired +0.04 [-0.17, +0.16]): the human entry speed does not change
+  where the plan places the turn. Look at [figs/receding_onset.png](figs/receding_onset.png): on the left, the traces follow the slope-1
+  line from 20 to about 5 m and then flatten in both groups. On the right, failed (dashed / dotted) and completed (solid) world onsets
+  are equally flat until the last 5 m. The straight-through traces shown are the 2 of 8 whose plans turned often enough for a slope.
+  Extracts: Tokyo `/data/runs/route_night/receding/pai.pkl`, box `$DATA_DIR/runs/route_follow/receding/held.pkl`
+  (+ `tax/` for RV2a / RV2b, `decisions.parquet` = every decision's onset / dpsi / human values).
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

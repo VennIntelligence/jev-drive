@@ -3,7 +3,9 @@
 #   box:    rf_receding.sh held-tax        rf_tax extract + report of RV2a / RV2b held 460 @18 (RSG reuses route_follow/ledger)
 #           rf_receding.sh held-extract    slim per-turn pkl of the six held sets -> $DATA_DIR/runs/route_follow/receding/held.pkl
 #   Tokyo:  rf_receding.sh pai-extract     slim per-turn pkl of the four PAI 281 checkpoints (strict 36) -> /data/runs/route_night/receding/pai.pkl
-#   Mac:    .venv/bin/python rf_receding.py read --pai pai.pkl --held held.pkl --out results/receding --fig figs/receding_onset.png
+#   Mac:    R=experiments/route_follow/results; .venv/bin/python rf_receding.py read --pai pai.pkl --held held.pkl --runway $R/approach/pai_runway22.txt
+#             --tax pai_RSG-L18-s0=$R/taxonomy/pai281_rsg.csv held_RSG-L18-s{0,1}=$R/ledger/tax/RSG-L18-s{0,1}.csv held_RV2{a,b}-L18-s{0,1}=$R/receding/tax/..
+#             --out $R/receding --fig experiments/route_follow/figs/receding_onset.png   (decisions.parquet is moved to the box)
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 cmd=$1; shift
