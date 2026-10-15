@@ -325,9 +325,12 @@ def fread(a):
     for lvl, R in sorted(runs.items()):
         for sc, D in sorted(R.items()):
             u = sel[sc]
-            A = drive_records(D)[sc]
-            B = drive_records(idr[sc])[sc] if sc in idr else []
-            x = dict(scene=sc, level=lvl, cls=u["cls"], kp=u["kp"], d=u["d"], how=u["how"], run=D)
+            A = drive_records(D).get(sc, [])
+            B = drive_records(idr[sc]).get(sc, []) if sc in idr else []
+            x = dict(scene=sc, level=lvl, cls=u["cls"], kp=u["kp"], d=u["d"], how=u["how"], run=D, n_rec=len(A))
+            if not A:                                       # no driver session (the scene did not open on this cache)
+                res.append(x)
+                continue
             pt = [r["perturb"] for r in A if "perturb" in r]
             x |= dict(n_pushed=len(pt), push=pt[0] if pt else None)
             n = pt[0]["n"] if pt else 0
