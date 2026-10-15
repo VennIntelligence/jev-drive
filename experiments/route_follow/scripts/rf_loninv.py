@@ -165,7 +165,10 @@ def policy(a, run):
         rem = np.maximum(dl[:, 0] - sf[:, -1], 0.05)
         can = ~cross4 & (v[:, -1] ** 2 / (2 * rem) <= A_STOP)
         icr = np.where(cross4, (sf > dl).argmax(1), 40)
-        rec = dict(sel=sel, q=q, d=d, plan_le1=le1, nostop=~le1, cross4=cross4, nostop_kin=~le1 & ~can, v_cross=np.where(cross4, v[np.arange(N), icr], np.nan),
+        req = speed ** 2 / (2 * np.maximum(d, 0.5))                                             # deceleration that stops the car at the line
+        got = (speed - v[:, -1]) / 4.0                                                             # the plan's mean deceleration over 4 s
+        rec = dict(sel=sel, q=q, d=d, plan_le1=le1, no_intent=v[:, -1] / np.maximum(speed, 0.1) >= 0.7, under_brake=got < 0.5 * req,
+                   req_decel=req, plan_decel=got, nostop=~le1, cross4=cross4, nostop_kin=~le1 & ~can, v_cross=np.where(cross4, v[np.arange(N), icr], np.nan),
                    human_stop=np.isfinite(take(tstop, q)), red_4s=take(red4, q), ltype=take(ty, q), elig=take(elig, q), plan_end_ratio=v[:, -1] / np.maximum(speed, 0.1))
         return rec
 
@@ -238,11 +241,13 @@ def policy(a, run):
     for c in LINE_CLASSES:
         R = C[c]
         out[c] = dict(sel=R["sel"], cols=dict(base, d_line=np.round(R["d"], 2), line_type=R["ltype"], elig=R["elig"], plan_le1=R["plan_le1"], cross4=R["cross4"],
-                                                nostop_kin=R["nostop_kin"], v_cross=np.round(R["v_cross"], 2), plan_end_ratio=np.round(R["plan_end_ratio"], 3),
+                                                nostop_kin=R["nostop_kin"], no_intent=R["no_intent"], under_brake=R["under_brake"],
+                                                req_decel=np.round(R["req_decel"], 2), plan_decel=np.round(R["plan_decel"], 2), v_cross=np.round(R["v_cross"], 2), plan_end_ratio=np.round(R["plan_end_ratio"], 3),
                                                 human_stop=R["human_stop"], red_4s=R["red_4s"]),
                       flags=dict(nostop=R["nostop"], cross4=R["cross4"], nostop_kin=R["nostop_kin"], human_stop=R["human_stop"],
                                  nostop_and_human_stop=R["nostop"] & R["human_stop"], nostop_kin_and_human_stop=R["nostop_kin"] & R["human_stop"],
-                                 red_4s=R["red_4s"]))
+                                 no_intent=R["no_intent"], no_intent_and_human_stop=R["no_intent"] & R["human_stop"],
+                                 under_brake=R["under_brake"], under_brake_and_human_stop=R["under_brake"] & R["human_stop"], red_4s=R["red_4s"]))
     slow_h, slow_x, slow_p = speed < SLOW_R * vh, speed < SLOW_R * vx, speed < SLOW_R * vp
     out["free"] = dict(sel=free, cols=dict(base, v_human=np.round(vh, 2), v_expert=np.round(vx, 2), v_proxy=np.round(vp, 2), turn60=np.round(turn60, 1),
                                            slow_h=slow_h, slow_x=slow_x & xs, slow_p=slow_p),
@@ -255,7 +260,7 @@ def policy(a, run):
 
     def stats(sel):
         return dict(decisions=int(sel.sum()), scenes=len(set(scene[sel].tolist())), logs=len(set(logf[sel].tolist())), with_frames=int(sel.sum()),
-                    k_le2=int((sel & (k <= 2)).sum()))
+                    replay_k_le1=int((sel & (k <= 1)).sum()))
     res = {}
     for c, O in out.items():
         r = dict(all=stats(O["sel"]), sub={f: stats(O["sel"] & fl) for f, fl in O["flags"].items()})
@@ -266,6 +271,8 @@ def policy(a, run):
             r["by_expert_speed"] = {BIN_NAMES[i]: dict(all=stats(O["sel"] & xs & (bx == i)), slow_x=stats(O["sel"] & xs & (bx == i) & slow_x)) for i in range(4)}
         if c in LINE_CLASSES:
             r["speed_q50_q90"] = [float(np.quantile(speed[O["sel"]], q)) for q in (0.5, 0.9)] if O["sel"].any() else None
+            hs = O["sel"] & C[c]["human_stop"] & (k >= 2)
+            r["own_state_human_stop_plan_decel_vs_required_q50"] = [float(np.median(C[c]["plan_decel"][hs])), float(np.median(C[c]["req_decel"][hs]))] if hs.any() else None
             r["d_line_bins"] = {lab: stats(O["sel"] & (C[c]["d"] >= lo) & (C[c]["d"] < hi)) for lab, lo, hi in (("0-10", 0, 10), ("10-20", 10, 20), ("20-40", 20, 40.001))}
         res[c] = r
         cols = O["cols"]
@@ -367,7 +374,7 @@ def paitv():
     D = B.data_dir()
     t = np.load(D / "runs/op_parity/cache/on1_PAITV/tab.npz")
     v = t["speed"].astype(float)
-    sc = np.array([n.split(":")[1] for n in t["names"].astype(str)])
+    sc = t["log"].astype(str)
     b = bins_of(v)
     return dict(rows=int(len(v)), scenes=len(set(sc.tolist())), speed_q10_q50_q90_max=[float(np.quantile(v, q)) for q in (0.1, 0.5, 0.9, 1.0)],
                 by_speed={BIN_NAMES[i]: int((b == i).sum()) for i in range(4)}, frames=(D / "runs/op_parity/cache/on1_PAITV@warp/front.npy").exists())
@@ -379,17 +386,19 @@ def tables(J):
     f = lambda s: f"{s['decisions']} / {s['scenes']} / {s['logs']} / {s['with_frames']}"  # noqa: E731
     L = ["## Policy store (decisions / scenes / logs / with frames)", ""]
     names = dict(nostop="plan not <= 1 m/s before the line", cross4="plan crosses within 4 s", nostop_kin="plan cannot stop (<= 3 m/s^2)",
-                 human_stop="human stopped at the line", nostop_and_human_stop="not <= 1 m/s AND human stopped",
+                 human_stop="human stopped at the line", no_intent="plan end speed >= 0.7 x speed (no intent)",
+                 no_intent_and_human_stop="no intent AND human stopped", under_brake="plan decel < 0.5 x needed to stop at the line",
+                 under_brake_and_human_stop="under-braking AND human stopped", nostop_and_human_stop="not <= 1 m/s AND human stopped",
                  nostop_kin_and_human_stop="cannot stop AND human stopped", red_4s="red through the 4 s window")
     for c in LINE_CLASSES:
         R = P["classes"][c]
-        L += [f"### {c}", "", "| subset | decisions / scenes / logs / frames | k <= 2 |", "|:--|--:|--:|", f"| all | {f(R['all'])} | {R['all']['k_le2']} |"]
-        L += [f"| {names[q]} | {f(s)} | {s['k_le2']} |" for q, s in R["sub"].items()]
+        L += [f"### {c}", "", "| subset | decisions / scenes / logs / frames | replay k <= 1 |", "|:--|--:|--:|", f"| all | {f(R['all'])} | {R['all']['replay_k_le1']} |"]
+        L += [f"| {names[q]} | {f(s)} | {s['replay_k_le1']} |" for q, s in R["sub"].items()]
         L += ["", "| line distance | all |", "|:--|--:|"] + [f"| {b} m | {f(s)} |" for b, s in R["d_line_bins"].items()] + [""]
     for c in ("free", "turn"):
         R = P["classes"][c]
-        L += [f"### {c}", "", "| subset | decisions / scenes / logs / frames | k <= 2 |", "|:--|--:|--:|", f"| all | {f(R['all'])} | {R['all']['k_le2']} |"]
-        L += [f"| {q} | {f(s)} | {s['k_le2']} |" for q, s in R["sub"].items()] + [""]
+        L += [f"### {c}", "", "| subset | decisions / scenes / logs / frames | replay k <= 1 |", "|:--|--:|--:|", f"| all | {f(R['all'])} | {R['all']['replay_k_le1']} |"]
+        L += [f"| {q} | {f(s)} | {s['replay_k_le1']} |" for q, s in R["sub"].items()] + [""]
         if "by_human_speed" in R:
             L += ["| human speed | all | slow_h (< 0.85 x human) | slow_p (< 0.85 x proxy) | with pack | slow_x (< 0.85 x expert) |", "|:--|--:|--:|--:|--:|--:|"]
             for b, s in R["by_human_speed"].items():

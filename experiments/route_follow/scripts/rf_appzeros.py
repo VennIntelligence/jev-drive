@@ -321,6 +321,189 @@ def summarise(a):
     print(json.dumps(res, indent=1, default=lambda x: x.item() if hasattr(x, "item") else str(x)))
 
 
+def onset(a):
+    """Where the zero label's track first leaves the base's: every >= 45 deg route turn whose entry the base passes within its rollout, the
+    decisions of both labels with station in [entry - 40, entry + 30] m before their own zero, binned by station - entry; per bin the zero label
+    minus the base at the same station (base linear in station): lateral (+ inside), heading (+ inside), the plan's 1 - 2 s shift over the ego
+    (+ inside) and the speed ratio. Groups: the zero label's new-zero scenes vs every other scene -> app1x_zeros_onset.{csv,json}."""
+    import pandas as pd
+    out = Path(a.out)
+    Sx = pd.read_csv(out / "app1x_zeros_scenes.csv")
+    Dx = pd.read_parquet(out / "app1x_zeros_decisions.parquet")
+    with open(out / "routes.pkl", "rb") as fh:
+        routes = pickle.load(fh)
+    base, bins = a.base, np.array([-40, -20, -10, 0, 10, 20, 30])
+    rows = []
+    B = Sx[Sx.label == base].set_index("scene")
+    for lb in a.labels:
+        X = Sx[Sx.label == lb].set_index("scene")
+        new = set(X.index[X.zero & ~B.reindex(X.index).zero.astype(bool)])
+        for sc, R in routes.items():
+            S = stations(R)
+            s_h, h_h = heading(R, S)
+            da = Dx[(Dx.label == lb) & (Dx.scene == sc)].sort_values("i")
+            db = Dx[(Dx.label == base) & (Dx.scene == sc)].sort_values("i")
+            da, db = da[da.i <= X.loc[sc].iz], db[db.i <= B.loc[sc].iz]
+            mono = np.maximum.accumulate(db.st.to_numpy())
+            for e, x, th in turns(s_h, h_h, 45.0):
+                if not (mono[0] <= e + 30 and mono[-1] >= e):                            # the base reaches the entry
+                    continue
+                sg = float(np.sign(th)) * da.sign.to_numpy()                            # undo the stored sign, apply this turn's
+                sgb = float(np.sign(th)) * db.sign.to_numpy()
+                w = (da.st >= e - 40) & (da.st < e + 30)
+                if not w.any():
+                    continue
+                q = lambda col, sgn: np.interp(da.st[w], mono, (db[col] * sgn).to_numpy(), left=np.nan, right=np.nan)  # noqa: E731
+                d = pd.DataFrame(dict(label=lb, scene=sc, new=sc in new, entry=e, rel=(da.st[w] - e).to_numpy(),
+                                      d_lat=(da.lat * sg)[w].to_numpy() - q("lat", sgb), d_he=np.degrees((da.he * sg)[w].to_numpy() - q("he", sgb)),
+                                      d_dplat=(da.dplat * sg)[w].to_numpy() - q("dplat", sgb), dplat_a=(da.dplat * sg)[w].to_numpy(),
+                                      v_ratio=da.v[w].to_numpy() / np.maximum(q("v", 1.0), 0.5), lat_a=(da.lat * sg)[w].to_numpy()))
+                rows.append(d)
+    O = pd.concat(rows)
+    O["bin"] = pd.cut(O.rel, bins, right=False).astype(str)
+    O.to_csv(out / "app1x_zeros_onset.csv", index=False)
+    res = {}
+    for (lb, nw), g in O.groupby(["label", "new"]):
+        res[f"{lb}|{'new_zero' if nw else 'other'}"] = {b: dict(n=int(len(h)), scenes=int(h.scene.nunique()), d_lat=float(np.nanmedian(h.d_lat)),
+                                                              d_he=float(np.nanmedian(h.d_he)), d_dplat=float(np.nanmedian(h.d_dplat)),
+                                                              d_lat_mean=float(np.nanmean(h.d_lat)), d_dplat_mean=float(np.nanmean(h.d_dplat)),
+                                                              v_ratio=float(np.nanmedian(h.v_ratio)))
+                                                        for b, h in g.groupby("bin", sort=False)}
+    (out / "app1x_zeros_onset.json").write_text(json.dumps(res, indent=1))
+    for k, v in res.items():
+        print(k)
+        for b in sorted(v, key=lambda s: float(s.split(",")[0][1:])):
+            x = v[b]
+            print(f"  {b:10s} n {x['n']:4d} ({x['scenes']:3d})  d_lat {x['d_lat']:+.2f} ({x['d_lat_mean']:+.2f})  d_he {x['d_he']:+.1f}  "
+                  f"d_dplat {x['d_dplat']:+.2f} ({x['d_dplat_mean']:+.2f})  v_ratio {x['v_ratio']:.2f}")
+
+
+def figure(a):
+    """BEV of example scenes: route, the base's and the zero label's anchors, both served plans at the zero label's last decision before the
+    zero (the base's at the nearest station), the zero point; frame = the first anchor, heading up."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    out = Path(a.out)
+    with open(a.pkl, "rb") as fh:
+        RR = pickle.load(fh)
+    with open(out / "routes.pkl", "rb") as fh:
+        routes = pickle.load(fh)
+    Z = pd.read_csv(out / "app1x_zeros.csv")
+    by = {}
+    for r in RR:
+        by.setdefault(r["scene"], {})[r["label"]] = r
+    C = {a.base: "#2a78d6", a.label: "#eb6834"}
+    fig, axs = plt.subplots(1, len(a.scenes), figsize=(4.2 * len(a.scenes), 5.6))
+    for ax, key in zip(np.atleast_1d(axs), a.scenes):
+        sc = next(x for x in by if x.endswith(key))
+        z = Z[(Z.label == a.label) & (Z.scene == sc)].iloc[0]
+        x0, y0, h0 = by[sc][a.base]["anchor"][0]
+        c, s = np.cos(np.pi / 2 - h0), np.sin(np.pi / 2 - h0)
+        T = lambda P: np.c_[c * (P[:, 0] - x0) - s * (P[:, 1] - y0), s * (P[:, 0] - x0) + c * (P[:, 1] - y0)]  # noqa: E731
+        R = routes[sc]
+        A = T(by[sc][a.label]["anchor"][:, :2])
+        lim = np.r_[A, T(by[sc][a.base]["anchor"][:, :2])]
+        lo, hi = lim.min(0) - 12, lim.max(0) + 12
+        Rt = T(R)
+        m = (Rt[:, 0] > lo[0] - 20) & (Rt[:, 0] < hi[0] + 20) & (Rt[:, 1] > lo[1] - 20) & (Rt[:, 1] < hi[1] + 20)
+        ax.plot(*Rt[m].T, color="#b5b4ae", lw=6, solid_capstyle="round", zorder=1, label="route (AlpaSim MAP)")
+        iz = int(z.kz) if np.isfinite(z.kz) else len(A) - 1
+        ka = by[sc][a.label]["k"]
+        izi = int(np.flatnonzero(ka <= iz)[-1])
+        for lb in (a.base, a.label):
+            r = by[sc][lb]
+            P = T(r["anchor"][:, :2])
+            n = izi + 1 if lb == a.label else len(P)
+            ax.plot(*P[:n].T, "-o", color=C[lb], lw=2, ms=3.5, zorder=3, label=lb.replace("-L18-s0", "") + (" (to the zero)" if lb == a.label else ""))
+        # plans 1 s before the zero
+        j = max(izi - 2, 0)
+        sa = T(by[sc][a.label]["anchor"][j:j + 1, :2])[0]
+        jb = int(np.argmin(np.hypot(*(T(by[sc][a.base]["anchor"][:, :2]) - sa).T)))
+        for lb, jj in ((a.label, j), (a.base, jb)):
+            x, y, yaw = by[sc][lb]["anchor"][jj]
+            Pp = by[sc][lb]["poses"][jj][:, :2]
+            cc, ss = np.cos(yaw), np.sin(yaw)
+            L = np.r_[[[x, y]], np.c_[x + cc * Pp[:, 0] - ss * Pp[:, 1], y + ss * Pp[:, 0] + cc * Pp[:, 1]]]
+            ax.plot(*T(L).T, "--", color=C[lb], lw=1.5, zorder=4)
+        ax.plot(*A[izi], marker="X", ms=12, color="#0b0b0b", mec="#fcfcfb", mew=1.5, zorder=5, label="zero (first event)")
+        ax.set_xlim(lo[0], hi[0]), ax.set_ylim(lo[1], hi[1]), ax.set_aspect("equal")
+        ax.set_title(f"...{key}  {z.fail.replace('left_corridor_laterally', 'corridor')}\n{z.cls}, {z.phase}"
+                     f" ({z.d_entry:+.0f} m from entry)" if np.isfinite(z.d_entry) else f"...{key}  {z.fail}\n{z.cls}", fontsize=9, color="#0b0b0b")
+        ax.text(0.02, 0.02, f"last 3 s vs RSG at same station:\nspeed x{z.v_ratio_st:.2f}, lat {z.d_lat:+.2f} m, heading {z.d_he:+.1f} deg\n(+ = toward the turn's inside)",
+                transform=ax.transAxes, fontsize=7.5, color="#52514e", va="bottom")
+        ax.tick_params(labelsize=7, colors="#52514e")
+        for sp_ in ax.spines.values():
+            sp_.set_color("#d0cfca")
+        ax.grid(color="#ecebe7", lw=0.6)
+    np.atleast_1d(axs)[0].legend(fontsize=7, loc="upper left", frameon=False)
+    fig.suptitle(f"{a.label} new held zeros vs {a.base}: anchors (solid), served plans 1 s before the zero (dashed); metres, start heading up",
+                 fontsize=10, color="#0b0b0b")
+    fig.tight_layout()
+    fig.savefig(a.fig, dpi=130)
+    print(a.fig)
+
+
+def plan0(a):
+    """Identical inputs: decisions 0 and 1 have the same state in every label (the rollouts split from decision 2), so the served plans there
+    are a pure policy difference. Per label minus the base, binned by the ego's station - the nearest >= 45 deg entry: the 1 - 2 s plan
+    lateral shift over the ego and the 4 s pose lateral / yaw (+ toward the inside), the plan arc to 2 s / 4 s -> app1x_zeros_plan01.{csv,json}."""
+    import pandas as pd
+    out = Path(a.out)
+    with open(a.pkl, "rb") as fh:
+        RR = pickle.load(fh)
+    with open(out / "routes.pkl", "rb") as fh:
+        routes = pickle.load(fh)
+    by = {}
+    for r in RR:
+        by.setdefault(r["scene"], {})[r["label"]] = r
+    labs = [a.base] + a.labels
+    rows = []
+    arc = lambda P: float(np.hypot(*np.diff(np.r_[[[0.0, 0.0]], P[:, :2]], axis=0).T).sum())  # noqa: E731
+    for sc, d in by.items():
+        R = routes[sc]
+        S = stations(R)
+        s_h, h_h = heading(R, S)
+        T = turns(s_h, h_h, 45.0)
+        for i in (0, 1):
+            assert all(np.allclose(d[lb]["anchor"][i], d[a.base]["anchor"][i], atol=1e-3) for lb in labs)
+            x, y, yaw = d[a.base]["anchor"][i]
+            st, lat = project(R, S, np.array([x, y]))
+            near = [t for t in T if t[0] - 40 <= st <= t[1] + 10]
+            if near:
+                t = min(near, key=lambda t: abs(st - t[0]))
+                rel, sg = st - t[0], float(np.sign(t[2]))
+                b = str(pd.cut([rel], [-40, -20, -10, 0, 10, 30], right=False)[0])
+            else:
+                rel, sg = np.nan, 1.0
+                b = "no_turn_60" if not any(st - 10 <= t[0] <= st + 60 for t in T) else "other"
+            rec = dict(scene=sc, i=i, rel=rel, bin=b)
+            c, s = np.cos(yaw), np.sin(yaw)
+            for lb in labs:
+                P = d[lb]["poses"][i]
+                L = np.c_[x + c * P[:, 0] - s * P[:, 1], y + s * P[:, 0] + c * P[:, 1]]
+                rec[lb + "|dplat"] = sg * (np.mean([project(R, S, p, st - 5, st + 80)[1] for p in L[1:4]]) - lat)
+                rec[lb + "|y4"], rec[lb + "|h4"] = sg * P[7, 1], np.degrees(sg * P[7, 2])
+                rec[lb + "|arc2"], rec[lb + "|arc4"] = arc(P[:4]), arc(P[:8])
+            rows.append(rec)
+    X = pd.DataFrame(rows)
+    X.to_csv(out / "app1x_zeros_plan01.csv", index=False)
+    res = {}
+    for lb in a.labels:
+        res[lb] = {}
+        for b, g in X.groupby("bin"):
+            res[lb][b] = dict(n=int(len(g)), **{f"{m}_{f}": float(fn(g[f"{lb}|{m}"] - g[f"{a.base}|{m}"])) for m in ("dplat", "y4", "h4", "arc2", "arc4")
+                                               for f, fn in (("med", np.median), ("mean", np.mean))},
+                              base_y4=float(g[f"{a.base}|y4"].median()), base_h4=float(g[f"{a.base}|h4"].median()))
+    (out / "app1x_zeros_plan01.json").write_text(json.dumps(res, indent=1))
+    for lb, v in res.items():
+        print(lb)
+        for b, x in v.items():
+            print(f"  {b:14s} n {x['n']:4d} dplat {x['dplat_med']:+.3f} ({x['dplat_mean']:+.3f}) y4 {x['y4_med']:+.3f} ({x['y4_mean']:+.3f}) "
+                  f"h4 {x['h4_med']:+.2f} ({x['h4_mean']:+.2f}) arc2 {x['arc2_med']:+.3f} arc4 {x['arc4_med']:+.3f} ({x['arc4_mean']:+.3f}) base h4 {x['base_h4']:+.1f}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -332,6 +515,15 @@ if __name__ == "__main__":
     m = sp.add_parser("summary")
     m.add_argument("--out", required=True), m.add_argument("--base", default="RSG-L18-s0")
     m.add_argument("--labels", nargs="+", default=["APP1X-L18-s0", "APP2W05-L18-s0", "APP0C-L18-s0"])
+    o = sp.add_parser("onset")
+    o.add_argument("--out", required=True), o.add_argument("--base", default="RSG-L18-s0")
+    o.add_argument("--labels", nargs="+", default=["APP1X-L18-s0", "APP2W05-L18-s0", "APP0C-L18-s0"])
+    f = sp.add_parser("fig")
+    f.add_argument("--pkl", required=True), f.add_argument("--out", required=True), f.add_argument("--fig", required=True)
+    f.add_argument("--base", default="RSG-L18-s0"), f.add_argument("--label", default="APP1X-L18-s0"), f.add_argument("--scenes", nargs="+", required=True)
+    q = sp.add_parser("plan01")
+    q.add_argument("--pkl", required=True), q.add_argument("--out", required=True), q.add_argument("--base", default="RSG-L18-s0")
+    q.add_argument("--labels", nargs="+", default=["APP1X-L18-s0", "APP2W05-L18-s0", "APP0C-L18-s0"])
     a = ap.parse_args()
     if a.cmd == "extract":
         R_ = Path(__file__).resolve().parents[3]
@@ -340,4 +532,4 @@ if __name__ == "__main__":
                         str(R_ / "experiments/eyes_vs_head/scripts"), str(R_ / "experiments/alpasim_long/scripts")]
         extract(a)
     else:
-        {"read": read, "summary": summarise}[a.cmd](a)
+        {"read": read, "summary": summarise, "onset": onset, "fig": figure, "plan01": plan0}[a.cmd](a)

@@ -917,7 +917,8 @@ def parse_variants(spec):
 def n_self_units(a):
     """Units of the self read from the STORED 18-decision rollouts (as n-tfail): failed = d316's stratum A without `short` (k_ref as
     d316); controls = the S_NCTRL completed turns with the latest entrance crossing (k_ref = the first decision whose route station
-    >= entry). h per Delta = k_ref - 2 Delta, 1 <= h. -> <out>/self.json, <out>/scenes.txt"""
+    >= entry). h per Delta = k_ref - 2 Delta, 1 <= h; controls at Delta 3 take h = max(1, k_ref - 6) (they cross the entry at k 4-8, so
+    the effective Delta is 1.5-3.5 s, `delta_eff`). -> <out>/self.json, <out>/scenes.txt"""
     n_paths()
     from jevdrive import par
     out = Path(a.out)
@@ -948,6 +949,9 @@ def n_self_units(a):
         if u["role"] == "ctrl":
             u["k_ref"], u["src"] = u["k_entry"], "entry"
         u["hs"] = {str(d): (u["k_ref"] - N_STEP * d if u["k_ref"] - N_STEP * d >= N_HMIN else None) for d in S_DELTAS}
+        if u["role"] == "ctrl" and u["k_ref"] - 1 >= N_HMIN:   # controls cross the entry early: at Delta 3 h = max(1, k_entry - 6) (prereg)
+            u["hs"][str(S_DELTAS[0])] = max(N_HMIN, u["k_ref"] - N_STEP * S_DELTAS[0])
+        u["delta_eff"] = {d: (u["k_ref"] - h) / N_STEP for d, h in u["hs"].items() if h is not None}
         units[s] = u
     (out / "self.json").write_text(json.dumps(dict(gate=gt, units=units, completed_k_entry={s: U[s]["k_entry"] for s in comp},
                                                    short=sorted(s for s, u in U.items() if u["src"] == "short_end")), indent=1, default=float))
