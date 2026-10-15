@@ -158,7 +158,8 @@ def policy(a, run):
     def line_class(mask):
         q = first_ahead(mask, dF)
         d = take(dF, q)
-        sel = onr & (q >= 0) & (d <= D_APP) & (speed >= V_FAST)
+        base = onr & (q >= 0) & (d <= D_APP)
+        sel = base & (speed >= V_FAST)
         dl = take(ld, q)[:, None]
         le1 = ((sf <= dl) & (v <= V_STOP)).any(1)
         cross4 = sf[:, -1] > dl[:, 0]
@@ -167,15 +168,16 @@ def policy(a, run):
         icr = np.where(cross4, (sf > dl).argmax(1), 40)
         req = speed ** 2 / (2 * np.maximum(d, 0.5))                                             # deceleration that stops the car at the line
         got = (speed - v[:, -1]) / 4.0                                                             # the plan's mean deceleration over 4 s
-        rec = dict(sel=sel, q=q, d=d, plan_le1=le1, no_intent=v[:, -1] / np.maximum(speed, 0.1) >= 0.7, under_brake=got < 0.5 * req,
+        rec = dict(sel=sel, base=base, q=q, d=d, plan_le1=le1, no_intent=v[:, -1] / np.maximum(speed, 0.1) >= 0.7, under_brake=got < 0.5 * req,
                    req_decel=req, plan_decel=got, nostop=~le1, cross4=cross4, nostop_kin=~le1 & ~can, v_cross=np.where(cross4, v[np.arange(N), icr], np.nan),
                    human_stop=np.isfinite(take(tstop, q)), red_4s=take(red4, q), ltype=take(ty, q), elig=take(elig, q), plan_end_ratio=v[:, -1] / np.maximum(speed, 0.1))
         return rec
 
     C = dict(red=line_class(ty == 2), stop=line_class(ty == 1), qual=line_class(elig & (ty > 0)))
     # 'red' must be the first light line and red now; 'qual' the first eligible line and must-stop now
-    C["red"]["sel"] &= take(st_now, C["red"]["q"]) == 1
-    C["qual"]["sel"] &= (C["qual"]["ltype"] == 1) | ((C["qual"]["ltype"] == 2) & (take(st_now, C["qual"]["q"]) == 1))
+    for key in ("sel", "base"):
+        C["red"][key] &= take(st_now, C["red"]["q"]) == 1
+        C["qual"][key] &= (C["qual"]["ltype"] == 1) | ((C["qual"]["ltype"] == 2) & (take(st_now, C["qual"]["q"]) == 1))
 
     # free road
     lead40 = ((Z["a_g0"] > -BIG / 2) & (Z["a_g0"] <= D_FREE_LEAD)).any(1)
@@ -271,6 +273,9 @@ def policy(a, run):
             r["by_expert_speed"] = {BIN_NAMES[i]: dict(all=stats(O["sel"] & xs & (bx == i)), slow_x=stats(O["sel"] & xs & (bx == i) & slow_x)) for i in range(4)}
         if c in LINE_CLASSES:
             r["speed_q50_q90"] = [float(np.quantile(speed[O["sel"]], q)) for q in (0.5, 0.9)] if O["sel"].any() else None
+            B0, hs0, ni = C[c]["base"], C[c]["human_stop"], C[c]["no_intent"]
+            r["by_speed_floor"] = {f"speed >= {f:g}": dict(all=stats(B0 & (speed >= f)), human_stop=stats(B0 & (speed >= f) & hs0),
+                                                            no_intent_and_human_stop=stats(B0 & (speed >= f) & hs0 & ni)) for f in (0.0, 3.0, 6.0, 9.0, 12.0)}
             hs = O["sel"] & C[c]["human_stop"] & (k >= 2)
             r["own_state_human_stop_plan_decel_vs_required_q50"] = [float(np.median(C[c]["plan_decel"][hs])), float(np.median(C[c]["req_decel"][hs]))] if hs.any() else None
             r["d_line_bins"] = {lab: stats(O["sel"] & (C[c]["d"] >= lo) & (C[c]["d"] < hi)) for lab, lo, hi in (("0-10", 0, 10), ("10-20", 10, 20), ("20-40", 20, 40.001))}
