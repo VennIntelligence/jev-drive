@@ -68,6 +68,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 
 - [research/zero-taxonomy.md](../../research/zero-taxonomy.md): every zero / low score of RSG-L18-s0 on PAI 281 and held 460 by mechanism
   (`scripts/rf_tax.py`, per-scene rows in `results/taxonomy/`, figures `figs/tax_*.png`, review sheet `research/route-follow/review-sheet-rsg.md`).
+- LON-DIAG readings 1-2 ([plans/2026-10-15-longitudinal-diag-prereg.md](plans/2026-10-15-longitudinal-diag-prereg.md)): the 17 route-end zeros
+  ([results/lon_diag/route_end.md](results/lon_diag/route_end.md), contact sheet `figs/lon_diag_route_end.png`) and the slow scenes (onset,
+  triggers, fixed point, following gap: [results/lon_diag/slow.md](results/lon_diag/slow.md), `figs/lon_diag_fixed_point.png`,
+  `figs/lon_diag_onsets.png`); `scripts/rf_londiag.py`, per-decision table on Tokyo `/data/runs/route_follow/lon_diag/decisions.parquet`.
 - [research/route-follow/pai-follow.md](../../research/route-follow/pai-follow.md): PAI 281 turn completion with the real route (RSG 13.9 %,
   RBSG2 25.0 % of 36 turns) and the map topology of every corridor zero (14 / 22 route zeros have a straight road ahead; the ego never slows
   into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
