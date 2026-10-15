@@ -103,3 +103,7 @@ corridor classes at t_f - 2 s, human path, driven path, plan at t_f - 2 s). Labe
 2. (Before any statistic.) Two descriptive columns per decision: `plan_len` (served plan arc to 4 s) and `cor_left` (route-chain end
    minus s_x). A plan longer than `cor_left` runs past the end of the labelled route; how often that happens in the C2 windows is
    reported, the registered measure is unchanged.
+3. (Before any statistic; the first full build hung.) `rf_pai_follow.all_turns` looped forever (and grew memory) when `find_turn`
+   returned a turn whose exit lies before the search start (its +-10 m context reaches back): 5 held rollouts (scene ddc1271e on
+   RBSG2 / RV2c s0 / s1 / APP1X, f3512ae1 on APP1X) via rf_progress `Ego.legs` inside `zero_job`. Fixed in place: the search start now
+   always advances (`x = max(exit, x) + 1`); every call that terminated before returns the same list.

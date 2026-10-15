@@ -234,7 +234,7 @@ def all_turns(s, h, lo, hi, **kw):
     out, x = [], lo
     while (t := find_turn(s, h, x, hi, **kw)) is not None:
         out.append(t)
-        x = t[1] + 1.0
+        x = max(t[1], x) + 1.0          # a turn whose exit lies before x (the +-10 m context window) never advanced x: an endless loop
     return out
 
 
