@@ -44,7 +44,7 @@ serve() { echo "-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e JEV_TRACK=0${1:+ -e JEV_INTENT
 
 runs() {  # card $1: the identity / smoke checks, then a 0.3 and a 0.15 back to back
   local g=$1 a R
-  python3 "$here/rf_p4.py" s1 --run "$O/id" --ref "$REF" > "$O/id/s1.txt" 2>&1
+  python3 "$here/rf_p4.py" s1 --run "$(ls -d "$O"/id/runs/*/ | head -1)" --ref "$REF" > "$O/id/s1.txt" 2>&1
   python3 "$here/rf_intent.py" ihcheck --run "$O/smoke" --ref "$REF" > "$O/smoke/ihcheck.txt" 2>&1
   log "identity: $(tail -1 "$O/id/s1.txt")"; log "smoke: $(tail -1 "$O/smoke/ihcheck.txt")"
   grep -q "S1: 2 / 2" "$O/id/s1.txt" || { log "STOP: identity re-run not bit-identical"; touch "$O/STOP"; exit 1; }
