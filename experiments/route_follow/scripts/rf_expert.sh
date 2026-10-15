@@ -94,11 +94,14 @@ tokyo-read)
   python3 "$HERE/rf_v2pai.py" table --turns "$O/turns.json" --a rsg --b "$l" --strict "$RES/pai281/strict36.txt" --exam "$EXAM/hard_exam.txt" --md "$O/turns.md" || exit 1
   python3 "$HERE/rf_appread.py" --a rsg=$D/runs/route_night/pai_follow/r281.pkl --b "$l=$O/follow.pkl" --strict "$RES/pai281/strict36.txt" \
       --runway "$RES/approach/pai_runway22.txt" --out "$O/runway.md" || exit 1
+  ${PY:-/data/envs/op-train/bin/python} "$HERE/rf_expert.py" report --kind pai --pack $T/pack_pai --turns "$O/turns.json" --xp "$l" --refs rsg \
+      --runs "$l=$O" rsg="$REF" --strict "$RES/pai281/strict36.txt" --control "$EXAM/control.txt" --out "$O/xp" > /dev/null || exit 1
   { echo "# PAI 281: rule expert $L vs RSG-L18-s0 (stored read r281/rsg), gains 20"; echo
     echo "Run \`$O\` ($(head -1 "$O/COMMIT" 2>/dev/null)), reference \`$REF\`; rf_expert.sh tokyo-read."
     echo; echo "## All 281 and the exam / control lists (rf_pai281.py)"; echo; cat "$O/read281.md"
     echo; echo "## Strict turns (36) and exam scenes (72) (rf_v2pai.py turns / table)"; echo; sed 's/^# /### /' "$O/turns.md"
-    echo; echo "## Runway turns (22) (rf_appread.py)"; echo; sed 's/^# /### /' "$O/runway.md"; } > "$O/read.md"
+    echo; echo "## Runway turns (22) (rf_appread.py)"; echo; sed 's/^# /### /' "$O/runway.md"
+    echo; echo "## Lines and the per-turn failure list (rf_expert.py report)"; echo; sed 's/^# /### /' "$O/xp/lines.md"; echo; sed 's/^# /### /' "$O/xp/turns.md"; } > "$O/read.md"
   echo "-> $O/read.md" ;;
 *) sed -n '2,22p' "$0"; exit 2 ;;
 esac
