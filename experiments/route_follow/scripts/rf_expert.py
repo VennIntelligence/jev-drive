@@ -13,7 +13,8 @@ never written.
         change blended (smoothstep) over [mid - 15, mid + 15] m inside both pieces' overlap; Amendment 1: where the chain lies > 2.5 m from
         the route at the same station (or is absent: the log prefix before a chain that starts late), the route polyline is used instead
         (dilated 5 m, weight smoothed over 10 m; index `on_route` = that share); resampled at 0.5 m; 30 m straight before the start,
-        150 m after the end. No piece -> the route polyline itself (fallback).
+        150 m after the end. No piece -> the route polyline itself (fallback). Amendment 1: shifted sideways around parked replayed
+        boxes that intrude on the ego's width (nudge(); index `nudges`).
   fig   (repo .venv / host python3 with matplotlib, shapely)
         rf_expert.py fig --pack DIR --runs LABEL=<run root | run dir>,.. ... --scenes s1,s2,.. --out PNG
         one panel per scene: road area / lanes (grey), the human log (blue), the expert chain (black dashed, turn entry / exit ticks),
@@ -38,6 +39,7 @@ sys.path[:0] = [str(HERE)] + ([str(HERE.parents[1] / "junction_eyes" / "lib")] i
 
 STEP, PRE_M, POST_M, BLEND, ROUTE_TOL = 0.5, 30.0, 150.0, 15.0, 2.5
 TURN_WIN, TURN_DEG, CHORD = 30.0, 45.0, 5.0
+NUDGE_M, NUDGE_MAX, NUDGE_PRE, NUDGE_POST, NUDGE_RAMP, STATIC_M = 0.3, 1.8, 12.0, 8.0, 10.0, 1.0
 GEO_R = 60.0
 
 
@@ -183,6 +185,46 @@ def vlog_of(P, S, T, LP):
     return out
 
 
+def nudge(P, objs, hw):
+    """Amendment 1: the path shifted sideways around parked boxes. A box is parked when its logged centre moves < STATIC_M m over its
+    whole track; it intrudes when its corners, in the path frame, reach within hw + NUDGE_M of the path. Offset o = the smaller of the
+    left / right shifts that clear it by NUDGE_M (none when both exceed NUDGE_MAX: the lane is blocked and the yield rule stops),
+    held over [s_min - NUDGE_PRE, s_max + NUDGE_POST] with cosine ramps of NUDGE_RAMP m; the largest |o| wins per station.
+    -> shifted path (resampled), list of (object id, s_min, offset)."""
+    S = stations(P)
+    d = np.gradient(P, axis=0)
+    N = np.c_[-d[:, 1], d[:, 0]] / np.maximum(np.hypot(*d.T), 1e-9)[:, None]
+    off, used = np.zeros(len(S)), []
+    for k, o in objs.items():
+        X = np.asarray(o["P"], float)
+        if not len(X) or np.hypot(*(X - X[0]).T).max() >= STATIC_M:
+            continue
+        c, h = X.mean(0), float(np.asarray(o["Y"], float).mean())
+        u, v = np.array([np.cos(h), np.sin(h)]), np.array([-np.sin(h), np.cos(h)])
+        Q = np.array([c + a * u * o["L"] / 2 + b * v * o["W"] / 2 for a in (-1, 1) for b in (-1, 1)])
+        if dist_to(P, c[None])[0] > 8.0:
+            continue
+        st = proj_seq(P, S, Q)
+        i = np.clip(np.searchsorted(S, st), 0, len(S) - 1)
+        lat = ((Q - P[i]) * N[i]).sum(1)
+        lim = hw + NUDGE_M
+        if lat.min() > lim or lat.max() < -lim:
+            continue
+        left, right = lat.max() + lim, lat.min() - lim
+        o_ = left if abs(left) <= abs(right) else right
+        if abs(o_) > NUDGE_MAX:
+            continue
+        a0, a1 = st.min() - NUDGE_PRE, st.max() + NUDGE_POST
+        w = np.clip(np.minimum((S - (a0 - NUDGE_RAMP)) / NUDGE_RAMP, ((a1 + NUDGE_RAMP) - S) / NUDGE_RAMP), 0, 1)
+        w = 0.5 - 0.5 * np.cos(np.pi * w)
+        cand = w * o_
+        off = np.where(np.abs(cand) > np.abs(off), cand, off)
+        used.append([str(k), round(float(st.min()), 1), round(float(o_), 2)])
+    if not used:
+        return P, used
+    return resample(dedup(P + off[:, None] * N, 0.05)), used
+
+
 def dist_to(P, X):
     """Distance of every point X (m, 2) to the polyline P (n, 2)."""
     A, d = P[:-1], P[1:] - P[:-1]
@@ -253,12 +295,12 @@ def pack_job(job):
     X, on_route = merge_route(g, xy, Rx, Sx)
     meta.update(pieces=len(ch["pieces"]), amb=int(ch["n_amb"]), change=ch["trans"].count("change"), brk=ch["trans"].count("break"),
                 blended=nlc, cov=float(ch["cov"].mean()) if len(ch["cov"]) else 0.0, fallback=g is None, on_route=round(on_route, 3))
-    P = extend(X)
+    objs = TX.logged_objects(ds)
+    P, nudges = nudge(extend(X), objs, float(dims[2]))
     S = stations(P)
     h = heading(P, S)
     tn = turns(P, S, h)
     vl = vlog_of(P, S, T, LP)
-    objs = TX.logged_objects(ds)
     keep = [k for k, o in objs.items() if len(o["T"]) and np.hypot(*(o["P"][:, None, :] - LP[None, ::10]).transpose(2, 0, 1)).min() < 150.0]
     off = np.r_[0, np.cumsum([len(objs[k]["T"]) for k in keep])].astype(np.int64)
     ot = np.concatenate([np.asarray(objs[k]["T"], float) for k in keep]) if keep else np.zeros(0)
@@ -273,7 +315,7 @@ def pack_job(job):
                pieces=[dict(j=M.ids[p["j"]], s0=p["s0"], s1=p["s1"], tin=p["tin"], tout=p["tout"]) for p in ch["pieces"]])
     pickle.dump(geo, open(Path(out) / "geo" / f"{scene}.pkl", "wb"), protocol=4)
     meta.update(path_m=float(S[-1]), turns=np.round(tn, 1).tolist(), objects=len(keep), vlog_known=float(np.isfinite(vl).mean()),
-                route_turns=chain_check(P, S, tn, Rx), log_s=[round(float(x), 1) for x in proj_seq(P, S, LP[[0, -1]])])
+                route_turns=chain_check(P, S, tn, Rx), nudges=nudges, log_s=[round(float(x), 1) for x in proj_seq(P, S, LP[[0, -1]])])
     return meta
 
 

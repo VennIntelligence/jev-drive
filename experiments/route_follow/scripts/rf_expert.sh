@@ -6,7 +6,7 @@
 # default 4.6); label XP-L<la>-E<ev> (dots dropped: XP-L12-E46).
 # box (repo root):
 #   rf_expert.sh box-pack                     pool CPU job: rf_expert.py pack on the held 460 (RSG-L18-s0's read configs) -> $O/pack_held
-#   rf_expert.sh box-smoke [flags]            the 3 held smoke scenes (results/rule_expert/smoke_held.txt), one pool job -> $O/smoke/<label>
+#   [SFX=s] rf_expert.sh box-smoke [flags]    the 3 held smoke scenes (results/rule_expert/smoke_held.txt), one pool job -> $O/smoke/<label>
 #   rf_expert.sh box-read [flags]             6 chunk jobs (rm_chain.sh read RSG-L18-s0 i 6 <label>) -> route_mem/read/RSG-L18-s0-<label>,
 #                                             then box-report as a pool job after them
 #   rf_expert.sh box-report <label>           held.py, ol_confirm (vs RSG-L18-s0 and -s1), rf_follow, rf_appheld -> $O/report/<label>
@@ -45,8 +45,8 @@ case $cmd in
 box-pack)
   sub xp-pack --vram 0.5 --cpu 32 --ram 120 --timeout-h 2 -- $P "$HERE/rf_expert.py" pack --workers 32 --out $O/pack_held --runs $(ls -d $M/RSG-L18-s0/c*/run) ;;
 box-smoke)
-  L=$RES/rule_expert/smoke_held.txt; D=$O/smoke/$LABEL; [[ ! -e $D ]] || { echo "$D exists" >&2; exit 1; }
-  sub xp-smoke-$LABEL --vram 20 --cpu 6 --ram 40 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 "${XENV[@]}" \
+  L=$RES/rule_expert/smoke_held.txt; D=$O/smoke/$LABEL${SFX:+-$SFX}; [[ ! -e $D ]] || { echo "$D exists" >&2; exit 1; }
+  sub xp-smoke-$LABEL${SFX:+-$SFX} --vram 20 --cpu 6 --ram 40 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 "${XENV[@]}" \
       -- bash experiments/route_mem/scripts/rm_chain.sh readlist RSG-L18-s0 $L $D ;;
 box-read)
   ids=()
@@ -73,7 +73,7 @@ tokyo-pack)
     -v "$HERE/rf_tax.py":/w/rf_tax.py:ro -v "$REPO/experiments/junction_eyes/lib/je_ruler.py":/w/je_ruler.py:ro alpasim-base:0.89.0 \
     -c "umask 0000 && cd /repo && uv run --no-sync python /w/rf_expert.py pack --workers ${WORKERS:-8} --out /out/pack_pai --runs $REF" ;;
 tokyo-smoke)
-  O=$T/smoke/$LABEL; [[ ! -e $O ]] || { echo "$O exists" >&2; exit 1; }; mkdir -p "$O"; git -C "$REPO" log --oneline -1 > "$O/COMMIT"
+  O=$T/smoke/$LABEL${SFX:+-$SFX}; [[ ! -e $O ]] || { echo "$O exists" >&2; exit 1; }; mkdir -p "$O"; git -C "$REPO" log --oneline -1 > "$O/COMMIT"
   SERVE="$XSERVE" RUNPFX=xps- CHUNK=3 CARDS=${CARDS:-1} bash "$REPO/experiments/alpasim/scripts/pai_eval.sh" "$O" RSG-L18-s0 "$RES/rule_expert/smoke_pai.txt" ;;
 tokyo-run)
   O=$T/$LABEL; mkdir -p "$O/chunks"
