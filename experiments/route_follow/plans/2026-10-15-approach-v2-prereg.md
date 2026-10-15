@@ -103,3 +103,27 @@ the shape gate, zeros by kind, and new non-turn zeros.
   - Box total: ~3 card-h, on the three cards in parallel: ~2 h wall.
   - PAI 281: ~2.3 h on both Tokyo cards.
 - No seed 1 and no public guard unless the coordinator asks after PAI.
+
+## Amendment 1 (rows, identity, pilot gate; 2026-10-15 ~13:25, before any full training or held read)
+
+- **Rows** ([results/approach/v2/rows.md](../results/approach/v2/rows.md)). The relabel reproduces all 18 v1 keys of both lab files bit for
+  bit.
+  - Past the handoff: 3 252 / 3 864 approach rows (turn rows: nuPlan 1 935 / 2 379, PAI 629 / 712).
+  - Speed rows: 1 620 -> 958. nuPlan 1 255 -> 719 and PAI 365 -> 239 (ego <= 26 m before the entry and past the handoff).
+  - Clipped lateral targets: 210. nuPlan 206 (median clip 0.37 m), PAI 4.
+  - Straight negatives with the symmetric speed term: 444 in the window (human median 8.4 / 15.2 m/s nuPlan / PAI); 604 past the handoff
+    have l3n.
+- **Bit identity** (50 eager steps vs `9c64aaa0`, the parent commit): `2off` (every flag off) and `2app1` (v1 `--app-lam 1` on on1_APP)
+  both have 109 net + 97 adapter tensors identical, and their dev ADE logs are equal (0.5284 -> 0.5320 and 0.5284 -> 0.5362). PASS
+  (`results/approach/v2/ident2*.json`).
+- **Pilot gate** (1 000 steps, batch 64, seed 0, vs RSG-L18-s0; `results/approach/v2/gate/APP2P{05,1}-L18-s0.md`):
+
+  | pilot | G-real (line 0.5435) | G-ST | G-over | G-rely | gate | A-lat drop | A-speed drop | neg_dv change | over10 share change |
+  |:--|--:|:--|--:|--:|:--|--:|--:|--:|--:|
+  | W 0.5 | 0.5403 PASS | 0.005 / 0.029 | 0.0067 | 0.0197 | **PASS** | +0.005 | -0.32 | +0.08 [-0.02, +0.16] | -0.007 |
+  | W 1 | 0.5508 FAIL | 0.005 / 0.027 | 0.0056 | 0.0176 | FAIL | -0.046 | -0.39 | +0.15 [+0.04, +0.23] | -0.007 |
+
+  - The base's speed excess on the dev rows is 0.006 m/s, so the A-speed "drops" are noise on a near-zero base.
+  - neg_dv is the plan speed minus the human's on the dev straights (base -1.95 m/s). It rises, i.e. no slow-down was learnt on the
+    straights.
+  - By section 3, **W 1 is not trained**. W 0.5 trains in full (APP2W05-L18-s0, launched 13:24, held read and report2 chained).

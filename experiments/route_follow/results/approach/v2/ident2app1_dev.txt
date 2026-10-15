@@ -1,0 +1,4 @@
+13:19:42 INFO route_mem/train-APPID2app1-new-s0: dev @ 0: ade 0.5284, drift_on 1.4740, drift_off 0.0411, ot_ade 0.7210, ot_drift_on 1.7318, ot_drift_off 0.0748, ade_nomem 0.5433; init's recorded dev ade 0.5284
+13:19:54 INFO route_mem/train-APPID2app1-new-s0: dev @ 50: ade 0.5362, drift_on 1.4755, drift_off 0.0418, ot_ade 0.7276, ot_drift_on 1.7185, ot_drift_off 0.0763, ade_nomem 0.5498
+13:20:02 INFO route_mem/train-APPID2app1-old-s0: dev @ 0: ade 0.5284, drift_on 1.4740, drift_off 0.0411, ot_ade 0.7210, ot_drift_on 1.7318, ot_drift_off 0.0748, ade_nomem 0.5433; init's recorded dev ade 0.5284
+13:20:13 INFO route_mem/train-APPID2app1-old-s0: dev @ 50: ade 0.5362, drift_on 1.4755, drift_off 0.0418, ot_ade 0.7276, ot_drift_on 1.7185, ot_drift_off 0.0763, ade_nomem 0.5498
