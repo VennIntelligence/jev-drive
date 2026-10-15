@@ -4,7 +4,7 @@ machinery (analyse / draw_bev / draw_traces): BEV of every decision's plan colou
 path and the lane polygons; traces of speed, 2 s / 4 s plan heading, the car's offset from the plan 1 s earlier and the plan-to-plan jump; plus
 the front-camera clip of the frames the driver received (CAM_F0 driver_camera_image of rollout.asl, one per decision). Stored reads are read only.
 
-  extract (box, AlpaSim venv)  ot_viz.py extract --follow <rf_follow scenes.csv> --lanes <progress/lanes_held.pkl> --out DIR
+  extract (box, AlpaSim venv)  ot_viz.py extract --follow <rf_follow scenes.csv> --lanes <route_follow/corridor/in/lanes_held.pkl (rf_corridor)> --out DIR
                                  --set LABEL=<run dir>[,<run dir>] ... [--frames LABEL ...] [--workers N]
       DIR/recs.pkl: {recs: {label: [plan_exec_viz held record + row]}, lanes: {scene: lanes}}; DIR/frames/<label>/<s8>/<k:02d>.jpg (480 px wide)
   render  (Mac, repo .venv)    ot_viz.py render --pkl DIR/recs.pkl --frames DIR/frames --cols LABEL[:CAMLABEL]=TITLE ... --out OUT

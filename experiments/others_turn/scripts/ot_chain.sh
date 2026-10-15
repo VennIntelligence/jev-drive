@@ -66,7 +66,7 @@ page)  # comparison page inputs: asl views, rf_follow over the page labels, ot_v
   LABS=("RSG-L18-s0=$RSG" "XP-L12-E46=$XPS" "WAJEPA=$O/rerun/wajepa" "LTF=$O/view/ltf" "DD=$O/view/dd" "G0014=$O/view/garage" "RSGr=$O/rerun/rsg" "XPr=$O/rerun/xp")
   $P experiments/route_follow/scripts/rf_follow.py --cover none --workers 16 --out $O/follow_page --runs $(for x in "${LABS[@]}"; do echo "${x/=/@18=}"; done) \
     > $O/follow_page.log 2>&1 || { tail $O/follow_page.log; exit 1; }
-  $P $E/scripts/ot_viz.py extract --follow $O/follow_page/scenes.csv --lanes $DATA_DIR/runs/route_follow/progress/lanes_held.pkl --out $O/page \
+  $P $E/scripts/ot_viz.py extract --follow $O/follow_page/scenes.csv --lanes $DATA_DIR/runs/route_follow/corridor/in/lanes_held.pkl --out $O/page \
     --set "${LABS[@]}" --frames WAJEPA LTF DD G0014 RSGr XPr --workers 24 ;;
 *) echo "ot_chain.sh check | rerun | read | rerun2 | page" >&2; exit 2 ;;
 esac
