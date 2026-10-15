@@ -266,6 +266,8 @@ def merge(parts, out):
 
 
 def cmd_pack(a):
+    assert not (CR / f"on1_{a.out}" / "tab.npz").exists() or os.environ.get("RCV_FORCE"), \
+        f"on1_{a.out} exists (a training may be reading it): pack under a new name, or RCV_FORCE=1"
     env_pools = [x for x in a.env_pools.split(",") if x] if a.arm in ("L", "RL") else []
     parts, rec = [f"on1_{a.base}:s:self"], dict(arm=a.arm, out=a.out, base=a.base, parts={})
     labs = {}
