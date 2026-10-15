@@ -89,6 +89,12 @@ Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.
             validity bits, through a zero-initialised map added to the branch's ego token (rmem.lat_feats; computed inside the head from the
             fed block, so nothing is rebuilt and the served values are the trained ones; sidecar head `latfeat`).
 
+Approach course (2026-10-15, experiments/route_follow/plans/2026-10-15-approach-course-prereg.md):
+  --app-lam W       the approach terms of onpol_nuplan lib/on_approach.py (entry-state pose L1, 1 - 2 s blend L2 x 2, speed excess over the
+            human L3) on the pool rows labelled in <POOL>/approach.npz (rf_apppool.py): sets --on-lon on_approach and --on-lon-lam 10 W, so
+            each term enters as 10 W x ho_w x sum over the pool rows / n_imit (W = 1: the route hinge's per-row weight in RB-F, the S agent
+            hinge's); refused together with another --on-lon module. 0 (default) = off: no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -831,6 +837,7 @@ if __name__ == "__main__":
         p.add_argument("--lc-dz", type=float, default=0.5)
         p.add_argument("--lc-adapter-only", action="store_true", help="the stay-lane rows' gradient reaches the adapter + route branch only")
         p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
+        p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")
@@ -852,4 +859,8 @@ if __name__ == "__main__":
         import on_lonsafe
         a.on_lon, a.on_lon_lam = "on_lonsafe", 1.0
         print(f"rm_train: --on-lon on_lonsafe, --on-lon-lam 1, weights {on_lonsafe.configure(a.lon_lead, a.lon_curve, a.lon_stop)}", flush=True)
+    if a.app_lam > 0:                                                # approach course: on_approach as the --on-lon module
+        assert a.on and a.on_lon in ("", "on_approach"), "--app-lam: needs --on and no other --on-lon module"
+        a.on_lon, a.on_lon_lam = "on_approach", 10.0 * a.app_lam
+        print(f"rm_train: --on-lon on_approach, --on-lon-lam {a.on_lon_lam:g}", flush=True)
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)
