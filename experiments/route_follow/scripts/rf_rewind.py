@@ -1449,9 +1449,9 @@ def n_yield(a):
                             at_fault=x.get("at_fault"), rear_after=x.get("rear_after"), v_win_end=x.get("v_win_end"), t_left_s=x.get("t_left_s"),
                             kmax=x.get("kmax"), dk=x.get("dk"), alat=x.get("alat"), v_0=x.get("v_0"), ent_after=x.get("ent_after"),
                             gate_pai=gpai, gate_nuplan=gnu, label=c3, rows=len(ks) if c3 else 0, run=x.get("run"), rid=x.get("rid")))
-            if c3:
-                rows += [dict(scene=s, log=lg(s), delta=d, h=h, k=k, gate_pai=gpai, gate_nuplan=gnu, within_tol=x.get("within_tol"),
-                              run=x.get("run"), rollout_id=x.get("rid")) for k in ks]
+            if valid:                                    # every valid handover's junction rows before any zero; label = completed and zero_free
+                rows += [dict(scene=s, log=lg(s), delta=d, h=h, k=k, run=x.get("run"), rollout_id=x.get("rid"), completed=bool(x["completed"]),
+                              zero_free=not za, label=c3, gate_pai=gpai, gate_nuplan=gnu, within_tol=x.get("within_tol")) for k in ks]
         cs = [c[0] for c in S["completed"]]
         S["rate"] = br([c[1] for c in S["completed"]], cs)
         for c in cats:
@@ -1521,7 +1521,8 @@ def n_yield(a):
     if a.rows:
         Path(a.rows).parent.mkdir(parents=True, exist_ok=True)
         with open(a.rows, "w", newline="") as f:
-            w = C.DictWriter(f, fieldnames=["scene", "log", "delta", "h", "k", "gate_pai", "gate_nuplan", "within_tol", "run", "rollout_id"])
+            w = C.DictWriter(f, fieldnames=["scene", "log", "delta", "h", "k", "run", "rollout_id", "completed", "zero_free", "label", "gate_pai",
+                                            "gate_nuplan", "within_tol"])
             w.writeheader()
             w.writerows(rows)
     J = dict(gate_pai=gp, gate_nuplan=gn, human=hum, turns=len(turns), outcome=oc, A_src=src, rewound=len(rew), union=uni,

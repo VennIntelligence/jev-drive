@@ -159,7 +159,25 @@ train64() {
     refs=$(for s in ${1//,/ }; do printf '%s,' "$s/tfail.json"; done); refs=${refs%,}
     RF_K_END=29 "$APY" "$here/rf_rewind.py" n-read --stage "$1" --ref "$refs" --out "$S/read.json" --pkl "$S/pkl" --workers 32 || exit 1
     $PY "$here/rf_rewind.py" n-yield --read "$S/read.json" --md "$S/rewind_onpol_all.md" --csv "$S/rewind_onpol_all.csv" --units "$S/units.csv" \
-      --rows "$S/rows.csv" --json "$S/summary.json" --d316 "$D/runs/route_follow/rewind_train64/tfail.json" > /dev/null && echo "-> $S/rewind_onpol_all.md" ;;
+      --rows "$S/rows.csv" --json "$S/summary.json" --d316 "$D/runs/route_follow/rewind_train64/tfail.json" > /dev/null || exit 1
+    if [[ -n ${RW_ROWS_DIR:-} ]]; then    # the trainer-facing row list (recovery_envelope / rf_recov.sh)
+      mkdir -p "$RW_ROWS_DIR"; cp "$S/rows.csv" "$S/units.csv" "$S/summary.json" "$RW_ROWS_DIR/"
+      cat > "$RW_ROWS_DIR/README.md" <<EOF
+# rewind_onpol_all label rows (plans/2026-10-16-rewind-onpol-all-prereg.md; read $S)
+
+rows.csv: one line per 2 Hz decision of a valid expert handover session (RSG-L18-s0 drove to h = k_ref - 2 Delta, the rule expert
+XP-L12-E46 served from h in the same session), decisions k >= h before the session's first zero, on rf_follow's junction stretch
+[entry - 20, exit + 10] m. Columns:
+- scene, log: clip id and its nuPlan log; delta (s, 2 or 3), h (handover decision), k (decision index, 0.5 s apart; rf_follow's k)
+- run, rollout_id: the expert session (AlpaSim run dir + rollout id; driver/drive.jsonl under run/ holds the served = expert plan at k)
+- completed: the session completed the turn (rf_follow); zero_free: no zero-score event (at-fault, offroad, dist_to_gt >= 4 m) at any k >= h
+- label: completed AND zero_free (the registered label set; everything else is listed for reference only)
+- gate_pai / gate_nuplan: label AND the d293 shape gate after h with the PAI thresholds / the nuPlan human p95 (summary.json gate_*)
+- within_tol: handover state within the identity's run-to-run spread (plan 0.15 m, track 5 cm, v 0.05 m/s)
+units.csv: one line per strict turn of the identity (outcome, k_ref, h per Delta). summary.json: the read's counts and thresholds.
+EOF
+    fi
+    echo "-> $S/rewind_onpol_all.md" ;;
   nsim)   # <run dir> <list | from file@i/n (the i-th of n chunks of its scenes)> id|xp0|<from file>: one 30-decision launch of the held-read
           # serving (rm_chain's sim, the long cache), resumable
     local R=$1 L=$2 M=$3 E=()
