@@ -29,7 +29,9 @@ mkdir -p "$V"
 
 trackpath() {  # run root -> the JEV_TRACK path its drivers logged ("serving:" line; a/b when chunks differ). Since decision 309 every PAI
   # result states its path and pairs only with a same-path reference (unset = gate in pai_driver; r281/rsg is the old path, 0)
-  grep -h "serving:" "$1"/runs/*/driver.log "$1"/driver.log 2>/dev/null | grep -o "JEV_TRACK [a-z0-9]*" | awk '{print $2}' | sort -u | paste -sd/ -
+  # a "serving:" line without JEV_TRACK predates track_ref (path 0)
+  grep -h "serving: JEV_VCONT" "$1"/runs/*/driver.log "$1"/driver.log 2>/dev/null \
+    | awk '{p = "0"; for (i = 1; i < NF; i++) if ($i == "JEV_TRACK") p = $(i + 1); print p}' | sort -u | paste -sd/ -
 }
 
 ckpt() {  # tag: the checkpoint from the box, sha256 equal on both sides
