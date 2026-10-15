@@ -9,6 +9,14 @@
       on1_<base>:s:self on1_APPN:a:self on1_APPP:p:self -> on1_<out> (+ approach.npz, + tab `app` turn / neg for --on-weight), and the
       dev-log rows -> $DATA_DIR/runs/route_follow/approach/dev.npz (the gate's held-out rows); counts -> experiments/route_follow/results/
       approach/rows.{json,md}; prints the --on-weight that puts k_app of every k_s + k_app pool draws on the approach rows.
+  rf_apppool.py v2 [--out APP]
+      APPROACH COURSE v2 (plans/2026-10-15-approach-v2-prereg.md): the sidecar cache/on1_<out>/approach_v2.npz for on_approach --app-v2, from
+      the same rows: t_hand = seconds since the handoff (nuPlan decision k x 0.5 s, PAI decision k x 0.1 s; the row name's last field,
+      checked against the source meta / cache), side, tgt = the entry target's offset from the human path (left +): -side x max(lat_h -
+      LANE_IN, 0), i.e. the human's entry offset clipped to <= LANE_IN inside the route centreline, never beyond the human; Hvh = the
+      human's speed on the grid (negatives too; `label` keeps it since v2); l3n = negatives whose human is >= 2 m/s over the 26 m window of
+      the virtual entry. If lab_<src>.v1.npz exists (the v1 labels, kept before relabelling), every v1 key must be equal. Counts ->
+      experiments/route_follow/results/approach/v2/rows.{json,md}.
 
 Rows (prereg section 1). Turn = rf_pai_follow.find_turn on the HUMAN's logged path (30 m window, net heading change >= 45 deg, change over
 [a - 10, a + 40] m >= 0.75 x 45 deg, entry / exit at 10 / 90 % of the change; rf_shape / rf_entryspeed / decision 293's rule with the
@@ -195,6 +203,7 @@ def nup_scene(job):
         H = np.where(valid[:, None], Hr[:, :2], np.nan)
         Hh = np.where(valid, wrapd(Hr[:, 2]), np.nan)
         Hv = np.where(valid, first_passage_speed(st, vt, q), np.nan)
+        r["Hvh"] = Hv
         if cls == "turn":
             je = int(round(de)) + 10
             if je >= len(GRID) or not np.isfinite(H[je]).all():
@@ -278,6 +287,7 @@ def label_pai(a):
         H, _ = poly_grid(Pm, offs)
         Hh = np.where(np.isfinite(H).all(1), np.interp(GRID, offs, np.where(ok, C["path_h"][c], np.nan)), np.nan)
         Hv = np.where(np.isfinite(H).all(1), np.interp(GRID, offs, np.where(ok, C["path_v"][c], np.nan)), np.nan)
+        r["Hvh"] = Hv
         if cls == "turn":
             je = int(round(de)) + 10
             if je >= len(GRID) or not np.isfinite(H[je]).all():
@@ -308,9 +318,12 @@ def save(a, res, tb, scene, logu, src):
     g = lambda k, d=np.nan: np.array([r.get(k, d) for r in res])  # noqa: E731
     H = np.full((n, len(GRID), 2), np.nan, np.float32)
     Hh, Hv = np.full((n, len(GRID)), np.nan, np.float32), np.full((n, len(GRID)), np.nan, np.float32)
+    Hvh = np.full((n, len(GRID)), np.nan, np.float32)
     for r in res:
         if "H" in r:
             H[r["i"]], Hh[r["i"]], Hv[r["i"]] = r["H"], r["Hh"], r["Hv"]
+        if "Hvh" in r:
+            Hvh[r["i"]] = r["Hvh"]
     cls = g("cls", "").astype("U4")
     de = g("d_e").astype(np.float32)
     turn = cls == "turn"
@@ -325,7 +338,7 @@ def save(a, res, tb, scene, logu, src):
     np.savez(OUT / f"lab_{src}.npz", names=tb["names"], scene=scene, log=logu, dev=dev, cls=cls, why=g("why", "").astype("U16"), d_e=de,
              side=g("side", 0).astype(np.int8), th=g("th").astype(np.float32), e0=g("e0").astype(np.float32), v=g("v").astype(np.float32),
              l3=g("l3", False).astype(bool), v_h_entry=g("v_h_entry").astype(np.float32), lat_h=g("lat_h").astype(np.float32),
-             dh_h=g("dh_h").astype(np.float32), H=H, Hh=Hh, Hv=Hv)
+             dh_h=g("dh_h").astype(np.float32), H=H, Hh=Hh, Hv=Hv, Hvh=Hvh)
     rep = dict(src=src, pool=a.pool, rows=n, s0_err_max=s0e, e0_err_max=e0e, cls={c: int((cls == c).sum()) for c in ("turn", "neg")},
                why={w: int((g("why", "") == w).sum()) for w in np.unique(g("why", "")) if w}, turn_train=int((turn & ~dev).sum()),
                turn_dev=int((turn & dev).sum()), neg_train=int(((cls == "neg") & ~dev).sum()), turn_scenes=int(len(np.unique(scene[turn]))),
@@ -440,6 +453,68 @@ def cmd_pack(a):
     print("\n".join(md))
 
 
+def cmd_v2(a):
+    import on_approach as OA
+    A = np.load(CR / f"on1_{a.out}" / "approach.npz")
+    tok, ok, kind = A["tokens"], A["ok"], A["kind"]
+    N, G = len(tok), len(GRID)
+    S = dict(t_hand=np.full(N, -1.0, np.float32), side=np.zeros(N, np.int8), tgt=np.zeros(N, np.float32), l3n=np.zeros(N, bool),
+             Hvh=np.full((N, G), np.nan, np.float32), lat_h=np.full(N, np.nan, np.float32))
+    Mz = np.load(D / "runs/onpol_nuplan/rows/L18RSG/meta.npz", allow_pickle=True)
+    kk = {"nup": dict(zip(Mz["names"].tolist(), Mz["k"].tolist()))}
+    Cz = np.load(a.cache)
+    kk["pai"] = {f"on:pai:{sc}:{int(k)}": int(k) for sc, k in zip(Cz["scenes"][Cz["sid"]].tolist(), Cz["k"].tolist())}
+    rec = dict(pool=f"on1_{a.out}", lane_in=OA.LANE_IN, t_hand=OA.T_HAND, sources={})
+    for src, pre, dt in (("nup", "a", 0.5), ("pai", "p", 0.1)):
+        Z = dict(np.load(OUT / f"lab_{src}.npz"))
+        v1 = OUT / f"lab_{src}.v1.npz"
+        if v1.exists():
+            Z1 = np.load(v1)
+            bad = [k for k in Z1.files if not np.array_equal(Z1[k], Z[k], equal_nan=Z1[k].dtype.kind == "f")]
+            assert not bad, f"{src}: the relabelled v1 keys differ: {bad}"
+            rec["sources"].setdefault(src, {})["v1_keys_equal"] = len(Z1.files)
+        assert "Hvh" in Z, f"lab_{src}.npz has no Hvh: run `label` again"
+        li = {str(n): i for i, n in enumerate(Z["names"].tolist())}
+        dst = np.array([j for j, t in enumerate(tok.tolist()) if ok[j] and t.split(":")[1] == pre])
+        src_i = np.array([li["on:" + tok[j][5:]] for j in dst])
+        k = np.array([int(str(Z["names"][i]).rsplit(":", 1)[1]) for i in src_i])
+        assert all(kk[src][str(Z["names"][i])] == x for i, x in zip(src_i, k)), f"{src}: name k != source k"
+        turn = Z["cls"][src_i] == "turn"
+        side = np.where(turn, Z["side"][src_i], 0).astype(np.int8)
+        lat = Z["lat_h"][src_i]
+        tgt = np.where(turn & np.isfinite(lat), -side * np.maximum(np.nan_to_num(lat) - OA.LANE_IN, 0.0), 0.0).astype(np.float32)
+        Hvh = Z["Hvh"][src_i]
+        de = A["d_e"][dst]
+        w = (GRID[None] >= de[:, None] - V_WIN) & (GRID[None] <= de[:, None])
+        vmin = np.where(w & np.isfinite(Hvh), Hvh, np.inf).min(1)
+        l3n = ~turn & np.isfinite(vmin) & (vmin >= VH_MIN) & (np.where(w, np.isfinite(Hvh), True).all(1))
+        S["t_hand"][dst], S["side"][dst], S["tgt"][dst], S["l3n"][dst], S["Hvh"][dst], S["lat_h"][dst] = k * dt, side, tgt, l3n, Hvh, lat
+        hand = k * dt >= OA.T_HAND
+        l3 = A["l3"][dst]
+        q = lambda x: [float(np.nanpercentile(x, p)) for p in (25, 50, 75)] if np.isfinite(x).any() else []  # noqa: E731
+        rec["sources"].setdefault(src, {}).update(
+            turn=int(turn.sum()), neg=int((~turn).sum()), turn_past_handoff=int((turn & hand).sum()), neg_past_handoff=int((~turn & hand).sum()),
+            speed_rows_v1=int((turn & l3).sum()), speed_rows_v2=int((turn & l3 & hand & (de <= V_WIN)).sum()),
+            neg_speed_rows=int((~turn & l3n & hand & (de <= V_WIN)).sum()), clipped=int((turn & hand & (tgt != 0)).sum()),
+            clip_m_q25_50_75=q(np.abs(tgt[turn & hand & (tgt != 0)])), neg_human_v_q25_50_75=q(np.nanmean(np.where(w, Hvh, np.nan)[~turn & l3n], 1)),
+            t_hand_turn_q25_50_75=q(k[turn] * dt))
+    assert not (ok & (S["t_hand"] < 0)).any()
+    np.savez(CR / f"on1_{a.out}" / OA.NAME2, tokens=tok, **S)
+    o = RES / "v2"
+    o.mkdir(parents=True, exist_ok=True)
+    (o / "rows.json").write_text(json.dumps(rec, indent=1))
+    md = ["# Approach course v2 rows (rf_apppool.py v2)", "", f"Pool `{rec['pool']}` (unchanged rows and labels) + sidecar `{OA.NAME2}`. Handoff rule: "
+          f"t_hand >= {OA.T_HAND} s (nuPlan k >= 3, PAI k >= 15). Lateral target clipped at {OA.LANE_IN} m inside the route centreline.", "",
+          "| source | turn rows | past the handoff | speed rows v1 -> v2 (ego <= 26 m, past the handoff) | clipped targets (median clip m) | negatives | past the handoff | negatives with the symmetric speed term (human median m/s) |",
+          "|:--|--:|--:|:--|:--|--:|--:|:--|"]
+    for s_, v in rec["sources"].items():
+        md.append(f"| {s_} | {v['turn']} | {v['turn_past_handoff']} | {v['speed_rows_v1']} -> {v['speed_rows_v2']} | {v['clipped']} "
+                  f"({v['clip_m_q25_50_75'][1] if v['clip_m_q25_50_75'] else float('nan'):.2f}) | {v['neg']} | {v['neg_past_handoff']} | "
+                  f"{v['neg_speed_rows']} ({v['neg_human_v_q25_50_75'][1] if v['neg_human_v_q25_50_75'] else float('nan'):.1f}) |")
+    (o / "rows.md").write_text("\n".join(md) + "\n")
+    print("\n".join(md))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -449,8 +524,12 @@ if __name__ == "__main__":
     p = sub.add_parser("pack")
     p.add_argument("--base", default="L18RB0"), p.add_argument("--out", default="APP"), p.add_argument("--neg-share", type=float, default=0.2)
     p.add_argument("--k-app", type=int, default=7), p.add_argument("--k-s", type=int, default=13)
+    p = sub.add_parser("v2")
+    p.add_argument("--out", default="APP"), p.add_argument("--cache", default=str(D / "runs/route_follow/paionp/src/cache_pol_tab.npz"))
     a = ap.parse_args()
-    if a.cmd == "label":
+    if a.cmd == "v2":
+        cmd_v2(a)
+    elif a.cmd == "label":
         a.pool = a.pool or {"nup": "L18RSG", "pai": "PAIonp"}[a.src]
         (label_nup if a.src == "nup" else label_pai)(a)
     else:

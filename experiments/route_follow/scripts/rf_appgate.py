@@ -13,6 +13,11 @@ plan segment in the 26 m window of the mean speed excess over the human (m/s, 0 
 the negatives' end-pose |lateral| to the centreline (no drift: not above the base + 0.10 m). Drop = 1 - pilot / base, log-clustered
 bootstrap CI (the same draw of logs for both models). Lines: A-lat drop >= 0.30 and A-speed drop >= 0.30; G-real dev ADE <= base + 0.01;
 G-ST shift and straight-continuation lateral moves <= 0.10 m; G-over share <= the base's; G-rely (memory reliance on junction rows) >= 0.01.
+
+APPROACH COURSE v2 (plans/2026-10-15-approach-v2-prereg.md): --guards-only --real-tol 0.015 --res-sub v2/gate: the gate is G-real (dev ADE <=
+base + 0.015 m), G-ST, G-over, G-rely only; A-lat / A-speed / A-neg are reported. Also reported (on_approach's v2 reads, every dev row):
+neg_dv = the plan's signed speed minus the human's on the straight negatives (26 m window of the virtual entry, human >= 2 m/s; a learnt
+slow-down shows as a drop), over = the share of dev turn rows whose 2 s heading points > 10 deg further into the turn than the human path.
 """
 from __future__ import annotations
 
@@ -56,12 +61,19 @@ def main(a):
         f = fz["f"][r].astype(np.float32)
         f[~fz["ok"][r]] = 0
         rows[s] = dict(pool=pool, r=r, ego=np.c_[tb["ego"][r], f].astype(np.float32), lht=tb["lht"][r], cam=tb["cam"][r, 0],
-                       **{k: L[k][r] for k in ("cls", "H", "Hh", "Hv", "d_e", "l3", "log")})
+                       **{k: L[k][r] for k in ("cls", "H", "Hh", "Hv", "d_e", "l3", "log") + (("Hvh", "side") if a.guards_only else ())})
     cat = lambda k: np.concatenate([rows[s][k] for s, _ in SRC])  # noqa: E731
     cls, logs = cat("cls"), np.array([f"{s}:{x}" for s, _ in SRC for x in rows[s]["log"]])
     src = np.concatenate([np.full(len(rows[s]["r"]), s) for s, _ in SRC])
     pk = {k: torch.as_tensor(cat(v), device=dev) for k, v in (("H", "H"), ("Hh", "Hh"), ("Hv", "Hv"), ("d_e", "d_e"), ("l3", "l3"))}
     pk["ok"] = torch.ones(len(cls), dtype=torch.bool, device=dev)
+    pv = None
+    if a.guards_only:                                                 # v2 reads (on_approach's v2 branch; reads only, no target needed)
+        Hvh, de_ = cat("Hvh"), cat("d_e")
+        w = (np.arange(-10.0, 81.0)[None] >= de_[:, None] - 26.0) & (np.arange(-10.0, 81.0)[None] <= de_[:, None])
+        l3n = (cls == "neg") & np.where(w, np.nan_to_num(Hvh, nan=-1.0) >= 2.0, True).all(1)
+        pv = pk | {k: torch.as_tensor(v, device=dev) for k, v in dict(hand=np.ones(len(cls), bool), side=np.where(cls == "turn", cat("side"), 0).astype(np.int8),
+                                                                        tgt=np.zeros(len(cls), np.float32), l3n=l3n, Hvh=Hvh, kind=(cls == "turn").astype(np.int8)).items()}
     W = torch.as_tensor(R2.t_weights(T.T8), device=dev, dtype=torch.float32)
     reads = {}
     for tg in (a.base, a.tag):
@@ -77,6 +89,10 @@ def main(a):
         P = np.concatenate(P)
         Tm = OA.terms(torch.as_tensor(P, dtype=torch.float32, device=dev), torch.arange(len(cls), device=dev), pk)
         reads[tg] = {k: v.detach().cpu().numpy() for k, v in Tm.items()} | dict(plans=P)
+        if pv is not None:
+            T2 = OA.terms(torch.as_tensor(P, dtype=torch.float32, device=dev), torch.arange(len(cls), device=dev), pv)
+            reads[tg] |= dict(dvn=T2["dvn"].cpu().numpy(), n_rows=T2["n_rows"].cpu().numpy(), over=T2["over"].cpu().numpy(),
+                              over10=(T2["over"] > np.radians(10.0)).float().cpu().numpy())
         del m
         torch.cuda.empty_cache()
     turn, neg = cls == "turn", cls == "neg"
@@ -103,6 +119,15 @@ def main(a):
                           lat_nup=drop("lat_e", turn & (src == "nup")), lat_pai=drop("lat_e", turn & (src == "pai")),
                           speed_nup=drop("vex", vrow & (src == "nup")), speed_pai=drop("vex", vrow & (src == "pai")),
                           loss1=drop("app1", turn), loss2=drop("app2", turn), loss3=drop("app3", vrow), neg_lat=drop("lat_e", neg)))
+    if pv is not None:
+        nrow = neg & reads[a.base]["n_rows"] & reads[a.tag]["n_rows"]
+        for k, key, m in (("neg_dv", "dvn", nrow), ("over10_share", "over10", turn)):
+            vb, _ = mean_ci(reads[a.base][key], m)
+            vp, _ = mean_ci(reads[a.tag][key], m)
+            dd_ = reads[a.tag][key] - reads[a.base][key]
+            _, bd = mean_ci(dd_, m)
+            res["reads"][k] = dict(base=vb, pilot=vp, drop=float(vp - vb), lo=float(np.nanpercentile(bd, 2.5)), hi=float(np.nanpercentile(bd, 97.5)),
+                                   rows=int(m.sum()), logs=int(len(np.unique(logs[m]))), diff=True)
     for k in ("head_deg",):
         for q in ("base", "pilot"):
             res["reads"][k][q] = float(np.degrees(res["reads"][k][q]))
@@ -117,8 +142,15 @@ def main(a):
             gates[k] = dict(value=g[k]["value"], base=g[k].get("base"), line=g[k]["line"], pass_=bool(g[k]["pass_"]))
     else:
         gates["G-v2"] = dict(value=None, line=f"{v2} missing", pass_=False)
-    res["gates"], res["all_pass"] = gates, all(x["pass_"] for x in gates.values())
-    out = [REPO / "experiments/route_follow/results/approach/gate", D / "runs/route_follow/approach/gate"]
+    if a.real_tol is not None and "G-real" in gates:                 # v2: the G-real line relaxed (prereg), from the same value / base
+        g = gates["G-real"]
+        g["line"], g["pass_"] = f"<= {g['base'] + a.real_tol:.4f} (base + {a.real_tol})", bool(g["value"] <= g["base"] + a.real_tol)
+    if a.guards_only:
+        for k in ("A-lat", "A-speed", "A-neg"):
+            gates[k]["line"] += " (reported)"
+    res["gates"] = gates
+    res["all_pass"] = all(x["pass_"] for k, x in gates.items() if not (a.guards_only and k.startswith("A-")))
+    out = [REPO / "experiments/route_follow/results/approach" / a.res_sub, D / "runs/route_follow/approach" / a.res_sub]
     if a.rows == "train":
         a.tag += "_trainrows"
     f3 = lambda x: ", ".join(f"{y:.3f}" for y in x) if isinstance(x, list) else ("-" if x is None else f"{x:.4f}")  # noqa: E731
@@ -126,9 +158,11 @@ def main(a):
           f"read, {res['rows']['neg']} straight negatives; held-out logs, never in the pool.", "",
           "| read | base | pilot | drop [95 % CI] | rows / logs |", "|:--|--:|--:|:--|:--|"]
     for k, v in res["reads"].items():
-        md.append(f"| {k} | {v['base']:.3f} | {v['pilot']:.3f} | {v['drop']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] | {v['rows']} / {v['logs']} |")
+        md.append(f"| {k} | {v['base']:.3f} | {v['pilot']:.3f} | {v['drop']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}]{' (difference)' if v.get('diff') else ''} | "
+                  f"{v['rows']} / {v['logs']} |")
     md += ["", "| gate | value | line | pass |", "|:--|--:|:--|:--|"]
-    md += [f"| {k} | {f3(g['value'])} | {g['line']} | {'PASS' if g['pass_'] else 'FAIL'} |" for k, g in gates.items()]
+    md += [f"| {k} | {f3(g['value'])} | {g['line']} | {'PASS' if g['pass_'] else 'FAIL'}{' (not gating)' if a.guards_only and k.startswith('A-') else ''} |"
+           for k, g in gates.items()]
     md += ["", f"all pass: {res['all_pass']}"]
     for o in out:
         o.mkdir(parents=True, exist_ok=True)
@@ -143,4 +177,7 @@ if __name__ == "__main__":
     ap.add_argument("--B", type=int, default=10000)
     ap.add_argument("--rows", default="dev", choices=("dev", "train"), help="train: a diagnostic read on the pool's own rows (no gate)")
     ap.add_argument("--n", type=int, default=2000)
+    ap.add_argument("--guards-only", action="store_true", help="v2: only G-real / G-ST / G-over / G-rely gate; the A-* reads are reported")
+    ap.add_argument("--real-tol", type=float, default=None, help="v2: G-real line base + this (rf_v2gate's own line is base + 0.01)")
+    ap.add_argument("--res-sub", default="gate", help="output subdir under results/approach and runs/route_follow/approach")
     main(ap.parse_args())

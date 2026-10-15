@@ -16,34 +16,69 @@
 #   rf_app.sh report [tags]             one pool job after every read: held.py, ol_confirm paired vs each tag's base, rf_follow turn
 #                                       completion, rf_appheld entry state of the held turns -> $O/report/
 #   rf_app.sh guard <tag> ..            public 1491 / 10-decision guard (rf_v2.sh guard's block) -> $O/guard/
+# APPROACH COURSE v2 (plans/2026-10-15-approach-v2-prereg.md; same pool on1_APP, + sidecar approach_v2.npz, rm_train --app-v2), into $O/v2:
+#   rf_app.sh v2rows                    CPU: keep the v1 labels as lab_<src>.v1.npz, relabel both sources (adds Hvh, the v1 keys must be
+#                                       equal), rf_apppool.py v2 -> on1_APP/approach_v2.npz, results/approach/v2/rows.*
+#   [BASE_REV=rev] rf_app.sh ident <suffix> [flags]   bit identity of this code vs the worktree at BASE_REV (/tmp/jev-appbase-<rev>), 50 eager
+#                                       steps of RSG-L18-s0's command + flags -> $O/v2/ident<suffix>.json
+#   [AFTER=ids] rf_app.sh pilot2 <W>    APP2P<W>-L18-s0: the v1 pilot recipe with --app-lam W --app-v2; guard gates only (G-real <= base + 0.015)
+#   rf_app.sh train2 <W> <seed>         APP2W<W>-L18-s<seed>: 2 500 gentle steps + guard gates + held 460 read (6 chunks) -> $O/v2/{reads,bases}.txt
+#   rf_app.sh report2 [tags]            the report stage into $O/v2/report
 set -uo pipefail; cd "$(dirname "$0")/../../.."
-O=$DATA_DIR/runs/route_follow/approach; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
+O=${APP_O:-$DATA_DIR/runs/route_follow/approach}; O2=$DATA_DIR/runs/route_follow/approach/v2; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; ME=experiments/route_follow/scripts/rf_app.sh
 PRIO=${PRIO:-12}; BASE_REV=${BASE_REV:-107e2002}; RES=experiments/route_follow/results/approach
 # RSG-L18-s0's command (meta.json argv) without --init / --steps / --seed / --tag (= rf_v2.sh REC)
 REC="--warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
 LANE="--lane-lam 1 --lane-dz 0.5 --lane-neg 0.2"
 pool() { echo "--on on1_APP --on-weight $(python3 -c "import json; print(json.load(open('$RES/rows.json'))['on_weight'])")"; }
-mkdir -p $O/pool
+mkdir -p $O/pool $O2
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner approach --name "$name" --tries 1 --priority $PRIO --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 gates() {  # tag base after: rf_v2gate (G-real / G-ST / G-over / G-rely), then rf_appgate
   local g; g=$(sub app-v2gate-$1 --after $3 --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $1 --base $2) || exit 1
-  sub app-gate-$1 --after $g --vram 12 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_appgate.py --tag $1 --base $2 > /dev/null || exit 1; }
+  sub app-gate-$1 --after $g --vram 12 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_appgate.py --tag $1 --base $2 ${GATE_FLAGS:-} > /dev/null || exit 1; }
+G2="--guards-only --real-tol 0.015 --res-sub v2/gate"
 case $1 in
 build)
   a=$(sub app-lab-nup --vram 0.5 --cpu 48 --ram 120 --timeout-h 2 -- $TR experiments/route_follow/scripts/rf_apppool.py label --src nup --workers 48) || exit 1
   b=$(sub app-lab-pai --vram 0.5 --cpu 2 --ram 40 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_apppool.py label --src pai) || exit 1
   sub app-pack --after $a,$b --vram 0.5 --cpu 4 --ram 80 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_apppool.py pack > /dev/null || exit 1
   tail -3 $O/jobs.txt ;;
-ident)
-  [[ -d /tmp/jev-appbase ]] || git worktree add --detach /tmp/jev-appbase $BASE_REV > /dev/null || exit 1
-  for t in APPID-new-s0 APPID-old-s0; do [[ ! -e $CK/$t ]] || { echo "$CK/$t exists"; exit 1; }; done
-  a=$(sub app-ident-new --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train APPID-new-s0 RSG-L18-s0 0 50 128 13 --eval-every 50 --allow-init) || exit 1
-  b=$(sub app-ident-old --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 --cwd /tmp/jev-appbase -- $TR experiments/route_mem/scripts/rm_train.py train --tag APPID-old-s0 \
-      --init RSG-L18-s0 --steps 50 --batch 128 --on-k 13 --seed 0 $REC --eval-every 50 --allow-init) || exit 1
-  sub app-ident-cmp --after $a,$b --vram 0.5 --cpu 1 --ram 8 --timeout-h 1 -- bash -c "$TR experiments/onpol_nuplan/scripts/on_train.py ident --a APPID-new-s0 --b APPID-old-s0 --out $O/ident.json; rc=\$?; \
-      grep -h 'dev @' $DATA_DIR/runs/route_mem/train-APPID-new-s0/*/log.txt $DATA_DIR/runs/route_mem/train-APPID-old-s0/*/log.txt | tee $O/ident_dev.txt; exit \$rc" ;;
+ident)  # ident <suffix> [flags]: this code vs BASE_REV, both with RSG-L18-s0's command + flags (none: every flag off)
+  X=${2:?suffix}; shift 2; WT=/tmp/jev-appbase-$BASE_REV; NEW=APPID$X-new-s0; OLD=APPID$X-old-s0
+  [[ -d $WT ]] || git worktree add --detach $WT $BASE_REV > /dev/null || exit 1
+  for t in $NEW $OLD; do [[ ! -e $CK/$t ]] || { echo "$CK/$t exists"; exit 1; }; done
+  a=$(sub app-ident-$X-new --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $NEW RSG-L18-s0 0 50 128 13 --eval-every 50 --allow-init "$@") || exit 1
+  b=$(sub app-ident-$X-old --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 --cwd $WT -- $TR experiments/route_mem/scripts/rm_train.py train --tag $OLD \
+      --init RSG-L18-s0 --steps 50 --batch 128 --on-k 13 --seed 0 $REC --eval-every 50 --allow-init "$@") || exit 1
+  sub app-ident-$X-cmp --after $a,$b --vram 0.5 --cpu 1 --ram 8 --timeout-h 1 -- bash -c "$TR experiments/onpol_nuplan/scripts/on_train.py ident --a $NEW --b $OLD --out $O2/ident$X.json; rc=\$?; \
+      grep -h 'dev @' $DATA_DIR/runs/route_mem/train-$NEW/*/log.txt $DATA_DIR/runs/route_mem/train-$OLD/*/log.txt | tee $O2/ident${X}_dev.txt; exit \$rc" ;;
+v2rows)
+  for s in nup pai; do [[ -f $O/lab_$s.v1.npz ]] || cp $O/lab_$s.npz $O/lab_$s.v1.npz || exit 1; done
+  a=$(sub app2-lab-nup --vram 0.5 --cpu 48 --ram 120 --timeout-h 2 -- $TR experiments/route_follow/scripts/rf_apppool.py label --src nup --workers 48) || exit 1
+  b=$(sub app2-lab-pai --vram 0.5 --cpu 2 --ram 40 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_apppool.py label --src pai) || exit 1
+  sub app2-v2 --after $a,$b --vram 0.5 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_apppool.py v2 > /dev/null || exit 1
+  tail -3 $O/jobs.txt ;;
+pilot2)
+  W=$2; T=APP2P${W/./}-L18-s0; F="$(pool) --app-lam $W --app-v2"
+  t=$(sub app2-pilot-$W ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 10 $F "${@:3}" --allow-init) || exit 1
+  GATE_FLAGS=$G2 gates $T RSG-L18-s0 $t; tail -3 $O/jobs.txt ;;
+gate2)  # gate2 <tag> [base]: the v2 guard gates again
+  GATE_FLAGS=$G2 gates $2 ${3:-RSG-L18-s0} ""; tail -2 $O/jobs.txt ;;
+train2)
+  W=$2; s=$3; B=RSG-L18-s$s; T=APP2W${W/./}-L18-s$s; F="$(pool) --app-lam $W --app-v2"
+  [[ -f $CK/$B/ckpt-final.pt ]] || { echo "no base $B"; exit 1; }
+  t=$(sub app2-train-$T ${AFTER:+--after $AFTER} --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- bash $ME body-train $T $B $s 2500 128 20 $F "${@:4}" --allow-init) || exit 1
+  GATE_FLAGS=$G2 gates $T $B $t
+  for i in 0 1 2 3 4 5; do
+    sub app2-read-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+        -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6 >> $O2/reads.txt || exit 1
+  done
+  echo "$T $B" >> $O2/bases.txt; tail -9 $O/jobs.txt ;;
+report2)
+  shift; sub app2-report --after "$(paste -sd, $O2/reads.txt)" --env APP_O=$O2 --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1
+  tail -1 $O/jobs.txt ;;
 pilot)
   W=$2; T=APP1P${W/./}-L18-s0; F="$(pool) --app-lam $W"
   t=$(sub app-pilot-$W ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 10 $F "${@:3}" --allow-init) || exit 1
@@ -98,5 +133,5 @@ body-report)
   $P experiments/route_follow/scripts/rf_follow.py --runs "${F[@]}" --out $O/report/follow --workers 16 --pairs "${PF[@]}" > /dev/null; rc2=$?
   $P experiments/route_follow/scripts/rf_appheld.py --follow $O/report/follow --out $O/report/entry --pairs "${PF[@]}"; rc3=$?
   echo "held $rc0 held18 $rc1 follow $rc2 entry $rc3"; exit $((rc0 + rc1 + rc2 + rc3)) ;;
-*) echo "rf_app.sh build | ident | pilot <W> | gate <tag> | train A1|A2 <W> <seed> | report [tags] | guard <tag> .." >&2; exit 2 ;;
+*) echo "rf_app.sh build | ident <suffix> [flags] | pilot <W> | gate <tag> | train A1|A2 <W> <seed> | report [tags] | guard <tag> .. | v2rows | pilot2 <W> | gate2 <tag> | train2 <W> <seed> | report2 [tags]" >&2; exit 2 ;;
 esac

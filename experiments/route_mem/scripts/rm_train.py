@@ -94,6 +94,10 @@ Approach course (2026-10-15, experiments/route_follow/plans/2026-10-15-approach-
             human L3) on the pool rows labelled in <POOL>/approach.npz (rf_apppool.py): sets --on-lon on_approach and --on-lon-lam 10 W, so
             each term enters as 10 W x ho_w x sum over the pool rows / n_imit (W = 1: the route hinge's per-row weight in RB-F, the S agent
             hinge's); refused together with another --on-lon module. 0 (default) = off: no operation is added.
+  --app-v2          (with --app-lam) APPROACH COURSE v2 (plans/2026-10-15-approach-v2-prereg.md): on_approach.configure(True): no term in the
+            first 1.5 s after the handoff, lateral dead zone 0.5 m to the human's entry offset clipped to <= 0.75 m inside the route, the speed
+            term only with the ego inside the 26 m window, a symmetric speed term to the human on the straight negatives, the 2 s over-turn
+            guard (10 deg); needs <POOL>/approach_v2.npz (rf_apppool.py v2). Off (default): on_approach exactly as v1.
 
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
@@ -838,6 +842,7 @@ if __name__ == "__main__":
         p.add_argument("--lc-adapter-only", action="store_true", help="the stay-lane rows' gradient reaches the adapter + route branch only")
         p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
         p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
+        p.add_argument("--app-v2", action="store_true", help="approach course v2 terms (on_approach.configure; needs --app-lam)")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")
@@ -863,4 +868,8 @@ if __name__ == "__main__":
         assert a.on and a.on_lon in ("", "on_approach"), "--app-lam: needs --on and no other --on-lon module"
         a.on_lon, a.on_lon_lam = "on_approach", 10.0 * a.app_lam
         print(f"rm_train: --on-lon on_approach, --on-lon-lam {a.on_lon_lam:g}", flush=True)
+    if getattr(a, "app_v2", False):
+        assert a.app_lam > 0, "--app-v2: needs --app-lam"
+        import on_approach
+        print(f"rm_train: approach v2 {on_approach.configure(True)}", flush=True)
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)
