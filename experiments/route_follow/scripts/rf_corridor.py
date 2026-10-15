@@ -37,7 +37,7 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "POLARS
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE.parents[2]), str(HERE), str(HERE.parents[1] / "junction_eyes" / "lib")]
+sys.path[:0] = [str(HERE)] + ([str(HERE.parents[2]), str(HERE.parents[1] / "junction_eyes" / "lib")] if len(HERE.parents) > 2 else [])
 
 R_MAP, STEP, NEAR_M, CHANGE_M, MARGIN = 150.0, 1.0, 1.0, 6.0, 0.3
 HEAD_MAX, SAME, ONC, AMB_PSI = np.radians(60.0), np.radians(60.0), np.radians(120.0), np.radians(30.0)
@@ -423,23 +423,32 @@ def roll_job(job):
     name, o, pl, sc, tax, frow, keep = job
     RP, PF, TX, e = _route_ego(o)
     M = SceneMap(sc)
-    ch = M.match(e.R, e.S, e.LP)
-    CR = Corridors(M, ch)
-    FP = footprint(o["dims"])
     L = sc["log"]
     LT, LPp, LY = np.asarray(L["T"], float), np.asarray(L["P"], float), np.asarray(L["Y"], float)
+    LS = stations(LPp)
+    ls0, _ = PF.project(LPp, LS, e.R[0])                           # the route starts ahead of the log start: prefix the log before it
+    pre = LPp[LS < ls0 - 0.5]
+    Rx = PF.dedup(np.r_[pre, e.R]) if len(pre) else e.R
+    Sx = PF.stations(Rx)
+    off = float(Sx[len(Rx) - len(e.R)]) if len(pre) else 0.0
+    ch = M.match(Rx, Sx, LPp)
+    CR = Corridors(M, ch)
+    FP = footprint(o["dims"])
     t0 = pl["t0"].astype(float)
     A, Pz = pl["anchor"], pl["poses"].astype(float)
     n = len(t0)
-    s_e = np.interp(t0, e.t, e.st)
+    s_e = np.interp(t0, e.t, e.st)                                  # route stations (rf_follow's entry / exit)
+    s_x = np.interp(t0, e.t, PF.track(Rx, Sx, e.P)[0])              # stations on the prefixed route (corridor windows)
+    s_end = max((p["s1"] for p in ch["pieces"]), default=0.0)        # where the route's lane chain ends
     grids, cpoly, rows = np.full((n, 48, 48), NOCOR, np.uint8), [], []
     hx = lambda t: np.c_[np.interp(t, LT, LPp[:, 0]), np.interp(t, LT, LPp[:, 1])]  # noqa: E731
     for i in range(n):
         a = A[i]
-        fd, am = CR.found(s_e[i])
-        K, ref, key = CR.at(s_e[i])
-        r = dict(set=name, scene=o["scene"], rid=o["rid"], k=i, t0=t0[i], s_e=float(s_e[i]), found=fd, amb=am, npieces=0 if key is None else len(key),
-                 v=float(np.hypot(*(Pz[i, 1, :2] - Pz[i, 0, :2])) / 0.5))
+        fd, am = CR.found(s_x[i])
+        K, ref, key = CR.at(s_x[i])
+        r = dict(set=name, scene=o["scene"], rid=o["rid"], k=i, t0=t0[i], s_e=float(s_e[i]), s_x=float(s_x[i]), found=fd, amb=am, npieces=0 if key is None else len(key),
+                 v=float(np.hypot(*(Pz[i, 1, :2] - Pz[i, 0, :2])) / 0.5), plan_len=float(np.hypot(*np.diff(np.r_[[[0.0, 0.0]], Pz[i, :, :2]], axis=0).T).sum()),
+                 cor_left=float(s_end - s_x[i]))
         g = M.classify(K, ref, to_world(a, GRID))
         grids[i] = g.reshape(48, 48)
         cpoly.append(None if K is None else M.sh.to_wkb(_to_frame(K, a)))
@@ -453,9 +462,9 @@ def roll_job(job):
         th = t0[i] + POSE_T * 1e6                                   # the human: own station's corridor, own future footprint
         if t0[i] >= LT[0] and t0[i] <= LT[-1]:
             h0 = hx(t0[i])[0]
-            s_h, _ = PF.project(e.R, e.S, h0)
+            s_h, _ = PF.project(Rx, Sx, h0)
             Kh, refh, _ = CR.at(s_h)
-            r["s_h"], r["found_h"] = float(s_h), CR.found(s_h)[0]
+            r["s_h"], r["found_h"] = float(s_h - off), CR.found(s_h)[0]
             r["h0"] = int(M.classify(Kh, refh, h0[None])[0])
             ok = th <= LT[-1]
             if ok.any():
@@ -467,7 +476,7 @@ def roll_job(job):
             r.update(s_h=np.nan, found_h=False, h0=-2, **{f"h{q}": -2 for q in range(1, 8)})
         rows.append(r)
     roll = dict(set=name, scene=o["scene"], rid=o["rid"], score=o["score"], n_dec=n, n_pieces=len(ch["pieces"]), n_amb_samples=ch["n_amb"],
-                n_change=ch["trans"].count("change"), n_break=ch["trans"].count("break"), route_m=float(e.S[-1]), t_first=float(e.t[0]),
+                n_change=ch["trans"].count("change"), n_break=ch["trans"].count("break"), route_m=float(e.S[-1]), prefix_m=off, t_first=float(e.t[0]),
                 t_last=float(e.t[-1]), dt0=float(t0[0] - e.t[0]) if n else np.nan)
     if tax is not None:
         roll.update(zero_type=tax.get("zero_type"), primary=tax.get("primary"))
@@ -839,7 +848,7 @@ def fig_bev(a, D, R, Z, W):
             tt, title = t_ref - 2e6, f"{rl.get('cls')} zero ({rl.get('zero_type')})"
         k = int(np.clip(np.searchsorted(t0, tt, side="right") - 1, 0, len(t0) - 1))
         r = rows[k]
-        K, ref, _ = CR.at(r["s_e"])
+        K, ref, _ = CR.at(r["s_x"])
         anc, pz = pl["anchor"][k], pl["poses"][k].astype(float)
         FP = footprint(o["dims"])
         c = e.P[e.i_at(t0[k])]

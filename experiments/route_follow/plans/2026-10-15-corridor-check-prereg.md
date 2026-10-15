@@ -92,3 +92,14 @@ also oncoming-only and off-road-only.
 class), `zeros.csv`, `turns.csv`; `figs/corridor_bev.png` (4-6 scenes incl. PAI 382a7247, de9db5dc, 1a69f757 and one completed turn:
 corridor classes at t_f - 2 s, human path, driven path, plan at t_f - 2 s). Labels (per decision grids and polygons) stay on the box:
 `$DATA_DIR/runs/route_follow/corridor/labels/`. Code `scripts/rf_corridor.py` (lanes | plans | build | check), `scripts/rf_corridor.sh`.
+
+## Amendments (appended after the prereg commit 7e1eac00; each says whether it came before or after a statistic was seen)
+
+1. (Before any statistic; from a smoke BEV of 7 held RSG-L18-s0 rollouts, labels only.) The rebuilt AlpaSim route starts a few metres
+   ahead of the log's first pose, so the first decisions stood behind the chain (the human's rear axle classed "adjacent" at t0). The
+   chain is now matched on the route prefixed with the human log before the route's start (log points with log station < the
+   projection of the route's first point); corridor windows use stations on this prefixed route (`s_x`); the turn windows keep
+   rf_follow's route stations (`s_e`, `s_h`). Smoke result after the fix: the human axle is inside at every early decision of the 7.
+2. (Before any statistic.) Two descriptive columns per decision: `plan_len` (served plan arc to 4 s) and `cor_left` (route-chain end
+   minus s_x). A plan longer than `cor_left` runs past the end of the labelled route; how often that happens in the C2 windows is
+   reported, the registered measure is unchanged.
