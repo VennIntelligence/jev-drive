@@ -238,27 +238,37 @@ def fsel(a):
     qual = onr & (q >= 0) & (d <= D_APP) & ((lt == 1) | ((lt == 2) & (LI.take(st_now, q) == 1))) & (speed >= V_QUAL)
     out, why = {}, {}
 
-    def pick(rows, dd):
-        """Rows of one scene with distance dd ahead -> (row, how): served decision k >= 2, 40-60 m (closest to 50), else 30-70 m."""
-        for lo, hi, how in ((40.0, 60.0, "in"), (30.0, 70.0, "near")):
-            c = [(abs(x - 50.0), r) for r, x in zip(rows, dd) if k[r] >= 2 and onr[r] and lo <= x <= hi]
+    def pick(rows, dd, wins):
+        """Rows of one scene with distance dd ahead -> (row, how): a served decision k >= 2 at >= 3 m/s in the first window that has one
+        (closest to 50 m)."""
+        for lo, hi, how in wins:
+            c = [(abs(x - 50.0), r) for r, x in zip(rows, dd) if k[r] >= 2 and onr[r] and speed[r] >= V_QUAL and lo <= x <= hi]
             if c:
                 return min(c)[1], how
         return None, None
+    W_STOP = ((40.0, 60.0, "in"), (30.0, 70.0, "near"), (20.0, 30.0, "short"))
+    W_TURN = ((40.0, 60.0, "in"), (30.0, 70.0, "near"))
     for sc in sorted(set(scene[qual])):
         r_q = np.flatnonzero(qual & (scene == sc))
         r0 = r_q[np.argmin(k[r_q])]
         li = int(q[r0])
         rows = np.flatnonzero(scene == sc)
-        r, how = pick(rows, ld[rows, li] - sf0[rows])
+        r, how = pick(rows, ld[rows, li] - sf0[rows], W_STOP)
         if r is None:
-            why[sc] = dict(cls="stop", reason="no decision 30-70 m before the line", d_k2=float((ld[rows, li] - sf0[rows])[k[rows] == 2][0]) if (k[rows] == 2).any() else None)
+            why[sc] = dict(cls="stop", reason="no decision 20-70 m before the line at >= 3 m/s",
+                           d_k2=float((ld[rows, li] - sf0[rows])[k[rows] == 2][0]) if (k[rows] == 2).any() else None)
             continue
         out[sc] = dict(cls="stop", kp=int(k[r]), d=float(ld[r, li] - sf0[r]), how=how, v=float(speed[r]), line=li, line_type=int(ty[r, li]),
                        k_first_qual=int(k[r0]), name=str(names[r]))
     nstop = len(set(scene[qual]))
-    turns = [x.split()[0] for x in open(a.turns) if x.strip()]
-    for sc in turns:
+    # turns: the train64 scenes first, then the other pool scenes in crc32 order, until --turn-n scenes have a decision 30-70 m before the
+    # first strict-turn entry ahead (rear axle; the train64 turns mostly start 2-28 m before their entry: no approach to push)
+    t64 = [x.split()[0] for x in open(a.turns) if x.strip()]
+    rest = sorted(set(scene.tolist()) - set(t64) - set(out), key=lambda x: zlib.crc32(x.encode()))
+    nturn = 0
+    for sc in t64 + rest:
+        if nturn >= a.turn_n:
+            break
         rows = np.flatnonzero(scene == sc)
         if not len(rows):
             why[sc] = dict(cls="turn", reason="not in the pool")
@@ -268,19 +278,23 @@ def fsel(a):
         r_first = rows[np.argmin(k[rows])]
         ent = [e for e, _ in TT if e >= s0[r_first]]
         if not ent:
-            why[sc] = dict(cls="turn", reason="no strict turn ahead on the context route")
+            if sc in t64:
+                why[sc] = dict(cls="turn", reason="no strict turn ahead on the context route")
             continue
-        r, how = pick(rows, ent[0] - s0[rows])
+        r, how = pick(rows, ent[0] - s0[rows], W_TURN)
         if r is None:
-            why[sc] = dict(cls="turn", reason="no decision 30-70 m before the entry", d_k0=float(ent[0] - s0[r_first]))
+            if sc in t64:
+                why[sc] = dict(cls="turn", reason="no decision 30-70 m before the entry at >= 3 m/s", d_k0=float(ent[0] - s0[r_first]))
             continue
         if sc in out:                                   # a scene in both sets keeps its stop line
             out[sc]["also_turn"] = True
             continue
-        out[sc] = dict(cls="turn", kp=int(k[r]), d=float(ent[0] - s0[r]), how=how, v=float(speed[r]), entry=float(ent[0]), name=str(names[r]))
-    rec = dict(pool=a.pool, stop_scenes=nstop, turn_scenes=len(turns), picked=len(out),
-               by=dict(stop=sum(v["cls"] == "stop" for v in out.values()), turn=sum(v["cls"] == "turn" for v in out.values()),
-                       near=sum(v["how"] == "near" for v in out.values())), skipped=why, scenes=out)
+        out[sc] = dict(cls="turn", kp=int(k[r]), d=float(ent[0] - s0[r]), how=how, v=float(speed[r]), entry=float(ent[0]), name=str(names[r]),
+                       train64=sc in t64)
+        nturn += 1
+    rec = dict(pool=a.pool, stop_scenes=nstop, turn_scenes_train64=len(t64), turn_n=a.turn_n, picked=len(out),
+               by={f"{c}/{h}": sum(v["cls"] == c and v["how"] == h for v in out.values()) for c in ("stop", "turn") for h in ("in", "near", "short")},
+               turn_train64=sum(bool(v.get("train64")) for v in out.values()), skipped=why, scenes=out)
     json.dump(rec, open(a.out, "w"), indent=1)
     print(json.dumps({k_: v for k_, v in rec.items() if k_ not in ("scenes", "skipped")}), "skipped", len(why))
 
@@ -374,7 +388,7 @@ def frows(a):
             if u is None or k < u["kp"]:
                 continue
             z = kz.get((lvl, sc), -1)
-            rows[nm] = dict(mode="self", push=lvl, cls=u["cls"], kp=str(u["kp"]), post_zero="1" if 0 <= z <= k else "0",
+            rows[nm] = dict(mode="self", push=lvl, cls=u["cls"], how=u["how"], kp=str(u["kp"]), post_zero="1" if 0 <= z <= k else "0",
                             win="1" if k < u["kp"] + a.n else "0")
         srcs.append(dict(geo=g, prefix=lvl, fut="path", rows=rows))
     json.dump(dict(kind="fast", sources=srcs), open(a.out, "w"), indent=1)
@@ -526,6 +540,7 @@ def main():
     p.add_argument("--stage", required=True), p.add_argument("--geo", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("fsel")
     p.add_argument("--pool", default="L18RSG"), p.add_argument("--turns", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--turn-n", type=int, default=64, help="turn scenes (train64 first, then the pool in crc32 order)")
     p = sp.add_parser("fprep")
     p.add_argument("--sel", required=True), p.add_argument("--stage", required=True), p.add_argument("--count", required=True)
     p.add_argument("--levels", required=True), p.add_argument("--n", type=int, default=2)
