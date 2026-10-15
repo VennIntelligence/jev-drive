@@ -27,7 +27,7 @@ one record per call; start.jsonl: the full rollout spec of every session), PAI_D
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
 the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; v9 adds the handoff
 guard, which reads the time since the session's first drive call and whether the lead limit cuts the served speed; **default `gate`** since
-decision 309, JEV_TRACK=0 = the old path; off by default with JEV_EXPERT / JEV_TURN_GAIN), JEV_VHIST
+decision 309, JEV_TRACK=0 = the old path; the old path is forced with JEV_EXPERT, JEV_TURN_GAIN != 1 or JEV_INTENT_HOLD), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
 row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
@@ -51,9 +51,10 @@ from pathlib import Path
 import numpy as np
 
 # Serve default (decision 309): JEV_TRACK unset -> `gate` (track_ref v8); JEV_TRACK=0 (or empty) is the old path, the plan handed to the
-# controller as is. Not with the rule expert or the turn gain, which replace or reshape the plan and assert JEV_TRACK off. Set before
-# sh30_driver is imported (it imports track_ref, which reads the environment once).
-if "JEV_TRACK" not in os.environ and not os.environ.get("JEV_EXPERT") and float(os.environ.get("JEV_TURN_GAIN") or 1.0) == 1.0:
+# controller as is. The old path is forced (no default) with JEV_EXPERT, JEV_TURN_GAIN != 1 or JEV_INTENT_HOLD, which replace or reshape
+# the plan and assert JEV_TRACK off. Set before sh30_driver is imported (it imports track_ref, which reads the environment once).
+if ("JEV_TRACK" not in os.environ and not os.environ.get("JEV_EXPERT") and float(os.environ.get("JEV_TURN_GAIN") or 1.0) == 1.0
+        and os.environ.get("JEV_INTENT_HOLD", "") in ("", "0")):
     os.environ["JEV_TRACK"] = "gate"
 
 import sh30_driver as S
