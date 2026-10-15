@@ -577,7 +577,10 @@ def n_ref(o, gt):
 
 def n_tfail(a):
     """Amendment 2: the units, strata and k_ref come from the STORED 18-decision train-pool rollouts of RSG-L18-s0 (--runs), once for
-    every stage; writes <out>/tfail.json and from_D<d>.txt."""
+    every stage; writes <out>/tfail.json and from_D<d>.txt. rewind_onpol_all: --runs = the stage's own 30-decision identity runs, --kend 29
+    (with RF_K_END=29 in the env: rf_follow's turn window), --deltas 2,3, --rewind event,off (short and B listed, never handed over)."""
+    global N_KEND, DELTAS
+    N_KEND, DELTAS = a.kend, tuple(int(x) for x in a.deltas.split(","))
     n_paths()
     from jevdrive import par
     stage = Path(a.stage)
@@ -587,6 +590,10 @@ def n_tfail(a):
         print("errors:", {res.items[i][2]: str(e)[-300:] for i, e in res.errors.items()}, file=sys.stderr)
     gt = n_gate()
     U = {o["scene"]: n_ref(o, gt) for o in res.values if o is not None}
+    rw = set(a.rewind.split(","))
+    for u in U.values():                                 # units whose src is not rewound keep k_ref, lose h
+        if u["src"] is not None and not ({"zero": "event", "off": "off", "off_cross": "off", "short_end": "short", "viol": "viol"}.get(u["src"]) in rw):
+            u["h"] = {str(d): None for d in DELTAS}
     (stage / "tfail.json").write_text(json.dumps(dict(gate=gt, units=U), indent=1, default=float))
     for d in DELTAS:
         hs = sorted((s, u["h"][str(d)]) for s, u in U.items() if u["h"][str(d)] is not None)
@@ -654,7 +661,9 @@ def n_metrics(o, ido, u, gt):
     x.update(kmax=shp["kmax"], dk=shp["dk"], alat=shp["alat"], v_0=spd["v_0"], gate=gk, shape_ok=bool(x["completed"] and all(gk.values())))
     kz = row["kz"] if row["kz"] >= 0 else 10 ** 6
     hh = h if h is not None else 0
-    x["rows_turn"] = int(sum(d["k"] >= hh and d["k"] < kz and ent - N_PRE <= d["st"] <= ext + N_PAST for d in o["dec"]))  # rf_follow's junction stretch
+    x["rows_k"] = [int(d["k"]) for d in o["dec"] if d["k"] >= hh and d["k"] < kz and ent - N_PRE <= d["st"] <= ext + N_PAST]  # rf_follow's junction stretch
+    x["rows_turn"] = len(x["rows_k"])
+    x.update(run=o["run"], rid=o["rid"], ent_after=bool(ent_after))
     x["rows_after"] = int(sum(d["k"] >= hh and d["k"] < kz for d in o["dec"]))
     if o.get("log") is not None:                             # calibration: the human log through the same gate
         L = o["log"]
@@ -669,10 +678,14 @@ def n_metrics(o, ido, u, gt):
 def n_read(a):
     n_paths()
     from jevdrive import par
-    T = json.loads(Path(a.ref).read_text())               # the units (stored 18-decision rollouts, Amendment 2)
-    U, gt, jobs = T["units"], T["gate"], []
+    U, gt, jobs = {}, None, []                            # the units (stored 18-decision rollouts, Amendment 2; or one tfail per stage)
+    for f in a.ref.split(","):
+        T = json.loads(Path(f).read_text())
+        U.update(T["units"])
+        gt = T["gate"]
+    only = {s for s, u in U.items() if u["turn"]}
     for stage in a.stage.split(","):                     # several stages (pilot + rest) read as one set
-        jobs += n_jobs(Path(stage), N_TAGS)
+        jobs += n_jobs(Path(stage), N_TAGS, only=only)
     import csv as C
     span = {r["scene"]: r for r in C.DictReader(open(HERE.parents[2] / "experiments/onpol_nuplan/results/long/span.csv"))}
     res = par.pmap(n_roll, jobs, workers=a.workers, desc="rollouts")
@@ -1364,6 +1377,160 @@ def n_self_fig(a):
 
 
 
+def n_yield(a):
+    """rewind_onpol_all (plans/2026-10-16-rewind-onpol-all-prereg.md): per Delta, the expert's completions from h on the failed units, the
+    d293 gate with the PAI thresholds and with thresholds recalibrated to the nuPlan human p95 of the read's turns, zeros / at-fault after
+    the handover, creep, the identity tolerance, and the label rows (2 Hz, k >= h, junction stretch) of zero-free completed continuations
+    per category; writes <md>, <csv> (unit x Delta), <units> (one line per turn), <rows> (one line per label row), <json> (summary)."""
+    n_paths()
+    from jevdrive import stats
+    import csv as C
+    X = json.loads(Path(a.read).read_text())
+    gp = X["gate"]
+    U = {s["scene"]: s["unit"] for s in X["scenes"]}
+    by = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in X["scenes"]}
+    Ds = [int(d) for d in a.deltas.split(",")]
+    lg = lambda s: s.rsplit("-", 1)[0]  # noqa: E731
+    fin = lambda v: v is not None and np.isfinite(v)  # noqa: E731
+    H = [by[s]["id"]["log_shape"] for s in U if by[s].get("id", {}).get("log_shape")]
+    gn = {k: float(np.nanpercentile([h[q] for h in H], 95)) for k, q in (("kmax", "kmax"), ("dk", "dk"), ("alat", "alat"), ("v_entry", "v_0"))}
+
+    def gate(x, g, ent_check=True):
+        return bool(all(fin(x.get(k)) and x[k] <= g[k] for k in ("kmax", "dk", "alat"))
+                    and (not ent_check or (fin(x.get("v_0")) and x["v_0"] <= g["v_entry"])))
+    hum = dict(n=len(H), pai=sum(gate(h, gp) for h in H), nuplan=sum(gate(h, gn) for h in H))
+    turns = sorted(U)
+    A = [s for s in turns if U[s]["stratum"] == "A"]
+    rew = [s for s in A if any(U[s]["h"].get(str(d)) is not None for d in Ds)]
+    br = lambda v, ss: stats.bootstrap(np.asarray(v, float), np.array([lg(s) for s in ss]), n_boot=10_000) if len(ss) else dict(n=0, mean=np.nan, lo=np.nan, hi=np.nan)  # noqa: E731
+    ci = lambda r: "-" if not r["n"] else f"{r['mean']:.2f} [{r['lo']:.2f}, {r['hi']:.2f}]"  # noqa: E731
+    cats = ("pai", "nuplan", "nogate")
+    out, rows, summ = [], [], {}
+    for d in Ds:
+        S = dict(units=0, valid=0, tol=0, completed=[], oc={}, zero_after=0, at_fault=0, rear=0, crawl=[0, 0], gate_pai=0, gate_nuplan=0,
+                 cat={c: dict(units=[], rows=0, per={}) for c in cats}, missing=[], not_rewindable=0)
+        for s in A:
+            u, h = U[s], U[s]["h"].get(str(d))
+            if h is None:
+                S["not_rewindable"] += int(u["src"] in ("zero", "off", "off_cross"))
+                continue
+            S["units"] += 1
+            x = by[s].get(f"D{d}")
+            if x is None or x.get("h") is None:
+                S["missing"].append(s)
+                continue
+            valid = bool(x["h"] == h and not x.get("zero_before_h"))
+            za = x["kz"] >= 0
+            c3 = bool(valid and x["completed"] and not za)
+            gpai, gnu = bool(c3 and x.get("shape_ok")), bool(c3 and gate(x, gn, x.get("ent_after", True)))
+            S["valid"] += valid
+            S["tol"] += bool(valid and x.get("within_tol"))
+            if valid:
+                S["completed"].append((s, float(x["completed"])))
+                S["oc"][x["outcome"]] = S["oc"].get(x["outcome"], 0) + 1
+                S["zero_after"] += za
+                S["at_fault"] += bool(x.get("at_fault"))
+                S["rear"] += bool(x.get("rear_after"))
+                if (x.get("t_left_s") or 0) >= WIN_END:
+                    S["crawl"][0] += bool(fin(x.get("v_win_end")) and x["v_win_end"] >= V_CREEP)
+                    S["crawl"][1] += 1
+                S["gate_pai"] += bool(x["completed"] and x.get("shape_ok"))
+                S["gate_nuplan"] += bool(x["completed"] and gate(x, gn, x.get("ent_after", True)))
+            ks = x.get("rows_k") or []
+            for c, ok in zip(cats, (gpai, gnu, c3)):
+                if ok:
+                    S["cat"][c]["units"].append(s)
+                    S["cat"][c]["rows"] += len(ks)
+                    S["cat"][c]["per"][s] = len(ks)
+            out.append(dict(scene=s, log=lg(s), src=u["src"], id_outcome=u["outcome"], k_ref=u["k_ref"], delta=d, h=h, valid=valid,
+                            within_tol=x.get("within_tol"), pre_plan_maxdiff=x.get("pre_plan_maxdiff"), pre_track_maxdiff=x.get("pre_track_maxdiff"),
+                            dv_h=x.get("dv_h"), v_h=x.get("v_h"), lat_h=x.get("lat_h"), st_h_rel_entry=x.get("st_h_rel_entry"),
+                            completed=x["completed"], outcome=x["outcome"], kz=x["kz"], zkind=x.get("zkind"), zero_after=za,
+                            at_fault=x.get("at_fault"), rear_after=x.get("rear_after"), v_win_end=x.get("v_win_end"), t_left_s=x.get("t_left_s"),
+                            kmax=x.get("kmax"), dk=x.get("dk"), alat=x.get("alat"), v_0=x.get("v_0"), ent_after=x.get("ent_after"),
+                            gate_pai=gpai, gate_nuplan=gnu, label=c3, rows=len(ks) if c3 else 0, run=x.get("run"), rid=x.get("rid")))
+            if c3:
+                rows += [dict(scene=s, log=lg(s), delta=d, h=h, k=k, gate_pai=gpai, gate_nuplan=gnu, within_tol=x.get("within_tol"),
+                              run=x.get("run"), rollout_id=x.get("rid")) for k in ks]
+        cs = [c[0] for c in S["completed"]]
+        S["rate"] = br([c[1] for c in S["completed"]], cs)
+        for c in cats:
+            per = S["cat"][c]["per"]
+            top = sorted(per.values(), reverse=True)[:3]
+            S["cat"][c].update(turns=len(per), logs=len({lg(s) for s in per}), top3=(sum(top) / S["cat"][c]["rows"]) if S["cat"][c]["rows"] else np.nan)
+        summ[d] = S
+    uni = {}
+    for c in cats:
+        per = {}
+        for d in Ds:
+            for s, n in summ[d]["cat"][c]["per"].items():
+                per[s] = per.get(s, 0) + n
+        top = sorted(per.values(), reverse=True)[:3]
+        tot = sum(per.values())
+        uni[c] = dict(rows=tot, turns=len(per), logs=len({lg(s) for s in per}), top3=sum(top) / tot if tot else np.nan)
+    oc = _count(U[s]["outcome"] for s in turns)
+    src = _count(U[s]["src"] for s in A)
+    L = [f"# Recovery-expert rewind on every onpol-train turn: RSG-L18-s0 (box, held-read serving, 30 decisions), expert XP-L12-E46", "",
+         f"Scenes with a strict turn in the identity's 15 s window: {len(turns)} ({len({lg(s) for s in turns})} logs); identity outcome "
+         + ", ".join(f"{k} {v}" for k, v in sorted(oc.items())) + f". Failed (A) {len(A)}: " + ", ".join(f"{k} {v}" for k, v in sorted(src.items()))
+         + f"; handed over (event / off with h >= 1 for some Delta) {len(rew)}; short listed, not rewound.", "",
+         f"Gate thresholds: PAI (d293 all-turn human p95) kmax {gp['kmax']:.3f} 1/m, dk {gp['dk']:.4f} 1/m^2, alat {gp['alat']:.2f} m/s^2, entry "
+         f"{gp['v_entry']:.1f} m/s; nuPlan (human p95 of these {hum['n']} turns) kmax {gn['kmax']:.3f}, dk {gn['dk']:.4f}, alat {gn['alat']:.2f}, "
+         f"entry {gn['v_entry']:.1f}. Human logs passing: PAI {hum['pai']} / {hum['n']}, nuPlan {hum['nuplan']} / {hum['n']}.", "",
+         "## Expert from h = k_ref - 2 Delta (failed units)", "",
+         "| Delta | units (not rewindable) | valid handovers | within tolerance | completed (log CI) | completed / event / off / short | any zero after h | at-fault after h | rear after h | creep v(h+3 s) >= 2 | completed + gate PAI | completed + gate nuPlan |",
+         "|--:|--:|--:|--:|:--|:--|--:|--:|--:|:--|--:|--:|"]
+    for d in Ds:
+        S = summ[d]
+        o = S["oc"]
+        L.append(f"| {d} s | {S['units']} ({S['not_rewindable']}) | {S['valid']} | {S['tol']} | {ci(S['rate'])} | "
+                 f"{o.get('completed', 0)} / {o.get('event', 0)} / {o.get('off', 0)} / {o.get('short', 0)} | {S['zero_after']} | {S['at_fault']} | {S['rear']} | "
+                 f"{S['crawl'][0]} / {S['crawl'][1]} | {S['gate_pai']} | {S['gate_nuplan']} |")
+    L += ["", "## Label rows (2 Hz, k >= h, rf_follow junction stretch, zero-free completed continuations)", "",
+          "| Delta | category | units | rows | unique turns | logs | top-3 turns' share |", "|--:|:--|--:|--:|--:|--:|--:|"]
+    nm = dict(pai="completed + gate (PAI)", nuplan="completed + gate (nuPlan)", nogate="completed, zero-free, no gate")
+    for d in [*Ds, "both"]:
+        for c in cats:
+            r = uni[c] if d == "both" else summ[d]["cat"][c]
+            L.append(f"| {d if d == 'both' else f'{d} s'} | {nm[c]} | {'-' if d == 'both' else len(r['units'])} | {r['rows']} | {r['turns']} | {r['logs']} | "
+                     f"{r['top3']:.2f} |")
+    if summ and any(summ[d]["missing"] for d in Ds):
+        L += ["", "Missing launches (unit with h, no rollout): " + "; ".join(f"D{d}: " + ", ".join(x[:15] for x in summ[d]["missing"]) for d in Ds if summ[d]["missing"])]
+    if X.get("errors"):
+        L += ["", f"Read errors: {len(X['errors'])} (" + ", ".join(list(X["errors"])[:10]) + ")"]
+    if a.d316:
+        T = json.loads(Path(a.d316).read_text())["units"]
+        old = {s for s, u in T.items() if u.get("stratum") == "A" and u.get("src") in ("zero", "off", "off_cross")}
+        new = {s for s in A if U[s]["src"] in ("zero", "off", "off_cross")}
+        L += ["", f"d316's 64 train turns (stored 18-decision units): event / off units {len(old)}; also event / off here {len(old & new)}; "
+              f"turn here but not failed {len({s for s in old if s in U and s not in new})}; no strict turn here {len(old - set(U))}."]
+    Path(a.md).write_text("\n".join(L) + "\n")
+    with open(a.csv, "w", newline="") as f:
+        if out:
+            w = C.DictWriter(f, fieldnames=list(out[0]))
+            w.writeheader()
+            w.writerows(out)
+    with open(a.units, "w", newline="") as f:
+        w = C.writer(f)
+        w.writerow(["scene", "log", "outcome", "stratum", "src", "k_ref", "kz", *[f"h_D{d}" for d in Ds], "entry", "exit", "side", "n_dec",
+                    "log_after_s", "video_after_s"])
+        for s in turns:
+            u, x = U[s], by[s].get("id", {})
+            w.writerow([s, lg(s), u["outcome"], u["stratum"], u["src"], u["k_ref"], u["kz"], *[u["h"].get(str(d)) for d in Ds], u["entry"],
+                        u["exit"], u["side"], x.get("n_dec"), u.get("log_after_s"), u.get("video_after_s")])
+    if a.rows:
+        Path(a.rows).parent.mkdir(parents=True, exist_ok=True)
+        with open(a.rows, "w", newline="") as f:
+            w = C.DictWriter(f, fieldnames=["scene", "log", "delta", "h", "k", "gate_pai", "gate_nuplan", "within_tol", "run", "rollout_id"])
+            w.writeheader()
+            w.writerows(rows)
+    J = dict(gate_pai=gp, gate_nuplan=gn, human=hum, turns=len(turns), outcome=oc, A_src=src, rewound=len(rew), union=uni,
+             per_delta={d: {k: v for k, v in S.items() if k not in ("completed",)} for d, S in summ.items()})
+    if a.json:
+        Path(a.json).write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -1387,6 +1554,12 @@ def main():
     p = sp.add_parser("n-tfail")
     p.add_argument("--stage", required=True); p.add_argument("--runs", required=True); p.add_argument("--scenes", required=True)  # noqa: E702
     p.add_argument("--workers", type=int, default=16)
+    p.add_argument("--kend", type=int, default=N_KEND); p.add_argument("--deltas", default="1,2,3")  # noqa: E702
+    p.add_argument("--rewind", default="event,off,short,viol")
+    p = sp.add_parser("n-yield")
+    p.add_argument("--read", required=True); p.add_argument("--md", required=True); p.add_argument("--csv", required=True)  # noqa: E702
+    p.add_argument("--units", required=True); p.add_argument("--rows", default=""); p.add_argument("--json", default="")  # noqa: E702
+    p.add_argument("--deltas", default="2,3"); p.add_argument("--d316", default="")  # noqa: E702
     p = sp.add_parser("n-read")
     p.add_argument("--stage", required=True); p.add_argument("--ref", required=True); p.add_argument("--out", required=True)  # noqa: E702
     p.add_argument("--pkl", default="")
@@ -1416,7 +1589,7 @@ def main():
     a = ap.parse_args()
     dict(cells=cells, extract=extract, tfail=tfail, read=read, table=table, fig=fig, **{"n-units": n_units, "n-tfail": n_tfail, "n-read": n_read,
          "n-table": n_table, "n-fig": n_fig, "n-self-units": n_self_units, "n-self-files": n_self_files, "n-self-read": n_self_read,
-         "n-self-check": n_self_check, "n-self-table": n_self_table, "n-self-fig": n_self_fig})[a.cmd](a)
+         "n-self-check": n_self_check, "n-self-table": n_self_table, "n-self-fig": n_self_fig, "n-yield": n_yield})[a.cmd](a)
 
 
 if __name__ == "__main__":

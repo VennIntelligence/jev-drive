@@ -86,10 +86,10 @@ job() {
 
 train64() {
   local sub=${1:?units|pack|stage|nsim|read}; shift
-  local P4=$D/runs/onpol_long/roll/RSG-L18-s0 NP=$O/pack W=$O/code AF=${RW_AFTER:-280}
-  local CA=$D/datasets/alpasim_nuplan_long/after${RW_AFTER:-280}_rw     # Amendment 2: 30 decisions = token + 14 s (num_timesteps_after counts 20 Hz steps)
-  nsub() { local name=$1; shift; local id; id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --owner rewind-train64 --name "$name" --tries ${TRIES:-2} \
-           --priority ${PRIO:-6} --no-check "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
+  local P4=$D/runs/onpol_long/roll/RSG-L18-s0 NP=${RW_PACK:-$O/pack} W=$O/code AF=${RW_AFTER:-280}
+  local CA=${RW_CACHE:-$D/datasets/alpasim_nuplan_long/after${RW_AFTER:-280}_rw}     # Amendment 2: 30 decisions = token + 14 s (num_timesteps_after counts 20 Hz steps)
+  nsub() { local name=$1; shift; local id; id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --owner ${RW_OWNER:-rewind-train64} --name "$name" --tries ${TRIES:-2} \
+           --priority ${PRIO:-6} --no-check "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }
            echo "$id $name" >> "$O/jobs.txt"; echo "$id"; }
   case $sub in
   units)
@@ -98,8 +98,8 @@ train64() {
     nsub rwn-pack --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$O/pool/rwn-pack" -- \
       "$APY" "$repo/experiments/route_follow/scripts/rf_expert.py" pack --workers 16 --out "$NP" --scenes "$O/scenes.txt" --runs $(ls -d $P4/c*/run) ;;
   cache)  # pool CPU job: the trajdata cache at token + 14 s for the 64 scenes (alpasim_long/build_cache.py, as rf_lateturn_long.sh's after380_lt)
-    nsub rwn-cache --tries 1 --vram 0.5 --cpu 16 --ram 64 --timeout-h 2 --log-dir "$O/pool/rwn-cache" -- env PYTHONPATH=$D/envs/nuplan_devkit_overlay \
-      "$APY" "$repo/experiments/alpasim_long/scripts/build_cache.py" build --after $AF --out "$CA" --scenes "$O/scenes.txt" --workers 16 ;;
+    nsub rwn-cache --tries 1 --vram 0.5 --cpu ${RW_CW:-16} --ram 64 --timeout-h 2 --log-dir "$O/pool/rwn-cache" -- env PYTHONPATH=$D/envs/nuplan_devkit_overlay \
+      "$APY" "$repo/experiments/alpasim_long/scripts/build_cache.py" build --after $AF --out "$CA" --scenes "$O/scenes.txt" --workers ${RW_CW:-16} ;;
   ref)    # pool CPU job: units, strata, k_ref and h from the stored 18-decision rollouts -> <root>/tfail.json, from_D<d>.txt
     nsub rwn-ref --tries 1 --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$O/pool/rwn-ref" -- \
       "$APY" "$repo/experiments/route_follow/scripts/rf_rewind.py" n-tfail --stage "$O" --scenes "$O/scenes.txt" --runs "$(ls -d $P4/c*/run | paste -sd,)" ;;
@@ -122,8 +122,51 @@ train64() {
     done; done
     nsub rwn-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$S/pool/read" -- $X read "$S" > /dev/null || exit 1
     date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 2 )) "$O/jobs.txt" ;;
-  nsim)   # <run dir> <list> id|xp0|<from file>: one 30-decision launch of the held-read serving (rm_chain's sim, the long cache), resumable
+  scenes-all)  # rewind_onpol_all: every scene of the stored onpol-train rollouts -> <root>/scenes.txt
+    $PY -c "import json,sys;print('\n'.join(sorted(r['clipgt_id'] for f in sys.argv[1:] for r in json.load(open(f))['rollouts'])))" \
+      $P4/c*/run/aggregate/results-summary.json > "$O/scenes.txt" && wc -l < "$O/scenes.txt" ;;
+  ostage)  # rewind_onpol_all (plans/2026-10-16-rewind-onpol-all-prereg.md): <name> <list> <id chunks> <D chunks>, all queued at once:
+           # id (+ idB on chunk 0 with SMOKE=1) -> tfail (units from the stage's own identity, RF_K_END 29) + pack (from the id runs' after280
+           # configs) -> D2 / D3 (the failed scenes only, <D chunks> each) -> read + yield; AFTER=<ids> gates the stage
+    local name=${1:?name} L=${2:?scene list} n=${3:-4} nd=${4:-4} S i d id ids=() all=() aft=() rr=()
+    [[ -d $CA ]] || { echo "no cache $CA (run cache first)" >&2; exit 1; }
+    S=$O/$name; [[ ! -e $S/SUBMITTED ]] || { echo "$S already submitted" >&2; exit 1; }
+    [[ -d $W ]] || git -C "$repo" worktree add -q --detach "$W" HEAD || exit 1
+    git -C "$W" checkout -q --detach "$(git -C "$repo" rev-parse HEAD)" || exit 1
+    echo "{\"served\": \"$W\", \"commit\": \"$(git -C "$W" rev-parse HEAD)\", \"dirty\": $(git -C "$W" status --porcelain -uno | grep -c .)}" > "$O/code.json"
+    mkdir -p "$S/lists"; cp "$O/code.json" "$S/code.json"; cp "$L" "$S/list.txt"
+    for i in $(seq 0 $((n - 1))); do awk -v i=$i -v n=$n '(NR - 1) % n == i {print $1}' "$L" > "$S/lists/c$i.txt"; rr+=("$S/id/c$i/run"); done
+    [[ -n ${AFTER:-} ]] && aft=(--after "$AFTER")
+    local X="bash $W/experiments/route_follow/scripts/rf_rewind.sh train64 $O" K=(--env RF_K_END=29 --env "RW_CACHE=$CA" --env "RW_PACK=$S/pack")
+    local G=(--vram ${RW_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=${RW_HIST:-alpasim-read4} --env "JEV_PY=$PY" "${K[@]}")
+    for i in $(seq 0 $((n - 1))); do ids+=($(nsub rwo-id-c$i "${G[@]}" "${aft[@]}" --log-dir "$S/pool/id-c$i" -- $X nsim "$S/id/c$i/run" "$S/lists/c$i.txt" id)) || exit 1; done
+    [[ -n ${SMOKE:-} ]] && { all+=($(nsub rwo-idB-c0 "${G[@]}" "${aft[@]}" --log-dir "$S/pool/idB-c0" -- $X nsim "$S/idB/c0/run" "$S/lists/c0.txt" id)) || exit 1; }
+    local C=(--vram 0.5 --cpu 32 --ram 96 --timeout-h 2 --env "JEV_PY=$PY" "${K[@]}" --after "$(IFS=,; echo "${ids[*]}")")
+    local tf pk
+    tf=$(nsub rwo-tfail "${C[@]}" --log-dir "$S/pool/tfail" -- "$APY" "$W/experiments/route_follow/scripts/rf_rewind.py" n-tfail --stage "$S" \
+         --scenes "$S/list.txt" --runs "$(IFS=,; echo "${rr[*]}")" --kend 29 --deltas 2,3 --rewind event,off --workers 32) || exit 1
+    pk=$(nsub rwo-pack "${C[@]}" --log-dir "$S/pool/pack" -- "$APY" "$W/experiments/route_follow/scripts/rf_expert.py" pack --workers 32 \
+         --out "$S/pack" --scenes "$S/list.txt" --runs "${rr[@]}") || exit 1
+    all+=("${ids[@]}")
+    for d in 2 3; do for i in $(seq 0 $((nd - 1))); do
+      all+=($(nsub rwo-D$d-c$i "${G[@]}" --after "$tf,$pk" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/from_D$d.txt@$i/$nd" "$S/from_D$d.txt")) || exit 1
+    done; done
+    nsub rwo-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --env RF_K_END=29 --vram 0.5 --cpu 32 --ram 96 --timeout-h 2 \
+      --log-dir "$S/pool/read" -- $X oread "$S" > /dev/null || exit 1
+    date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 3 )) "$O/jobs.txt" ;;
+  oread)  # <stage dir>[,<stage dir>..] [out dir, default the first stage]: n-read (units = each stage's tfail.json) + n-yield
+    local S=${2:-${1%%,*}} refs; mkdir -p "$S"
+    refs=$(for s in ${1//,/ }; do printf '%s,' "$s/tfail.json"; done); refs=${refs%,}
+    RF_K_END=29 "$APY" "$here/rf_rewind.py" n-read --stage "$1" --ref "$refs" --out "$S/read.json" --pkl "$S/pkl" --workers 32 || exit 1
+    $PY "$here/rf_rewind.py" n-yield --read "$S/read.json" --md "$S/rewind_onpol_all.md" --csv "$S/rewind_onpol_all.csv" --units "$S/units.csv" \
+      --rows "$S/rows.csv" --json "$S/summary.json" --d316 "$D/runs/route_follow/rewind_train64/tfail.json" > /dev/null && echo "-> $S/rewind_onpol_all.md" ;;
+  nsim)   # <run dir> <list | from file@i/n (the i-th of n chunks of its scenes)> id|xp0|<from file>: one 30-decision launch of the held-read
+          # serving (rm_chain's sim, the long cache), resumable
     local R=$1 L=$2 M=$3 E=()
+    if [[ $L == *@*/* ]]; then
+      local f=${L%@*} ij=${L##*@}; L=$(dirname "$R")/list.txt; mkdir -p "$(dirname "$R")"
+      awk -v i=${ij%/*} -v n=${ij#*/} '(NR - 1) % n == i {print $1}' "$f" > "$L"
+    fi
     if [[ ! -s $L ]]; then mkdir -p "$R"; echo "empty list" > "$R/EMPTY"; exit 0; fi
     [[ -f $R/aggregate/results-summary.json ]] && { echo "$R done"; exit 0; }
     case $M in id) E=(-u JEV_EXPERT -u JEV_EXPERT_FROM) ;; xp0) E=(-u JEV_EXPERT_FROM JEV_EXPERT=$NP) ;; *) E=(JEV_EXPERT=$NP JEV_EXPERT_FROM=$M) ;; esac
