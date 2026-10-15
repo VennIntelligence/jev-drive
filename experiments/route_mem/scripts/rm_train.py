@@ -116,6 +116,7 @@ RECOVERY-ENVELOPE (2026-10-16, experiments/route_follow/plans/2026-10-16-recover
   --env-lam W       the asymmetric longitudinal speed envelope of onpol_nuplan lib/on_envelope.py (envU: speed above the row's upper bound,
             envL: below its lower bound; timing-only plan geometry) on the pool rows labelled in <POOL>/envelope.npz (rf_recov.py pack): sets
             --on-lon on_envelope and --on-lon-lam 10 W (the --app-lam scale); refused together with another --on-lon module.
+  --env-lo-scale F  on_envelope's lower-bound term (envL) x F (Amendment 3: upper and lower bounds at their own weights); 1 = off.
   --on-lon-all      with --on-mode mixed: the --on-lon terms on every pool row of the batch (on_train LossesOn._lon_all), not only on the
             `both` rows (the RL arm: envelope on the S / envelope self rows, recovery rows as `both`).
 
@@ -954,6 +955,7 @@ if __name__ == "__main__":
         p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--app-v2", action="store_true", help="approach course v2 terms (on_approach.configure; needs --app-lam)")
         p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
+        p.add_argument("--env-lo-scale", type=float, default=1.0, help="RECOVERY-ENVELOPE: on_envelope's lower-bound term x this (1 = as --env-lam)")
         p.add_argument("--on-lon-all", action="store_true", help="--on-mode mixed: the --on-lon terms on every pool row (self rows too)")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
@@ -989,6 +991,9 @@ if __name__ == "__main__":
         assert a.on and a.on_lon in ("", "on_envelope") and a.app_lam == 0, "--env-lam: needs --on and no other --on-lon module"
         a.on_lon, a.on_lon_lam = "on_envelope", 10.0 * a.env_lam
         print(f"rm_train: --on-lon on_envelope, --on-lon-lam {a.on_lon_lam:g}", flush=True)
+        if a.env_lo_scale != 1.0:
+            import on_envelope
+            print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

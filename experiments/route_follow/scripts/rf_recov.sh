@@ -31,6 +31,10 @@ flags() {  # arm [W] -> the arm's trainer flags
   local f=$O/flags_$(pool_of $1).txt; [[ -s $f ]] || { echo "no $f (rf_recov.sh pack $1)" >&2; exit 1; }
   local F W=${2:-}; F=$(cat $f)
   if [[ $W == *u ]]; then W=${W%u}; F=${F/--on-weight /--on-weight env=free:0,}; fi    # diagnostic: upper bounds only (free rows never drawn)
+  if [[ $W == k* ]]; then                                            # R dose: k recovery rows per batch instead of the pack's 3
+    F=$(python3 -c "import re,sys; f,k=sys.argv[1],int(sys.argv[2]); m=re.search(r'pool=r:([0-9.]+)',f); n=re.search(r'--on-k ([0-9]+)',f)
+print(f.replace(m.group(0),'pool=r:%.5f'%(float(m.group(1))*k/3)).replace(n.group(0),'--on-k %d'%(int(n.group(1))+k-3)))" "$F" ${W#k}); W=${3:-}; fi
+  if [[ $W == *l* ]]; then F="$F --env-lo-scale $(python3 -c "print(round(float('${W#*l}') / float('${W%l*}'), 6))")"; W=${W%l*}; fi   # <up>l<lo>
   [[ $(kind_of $1) != R ]] && F="$F --env-lam ${W:?W}"; echo "$F"; }
 FW=(--train --vram 24 --cpu 6 --ram 70)                              # measured peak 19.6 GB (rcv-pilot history)
 case ${1:-} in
@@ -99,7 +103,7 @@ base)    # reference plans: RSG-L18-s0 (+ APP1X-L18-s0 on the held decisions 0 /
   b2=$(sub rcv-fwd-base-devenv --vram 20 --cpu 6 --ram 64 --timeout-h 1 ${AFTER:+--after $AFTER} -- $TR $PY fwd --pool L18RSG --rows dev-env --tags RSG-L18-s0) || exit 1
   echo "$b1 $b2" ;;
 pilot)   # pilot <arm> [W]
-  A=$2; W=${3:-}; K=$(kind_of $A); T=RCV${A}P${W/./}-L18-s0; RP=$(rec_of $A)
+  A=$2; W=${3:-}; K=$(kind_of $A); T=RCV${A}P${W//./}-L18-s0; RP=$(rec_of $A)
   [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
   t=$(sub rcv-pilot-$T "${FW[@]}" --timeout-h 1 ${AFTER:+--after $AFTER} -- bash $ME train $A 0 1000 $T $W) || exit 1
   f=($(sub rcv-fwd-$T-held01 --after $t --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- $TR $PY fwd --pool L18RSGallheld --rows held01 --tags $T)) || exit 1

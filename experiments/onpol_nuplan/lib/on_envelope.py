@@ -34,6 +34,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import on_lon as OL  # noqa: E402
 
 NAME = "envelope.npz"
+CFG = dict(lo_scale=1.0)                                                       # rm_train --env-lo-scale (Amendment 3): envL x lo_scale
+
+
+def configure(lo_scale: float = 1.0) -> dict:
+    CFG["lo_scale"] = float(lo_scale)
+    return dict(CFG)
 BIG, LAT_ROUTE = 1e3, 3.5
 A_DEC, A_MAX, STOP_M, MARGIN_UP = 3.0, 6.0, 1.5, 1.0
 
@@ -118,7 +124,7 @@ def terms(poses, rows, pack):
 def loss(poses, rows, pack):
     """The trainer hook -> {"envU", "envL"}: (n,) per-row values (0 on rows without a bound)."""
     T = terms(poses, rows, pack)
-    return {"envU": T["envU"], "envL": T["envL"]}
+    return {"envU": T["envU"], "envL": T["envL"] * CFG["lo_scale"] if CFG["lo_scale"] != 1.0 else T["envL"]}
 
 
 # ---------------------------------------------------------------- smoke (CPU, synthetic rows): python on_envelope.py --smoke
