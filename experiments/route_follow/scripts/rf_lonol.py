@@ -41,7 +41,7 @@ SCALES = (0.6, 0.8, 1.0, 1.2, 1.4)
 CONDS = ("S06", "S08", "H", "S12", "S14", "F")
 BINS, BIN_NAMES = (8.0, 12.0, 16.0), ("< 8", "8-12", "12-16", ">= 16")
 CELLS = ("free", "red", "green", "lead", "red_all", "green_all", "lead_all", "red_nolead")
-NB, SEED = 10_000, 0
+NB, SEED = int(__import__("os").environ.get("LONOL_NB", 10_000)), 0
 
 
 # ---------------------------------------------------------------- cells (CPU)
@@ -138,8 +138,10 @@ def cmd_run(a):
     assert np.array_equal(C["names"], names), "cells rows != store's offline rows (same shards, same order)"
     pi = torch.as_tensor(S.pi, device=dev)
     esp = torch.as_tensor(EGO_SPEED, device=dev)
+    sel = np.flatnonzero(np.any([C[q] for q in CELLS], 0))           # the rows of any cell (all six fed rows on each)
     E0 = S.ego[:on0, :20].cpu().numpy()
-    Fd = torch.as_tensor(flat_rows(E0), device=dev)
+    Fd = torch.zeros(on0, 20, device=dev)
+    Fd[torch.as_tensor(sel, device=dev)] = torch.as_tensor(flat_rows(E0[sel]), device=dev)
 
     def fwd(rows, cond, bs=256):
         xs, ys = [], []
@@ -169,21 +171,22 @@ def cmd_run(a):
     xs, ys = fwd(dv, "S10")                                           # the x 1.0 scale path must be the measured row
     gate = dict(dev_rows=int(len(dv)), ade_equal_bitwise=bool(np.array_equal(ref, mine)), ade_max_abs_diff=float(np.abs(ref - mine).max()),
                 dev_ade_rows_ade=float(ref.mean()), dev_ade_mine=float(mine.mean()), scale1_equal_bitwise=bool(np.array_equal(x, xs) and np.array_equal(y, ys)),
-                f_changes_only_speed_cols=bool(np.array_equal(np.delete(Fd.cpu().numpy(), EGO_SPEED + [10, 13, 16], 1), np.delete(E0, EGO_SPEED + [10, 13, 16], 1))))
+                f_changes_only_speed_cols=bool(np.array_equal(np.delete(Fd[torch.as_tensor(sel, device=dev)].cpu().numpy(), EGO_SPEED + [10, 13, 16], 1),
+                                                              np.delete(E0[sel], EGO_SPEED + [10, 13, 16], 1))))
     print("gate", json.dumps(gate), flush=True)
     out = _pl.Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "gate.json").write_text(json.dumps(gate, indent=1))
     assert gate["ade_equal_bitwise"] and gate["scale1_equal_bitwise"] and gate["f_changes_only_speed_cols"], "gate failed: no counterfactual read"
-    rows = np.arange(on0)
     P = {}
     for c in CONDS:
-        x, y = fwd(rows, c)
+        x, y = fwd(sel, c)
         P[c] = np.stack([x, y], -1).astype(np.float32)                 # (n, 8, 2) rear-axle plan
         print(c, "done", flush=True)
     sp = np.zeros(on0, bool)
     sp[ns.dv_o[ns.dv_o < on0]] = True
-    np.savez(out / "plans.npz", names=names, dev=sp, ego=E0, egoF=Fd.cpu().numpy(), **{f"plan_{c}": v for c, v in P.items()})
+    np.savez(out / "plans.npz", sel=sel, names=names[sel], dev=sp[sel], ego=E0[sel], egoF=Fd[torch.as_tensor(sel, device=dev)].cpu().numpy(),
+             **{f"plan_{c}": v for c, v in P.items()})
     print("wrote", out / "plans.npz", flush=True)
 
 
@@ -214,7 +217,12 @@ def cmd_report(a):
     C = dict(np.load(_pl.Path(a.cells) / "cells.npz", allow_pickle=False))
     R = np.load(_pl.Path(a.run) / "plans.npz", allow_pickle=False)
     gate = json.loads((_pl.Path(a.run) / "gate.json").read_text())
+    C = {k: v[R["sel"]] for k, v in C.items()}
     assert np.array_equal(R["names"], C["names"])
+    if a.shard0:                                                      # the prereg-literal store: shard 0 only
+        m = C["shard"] == 0
+        C = {k: v[m] for k, v in C.items()}
+        R = {k: R[k][m] for k in R.files}
     vx = R["ego"][:, 4] * 10.0
     vp = {c: arc2(R[f"plan_{c}"].astype(np.float64)) / 2.0 for c in CONDS}
     logs = C["log"]
@@ -277,9 +285,11 @@ def cmd_report(a):
         res["store_speed"] = json.loads(_pl.Path(a.speeds).read_text())
     out = _pl.Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "openloop.json").write_text(json.dumps(res, indent=1))
-    (out / "openloop.md").write_text(md(res))
-    figs(res, C, vx, vp, bH, bF, _pl.Path(a.figs))
+    stem = "openloop_shard0" if a.shard0 else "openloop"
+    (out / f"{stem}.json").write_text(json.dumps(res, indent=1))
+    (out / f"{stem}.md").write_text(md(res))
+    if not a.shard0:
+        figs(res, C, vx, vp, bH, bF, _pl.Path(a.figs))
     print(md(res))
 
 
@@ -414,5 +424,6 @@ if __name__ == "__main__":
     p = sp.add_parser("report")
     p.add_argument("--cells", required=True), p.add_argument("--run", required=True), p.add_argument("--out", required=True)
     p.add_argument("--figs", required=True), p.add_argument("--tag", default="RSG-L18-s0"), p.add_argument("--speeds", default="")
+    p.add_argument("--shard0", action="store_true", help="only the rows of shard 0 (the prereg's store); no figures")
     a = ap.parse_args()
     dict(cells=cmd_cells, run=cmd_run, report=cmd_report, speeds=cmd_speeds)[a.cmd](a)
