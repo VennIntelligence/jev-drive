@@ -7,8 +7,9 @@ Run `/data/runs/route_night/v2pai/RV2b-L18-s1` (3bc80aa8 rf_v2pai.sh chain: star
 
 Notes: 4 rollouts of chunk c001 (901c2cff, 90ab8c24, 91d84204, 92af888e) failed at start (renderer port 6500 connection timeout when card 1
 joined) and were rerun as `runs/rv2b-l18-s1_c001r`; rf_pai_follow extract skips failed rollouts without a controller trace (d3f590da).
-Reproducibility caveat: RV2a-L18-s0's stored 281 run did not reproduce on rerun (route v2 prereg Amendment 17); exact chunk reruns are
-pending, and an RV2b chunk rerun follows; until then this read is provisional.
+Reproducibility: confirmed. An exact rerun of chunk c007 (29 scenes, 12 zeros, 1 spin; `/data/runs/route_night/v2pai/rerun_RV2b_c007`)
+is bit-identical to the stored chunk at every decision of all 29 scenes (scores, spins, zeros equal). The RV2a non-reproduction of
+Amendment 17 was RV2a's first run driving at the default gains (Amendment 18); this run carries gains 20 in every chunk.
 
 ## All 281 and the exam / control lists (rf_pai281.py; turn proxy = the 20 reference turn scenes)
 
