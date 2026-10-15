@@ -21,6 +21,15 @@ rerun)
   .venv/bin/python -m jevdrive.cl fanout --arms ltf,dd,garage --name ot-turn24 --owner others-turn --cpu 8 --ram 60 --tries 1 --priority 12 \
     --timeout-h 1 --no-check --vram 34 --log-dir "$O/rerun/{arm}/pool" \
     -- bash -c "mkdir -p $O/rerun/{arm} && exec bash experiments/alpasim/scripts/run.sh $O/rerun/{arm} {arm} --scene-list $T24 ${BASE[*]} $X" ;;
+rerun2)  # page reruns (keep rollout.asl: the driver's camera frames): WA-JEPA as shipped, RSG-L18-s0 and the rule expert XP-L12-E46 (rm_chain sim's command)
+  source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
+  X="$KEY.cache_location=$C/after160 $KEY.dataset.extra_params.num_timesteps_after=160"; XP=$DATA_DIR/runs/route_follow/rule_expert/pack_held
+  sub2() { .venv/bin/python -m jevdrive.cl submit --owner others-turn --name "$1" --cpu 6 --ram 40 --tries 1 --priority 10 --timeout-h 1 --no-check \
+           --vram "$2" --log-dir "$O/rerun/$3/pool" "${@:4}"; }
+  sub2 ot-turn24-wajepa 36 wajepa -- bash -c "mkdir -p $O/rerun/wajepa && WAJ_AMP=0 exec bash experiments/alpasim/scripts/run.sh $O/rerun/wajepa wajepa --scene-list $T24 ${BASE[*]} $X"
+  sub2 ot-turn24-rsg 20 rsg --env CL_HIST_KEY=alpasim-read4 -- bash -c "mkdir -p $O/rerun/rsg && SH30_TAG=RSG-L18-s0 exec bash experiments/alpasim/scripts/run.sh $O/rerun/rsg sh30 --scene-list $T24 ${BASE[*]} $X"
+  sub2 ot-turn24-xp 20 xp --env CL_HIST_KEY=alpasim-read4 --env JEV_EXPERT=$XP --env JEV_EXPERT_LA=1.2 --env JEV_EXPERT_EV=4.6 \
+    -- bash -c "mkdir -p $O/rerun/xp && SH30_TAG=RSG-L18-s0 exec bash experiments/alpasim/scripts/run.sh $O/rerun/xp sh30 --scene-list $T24 ${BASE[*]} $X" ;;
 read)
   for a in ltf dd garage; do
     [[ -e $O/rerun/$a/pool/DONE ]] || { echo "rerun $a not done"; exit 1; }
