@@ -173,6 +173,11 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   terms learn without transferring. Look at the read tables: the dev base is already near the dead zones (lateral 0.26 m vs 0.69 m on the
   train rows; speed excess 0.006 m/s, the PAI dev has one scene with a speed read). Scripts `rf_apppool.py`, `rf_appgate.py`, `rf_app.sh`,
   `rf_appheld.py`.
+  **EXPLORATORY APP1X-L18-s0** (Amendment 4; A1 at W 1, seed 0, a mechanism read and not a candidate): held 460 H1 fails.
+  - Zeros 70 vs 26, +44 [+30, +58]; at-fault +26; offroad 41 vs 17.
+  - Held turns 8 / 24 vs 16 / 24. The car enters 0.17 m further inside; entry speed is unchanged.
+  - Look at [held/confirm.md](results/approach/held/confirm.md) and [held/entry.md](results/approach/held/entry.md).
+  - The PAI 281 mechanism read on the 22 runway turns is in `results/approach/pai/` (`scripts/rf_appread.py`).
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

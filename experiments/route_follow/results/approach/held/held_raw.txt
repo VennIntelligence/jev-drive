@@ -1,0 +1,3 @@
+common scenes 460
+APP1X-L18-s0     n  460 mean 0.7419 zeros  78 gt 1.252 latgt 1.054  {'offroad': 41, 'left_corridor_laterally': 23, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 44 fails sanity check': 1}
+RSG-L18-s0       n  460 mean 0.8656 zeros  34 gt 1.135 latgt 0.869  {'offroad': 17, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 5, 'collision_at_fault': 4, 'Waypoint 44 fails sanity check': 1}

@@ -181,3 +181,19 @@ place the approach is tested. G-real (+0.020 m at W 1) is the known harm proxy.
 - **Reading.**
   - Speed excess and offset both within noise: the approach course as rows-plus-hinge is closed.
   - Mechanism moves but completion does not: that is a finding about which entry state is not enough.
+
+### Amendment 4 reads — EXPLORATORY
+
+- **Training.** APP1X-L18-s0: dev ADE 0.5284 -> 0.5600 (+0.032); junction reliance 0.015. Offline gate (`results/approach/gate/APP1X-L18-s0.md`):
+  A-lat -15 %, A-speed +9 %, G-real FAIL.
+- **Held 460 H1 FAILS** (`results/approach/held/confirm.md`, held18, 452 paired, 39 logs, vs RSG-L18-s0):
+  - zeros 70 vs 26, +44.0 [+30.4, +58.3]
+  - at-fault zeros 47 vs 21, +26.0 [+15.5, +36.9]
+  - collision / offroad / corridor 6 / 41 / 25 vs 4 / 17 / 6
+  - mean score -0.126 [-0.156, -0.098]
+  - held.py on all 460: zeros 78 vs 34
+- **Held turns 8 / 24 vs 16 / 24** (`held/entry.md`).
+  - Entry speed unchanged: -0.02 [-0.18, +0.10] m/s.
+  - Inward offset at the entry +0.17 [+0.09, +0.25] m.
+  - Reading: the plan is pushed inward and leaves the road, the RBSG2 direction.
+- **PAI 281** (mechanism read): below, when it lands.
