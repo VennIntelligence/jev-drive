@@ -44,6 +44,6 @@ box-explore)
   run() { local t=$1; shift
     env "$@" COR_GRID=0 BUILD=$O/build_$t RES=$R/$t "$0" box-build > $O/build_$t.log 2>&1 &&
     env "$@" BUILD=$O/build_$t RES=$R/$t "$0" box-check > $O/check_$t.log 2>&1; echo "$t done ($?)"; }
-  run m0.6 COR_MARGIN=0.6 & run m1.0 COR_MARGIN=1.0 & run m1.5 COR_MARGIN=1.5 & run axle0.3 COR_FP=axle COR_MARGIN=0.3 & wait ;;
+  run m0.6 COR_MARGIN=0.6; run m1.0 COR_MARGIN=1.0; run m1.5 COR_MARGIN=1.5; run axle0.3 COR_FP=axle COR_MARGIN=0.3 ;;   # one at a time (RAM)
 *) sed -n '2,7p' "$0"; exit 1 ;;
 esac
