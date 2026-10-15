@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SPIN v9 on Tokyo (plans/2026-10-15-spin-v9-prereg.md): PAI, gains 20 (WIZ), serving JEV_VCONT 1.0 + JEV_LEAD 1 as the identities
 # (r281/rsg, v2pai/APP1X-L18-s0), one stack per card, RUNPFX v9- (PFX) so no compose name clashes with another lane.
-#   sv9.sh smoke               card 0: APP1X-L18-s0 switch off on 2 spin-set scenes (plans must equal the stored identity), card 1: the same
-#                              2 scenes with JEV_TRACK=v9 (guard records present); -> $O/smoke_{off,v9}
+#   sv9.sh smoke               card CARD (0), one after the other: APP1X-L18-s0 switch off on 2 spin-set scenes (plans must equal the stored
+#                              identity), then the same 2 scenes with JEV_TRACK=v9 (guard records present); -> $O/smoke_{off,v9}
 #   sv9.sh run <arm> <tag> <list> <card> [driver env]   one arm on one card -> $O/<arm>_<tag>, RUN_DONE when finished (start it in tmux)
 #   sv9.sh read <arm>          sv9_read.py for both checkpoints -> results/spin_v9/<arm>_{app1x,rsg}.md (Tokyo working tree)
 set -uo pipefail
@@ -19,8 +19,8 @@ case ${1:?smoke|run|read} in
 smoke)
   head -2 "$R/app1x_spin29.txt" > "$O/smoke2.txt"
   rm -rf "$O"/smoke_{off,v9}
-  PFX=v9off- arm "$O/smoke_off" APP1X-L18-s0 "$O/smoke2.txt" 0 & p=$!
-  sleep 30; PFX=v9on- arm "$O/smoke_v9" APP1X-L18-s0 "$O/smoke2.txt" 1 "-e JEV_TRACK=v9"; wait $p
+  PFX=v9off- arm "$O/smoke_off" APP1X-L18-s0 "$O/smoke2.txt" "${CARD:-0}"
+  PFX=v9on- arm "$O/smoke_v9" APP1X-L18-s0 "$O/smoke2.txt" "${CARD:-0}" "-e JEV_TRACK=v9"
   grep -h "serving:" "$O"/smoke_*/runs/*/driver.log
   python3 "$here/sv9_check.py" plans --a "$ID_APP" --b "$O/smoke_off" && echo "SMOKE OFF: identical to the identity"
   python3 "$here/sv9_check.py" plans --a "$O/smoke_off" --b "$O/smoke_v9"
