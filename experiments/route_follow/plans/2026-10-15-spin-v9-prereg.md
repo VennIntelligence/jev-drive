@@ -86,3 +86,14 @@ Handoff decisions k 17 .. 27 of both stored reads, CPU only.
   (726 of 2 019 RSG) have the lead limit active and keep -5.
 - Not supported: a ratio trigger (served arc < 0.7 x 2 x v0) at k 17: the spins read 0.64-0.78 there (only about a third below 0.7), so the
   guard bounds the deceleration in the whole window instead of triggering (the bound only binds when the plan asks for more).
+
+## Amendment 2 (gates and launch, 2026-10-15 14:50 JST, before any v9 read)
+
+- Offline: `sv9_check.py same` 0 / 9000 differ from v8 (commit acb84875).
+- Smoke (Tokyo card 0, `/data/runs/route_night/spin_v9/smoke_{off,v9}`, 05855d57 and 0e05cb0c): switch off -> 398 / 398 served plans
+  identical to the stored APP1X identity (max |diff| 0). v9 on -> guard records on k 0 .. 27 of both sessions (k 27 is inside: t_s is
+  2.6999.. in floating point, so the window holds the 11 policy decisions k 17 .. 27, not 10; kept as run), both handoff spins gone
+  (0.457 and 0.379 vs 0 / 0). Two scenes say nothing about the lines.
+- Launch: v9a APP1X-L18-s0 on card 0, then the v8 diagnostic (APP1X, 29 scenes) on card 0; v9a RSG-L18-s0 on card 1 (freed by the
+  rule-expert lane's smoke). Both at gains 20 (wizard_cmd checked), `JEV_VCONT 1, JEV_LEAD 1`, CHUNK 24, RUNPFX v9-. A first card-0-only
+  chain was stopped after 8 min (no rollout finished) to use card 1, and restarted from scratch.
