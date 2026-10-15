@@ -205,3 +205,9 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   转弯零分前 0.5–3 s 的 470 个状态（held 108 + train 362）里 65 % 的 served plan 已接触路沿或他车，路线记忆置零只解除 5.6 % [3.0, 8.6]（完成转弯上 12.8 %），反而让 10.6 % 无接触的 plan 进入接触；
   路线只挪 1–2 s plan 3 cm、4 s 0.4 m。APP1X 权重同样 BLIND，且它的路线把 plan 拉离接触。APP1X 自己的失败状态没存帧，读不了。含义：路线置零 / 路线 lr 不是杠杆，plan 不读后果，处方在后果侧（on-policy 失败状态的 hinge、恢复行、critic）。
   `experiments/route_follow/results/route_dominance/route_dominance.md`，图 `figs/route_dominance.png`。
+- 10-16 02:10（JST）：RECOVERY-ENVELOPE（预登记 `experiments/route_follow/plans/2026-10-16-recovery-envelope-prereg.md` + 补记 1–3；pilot `experiments/route_follow/results/recovery_envelope/pilot.md`）。
+  标签全在 RSG-L18-s0 自己的状态上：L = 非对称纵向包络（停止线 / 弯入口 / 前车上界，空路下界，只沿航向动，`on_envelope.py`），R = d316 专家接手 session 里 h 及之后的状态以专家 served plan 为目标（重跑带帧，361 行 / 38 单元）。
+  逐位闸全过。L：W 1 / 3 / 0.3 的 dev ADE 不过（害处在空路下界：plan 变快），只上界 W 1 守住 ADE 且等弧长转弯 +0.63°；**上界 W 1 + 下界 W 0.1 全闸过**（ADE 0.5335、停止线超速 −25 %、
+  弯入口超速 −65 %、空路 plan / 喂入 +0.02、等弧长转弯 +0.42°），01:06 CST 起全量（RCVL-L18-s{0,1} → held / 公开 / 盒上 PAI 281 → 报告；盒上 PAI 要等 118 个场景下载和 RSG 盒上参照）。
+  R0 在两个剂量下留出 log 的模仿只降 10.5 / 15.7 %（线 20 %），停；但它的 plan 在弯前多转 0.34–0.43°。RL0 未跑。R / RL 等全场景倒回（d319）的行。
+  同输入转弯仪器离线复现了 APP1X 的欠转（−1.64°），新加的等弧长读数把「变慢少走」与「少转」分开。
