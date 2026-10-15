@@ -112,7 +112,7 @@ full)    # full <arm> [W]: both seeds' trainings, then the post-training chain (
   for s in 0 1; do T=RCV$A-L18-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
     ids+=($(sub rcv-train-$T "${FW[@]}" --timeout-h 2 ${AFTER:+--after $AFTER} -- bash $ME train $A $s 2500 $T $W)) || exit 1; done
   echo "$A W=${W:-none} trainings ${ids[*]}" >> $O/full.txt
-  bash experiments/route_follow/scripts/rf_recov_post.sh submit $A RCV$A-L18-s0 RCV$A-L18-s1 ${ids[0]} ${ids[1]} ;;
+  bash experiments/route_follow/scripts/rf_recov_post.sh submit RCV$A RCV$A-L18-s0 RCV$A-L18-s1 ${ids[0]} ${ids[1]} ;;
 train)   # train <arm> <seed> <steps> <tag> [W]
   F=$(flags $2 ${6:-}) || exit 1
   exec $TR experiments/route_mem/scripts/rm_train.py train --tag $5 $REC $F --steps $4 --seed $3 ;;
