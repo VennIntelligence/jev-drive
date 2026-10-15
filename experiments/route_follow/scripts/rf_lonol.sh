@@ -14,7 +14,7 @@ cells)
 submit)
   mkdir -p $O/pool
   id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name lonol-RSG-L18-s0 --tries 1 --priority 14 --no-check --log-dir $O/pool/run \
-       --vram 24 --cpu 6 --ram 80 --timeout-h 2 -- $TR experiments/route_follow/scripts/rf_lonol.py run --shards $S --tag RSG-L18-s0 --cells $O/cells \
+       --vram 32 --cpu 6 --ram 90 --timeout-h 2 -- $TR experiments/route_follow/scripts/rf_lonol.py run --shards $S --tag RSG-L18-s0 --cells $O/cells \
        --out $O/run | awk '{print $NF}') && [[ -n $id ]] || { echo "submit failed" >&2; exit 1; }
   echo "$id lonol-RSG-L18-s0" | tee -a $O/jobs.txt ;;
 report)
