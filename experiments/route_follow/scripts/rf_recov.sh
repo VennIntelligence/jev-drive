@@ -29,7 +29,9 @@ kind_of() { case $1 in L) echo L ;; R0|R) echo R ;; RL0|RL) echo RL ;; esac; }
 rec_of() { case $1 in R0|RL0) echo ${REC_POOL0:-RCVd316} ;; R|RL) echo ${REC_POOL:-RCVall} ;; *) echo "" ;; esac; }
 flags() {  # arm [W] -> the arm's trainer flags
   local f=$O/flags_$(pool_of $1).txt; [[ -s $f ]] || { echo "no $f (rf_recov.sh pack $1)" >&2; exit 1; }
-  local F; F=$(cat $f); [[ $(kind_of $1) != R ]] && F="$F --env-lam ${2:?W}"; echo "$F"; }
+  local F W=${2:-}; F=$(cat $f)
+  if [[ $W == *u ]]; then W=${W%u}; F=${F/--on-weight /--on-weight env=free:0,}; fi    # diagnostic: upper bounds only (free rows never drawn)
+  [[ $(kind_of $1) != R ]] && F="$F --env-lam ${W:?W}"; echo "$F"; }
 FW=(--train --vram 28 --cpu 6 --ram 70)
 case ${1:-} in
 gates)
