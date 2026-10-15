@@ -158,7 +158,7 @@ def cmd_run(a):
                     e[:, :20] = Fd[r]
                 elif cond != "H":
                     e = e.clone()
-                    e[:, esp] = e[:, esp] * float(cond[1:]) / 10.0
+                    e[:, esp] = e[:, esp] * (float(cond[1:]) / 10.0)          # the factor first: x 1.0 is then exact
                 p = model(S.front[r], e, S.tc[r], None, None, nv=None if S.nv is None else S.nv[r]).float()[:, pi].view(-1, 33, 15)
                 x, y, _ = T.rear(p, S.cam_x[r], W)
                 xs.append(x if gpu else x.cpu())
