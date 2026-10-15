@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSG-L18-s0 训练过程动画示意：数据、模型、损失、两段训练</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px;line-height:1.3}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:6px;font-size:20px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13.5px;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}figcaption{font-size:13.5px;color:#444;margin-top:6px}
+a{color:#0066cc;text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;background:#f0f0f2;padding:2px 4px;border-radius:3px}
+.cite{font-size:12.5px;color:#666;margin-top:4px;margin-bottom:12px}
+ul{padding-left:20px}li{margin-bottom:6px}
+.scene{border:1px solid #ddd;border-radius:6px;padding:8px;background:#fcfcfb}
+.scene svg{width:100%;height:auto;display:block;font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;font-size:13px}
+.bar button{font:13px/1.4 inherit;padding:3px 10px;border:1px solid #bbb;border-radius:4px;background:#fff;cursor:pointer;color:#1d1d1f}
+.bar button.on{background:#0072b2;color:#fff;border-color:#0072b2}
+.bar input[type=range]{flex:1;min-width:120px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+.steps button{font:13px/1.4 inherit;padding:3px 10px;border:1px solid #bbb;border-radius:14px;background:#fff;cursor:pointer;color:#1d1d1f}
+.steps button.on{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+.note{font-size:13.5px;color:#333;min-height:3.2em;margin:4px 2px 2px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}code{background:#28282c;color:#e8e8ea}.cite{color:#999}a{color:#4da3ff}
+.scene{background:#1c1c1f;border-color:#444}.bar button,.steps button{background:#26262a;color:#e8e8ea;border-color:#555}.note{color:#ddd}.steps button.on{background:#e8e8ea;color:#161618}}
+</style></head><body>
+
+<h1>RSG-L18-s0 训练过程动画示意：数据、模型、损失、两段训练</h1>
+
+<div class="v">
+当前各分支里跑得最好的基座是 <code>RSG-L18-s0</code>（route_follow 线，held 452 零分 34 对 59，公开榜持平）。它从出厂 openpilot Cinque 权重起，分两段训出来：
+第一段 <code>RB0-F-s0</code> 在 navtrain 上训 10 000 步（模仿 + 锚定 + 偏航率行 + 可行驶 hinge，加新的 P2 适配器和路线记忆支路）；
+第二段续训 2 500 步，学习率缩到 0.1 倍，每个 batch 再混入 13 行 RB0 自己在 AlpaSim nuPlan 里开出来的状态，这些行没有模仿目标，只有两个几何 hinge。
+视觉编码器全程冻结，其余输出头一律蒸馏回出厂模型。下面每张图都能播放、拖动和分步看；数字来自盒上两次运行的 meta.json 与训练脚本（见页尾来源）。
+</div>
+
+<h2>〇、总览：从出厂权重到 RSG-L18</h2>
+<figure><div class="scene" id="s0"></div>
+<figcaption>看什么：两段训练之间多了一个回路，第一段模型自己去 AlpaSim nuPlan 开 1 031 个场景，开出来的状态成为第二段的 on-policy 行。视觉编码器（灰）始终不动。</figcaption></figure>
+
+<h2>一、数据准备 a：上下文 9 槽与冻结编码器缓存</h2>
+<figure><div class="scene" id="s1"></div>
+<figcaption>看什么：模型吃 −1.6 到 0 s 每 0.2 s 一个槽，最老的槽固定为零。只有 −1.0 和 0 s 是真关键帧（实心），其余 6 个槽是最近的 2 Hz 关键帧沿自车运动 warp 出来的（橙色箭头）。每个槽的前视图像对 (t − 0.2 s, t) 过一次冻结的视觉编码器，缓存成 (N, 8, 32, 512) fp16 token，训练只读缓存。</figcaption></figure>
+
+<h2>二、数据准备 b：偏航率行（yr1，69 572 行，每 batch 13 行）</h2>
+<figure><div class="scene" id="s2"></div>
+<figcaption>看什么：在日志历史上注入分段线性的航向误差（结点 −1.5 / −1.0 / −0.5 / 0 s），画面和历史位姿都按扰动后的位姿重做（橙色车），但目标仍是日志未来（绿点）。模型要学的是回到车道，而不是延续注入的转动。这类行从不作锚定行，可行驶 hinge 在行自己的坐标系里算。</figcaption></figure>
+
+<h2>三、数据准备 c：路线记忆（200 维）</h2>
+<figure><div class="scene" id="s3"></div>
+<figcaption>看什么：收到过的每条路线消息用自车位姿搬到当前车体系，拼成一条折线（最老的消息 + 更新消息超出它末端的点）；沿弧长取 −6 到 +72 m 的 40 个槽（每 2 m），每槽 [valid, x/20, y/20, cos h, sin h]，没覆盖到的槽 valid = 0（灰）。训练时 25 % 非锚定行把这 200 维置零，on-policy 行从不置零。</figcaption></figure>
+
+<h2>四、数据准备 d：on-policy 池（on1_L18RB0，17 429 行 / 28 个 log）</h2>
+<figure><div class="scene" id="s4"></div>
+<figcaption>看什么：第一段模型 RB0-F-s0 在 AlpaSim nuPlan 的 onpol-train 划分里自己开（橙色轨迹会偏离人类日志，绿色）；每个决策点的状态（token、自车向量、路线、仿真器里的 actor 框、道路与车道栅格）存成一行。这些行<strong>没有模仿目标</strong>：模型走到的地方没有人类答案，只有「不要撞框、不要出道路」两个约束。</figcaption></figure>
+
+<h2>五、模型：哪些冻结，哪些训练，哪些是新的</h2>
+<figure><div class="scene" id="s5"></div>
+<figcaption>看什么：灰色视觉编码器只在预处理时跑一次。可训练的是蓝色策略通路（ONNX 节点 479–665）和橙色两个新模块；两个新模块都不改 token，而是给 9 帧上下文加偏置，输出层从 0 起，所以第 0 步等于起点模型。plan 头输出 33 × 15，训练只读 0.5–4 s 的 8 个位姿；其余头（紫）蒸馏到出厂老师。</figcaption></figure>
+
+<h2>六、一个 batch 与损失：画在道路上</h2>
+<figure><div class="scene" id="s6"></div>
+<figcaption>看什么：同一条路、同一辆车，分六步看每类行的损失落在哪里。模仿行的误差先除以随时域线性增长的 σ 再进 Huber（δ = 1），远处位姿容忍更大误差；可行驶 hinge 把 8 个位姿插成 41 个（0.1 s），在每个位姿放 Pacifica 足迹四角，角落到路沿距离不足 0.3 m 就罚；on-policy 行只有 agent 框 hinge 与道路栅格 hinge，并且<strong>只改形状</strong>（梯度只沿航向法线）。</figcaption></figure>
+
+<h2>七、两段训练：学习率、batch 组成与回路</h2>
+<figure><div class="scene" id="s7"></div>
+<figcaption>看什么：第二段策略通路与适配器整体缩到 0.1 倍（3e-6 / 3e-5），warm-up 只有 1 步；路线支路不受 <code>--lr-scale</code> 影响，两段都以 3e-4 为峰值、100 步 warm-up、同一条余弦到 0。batch 都是 128 行：第一段 115 普通 + 13 偏航率，第二段 102 普通 + 13 偏航率 + 13 on-policy，普通行再按 0.75 / 0.25 分成模仿行与锚定行。</figcaption></figure>
+
+<table>
+<tr><th>参数</th><th>第一段 RB0-F-s0</th><th>第二段 RSG-L18-s0</th></tr>
+<tr><td>起点</td><td>出厂 Cinque 权重 + 新 P2 适配器 + 路线支路（输出层为 0）</td><td><code>--init RB0-F-s0</code></td></tr>
+<tr><td>步数 / batch</td><td>10 000 / 128</td><td>2 500 / 128</td></tr>
+<tr><td>学习率（策略 / 适配器 / 路线支路）</td><td>3e-5 / 3e-4 / 3e-4</td><td>3e-6 / 3e-5 / 3e-4</td></tr>
+<tr><td>warm-up 与调度</td><td>300 步（支路 100 步），余弦到 0；AdamW wd 0.01</td><td>1 步（支路 100 步），余弦到 0；AdamW wd 0.01</td></tr>
+<tr><td>batch 组成</td><td>115 普通 + 13 偏航率</td><td>102 普通 + 13 偏航率 + 13 on-policy（<code>--on on1_L18RB0 --on-k 13 --on-mode self</code>）</td></tr>
+<tr><td>损失权重</td><td colspan="2">模仿 λ 1；锚定 λ 3；蒸馏 λ 30；可行驶 hinge λ 10、余量 0.3 m（模仿行与偏航率行）；on-policy 行 agent hinge λ 10（余量 0.5 m）+ 道路栅格 hinge λ 10，只作用于形状，× ho_w 3 / n_imit；路线输入在 25 % 非锚定行上置零</td></tr>
+<tr><td>数据</td><td colspan="2">navtrain 103 288 个 token，划分 <code>navsim/op-parity-full</code>：训练 101 499、dev 1 789；偏航率行 yr1 69 572；on-policy 池 on1_L18RB0 17 429 行（28 个 log）</td></tr>
+</table>
+
+<h2>来源文件</h2>
+<ul>
+<li><a href="../base-recipe/index.html">research/base-recipe/</a>：同一配方的静态图版本，含命令行与用时核对</li>
+<li><code>experiments/op_parity/scripts/pp_train.py</code>：Cfg（λ 1 / 3 / 30，hinge 余量 0.3）、σ 与 <code>Losses.dist</code>（Huber δ 1）；<code>lib/drivable_hinge.py</code>：足迹四角、0.1 s 插值、SDF 栅格 0.5 m；<code>lib/agent_hinge.py</code>：K = 16、前半平面、|横向| &lt; 3 m、余量 0.5 m</li>
+<li><code>experiments/body1/lib/loss43.py</code>：<code>shape_only</code>（梯度只沿航向法线）；<code>experiments/onpol_nuplan/scripts/on_train.py</code>：<code>--on-mode self</code> 行的两个 hinge 与 ho_w / n_imit 归一</li>
+<li><code>experiments/alpasim/scripts/ot3_rows.py</code>：偏航率行结点 −1.5 / −1.0 / −0.5 s；<code>experiments/route_mem/scripts/rm_train.py</code>、<code>lib/rmem.py</code>：路线支路、学习率分组、置零规则</li>
+<li><code>jevdrive/op_interp.py</code>、<code>experiments/op_parity/scripts/pp_prep.py</code>：关键帧时刻与 warp 帧协议</li>
+</ul>
+
+<script>
+(function(){
+const C={blue:'#0072B2',orange:'#E69F00',green:'#009E73',purple:'#CC79A7',verm:'#D55E00',sky:'#56B4E9',yellow:'#F0E442',grey:'#9E9E9E',road:'#d9d9d9',roadD:'#3a3a3e',ink:'#1d1d1f',mute:'#666'};
+const dark=matchMedia('(prefers-color-scheme: dark)').matches;
+const INK=dark?'#e8e8ea':C.ink, MUTE=dark?'#aaa':C.mute, ROAD=dark?C.roadD:C.road, LANE=dark?'#777':'#fff', BG=dark?'#1c1c1f':'#fcfcfb';
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs||{})e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function txt(p,x,y,s,attrs){const t=el('text',Object.assign({x,y,fill:INK,'font-size':12},attrs||{}),p);t.textContent=s;return t;}
+function box(p,x,y,w,h,label,fc,attrs){const g=el('g',{},p);el('rect',Object.assign({x,y,width:w,height:h,rx:5,fill:fc,stroke:'none'},attrs||{}),g);
+  const lines=label.split('\n');const lh=13;const y0=y+h/2-(lines.length-1)*lh/2+4;
+  lines.forEach((s,i)=>txt(g,x+w/2,y0+i*lh,s,{'text-anchor':'middle','font-size':11.5,fill:(fc===C.blue||fc===C.purple||fc===C.verm||fc===C.green)?'#fff':INK}));return g;}
+function arrow(p,x1,y1,x2,y2,col,w){el('line',{x1,y1,x2,y2,stroke:col||MUTE,'stroke-width':w||1.6,'marker-end':'url(#ah)'},p);}
+function defs(svg){const d=el('defs',{},svg);const m=el('marker',{id:'ah',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},d);el('path',{d:'M0 0L10 5L0 10z',fill:MUTE},m);
+  const m2=el('marker',{id:'ahO',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},d);el('path',{d:'M0 0L10 5L0 10z',fill:C.orange},m2);
+  const m3=el('marker',{id:'ahV',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},d);el('path',{d:'M0 0L10 5L0 10z',fill:C.verm},m3);
+  const pat=el('pattern',{id:'grid',width:5,height:5,patternUnits:'userSpaceOnUse'},d);el('path',{d:'M5 0H0V5',fill:'none',stroke:dark?'#555':'#bbb','stroke-width':0.4},pat);}
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2, clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
+
+// Scene controller: each scene = {w,h,dur,steps?,draw(g,t,step)}
+function Scene(id,spec){
+  const host=document.getElementById(id);const svg=el('svg',{viewBox:`0 0 ${spec.w} ${spec.h}`},host);defs(svg);const g=el('g',{},svg);
+  const bar=document.createElement('div');bar.className='bar';host.appendChild(bar);
+  const play=document.createElement('button');play.textContent='⏸ 暂停';bar.appendChild(play);
+  const rng=document.createElement('input');rng.type='range';rng.min=0;rng.max=1000;rng.value=0;bar.appendChild(rng);
+  const lab=document.createElement('span');lab.className='mono';bar.appendChild(lab);
+  let steps=null,step=0,note=null;
+  if(spec.steps){steps=document.createElement('div');steps.className='steps';host.insertBefore(steps,bar);
+    spec.steps.forEach((s,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' '+s.name;b.onclick=()=>{step=i;t=0;sync();};steps.appendChild(b);});
+    note=document.createElement('div');note.className='note';host.appendChild(note);}
+  let t=0,playing=true,last=null;
+  function sync(){if(steps)[...steps.children].forEach((b,i)=>b.classList.toggle('on',i===step));if(note)note.innerHTML=spec.steps[step].note;}
+  function render(){while(g.firstChild)g.removeChild(g.firstChild);spec.draw(g,t,step);rng.value=Math.round(t*1000);lab.textContent=(t*spec.dur).toFixed(1)+' s';}
+  function frame(ts){if(last==null)last=ts;const dt=(ts-last)/1000;last=ts;
+    if(playing){t+=dt/spec.dur;if(t>=1){t=0;if(spec.steps&&spec.autoStep){step=(step+1)%spec.steps.length;sync();}}render();}
+    requestAnimationFrame(frame);}
+  play.onclick=()=>{playing=!playing;play.textContent=playing?'⏸ 暂停':'▶ 播放';};
+  rng.oninput=()=>{playing=false;play.textContent='▶ 播放';t=rng.value/1000;render();};
+  sync();requestAnimationFrame(frame);
+}
+
+// ---------- helpers for road scenes (metres -> px): x forward to the right, y left = up
+function world(g,ox,oy,s){return el('g',{transform:`translate(${ox},${oy}) scale(${s},${-s})`},g);}
+function wtext(g,x,y,s,attrs){const t=txt(g,0,0,s,Object.assign({'font-size':1.6},attrs||{}));t.setAttribute('transform',`translate(${x},${y}) scale(1,-1)`);return t;}
+// arc trajectory: speed v, radius R (left turn), arc length s -> pose
+function arcPose(s,R){const a=s/R;return {x:R*Math.sin(a),y:R*(1-Math.cos(a)),h:a};}
+function pathD(pts){return pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2)).join(' ');}
+function offsetPath(R,s0,s1,off,n){const pts=[];for(let i=0;i<=n;i++){const s=lerp(s0,s1,i/n);const p=arcPose(s,R);pts.push({x:p.x-Math.sin(p.h)*off,y:p.y+Math.cos(p.h)*off});}return pts;}
+function roadArc(g,R,s0,s1,half,laneOff){el('path',{d:pathD(offsetPath(R,s0,s1,0,60)),fill:'none',stroke:ROAD,'stroke-width':half*2},g);
+  (laneOff||[]).forEach(o=>el('path',{d:pathD(offsetPath(R,s0,s1,o,60)),fill:'none',stroke:LANE,'stroke-width':0.15,'stroke-dasharray':'2 2'},g));
+  el('path',{d:pathD(offsetPath(R,s0,s1,half,60)),fill:'none',stroke:MUTE,'stroke-width':0.2},g);el('path',{d:pathD(offsetPath(R,s0,s1,-half,60)),fill:'none',stroke:MUTE,'stroke-width':0.2},g);}
+const FP=[[4.049,1.1485],[4.049,-1.1485],[-1.127,-1.1485],[-1.127,1.1485]];
+function car(g,x,y,h,fc,attrs,fp){const gg=el('g',{transform:`translate(${x},${y}) rotate(${h*180/Math.PI})`},g);const P=fp||FP;
+  el('path',{d:pathD(P.map(c=>({x:c[0],y:c[1]})))+'Z',fill:fc,'fill-opacity':attrs&&attrs.op!=null?attrs.op:0.85,stroke:attrs&&attrs.stroke||'none','stroke-width':0.2},gg);
+  el('path',{d:'M2.6 -0.8 L3.6 0 L2.6 0.8',fill:'none',stroke:'#fff','stroke-width':0.25,'stroke-opacity':0.9},gg);return gg;}
+function dot(g,x,y,r,fc,attrs){return el('circle',Object.assign({cx:x,cy:y,r,fill:fc},attrs||{}),g);}
+
+// ======================= S0 pipeline
+Scene('s0',{w:960,h:300,dur:8,draw(g,t){
+  const y=120;
+  box(g,20,y,150,60,'出厂 openpilot\nCinque 权重',C.grey);
+  box(g,230,y,200,60,'第一段 RB0-F-s0\nnavtrain 10 000 步\n模仿 + 锚定 + 偏航率 + hinge',C.blue);
+  box(g,490,y,200,60,'第二段 RSG-L18-s0\n续训 2 500 步，lr × 0.1\n+ 13 行 on-policy / batch',C.blue);
+  box(g,750,y,190,60,'基座 RSG-L18-s0\nheld 零分 34 对 59',C.green);
+  box(g,230,230,200,50,'navtrain 缓存\n101 499 训练行 + yr1 69 572',dark?'#2a3a4a':'#DCEBF5');
+  box(g,490,20,200,56,'AlpaSim nuPlan rollout\nonpol-train 1 031 场景',C.orange);
+  box(g,720,20,200,56,'on-policy 池 on1_L18RB0\n17 429 行 / 28 log，无模仿目标',dark?'#4a3a2a':'#FBE9C8');
+  box(g,20,230,150,50,'视觉编码器\n全程冻结',C.grey);
+  arrow(g,170,150,228,150);arrow(g,430,150,488,150);arrow(g,690,150,748,150);
+  arrow(g,330,230,330,182);arrow(g,590,230,590,182);el('line',{x1:330,y1:255,x2:488,y2:255,stroke:MUTE,'stroke-width':1.6},g);
+  arrow(g,430,120,520,78,C.orange);arrow(g,690,48,718,48,C.orange);arrow(g,820,76,640,118,C.orange);
+  txt(g,455,105,'RB0 自己去开',{fill:C.orange,'font-size':11});txt(g,705,110,'它走到的状态回来',{fill:C.orange,'font-size':11});
+  txt(g,20,205,'预处理：每个 token 编码一次，训练读缓存',{fill:MUTE,'font-size':11});
+  // moving token
+  const segs=[[170,150,230,150],[330,180,330,150],[430,150,490,150],[430,120,520,78],[690,48,720,48],[820,76,640,118],[690,150,750,150]];
+  const k=Math.floor(t*segs.length),u=ease(t*segs.length-k);const s=segs[Math.min(k,segs.length-1)];
+  dot(g,lerp(s[0],s[2],u),lerp(s[1],s[3],u),6,k>=3&&k<=5?C.orange:C.verm);
+  const labels=['出厂权重进入第一段','navtrain 行进入第一段','RB0 权重进入第二段','RB0 在 AlpaSim 里开','状态存入 on-policy 池','on-policy 行进入第二段','得到 RSG-L18'];
+  txt(g,480,292,labels[Math.min(k,6)],{'text-anchor':'middle','font-size':13,fill:INK,'font-weight':600});
+}});
+
+// ======================= S1 context slots and cache
+Scene('s1',{w:960,h:360,dur:8,draw(g,t){
+  // top: road with ego history in world
+  const W=world(g,230,150,9);const R=80;
+  roadArc(W,R,-25,45,3.6,[]);
+  const v=9;const slots=[];for(let i=0;i<=8;i++)slots.push(-1.6+0.2*i);
+  // ego pose along time (t drives the "now" marker scanning the slots)
+  const keys=[-1.0,0];
+  slots.forEach((ts,i)=>{if(i===0)return;const p=arcPose(v*ts,R);const isKey=keys.includes(+ts.toFixed(1));
+    if(!isKey){const nk=ts<-0.5?-1.0:0;const q=arcPose(v*nk,R);
+      el('line',{x1:q.x,y1:q.y,x2:p.x,y2:p.y,stroke:C.orange,'stroke-width':0.25,'marker-end':'url(#ahO)'},W);
+      const gg=el('g',{transform:`translate(${p.x},${p.y}) rotate(${p.h*180/Math.PI})`},W);el('path',{d:'M-0.6 -0.6 L0.9 0 L-0.6 0.6Z',fill:C.sky,'fill-opacity':0.9},gg);}
+    else car(W,p.x,p.y,p.h,C.blue,{op:0.9});
+    wtext(W,p.x-0.6,p.y+(i%2?2.4:-2.6),ts.toFixed(1),{fill:MUTE,'font-size':1.3});});
+  wtext(W,-20,8.5,'真关键帧（实心车）: −1.0, 0 s；6 个格点槽（小三角）= 最近关键帧沿自车运动 warp（橙箭头）',{fill:INK,'font-size':1.6});
+  wtext(W,-20,-7,'槽 0 (−1.6 s) 固定为零；时间轴上每 0.2 s 一个槽',{fill:MUTE,'font-size':1.5});
+  // bottom: slot strip + encoder + cache
+  const y0=240;txt(g,20,y0-14,'每个槽：前视图像对 (t − 0.2 s, t)',{fill:MUTE,'font-size':11});
+  slots.forEach((ts,i)=>{const x=20+i*52;const isKey=keys.includes(+ts.toFixed(1));const zero=i===0;
+    el('rect',{x,y:y0,width:44,height:30,rx:3,fill:zero?(dark?'#333':'#eee'):(isKey?C.blue:C.sky),'fill-opacity':zero?1:(isKey?0.9:0.45)},g);
+    txt(g,x+22,y0+19,zero?'0':ts.toFixed(1),{'text-anchor':'middle','font-size':11,fill:zero?MUTE:'#fff'});});
+  // scanning encoder
+  const k=Math.floor(seg(t,0,0.9)*8.999);const x=20+(k+0)*52;
+  el('rect',{x:x-2,y:y0-3,width:48,height:36,rx:4,fill:'none',stroke:C.verm,'stroke-width':2},g);
+  box(g,520,y0-12,150,54,'冻结视觉编码器\n（只在预处理跑一次）',C.grey);
+  box(g,740,y0-12,200,54,'front.npy  (N, 8, 32, 512) fp16\ntoken 缓存：训练只读这里',dark?'#2a3a4a':'#DCEBF5');
+  arrow(g,x+46,y0+15,518,y0+15,C.verm);arrow(g,670,y0+15,738,y0+15);
+  // cache fill bars
+  for(let i=0;i<8;i++){el('rect',{x:745+i*24,y:y0+50,width:20,height:8,fill:i<=k-1?C.blue:(dark?'#333':'#e5e5e5')},g);}
+  txt(g,745,y0+74,'8 个槽的 token 依次写入缓存',{fill:MUTE,'font-size':11});
+  txt(g,20,y0+74,'训练时 9 帧上下文 = [零槽] + 这 8 个槽的 token（再加 P2 适配器和路线支路的偏置，见第五节）',{fill:MUTE,'font-size':11});
+}});
+
+// ======================= S2 yaw-rate rows
+Scene('s2',{w:960,h:360,dur:7,draw(g,t){
+  const W=world(g,150,210,8.5);const R=1e4;// straight road
+  el('rect',{x:-20,y:-3.6,width:100,height:7.2,fill:ROAD},W);el('line',{x1:-20,y1:0,x2:80,y2:0,stroke:LANE,'stroke-width':0.15,'stroke-dasharray':'2 2'},W);
+  el('line',{x1:-20,y1:3.6,x2:80,y2:3.6,stroke:MUTE,'stroke-width':0.2},W);el('line',{x1:-20,y1:-3.6,x2:80,y2:-3.6,stroke:MUTE,'stroke-width':0.2},W);
+  const v=10;const a=ease(seg(t,0.05,0.5));// perturbation amount
+  const A=[0.06,0.10,0.08].map(z=>z*a);// increments a1,a2,a3 (rad)
+  const psi=ts=>{let s=0;[-1.5,-1.0,-0.5].forEach((k,i)=>s+=A[i]*clamp((ts-k)/0.5,0,1));return s;};
+  // logged history + future (green)
+  for(let ts=-1.6;ts<=4.01;ts+=0.2){const x=v*ts;dot(W,x,-1.8,ts>0?0.35:0.25,ts>0?C.green:MUTE,{'fill-opacity':ts>0?0.9:0.6});}
+  wtext(W,-16,-6.2,'日志：历史（灰点）与未来 0.5–4 s（绿点 = 目标，不变）',{fill:INK,'font-size':1.6});
+  // perturbed history: integrate heading error backwards from t=0 so pose at 0 differs
+  let pts=[];let x=0,y=-1.8;const dts=0.1;const hist=[];for(let ts=0;ts>-1.61;ts-=dts){hist.push({ts,x,y,h:psi(ts)});x-=v*dts*Math.cos(psi(ts));y-=v*dts*Math.sin(psi(ts));}
+  // shift so that the perturbed path at -1.6 coincides with the log at -1.6
+  const h0=hist[hist.length-1];const dx=(v*-1.6)-h0.x,dy=-1.8-h0.y;
+  hist.forEach(p=>{p.x+=dx;p.y+=dy;});
+  hist.forEach((p,i)=>{if(i%2===0)dot(W,p.x,p.y,0.25,C.orange,{'fill-opacity':0.7});});
+  const now=hist[0];car(W,now.x,now.y,now.h,C.orange,{op:0.9});
+  wtext(W,-16,-8.6,'橙 = 扰动后的自车与历史（画面与历史位姿都按它重做）',{fill:C.orange,'font-size':1.6});
+  // plan from the perturbed pose back to the logged future: animate from "continue the turn" to "return to lane"
+  const b=ease(seg(t,0.5,0.95));
+  const plan=[];for(let i=1;i<=8;i++){const T=0.5*i;const tx=v*T,ty=-1.8;const cx=now.x+v*T*Math.cos(now.h),cy=now.y+v*T*Math.sin(now.h);
+    plan.push({x:lerp(cx,tx,b),y:lerp(cy,ty,b)});}
+  el('path',{d:pathD([{x:now.x,y:now.y}].concat(plan)),fill:'none',stroke:C.blue,'stroke-width':0.3},W);
+  plan.forEach(p=>dot(W,p.x,p.y,0.45,C.blue));
+  wtext(W,-16,5.2,b<0.5?'蓝 = plan；错误的学法：延续注入的转动':'蓝 = plan；要学的：回到车道，模仿日志未来（λ 1）+ 可行驶 hinge（λ 10，在扰动系里）',{fill:C.blue,'font-size':1.6});
+  // heading error profile inset
+  const ix=700,iy=40;txt(g,ix,iy-8,'注入的航向误差 ψ(t)：分段线性，结点 −1.5 / −1 / −0.5 / 0',{fill:MUTE,'font-size':10.5});
+  el('line',{x1:ix,y1:iy+60,x2:ix+220,y2:iy+60,stroke:MUTE,'stroke-width':1},g);
+  const P=[];for(let ts=-1.6;ts<=0.001;ts+=0.05){P.push({x:ix+(ts+1.6)/1.6*220,y:iy+60-psi(ts)*180});}
+  el('path',{d:pathD(P),fill:'none',stroke:C.orange,'stroke-width':2},g);
+  [-1.5,-1.0,-0.5,0].forEach(k=>{const xx=ix+(k+1.6)/1.6*220;el('line',{x1:xx,y1:iy+60,x2:xx,y2:iy+64,stroke:MUTE},g);txt(g,xx,iy+76,k.toFixed(1),{'text-anchor':'middle','font-size':10,fill:MUTE});});
+  txt(g,ix,iy+96,'a1, a2, a3 三段增量；每 batch 占 10 %（13 行）',{fill:MUTE,'font-size':11});
+}});
+
+// ======================= S3 route memory
+Scene('s3',{w:960,h:380,dur:9,draw(g,t){
+  const W=world(g,90,255,4.6);const R=75;
+  roadArc(W,R,-10,100,3.6,[]);
+  const v=8;const sEgo=v*t*9*0.6;// ego progress along arc (m)
+  const ego=arcPose(sEgo,R);
+  // route messages: arrive every ~2.2 s sim, each covers [sEgo_at_arrival-2, +45]
+  const msgs=[];for(let k=0;k<4;k++){const ta=k*0.22;if(t>=ta){msgs.push({s0:v*ta*9*0.6-2,s1:v*ta*9*0.6+45,k});}}
+  msgs.forEach((m,i)=>{const pts=offsetPath(R,m.s0,m.s1,0.9-0.5*i,40);el('path',{d:pathD(pts),fill:'none',stroke:C.purple,'stroke-width':0.5,'stroke-opacity':0.35+0.15*i},W);
+    const p=arcPose(m.s0,R);wtext(W,p.x-1,p.y-4.5-i*2.4,'消息 '+(i+1),{fill:C.purple,'font-size':2.3});});
+  // merged polyline in ego frame: slots every 2 m from -6..72 along arc from ego
+  const cover1=msgs.length?Math.max(...msgs.map(m=>m.s1)):-1e9,cover0=msgs.length?Math.min(...msgs.map(m=>m.s0)):1e9;
+  for(let i=0;i<40;i++){const off=-6+2*i;const s=sEgo+off;const p=arcPose(s,R);const ok=s>=cover0&&s<=cover1;
+    dot(W,p.x,p.y,0.55,ok?C.orange:C.grey,{'fill-opacity':ok?0.95:0.5});}
+  car(W,ego.x,ego.y,ego.h,C.blue);
+  wtext(W,ego.x+2,ego.y+4.5,'自车 = 原点，沿弧长取槽',{fill:C.blue,'font-size':2.3});
+  wtext(W,-16,42,'紫 = 收到过的路线消息（各自在收到时的车体系，用自车位姿搬到现在）',{fill:INK,'font-size':2.5});
+  wtext(W,-16,38.5,'橙 = 合并折线上的 40 个槽（−6 … +72 m，每 2 m）；灰 = 没覆盖，valid = 0',{fill:INK,'font-size':2.5});
+  // slot strip bottom
+  const y0=330;txt(g,20,y0-10,'每槽 [valid, x/20, y/20, cos h, sin h] → 40 × 5 = 200 维，进路线记忆支路',{fill:MUTE,'font-size':11});
+  for(let i=0;i<40;i++){const off=-6+2*i;const s=sEgo+off;const ok=s>=cover0&&s<=cover1;el('rect',{x:20+i*23,y:y0,width:20,height:14,rx:2,fill:ok?C.orange:(dark?'#333':'#e5e5e5')},g);
+    if(i%5===0)txt(g,30+i*23,y0+28,(off>0?'+':'')+off,{'text-anchor':'middle','font-size':10,fill:MUTE});}
+  txt(g,560,300,'训练时：25 % 非锚定行把这 200 维置零（学会没路线也能开）',{fill:MUTE,'font-size':11});
+  txt(g,560,318,'on-policy 行从不置零（路线 hinge 不能教没理由的转弯）',{fill:MUTE,'font-size':11});
+}});
+
+// ======================= S4 on-policy pool
+Scene('s4',{w:960,h:360,dur:9,draw(g,t){
+  const W=world(g,60,200,6);const R=120;
+  roadArc(W,R,-5,110,3.6,[0]);
+  // human log along lane centre offset +1.8; policy drifts
+  const hum=offsetPath(R,0,100,1.8,50);el('path',{d:pathD(hum),fill:'none',stroke:C.green,'stroke-width':0.4,'stroke-dasharray':'1.5 1'},W);
+  wtext(W,2,7.5,'人类日志（绿虚线）：模型走偏后这里不再是答案',{fill:C.green,'font-size':2.0});
+  const u=seg(t,0,0.85);const n=50;const pol=[];for(let i=0;i<=n;i++){const s=100*i/n;const d=1.8-1.3*Math.sin(Math.PI*s/100)*(s>20?1:s/20);const p=arcPose(s,R);pol.push({x:p.x-Math.sin(p.h)*d,y:p.y+Math.cos(p.h)*d,h:p.h});}
+  const m=Math.floor(u*n);el('path',{d:pathD(pol.slice(0,m+1)),fill:'none',stroke:C.orange,'stroke-width':0.45},W);
+  const e=pol[m];car(W,e.x,e.y,e.h,C.orange);
+  // other actors
+  car(W,arcPose(55,R).x-Math.sin(arcPose(55,R).h)*1.8+0,arcPose(55,R).y+Math.cos(arcPose(55,R).h)*1.8,arcPose(55,R).h,C.grey);
+  car(W,arcPose(30,R).x+Math.sin(arcPose(30,R).h)*1.8,arcPose(30,R).y-Math.cos(arcPose(30,R).h)*1.8,arcPose(30,R).h+Math.PI,C.grey);
+  wtext(W,2,-7,'橙 = RB0-F-s0 在 AlpaSim nuPlan（onpol-train，1 031 场景）里自己开',{fill:C.orange,'font-size':2.0});
+  // snapshots every 2 s -> cards flying to pool
+  const cards=[];for(let k=1;k<=5;k++){const sk=k*0.17;if(u>=sk)cards.push(k);}
+  const px=640,py=60;box(g,px,py,290,58,'on-policy 池 on1_L18RB0\n每决策点一行：token、自车向量、路线、\nactor 框、道路 / 车道栅格',dark?'#4a3a2a':'#FBE9C8');
+  cards.forEach((k,i)=>{const p=pol[Math.floor(k*0.17*n)];const sx=60+p.x*6,sy=200-p.y*6;const f=ease(seg(u,k*0.17,k*0.17+0.12));
+    const x=lerp(sx,px+20+i*50,f),y=lerp(sy,py+70,f);el('rect',{x:x-12,y:y-9,width:24,height:18,rx:2,fill:C.orange,'fill-opacity':0.85,stroke:'#fff','stroke-width':0.8},g);txt(g,x,y+4,'行',{'text-anchor':'middle','font-size':10,fill:'#fff'});});
+  txt(g,640,160,'没有模仿目标；只有两个约束：',{fill:INK,'font-size':12,'font-weight':600});
+  txt(g,640,180,'· agent 框 hinge：plan 足迹不进前方车辆框（余量 0.5 m）',{fill:INK,'font-size':11.5});
+  txt(g,640,198,'· 道路与车道栅格 hinge：plan 足迹不出可行驶区',{fill:INK,'font-size':11.5});
+  txt(g,640,216,'都只改形状（梯度只沿航向法线），其余头蒸馏到老师',{fill:MUTE,'font-size':11.5});
+  txt(g,640,240,'池 17 429 行 / 28 个 log；第二段每 batch 抽 13 行',{fill:MUTE,'font-size':11.5});
+  txt(g,20,340,'纠正的是模型自己会走到的状态，而不是日志里人类走过的状态。',{fill:INK,'font-size':12.5});
+}});
+
+// ======================= S5 model
+Scene('s5',{w:960,h:380,dur:6,draw(g,t){
+  box(g,20,40,130,50,'前视图像对\n8 个槽',dark?'#2a3a4a':'#DCEBF5');
+  box(g,190,40,150,50,'视觉编码器\n冻结，缓存',C.grey);
+  box(g,380,20,180,90,'9 帧上下文 token\n(零槽 + 8 槽)\n+ 偏置',dark?'#2a3a4a':'#DCEBF5');
+  box(g,600,40,160,50,'策略通路\nONNX 节点 479–665（训练）',C.blue);
+  box(g,800,10,140,46,'plan 头 33 × 15\n读 0.5–4 s 8 位姿',C.blue);
+  box(g,800,74,140,46,'其余输出头\n蒸馏到出厂老师 λ 30',C.purple);
+  box(g,190,170,150,54,'自车向量 20 维\n速度、历史偏航等',dark?'#2a3a4a':'#DCEBF5');
+  box(g,380,170,180,54,'P2 适配器（新）\n输出层从 0 起，lr 3e-4',C.orange);
+  box(g,190,260,150,54,'路线记忆 200 维\n40 槽 × 5',dark?'#2a3a4a':'#DCEBF5');
+  box(g,380,260,180,54,'路线记忆支路（新）\n输出层从 0 起，lr 3e-4',C.orange);
+  arrow(g,150,65,188,65);arrow(g,340,65,378,65);arrow(g,560,65,598,65);arrow(g,760,55,798,33);arrow(g,760,75,798,97);
+  arrow(g,340,197,378,197);arrow(g,340,287,378,287);arrow(g,560,197,480,112,C.orange);arrow(g,560,287,500,112,C.orange);
+  txt(g,540,150,'+ 偏置（present = 1；锚定行 present = 0）',{fill:C.orange,'font-size':11});
+  txt(g,20,140,'蓝 = 训练，橙 = 新模块（训练），灰 = 冻结，紫 = 蒸馏',{fill:MUTE,'font-size':11});
+  txt(g,600,330,'第 0 步：两个新模块输出 0 → 模型 = 出厂 Cinque + 冻结编码器',{fill:INK,'font-size':12});
+  txt(g,600,350,'其余头跟着老师，plan 头跟着日志 / hinge',{fill:MUTE,'font-size':11.5});
+  // pulse
+  const route=[[150,65],[190,65],[340,65],[380,65],[560,65],[600,65],[760,65],[800,33]];
+  const k=Math.floor(t*(route.length-1)),u=ease(t*(route.length-1)-k);const a=route[k],b=route[Math.min(k+1,route.length-1)];
+  dot(g,lerp(a[0],b[0],u),lerp(a[1],b[1],u),6,C.verm);
+  const bb=ease(seg(t,0.3,0.6));dot(g,lerp(560,480,bb),lerp(197,112,bb),5,C.orange);dot(g,lerp(560,500,bb),lerp(287,112,bb),5,C.orange);
+  txt(g,20,360,'偏置的幅度随训练长大（输出层从 0 起）：',{fill:MUTE,'font-size':11});el('rect',{x:270,y:350,width:200,height:10,fill:dark?'#333':'#e5e5e5'},g);el('rect',{x:270,y:350,width:200*t,height:10,fill:C.orange},g);
+}});
+
+// ======================= S6 losses on the road
+const S6=[
+ {name:'模仿行 ~77',note:'<b>模仿（λ 1）</b>：plan 的 8 个位姿（0.5–4 s，后轴，左 +）对日志未来（绿）。误差 (x, y, ψ) 先除以 σ(T) 再进 Huber(δ = 1)：σ<sub>x</sub> = 0.3 + 0.2 T m，σ<sub>y</sub> = 0.1 + 0.1 T m，σ<sub>ψ</sub> = 1 + 1 T °。虚线椭圆 = 1 σ，远处容忍更大误差。路线输入在 25 % 这类行上置零。'},
+ {name:'可行驶 hinge',note:'<b>可行驶区 hinge（λ 10，余量 0.3 m）</b>：8 个位姿插成 41 个（0.1 s），每个位姿放 Pacifica 足迹四角（前 4.049 / 后 −1.127 / 半宽 1.1485 m），在 0.5 m 栅格的 SDF 上双线性采样，mean(relu(0.3 − sdf))。红角 = 被罚的角。作用于模仿行与偏航率行。'},
+ {name:'锚定行 ~25',note:'<b>锚定（λ 3）</b>：普通行里按 p = 0.25 抽出，新输入全部置零（present = 0，路线与自车向量都为零），plan 拉回出厂 Cinque 的 plan（灰虚线），同样的 σ-Huber；每个头都蒸馏到老师。作用：新模块不许把模型带偏（决定 137 的护栏）。'},
+ {name:'蒸馏 λ 30',note:'<b>蒸馏（λ 30，所有行）</b>：plan 之外的每个输出头（车道线、前车、姿态、期望曲率以外的动作等）对出厂老师在同一帧上的输出做 L2。老师在预处理时算好存成 teacher.npz。plan 头本身不蒸馏（它跟日志 / hinge）。'},
+ {name:'on-policy 行 13',note:'<b>on-policy 行（self 模式，λ 10 + λ 10，× ho_w 3 / n_imit）</b>：没有模仿目标。agent 框 hinge：前方 K ≤ 16 个对象（前半平面、|横向| &lt; 3 m），自车框前沿前推 0.5 m，relu(0.5 − 有向距离) 对 41 步取均值；道路与车道栅格 hinge 同可行驶 hinge 的几何。<b>只改形状</b>：梯度经 shape_only 投影到航向法线（橙箭头），不改快慢。'},
+ {name:'偏航率行 13',note:'<b>偏航率行（λ 1 + hinge λ 10）</b>：扰动系里模仿日志未来，可行驶 hinge 在行自己的坐标系里算；从不作锚定行。汇总：<span class="mono">L = 1·imit + 3·cons + 30·distill + 10·hinge + (10·agent + 10·road) × 3 / n_imit</span>；AdamW wd 0.01。'}];
+Scene('s6',{w:960,h:470,dur:6,steps:S6,autoStep:true,draw(g,t,step){
+  const W=world(g,100,290,9);const R=70;const v=9;const LANE_OFF=1.8;// ego drives in the right lane; road centre is +1.8 m to the left
+  const grid=step===1||step===4;
+  const RW=el('g',{transform:`translate(0,${LANE_OFF})`},W);roadArc(RW,R,-12,50,3.6,[0]);
+  if(grid){el('rect',{x:100-8*9,y:290-9*24,width:64*9,height:48*9,fill:'url(#grid)',opacity:0.9},g);}
+  const RT=[];const note=(s,col,b)=>RT.push([s,col||INK,b]);// right column notes
+  // logged future
+  const log=[];for(let i=1;i<=8;i++){const T=0.5*i;const p=arcPose(v*T,R);log.push(Object.assign({T},p));}
+  const a=ease(seg(t,step===1||step===4?0.25:0.1,step===1||step===4?0.95:0.8));
+  const err=(T)=>{switch(step){case 0:return {dy:-0.9*T/4*(1-a),dx:0.6*T/4*(1-a)};case 1:return {dy:-2.4*T/4*(1-a)-0.25,dx:0};case 2:return {dy:0.5*T/4*(1-a),dx:0};case 4:return {dy:1.6*T/4*(1-a)+0.2,dx:0};case 5:return {dy:0.9*T/4*(1-a),dx:0};default:return {dy:0,dx:0};}};
+  const plan=log.map(p=>{const e=err(p.T);return {T:p.T,x:p.x+e.dx-Math.sin(p.h)*e.dy,y:p.y+e.dy*Math.cos(p.h),h:p.h};});
+  const ship=log.map(p=>({T:p.T,x:p.x,y:p.y-0.25*p.T/4,h:p.h}));
+  // actors: a lead car in the ego lane (agent step) and an oncoming car in the left lane
+  const lead=arcPose(21+(step===4?2.5*t:0),R);
+  if(step===4||step===3){car(W,lead.x,lead.y,lead.h,C.grey);const q=arcPose(34,R);car(W,q.x-Math.sin(q.h)*3.6,q.y+Math.cos(q.h)*3.6,q.h+Math.PI,C.grey);}
+  if(step===5)car(W,0,0,0.12,C.orange);else car(W,0,0,0,C.blue);
+  if(step===0||step===5){log.forEach(p=>dot(W,p.x,p.y,0.45,C.green));}
+  if(step===2){el('path',{d:pathD([{x:0,y:0}].concat(ship)),fill:'none',stroke:MUTE,'stroke-width':0.3,'stroke-dasharray':'0.8 0.6'},W);ship.forEach(p=>dot(W,p.x,p.y,0.4,MUTE));}
+  if(step!==3){el('path',{d:pathD([{x:0,y:0}].concat(plan)),fill:'none',stroke:C.blue,'stroke-width':0.3},W);plan.forEach(p=>dot(W,p.x,p.y,0.45,C.blue));
+    wtext(W,plan[7].x+1.2,plan[7].y-0.5,'plan',{fill:C.blue,'font-size':1.8});}
+  if(step===0){
+    log.forEach((p,i)=>{const sx=0.3+0.2*p.T,sy=0.1+0.1*p.T;el('ellipse',{cx:p.x,cy:p.y,rx:sx,ry:sy,transform:`rotate(${p.h*180/Math.PI} ${p.x} ${p.y})`,fill:C.green,'fill-opacity':0.15,stroke:C.green,'stroke-width':0.15,'stroke-dasharray':'0.5 0.35'},W);
+      el('line',{x1:p.x,y1:p.y,x2:plan[i].x,y2:plan[i].y,stroke:C.verm,'stroke-width':0.22},W);});
+    wtext(W,log[7].x-1,log[7].y+2.2,'日志未来（目标）',{fill:C.green,'font-size':1.7});
+    wtext(W,log[3].x-2,log[3].y-3.4,'绿椭圆 = 1 σ，随 T 增大；红线 = 误差',{fill:C.green,'font-size':1.6});
+    const ix=640,iy=50;txt(g,ix,iy-10,'Huber(δ = 1) 作用在 误差 / σ 上',{fill:MUTE,'font-size':11});
+    const P=[];for(let z=-3;z<=3;z+=0.1){const h=Math.abs(z)<=1?0.5*z*z:Math.abs(z)-0.5;P.push({x:ix+(z+3)/6*200,y:iy+90-h*30});}
+    el('path',{d:pathD(P),fill:'none',stroke:C.blue,'stroke-width':2},g);el('line',{x1:ix,y1:iy+90,x2:ix+200,y2:iy+90,stroke:MUTE},g);
+    const z=3*(1-a)+0.2;const h=Math.abs(z)<=1?0.5*z*z:Math.abs(z)-0.5;dot(g,ix+(z+3)/6*200,iy+90-h*30,5,C.verm);
+    txt(g,ix+100,iy+106,'|误差 / σ| > 1 后转线性',{'text-anchor':'middle','font-size':10.5,fill:MUTE});
+    note('σx = 0.3 + 0.2 T m');note('σy = 0.1 + 0.1 T m');note('σψ = 1 + 1 T °');note('对 8 位姿 × (x, y, ψ) 取均值，λ 1',INK,true);note('路线输入在 25 % 的这类行上置零',MUTE);}
+  if(step===1||step===4){
+    const dense=[{x:0,y:0,h:0}];for(let k=1;k<=40;k++){const tt=k*0.1;const j=Math.min(Math.floor(tt/0.5),7);const t0=j*0.5,p0=j===0?{x:0,y:0,h:0}:plan[j-1],p1=plan[j];const f=(tt-t0)/0.5;
+      dense.push({x:lerp(p0.x,p1.x,f),y:lerp(p0.y,p1.y,f),h:lerp(p0.h,p1.h,f)});}
+    const margin=step===1?0.3:0.5;let pen=0,nbad=0;
+    dense.forEach((p,k)=>{if(k%2)return;const gg=el('g',{transform:`translate(${p.x},${p.y}) rotate(${p.h*180/Math.PI})`},W);
+      el('path',{d:pathD(FP.map(c=>({x:c[0],y:c[1]})))+'Z',fill:'none',stroke:C.blue,'stroke-width':0.08,'stroke-opacity':0.6},gg);
+      if(step===1)FP.forEach(c=>{const cx=p.x+c[0]*Math.cos(p.h)-c[1]*Math.sin(p.h),cy=p.y+c[0]*Math.sin(p.h)+c[1]*Math.cos(p.h);
+        const r=Math.hypot(cx,cy-(R+LANE_OFF));const d=3.6-Math.abs(R-r);if(d<margin){pen+=margin-d;nbad++;dot(W,cx,cy,0.3,C.verm);}});});
+    if(step===1){wtext(W,-8,-9,'8 位姿 → 线性插到 0.1 s：41 个位姿 × 4 角（画出每隔一个）',{fill:MUTE,'font-size':1.6});
+      wtext(W,-8,10.5,'SDF 栅格 0.5 m，x −8…56，y −24…24 m，+ 为路内',{fill:MUTE,'font-size':1.6});
+      note('红点 = 距路沿 < 0.3 m 的足迹角',C.verm,true);note('当前被罚的角：'+nbad+' / 84 画出的角',C.verm);note('hinge = mean(relu(0.3 − sdf)) = '+(pen/164).toFixed(3)+' m',INK,true);
+      note('足迹：前 4.049 / 后 −1.127 / 半宽 1.1485 m',MUTE);note('λ 10；作用于模仿行与偏航率行',INK);note('SDF 标签来自 op_probe 的 opb_labels.py',MUTE);}
+    if(step===4){
+      const ex=4.049+0.5;el('path',{d:pathD([{x:ex,y:1.1485},{x:ex,y:-1.1485},{x:-1.127,y:-1.1485},{x:-1.127,y:1.1485}])+'Z',fill:'none',stroke:C.verm,'stroke-width':0.2,'stroke-dasharray':'0.5 0.3'},W);
+      wtext(W,-1,-3,'自车框前沿 +0.5 m',{fill:C.verm,'font-size':1.5});
+      el('path',{d:pathD(offsetPath(R,0,40,3,40)),fill:'none',stroke:C.verm,'stroke-width':0.12,'stroke-dasharray':'0.6 0.4'},W);el('path',{d:pathD(offsetPath(R,0,40,-3,40)),fill:'none',stroke:C.verm,'stroke-width':0.12,'stroke-dasharray':'0.6 0.4'},W);
+      wtext(W,-8,-9,'红虚线 = 只数前半平面、|横向| < 3 m 内的对象（K ≤ 16，灰车）',{fill:C.verm,'font-size':1.6});
+      let best=null,bd=1e9;dense.forEach(p=>{const d=Math.hypot(p.x-lead.x,p.y-lead.y);if(d<bd){bd=d;best=p;}});
+      el('line',{x1:best.x+ex*Math.cos(best.h),y1:best.y+ex*Math.sin(best.h),x2:lead.x-1.127*Math.cos(lead.h),y2:lead.y-1.127*Math.sin(lead.h),stroke:C.verm,'stroke-width':0.25},W);
+      plan.forEach(p=>{const nx=-Math.sin(p.h),ny=Math.cos(p.h);el('line',{x1:p.x,y1:p.y,x2:p.x+nx*1.6,y2:p.y+ny*1.6,stroke:C.orange,'stroke-width':0.22,'marker-end':'url(#ahO)'},W);el('line',{x1:p.x,y1:p.y,x2:p.x-nx*1.6,y2:p.y-ny*1.6,stroke:C.orange,'stroke-width':0.22,'marker-end':'url(#ahO)'},W);});
+      wtext(W,-8,10.5,'橙箭头 = shape-only：梯度只沿航向法线，不改快慢',{fill:C.orange,'font-size':1.6});
+      note('agent 框 hinge：relu(0.5 − 自车框到对象框的有向距离)',C.verm,true);note('对 41 步取均值，λ 10',INK);note('道路与车道栅格 hinge：同可行驶 hinge 几何，',INK,true);note('栅格来自仿真器，λ 10',INK);
+      note('没有模仿目标；两项各 × ho_w 3 / n_imit',INK);note('路线输入从不置零；其余头蒸馏到老师',MUTE);}}
+  if(step===2){
+    wtext(W,ship[7].x-2,ship[7].y-3,'出厂 Cinque 的 plan（目标）',{fill:MUTE,'font-size':1.7});
+    txt(g,640,40,'新输入置零（present = 0）：',{fill:INK,'font-size':12,'font-weight':600});
+    for(let i=0;i<20;i++)el('rect',{x:640+i*13,y:52,width:11,height:10,fill:dark?'#333':'#e5e5e5'},g);txt(g,640,78,'自车向量 20 维 = 0',{fill:MUTE,'font-size':11});
+    for(let i=0;i<20;i++)el('rect',{x:640+i*13,y:88,width:11,height:10,fill:dark?'#333':'#e5e5e5'},g);txt(g,640,114,'路线记忆 200 维 = 0',{fill:MUTE,'font-size':11});
+    note('模型此时应等于出厂模型',INK,true);note('plan → 出厂 plan，同样的 σ-Huber，λ 3');note('每个头都蒸馏到老师，λ 30');note('普通行按 p = 0.25 抽出；偏航率行不抽',MUTE);}
+  if(step===3){
+    const heads=['车道线','路沿','前车','姿态','期望速度','其它'];txt(g,600,40,'其余输出头（示意列出）→ 出厂老师，同一帧，L2 × 30',{fill:INK,'font-size':12,'font-weight':600});
+    heads.forEach((h,i)=>{const y=58+i*32;txt(g,600,y+14,h,{fill:INK,'font-size':11.5});const w=140;el('rect',{x:680,y:y,width:w,height:18,fill:dark?'#333':'#e5e5e5'},g);
+      const d=Math.abs(Math.sin(i*1.7+t*6))*0.9*(1-a)+0.03;el('rect',{x:680,y:y,width:w*(1-d),height:18,fill:C.purple},g);el('line',{x1:680+w,y1:y-2,x2:680+w,y2:y+20,stroke:MUTE,'stroke-width':2},g);});
+    txt(g,600,262,'深线 = 老师输出；紫条逼近它',{fill:MUTE,'font-size':11});txt(g,600,280,'期望曲率 action[0] 不蒸馏（按 plan / 日志标签）',{fill:MUTE,'font-size':11});
+    el('path',{d:pathD([{x:0,y:0}].concat(log)),fill:'none',stroke:MUTE,'stroke-width':0.2,'stroke-dasharray':'0.5 0.5'},W);wtext(W,8,-2.6,'plan 头不蒸馏（跟日志 / hinge）',{fill:MUTE,'font-size':1.6});}
+  if(step===5){wtext(W,log[7].x-1,log[7].y+2.2,'日志未来（目标）',{fill:C.green,'font-size':1.7});
+    wtext(W,-8,-9,'橙车 = 扰动系里的自车（已偏航 7°）；在这个坐标系里模仿日志未来',{fill:C.orange,'font-size':1.6});
+    note('模仿 λ 1 + 可行驶 hinge λ 10，都在行自己的坐标系',INK,true);note('从不作锚定行；每 batch 13 行',INK);note('汇总（第二段）：',INK,true);
+    note('L = 1·imit + 3·cons + 30·distill',INK);note('    + 10·hinge + (10·agent + 10·road) × 3 / n_imit',INK);note('AdamW，wd 0.01',MUTE);}
+  // right column notes
+  const nx0=step===0||step===2||step===3?640:600,ny0=step===0?190:step===2?150:step===3?310:40;
+  RT.forEach((r,i)=>txt(g,nx0,ny0+i*19,r[0],{fill:r[1],'font-size':11.5,'font-weight':r[2]?600:400}));
+  const y0=420;const parts=[['模仿 ~77',77,C.blue],['锚定 ~25',25,C.grey],['偏航率 13',13,C.orange],['on-policy 13',13,C.verm]];let x=20;
+  txt(g,20,y0-8,'第二段一个 batch = 128 行（第一段无 on-policy：115 普通 + 13 偏航率）',{fill:MUTE,'font-size':11});
+  parts.forEach((p,i)=>{const w=p[1]/128*920;const on=(step===0&&i===0)||(step===1&&(i===0||i===2))||(step===2&&i===1)||step===3||(step===4&&i===3)||(step===5&&i===2);
+    el('rect',{x,y:y0,width:w-2,height:22,fill:p[2],'fill-opacity':on?0.95:0.25},g);txt(g,x+w/2,y0+15,p[0],{'text-anchor':'middle','font-size':11,fill:on?'#fff':INK});x+=w;});
+}});
+
+// ======================= S7 two stages: LR schedules + loop
+Scene('s7',{w:960,h:380,dur:8,draw(g,t){
+  function panel(x0,title,steps,warm,warmB,lrP,lrA,lrB,frac){
+    const w=400,h=190,y0=40;txt(g,x0,y0-12,title,{fill:INK,'font-size':12.5,'font-weight':600});
+    el('rect',{x:x0,y:y0,width:w,height:h,fill:'none',stroke:dark?'#444':'#ddd'},g);
+    const lmin=-6.5,lmax=-3.2;const Y=lr=>y0+h-(Math.log10(Math.max(lr,1e-7))-lmin)/(lmax-lmin)*h;
+    [-6,-5,-4].forEach(e=>{const y=Y(Math.pow(10,e));el('line',{x1:x0,y1:y,x2:x0+w,y2:y,stroke:dark?'#333':'#eee'},g);txt(g,x0-6,y+4,'1e'+e,{'text-anchor':'end','font-size':10,fill:MUTE});});
+    const sched=(peak,wu,s)=>s<wu?peak*s/wu:peak*0.5*(1+Math.cos(Math.PI*(s-wu)/(steps-wu)));
+    const series=[['策略通路',lrP,warm,C.blue],['P2 适配器',lrA,warm,C.orange],['路线支路',lrB,warmB,C.purple]];
+    const n=Math.max(2,Math.floor(frac*200));
+    series.forEach(([nm,pk,wu,col],i)=>{const P=[];for(let k=0;k<=n;k++){const s=steps*k/200;P.push({x:x0+k/200*w,y:Y(sched(pk,wu,s))});}
+      el('path',{d:pathD(P),fill:'none',stroke:col,'stroke-width':2,'stroke-dasharray':i===1?'6 3':'none'},g);
+      txt(g,x0+w-6,Y(pk*(i===1?0.55:1))+(i===0?-5:i===2?-6:-5),nm,{fill:col,'font-size':10.5,'text-anchor':'end'});});
+    [0,steps].forEach((s,i)=>txt(g,x0+i*w,y0+h+14,s.toLocaleString('en-US')+' 步',{'text-anchor':i?'end':'start','font-size':10,fill:MUTE}));
+    txt(g,x0+w/2,y0+h+30,`warm-up ${warm} 步（支路 ${warmB}），余弦到 0`,{'text-anchor':'middle','font-size':10.5,fill:MUTE});
+    const cx=x0+frac*w;el('line',{x1:cx,y1:y0,x2:cx,y2:y0+h,stroke:C.verm,'stroke-width':1,'stroke-dasharray':'3 3'},g);
+  }
+  const f1=seg(t,0,0.45),f2=seg(t,0.55,1);
+  panel(50,'第一段 RB0-F-s0：10 000 步，峰值 3e-5 / 3e-4 / 3e-4',10000,300,100,3e-5,3e-4,3e-4,f1);
+  panel(540,'第二段 RSG-L18-s0：2 500 步，--lr-scale 0.1（支路不缩）',2500,1,100,3e-6,3e-5,3e-4,f2);
+  // loop between stages
+  const yb=300;txt(g,50,yb,t<0.45?'第一段进行中：batch = 115 普通（0.75 模仿 / 0.25 锚定）+ 13 偏航率':t<0.55?'RB0-F-s0 在 AlpaSim nuPlan 开 1 031 个场景 → on1_L18RB0 池（17 429 行）':'第二段进行中：batch = 102 普通 + 13 偏航率 + 13 on-policy（无模仿目标，两个 hinge）',{fill:INK,'font-size':12.5,'font-weight':600});
+  const parts=t<0.55?[['普通 115',115,C.blue],['偏航率 13',13,C.orange]]:[['普通 102',102,C.blue],['偏航率 13',13,C.orange],['on-policy 13',13,C.verm]];let x=50;
+  parts.forEach(p=>{const w=p[1]/128*880;el('rect',{x,y:yb+12,width:w-2,height:22,fill:p[2],'fill-opacity':0.85},g);txt(g,x+w/2,yb+27,p[0],{'text-anchor':'middle','font-size':11,fill:'#fff'});x+=w;});
+  txt(g,50,yb+58,'验证：第一段每 1 000 步，第二段每 500 步；用时 1 350 s / 382 s；AdamW wd 0.01；seed 0。',{fill:MUTE,'font-size':11});
+  if(t>=0.45&&t<0.55){const u=seg(t,0.45,0.55);arrow(g,450,150,lerp(450,540,u),150,C.orange,2.5);}
+}});
+})();
+</script>
+</body></html>

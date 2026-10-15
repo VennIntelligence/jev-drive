@@ -6,6 +6,8 @@
 结论稳定后在 `docs/` 或代码里写英文正式版。
 
 ## 主题页
+- [base-recipe/](base-recipe/index.html)：当前基座 RSG-L18-s0 的训练配方示意：模型冻结 / 训练 / 新模块、预处理、一个 batch 的损失、两段训练与 on-policy 回路。
+- [base-recipe-anim/](base-recipe-anim/index.html)：同一配方的动画版（纯 HTML / SVG，可播放、拖动、分步）：总览回路、9 槽上下文与缓存、偏航率行、路线记忆、on-policy 池、模型、六类损失画在道路上、两段学习率。
 - [midterm-2026-10/](midterm-2026-10/index.html)：中期组会页（2026-10-13）：09-29 以来全部决策的交互实验地图（按研究线与结论类型），各榜单位置，要解决和正在解决的问题，人在环与打标签，下阶段。
 - [openpilot-diagnosis/](openpilot-diagnosis/index.html)：openpilot 为什么在各榜上表现不一，接口归因、能力缺口与接入矩阵。
 - [four-directions/](four-directions/index.html)：四个方向的综合诊断：急弯内侧切角与入弯速度、宽弯擦边余量、前车近距测距偏差与夜间归属。

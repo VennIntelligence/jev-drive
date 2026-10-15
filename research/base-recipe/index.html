@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>当前基座的训练配方（RSG-L18-s0）</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px;line-height:1.3}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:6px;font-size:20px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13.5px;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%;height:auto;border-radius:2px}figcaption{font-size:13.5px;color:#444;margin-top:6px}
+a{color:#0066cc;text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;background:#f0f0f2;padding:2px 4px;border-radius:3px}
+.cite{font-size:12.5px;color:#666;margin-top:4px;margin-bottom:12px}
+ul{padding-left:20px}li{margin-bottom:6px}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}code{background:#28282c;color:#e8e8ea}.cite{color:#999}a{color:#4da3ff}}
+</style></head><body>
+
+<h1>当前基座的训练配方（RSG-L18-s0）</h1>
+
+<div class="v">
+当前基座 <code>RSG-L18-s0</code> 是两段训出来的：第一段 <code>RB0-F-s0</code> 从出厂 openpilot Cinque 权重起，在 navtrain 上训 10 000 步（加偏航率扰动行、新的 P2 适配器和路线记忆支路）；第二段从 RB0 续训 2 500 步，学习率降到 0.1 倍，每个 batch 再混入 13 行 RB0 自己在 AlpaSim nuPlan 里开出来的状态，这些行只有约束、没有模仿目标。视觉编码器全程冻结，只训策略通路和新模块；其余输出头一律蒸馏回出厂模型。下面四张图依次讲模型、预处理、一个 batch 的损失、两段训练。
+</div>
+
+<h2>一、模型：哪些冻结，哪些训练，哪些是新的</h2>
+<figure>
+<img src="figs/fig_model.png" alt="模型结构示意">
+<figcaption>看什么：灰色的视觉编码器只在预处理时跑一次，训练读的是缓存好的 token；可训练的只有蓝色的策略通路（ONNX 节点 479–665）和橙色两个新模块。两个新模块都不改 token 本身，而是给 9 帧上下文加偏置：P2 适配器读 20 维自车向量，路线记忆支路读 200 维路线特征，输出层从 0 起，所以训练第 0 步就等于起点模型。plan 头输出 33 × 15，训练只读其中 0.5–4 s 的 8 个位姿；其余头（紫色）蒸馏到出厂老师。</figcaption>
+</figure>
+
+<h2>二、预处理：一次编码，三类行</h2>
+<figure>
+<img src="figs/fig_prep.png" alt="预处理流程示意">
+<figcaption>看什么：（a）上下文是 −1.6 到 0 s 每 0.2 s 一个槽，最老的槽固定为零；只有 −1.0 和 0 s 是真关键帧，其余 6 个槽是最近的 2 Hz 关键帧沿自车运动 warp 出来的（橙色箭头）。（b）偏航率行在历史上注入分段线性的航向误差（结点 −1.5 / −1 / −0.5 / 0 s），画面和历史位姿都按扰动后的位姿重做，但目标仍是日志未来：模型要学的是回到车道，而不是延续注入的转动。（c）路线记忆把收到过的每条路线消息用自车位姿搬到当前车体系、拼成一条折线，取 −6 到 +72 m 的 40 个点，没覆盖到的点有效位为 0。</figcaption>
+</figure>
+
+<h2>三、一个 batch 与损失</h2>
+<figure>
+<img src="figs/fig_batch_loss.png" alt="batch 组成与损失示意">
+<figcaption>看什么：第二段的 128 行里，102 行普通行按 0.75 / 0.25 随机分成模仿行和锚定行（约 77 / 25），另有 13 行偏航率行和 13 行 on-policy 行；第一段没有 on-policy 行，即 115 + 13。锚定行把新输入全部置零、把 plan 拉回出厂 plan，防止新模块把模型带偏。on-policy 行没有模仿目标，只有 agent 框与道路车道栅格两个 hinge。右侧（b）是模仿损失的分母：误差先除以随时域线性增长的 σ 再进 Huber，远处的位姿容忍更大的误差。</figcaption>
+</figure>
+
+<h2>四、两段训练</h2>
+<figure>
+<img src="figs/fig_stages.png" alt="两段训练与数据来源示意">
+<figcaption>看什么：第二段的 on-policy 池来自第一段模型 RB0-F-s0 自己在 AlpaSim nuPlan（onpol-train 划分，1 031 个场景）里的 rollout（橙色回路），所以续训纠正的是模型自己会走到的状态。学习率面板里，第二段策略通路与适配器整体缩到 0.1 倍，但路线支路不受 <code>--lr-scale</code> 影响，仍以 3e-4 为峰值、自带 100 步 warm-up、走同一条余弦（不是常数）。</figcaption>
+</figure>
+
+<table>
+<tr><th>参数</th><th>第一段 RB0-F-s0</th><th>第二段 RSG-L18-s0</th></tr>
+<tr><td>起点</td><td>出厂 Cinque 权重 + 新 P2 适配器 + 路线支路（输出层为 0）</td><td><code>--init RB0-F-s0</code></td></tr>
+<tr><td>步数 / batch</td><td>10 000 / 128</td><td>2 500 / 128</td></tr>
+<tr><td>学习率（策略 / 适配器 / 路线支路）</td><td>3e-5 / 3e-4 / 3e-4</td><td>3e-6 / 3e-5 / 3e-4（<code>--lr-scale 0.1</code> 不作用于支路）</td></tr>
+<tr><td>warm-up 与调度</td><td>300 步（支路 100 步），余弦到 0；AdamW wd 0.01</td><td>1 步（支路 100 步），余弦到 0；AdamW wd 0.01</td></tr>
+<tr><td>batch 组成</td><td>115 普通 + 13 偏航率</td><td>102 普通 + 13 偏航率 + 13 on-policy（<code>--on on1_L18RB0 --on-k 13 --on-mode self</code>）</td></tr>
+<tr><td>损失权重</td><td colspan="2">模仿 λ 1；锚定 λ 3；蒸馏 λ 30；可行驶 hinge λ 10、余量 0.3 m（模仿行与偏航率行）；on-policy 行 agent hinge λ 10 + 道路栅格 hinge λ 10，只作用于形状，× ho_w 3 / n_imit；路线输入在 25 % 非锚定行上置零（on-policy 行不置零）</td></tr>
+<tr><td>验证间隔 / 用时</td><td>每 1 000 步 / 1 350 s</td><td>每 500 步 / 382 s</td></tr>
+<tr><td>数据</td><td colspan="2">navtrain 103 288 个 token（12 个分片），划分 <code>navsim/op-parity-full</code>：训练 101 499、dev 1 789；偏航率行 yr1 69 572；on-policy 池 on1_L18RB0 17 429 行（28 个 log）</td></tr>
+</table>
+<div class="cite">命令行与用时来自盒上两次运行的 meta.json（2026-10-15 核对）；第一段相同的标志：<code>--yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --seed 0</code>。第一段没有池，按 rm_train.py 的规则 <code>--agent-on-only</code> 不带 <code>--on</code> 等于 agent hinge 关闭。</div>
+
+<h2>来源文件</h2>
+<ul>
+<li><a href="../base-recipe-anim/index.html">research/base-recipe-anim/</a>：同一配方的动画版（可播放、拖动、分步）</li>
+<li><code>experiments/op_parity/scripts/pp_train.py</code>：Cfg、σ 定义、<code>Losses.dist</code> 与总损失</li>
+<li><code>experiments/op_parity/scripts/pp_prep.py</code>：缓存文件与帧协议；<code>jevdrive/op_interp.py</code>：关键帧时刻与最近关键帧 warp</li>
+<li><code>experiments/alpasim/scripts/joint_train.py</code>、<code>ot3_rows.py</code>：偏航率行与 batch 组成</li>
+<li><code>experiments/onpol_nuplan/scripts/on_train.py</code>：<code>--init</code>、on-policy 行与 <code>self</code> 模式</li>
+<li><code>experiments/route_mem/scripts/rm_train.py</code>、<code>lib/rmem.py</code>、<code>README.md</code>：路线支路、学习率分组与置零规则</li>
+<li><code>lib/parity_adapter.py</code>：<code>ego_features</code>（20 维）；<code>jevdrive/op_adapt.py</code>：视觉 / 策略分解</li>
+<li><code>experiments/route_follow/README.md</code>、<code>research/next-round/route-night.md</code>：RB0 与 RSG 的来历</li>
+<li>示意图脚本：<code>research/base-recipe/figs/make_figs.py</code></li>
+</ul>
+</body></html>
