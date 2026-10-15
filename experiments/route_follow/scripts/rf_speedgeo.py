@@ -8,8 +8,8 @@ human braked for a lead, in the oncoming lane)? CPU only; stored reads are read,
                  --taxcsv <pai281_rsg.csv> --laneoff <laneoff turns.csv> --out <dir> [--workers N]
                  -> <dir>/brake_dec.csv.gz (every infer decision: plan / human drops, ego / human leads), <dir>/brake_scenes.csv
   read           (Mac, .venv)  rf_speedgeo.py read --pai <RECEDING pai.pkl> --held <RECEDING held.pkl> --cls <receding turns.csv>
-                 --brake <dir> --out <results dir> --fig <png>
-                 -> speed_geo.md, speed_geo.json, turns.csv, decisions.csv.gz (Part A), brake_scenes.csv (Part B), the figure.
+                 --brake <dir> --out <results dir> --fig <png> [--dec <Part A decisions csv.gz>]
+                 -> speed_geo.md, speed_geo.json, turns.csv, brake_scenes.csv (Part B), decisions csv (Part A), the figure.
 
 Definitions: the prereg. Plan / human curvature: chord headings of the 8 pose segments at their mid arcs plus the start heading at arc 0;
 kappa_j = |delta heading| / delta arc (segments >= 0.3 m). Human arc-matched = the log path sampled at the plan's own arcs from the point
@@ -377,7 +377,7 @@ def part_a(a, res):
         D["lkpt2"] = D.lkp2
         D["cf_alat4"] = D.kh4 * D.v ** 2
         D["h_alat4"] = D.kh4 * D.vh ** 2
-    D.to_csv(Path(a.out) / "decisions.csv.gz", index=False)
+    D.to_csv(Path(a.dec or Path(a.out) / "decisions.csv.gz"), index=False)
     base = (D.v >= V_MIN) & (D.vh >= V_MIN)
     elig = lambda T, h="kh": base & np.isfinite(D[f"kp{T}"]) & (D[f"{h}{T}"] >= KH_MIN)  # noqa: E731
     sets = {"pai_RSG": D.key == "pai_RSG-L18-s0", "held_RSG": D.key.isin(["held_RSG-L18-s0", "held_RSG-L18-s1"]),
@@ -544,6 +544,35 @@ def part_b(a, res):
     return B, Sc, per
 
 
+def explore(D, B, Sc, per, res):
+    """Amendment 1 (EXPLORATORY, post hoc): where the A1 slope comes from; B2 against the plan's own lead-free decisions; B1 against the
+    hit object's approach."""
+    X = res["explore"] = {}
+    el = (D.v >= V_MIN) & (D.vh >= V_MIN) & np.isfinite(D.kp2) & (D.kh2 >= KH_MIN) & np.isfinite(D.lr2)
+    for nm, m in (("pai_RSG", D.key == "pai_RSG-L18-s0"), ("held_RSG", D.key.isin(["held_RSG-L18-s0", "held_RSG-L18-s1"])),
+                  ("pai_APP1X", D.key == "pai_APP1X-L18-s0")):
+        X[f"A1_no_straight_{nm}"] = a1_fit(D[m & el & ~D.cls.isin(["straight", "other"])])
+        e = D[m & el]
+        X[f"straight_share_{nm}"] = {f"q>{c}": float(e[e.q > c].cls.eq("straight").mean()) if (e.q > c).any() else np.nan for c in (1.0, 1.25, 1.5)}
+    # B2 against the plan's own lead-free decisions (pooled; per-scene lead-free means are too noisy to subtract) and per scene
+    match = Sc[~Sc.primary.isin(COLL) & (Sc.n_hb > 0)]
+    x = B[B.scene.isin(match.scene) & B.pre]
+    grp = dict(lead=x[(x.v >= 1) & (x.e_ttc <= TTC_MAX)], free=x[(x.v >= 2) & ~np.isfinite(x.e_gap)])
+    X["B2_lead_vs_free"] = {k: dict(n=int(len(y)), scenes=int(y.scene.nunique()), v=float(y.v.mean()), dP=float(y.dP.mean()),
+                                    dP_over_v=float((y.dP / y.v).mean()), exec2=float(y.v_ex2.mean()), dH=float(y.dH.mean()), vh=float(y.vh.mean()))
+                            for k, y in grp.items()}
+    ps = grp["lead"].groupby("scene").agg(dP=("dP", "mean"), dH=("dH", "mean")).dropna()
+    ps = ps[ps.dH >= 0.5]
+    X["B2_half"] = dict(n=int(len(ps)), plan_ge_half=int((ps.dP >= 0.5 * ps.dH).sum()))
+    # B1: scenes whose hit object closed in at range-rate TTC <= 3 s at t_ev - 2 s
+    c = per[per.hit_ttc2 <= 3.0]
+    X["B1_closing"] = dict(scenes=[dict(scene=r.scene[7:15], primary=r.primary, ttc=float(r.hit_ttc2), rng=float(r.hit_rng2), dP=float(r.dP),
+                                        v=float(r.v), v_ev=float(r.v_ev), vh_ev=float(r.vh_ev)) for r in c.itertuples()],
+                           plan_slowed=int((c.dP > 0.5).sum()), n=int(len(c)))
+    X["B1_speed_at_event"] = dict(ego=float(per.v_ev.median()), human=float(per.vh_ev.median()), n_faster=int((per.v_ev > per.vh_ev + 0.5).sum()),
+                                  n=int(per.v_ev.notna().sum()))
+
+
 # ---------------------------------------------------------------- report
 def fnum(v, p=2, sign=True):
     return "-" if v is None or not np.isfinite(v) else (f"{v:+.{p}f}" if sign else f"{v:.{p}f}")
@@ -612,6 +641,25 @@ def write_md(out, res):
     for s in B["B3"]["scenes"]:
         md.append(f"| {s['scene'][7:15]} | {s['primary']} | {f(s['dP_pre'])} / {f(s['dH_pre'])} | {f(s['dP_in'])} / {f(s['dH_in'])} | "
                   f"{f(s['v'], 1, False)} / {f(s['vh'], 1, False)} | {f(s['e_ttc_min'], 1, False)} |")
+    X = res.get("explore")
+    if X:
+        a = lambda r: f"{f(r['slope'])} [{f(r['lo'])}, {f(r['hi'])}] (turns {r['n_turns']}, within {f(r['within'])} [{f(r['w_lo'])}, {f(r['w_hi'])}])"  # noqa: E731
+        md += ["", "## Amendment 1 (EXPLORATORY, post hoc)", "",
+               "- A1 without the straight-through (and other) turns: " + "; ".join(f"{k} {a(X[f'A1_no_straight_{k}'])}" for k in ("pai_RSG", "held_RSG", "pai_APP1X")
+                                                                                if "slope" in X[f"A1_no_straight_{k}"]),
+               "- share of eligible decisions from straight-through turns, by speed ratio: " + "; ".join(
+                   f"{k} " + ", ".join(f"{c} {f(v, 2, False)}" for c, v in X[f"straight_share_{k}"].items()) for k in ("pai_RSG", "pai_APP1X")),
+               "- B2, plan at a lead within 3 s TTC vs its own lead-free decisions (matched scenes, pooled decisions; v, dP, dP / v, executed 2 s drop, "
+               "human dH at those stations): " + "; ".join(f"{k} n {z['n']} ({z['scenes']} scenes) v {z['v']:.1f}, dP {z['dP']:+.2f}, dP/v {z['dP_over_v']:+.3f}, "
+                                                          f"executed {z['exec2']:+.2f}, dH {z['dH']:+.2f}" for k, z in X["B2_lead_vs_free"].items()),
+               f"- B2 per scene (scenes where the human dropped >= 0.5 m/s there): the plan drops at least half the human's in "
+               f"{X['B2_half']['plan_ge_half']} / {X['B2_half']['n']}",
+               f"- B1, hit object closing at range-rate TTC <= 3 s at t_ev - 2 s: {X['B1_closing']['n']} scenes, plan dP > 0.5 m/s in "
+               f"{X['B1_closing']['plan_slowed']}: " + "; ".join(f"{z['scene']} {z['primary']} TTC {z['ttc']:.1f} s at {z['rng']:.0f} m, dP {z['dP']:+.2f}, "
+                                                                f"v {z['v']:.1f} -> {z['v_ev']:.1f} (human at the event station {z['vh_ev']:.1f})"
+                                                                for z in X["B1_closing"]["scenes"]),
+               f"- B1 speed at the event station: ego median {X['B1_speed_at_event']['ego']:.1f}, human {X['B1_speed_at_event']['human']:.1f} m/s; "
+               f"ego faster by > 0.5 m/s in {X['B1_speed_at_event']['n_faster']} / {X['B1_speed_at_event']['n']}"]
     (out / "speed_geo.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 
@@ -623,7 +671,7 @@ def fig(D, B, per, png):
     from matplotlib.gridspec import GridSpec
     col = {"completed": "#2a78d6", "late_wide": "#eb6834", "straight": "#1baf7a", "over_turn": "#eda100", "no_zero": "#8c8c8c", "other": "#b07aa1"}
     fg = plt.figure(figsize=(17, 10))
-    gs = GridSpec(2, 12, figure=fg, hspace=0.38, wspace=0.9)
+    gs = GridSpec(2, 12, figure=fg, hspace=0.38, wspace=1.6)
     el = (D.v >= V_MIN) & (D.vh >= V_MIN) & np.isfinite(D.kp2) & (D.kh2 >= KH_MIN) & np.isfinite(D.lr2)
     ax = fg.add_subplot(gs[0, 0:4])
     for k, mk, nm in (("pai_RSG-L18-s0", "o", "PAI RSG"), ("held", "^", "held RSG")):
@@ -677,10 +725,11 @@ def fig(D, B, per, png):
         ax.axvspan(-2, 0, color="#f2f2f2", zorder=0)
         a2 = ax.twinx()
         a2.plot(x.t_rel, x.hit_rng, color="#9c36b5", lw=1, alpha=0.7)
-        a2.set_ylabel("range to the hit object (m)", color="#9c36b5", fontsize=8)
+        if n == 3:
+            a2.set_ylabel("range to the hit object (m, purple)", color="#9c36b5", fontsize=8)
         a2.set_ylim(0, max(40, np.nanmax(x.hit_rng) if x.hit_rng.notna().any() else 40))
         p = per[per.scene == s].iloc[0]
-        ax.set(xlabel="time to the collision (s)", ylabel="speed (m/s)", ylim=(0, None),
+        ax.set(xlabel="time to the collision (s)", ylabel="speed (m/s)" if n == 0 else "", ylim=(0, None),
                title=f"{s[7:15]} {p.primary.replace('coll_', '')}: dP {p.dP:+.2f} vs dH {p.dH:+.2f}")
         ax.title.set_fontsize(9)
         if n == 0:
@@ -698,6 +747,7 @@ def read(a):
     res = {}
     D = part_a(a, res)
     B, Sc, per = part_b(a, res)
+    explore(D, B, Sc, per, res)
     (out / "speed_geo.json").write_text(json.dumps(res, indent=1, default=float) + "\n")
     write_md(out, res)
     if a.fig:
@@ -713,5 +763,6 @@ if __name__ == "__main__":
     r = sp.add_parser("read")
     r.add_argument("--pai", required=True), r.add_argument("--held", required=True), r.add_argument("--cls", required=True)
     r.add_argument("--brake", required=True), r.add_argument("--out", required=True), r.add_argument("--fig", default="")
+    r.add_argument("--dec", default="", help="Part A per-decision csv (default <out>/decisions.csv.gz)")
     a = ap.parse_args()
     {"brake-extract": brake_extract, "read": read}[a.cmd](a)

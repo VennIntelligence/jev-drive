@@ -116,3 +116,21 @@ point's time): mean dP and dH over [t_e - 2 s, t_e) and over [t_e, min(t_e + 2 s
 `scripts/rf_speedgeo.py` (brake-extract on the box, read on the Mac), `results/speed_geo/` (speed_geo.md, speed_geo.json, turns.csv,
 brake_scenes.csv), `figs/speed_geo.png` (A: curvature ratio against speed ratio by class; B: brake-response traces for 4 collision
 scenes), a README paragraph. research/decisions.md is not edited by this reading.
+
+## Amendment 1 (2026-10-16, after the registered read; routine choices and EXPLORATORY items, post hoc)
+
+Routine choices made while coding (no number was seen before them):
+- B "own times": the human's states are those at the stations the ego's decisions visit (the decision rows' t_s with the human's own lead
+  TTC <= 3 s), not every log time; the plan side is the B2 eligible decisions.
+- Figure picks: the first scene by id of each type (oncoming, crossing, side, cyclist / pedestrian) among the 9 collision zeros.
+- Per-class A1 slopes use 2 000 cluster resamples (registered sets: 10 000).
+- The Part A per-decision table (`decisions_partA.csv.gz`) and the Part B decision table (`brake_dec.csv.gz`) stay on the box,
+  `$DATA_DIR/runs/route_follow/speed_geo/`; the taxonomy's integer actor ids are read back as asl id strings.
+
+Exploratory, computed after the registered verdicts were seen (not verdicts):
+- A1 without the straight-through (and other) turns, and the share of straight-through decisions by speed ratio: where the pooled
+  slope comes from.
+- B2 against the plan's own lead-free decisions (pooled), and per scene "the plan drops at least half the human's". A per-scene
+  baseline subtraction was tried first and dropped: scene lead-free means are too noisy (e.g. turn slowdowns count as lead-free).
+- B1 against the hit object's approach: scenes whose hit object closed at range-rate TTC <= 3 s at t_ev - 2 s, the plan's dP there;
+  ego vs human speed at the event station.

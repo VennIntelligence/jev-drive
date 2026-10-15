@@ -325,6 +325,38 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   is re-planning and one third tracking. Look at [figs/creep_rep.png](figs/creep_rep.png). (a): completed turns sit on 0, late-wide and
   straight-through float above it, and open circles (FMH) fill the straight-through column. (b): only FMH separates by family. (c):
   every failed class starts at 0 at 0.5 s and fans out by 2 s.
+- [results/speed_geo/](results/speed_geo/speed_geo.md): SPEED-GEOMETRY (turn-night.md section 10, the user's reading "over-guided by the
+  route, ignores what the road geometry implies"; prereg `plans/2026-10-16-speed-geometry-prereg.md`, Amendment 1; `scripts/rf_speedgeo.py`
+  brake-extract (box) | read (Mac), CPU, on the RECEDING extracts and the PAI rf_tax extract). **A, wide turn = speed: A1 supported, A2
+  supported on PAI, but the effect is a mode switch, not a curvature cap.** r = plan peak curvature over 0-2 s / human peak curvature over
+  the same stretch of road, q = ego / human speed at the same station. On PAI RSG-L18-s0 the slope of log r on log q is -1.68 [-2.48, -0.71]
+  (34 turns; the control A1c, log v with log v_h and log kappa_h as covariates, -1.77 [-2.59, -0.74]). It replicates on 0-4 s (-1.49), the
+  time-matched human (-1.52), held RSG s0 + s1 (-0.88 [-1.64, -0.24]) and APP1X (-0.64). But within a turn the slope is -0.14
+  [-0.70, +0.31]. Straight-through turns carry it: r 0.05 at q 1.36. Without them the slope is -0.24 [-0.48, -0.02] (within +0.01), and
+  they make up 28 / 39 / 50 % of the decisions at q > 1 / 1.25 / 1.5. Late-wide plans match the human's curvature on the same road
+  (r 0.92) while slower than the human (q 0.89; 3.4 vs 4.4 m/s), so late-wide is not a speed effect (d308 creep stands). A2: the plan's
+  0-4 s lateral acceleration has p90 2.89 [2.26, 3.18] m/s^2 (human 3.91). Following the human's line at the ego's speed would need p90
+  8.94 [5.11, 11.13] on the 841 decisions where the ego is faster. held refutes A2 (2.71: where the ego is faster on held turns, the human's line asks little); APP1X is
+  inconclusive. A3: on 31 shared turns APP1X moves r toward 1 (median |log r| 0.17 vs 0.29, paired log r +0.09 [+0.01, +0.21]; q 0.94 vs
+  0.99; completed 11 vs 4). **B, no braking for what it sees: B1 untestable, B2 refuted, B3 descriptive.** dP = v - plan speed at 2 s,
+  dH = the human's 2 s drop at the same log station. At the 9 collision zeros the human did not brake at those stations (mean dH -0.33,
+  dP -0.00), so the registered ratio is undefined. The exploratory read: of the 3 zeros whose hit object was closing at TTC <= 3 s 2 s
+  before contact, the plan speeds up into both oncoming cars. In 1a69f757 an oncoming car 35 m away is at TTC 2.4 s; the plan asks for
+  +2.2 m/s and the car goes from 6.3 to 8.0 m/s. In 382a7247 the plan asks +0.7. For the cyclist (1e8e939e) the plan cuts 3.6 m/s at
+  13.5 m/s, but the car only slows from 14.6 to 11.6. In 229791a5 the human waited at the stop line that the ego ran at 4-5 m/s,
+  speeding up into a crossing truck. The other 5 are low-speed sideswipes and a pedestrian walking into the stopped ego. With a
+  same-direction lead the plan does brake. The human braked for a lead in 83 scenes, but the ego came within 3 s TTC of one in only 14
+  (it is slower). There, R2 = 0.81 [0.15, 1.64], 1.11 when both face a lead, and 1.20 at their own times. At a lead the plan asks for
+  2.36 m/s (half its speed) against 0.57 without one, and the car drops 3.4 m/s. The plan drops at least half the human's in 6 / 8
+  scenes. The exception is b40f4729: at 14.6 m/s, with a lead 19 m ahead at TTC 2.1 s, the plan speeds up. B3 (7 oncoming-lane entries):
+  the plan does not slow before entering (dP -0.06 vs dH +0.02) and speeds up inside (-0.76). The human speeds up there too (-1.42,
+  leaving the turn), and there is rarely an in-path vehicle. So: it brakes for cars ahead. It does not slow for crossing or oncoming
+  traffic or for stop lines, and it opts out of turns it reaches fast. Look at [figs/speed_geo.png](figs/speed_geo.png). Top left: turn
+  medians sit on the r = 1 line across q. The green straight-through turns fall far below it, most of them at q > 1. Top middle: the arrows
+  from RSG to APP1X climb toward r = 1. Top right: the plan's lateral acceleration (orange) stays almost entirely under the 4.5 line where the human line
+  at the ego's speed (blue) climbs to 8-15. Bottom: 1a69f757's plan speed (orange) climbs as the range to the oncoming car (purple) falls.
+  In 229791a5 the human's speed at the station (blue dashed) drops to 0 at the stop line. The cyclist's plan brakes but the car (black)
+  lags.
 - [results/rule_expert/](results/rule_expert/README.md): RULE EXPERT (prereg `plans/2026-10-15-rule-expert-prereg.md`, Amendment 1): a
   privileged map-based rule planner (`experiments/alpasim/lib/rule_expert.py`, `JEV_EXPERT`: the route-lane chain from rf_corridor's
   matcher, pure pursuit, human-speed cruise with a 26 m ramp to 4.6 m/s at every >= 45 deg turn, swept-footprint yield on the replayed
