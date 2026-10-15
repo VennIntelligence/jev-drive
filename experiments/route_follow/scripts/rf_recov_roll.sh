@@ -77,7 +77,7 @@ nsim)   # <run dir> <list | file@i/n> <cache> id | xp=<from file> | pt=<perturb 
 rowsR)  # <stage dir> <NAME> [prior read]: n-read + rewind check, geo of D2 / D3, unit / row selection, pool, labels
   S=$1 N=$2 P=${3:-}
   $APY "$here/rf_rewind.py" n-read --stage "$S" --ref "$S/tfail.json" --out "$S/read.json" --pkl "$S/pkl" --workers 32 || die "n-read"
-  $PY "$X" rcheck --stage "$S" ${P:+--prior "$P"} || die "rcheck"
+  $PY "$X" rcheck --stage "$S" ${P:+--prior "$P"} --prior-runs "$(cat "$S/id_stages.txt")" || die "rcheck"
   for d in 2 3; do geo "$S/geo/D$d" "${N}_D${d}g" "$S"/D$d/c*/run; done
   $APY "$X" rsel --stage "$S" --geo "D2=${N}_D2g,D3=${N}_D3g" --out "$S/sel.json" || die "rsel"
   $TR "$X" assemble --name "$N" --sel "$S/sel.json" || die "assemble"
@@ -112,6 +112,7 @@ recov)
   [[ ! -e $S/SUBMITTED ]] || die "$S already submitted"
   [[ -s $FD/tfail.json && -s $FD/from_D2.txt && -s $FD/from_D3.txt && -d $NP && ( -d $CA || -n ${AFTER:-} ) ]] || die "source incomplete"
   mkdir -p "$S"; cp "$FD"/{tfail.json,from_D2.txt,from_D3.txt} "$S/"; code "$S"
+  echo "$IDS" > "$S/id_stages.txt"
   i=0; for st in ${IDS//,/ }; do for r in "$st"/id/c*/run; do [[ -d $r ]] || continue; mkdir -p "$S/id/c$i"; ln -sfn "$r" "$S/id/c$i/run"; i=$((i + 1)); done; done
   XS="bash $S/code/experiments/route_follow/scripts/rf_recov_roll.sh"; sims=()
   G=(--vram ${RR_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 --env "JEV_PY=$PY" ${AFTER:+--after $AFTER})

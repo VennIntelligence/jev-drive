@@ -127,6 +127,7 @@ def rcheck(a):
     S = Path(a.stage)
     mine = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in json.loads((S / "read.json").read_text())["scenes"]}
     prior = {s["scene"]: {r["tag"]: r for r in s["rows"]} for s in json.loads(Path(a.prior).read_text())["scenes"]} if a.prior else {}
+    pr = {d: summary_runs([r for st in a.prior_runs.split(",") if st for r in sorted(glob.glob(f"{st}/D{d}/c*/run"))]) for d in (2, 3)}
     out, tot = [], {}
     for d in (2, 3):
         hs = {s: int(h) for s, h in (ln.split() for ln in open(S / f"from_D{d}.txt") if ln.strip())}
@@ -137,16 +138,18 @@ def rcheck(a):
                 u |= dict(h_run=x.get("h"), completed=x.get("completed"), outcome=x.get("outcome"), kz=x.get("kz"), within_tol=x.get("within_tol"),
                           pre_plan_maxdiff=x.get("pre_plan_maxdiff"), pre_track_maxdiff=x.get("pre_track_maxdiff"), dv_h=x.get("dv_h"),
                           zero_before_h=x.get("zero_before_h"))
-            if x is not None and p is not None and x.get("run") and p.get("run"):
-                u |= dict(p_completed=p.get("completed"), p_outcome=p.get("outcome"), p_kz=p.get("kz"), p_h=p.get("h"))
-                A, B = drive_records(x["run"]).get(sc, []), drive_records(p["run"]).get(sc, [])
+            if x is not None and p is not None:
+                u |= dict(p_completed=p.get("completed"), p_outcome=p.get("outcome"), p_kz=p.get("kz"), p_h=p.get("h"),
+                          same_outcome=bool(x.get("completed") == p.get("completed") and x.get("outcome") == p.get("outcome")
+                                            and (x.get("kz", -1) >= 0) == (p.get("kz", -1) >= 0)))
+            prun = (p or {}).get("run") or pr[d].get(sc)
+            if x is not None and x.get("run") and prun:
+                A, B = drive_records(x["run"]).get(sc, []), drive_records(prun).get(sc, [])
                 Bk = {r["k"]: r for r in B}
                 pre = [float(np.abs(np.subtract(r["poses"], Bk[r["k"]]["poses"])).max()) for r in A if r["k"] < h and r["k"] in Bk]
                 post = [float(np.abs(np.subtract(r["poses"], Bk[r["k"]]["poses"])).max()) for r in A if r["k"] >= h and r["k"] in Bk]
                 u |= dict(vs_prior_pre_max=max(pre, default=None), vs_prior_pre_identical=bool(pre and max(pre) == 0.0),
-                          vs_prior_post_h_max=post[0] if post else None, vs_prior_post_max=max(post, default=None),
-                          same_outcome=bool(x.get("completed") == p.get("completed") and x.get("outcome") == p.get("outcome")
-                                            and (x.get("kz", -1) >= 0) == (p.get("kz", -1) >= 0)))
+                          vs_prior_post_h_max=post[0] if post else None, vs_prior_post_max=max(post, default=None), prior_run=prun)
             out.append(u)
         U = [u for u in out if u["D"] == d]
         V = [u for u in U if u["have"] and u.get("prior")]
@@ -536,6 +539,7 @@ def main():
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("rcheck")
     p.add_argument("--stage", required=True), p.add_argument("--prior", default="")
+    p.add_argument("--prior-runs", default="", help="stage dirs whose D<d>/c*/run hold the source's own D sessions")
     p = sp.add_parser("rsel")
     p.add_argument("--stage", required=True), p.add_argument("--geo", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("fsel")
