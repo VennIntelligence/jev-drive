@@ -25,7 +25,8 @@ A `drive` whose inputs are incomplete or whose inference raises is aborted with 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
-the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default), JEV_VHIST
+the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; v9 adds the handoff
+guard, which reads the time since the session's first drive call and whether the lead limit cuts the served speed; off by default), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
 row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
@@ -112,6 +113,7 @@ class Session:
         self.rt, self.unlogged, self.rpose = (RMEM.Tracker() if RMEM else None), {}, {}
         self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
         self.lock = threading.Lock()
+        self.t_first = None                          # time_now of the session's first drive call (track_ref's v9 handoff guard)
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
     def pose_at(self, ts: int):
@@ -233,6 +235,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         with s.lock:
             k = s.count["drive"]
             s.count["drive"] += 1
+            if s.t_first is None:
+                s.t_first = now
             infer = s.plan is None or k % self.every == 0
             ts = [t for t in s.frames if t <= now + TOL_US]
             t0 = max(ts) if ts else None
@@ -301,7 +305,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             if TG.ON:                                        # JEV_TURN_GAIN (turn_gain.py): the plan's turn scaled while it under-takes the route's
                 served, tgr = TG.apply(rf, o["poses"])
             if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
-                ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]))
+                ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]), t_s=(now - s.t_first) * 1e-6,
+                                    lead=bool(((fx or {}).get("lead") or {}).get("cut", 0.0) > 0))
                 ax, tilt = TR.anchor(p0, near.pose.quat)    # tilted pose (ground-mesh defect): the controller's planar yaw
                 s.plan = TR.cached_plan(CachedPlan, t0, ax, ref)
                 if tilt:

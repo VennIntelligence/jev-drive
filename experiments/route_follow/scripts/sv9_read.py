@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""SPIN v9 read (plans/2026-10-15-spin-v9-prereg.md), numpy only, Tokyo host. One checkpoint: an arm root against its identity root on the
+union and the checkpoint's spin set / control set. Per rollout: score, zero kind, sf_detect spin (handoff / fast / slow) and its onset,
+rf_pai281's handoff spin, at-fault / front / rear collisions, the zero's event time (the controller's last row: a zero ends the rollout).
+Lines: L1 spins (sf_detect, any kind) on the spin set <= 2; L2 controls: zeros, paired bootstrap 97.5 % of the summed difference <= +2,
+and the paired mean difference >= -0.01; L3 no new offroad zero with its event <= 4.7 s (3 s after the 1.7 s handoff) over the union.
+Bootstrap over scenes, 10 000 draws, seed 0. A rollout without metrics is skipped (sf_read.py's rule); an arm may list root1,root2.
+  sv9_read.py --label APP1X --id <root> --arm <root>[,<root>] --spin <list> --ctrl <list> --union <list> [--ctrl-all <list>] --md out.md"""
+import argparse, csv, glob, json, os, sys
+import numpy as np
+here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(here, "../../steer_long/scripts"))
+from sf_detect import detect
+
+
+def read(roots, keep):
+    out = {}
+    for root in roots.split(","):
+        for sim in sorted(glob.glob(os.path.join(root, "runs", "*", "sim"))):
+            f = os.path.join(sim, "aggregate", "results-summary.json")
+            if not os.path.exists(f):
+                continue
+            for r in json.load(open(f))["rollouts"]:
+                c = os.path.join(sim, "controller", f"alpasim_controller_{r['rollout_id']}.csv")
+                if r["clipgt_id"] not in keep or not r.get("metrics") or not os.path.exists(c):
+                    continue
+                rows = list(csv.DictReader(open(c)))
+                g = {k: np.array([float(x[k]) for x in rows]) for k in ("timestamp_us", "vx", "vy", "wz", "front_steering_angle")}
+                t = (g["timestamp_us"] - g["timestamp_us"][0]) / 1e6 + 0.1
+                d = detect(t, g["vx"], g["vy"], g["wz"], g["front_steering_angle"])
+                w = (t > 1.7) & (t <= 3.2)
+                m = r["metrics"]
+                sc = float(r.get("score") or 0)
+                kind = "" if sc else ("collision" if m.get("collision_at_fault") else "offroad" if m.get("offroad") else
+                                      "corridor" if m.get("left_corridor_laterally") else "other")
+                out[r["clipgt_id"]] = dict(score=sc, kind=kind, spin=d["kind"], t_spin=d["t_first"], t_end=float(t[-1]),
+                                           hspin=bool(w.any() and np.abs(g["vx"] * g["wz"])[w].max() > 6),
+                                           atf=float(m.get("collision_at_fault") or 0) > 0, front=float(m.get("collision_front") or 0) > 0,
+                                           rear=float(m.get("collision_rear") or 0) > 0)
+    return out
+
+
+def boot(x, rng):
+    b = rng.integers(0, len(x), (10000, len(x)))
+    return np.quantile(x[b].sum(1), (0.025, 0.975)), np.quantile(x[b].mean(1), (0.025, 0.975))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    for k in ("label", "id", "arm", "spin", "ctrl", "union", "md"):
+        ap.add_argument("--" + k, required=True)
+    ap.add_argument("--ctrl-all")
+    a = ap.parse_args()
+    L = lambda f: [x for x in open(f).read().split() if x]  # noqa: E731
+    U = L(a.union)
+    I, A = read(a.id, set(U)), read(a.arm, set(U))
+    rng = np.random.default_rng(0)
+    out = [f"# SPIN v9 read: {a.label}, arm `{a.arm}` vs identity `{a.id}`", ""]
+    res = {}
+    out += ["| set | scenes (both) | spins sf any (id) | handoff spins (id) | zeros (id) | new / recovered zeros | zeros diff 95 % CI | "
+            "at-fault / front / rear (id) | mean (id) | diff 95 % CI |", "|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|"]
+    sets = [("spin set", a.spin), ("controls", a.ctrl)] + ([("controls, all 46", a.ctrl_all)] if a.ctrl_all else []) + [("union", a.union)]
+    for name, f in sets:
+        sc = [s for s in L(f) if s in I and s in A]
+        z = lambda D: np.array([D[s]["score"] == 0 for s in sc], float)  # noqa: E731
+        dz, ds = z(A) - z(I), np.array([A[s]["score"] - I[s]["score"] for s in sc])
+        (zl, zh), _ = boot(dz, rng)
+        _, (ml, mh) = boot(ds, rng)
+        cnt = lambda D, k: sum(bool(D[s][k]) for s in sc)  # noqa: E731
+        res[name] = dict(n=len(sc), spins=cnt(A, "spin"), zh=zh, md=ds.mean(), missing=len(L(f)) - len(sc))
+        out.append(f"| {name} | {len(sc)} | {cnt(A, 'spin')} ({cnt(I, 'spin')}) | {cnt(A, 'hspin')} ({cnt(I, 'hspin')}) | {int(z(A).sum())} ({int(z(I).sum())}) | "
+                   f"{int((dz > 0).sum())} / {int((dz < 0).sum())} | {dz.sum():+.0f} [{zl:+.0f}, {zh:+.0f}] | {cnt(A, 'atf')} / {cnt(A, 'front')} / {cnt(A, 'rear')} "
+                   f"({cnt(I, 'atf')} / {cnt(I, 'front')} / {cnt(I, 'rear')}) | {np.mean([A[s]['score'] for s in sc]):.4f} ({np.mean([I[s]['score'] for s in sc]):.4f}) | "
+                   f"{ds.mean():+.4f} [{ml:+.4f}, {mh:+.4f}] |")
+    early = [s for s in U if s in A and s in I and A[s]["kind"] == "offroad" and A[s]["t_end"] <= 4.7
+             and not (I[s]["kind"] == "offroad" and I[s]["t_end"] <= 4.7)]
+    l1, l2 = res["spin set"]["spins"] <= 2, res["controls"]["zh"] <= 2 and res["controls"]["md"] >= -0.01
+    l3 = not early
+    out += ["", f"- L1 spin set spins {res['spin set']['spins']} <= 2: {'pass' if l1 else 'FAIL'}",
+            f"- L2 controls zeros CI upper {res['controls']['zh']:+.0f} <= +2 and mean diff {res['controls']['md']:+.4f} >= -0.01: {'pass' if l2 else 'FAIL'}",
+            f"- L3 new offroad zeros with the event <= 4.7 s over the union: {len(early)} {early and [s[7:15] for s in early] or ''}: {'pass' if l3 else 'FAIL'}",
+            f"- missing rollouts (no metrics in either root): " + ", ".join(f"{k} {v['missing']}" for k, v in res.items()), "",
+            "## Per scene (union; changed score, zero or spin only)", "",
+            "| scene | sets | id score | arm score | id zero / spin (onset s) | arm zero / spin (onset s) | arm event t s |", "|:--|:--|--:|--:|:--|:--|--:|"]
+    member = {s: "+".join(n for n, f in sets[:-1] if s in set(L(f))) for s in U}
+    for s in U:
+        if s not in A or s not in I:
+            out.append(f"| {s[7:15]} | {member[s]} | missing | | | | |")
+            continue
+        i, x = I[s], A[s]
+        if abs(i["score"] - x["score"]) < 1e-9 and i["spin"] == x["spin"] and i["kind"] == x["kind"]:
+            continue
+        f = lambda r: f"{r['kind'] or '-'} / {r['spin'] or '-'}" + (f" ({r['t_spin']:.1f})" if r["spin"] else "")  # noqa: E731
+        out.append(f"| {s[7:15]} | {member[s]} | {i['score']:.3f} | {x['score']:.3f} | {f(i)} | {f(x)} | {x['t_end']:.1f} |")
+    out.append("")
+    out.append(f"VERDICT {a.label}: L1 {'pass' if l1 else 'FAIL'}, L2 {'pass' if l2 else 'FAIL'}, L3 {'pass' if l3 else 'FAIL'}")
+    open(a.md, "w").write("\n".join(out) + "\n")
+    print("\n".join(out[:12] + out[-1:]))
+
+
+if __name__ == "__main__":
+    main()

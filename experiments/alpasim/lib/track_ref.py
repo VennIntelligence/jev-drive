@@ -34,6 +34,15 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    made the receding-horizon reference lag every turn: run 1 of results/spin_fix.md). The MPC then sees a
                    reference whose steering is bounded by these physical limits at every speed (at 30 m/s and ALAT 7: 0.022 rad; a spin command is 0.2-1.1 rad).
   JEV_TRACK_CFG    overrides, e.g. "alat=4,amin=-5,jlat=5" (names: the module constants in lower case).
+  JEV_TRACK=v9     gate + the handoff guard (HAND = 1; plans/2026-10-15-spin-v9-prereg.md in experiments/route_follow): while the session is
+                   younger than H_T s (first `drive` call = 0; AlpaSim's force-GT ends at 1.7 s, so H_T 2.7 covers the first 10 policy
+                   decisions) and the car is at least H_V m/s fast, the reference is re-timed along the plan's own path from the car's
+                   speed with the deceleration bounded by H_AMIN instead of AMIN, unless the lead limit (serve_fix JEV_LEAD) is cutting the
+                   served speed (then AMIN stays); the lateral side is v8's (gate + PP: the curvature-capped full reference where the plan
+                   or the arc onto it is beyond the cap), or with H_FULL = 1 the full reference on every guarded call. Why (Amendment 1 of the prereg):
+                   at the handoff the fed speed is the log's, a policy that wants to be slower plans 7-12 m/s below it, JEV_VCONT's
+                   1 s blend turns that into a 7-12 m/s^2 deceleration demand, at the MPC's -9 bound, and the MPC loses the distance by
+                   steering (APP1X-L18-s0: 29 / 29 handoff spins at a gap >= 7 m/s, onset 0.1-0.2 s after the handoff). The path is never changed.
   TILT             (any mode on) anchor guard, see anchor(): AlpaSim's physics can put the ego on a tilted pose (a 2 m jump and 40-70 deg of
                    roll / pitch at a ground-mesh defect: d8bfaaf2 18.3 s, 1e8e939e 18.0 s); the driver's yaw from the full quaternion then
                    differs from the controller's planar yaw by 0.8-3 rad and the reference, straight in the rig frame, is handed over rotated.
@@ -48,10 +57,11 @@ import os
 
 import numpy as np
 
-MODE = os.environ.get("JEV_TRACK", "0") or "0"
+NAME = os.environ.get("JEV_TRACK", "0") or "0"
+if NAME not in ("0", "time", "curv", "gate", "full", "v9"):
+    raise ValueError(f"JEV_TRACK={NAME!r}: expected time | curv | gate | full | v9 | 0")
+MODE = "gate" if NAME == "v9" else NAME
 ON = MODE in ("time", "curv", "gate", "full")
-if MODE not in ("0", "time", "curv", "gate", "full"):
-    raise ValueError(f"JEV_TRACK={MODE!r}: expected time | curv | gate | full | 0")
 
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
 JLON = 10.0                     # m/s^3, its jerk, starting from the ego's measured acceleration: a plan whose speed flickers between
@@ -77,12 +87,15 @@ V_DROP = 2.0                     # m/s^2: the curvature cap uses max(v, v0 - V_D
 TAU_LAT, D_MIN, ZETA = 1.0, 4.0, 0.9
 V_MIN = 1.0                     # m/s, floor of v in the curvature limits
 DT_SIM, T_END, DT_OUT = 0.05, 4.0, 0.1
+HAND = 1.0 if NAME == "v9" else 0.0  # gate: the v9 handoff guard (JEV_TRACK=v9), 0 = v8
+H_T, H_V, H_AMIN = 2.7, 5.0, -2.5   # s since the session's first call, m/s, m/s^2 (see the module docstring)
+H_FULL = 0.0                        # guard: 0 = v8's gate (curv, full where the gate / PP check opens) with H_AMIN, 1 = always full
 for _kv in filter(None, (os.environ.get("JEV_TRACK_CFG", "") or "").split(",")):
     _k, _v = _kv.split("=")
-    if _k.upper() not in globals() or _k.upper() in ("MODE", "ON"):
+    if _k.upper() not in globals() or _k.upper() in ("MODE", "ON", "NAME"):
         raise ValueError(f"JEV_TRACK_CFG: unknown key {_k}")
     globals()[_k.upper()] = float(_v)
-SUFFIX = f"-track{MODE}" if ON else ""
+SUFFIX = f"-track{NAME}" if ON else ""
 
 
 class Path:
@@ -125,11 +138,23 @@ def speeds(poses):
     return np.hypot(*np.diff(p, axis=0).T) / 0.5
 
 
-def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
+def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, t_s: float | None = None, lead: bool = False, **kw):
     """Plan (8, 3) rig frame, ego speed, yaw rate (logged only), acceleration -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
-    override the environment's configuration (offline replays)."""
+    override the environment's configuration (offline replays). t_s (s since the session's first call) and lead (the lead limit cuts the
+    served speed) are read by the v9 handoff guard only."""
     mode = mode or MODE
     if mode == "gate":
+        if kw.get("hand", HAND) > 0 and t_s is not None and t_s < kw.get("h_t", H_T) and v0 >= kw.get("h_v", H_V):    # v9 handoff guard
+            hk = {k: x for k, x in kw.items() if k not in ("hand", "h_t", "h_v", "h_amin", "h_full")}
+            if not lead:
+                hk["amin"] = kw.get("h_amin", H_AMIN)
+            if kw.get("h_full", H_FULL) > 0:
+                ref, info = build(poses, v0, wz, "curv", a0, **hk)
+                ref, fi = build(poses, v0, wz, "full", a0, **hk)
+                info = {**fi, "mode": "gate", "open": 1, "gate": info["gate"], **({"pp": info["pp"]} if "pp" in info else {})}
+            else:
+                ref, info = build(poses, v0, wz, "gate", a0, **hk)
+            return ref, {**info, "hand": 1, "lead": int(lead), "t_s": round(float(t_s), 2)}
         ref, info = build(poses, v0, wz, "curv", a0, **kw)
         if info["gate"] <= kw.get("gate", GATE):
             return ref, {**info, "mode": "gate", "open": 0}
