@@ -2,7 +2,7 @@
 
 status: closed
 decisions: 246 (inputs: 144, 148, 172, 204, 207, 240, 243)
-index: Flow-matching trajectory head vs the same head as a regression on SH30 features: off-road on turns -5 pp but EPDMS -1.1, not a candidate; closed
+index: Flow-matching trajectory head vs the same head as a regression on SH30 features: off-road on turns -5 pp but EPDMS -1.1, not a candidate; closed loop held 460 (2026-10-15): flow head 0.5 / 24 turns vs twin 11, zeros +110; closed
 
 **Question.** With everything else as the SH30 recipe (frozen Cinque encoder), does a flow-matching trajectory head in place of the regressed plan lower the off-road failures of navtest turns above 45 deg?
 
