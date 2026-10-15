@@ -30,7 +30,15 @@ RSG-L18 recipe, 60 steps, old code = the prereg commit 6a2fdac6 (before any trai
   after h): 361 rows / 38 units / 13 logs: 38 rows at k = h (the policy's exact state), 323 at k > h (expert-driven states the policy is fed); D2 185, D3 176.
   Dev logs (crc32 rule) hold 115 rows / 12 units / 3 logs; 246 rows / 26 units train. Pool on1_RCVR0 = S rows + 246 R rows (both), on-k 16 (13 + 3), per-log cap 0.10
   (10 logs: the cap makes the R draw uniform over logs).
-- Fast approaches (pool on1_RCVfast): built by the rollout sub-lane; not in the L pilots or the L full round (see below).
+- **Fast approaches** (pool on1_RCVfast, `rf_recov_roll.sh fast`, results/recov_roll/): JEV_PERTURB g 1, arc scale s 1.15 / 1.20 for 2 decisions (s 1.10 gave only +19 %
+  in the smoke and was dropped), at the decision k >= 2 where the policy is 40-60 m (else 30-70, else 20-30 m, tagged) before a qualifying stop line (84 of the 85
+  inventory scenes) or a strict-turn entry. The 64 train64 turn scenes could not be used (their entry is 2-28 m ahead already at decision 0); 64 other onpol-train
+  turn scenes with the entry 40-60 m ahead were taken instead. Speed at the end of the push window vs the unpushed policy at the same decision: L115 stop 7.25 vs
+  5.66 m/s (x 1.28), turn 7.78 vs 6.10 (x 1.28); L120 stop 7.80 vs 5.66 (x 1.38), turn 8.32 vs 6.10 (x 1.37). The push mostly wears off before the line (speed at the
+  line 3.6-3.7 vs 3.5-3.7 m/s; at turn entries +0.5 m/s). 6 498 rows (L115 3 261, L120 3 237; stop 3 905, turn 2 593; dev 1 366); envelope-labelled 4 352 rows /
+  142 scenes (stop 2 302 train + 163 dev, turn 1 334 + 94, lead 365, free 46); stop-line rows at >= 6 m/s 709 (on1_L18RSG: 229), max 13.1 m/s; served plans violate
+  the stop bound on 33 % of stop rows (0.39 m/s mean excess). Pool on1_RCVLF = on1_RCVL's rows + 4 047 train-log fast rows (1 draw / batch).
+  **LF pilot fails** (dev ADE 0.5383 against 0.538, free ratio flat): not launched.
 
 ## Pilot gates (1 000 steps, seed 0, vs RSG-L18-s0)
 
@@ -48,6 +56,7 @@ held-out-log R rows drop >= 20 %. Dev rows: stop 127 (7 logs), turn 155 (9), lea
 | RCVLP1u (W 1, upper only; diagnostic) | 0.5364 | +0.0238 | True | -0.90 | **+0.63** [+0.44, +0.80] | 0.129 -> 0.075 (-42 %) | 0.0124 -> 0.0033, CI hi -0.0025 | 0.049 -> 0.029 (-41 %) | 0.615 -> 0.710 | 0.961 -> 0.936, -0.029 [-0.038, -0.021] | - | fail: free (by construction) |
 | RCVLP05l01 (upper 0.5, lower 0.1) | 0.5316 | +0.0257 | True | -0.28 | +0.18 [+0.04, +0.31] | 0.129 -> 0.110 (-14 %) | 0.0124 -> 0.0063, CI hi -0.0018 | 0.049 -> 0.042 (-13 %) | 0.615 -> 0.496 | 0.961 -> 0.980, +0.030 [+0.023, +0.037] | - | fail: stop |
 | **RCVLP1l01 (upper 1, lower 0.1)** | 0.5335 | +0.0251 | True | -0.42 | **+0.42** [+0.25, +0.56] | 0.129 -> 0.097 (-25 %) | 0.0124 -> 0.0043, CI hi -0.0023 | 0.049 -> 0.036 (-25 %) | 0.615 -> 0.522 | 0.961 -> 0.973, +0.020 [+0.016, +0.026] | - | **PASS** |
+| RCVLFP1l01 (LF: L + fast rows, upper 1, lower 0.1) | 0.5383 | +0.0247 | True | -0.69 | +0.71 [+0.51, +0.87] | 0.129 -> 0.059 (-54 %) | 0.0124 -> 0.0047, CI hi -0.0020 | 0.049 -> 0.029 (-39 %) | 0.615 -> 0.603 | 0.961 -> 0.955, -0.001 [-0.005, +0.005] | - | fail: dev ADE (0.5383), free |
 | RCVR0P (R0, 3 rows / batch) | 0.5285 | +0.0238 | True | +0.40 | +0.34 [+0.15, +0.51] | - | - | - | - | - | 1.548 -> 1.386 (-10.5 %) | fail: R imitation |
 | RCVR0Pk6 (R0, 6 rows / batch) | 0.5310 | +0.0167 | False | +0.99 | +0.43 [+0.16, +0.68] | - | - | - | - | - | 1.548 -> 1.305 (-15.7 %) | fail: R imitation, rely |
 
