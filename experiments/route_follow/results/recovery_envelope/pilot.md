@@ -1,0 +1,77 @@
+# RECOVERY-ENVELOPE pilots (2026-10-16)
+
+Prereg: [plans/2026-10-16-recovery-envelope-prereg.md](../../plans/2026-10-16-recovery-envelope-prereg.md) (Amendments 1-3). Code: `scripts/rf_recov.{py,sh}`,
+`experiments/onpol_nuplan/lib/on_envelope.py`, `rm_train.py --env-lam / --env-lo-scale / --on-lon-all`. Box run dir `$DATA_DIR/runs/route_follow/recovery_envelope/`
+(`gate/<tag>.json` per pilot, `lab_L18RSG.{npz,json}`, `pack_*.json`, `flags_*.txt`, `fwd/`, `gates.json`, `jobs.txt`). Per-pilot JSON copies: `gate_<tag>.json` here (box repo).
+
+## Bit identity (gate 1; `gates.json`)
+
+RSG-L18 recipe, 60 steps, old code = the prereg commit 6a2fdac6 (before any trainer change):
+
+| check | scalars compared | max abs diff (scalars / weights) | on_hash_60 | identical |
+|:--|--:|:--|:--|:--|
+| G0 every new flag off, old vs new code | 89 | 0 / 0 | ea8cacc3e451c577 = RSG-L18-s0's stored hash | yes |
+| G0 new code twice | 89 | 0 / 0 | same | yes |
+| G2 `--env-lam 1` on on1_RCVL: `--on-mode self` vs `--on-mode mixed --on-lon-all` (every row self) | 38 (loss / dev) | 0 / 0 | e478c6a76d3d5294 both | yes |
+
+`--env-lo-scale 1` adds no operation (the multiply is skipped).
+
+## Rows
+
+- **L envelope rows** (`rf_recov.py label`, RSG-L18-s0's own pool on1_L18RSG, 17 474 rows): labelled 11 430 rows / 927 scenes / 96 logs. Train-log rows by class
+  (first reason wins: stop > turn > lead > free): stop 1 344 (dev 127), turn 1 988 (155), lead 4 739 (470), free 4 422 (929). Stop-line rows: 1 471 rows / 130 scenes in all,
+  fed speed p50 2.9 / p90 6.7 / max 10.6 m/s; 718 rows at >= 3 m/s, 229 at >= 6 m/s (the inventory's 451 / 77 counted only the first eligible line within 40 m at the
+  decision; the envelope takes 0-60 m and both the human-stopped and red-throughout-4-s rule).
+- The policy's own served plans against the bounds (share of rows violating, mean excess): stop 10.5 % / 0.10 m/s, turn 14.5 % / 0.09, lead 6.3 % / 0.08 (time form,
+  Amendment 1; the registered any-time sweep: 90 % / 2.95 m/s, not trained on), free lower bound 54 % / 0.59 m/s short.
+- **Pool on1_RCVL** = on1_L18RB0 (17 429 S rows, self) + 9 980 train-log envelope rows (self, envelope.npz); on-k 20 = 13 S + 7 envelope rows per batch
+  (stop 1, turn 2, lead 2, free 2): `--on-weight env=stop:0.99754,env=turn:1.34879,env=lead:0.56581,env=free:0.60637`.
+- **R0 rows** (pool on1_RCVd316, built by `rf_recov_roll`: d316's D2 / D3 handovers re-run with frame dumps; units whose expert continuation completes with no zero
+  after h): 361 rows / 38 units / 13 logs: 38 rows at k = h (the policy's exact state), 323 at k > h (expert-driven states the policy is fed); D2 185, D3 176.
+  Dev logs (crc32 rule) hold 115 rows / 12 units / 3 logs; 246 rows / 26 units train. Pool on1_RCVR0 = S rows + 246 R rows (both), on-k 16 (13 + 3), per-log cap 0.10
+  (10 logs: the cap makes the R draw uniform over logs).
+- Fast approaches (pool on1_RCVfast): built by the rollout sub-lane; not in the L pilots or the L full round (see below).
+
+## Pilot gates (1 000 steps, seed 0, vs RSG-L18-s0)
+
+Lines: dev ADE <= 0.538; G-rely true; turning = equal-arc 4 s heading toward the turn, pilot - RSG mean >= -0.3 deg (Amendment 3; the 4 s heading is reported);
+L: stop-line excess drop >= 20 %, A-speed (turn-entry excess) CI high < 0, free-road plan / fed speed ratio CI low > 0; R: imitation ADE to the expert target on
+held-out-log R rows drop >= 20 %. Dev rows: stop 127 (7 logs), turn 155 (9), lead 470 (11), free 929 (15); turning rows: on1_L18RSGallheld decisions 0 / 1 within
+[entry - 40, entry + 10) m of a >= 45 deg turn, 276 rows / 139 scenes.
+
+| pilot | dev ADE | G-rely d_junction | G-rely | 4 s heading | equal-arc heading [CI] | stop excess (m/s) | A-speed | lead excess | free deficit | free ratio (median), diff [CI] | R imitation ADE | result |
+|:--|--:|:--|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|
+| RCVLP1 (W 1) | 0.5713 | +0.0027 | False | -0.20 | -0.09 [-0.29, +0.12] | 0.129 -> 0.103 (-20 %) | 0.0124 -> 0.0045, CI hi -0.0020 | 0.049 -> 0.063 (+30 %) | 0.615 -> 0.089 | 0.961 -> 1.060, +0.177 [+0.134, +0.227] | - | fail: dev ADE, rely |
+| RCVLP3 (W 3) | 0.5976 | -0.0073 | False | -0.50 | +0.17 [-0.11, +0.43] | 0.129 -> 0.089 (-31 %) | 0.0124 -> 0.0034, CI hi -0.0023 | 0.049 -> 0.059 (+21 %) | 0.615 -> 0.066 | 0.961 -> 1.076, +0.196 [+0.148, +0.253] | - | fail: dev ADE, rely |
+| RCVLP03 (W 0.3) | 0.5506 | +0.0145 | True | +0.05 | -0.26 [-0.43, -0.08] | 0.129 -> 0.123 (-4 %) | 0.0124 -> 0.0083, CI hi -0.0010 | 0.049 -> 0.060 (+24 %) | 0.615 -> 0.250 | 0.961 -> 1.022, +0.108 [+0.082, +0.138] | - | fail: dev ADE, stop |
+| RCVLP01 (W 0.1) | 0.5318 | +0.0227 | True | -0.19 | -0.38 [-0.54, -0.19] | 0.129 -> 0.133 (+3 %) | 0.0124 -> 0.0107, CI hi -0.0004 | 0.049 -> 0.056 (+15 %) | 0.615 -> 0.463 | 0.961 -> 0.988, +0.043 [+0.033, +0.054] | - | fail: turn, stop |
+| RCVLP1u (W 1, upper only; diagnostic) | 0.5364 | +0.0238 | True | -0.90 | **+0.63** [+0.44, +0.80] | 0.129 -> 0.075 (-42 %) | 0.0124 -> 0.0033, CI hi -0.0025 | 0.049 -> 0.029 (-41 %) | 0.615 -> 0.710 | 0.961 -> 0.936, -0.029 [-0.038, -0.021] | - | fail: free (by construction) |
+| RCVLP05l01 (upper 0.5, lower 0.1) | 0.5316 | +0.0257 | True | -0.28 | +0.18 [+0.04, +0.31] | 0.129 -> 0.110 (-14 %) | 0.0124 -> 0.0063, CI hi -0.0018 | 0.049 -> 0.042 (-13 %) | 0.615 -> 0.496 | 0.961 -> 0.980, +0.030 [+0.023, +0.037] | - | fail: stop |
+| **RCVLP1l01 (upper 1, lower 0.1)** | 0.5335 | +0.0251 | True | -0.42 | **+0.42** [+0.25, +0.56] | 0.129 -> 0.097 (-25 %) | 0.0124 -> 0.0043, CI hi -0.0023 | 0.049 -> 0.036 (-25 %) | 0.615 -> 0.522 | 0.961 -> 0.973, +0.020 [+0.016, +0.026] | - | **PASS** |
+| RCVR0P (R0, 3 rows / batch) | 0.5285 | +0.0238 | True | +0.40 | +0.34 [+0.15, +0.51] | - | - | - | - | - | 1.548 -> 1.386 (-10.5 %) | fail: R imitation |
+| RCVR0Pk6 (R0, 6 rows / batch) | 0.5310 | +0.0167 | False | +0.99 | +0.43 [+0.16, +0.68] | - | - | - | - | - | 1.548 -> 1.305 (-15.7 %) | fail: R imitation, rely |
+
+Turning instrument check (same offline read, pilot - RSG-L18-s0, 4 s / equal arc): APP1X-L18-s0 -1.70 / -1.64 [-2.16, -1.00] (the closed-loop read was -1.0 to -1.5;
+by bin -1.48 at 0-10 m and -3.05 at 10-20 m before the entry against -1.5 / -3.1 in decision 303 Amendment 5), APP0C-L18-s0 (W 0 control) -0.31 / -0.21,
+RSG-L18-s1 -0.12 / -0.11. The -0.3 deg line sits at the checkpoint-to-checkpoint spread. The 4 s heading falls mechanically when a plan slows before a turn
+(RCVLP1u: 4 s arc -0.84 m, 4 s heading -0.90, equal-arc +0.63), hence Amendment 3.
+
+Reading:
+- The envelope's harm sits in the free-road lower bound: at W >= 0.3 it pushes the plans faster (free ratio 0.96 -> 1.02-1.08) and costs dev ADE (0.551-0.598) and
+  route reliance; upper bounds alone at W 1 keep dev ADE (0.536) and G-rely and make the plan turn MORE per metre (+0.63 deg). Upper W 1 + lower W 0.1 passes every gate.
+- R0 learns the expert's recoveries on the training units but transfers weakly to the 3 held-out logs (-10.5 / -15.7 %); its plans turn more (+0.34 / +0.43 deg at equal
+  arc). 246 training rows from 26 units (10 logs) are thin; the all-scene rewind (decision 319) is the material R and RL wait for.
+
+## Decisions taken in this session (main session to check)
+
+- Amendment 1 (lead bound in time), Amendment 2 (dose extension W 0.3 / 0.1 + upper-only diagnostic), Amendment 3 (equal-arc turning read decisive; split upper /
+  lower weights; R dose k 6), each committed before the pilots it concerns. All three were made after seeing earlier pilots of this round.
+- **L launched** (`rf_recov.sh full L 1l0.1`, 01:06 CST): RCVL-L18-s{0,1}, 2 500 steps, `--env-lam 1 --env-lo-scale 0.1`, pool on1_RCVL (no fast-approach rows: the pushed
+  rows were not built when L passed; the user's instruction was to launch on pass). Then held 460 @18 (6 chunks / seed), public 1491 @10 (10 chunks / seed), PAI 281
+  seed 0 on the box (8 chunks; waits for a 118-scene download and the box RSG-L18-s0-gate reference read), extracts, report -> `RCVL/lines.md`.
+- **R0 stopped** (fails its imitation gate at both doses). **RL0 not piloted** (Amendment 3: RL0 combines L's weight with R's chosen dose; R has none).
+
+## Cost
+
+Pilots and gates: 14 training jobs (9 pilots x ~4.4 min + 5 gate smokes) 0.73 GPU job-h, 21 forward reads 0.16 job-h, 14 CPU jobs 0.09 h; ~19.6 GB per training job
+(about 0.2 card-h of VRAM-weighted card time). Wall 00:19-01:06 CST, mostly queueing behind the all-scene rewind.
