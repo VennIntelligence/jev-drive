@@ -98,3 +98,31 @@
   xp0 在 3 个场景里只完成 1 个（2 个 short）。9 s 片段对按 4.6 m/s 过弯的专家可能太短，这会压低 A 与 C 的完成率，与倒回本身无关。
 - 恢复的选项（待用户定）：(a) 把登记条件放宽为「h 前与 identity 的差在 identity 自身 run-to-run 散布内」，对照取同 launch 的 identity 重放；
   (b) 让渲染确定（模拟器 / 渲染器侧改动，超出本任务）；(c) 对每个单元在同一 launch 里同时跑 id 与 D（每场景多 rollout），仍受渲染器影响。
+
+## 补记 2（用户决定，在任何新读数之前，2026-10-15 晚）
+
+用户选 (a)，并把本读数的时长加长。以下改动只对本读数，held read 不变。
+
+1. **交接检查改为「在 identity 自身的 run-to-run 散布内」。** 对照 = 同 stage 的 `id` launch（RSG-L18-s0 单独开，同长度）。D launch 跑 id chunk
+   自己的场景表，没有交接的场景重放 identity，给出散布。登记容差取 smoke 2 观察到的量级：h 前 served plan 最大差 ≤ 0.15 m、控制器轨迹
+   最大差 ≤ 5 cm、|v(h) − v_id(h)| ≤ 0.05 m/s。每个单元报实际值（CSV 的 pre_plan_maxdiff / pre_track_maxdiff / dv_h / within_tol）。
+   超出容差的单元照常读，但单列，不进主表的分子分母之外的任何判断；超出的比例 > 20 % 时停下报告。
+2. **本读数所有 session（id、idB、xp0、D1–D3）跑 30 个决策（15 s）而不是 18。** 做法照 rf_lateturn_long.sh：`alpasim_long/build_cache.py --after 280
+   --scenes <64 个场景>` 建 trajdata 缓存 `$DATA_DIR/datasets/alpasim_nuplan_long/after280_rw`（num_timesteps_after 按 20 Hz 计：160 → 18 个决策、
+   190 → 21、380 → 40，所以 280 → 30），run.sh sh30 + c0b_chain OVERRIDES + 这个缓存（rm_chain 的 sim 只换缓存与窗口；sh30_driver 不需要改，
+   runtime 的 n_sim_steps 200 会被场景长度截断）。
+   - 日志：span.csv 里 64 个场景有 60 个 log_after_s ≥ 14 s；其余 4 个在日志结束处被 runtime 截断（≥ 18 个决策），照跑并在表里标出实际决策数
+     （与用户「保持 18」的说法略有不同：截断点由日志决定，在 18 到 30 之间；不另开 18 决策的 launch）。
+   - **渲染覆盖**：MTGS 重建的相机覆盖 video_after_s 在这 64 个场景上中位 9.6 s（6.4–11.1 s，只有 1 个 ≥ 14 s），即大约第 20 个决策之后渲染器画的是
+     重建之外的视野（rf_lateturn_long 已见：不报错，但画面是混杂因素）。h ≤ 15，交接前大都在覆盖内；**专家只读地图，不读画面**，所以专家的读数
+     不受影响；受影响的是 identity（策略对照）在约 10 s 之后的部分。表里报覆盖时长，判词以专家为准，策略列只作参照。
+   - turn、entry / exit 与完成规则不变（rf_follow，RF_K_END 不设：转弯仍在第 17 个决策前日志走过的路段上定义），完成可以发生在第 18–29 个决策；
+     每个 rollout 用它自己 run 的 generated config（after280 缓存）重建路线。
+3. **单元的失败时刻取 18 决策的存档 RSG rollout**（训练池 `onpol_long/roll/RSG-L18-s0`，follow 表那一次）：层（A：event 23 / off 9 / short 11；B：21）、
+   k_ref（event = k_z，off = 第一次 > 2.5 m，short = 17，B = 存档 10 Hz 轨迹上第一次 d293 违规）都在存档 rollout 上算一次（`rf_rewind.sh train64 ref`），
+   所有 stage 共用。新跑的 30 决策 identity 只作对照，不重新定义单元。策略列因此不再按构造为 0 / 1（例如 short 单元在 15 s 内可能完成），配对差
+   expert − policy 现在有信息，按日志聚类 bootstrap 报。
+4. **short 是单独的结局**：每张表按 completed / event / off / short 四列报，专家与策略都是；从不并入失败。
+
+分阶段不变：smoke 同 3 个单元（4109b79d、537935a8、bba5d587，SMOKE=1 加 idB）→ 10 个 → 其余 54 个 → 64 个合并读数。打包同前（alpasim-read4 history，
+--vram 20，每卡 4 个），优先级 6（低于其他 lane）。代码：`rf_rewind.sh train64 cache | ref | stage`，`rf_rewind.py n-tfail`（现在读存档 rollout）、`n-read --ref`、`n-table`。
