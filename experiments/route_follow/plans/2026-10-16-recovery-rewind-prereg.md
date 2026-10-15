@@ -93,3 +93,10 @@ PAI 281 的 36 个严格转弯的专家读数在 Tokyo 跑（`research/next-roun
 - 由此事先追加（探索性，不改登记线和判词）：按专家结局（completed / event / off / short_rear / short_slow）拆开每个 Δ 的计数；
   「未被追尾时的完成率」= completed / (单元数 − short_rear) 单列，标为探索性。
 - 盒上 5 个缺失 usdz 已从 hf-mirror 下到（fetch.log 5 个 ok），36 个场景全部可跑。分阶段：10 个场景（17:10 提交），检查后再提交其余 26 个 + collect。
+
+## 补记 2（只改装箱，不改协议，2026-10-15 17:50 盒时间）
+
+- 主会话指出 rw-* 每个 job 被池按 27.1 GB 预订、卡上只放 2–3 个。池记录的已完成 job 的 VRAM 峰值是 19.3 GB（phase B 三个 launch 并排时），
+  所以把剩下排队的 5 个场景（e848c843、ea468790、eaba3f6a、f9e361aa、fd01e9ab）取消后按 `--vram 20`、独立 history key `alpasim-rw` 重新提交
+  （rf_rewind.sh 新开关 RW_VRAM / RW_HIST）；没按主会话建议的 15 GB，因为实测峰值 19.3 GB，15 GB 会让同卡多个 phase B 叠加时超出显存。
+  服务代码（worktree `run/code`，5a8beed6）、单元、Δ、优先级都不变；collect 重新提交在全部 14 个在跑 / 排队 job 之后。
