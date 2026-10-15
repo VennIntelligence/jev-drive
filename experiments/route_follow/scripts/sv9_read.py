@@ -17,6 +17,8 @@ from sf_detect import detect
 def events(f, ts0):
     """First step (s, controller clock + 0.1) with offroad / collision_any / left_corridor_laterally > 0, None when it never fires."""
     import pyarrow.parquet as pq
+    if not os.path.exists(f):
+        return dict(offroad=None, collision_any=None, left_corridor_laterally=None)
     m = pq.read_table(f, columns=["name", "timestamps_us", "values"]).to_pydict()
     out = {}
     for nm in ("offroad", "collision_any", "left_corridor_laterally"):

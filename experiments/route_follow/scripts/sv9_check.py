@@ -7,7 +7,10 @@
                                row's speed / acceleration, t_s = (now - first call) s, lead = the logged lead cut > 0): the reference's speed
                                drop over the MPC's tracked window (1 .. 2 s) and its 2 s arc deficit against 2 x v0, spin vs no-spin rollouts
   sv9_check.py plans --a <root> --b <root>   served poses of every (scene, k) both roots logged: identical count and max |difference|
-                               (the flag-off smoke against the stored identity), and the guard records of b (track.hand)"""
+                               (the flag-off smoke against the stored identity), and the guard records of b (track.hand)
+  sv9_check.py screen --b <v9 root> --scenes <list>   per rollout: guard calls whose v9 reference differs from v8's (> 1 cm at 0.5 .. 4 s,
+                               rebuilt from the logged plan, the driver's v0 and the controller row's acceleration; the v9 rebuild is checked
+                               against the logged reference). A rollout with no such call drove v8's closed loop."""
 import argparse, os, sys
 import numpy as np
 here = os.path.dirname(os.path.abspath(__file__))
@@ -103,13 +106,42 @@ def plans(a):
     return 0 if ks and max(d) == 0 else 1
 
 
+def screen(a):
+    from sv9_diag import rollouts
+    keep = set(open(a.scenes).read().split())
+    D = rollouts(a.b, keep)
+    print("scene | guard calls | v9 != v8 | rebuild mismatch | first differing k (t_s, v0, plan drop m/s)")
+    for sc, d in sorted(D.items()):
+        g, R = d["rows"], d["recs"]
+        n = nd = mis = 0
+        first = None
+        for k in sorted(R):
+            r = R[k]
+            tr = r.get("track") or {}
+            if not tr.get("hand"):
+                continue
+            n += 1
+            i = int(np.abs(g["timestamp_us"] - r["t0"]).argmin())
+            P, a0 = np.asarray(r["poses"], float), float(g["acceleration"][i])
+            r9, _ = TR.build(P, tr["v0"], 0.0, mode="gate", a0=a0, t_s=tr["t_s"], lead=bool(tr["lead"]), hand=1)
+            r8, _ = TR.build(P, tr["v0"], 0.0, mode="gate", a0=a0)
+            mis += int(np.abs(TR.poses8(r9) - np.asarray(r["poses_track"])).max() > 0.02)
+            if np.abs(TR.poses8(r9) - TR.poses8(r8)).max() > 0.01:
+                nd += 1
+                if first is None:
+                    first = (k, tr["t_s"], tr["v0"], round(tr["v0"] - float(np.hypot(*P[2, :2] - P[1, :2]) / 0.5), 1))
+        print(f"{sc[7:15]} | {n} | {nd} | {mis} | {first}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("same", "replay", "plans"))
+    ap.add_argument("cmd", choices=("same", "replay", "plans", "screen"))
     ap.add_argument("--a")
     ap.add_argument("--b")
     ap.add_argument("--run", nargs="+")
     ap.add_argument("--scenes")
     ap.add_argument("--md")
     a = ap.parse_args()
-    sys.exit(1 if same() else 0) if a.cmd == "same" else sys.exit(plans(a)) if a.cmd == "plans" else replay(a)
+    if a.cmd == "same":
+        sys.exit(1 if same() else 0)
+    sys.exit(plans(a)) if a.cmd == "plans" else screen(a) if a.cmd == "screen" else replay(a)
