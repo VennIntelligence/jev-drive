@@ -1,0 +1,1123 @@
+{
+ "name": "PAITVn",
+ "scenes_asked": 160,
+ "scenes_with_rows": 80,
+ "scenes_missing": [
+  "clipgt-04749bb9-9b37-495b-bed0-77f0e33ac7da",
+  "clipgt-05f35348-9de0-4f68-ac65-f31316dbb59e",
+  "clipgt-071d15c4-a179-4311-b724-f7de1d45ab65",
+  "clipgt-0810968d-325e-4478-8d07-cb874aadfc75",
+  "clipgt-0b54c8d4-8119-431e-9ae8-5c70f5e64716",
+  "clipgt-0e3771c0-04ed-4002-bce1-993fa746c8f3",
+  "clipgt-145bf9cc-0547-4e74-9903-2b6bac686245",
+  "clipgt-15fd88d6-af76-41ea-9a63-b7c49b39ff11",
+  "clipgt-195b19d3-30a4-4449-990e-43932e3597c5",
+  "clipgt-1d68b79f-8459-456f-856d-316ec5572242",
+  "clipgt-1d6e30bc-00d2-4c1f-b7e5-647719481dfc",
+  "clipgt-1d879259-ba18-435b-8fc5-0234be52364e",
+  "clipgt-1deba1be-55e2-4f85-8669-d7e4703c6a29",
+  "clipgt-1fcacc17-2f22-437e-84f3-a8451431f39b",
+  "clipgt-200c6367-6372-437d-949b-620851624628",
+  "clipgt-27e14d22-f753-4b42-88ee-70d886622908",
+  "clipgt-2837a7e8-cccd-4e78-9b3c-2f7582592fa2",
+  "clipgt-2d2673a0-cc80-4ba5-ae72-0588836ed07e",
+  "clipgt-2ffb6b0f-5239-46a4-ab30-6d2906f22f65",
+  "clipgt-32e61f41-164d-4eb9-ae60-4ed04edf6f61",
+  "clipgt-395b7b6c-4e8e-4b99-b268-87113fec9b2a",
+  "clipgt-39973d65-0c1a-4401-91a0-f0c389e15688",
+  "clipgt-3a48e906-2733-4fc9-b687-6b2ed33defec",
+  "clipgt-3a9824bc-0e4e-491d-b848-81babda68457",
+  "clipgt-3d1d39e6-7845-482e-8f96-8c8ac23bda45",
+  "clipgt-41424eff-22b8-4b7d-8cc9-3197c3dc2825",
+  "clipgt-44fdaa0f-373d-439c-bcbb-4d748bcb5bda",
+  "clipgt-48a3f74a-4474-4810-8f89-f7eb58b3dfc9",
+  "clipgt-49513907-cf1c-4e07-9f92-36ba0c1561b7",
+  "clipgt-4d659a21-e7dc-44df-82d8-6f3c87ade1f3",
+  "clipgt-4ec84bcf-76d9-41bb-93e2-ffa5147f94c0",
+  "clipgt-51e7f59e-a539-4c67-9c10-6c236b72487f",
+  "clipgt-577a5904-27d0-4545-8f01-ab589cc197b6",
+  "clipgt-58814d76-1ced-4a15-9fdd-151111a76535",
+  "clipgt-59e085d7-9047-4300-8228-33a618db27f1",
+  "clipgt-5cdc4c2f-7c2e-45bf-9800-da290dec829e",
+  "clipgt-601c88bb-a638-4b9a-9274-0020e5d92dd4",
+  "clipgt-623d5516-5e45-44f8-9a49-841f5cbc2117",
+  "clipgt-637fd51a-7f9f-4f13-bc3c-1fd1540c4a50",
+  "clipgt-6601fe71-5a78-4881-ba7e-eee44cdf65d2",
+  "clipgt-69fc21e8-6faf-487b-806f-1d24654805ce",
+  "clipgt-6dd0b533-cb90-43c4-838e-518e84487751",
+  "clipgt-6ea7f154-7b37-4d23-bae7-3023bddf33d8",
+  "clipgt-75c23f07-026b-4382-9b39-6e806bb16730",
+  "clipgt-780ece49-d8cd-421c-93e4-b2bce57d27a0",
+  "clipgt-7a824ffa-5404-478b-8f20-667d342cbc69",
+  "clipgt-81cbd9fd-6f78-486f-8408-8b64478e2932",
+  "clipgt-8457182d-fe0e-48bb-9411-6638b358ee92",
+  "clipgt-8ecf02e3-860b-4ad1-ab9a-8ce031d73c6f",
+  "clipgt-8f9ca4ab-5534-4c9c-8a6b-aa8f745bc7af",
+  "clipgt-91f9b960-2988-4daf-ab6c-d43e6730a81e",
+  "clipgt-94877a4a-cbf1-4353-ae4a-f4453def52cc",
+  "clipgt-96cc7239-9216-4579-aa86-40f9f36280ea",
+  "clipgt-9b21431c-c5e1-47db-ac43-be07c952ae31",
+  "clipgt-9d735456-670a-4837-b733-d80f1cd576d8",
+  "clipgt-9e3fd12d-e7af-41f5-881f-0f85ef927f23",
+  "clipgt-9ea70552-6dcb-4ee8-a368-9a906a333f6e",
+  "clipgt-a28b6685-a2c7-4c9a-a257-3d992516a2f7",
+  "clipgt-a99edad2-4ee8-44c5-9acc-509359bfcb0f",
+  "clipgt-ac030b40-1701-4d26-b7ea-5017162e2758",
+  "clipgt-afa37955-fae8-4741-bb91-649ca9e3eb5d",
+  "clipgt-b0fa4732-6057-4e68-bb92-1f346bb5143b",
+  "clipgt-b867a504-9dce-4666-9405-62aec7fcfb09",
+  "clipgt-b988494a-2a9a-4791-8613-679c8e506007",
+  "clipgt-bb9b4a37-608e-4c65-b0ab-c61725f3c24c",
+  "clipgt-bd0d494f-fd3c-4d53-a4b2-7e7f3519b3f9",
+  "clipgt-c5bc66c4-8249-4614-a93c-c03936cb9b54",
+  "clipgt-cd0da2b3-a896-4117-af9c-c0d229e6f5f9",
+  "clipgt-cda8a096-0982-4a91-b721-624dac7c83b8",
+  "clipgt-d7328fed-a0ce-452c-a966-1b010d09e2dd",
+  "clipgt-d96fcf8e-378a-474c-863d-57dd26412e9a",
+  "clipgt-d9b5545a-ec4d-4bfd-8f76-612d0d74b4f1",
+  "clipgt-d9d390a3-8527-4918-8097-42ca325d835a",
+  "clipgt-de620c90-3a40-49a9-8c81-7b3c117fd847",
+  "clipgt-e2781af3-c9a5-4062-8b60-e33799288b82",
+  "clipgt-e6fc5ab4-58ce-4e9c-903c-3c12930becd7",
+  "clipgt-eaf4352c-a194-4b09-a5a1-144c6a0d7dbc",
+  "clipgt-eb7e7674-8022-454e-b957-e7757217b078",
+  "clipgt-fadc73da-130e-42c1-81b9-9e74405c39f3",
+  "clipgt-fdfb5073-c9e6-4da2-93b7-988273da3807"
+ ],
+ "rows": 2729,
+ "scenes": 28,
+ "turns": 80,
+ "rows_by_part": {
+  "train160": 2729,
+  "hard_train": 0
+ },
+ "rows_by_topo": {
+  "straight": 2729
+ },
+ "turns_by_topo": {
+  "straight": 0
+ },
+ "rows_by_d_entry": {
+  "> 40 m": 0,
+  "40 .. 20": 0,
+  "20 .. 0": 0,
+  "in junction (<= 0)": 0
+ },
+ "human_entry_speed_median": {
+  "v_log_40": NaN,
+  "v_log_20": NaN,
+  "v_log_0": NaN
+ },
+ "G_route": {
+  "rows_with_route0": 2729,
+  "share_le_005": 1.0,
+  "max": 0.02803066186606884,
+  "feat_ok": 1.0,
+  "pass": true
+ },
+ "G_road": {
+  "demo_cross_share": 0.0,
+  "log_cross_share": 0.0,
+  "rows_with_edges": 2729,
+  "pass": true
+ },
+ "G_speed": {
+  "within_10pct": 1.0,
+  "median_ratio": 1.000000008197692,
+  "stopped_rows": 0,
+  "v0_median": 23.054683685302734,
+  "demo_v_mean_median": 23.201226453844324,
+  "v0_ge_12_share": 1.0,
+  "pass": true
+ },
+ "tracking": {
+  "e0_abs_p95": 0.04674796387553215,
+  "ds0_abs_p95": 0.15140074491500854
+ },
+ "per_scene": {
+  "clipgt-0026708c-a386-4dd2-82b1-286da952c68f": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 131,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-0026d903-764d-4bd0-96f5-7a6a3a6838e4": {
+   "turns": [],
+   "used": [
+    {
+     "good": 148,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-0bd5202f-5f7c-4748-b78d-20d1f921b4db": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-0d10d2e3-29ef-40cb-b612-94021d98245c": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-0ee89cab-e4a5-4010-b6e7-dd3cfd1f73f2": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-0fd06bc3-1899-4b45-9278-c5c018b3968d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-13fb89b9-2196-4545-abb4-c3029d89fcbe": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-1594e89e-5d0a-48d6-8d2b-5a5c287d451c": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-17ad7fea-5672-4a12-8578-a3b3993b1027": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 154,
+     "turn_ok": 154,
+     "rows": 154
+    }
+   ],
+   "rows": 154
+  },
+  "clipgt-1a7b81b8-9bca-4385-a591-64f74eb59db2": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-1c7e2423-77d7-40b6-bf26-f36fb8ebcf52": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-1e0f1cb2-0c16-4f65-b7f4-3858337ca7da": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-1e884c53-d49b-4410-aeb4-65f5da23cf53": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 29,
+     "turn_ok": 29,
+     "rows": 29
+    }
+   ],
+   "rows": 29
+  },
+  "clipgt-213dfdac-3596-472d-8dc9-aaef6d0a7b92": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-21626256-03c1-4b4a-857e-09b20eb8f636": {
+   "turns": [],
+   "used": [
+    {
+     "good": 102,
+     "fast": 20,
+     "turn_ok": 20,
+     "rows": 20
+    }
+   ],
+   "rows": 20
+  },
+  "clipgt-232d240e-5ccb-41ce-9954-97c336fa45af": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 17,
+     "turn_ok": 16,
+     "rows": 16
+    }
+   ],
+   "rows": 16
+  },
+  "clipgt-24535266-2711-4c57-a98d-bfc024a98782": {
+   "turns": [],
+   "used": [
+    {
+     "good": 20,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-24a50fcc-08c6-493e-b1a6-70c7e95688dd": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-2c84ac16-0b90-4416-b7c2-553b2f331b7f": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-2e76251a-fb78-44a3-9501-bdf5d7447a3b": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-3057d8e3-04f2-4c81-97a0-ee7fd5c7ed0d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 28,
+     "turn_ok": 28,
+     "rows": 28
+    }
+   ],
+   "rows": 28
+  },
+  "clipgt-355045f7-e540-4690-bce8-4f4a8d0a87ee": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 15,
+     "turn_ok": 15,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-38d78b19-03c5-4918-b21b-e1abc4547896": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-4530d50a-8c39-4929-b55d-ea657d5e863d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-46d68e21-a7f2-45e8-9b2d-147bee3a058b": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-4726de45-34cc-465a-8167-281c37faecbf": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-49597f01-1461-4084-9447-95741690d9d8": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 159,
+     "turn_ok": 129,
+     "rows": 105
+    }
+   ],
+   "rows": 105
+  },
+  "clipgt-4f779a92-af3f-4951-a09e-18fa15cbbf97": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 159,
+     "turn_ok": 144,
+     "rows": 31
+    }
+   ],
+   "rows": 31
+  },
+  "clipgt-5a38c811-1e28-4a67-9239-54ba2b695950": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-5ab1d9cb-778a-46d5-b89f-720b6f185457": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-5d794411-c055-43a0-8f33-0118cbb902e5": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-5e7775f9-b58f-425a-b8fb-31c41317c991": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-605bf77a-3998-4f01-aabb-0a3c7f5eaaed": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-61ef954c-3162-48c0-a5b8-e2b1ff479358": {
+   "turns": [],
+   "used": [
+    {
+     "good": 156,
+     "fast": 70,
+     "turn_ok": 70,
+     "rows": 46
+    }
+   ],
+   "rows": 46
+  },
+  "clipgt-630a2f71-b5de-4661-be26-9592bbe8f727": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 122,
+     "turn_ok": 122,
+     "rows": 43
+    }
+   ],
+   "rows": 43
+  },
+  "clipgt-6532f25e-2e8e-47ca-b627-631bb466847e": {
+   "turns": [],
+   "used": [
+    {
+     "good": 154,
+     "fast": 100,
+     "turn_ok": 100,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-6ab146ad-75c6-4cd2-b7ac-4a306dcb01f5": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 159,
+     "turn_ok": 159,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-6ae687bb-da85-487a-a76d-5e1e06e783fd": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 158,
+     "turn_ok": 158,
+     "rows": 158
+    }
+   ],
+   "rows": 158
+  },
+  "clipgt-6b986b30-0b06-4747-a29a-811a7a067cd2": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 84,
+     "turn_ok": 84,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-6d7fa4c3-3b8b-471b-a816-38ee281aee5e": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-77fdd75c-f770-415e-80cc-1ba9c52c4004": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 47,
+     "turn_ok": 47,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-7807500f-4a25-4262-8aec-07f764cc004a": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-8913f537-ed6d-441f-a4d0-31a16759d433": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 106
+    }
+   ],
+   "rows": 106
+  },
+  "clipgt-8a365ac2-e5d5-4fd6-903d-497b2225151c": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 9,
+     "turn_ok": 9,
+     "rows": 9
+    }
+   ],
+   "rows": 9
+  },
+  "clipgt-8a812020-cb7b-4189-8664-021a23b4d190": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-8e9691d4-0a0b-44bd-88c9-316ef126b10a": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-8f3902f9-864d-4acb-9907-9a6da8b242df": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-909a2801-9af4-4c49-b33a-1329ae268a29": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-90abccf6-0566-46a4-981e-f2a7005e3b67": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 159,
+     "turn_ok": 159,
+     "rows": 159
+    }
+   ],
+   "rows": 159
+  },
+  "clipgt-92163671-81b0-466b-8e85-5c931f8d78e3": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-96da4f1a-2057-4263-94e9-9e5112c89737": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 3,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-96eb4700-3f26-4629-86df-7e736935f51d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 65,
+     "turn_ok": 65,
+     "rows": 65
+    }
+   ],
+   "rows": 65
+  },
+  "clipgt-98694f91-f6a4-44f3-aa7c-3095c91e4a78": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-9b4cdc78-ec1f-4dc9-9dc4-0ca16abe3bf0": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-a0c831e6-5275-4a8a-bd67-9e0d59de52e8": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 123,
+     "turn_ok": 123,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-a45776a3-df71-4dc5-accb-8f06135329bb": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 47,
+     "turn_ok": 47,
+     "rows": 47
+    }
+   ],
+   "rows": 47
+  },
+  "clipgt-a4be61d6-099b-4380-8c32-ad176781b288": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-a784414a-5989-4a5a-9a4f-74ad9327b934": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 129,
+     "turn_ok": 127,
+     "rows": 105
+    }
+   ],
+   "rows": 105
+  },
+  "clipgt-a817c74a-2ac3-4066-b12f-56dd35ee3214": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-a8e78edb-9a04-471e-8a66-cb3360707535": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 154,
+     "rows": 154
+    }
+   ],
+   "rows": 154
+  },
+  "clipgt-ad9a833a-0b9c-4bfd-b15b-6c6102a9de41": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 103,
+     "rows": 103
+    }
+   ],
+   "rows": 103
+  },
+  "clipgt-b0ca8b13-0362-45e7-a1d1-f40d22f3340c": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 158,
+     "turn_ok": 158,
+     "rows": 158
+    }
+   ],
+   "rows": 158
+  },
+  "clipgt-b45734f4-01d2-48f7-9296-2ae79a7a89b9": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-c028c8ce-ea7d-40d4-bce6-dce704f3b232": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-c14c031a-8c17-4d08-aa4d-23c020a6871e": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-c16477bc-54aa-4c57-ac87-3104a05d284e": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-c6c01d25-ff8a-4cc3-9d33-27598d48dd90": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-d0b9a872-bbc5-4df6-b89d-7987e8ead288": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-d5e79abb-b889-4199-a50c-0e999447709d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-d6d366f6-7b74-4868-b209-61c879064d60": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 69,
+     "turn_ok": 69,
+     "rows": 46
+    }
+   ],
+   "rows": 46
+  },
+  "clipgt-dc1966f4-c32c-4028-a4c2-7515ceb1af1f": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-df994ead-5131-4d49-8337-2c27032c9a14": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-dfb0277e-9147-4a43-80fa-adba2a63c5cc": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 160,
+     "turn_ok": 160,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-e9fe4c3b-a052-4ece-95a0-6f4bc9463a39": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-eb18182f-574f-4826-85bf-f9380c281d52": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 18,
+     "turn_ok": 18,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-edcf41a4-be66-4f5a-9ab1-d760962f4a5d": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-eea2fc6d-1d30-4cc7-9818-6882f0bc9af7": {
+   "turns": [],
+   "used": [
+    {
+     "good": 160,
+     "fast": 60,
+     "turn_ok": 60,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-f005ac5f-e919-4255-b9f9-acf6720015f1": {
+   "turns": [],
+   "used": [
+    {
+     "good": 158,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-f8a680f2-599b-4967-951c-18b9cccb331b": {
+   "turns": [],
+   "used": [
+    {
+     "good": 157,
+     "fast": 0,
+     "turn_ok": 0,
+     "rows": 0
+    }
+   ],
+   "rows": 0
+  },
+  "clipgt-fbdce016-950b-4533-b8cf-292e3e8b2dda": {
+   "turns": [],
+   "used": [
+    {
+     "good": 159,
+     "fast": 30,
+     "turn_ok": 30,
+     "rows": 27
+    }
+   ],
+   "rows": 27
+  }
+ },
+ "v0": {
+  "window": "straight",
+  "p50": 23.054683685302734,
+  "p90": 32.021923828125,
+  "max": 34.767303466796875,
+  "ge16": 2182
+ },
+ "G_r1": {
+  "front_equal": true,
+  "ego_equal": true,
+  "feat_f16_max_diff": 0.0009765625,
+  "pool": "/data/runs/op_parity/cache/on1_PAITVn"
+ },
+ "G_bev": {
+  "fig": "experiments/route_follow/figs/pait_bev_PAITVn.png",
+  "rows": [
+   "on:pait:clipgt-a817c74a-2ac3-4066-b12f-56dd35ee3214:67",
+   "on:pait:clipgt-3057d8e3-04f2-4c81-97a0-ee7fd5c7ed0d:11",
+   "on:pait:clipgt-6ae687bb-da85-487a-a76d-5e1e06e783fd:5",
+   "on:pait:clipgt-6d7fa4c3-3b8b-471b-a816-38ee281aee5e:0",
+   "on:pait:clipgt-fbdce016-950b-4533-b8cf-292e3e8b2dda:115",
+   "on:pait:clipgt-21626256-03c1-4b4a-857e-09b20eb8f636:0"
+  ]
+ }
+}

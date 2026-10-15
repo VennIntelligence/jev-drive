@@ -63,3 +63,25 @@ pilot 2 × 0.4 卡时；训练 4 × 0.8 卡时；held 4 × 1.2 卡时；护栏 4
 线不变（第 1–3 组对 RSG-L18）；另登记两条交互读法：S1 − Sall 的公开零分差（CI）回答「横向代价是不是来自在该读历史的行上丢了历史」；S2 − S3 与 S1 − RSG 的速度比差回答两段是否可加。
 PAI 281 的 Tokyo 读按 seed 0、顺序 S1、S2、S3、Sall（Tokyo 排在 expert 读之后，能读几个读几个，先读的先判）。
 代价改为：训练 8 × 0.8、held 8 × 1.2、护栏 8 × 2 ≈ 32 卡时，三张卡约 11 h；全部 `--after` 串起来一次提交，不等 pilot 过闸就先把 seed 1 的 pilot 和其余臂的训练排进队列（pilot 不过的臂由主会话取消它后面的 job）。
+
+## 补记 2（实现会话，2026-10-15 晚，任何训练之前；主会话批准「build PAITV from log cache」）：`on1_PAITV` 的行窗与来源
+
+- **按字面不过 300 行**：从 `on1_PAIT` 按登记的过滤取，train160 中 t0 车速 ≥ 12 m/s 的只有 **24 行 / 3 个场景**（≥ 16 m/s 0 行）。原因：`on1_PAIT` 只装转弯窗里的行
+  （rf_pait.py pack：≥ 60° 转弯入口前 6 s 到出口），高速直路行在打包时就被丢了；它的来源，两份 Tokyo 日志跟随 cache，同样的行、同样的帧与 `imit` 目标，里面有上千行。
+- **改法**：`rf_pait.py pack --window straight`，从同两份 cache 打包（`/data/runs/onpol_pai/train/cache/log` = PAIT80 的 80 个 train160 场景；`/data/runs/route_night/pait/cache/pait` =
+  PAITn 的滚出场景，只取 train160），**行与 `imit` 的定义、G-route / G-road / G-speed / G-r1 闸全部不改**，只把转弯窗换成直路窗：
+  t0 车速 v0 ≥ 12 m/s；路线 polyline 自本行起 60 m 弧长内最大航向变化 < 30°（1 m 步，已知路线不足 60 m 的行丢掉）；t0 时刻走廊里没有同向的 asl 框
+  （框中心距日志路径 0–40 m 段 ≤ 2.0 m，即 onp_rows `lead` 的距离；框航向与最近路径点航向差 ≤ 45°；不分类别，全算）。topo = `straight`。
+  场景表 = `/data/runs/route_night/train160.txt`，`--exclude hard_exam.txt hard_train.txt control.txt`（输出里断言不含；考题 72 与 206 个评估场景重叠 0）。
+- **漏斗**（两份 cache 合计）：可用行 25 129 → v0 ≥ 12：9 455 → 转角 < 30°：9 144 → 走廊无同向车：**7 301 行 / 75 个场景**（PAITV80 4 572 / 47，PAITVn 2 729 / 28）。
+  **v0 p50 19.8、p90 31.4、max 34.8 m/s，≥ 16 m/s 4 655 行（64 %）**：补的正是训练 store（p99 12.8、max 17.1）没有的速度段。
+- **闸**：G-route（route0 ≤ 0.05 m）0.9993 / 1.000；G-road（示范穿路沿）0 / 0；G-speed（4 s 弦长在日志 ±10 % 内）1.000 / 1.000；G-r1 输入逐位（front、ego 相等，特征 f16 量化 ≤ 0.00098）。
+  R1 读（池行输入复现驾驶员记录的 poses_model，CPU）在 Tokyo 后台跑，结果写回 `runs/route_follow/slow/gates_PAITV*.json`；这两份 cache 的 R1 读在 turning school 时已过（同 cache 的其他行）。
+  BEV 抽样 `experiments/route_follow/figs/pait_bev_PAITV80.png`、`pait_bev_PAITVn.png`（看：红色示范与蓝色日志路径重合、0–40 m 内路径上没有框；一个 31 m/s 高速行的路线记忆在右边一条车道，
+  是 PAI 路线本身的车道选择，PAIT 里同样存在，不过滤）。闸数字副本 `experiments/route_follow/results/slow/gates_PAITV*.json`。
+- **池与按池分模式**：盒上 `rf_pait.py merge --out RSGPAITV --pools on1_L18RB0:r:self on1_PAITV:v:both`（nuPlan 行在前、顺序不变，`mode` 标签），训练用已有的
+  `--on-mode mixed`（turning school 的实现，`mode == self` 的行走 self，其余走 both），**不新增 flag**。PAITV 占池行抽取 10 %：`--on-weight pool=v:W`，W = 0.1 / 0.9 × 17 429 / 7 301
+  （`rf_slow.sh pool` 写 `paitv_weight.txt`）。PAITV 行不在 on_lon 包里 → 无空路标签 → S2 中**从不置零**（按登记的「连不上标签的行不丢」）。
+- **S2 / S3 的「关掉 = S1」闸**改为：S1 的 flag 放在合并池上、`--on-mode mixed --on-weight pool=v:0`（权重 0 的尾部行不抽，抽取退化为对前 17 429 行的均匀抽取，rm_train 的新规则），
+  与 S1 在 on1_L18RB0 上逐位比较（`rf_slow.sh gates`，G2）。
+- pilot 闸的补记顺延为补记 3。
