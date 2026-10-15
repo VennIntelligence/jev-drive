@@ -1,0 +1,1233 @@
+{
+ "policy": {
+  "meta": {
+   "pool": "L18RSG",
+   "rows": 17474,
+   "scenes_rows": 1020,
+   "logs_rows": 97,
+   "rows_ok": 17461,
+   "rows_on_route": 17409,
+   "decisions_all": 18352,
+   "scenes_all": 1021,
+   "excluded_by_reason": {
+    "overlap": 672,
+    "corridor": 42,
+    "log_future": 151,
+    "frame": 13
+   },
+   "frames": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_L18RSG@warp/front.npy",
+   "frames_shape": [
+    17474,
+    8,
+    32,
+    512
+   ],
+   "light_known_rows": 1.0,
+   "policy_speed_q50_q90_q99_max": [
+    4.751636743545532,
+    9.068001747131348,
+    12.775402622222918,
+    14.958402633666992
+   ],
+   "dumps_dir": "runs/onpol_long/roll/RSG-L18-s0/c*/run/driver-logs/dump (one npz per decision, excluded decisions included)"
+  },
+  "classes": {
+   "red": {
+    "all": {
+     "decisions": 120,
+     "scenes": 53,
+     "logs": 44,
+     "with_frames": 120,
+     "replay_k_le1": 27
+    },
+    "sub": {
+     "nostop": {
+      "decisions": 119,
+      "scenes": 53,
+      "logs": 44,
+      "with_frames": 119,
+      "replay_k_le1": 27
+     },
+     "cross4": {
+      "decisions": 29,
+      "scenes": 13,
+      "logs": 11,
+      "with_frames": 29,
+      "replay_k_le1": 5
+     },
+     "nostop_kin": {
+      "decisions": 32,
+      "scenes": 13,
+      "logs": 11,
+      "with_frames": 32,
+      "replay_k_le1": 5
+     },
+     "human_stop": {
+      "decisions": 62,
+      "scenes": 28,
+      "logs": 24,
+      "with_frames": 62,
+      "replay_k_le1": 15
+     },
+     "nostop_and_human_stop": {
+      "decisions": 62,
+      "scenes": 28,
+      "logs": 24,
+      "with_frames": 62,
+      "replay_k_le1": 15
+     },
+     "nostop_kin_and_human_stop": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "no_intent": {
+      "decisions": 24,
+      "scenes": 14,
+      "logs": 14,
+      "with_frames": 24,
+      "replay_k_le1": 8
+     },
+     "no_intent_and_human_stop": {
+      "decisions": 7,
+      "scenes": 5,
+      "logs": 5,
+      "with_frames": 7,
+      "replay_k_le1": 2
+     },
+     "under_brake": {
+      "decisions": 24,
+      "scenes": 10,
+      "logs": 10,
+      "with_frames": 24,
+      "replay_k_le1": 6
+     },
+     "under_brake_and_human_stop": {
+      "decisions": 2,
+      "scenes": 1,
+      "logs": 1,
+      "with_frames": 2,
+      "replay_k_le1": 0
+     },
+     "red_4s": {
+      "decisions": 101,
+      "scenes": 44,
+      "logs": 37,
+      "with_frames": 101,
+      "replay_k_le1": 19
+     }
+    },
+    "speed_q50_q90": [
+     6.743520259857178,
+     7.99371976852417
+    ],
+    "by_speed_floor": {
+     "speed >= 0": {
+      "all": {
+       "decisions": 1388,
+       "scenes": 159,
+       "logs": 68,
+       "with_frames": 1388,
+       "replay_k_le1": 108
+      },
+      "human_stop": {
+       "decisions": 711,
+       "scenes": 78,
+       "logs": 43,
+       "with_frames": 711,
+       "replay_k_le1": 73
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 318,
+       "scenes": 68,
+       "logs": 40,
+       "with_frames": 318,
+       "replay_k_le1": 54
+      }
+     },
+     "speed >= 3": {
+      "all": {
+       "decisions": 554,
+       "scenes": 112,
+       "logs": 58,
+       "with_frames": 554,
+       "replay_k_le1": 52
+      },
+      "human_stop": {
+       "decisions": 280,
+       "scenes": 48,
+       "logs": 34,
+       "with_frames": 280,
+       "replay_k_le1": 25
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 37,
+       "scenes": 14,
+       "logs": 13,
+       "with_frames": 37,
+       "replay_k_le1": 8
+      }
+     },
+     "speed >= 6": {
+      "all": {
+       "decisions": 120,
+       "scenes": 53,
+       "logs": 44,
+       "with_frames": 120,
+       "replay_k_le1": 27
+      },
+      "human_stop": {
+       "decisions": 62,
+       "scenes": 28,
+       "logs": 24,
+       "with_frames": 62,
+       "replay_k_le1": 15
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 7,
+       "scenes": 5,
+       "logs": 5,
+       "with_frames": 7,
+       "replay_k_le1": 2
+      }
+     },
+     "speed >= 9": {
+      "all": {
+       "decisions": 4,
+       "scenes": 2,
+       "logs": 2,
+       "with_frames": 4,
+       "replay_k_le1": 2
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     },
+     "speed >= 12": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     }
+    },
+    "own_state_human_stop_plan_decel_vs_required_q50": [
+     0.8246161937713623,
+     0.6536309551035523
+    ],
+    "d_line_bins": {
+     "0-10": {
+      "decisions": 5,
+      "scenes": 3,
+      "logs": 3,
+      "with_frames": 5,
+      "replay_k_le1": 4
+     },
+     "10-20": {
+      "decisions": 19,
+      "scenes": 11,
+      "logs": 10,
+      "with_frames": 19,
+      "replay_k_le1": 1
+     },
+     "20-40": {
+      "decisions": 96,
+      "scenes": 44,
+      "logs": 38,
+      "with_frames": 96,
+      "replay_k_le1": 22
+     }
+    }
+   },
+   "stop": {
+    "all": {
+     "decisions": 73,
+     "scenes": 24,
+     "logs": 14,
+     "with_frames": 73,
+     "replay_k_le1": 14
+    },
+    "sub": {
+     "nostop": {
+      "decisions": 73,
+      "scenes": 24,
+      "logs": 14,
+      "with_frames": 73,
+      "replay_k_le1": 14
+     },
+     "cross4": {
+      "decisions": 19,
+      "scenes": 9,
+      "logs": 7,
+      "with_frames": 19,
+      "replay_k_le1": 6
+     },
+     "nostop_kin": {
+      "decisions": 33,
+      "scenes": 12,
+      "logs": 7,
+      "with_frames": 33,
+      "replay_k_le1": 10
+     },
+     "human_stop": {
+      "decisions": 7,
+      "scenes": 2,
+      "logs": 2,
+      "with_frames": 7,
+      "replay_k_le1": 0
+     },
+     "nostop_and_human_stop": {
+      "decisions": 7,
+      "scenes": 2,
+      "logs": 2,
+      "with_frames": 7,
+      "replay_k_le1": 0
+     },
+     "nostop_kin_and_human_stop": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "no_intent": {
+      "decisions": 20,
+      "scenes": 9,
+      "logs": 6,
+      "with_frames": 20,
+      "replay_k_le1": 2
+     },
+     "no_intent_and_human_stop": {
+      "decisions": 1,
+      "scenes": 1,
+      "logs": 1,
+      "with_frames": 1,
+      "replay_k_le1": 0
+     },
+     "under_brake": {
+      "decisions": 17,
+      "scenes": 7,
+      "logs": 4,
+      "with_frames": 17,
+      "replay_k_le1": 1
+     },
+     "under_brake_and_human_stop": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "red_4s": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     }
+    },
+    "speed_q50_q90": [
+     6.922857284545898,
+     8.294599533081055
+    ],
+    "by_speed_floor": {
+     "speed >= 0": {
+      "all": {
+       "decisions": 690,
+       "scenes": 75,
+       "logs": 31,
+       "with_frames": 690,
+       "replay_k_le1": 72
+      },
+      "human_stop": {
+       "decisions": 99,
+       "scenes": 10,
+       "logs": 6,
+       "with_frames": 99,
+       "replay_k_le1": 5
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 50,
+       "scenes": 10,
+       "logs": 6,
+       "with_frames": 50,
+       "replay_k_le1": 5
+      }
+     },
+     "speed >= 3": {
+      "all": {
+       "decisions": 392,
+       "scenes": 63,
+       "logs": 28,
+       "with_frames": 392,
+       "replay_k_le1": 41
+      },
+      "human_stop": {
+       "decisions": 50,
+       "scenes": 9,
+       "logs": 6,
+       "with_frames": 50,
+       "replay_k_le1": 3
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 14,
+       "scenes": 5,
+       "logs": 3,
+       "with_frames": 14,
+       "replay_k_le1": 3
+      }
+     },
+     "speed >= 6": {
+      "all": {
+       "decisions": 73,
+       "scenes": 24,
+       "logs": 14,
+       "with_frames": 73,
+       "replay_k_le1": 14
+      },
+      "human_stop": {
+       "decisions": 7,
+       "scenes": 2,
+       "logs": 2,
+       "with_frames": 7,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 1,
+       "scenes": 1,
+       "logs": 1,
+       "with_frames": 1,
+       "replay_k_le1": 0
+      }
+     },
+     "speed >= 9": {
+      "all": {
+       "decisions": 1,
+       "scenes": 1,
+       "logs": 1,
+       "with_frames": 1,
+       "replay_k_le1": 0
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     },
+     "speed >= 12": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     }
+    },
+    "own_state_human_stop_plan_decel_vs_required_q50": [
+     0.7202316522598267,
+     0.9622298063118657
+    ],
+    "d_line_bins": {
+     "0-10": {
+      "decisions": 3,
+      "scenes": 3,
+      "logs": 2,
+      "with_frames": 3,
+      "replay_k_le1": 1
+     },
+     "10-20": {
+      "decisions": 15,
+      "scenes": 9,
+      "logs": 7,
+      "with_frames": 15,
+      "replay_k_le1": 4
+     },
+     "20-40": {
+      "decisions": 55,
+      "scenes": 19,
+      "logs": 13,
+      "with_frames": 55,
+      "replay_k_le1": 9
+     }
+    }
+   },
+   "qual": {
+    "all": {
+     "decisions": 77,
+     "scenes": 36,
+     "logs": 31,
+     "with_frames": 77,
+     "replay_k_le1": 19
+    },
+    "sub": {
+     "nostop": {
+      "decisions": 76,
+      "scenes": 36,
+      "logs": 31,
+      "with_frames": 76,
+      "replay_k_le1": 19
+     },
+     "cross4": {
+      "decisions": 1,
+      "scenes": 1,
+      "logs": 1,
+      "with_frames": 1,
+      "replay_k_le1": 0
+     },
+     "nostop_kin": {
+      "decisions": 1,
+      "scenes": 1,
+      "logs": 1,
+      "with_frames": 1,
+      "replay_k_le1": 0
+     },
+     "human_stop": {
+      "decisions": 64,
+      "scenes": 28,
+      "logs": 24,
+      "with_frames": 64,
+      "replay_k_le1": 15
+     },
+     "nostop_and_human_stop": {
+      "decisions": 64,
+      "scenes": 28,
+      "logs": 24,
+      "with_frames": 64,
+      "replay_k_le1": 15
+     },
+     "nostop_kin_and_human_stop": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "no_intent": {
+      "decisions": 7,
+      "scenes": 6,
+      "logs": 6,
+      "with_frames": 7,
+      "replay_k_le1": 3
+     },
+     "no_intent_and_human_stop": {
+      "decisions": 6,
+      "scenes": 5,
+      "logs": 5,
+      "with_frames": 6,
+      "replay_k_le1": 2
+     },
+     "under_brake": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "under_brake_and_human_stop": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "red_4s": {
+      "decisions": 65,
+      "scenes": 30,
+      "logs": 26,
+      "with_frames": 65,
+      "replay_k_le1": 16
+     }
+    },
+    "speed_q50_q90": [
+     6.688573837280273,
+     7.8870094299316404
+    ],
+    "by_speed_floor": {
+     "speed >= 0": {
+      "all": {
+       "decisions": 1147,
+       "scenes": 119,
+       "logs": 57,
+       "with_frames": 1147,
+       "replay_k_le1": 94
+      },
+      "human_stop": {
+       "decisions": 763,
+       "scenes": 82,
+       "logs": 45,
+       "with_frames": 763,
+       "replay_k_le1": 75
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 337,
+       "scenes": 72,
+       "logs": 42,
+       "with_frames": 337,
+       "replay_k_le1": 56
+      }
+     },
+     "speed >= 3": {
+      "all": {
+       "decisions": 451,
+       "scenes": 85,
+       "logs": 49,
+       "with_frames": 451,
+       "replay_k_le1": 41
+      },
+      "human_stop": {
+       "decisions": 312,
+       "scenes": 54,
+       "logs": 37,
+       "with_frames": 312,
+       "replay_k_le1": 28
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 43,
+       "scenes": 17,
+       "logs": 14,
+       "with_frames": 43,
+       "replay_k_le1": 11
+      }
+     },
+     "speed >= 6": {
+      "all": {
+       "decisions": 77,
+       "scenes": 36,
+       "logs": 31,
+       "with_frames": 77,
+       "replay_k_le1": 19
+      },
+      "human_stop": {
+       "decisions": 64,
+       "scenes": 28,
+       "logs": 24,
+       "with_frames": 64,
+       "replay_k_le1": 15
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 6,
+       "scenes": 5,
+       "logs": 5,
+       "with_frames": 6,
+       "replay_k_le1": 2
+      }
+     },
+     "speed >= 9": {
+      "all": {
+       "decisions": 2,
+       "scenes": 1,
+       "logs": 1,
+       "with_frames": 2,
+       "replay_k_le1": 0
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     },
+     "speed >= 12": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "no_intent_and_human_stop": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     }
+    },
+    "own_state_human_stop_plan_decel_vs_required_q50": [
+     0.8246161937713623,
+     0.6630513285349644
+    ],
+    "d_line_bins": {
+     "0-10": {
+      "decisions": 0,
+      "scenes": 0,
+      "logs": 0,
+      "with_frames": 0,
+      "replay_k_le1": 0
+     },
+     "10-20": {
+      "decisions": 1,
+      "scenes": 1,
+      "logs": 1,
+      "with_frames": 1,
+      "replay_k_le1": 0
+     },
+     "20-40": {
+      "decisions": 76,
+      "scenes": 35,
+      "logs": 30,
+      "with_frames": 76,
+      "replay_k_le1": 19
+     }
+    }
+   },
+   "free": {
+    "all": {
+     "decisions": 5349,
+     "scenes": 522,
+     "logs": 87,
+     "with_frames": 5349,
+     "replay_k_le1": 577
+    },
+    "sub": {
+     "slow_h": {
+      "decisions": 2006,
+      "scenes": 319,
+      "logs": 81,
+      "with_frames": 2006,
+      "replay_k_le1": 0
+     },
+     "slow_x": {
+      "decisions": 79,
+      "scenes": 21,
+      "logs": 15,
+      "with_frames": 79,
+      "replay_k_le1": 0
+     },
+     "has_pack": {
+      "decisions": 232,
+      "scenes": 36,
+      "logs": 26,
+      "with_frames": 232,
+      "replay_k_le1": 0
+     },
+     "slow_p": {
+      "decisions": 1924,
+      "scenes": 326,
+      "logs": 78,
+      "with_frames": 1924,
+      "replay_k_le1": 14
+     }
+    },
+    "by_human_speed": {
+     "< 8": {
+      "all": {
+       "decisions": 2259,
+       "scenes": 321,
+       "logs": 77,
+       "with_frames": 2259,
+       "replay_k_le1": 231
+      },
+      "slow_h": {
+       "decisions": 802,
+       "scenes": 163,
+       "logs": 58,
+       "with_frames": 802,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 37,
+       "scenes": 13,
+       "logs": 10,
+       "with_frames": 37,
+       "replay_k_le1": 0
+      },
+      "has_pack": {
+       "decisions": 172,
+       "scenes": 33,
+       "logs": 23,
+       "with_frames": 172,
+       "replay_k_le1": 0
+      },
+      "slow_p": {
+       "decisions": 749,
+       "scenes": 164,
+       "logs": 57,
+       "with_frames": 749,
+       "replay_k_le1": 14
+      }
+     },
+     "8-12": {
+      "all": {
+       "decisions": 2693,
+       "scenes": 294,
+       "logs": 74,
+       "with_frames": 2693,
+       "replay_k_le1": 303
+      },
+      "slow_h": {
+       "decisions": 1055,
+       "scenes": 170,
+       "logs": 63,
+       "with_frames": 1055,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 42,
+       "scenes": 11,
+       "logs": 9,
+       "with_frames": 42,
+       "replay_k_le1": 0
+      },
+      "has_pack": {
+       "decisions": 60,
+       "scenes": 14,
+       "logs": 12,
+       "with_frames": 60,
+       "replay_k_le1": 0
+      },
+      "slow_p": {
+       "decisions": 1026,
+       "scenes": 167,
+       "logs": 61,
+       "with_frames": 1026,
+       "replay_k_le1": 0
+      }
+     },
+     "12-16": {
+      "all": {
+       "decisions": 397,
+       "scenes": 42,
+       "logs": 19,
+       "with_frames": 397,
+       "replay_k_le1": 43
+      },
+      "slow_h": {
+       "decisions": 149,
+       "scenes": 22,
+       "logs": 14,
+       "with_frames": 149,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "has_pack": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_p": {
+       "decisions": 149,
+       "scenes": 22,
+       "logs": 14,
+       "with_frames": 149,
+       "replay_k_le1": 0
+      }
+     },
+     ">= 16": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_h": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "has_pack": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_p": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     }
+    },
+    "by_expert_speed": {
+     "< 8": {
+      "all": {
+       "decisions": 208,
+       "scenes": 36,
+       "logs": 26,
+       "with_frames": 208,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 61,
+       "scenes": 19,
+       "logs": 14,
+       "with_frames": 61,
+       "replay_k_le1": 0
+      }
+     },
+     "8-12": {
+      "all": {
+       "decisions": 24,
+       "scenes": 8,
+       "logs": 7,
+       "with_frames": 24,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 18,
+       "scenes": 8,
+       "logs": 7,
+       "with_frames": 18,
+       "replay_k_le1": 0
+      }
+     },
+     "12-16": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     },
+     ">= 16": {
+      "all": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      },
+      "slow_x": {
+       "decisions": 0,
+       "scenes": 0,
+       "logs": 0,
+       "with_frames": 0,
+       "replay_k_le1": 0
+      }
+     }
+    }
+   },
+   "turn": {
+    "all": {
+     "decisions": 2234,
+     "scenes": 260,
+     "logs": 68,
+     "with_frames": 2234,
+     "replay_k_le1": 383
+    },
+    "sub": {
+     "fast_x": {
+      "decisions": 23,
+      "scenes": 19,
+      "logs": 15,
+      "with_frames": 23,
+      "replay_k_le1": 22
+     },
+     "has_pack": {
+      "decisions": 277,
+      "scenes": 57,
+      "logs": 34,
+      "with_frames": 277,
+      "replay_k_le1": 114
+     },
+     "fast_p": {
+      "decisions": 114,
+      "scenes": 40,
+      "logs": 24,
+      "with_frames": 114,
+      "replay_k_le1": 35
+     },
+     "fast_h": {
+      "decisions": 60,
+      "scenes": 25,
+      "logs": 20,
+      "with_frames": 60,
+      "replay_k_le1": 0
+     },
+     "fast_p_and_h": {
+      "decisions": 29,
+      "scenes": 12,
+      "logs": 9,
+      "with_frames": 29,
+      "replay_k_le1": 0
+     }
+    }
+   }
+  },
+  "pack_check": {
+   "pack_scenes_found": 524,
+   "pool_scenes_with_pack": 64,
+   "rows_with_pack": 1069,
+   "k0_anchor_to_log_m_q50_max": [
+    0.08894948098788485,
+    0.17759185976906872
+   ],
+   "proxy_vs_pack_abs_q50_q90": [
+    0.11370355485290906,
+    1.1676324373388354
+   ],
+   "proxy_vs_pack_within_1ms": 0.864326375711575,
+   "proxy_vs_pack_free_rows_abs_q50": 0.17498461984580027,
+   "proxy_vs_pack_turn_rows_abs_q50": 0.38077359087765217
+  },
+  "pack_scenes": [
+   "2021.05.25.14.16.10_veh-35_01690_02183-19488eb3301f5d26",
+   "2021.05.25.14.16.10_veh-35_04097_04328-cc853dd8697f51b3",
+   "2021.05.25.16.37.23_veh-25_00005_00217-60681597a59d5cf9",
+   "2021.06.03.18.47.39_veh-35_00503_00777-e4d88f52d2b45609",
+   "2021.06.28.18.03.27_veh-14_00620_01581-4d38d745131c5de1",
+   "2021.06.28.20.24.43_veh-38_03385_04952-e933d70dd378598f",
+   "2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947",
+   "2021.08.30.13.45.25_veh-40_00610_00771-1a1f73871bea5afa",
+   "2021.08.30.13.45.25_veh-40_00610_00771-c133861a233a51de",
+   "2021.08.30.13.45.25_veh-40_00610_00771-cdc6e3f7dcb25376",
+   "2021.08.30.13.45.25_veh-40_00610_00771-e1886e081b945907",
+   "2021.08.30.13.45.25_veh-40_01116_01336-f6f14df95f6c52af",
+   "2021.08.30.14.54.34_veh-40_00439_00835-4109b79d84ea5053",
+   "2021.08.30.14.54.34_veh-40_00439_00835-537935a8e7b653f2",
+   "2021.08.30.16.16.44_veh-40_00256_00716-5403d4e6179a5354",
+   "2021.08.30.16.16.44_veh-40_01099_01351-2bd04a0902095129",
+   "2021.08.30.16.16.44_veh-40_01099_01351-58ad6156b5895541",
+   "2021.09.09.14.18.22_veh-48_00322_00895-50e5a63ba7ac5d51",
+   "2021.09.09.14.18.22_veh-48_00322_00895-52d3f15d6ca75701",
+   "2021.09.09.14.18.22_veh-48_00322_00895-f227c6775ba75451",
+   "2021.09.09.14.18.22_veh-48_00960_01115-b53b172e95895a12",
+   "2021.09.09.14.18.22_veh-48_01298_01492-6012210b020c53a9",
+   "2021.09.09.14.18.22_veh-48_01503_01761-87339a4d32305504",
+   "2021.09.09.14.18.22_veh-48_01503_01761-a7fa8bccce9253cb",
+   "2021.09.09.14.18.22_veh-48_01503_01761-bba5d587cab25dfa",
+   "2021.09.09.17.18.51_veh-48_00657_00876-7d4c548895955e0d",
+   "2021.09.09.17.18.51_veh-48_01248_01450-3ae3cf56296b5861",
+   "2021.09.09.17.18.51_veh-48_01248_01450-583e9cc4115258e4",
+   "2021.09.09.17.18.51_veh-48_01248_01450-fe4459e9f02052d3",
+   "2021.09.09.17.18.51_veh-48_01462_01552-1975d15fde2955ff",
+   "2021.09.16.13.53.10_veh-42_00180_00342-52d9d533ca4e5980",
+   "2021.09.16.13.53.10_veh-42_00180_00342-6eac1c0e2bbd57bb",
+   "2021.09.16.13.53.10_veh-42_00180_00342-fd001bff97c155b3",
+   "2021.09.16.13.53.10_veh-42_00630_00818-92427e4a55475ba6",
+   "2021.09.16.15.12.03_veh-42_01037_01434-5f402207dd7d5977",
+   "2021.09.16.15.12.03_veh-42_01037_01434-a8fb178e35d25d73",
+   "2021.09.16.16.20.27_veh-08_02435_02525-3acfdef9ef305e77",
+   "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+   "2021.09.16.19.27.01_veh-45_00472_00711-8cc8fe63227d5c07",
+   "2021.09.16.19.27.01_veh-45_01749_03230-79e7ccb136775266",
+   "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0",
+   "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+   "2021.09.16.19.27.01_veh-45_01749_03230-e45572ab63ef5deb",
+   "2021.09.16.19.27.01_veh-45_01749_03230-ea1302023ad258ff",
+   "2021.09.29.14.44.26_veh-28_00337_00504-00016f8b45c25a1d",
+   "2021.09.29.14.44.26_veh-28_00528_00992-645e303a25a65190",
+   "2021.09.29.14.44.26_veh-28_00528_00992-f5442665da9f554c",
+   "2021.09.29.14.44.26_veh-28_01059_01191-dda361f4db52537a",
+   "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee",
+   "2021.09.29.14.44.26_veh-28_01640_01743-0220967816915e94",
+   "2021.09.29.18.19.40_veh-28_00438_00833-697c73f258ef5745",
+   "2021.09.29.18.19.40_veh-28_00844_01218-511741d6df93540d",
+   "2021.09.29.18.19.40_veh-28_01268_01685-9d423dea34235b41",
+   "2021.09.29.19.02.14_veh-28_00273_00514-2575048779565f0b",
+   "2021.09.29.19.02.14_veh-28_00540_00917-7e76a2b3918656f9",
+   "2021.09.29.19.02.14_veh-28_00540_00917-cda381919f5e5dca",
+   "2021.09.29.19.02.14_veh-28_00964_01689-1b01f89fe48355b6",
+   "2021.09.29.19.02.14_veh-28_03198_03360-7da6ba784b8b5ff0",
+   "2021.09.29.19.02.14_veh-28_03198_03360-8d06ea883e7853a9",
+   "2021.09.29.19.02.14_veh-28_03198_03360-a2c2e046132e5596",
+   "2021.10.06.07.26.10_veh-52_00006_00398-bf1184622f355af4",
+   "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c",
+   "2021.10.06.07.26.10_veh-52_01245_02064-94c0ff5134d45dd1",
+   "2021.10.06.07.26.10_veh-52_01245_02064-f86eb011b333505e"
+  ]
+ },
+ "paitv": {
+  "rows": 7301,
+  "scenes": 75,
+  "speed_q10_q50_q90_max": [
+   12.877293586730957,
+   19.815753936767578,
+   31.371395111083984,
+   34.767303466796875
+  ],
+  "by_speed": {
+   "< 8": 0,
+   "8-12": 0,
+   "12-16": 2646,
+   ">= 16": 4655
+  },
+  "frames": true
+ },
+ "human": {
+  "tokens": 103288,
+  "logs": 1192,
+  "red": {
+   "all": {
+    "rows": 1711,
+    "logs": 335
+   },
+   "human_stop": {
+    "rows": 894,
+    "logs": 171
+   },
+   "decelerating_ax_lt_m0p5": {
+    "rows": 1191,
+    "logs": 290
+   }
+  },
+  "stop": {
+   "all": {
+    "rows": 819,
+    "logs": 171
+   },
+   "human_stop": {
+    "rows": 124,
+    "logs": 26
+   },
+   "decelerating_ax_lt_m0p5": {
+    "rows": 257,
+    "logs": 93
+   }
+  },
+  "qual": {
+   "all": {
+    "rows": 1418,
+    "logs": 269
+   },
+   "human_stop": {
+    "rows": 960,
+    "logs": 180
+   },
+   "decelerating_ax_lt_m0p5": {
+    "rows": 977,
+    "logs": 231
+   }
+  },
+  "free": {
+   "all": {
+    "rows": 20889,
+    "logs": 1010
+   },
+   "by_speed": {
+    "< 8": {
+     "rows": 9949,
+     "logs": 889
+    },
+    "8-12": {
+     "rows": 9197,
+     "logs": 719
+    },
+    "12-16": {
+     "rows": 1735,
+     "logs": 240
+    },
+    ">= 16": {
+     "rows": 8,
+     "logs": 1
+    }
+   }
+  },
+  "turn": {
+   "all": {
+    "rows": 20492,
+    "logs": 785
+   },
+   "faster_than_proxy_plus1": {
+    "rows": 873,
+    "logs": 268
+   }
+  },
+  "speed_q50_q90_q99_max_all": [
+   4.4315361976623535,
+   9.266329956054689,
+   12.783636960983277,
+   17.114574432373047
+  ],
+  "rows_ge12": 2127,
+  "rows_ge16": 8
+ }
+}

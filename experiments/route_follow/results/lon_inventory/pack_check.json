@@ -1,0 +1,16 @@
+{
+ "pack_scenes_found": 524,
+ "pool_scenes_with_pack": 64,
+ "rows_with_pack": 1069,
+ "k0_anchor_to_log_m_q50_max": [
+  0.08894948098788485,
+  0.17759185976906872
+ ],
+ "proxy_vs_pack_abs_q50_q90": [
+  0.11370355485290906,
+  1.1676324373388354
+ ],
+ "proxy_vs_pack_within_1ms": 0.864326375711575,
+ "proxy_vs_pack_free_rows_abs_q50": 0.17498461984580027,
+ "proxy_vs_pack_turn_rows_abs_q50": 0.38077359087765217
+}
