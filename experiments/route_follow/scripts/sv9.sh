@@ -8,6 +8,7 @@
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
 D=${DATA_DIR:-/data}; O=$D/runs/route_night/spin_v9; R=$repo/experiments/route_follow/results/spin_v9; S=$repo/experiments/steer_long/results/spin_fix
+PY=${PY:-/data/envs/op-train/bin/python}     # sv9_read.py needs pyarrow (metrics.parquet event times)
 ID_APP=$D/runs/route_night/v2pai/APP1X-L18-s0; ID_RSG=$D/runs/route_night/r281/rsg
 export WIZ=controller.gains.rel_front_steering_angle_weight=20
 mkdir -p "$O"
@@ -24,7 +25,7 @@ smoke)
   grep -h "serving:" "$O"/smoke_*/runs/*/driver.log
   python3 "$here/sv9_check.py" plans --a "$ID_APP" --b "$O/smoke_off" && echo "SMOKE OFF: identical to the identity"
   python3 "$here/sv9_check.py" plans --a "$O/smoke_off" --b "$O/smoke_v9"
-  python3 "$here/sv9_read.py" --label smoke --id "$ID_APP" --arm "$O/smoke_v9" --spin "$O/smoke2.txt" --ctrl "$O/smoke2.txt" --union "$O/smoke2.txt" --md "$O/smoke_v9/read.md" | tail -1
+  "$PY" "$here/sv9_read.py" --label smoke --id "$ID_APP" --arm "$O/smoke_v9" --spin "$O/smoke2.txt" --ctrl "$O/smoke2.txt" --union "$O/smoke2.txt" --md "$O/smoke_v9/read.md" | tail -1
   ;;
 run)
   a=$2 t=$3 l=$4 g=$5; x=${6:-}; out=$O/${a}_$t
@@ -32,9 +33,9 @@ run)
   ;;
 read)
   a=$2
-  python3 "$here/sv9_read.py" --label "$a APP1X-L18-s0" --id "$ID_APP" --arm "$O/${a}_APP1X-L18-s0" --spin "$R/app1x_spin29.txt" --ctrl "$R/ctrl_app1x.txt" \
+  "$PY" "$here/sv9_read.py" --label "$a APP1X-L18-s0" --id "$ID_APP" --arm "$O/${a}_APP1X-L18-s0" --spin "$R/app1x_spin29.txt" --ctrl "$R/ctrl_app1x.txt" \
     --ctrl-all "$S/ctrl_all.txt" --union "$R/union90.txt" --md "$R/${a}_app1x.md"
-  python3 "$here/sv9_read.py" --label "$a RSG-L18-s0" --id "$ID_RSG" --arm "$O/${a}_RSG-L18-s0" --spin "$S/spin_set.txt" --ctrl "$S/ctrl_all.txt" \
+  "$PY" "$here/sv9_read.py" --label "$a RSG-L18-s0" --id "$ID_RSG" --arm "$O/${a}_RSG-L18-s0" --spin "$S/spin_set.txt" --ctrl "$S/ctrl_all.txt" \
     --union "$R/union90.txt" --md "$R/${a}_rsg.md"
   ;;
 esac

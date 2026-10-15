@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """SPIN v9 read (plans/2026-10-15-spin-v9-prereg.md), numpy only, Tokyo host. One checkpoint: an arm root against its identity root on the
 union and the checkpoint's spin set / control set. Per rollout: score, zero kind, sf_detect spin (handoff / fast / slow) and its onset,
-rf_pai281's handoff spin, at-fault / front / rear collisions, the zero's event time (the controller's last row: a zero ends the rollout).
+rf_pai281's handoff spin, at-fault / front / rear collisions, the first offroad / any event time from the rollout's metrics.parquet (needs
+pyarrow: run with /data/envs/op-train/bin/python on Tokyo; a zero does not end the rollout, the controller runs to 19.9 s).
 Lines: L1 spins (sf_detect, any kind) on the spin set <= 2; L2 controls: zeros, paired bootstrap 97.5 % of the summed difference <= +2,
-and the paired mean difference >= -0.01; L3 no new offroad zero with its event <= 4.7 s (3 s after the 1.7 s handoff) over the union.
+and the paired mean difference >= -0.01; L3 no new offroad zero whose first offroad step is <= 4.7 s (3 s after the 1.7 s handoff) over the union.
 Bootstrap over scenes, 10 000 draws, seed 0. A rollout without metrics is skipped (sf_read.py's rule); an arm may list root1,root2.
   sv9_read.py --label APP1X --id <root> --arm <root>[,<root>] --spin <list> --ctrl <list> --union <list> [--ctrl-all <list>] --md out.md"""
 import argparse, csv, glob, json, os, sys
@@ -11,6 +12,17 @@ import numpy as np
 here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(here, "../../steer_long/scripts"))
 from sf_detect import detect
+
+
+def events(f, ts0):
+    """First step (s, controller clock + 0.1) with offroad / collision_any / left_corridor_laterally > 0, None when it never fires."""
+    import pyarrow.parquet as pq
+    m = pq.read_table(f, columns=["name", "timestamps_us", "values"]).to_pydict()
+    out = {}
+    for nm in ("offroad", "collision_any", "left_corridor_laterally"):
+        hit = [ts for n, ts, v in zip(m["name"], m["timestamps_us"], m["values"]) if n == nm and ts is not None and (v or 0) > 0]
+        out[nm] = round((min(hit) - ts0) / 1e6 + 0.1, 2) if hit else None
+    return out
 
 
 def read(roots, keep):
@@ -33,7 +45,9 @@ def read(roots, keep):
                 sc = float(r.get("score") or 0)
                 kind = "" if sc else ("collision" if m.get("collision_at_fault") else "offroad" if m.get("offroad") else
                                       "corridor" if m.get("left_corridor_laterally") else "other")
-                out[r["clipgt_id"]] = dict(score=sc, kind=kind, spin=d["kind"], t_spin=d["t_first"], t_end=float(t[-1]),
+                ev = events(os.path.join(sim, "rollouts", r["clipgt_id"], r["rollout_id"], "metrics.parquet"), g["timestamp_us"][0])
+                out[r["clipgt_id"]] = dict(score=sc, kind=kind, spin=d["kind"], t_spin=d["t_first"], t_off=ev["offroad"], t_ev=min(
+                                           (x for x in ev.values() if x is not None), default=None),
                                            hspin=bool(w.any() and np.abs(g["vx"] * g["wz"])[w].max() > 6),
                                            atf=float(m.get("collision_at_fault") or 0) > 0, front=float(m.get("collision_front") or 0) > 0,
                                            rear=float(m.get("collision_rear") or 0) > 0)
@@ -72,8 +86,8 @@ def main():
                    f"{int((dz > 0).sum())} / {int((dz < 0).sum())} | {dz.sum():+.0f} [{zl:+.0f}, {zh:+.0f}] | {cnt(A, 'atf')} / {cnt(A, 'front')} / {cnt(A, 'rear')} "
                    f"({cnt(I, 'atf')} / {cnt(I, 'front')} / {cnt(I, 'rear')}) | {np.mean([A[s]['score'] for s in sc]):.4f} ({np.mean([I[s]['score'] for s in sc]):.4f}) | "
                    f"{ds.mean():+.4f} [{ml:+.4f}, {mh:+.4f}] |")
-    early = [s for s in U if s in A and s in I and A[s]["kind"] == "offroad" and A[s]["t_end"] <= 4.7
-             and not (I[s]["kind"] == "offroad" and I[s]["t_end"] <= 4.7)]
+    eo = lambda r: r["kind"] == "offroad" and r["t_off"] is not None and r["t_off"] <= 4.7  # noqa: E731
+    early = [s for s in U if s in A and s in I and eo(A[s]) and not eo(I[s])]
     l1, l2 = res["spin set"]["spins"] <= 2, res["controls"]["zh"] <= 2 and res["controls"]["md"] >= -0.01
     l3 = not early
     out += ["", f"- L1 spin set spins {res['spin set']['spins']} <= 2: {'pass' if l1 else 'FAIL'}",
@@ -81,8 +95,8 @@ def main():
             f"- L3 new offroad zeros with the event <= 4.7 s over the union: {len(early)} {early and [s[7:15] for s in early] or ''}: {'pass' if l3 else 'FAIL'}",
             f"- missing rollouts (no metrics in either root): " + ", ".join(f"{k} {v['missing']}" for k, v in res.items()), "",
             "## Per scene (union; changed score, zero or spin only)", "",
-            "| scene | sets | id score | arm score | id zero / spin (onset s) | arm zero / spin (onset s) | arm event t s |", "|:--|:--|--:|--:|:--|:--|--:|"]
-    member = {s: "+".join(n for n, f in sets[:-1] if s in set(L(f))) for s in U}
+            "| scene | sets | id score | arm score | id zero / spin (onset s) | arm zero / spin (onset s) | id / arm first event s |", "|:--|:--|--:|--:|:--|:--|--:|"]
+    member = {s: " + ".join(n for n, f in sets[:-1] if s in set(L(f))) for s in U}
     for s in U:
         if s not in A or s not in I:
             out.append(f"| {s[7:15]} | {member[s]} | missing | | | | |")
@@ -91,7 +105,7 @@ def main():
         if abs(i["score"] - x["score"]) < 1e-9 and i["spin"] == x["spin"] and i["kind"] == x["kind"]:
             continue
         f = lambda r: f"{r['kind'] or '-'} / {r['spin'] or '-'}" + (f" ({r['t_spin']:.1f})" if r["spin"] else "")  # noqa: E731
-        out.append(f"| {s[7:15]} | {member[s]} | {i['score']:.3f} | {x['score']:.3f} | {f(i)} | {f(x)} | {x['t_end']:.1f} |")
+        out.append(f"| {s[7:15]} | {member[s]} | {i['score']:.3f} | {x['score']:.3f} | {f(i)} | {f(x)} | {i['t_ev'] or '-'} / {x['t_ev'] or '-'} |")
     out.append("")
     out.append(f"VERDICT {a.label}: L1 {'pass' if l1 else 'FAIL'}, L2 {'pass' if l2 else 'FAIL'}, L3 {'pass' if l3 else 'FAIL'}")
     open(a.md, "w").write("\n".join(out) + "\n")
