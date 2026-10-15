@@ -84,3 +84,15 @@ which is at least as conservative as scene clusters). A replicate resamples clus
 `figs/creep_rep.png` (creep per metre by outcome and class; the R4 profile), one README paragraph. research/decisions.md is not edited.
 
 ## Amendments (appended after the prereg commit; each says whether it came before or after a statistic was seen)
+
+1. (After the first read; R1 / R2, R3, R4 and the sensitivity table were seen.) R1 and R2 read "supported", but "without FMH" removes
+   both (c +0.017 [-0.012, +0.043], x2 -1.3 [-2.8, +0.1]): the flow head's 47 failed turns (all 32 straight-through turns of the data)
+   carry the pooled result. The completed median creep is +0.000 m / m, so the registered ratio condition is met by its "completed <= 0
+   or rho >= 2" clause and rho (99) carries no information. Added, descriptive, no verdict, nothing registered changes:
+   (a) **without FMH**: c, C and x2 failed vs completed for the zero-only failures (event / off), late-wide, no_zero / short, and
+       the 15 non-flow checkpoints' failed turns of every class;
+   (b) **R4 split of the 1-2 s shortfall**: per decision k with a decision k + 2 served 1.0 s later (+-20 ms), x12 = car(1-2 s) -
+       plan k(1-2 s) splits exactly into **replan** = plan k+2's own 0-1 s heading - plan k's 1-2 s segment (the newer plan, drawn
+       from where the car actually is, asks for less turn than plan k did for the same second) and **track** = car(1-2 s) - plan
+       k+2's 0-1 s (the car under-executes the plan that is actually driving it); per-turn medians, group medians with CIs, for
+       completed, failed, failed without FMH and the classes.

@@ -2,7 +2,7 @@
 # CREEP-REP (plans/2026-10-15-creep-replication-prereg.md): the box stages that build the RECEDING-style held extracts of the 17
 # checkpoints decision 308 did not use. CPU only, no pool job; run in tmux jev (scripts/tmux_run.sh). Repo root.
 #   rf_creep_rep.sh tax       rf_tax extract of the 11 sets without one (WORKERS, default 16, one set at a time) + rf_tax report of all 17
-#   rf_creep_rep.sh extract   merged follow rows -> rf_receding.py extract-held of the 15 non-flowhead sets -> $O/held_rep.pkl
+#   rf_creep_rep.sh extract   merged follow rows -> rf_receding.py extract-held of the 13 non-flowhead sets -> $O/held_rep.pkl
 #   Mac: copy $O/held_rep.pkl, $DATA_DIR/runs/flowhead/closed_loop/held.pkl and $O/tax/report/*.csv to tmp/creep_rep/, then
 #        .venv/bin/python experiments/route_follow/scripts/rf_creep_rep.py read ... (see its docstring)
 set -euo pipefail; cd "$(dirname "$0")/../../.."

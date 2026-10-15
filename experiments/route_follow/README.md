@@ -295,6 +295,25 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   [figs/plan_switching.png](figs/plan_switching.png). Row 1: failed r traces are smooth and never jump between the shaded bands. Row 2:
   failed j stays small and below 0, while completed j is larger and scatters around 0. Row 4: summed j falls steadily to about -2 m in
   the failed turns and stays near 0 in the completed ones (382a7247 creeps inward).
+- [results/creep_rep/](results/creep_rep/creep_rep.md): CREEP REPLICATION (prereg `plans/2026-10-15-creep-replication-prereg.md`, Amendment 1
+  post hoc; `scripts/rf_creep_rep.py read`, box stages `scripts/rf_creep_rep.sh`, CPU). d308's creep measure, unchanged and with its sign
+  flipped (+ = outward), on 408 held 460 @18 turns of 17 checkpoints d308 did not use: 9 lr x steps cells, RV2c s0 / s1, APP0C, APP2W05,
+  FMH-F and RGH-F s0 / s1. 178 failed, 230 completed; log-clustered bootstrap. Gates pass: the code reproduces d308's held_all6 to the
+  printed digit; the human log treated as a plan creeps +0.0025 m / m. **As registered, R1 and R2 are supported.** Creep per metre is
+  +0.038 vs +0.000 (diff +0.037 [+0.009, +0.069]); summed over the window that is +0.73 vs -0.09 m. The 2 s heading shortfall is -1.8 vs
+  +0.4 deg (-2.2 [-3.4, -0.5]). **But the flow head carries the pooled result.** FMH's 47 failed turns include all 32 straight-through
+  turns, which creep +0.265 m / m. Without FMH the difference is +0.017 [-0.012, +0.043] and x2 -1.3 [-2.8, +0.1]. Amendment 1 finds
+  where creep lives without FMH. Late-wide creeps +0.097 [+0.051, +0.120] m / m (n 29; d308 held late-wide 0.104, PAI 0.133) with x2
+  -4.3 deg. Failures with a zero creep +0.038 [+0.004, +0.063]. Slow / short turns (no zero, 92) do not creep: +0.007 [-0.029, +0.025].
+  Over-turns creep 0 and turn more than the plan (+2.1 deg). So creep is the signature of turns that end wide, not of every failure.
+  Families: RGH +0.030 vs +0.004, APP0C +0.053, the lr cells +0.006 (their failures are 62 / 73 short). R4: in the first 0.5 s, when plan
+  k alone drives the car, the shortfall is -0.1 deg on failed turns and -0.3 on late-wide. Most of it builds in 1-2 s (late-wide x1
+  -1.2, x12 -2.9). The registered reading on all failed turns is "both". Each late-wide plan's far second asks more than its near second
+  (19.3 vs 15.3 deg). Splitting the late-wide 1-2 s shortfall through plan k+2, served 1 s later: the newer plan, drawn from where the car
+  is, asks 1.9 deg less for that second than plan k did; the car then under-executes plan k+2 by a further 1.0 deg. So about two thirds
+  is re-planning and one third tracking. Look at [figs/creep_rep.png](figs/creep_rep.png). (a): completed turns sit on 0, late-wide and
+  straight-through float above it, and open circles (FMH) fill the straight-through column. (b): only FMH separates by family. (c):
+  every failed class starts at 0 at 0.5 s and fans out by 2 s.
 - [results/rule_expert/](results/rule_expert/README.md): RULE EXPERT (prereg `plans/2026-10-15-rule-expert-prereg.md`, Amendment 1): a
   privileged map-based rule planner (`experiments/alpasim/lib/rule_expert.py`, `JEV_EXPERT`: the route-lane chain from rf_corridor's
   matcher, pure pursuit, human-speed cruise with a 26 m ramp to 4.6 m/s at every >= 45 deg turn, swept-footprint yield on the replayed
