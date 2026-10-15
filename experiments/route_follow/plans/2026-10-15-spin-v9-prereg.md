@@ -97,3 +97,16 @@ Handoff decisions k 17 .. 27 of both stored reads, CPU only.
 - Launch: v9a APP1X-L18-s0 on card 0, then the v8 diagnostic (APP1X, 29 scenes) on card 0; v9a RSG-L18-s0 on card 1 (freed by the
   rule-expert lane's smoke). Both at gains 20 (wizard_cmd checked), `JEV_VCONT 1, JEV_LEAD 1`, CHUNK 24, RUNPFX v9-. A first card-0-only
   chain was stopped after 8 min (no rollout finished) to use card 1, and restarted from scratch.
+
+## Amendment 3 (2026-10-15 15:45 JST, after an interim look at the first chunk of each card, before the full read)
+
+Interim (APP1X 24 of the 29 spin scenes, RSG 24 of the 90; sanity only, not a read): APP1X spins 1 / 24 (identity 24 / 24), RSG 0 / 11 on
+its spin-set scenes so far. The one left, 2fe500f7 (handoff + fast at 2.0 s), is a third regime: the model's plan **reverses** at 24 m/s
+(model plan x at 2 s -16 .. -42 m, at 4 s -84 .. -171 m for k 15 .. 19), VCONT places the served points behind the car, v8's gate opens
+(PP ratio 3-4) and its full reference follows a path whose heading is 180 deg off, i.e. turns at the curvature cap (y -7 m at 2 s); when the
+plan flips forward again at k 20 the reference jumps and the MPC commands 1.24 rad. Reversing plans are rare: identity reads, decisions at
+>= 5 m/s whose model plan goes back > 1 m within 2 s: APP1X 25 / 27 878 (10 scenes; in the handoff window 2fe500f7 and 478d6ec4), RSG 1 / 33 242.
+Decision: the v9b content registered above (H_AMIN 0, H_FULL 1) would not touch this case, so v9b is redefined, its trigger unchanged
+(> 2 spins on a spin set with a handoff-window onset): v9a + a reverse guard (the plan's path is cut at its first node that lies behind the
+previous one along the car's heading, and the reference stops there with the deceleration bound). If the trigger does not fire, the reverse
+guard is reported as the proposed next fix, not run.
