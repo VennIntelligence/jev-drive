@@ -354,6 +354,9 @@ def rows_of(pool, which):
     if which == "dev-rec":
         T = dict(np.load(CR / f"on1_{pool}" / "tab.npz"))
         return np.flatnonzero(dev_of(T)), {}
+    if which == "train-rec":                                          # descriptive: the same read on the rows the R arms train on
+        T = dict(np.load(CR / f"on1_{pool}" / "tab.npz"))
+        return np.flatnonzero(~dev_of(T)), {}
     raise SystemExit(f"rows {which}")
 
 
