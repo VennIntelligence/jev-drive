@@ -120,7 +120,11 @@ def flat_rows(E):
 
 
 def cmd_run(a):
+    import os
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")     # deterministic kernels: two passes over the same rows agree bit for bit
     import torch
+    torch.use_deterministic_algorithms(True, warn_only=True)
+    torch.backends.cudnn.deterministic, torch.backends.cudnn.benchmark = True, False
     from types import SimpleNamespace
     import rm_train as RT
     import pp_train as T
@@ -143,7 +147,7 @@ def cmd_run(a):
     Fd = torch.zeros(on0, 20, device=dev)
     Fd[torch.as_tensor(sel, device=dev)] = torch.as_tensor(flat_rows(E0[sel]), device=dev)
 
-    def fwd(rows, cond, bs=256):
+    def fwd(rows, cond, bs=256, gpu=False):
         xs, ys = [], []
         with torch.no_grad():
             for i in range(0, len(rows), bs):
@@ -157,20 +161,23 @@ def cmd_run(a):
                     e[:, esp] = e[:, esp] * float(cond[1:]) / 10.0
                 p = model(S.front[r], e, S.tc[r], None, None, nv=None if S.nv is None else S.nv[r]).float()[:, pi].view(-1, 33, 15)
                 x, y, _ = T.rear(p, S.cam_x[r], W)
-                xs.append(x.cpu())
-                ys.append(y.cpu())
-        return torch.cat(xs).numpy(), torch.cat(ys).numpy()
+                xs.append(x if gpu else x.cpu())
+                ys.append(y if gpu else y.cpu())
+        return (torch.cat(xs), torch.cat(ys)) if gpu else (torch.cat(xs).numpy(), torch.cat(ys).numpy())
 
     # gate: edits off -> the plans of rm_train's dev evaluation (rows_ade, memory on, bs 256), per-row ADE bit for bit, on the shards' dev rows
     dv = ns.dv_o[ns.dv_o < on0]
     dv = dv[S.has_fut[torch.as_tensor(dv, device=dev)].cpu().numpy().astype(bool)]
     ref = RT.rows_ade(model, S, dv, W, False)
-    x, y = fwd(dv, "H")
-    fut = S.fut[torch.as_tensor(dv, device=dev)].cpu().numpy()
-    mine = torch.hypot(torch.as_tensor(x) - torch.as_tensor(fut[..., 0]), torch.as_tensor(y) - torch.as_tensor(fut[..., 1])).mean(1).numpy()
+    xg, yg = fwd(dv, "H", gpu=True)
+    fut = S.fut[torch.as_tensor(dv, device=dev)]
+    mine = torch.hypot(xg - fut[..., 0], yg - fut[..., 1]).mean(1).cpu().numpy()     # rows_ade's own arithmetic, on the card
+    x, y = xg.cpu().numpy(), yg.cpu().numpy()
     xs, ys = fwd(dv, "S10")                                           # the x 1.0 scale path must be the measured row
-    gate = dict(dev_rows=int(len(dv)), ade_equal_bitwise=bool(np.array_equal(ref, mine)), ade_max_abs_diff=float(np.abs(ref - mine).max()),
-                dev_ade_rows_ade=float(ref.mean()), dev_ade_mine=float(mine.mean()), scale1_equal_bitwise=bool(np.array_equal(x, xs) and np.array_equal(y, ys)),
+    x2, y2 = fwd(dv, "H")
+    gate = dict(dev_rows=int(len(dv)), deterministic_kernels=True, ade_equal_bitwise=bool(np.array_equal(ref, mine)), ade_max_abs_diff=float(np.abs(ref - mine).max()),
+                dev_ade_rows_ade=float(ref.mean()), dev_ade_mine=float(mine.mean()), repeat_equal_bitwise=bool(np.array_equal(x, x2) and np.array_equal(y, y2)),
+                scale1_equal_bitwise=bool(np.array_equal(x, xs) and np.array_equal(y, ys)), scale1_max_abs_diff_m=float(max(np.abs(x - xs).max(), np.abs(y - ys).max())),
                 f_changes_only_speed_cols=bool(np.array_equal(np.delete(Fd[torch.as_tensor(sel, device=dev)].cpu().numpy(), EGO_SPEED + [10, 13, 16], 1),
                                                               np.delete(E0[sel], EGO_SPEED + [10, 13, 16], 1))))
     print("gate", json.dumps(gate), flush=True)
@@ -303,7 +310,8 @@ def md(r):
          f"{r['shards']} ({r['rows']} offline rows, rm_train.build as rf_lonread.py). CIs: log-clustered percentile bootstrap, B 10 000, seed 0.", "",
          "## Gate", "", "Edits off vs rm_train's dev evaluation (rows_ade, memory on): "
          f"{r['gate']['dev_rows']} dev rows, per-row ADE bit-for-bit equal: **{r['gate']['ade_equal_bitwise']}** (max |diff| {r['gate']['ade_max_abs_diff']:.3g}, "
-         f"dev ADE {r['gate']['dev_ade_rows_ade']:.6f}); x 1.0 scale path = measured row bit for bit: {r['gate']['scale1_equal_bitwise']}; F touches only the "
+         f"dev ADE {r['gate']['dev_ade_rows_ade']:.6f}); a repeated pass equal bit for bit: {r['gate'].get('repeat_equal_bitwise')}; x 1.0 scale path = "
+         f"measured row bit for bit: {r['gate']['scale1_equal_bitwise']} (max {r['gate'].get('scale1_max_abs_diff_m', float('nan')):.3g} m); F touches only the "
          f"speed columns and the history yaws: {r['gate']['f_changes_only_speed_cols']}.", "",
          "## Cells", "", "| cell | rows | logs |", "|:--|--:|--:|"]
     L += [f"| {q} | {v['rows']} | {v['logs']} |" for q, v in r["cells"].items()]
