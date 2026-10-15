@@ -91,3 +91,17 @@ sh30_driver 的交接方式（同一个 session，不重启，不注入状态）
 - 结果：`experiments/route_follow/results/rewind_self/`（rewind_self.md、逐单元 CSV、逐变体 CSV、read.json），图 `figs/rewind_self_bev.png`
   （2–3 个单元：identity、变体、专家）。盒：`$DATA_DIR/runs/route_follow/rewind_self/`。
 - 决策文件 research/decisions/317.md + decisions.md 一行 + research/next-round/turn-night.md 末尾一段 + route_follow README 一行。
+
+## 补记 1（smoke 之后、pilot10 之前，2026-10-15 23:40 盒时间）
+
+- smoke（`$DATA_DIR/runs/route_follow/rewind_self/smoke`，be43648a；1b945907 h = 11 / 7 / 1，14315cc0 h = 2）：**机制过闸**。开关不设的 id 与 d316 存档 identity
+  逐位相同（2 / 2：plan 0、轨迹 0、每个 h 上 Δv 0，结局相同），idB 与 id 逐位相同；32 个扰动 session 在 h 前与 id 逐位相同（32 / 32），扰动正好打在
+  决策 h、h + 1 上。
+- **位移**：横向与航向都远在界内（Δ 3 / 5 s 横向 ≤ 1 cm、航向 ≤ 0.84°；Δ 8 s（h = 1）横向 ≤ 0.14 m、航向 ≤ 4.3°，g 1.3 s 1.1 最大）。
+  **速度比全部出界**：窗末速度比 ≈ 1 + 2 (s − 1)（s 0.9 → 0.80–0.84，s 1.1 → 1.17–1.22），32 / 32 界外。所以按登记的规则调 s，g 与 n 不变：
+  **s ∈ {0.96, 1.04}**（预期窗末速度比约 0.92 / 1.08）；变体 = g {0.7, 0.85, 1.15, 1.3} × s {0.96, 1.04}，n = 2。pilot10 的 n-self-check 仍是闸
+  （界内变体 ≥ 50 %，否则 rest32 不跑）。
+- 顺带看到的（2 个单元，不作判词，写出来是因为它们会影响读法）：窗末后 1 s 速度比继续放大（s 0.9 → 0.51–0.78，s 1.1 → 1.28–1.63），即策略把
+  速度扰动当成自己的趋势跟着走（d315 的纵向趋势跟随）；这是策略自己的续写，不排除。失败单元 1b945907 的 24 个变体全部失败（corridor，和 identity
+  一样），专家 Δ 3 / 5 / 8 s 都完成；对照 14315cc0 的 identity 完成，但 8 个变体全部失败（6 个 at-fault 碰撞、全部被追尾，速度变了 ±20 % 以后与
+  回放车的时序对不上），专家从同一 h 也失败（碰撞）。即 ±20 % 的速度扰动对这个对照不算「小」；s 收到 ±4 % 正是为此。
