@@ -14,7 +14,7 @@
 #   rf_recov.sh pilot <arm> [W]             1 000-step pilot RCV<arm>P[W]-L18-s0 (+ fwd reads + gate job, all --after)
 #   rf_recov.sh full <arm> [W]              2 x 2 500-step trainings RCV<arm>-L18-s{0,1} + rf_recov_post.sh submit (held, guard, PAI s0, report)
 #   rf_recov.sh train <arm> <seed> <steps> <tag> [W] | smoke <old|new> <kind> | gatecmp      (job bodies)
-# Env: PRIO (pool priority, default 2), OLD_REV (default 6a2fdac6 = the prereg commit, before any trainer change), AFTER (ids gating pilot/full)
+# Env: PRIO (pool priority, default 2; pilots 7: four-minute jobs ahead of the long rewind lane), OLD_REV (default 6a2fdac6 = the prereg commit, before any trainer change), AFTER (ids gating pilot/full)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/data}
 RF=$DATA_DIR/runs/route_follow; O=$RF/recovery_envelope; CK=$DATA_DIR/runs/op_parity/runs
 TR=$DATA_DIR/envs/op-train/bin/python; ME=experiments/route_follow/scripts/rf_recov.sh; PY=experiments/route_follow/scripts/rf_recov.py
@@ -32,7 +32,7 @@ flags() {  # arm [W] -> the arm's trainer flags
   local F W=${2:-}; F=$(cat $f)
   if [[ $W == *u ]]; then W=${W%u}; F=${F/--on-weight /--on-weight env=free:0,}; fi    # diagnostic: upper bounds only (free rows never drawn)
   [[ $(kind_of $1) != R ]] && F="$F --env-lam ${W:?W}"; echo "$F"; }
-FW=(--train --vram 28 --cpu 6 --ram 70)
+FW=(--train --vram 24 --cpu 6 --ram 70)                              # measured peak 19.6 GB (rcv-pilot history)
 case ${1:-} in
 gates)
   [[ -d $OLD ]] || git worktree add --detach $OLD $OLD_REV || exit 1

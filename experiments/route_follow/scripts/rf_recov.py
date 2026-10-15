@@ -66,6 +66,14 @@ def is_dev(log) -> bool:
     return zlib.crc32(str(log).encode()) % 100 < DEV_PCT
 
 
+def dev_of(T) -> np.ndarray:
+    """A pool tab's dev flag: tab `dev` ('0' / '1' strings or bools) when present, else is_dev(log)."""
+    if "dev" in T:
+        d = np.asarray(T["dev"])
+        return np.isin(d.astype(str), ("1", "True", "true")) if d.dtype.kind in "US" else d.astype(bool)
+    return np.array([is_dev(x) for x in T["log"]])
+
+
 def braking(stop, g, add=0.0):
     """sqrt(2 A_DEC (stop - g)) + add before `stop`, 0 from it on (per row stop (S,), grid g (NR,)) -> (S, NR); stop = inf: BIG."""
     rem = stop[:, None] - g[None]
@@ -274,7 +282,7 @@ def cmd_pack(a):
         rec["parts"][pre] = dict(pool=p, rows=int(len(keep)), env={c: int((env == c).sum()) for c in np.unique(env)})
     if a.arm in ("R", "RL"):
         T = dict(np.load(CR / f"on1_{a.rec}" / "tab.npz"))
-        dev = T["dev"].astype(bool) if "dev" in T else np.array([is_dev(x) for x in T["log"]])
+        dev = dev_of(T)
         keep = np.flatnonzero(~dev)
         subset(a.rec, keep, f"RCVR{a.rec}", {})
         parts.append(f"on1_RCVR{a.rec}:r:both")
@@ -342,9 +350,8 @@ def rows_of(pool, which):
         r = np.flatnonzero(m["k"] <= 1)
         return r, {}
     if which == "dev-rec":
-        T = np.load(CR / f"on1_{pool}" / "tab.npz")
-        dev = T["dev"].astype(bool) if "dev" in T.files else np.array([is_dev(x) for x in T["log"]])
-        return np.flatnonzero(dev), {}
+        T = dict(np.load(CR / f"on1_{pool}" / "tab.npz"))
+        return np.flatnonzero(dev_of(T)), {}
     raise SystemExit(f"rows {which}")
 
 
