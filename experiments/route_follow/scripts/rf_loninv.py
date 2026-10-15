@@ -251,7 +251,7 @@ def policy(a, run):
     slow_h, slow_x, slow_p = speed < SLOW_R * vh, speed < SLOW_R * vx, speed < SLOW_R * vp
     out["free"] = dict(sel=free, cols=dict(base, v_human=np.round(vh, 2), v_expert=np.round(vx, 2), v_proxy=np.round(vp, 2), turn60=np.round(turn60, 1),
                                            slow_h=slow_h, slow_x=slow_x & xs, slow_p=slow_p),
-                       flags=dict(slow_h=slow_h, slow_x=slow_x & xs, has_pack=xs, slow_p=slow_p, slow_h_k_le2=slow_h & (k <= 2)),
+                       flags=dict(slow_h=slow_h, slow_x=slow_x & xs, has_pack=xs, slow_p=slow_p),
                        binv=vh)
     fast_x, fast_p, fast_h = speed > vx + FAST_D, speed > vp + FAST_D, speed > vh + FAST_D
     out["turn"] = dict(sel=turn, cols=dict(base, d_entry=np.round(ent, 2), v_human=np.round(vh, 2), v_expert=np.round(vx, 2), v_proxy=np.round(vp, 2),
