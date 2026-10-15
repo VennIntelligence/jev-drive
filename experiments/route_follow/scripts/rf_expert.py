@@ -19,6 +19,12 @@ never written.
         rf_expert.py fig --pack DIR --runs LABEL=<run root | run dir>,.. ... --scenes s1,s2,.. --out PNG
         one panel per scene: road area / lanes (grey), the human log (blue), the expert chain (black dashed, turn entry / exit ticks),
         each label's driven rear-axle path from drive.jsonl anchors (first label red, second orange), the first zero-score position (x)
+  report (box / Tokyo host python3, numpy + pandas not needed)
+        rf_expert.py report --kind held --pack DIR --follow <rf_follow scenes.csv> --xp LABEL --refs LABEL,.. --runs LABEL=<dir>,.. .. --out DIR
+        rf_expert.py report --kind pai --pack DIR --turns <rf_v2pai turns.json> --xp LABEL --refs rsg --runs LABEL=<root> .. --control FILE --out DIR
+        -> DIR/turns.md + turns.csv (the registered turn set: held = the reference's first label's rf_follow turn scenes, PAI = strict36;
+        per turn the expert's outcome, zero type, failure class (prereg: wrong lane chain / collision / corridor / speed), yield decisions
+        in [entry - 20, exit + 10] m) and DIR/lines.md (E1 / E2 count, E3 means on the straight / control scenes vs each reference)
 """
 from __future__ import annotations
 
@@ -452,6 +458,133 @@ def fig(a):
     print("->", a.out)
 
 
+def summaries(spec):
+    """LABEL=<dir | root>,.. -> {scene: rollout summary row}."""
+    lab, roots = spec.split("=", 1)
+    out = {}
+    for root in roots.split(","):
+        for f in glob.glob(os.path.join(root, "aggregate", "results-summary.json")) + glob.glob(os.path.join(root, "runs", "*", "sim", "aggregate", "results-summary.json")):
+            for r in json.loads(open(f).read())["rollouts"]:
+                if r.get("score") is not None or r["clipgt_id"] not in out:
+                    out[r["clipgt_id"]] = r
+    return lab, out
+
+
+def yields(root_spec):
+    """{scene: [(entry rel, exit rel, has hits)] per expert decision} from drive.jsonl `expert` (the last session of a scene)."""
+    lab, roots = root_spec.split("=", 1)
+    out = {}
+    for root in roots.split(","):
+        fs = (glob.glob(os.path.join(root, "runs", "*", "driver", "drive.jsonl")) + glob.glob(os.path.join(root, "driver-logs", "drive.jsonl")))
+        for f in fs:
+            S = {}
+            for line in open(f):
+                if '"expert"' not in line:
+                    continue
+                r = json.loads(line)
+                x = r["expert"]
+                S.setdefault((r["scene"], r["session"]), []).append((x["turn"][0] if x["turn"] else None, x["turn"][1] if x["turn"] else None, bool(x["hits"])))
+            for (sc, _), v in S.items():
+                out[sc] = v
+    return out
+
+
+def fail_class(outcome, zero, chain_bad):
+    if outcome == "completed":
+        return ""
+    if chain_bad:
+        return "wrong lane chain"
+    z = str(zero or "")
+    if "collision" in z:
+        return "collision"
+    if "offroad" in z or "corridor" in z or outcome == "off":
+        return "corridor"
+    if str(outcome).startswith("short"):
+        return "speed"
+    return "other:" + str(outcome)
+
+
+def report(a):
+    import csv
+    idx = json.loads((Path(a.pack) / "index.json").read_text())["scenes"]
+    S = dict(summaries(s) for s in a.runs)
+    Y = yields(next(s for s in a.runs if s.startswith(a.xp + "=")))
+    refs = a.refs.split(",")
+    rows = []
+    if a.kind == "held":
+        F = {}
+        for r in csv.DictReader(open(a.follow)):
+            F.setdefault(r["label"].split("@")[0], {})[r["scene"]] = r
+        turn_set = sorted(sc for sc, r in F[refs[0]].items() if r["turn"] == "True")
+        for sc in turn_set:
+            r = F[a.xp].get(sc, {})
+            oc = r.get("outcome") if r.get("turn") == "True" else "not_a_turn"
+            rows.append(dict(scene=sc, side=F[refs[0]][sc]["side"], deg=round(float(F[refs[0]][sc]["turn_deg"])), outcome=oc,
+                             **{f"ref_{x}": F[x].get(sc, {}).get("outcome", "") for x in refs}))
+    else:
+        T = json.loads(open(a.turns).read())["rows"]
+        by = {(r["label"], r["scene"]): r for r in T}
+        turn_set = open(a.strict).read().split()
+        for sc in turn_set:
+            r = by.get((a.xp, sc), {})
+            rows.append(dict(scene=sc, side=r.get("side", ""), deg=round(r.get("turn_deg") or 0), outcome=r.get("outcome") or "missing",
+                             v_entry=None if r.get("v_entry") is None else round(r["v_entry"], 2), v_log_entry=None if r.get("v_log_entry") is None else round(r["v_log_entry"], 2),
+                             shape_ok=r.get("shape_ok"), **{f"ref_{x}": by.get((x, sc), {}).get("outcome", "") for x in refs}))
+    for row in rows:
+        sc = row["scene"]
+        m = idx.get(sc, {})
+        rt = m.get("route_turns", [])
+        row["chain_bad"] = bool(m.get("fallback")) or any((not t[4]) or t[3] > 2.0 for t in rt)
+        sm = S[a.xp].get(sc, {})
+        row["score"] = None if sm.get("score") is None else round(sm["score"], 3)
+        row["zero"] = sm.get("failure_reason") or ""
+        row["cls"] = fail_class(row["outcome"], row["zero"], row["chain_bad"])
+        v = Y.get(sc, [])
+        row["yield_dec"] = sum(1 for en, ex, h in v if h and en is not None and en <= 20.0 and ex >= -10.0)
+        row["yield_all"] = sum(h for _, _, h in v)
+        row["nudges"] = len(m.get("nudges", []))
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    keys = list(rows[0].keys())
+    with open(out / "turns.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, keys)
+        w.writeheader()
+        w.writerows(rows)
+    n, done = len(rows), sum(r["outcome"] == "completed" for r in rows)
+    L = [f"# Rule expert {a.xp}: the registered turn set ({a.kind}, {n} turns)", "",
+         f"- completed: **{done} / {n}**" + "".join(f"; {x} {sum(r[f'ref_{x}'] == 'completed' for r in rows)} / {n}" for x in refs),
+         "- failure classes: " + ", ".join(f"{k} {v}" for k, v in sorted({c: sum(r['cls'] == c for r in rows) for c in set(r['cls'] for r in rows) if c}.items())), "",
+         "| " + " | ".join(keys) + " |", "|" + "|".join(":--" for _ in keys) + "|"]
+    L += ["| " + " | ".join(str(r[k])[:44] if k != "scene" else (r[k][7:15] if r[k].startswith("clipgt") else r[k][-8:]) for k in keys) + " |" for r in rows]
+    (out / "turns.md").write_text("\n".join(L) + "\n")
+    # E3: straight held scenes (no expert-path turn before the log's end station) or the control list
+    if a.kind == "held":
+        e3 = sorted(sc for sc, m in idx.items() if not any(t[0] < m["log_s"][1] for t in m["turns"]))
+        name = "held straight"
+    else:
+        e3 = open(a.control).read().split()
+        name = "control"
+    def mean(lab, sel):
+        v = [S[lab][sc].get("score") for sc in sel if sc in S[lab]]
+        v = [0.0 if x is None else float(x) for x in v]
+        return (sum(v) / len(v) if v else float("nan")), len(v)
+    common = [sc for sc in e3 if all(sc in S[x] and S[x][sc].get("score") is not None for x in [a.xp] + refs)]
+    E = [f"# Lines ({a.kind})", "", f"- E{'1' if a.kind == 'held' else '2'}: completed {done} / {n} (line {'20 / 24' if a.kind == 'held' else '29 / 36'})",
+         f"- E3 ({name}, {len(common)} scenes scored by every label): " + "; ".join(f"{x} {mean(x, common)[0]:.4f}" for x in [a.xp] + refs)
+         + "; " + "; ".join(f"{a.xp} - {x} {mean(a.xp, common)[0] - mean(x, common)[0]:+.4f} (line >= -0.05)" for x in refs)]
+    for lab in [a.xp] + refs:
+        v = S[lab]
+        sc = [x for x in v if v[x].get("score") is not None]
+        z = [x for x in sc if float(v[x]["score"]) == 0]
+        atf = [x for x in sc if (v[x].get("metrics") or {}).get("collision_at_fault") or (v[x].get("metrics") or {}).get("offroad_or_collision_at_fault")]
+        E.append(f"- {lab}: scored {len(sc)}, mean {sum(float(v[x]['score']) for x in sc) / max(len(sc), 1):.4f}, zeros {len(z)}, "
+                 f"collision at fault {sum(bool((v[x].get('metrics') or {}).get('collision_at_fault')) for x in sc)}, "
+                 f"offroad {sum(bool((v[x].get('metrics') or {}).get('offroad')) for x in sc)}")
+    (out / "lines.md").write_text("\n".join(E) + "\n")
+    print((out / "lines.md").read_text())
+    print("\n".join(L[:4]))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -465,8 +598,19 @@ def main():
     s.add_argument("--runs", nargs="+", required=True)
     s.add_argument("--scenes", required=True)
     s.add_argument("--out", required=True)
+    s = sp.add_parser("report")
+    s.add_argument("--kind", choices=("held", "pai"), required=True)
+    s.add_argument("--pack", required=True)
+    s.add_argument("--follow", default="")
+    s.add_argument("--turns", default="")
+    s.add_argument("--strict", default="")
+    s.add_argument("--control", default="")
+    s.add_argument("--xp", required=True)
+    s.add_argument("--refs", required=True)
+    s.add_argument("--runs", nargs="+", required=True)
+    s.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"pack": pack, "fig": fig}[a.cmd](a)
+    {"pack": pack, "fig": fig, "report": report}[a.cmd](a)
 
 
 if __name__ == "__main__":
