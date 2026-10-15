@@ -4,8 +4,8 @@
 # rf_slow.sh's way), PAI 281 for seed 0 on the box (pai_box.sh run per chunk: gate serve = JEV_TRACK unset, gains 20, JEV_VCONT 1.0 JEV_LEAD 1,
 # the Tokyo reference r281/rsg's own 8 chunk lists), the PAI extracts, then the lines report (rf_recov_post.py lines). Box, repo root.
 # Every job goes through the pool, --after chained; ids in $O/<ARM>/jobs.txt.
-#   rf_recov_post.sh fetch          pool network job: the PAI 281 scenes missing from the box scene cache (hf-mirror, pai_fetch.sh) -> $O/fetch.id
-#   rf_recov_post.sh ref-pai        the same-host PAI reference: RSG-L18-s0 on the 281, identical box path, + its extracts -> $O/ref_paix.id
+#   rf_recov_post.sh fetch          pool network job: the PAI 281 scenes missing from the box scene cache (hf-mirror, pai_fetch.sh) -> $O/post/fetch.id
+#   rf_recov_post.sh ref-pai        the same-host PAI reference: RSG-L18-s0 on the 281, identical box path, + its extracts -> $O/post/ref_paix.id
 #   rf_recov_post.sh submit <ARM> <TAG_s0> <TAG_s1|-> <train_job_s0> <train_job_s1|->     the whole arm, --after its training jobs
 #   rf_recov_post.sh post <ARM> <TAG_s0> <TAG_s1|->    a report job now, no dependencies (rerun after a failure / partial report)
 #   rf_recov_post.sh cost           job count and estimated job-hours per arm (+ the one-off reference)
@@ -20,7 +20,7 @@ P=$DATA_DIR/third_party/alpasim/.venv/bin/python; PB=experiments/alpasim/scripts
 CH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks          # the Tokyo reference's 8 chunk lists (36 scenes; the simulator repeats a list)
 STRICT=experiments/route_follow/results/pai281/strict36.txt; WL=$O/pai_wl.pkl; REFT=RSG-L18-s0
 WIZ=controller.gains.rel_front_steering_angle_weight=20
-mkdir -p $O
+X=$O/post; mkdir -p $X                               # one-off jobs (fetch, reference) of this script; $O is shared with the training half
 kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
 NDRY=0
 sub() { local log=$1 name=$2; shift 2; local id
@@ -43,8 +43,8 @@ okafter() {  # ids...: every id must be a known pool job that has not failed / b
 fetchdep() {  # the fetch job id when the cache still misses scenes (the PAI jobs wait for it); refuses a failed fetch
   local n; n=$(python3 $S/rf_recov_post.py missing --scenes $DATA_DIR/third_party/alpasim/data/scenes --cache $DATA_DIR/datasets/nurec/all-usdzs --chunks $CH/*.txt)
   (( n == 0 )) && return 0
-  [[ -s $O/fetch.id ]] || { echo "$n PAI scenes missing from the cache and no fetch job: run rf_recov_post.sh fetch" >&2; return 1; }
-  okafter $(cat $O/fetch.id) || return 1; cat $O/fetch.id; }
+  [[ -s $X/fetch.id ]] || { echo "$n PAI scenes missing from the cache and no fetch job: run rf_recov_post.sh fetch" >&2; return 1; }
+  okafter $(cat $X/fetch.id) || return 1; cat $X/fetch.id; }
 held_ok() { local i; for i in 0 1 2 3 4 5; do [[ -f $M/$1/c$i/run/aggregate/results-summary.json ]] || return 1; done; }
 hdirs() { ls -d $M/$1/c*/run | paste -sd,; }
 pdir() { local r i; for r in $O/read10 $RF/guard/read10 $RF/slow/read10 $RF/allrows/read10; do   # the first root holding all 10 public chunks of the tag
@@ -65,24 +65,24 @@ pai_submit() {  # <read dir> <tag> <log> <after ids>: one pool job per chunk (pa
   (IFS=,; echo "${ids[*]}"); }
 case ${1:-} in
 fetch)
-  n=$(python3 $S/rf_recov_post.py missing --scenes $DATA_DIR/third_party/alpasim/data/scenes --cache $DATA_DIR/datasets/nurec/all-usdzs --chunks $CH/*.txt --tsv $O/fetch281.tsv)
+  n=$(python3 $S/rf_recov_post.py missing --scenes $DATA_DIR/third_party/alpasim/data/scenes --cache $DATA_DIR/datasets/nurec/all-usdzs --chunks $CH/*.txt --tsv $X/fetch281.tsv)
   (( n > 0 )) || { echo "every PAI 281 scene is in the cache"; exit 0; }
-  if [[ -s $O/fetch.id ]] && jstate $(cat $O/fetch.id) | grep -qE ' (queued|running|inbox)$'; then echo "fetch job $(cat $O/fetch.id) still pending"; exit 0; fi
-  id=$(TRIES=2 sub $O/jobs.txt recov-fetch --vram 0.5 --cpu 2 --ram 4 --timeout-h 10 -- bash $ME fetchjob) || exit 1
-  [[ ${DRY:-0} == 1 ]] || echo $id > $O/fetch.id; echo "$n scenes ($O/fetch281.tsv), fetch job $id" ;;
+  if [[ -s $X/fetch.id ]] && jstate $(cat $X/fetch.id) | grep -qE ' (queued|running|inbox)$'; then echo "fetch job $(cat $X/fetch.id) still pending"; exit 0; fi
+  id=$(TRIES=2 sub $X/jobs.txt recov-fetch --vram 0.5 --cpu 2 --ram 4 --timeout-h 10 -- bash $ME fetchjob) || exit 1
+  [[ ${DRY:-0} == 1 ]] || echo $id > $X/fetch.id; echo "$n scenes ($X/fetch281.tsv), fetch job $id" ;;
 fetchjob)    # up to 3 passes of pai_fetch.sh from hf-mirror (direct, no proxy: docs/alpasim.md), rc 0 only when no scene of the 281 is missing
   for pass in 1 2 3; do
     env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY HFROOT=https://hf-mirror.com \
-      bash experiments/alpasim/scripts/pai_fetch.sh $O/fetch281.tsv 1 4
-    n=$(python3 $S/rf_recov_post.py missing --scenes $DATA_DIR/third_party/alpasim/data/scenes --cache $DATA_DIR/datasets/nurec/all-usdzs --chunks $CH/*.txt --tsv $O/fetch281.tsv)
+      bash experiments/alpasim/scripts/pai_fetch.sh $X/fetch281.tsv 1 4
+    n=$(python3 $S/rf_recov_post.py missing --scenes $DATA_DIR/third_party/alpasim/data/scenes --cache $DATA_DIR/datasets/nurec/all-usdzs --chunks $CH/*.txt --tsv $X/fetch281.tsv)
     echo "$(date '+%F %T') pass $pass: $n scenes missing"; (( n == 0 )) && exit 0
   done; exit 1 ;;
-ref-pai)     # RSG-L18-s0 on the 281, the identical box path; its extracts -> $O/ref_paix.id (each arm's report waits for it)
+ref-pai)     # RSG-L18-s0 on the 281, the identical box path; its extracts -> $X/ref_paix.id (each arm's report waits for it)
   [[ -s $WL ]] || { echo "no $WL (the stored PAI wait lines, Mac tmp/tax/pai_wl.pkl): copy it first" >&2; exit 1; }
   af=$(fetchdep) || exit 1; R=$O/pai/$REFT; mkdir -p $R
   ids=$(pai_submit $R $REFT $R/jobs.txt "$af") || exit 1
   x=$(sub $R/jobs.txt paix-${REFT,,} ${ids:+--after $ids} --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME paix $R) || exit 1
-  [[ ${DRY:-0} == 1 ]] || echo $x > $O/ref_paix.id; echo "reference PAI read $R: chunks ${ids:-all done}, extracts $x" ;;
+  [[ ${DRY:-0} == 1 ]] || echo $x > $X/ref_paix.id; echo "reference PAI read $R: chunks ${ids:-all done}, extracts $x" ;;
 submit)
   ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:?TAG_s1 or -}; J0=${5:?train job s0}; J1=${6:?train job s1 or -}; K=$(kind $ARM) || exit 1
   [[ $T1 == - ]] && J1=-; TAGS=($T0); JOBS=($J0); [[ $T1 != - ]] && { TAGS+=($T1); JOBS+=($J1); }
@@ -105,7 +105,7 @@ submit)
   done
   pids=$(pai_submit $O/pai/$T0 $T0 $LOG "$J0${af:+,$af}") || exit 1
   x=$(sub $LOG paix-${T0,,} --after $pids --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME paix $O/pai/$T0) || exit 1
-  dep="$(IFS=,; echo "${rr[*]}"),$x"; [[ -s $O/ref_paix.id ]] && dep="$dep,$(cat $O/ref_paix.id)" || echo "warning: no reference PAI job ($O/ref_paix.id): PAI lines stay pending until ref-pai + post" >&2
+  dep="$(IFS=,; echo "${rr[*]}"),$x"; [[ -s $X/ref_paix.id ]] && dep="$dep,$(cat $X/ref_paix.id)" || echo "warning: no reference PAI job ($X/ref_paix.id): PAI lines stay pending until ref-pai + post" >&2
   r=$(sub $LOG rcv-report-$ARM --after $dep --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 $T1) || exit 1
   echo "$ARM ($K): ${#rr[@]} held / public read jobs, $(echo $pids | tr , '\n' | grep -c .) PAI chunk jobs, extracts $x, report $r"
   [[ ${DRY:-0} == 1 ]] && echo "DRY: $NDRY job specs printed, nothing submitted" || echo "ids in $LOG" ;;
