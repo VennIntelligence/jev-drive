@@ -105,3 +105,20 @@ switching.json, switching.md with the CIs and verdicts), `figs/plan_switching.pn
 and the first 2 straight by scene id with a switching rate), one README paragraph. research/decisions.md is not edited by this lane.
 
 ## Amendments (appended after the prereg commit; each says whether it came before or after a statistic was seen)
+
+1. (After the first read; S1 / S2 / S3 and the class table were seen.) Switching pairs are absent: 0 of 1596 r-defined consecutive
+   pairs on pai_RSG-L18-s0, 1 of 1580 on pai_APP1X (a174faed, 5.6 m before the entry), 0 on every held set. On pai_APP1X the registered
+   S1 rule returns "supported" mechanically (failed mean 0.001 / completed 0, ratio +inf); this is reported as registered and marked
+   degenerate, and the substantive reading is "no switching". The |j| per pair is confounded by speed (failed turns approach slower:
+   PAI RSG median 4.0 vs 6.4 m/s, so each 0.1 s step covers less road). Added, descriptive, no verdict:
+   (a) **plan creep**: j per metre of ego travel between the two decisions (pairs with ds > 0.05 m; per-turn median) and the cumulative
+       signed j over the window (sum, m; negative = each new plan places its 2 s point outside the previous plan's path), failed vs
+       completed with the bootstrap CI, per class; control = the same on decisions 40-80 m before the entry (signed by the coming
+       turn's side; ~0 expected) where the rollout reaches back that far;
+   (b) **M4 composition**: per failed turn, the set of states (d307 M4: S r < 0.25, P, F r >= 0.6) present 0-10 m before the entry, and
+       the share of the variance of r there that lies between turns;
+   (c) **executed vs planned heading**: per decision, the plan's heading toward the turn at 1 s and 2 s against the car's yaw change
+       over [t0, t0 + 1 s] / [t0, t0 + 2 s] (controller trace; decisions with t0 + T < t_f); per turn the median executed - planned
+       (deg), failed vs completed;
+   (d) the figure gains a fourth row, the cumulative signed j; legends move below the panels.
+   Nothing registered changes.
