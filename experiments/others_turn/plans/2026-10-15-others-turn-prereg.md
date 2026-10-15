@@ -33,6 +33,12 @@
 主办方 PAI 参考 subject（alpamayo1、vavam-linear / nonlinear、alternative_1..5，各 3 rollout，441 curated val）的逐 scene 得分 / offroad / 走廊，
 在我们 PAI 281 的 36 个严格转弯上：通过率（score > 0）对 RSG-L18-s0（同 36，path 0 与 gate 各报）。不是完成率（无轨迹），配置不同（主办方 run），只作方向。
 
-## 结果
+## 结果（2026-10-15 16:25 填）
 
-（留空）
+- 闸：G1 过（WA-JEPA 85 个 rollout、1 527 个决策，asl 取的 anchor 与 driver 记录逐位相同，k 一致；第二句未单独跑，输入相同推出）；G2 过（YR10m10 9 / 24，turn 集同 RSG 的 24 个）；
+  G3 过（LTF 24 / 24、DD 23 / 24、garage 24 / 24）。
+- 24 转弯完成：RSG-L18-s0 16，WA-JEPA 7（配对 −37.5 pp [−68.8, 0.0]），garage 1（−62.5 [−83.3, −40.9]），LTF 0、DD 0（−66.7 [−85.7, −45.5]）。
+- 判读：「不经专项训练就会转」四个都不成立；「它们也不会转」（≤ 12 / 24）四个都成立。
+- 零分 / 均分（held 452）：RSG 0.881 / 26，WA-JEPA 0.766 / 85，garage 0.628 / 121，LTF 0.569 / 176，DD 0.540 / 192。
+- 附读（PAI 严格 36，只有得分）：alpamayo1 通过 52 %，RSG 39 %，vavam-linear 27 %，其余更低。
+- 事后（未预登记）：对照页的重跑（WA-JEPA、RSG、规则专家 XP-L12-E46）完成数与存档相同（7 / 16 / 22）。

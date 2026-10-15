@@ -34,6 +34,7 @@
 - [next-round/plan.md](next-round/plan.md)：下一轮方向与计划（2026-10-09 改写）：论文线与比赛线分开，后果监督的轻量表征支路，判定线、日历。
 - [next-round/closed-loop.md](next-round/closed-loop.md)：闭环训练线方案：全长（18–20 决策）训练、估算与排期。
 - [literature/anchored-planning-2026.md](literature/anchored-planning-2026.md)：文献笔记，Aim Short to Reach Far（Anchored Planning，arXiv 2609.30036）：冻结世界模型只把远目标换成近锚点，CEM 成功率 9.2% → 59.8%；与我们漂移的异同、serving 近锚点校正与短程锚点标签，三个两天内的小实验。
+- [others-turn.md](others-turn.md)：别人会转弯吗（2026-10-15）：第三方策略（WA-JEPA、AlpaSim 的 LTF / DiffusionDrive sample、主办方 garage TransFuser）在 held 24 个转弯上原样闭环，完成 7 / 0 / 0 / 1 对 RSG 16；文献里别人怎么转弯、差异清单、为什么对我们难；对照页在桌面 others_turn/。
 - [recipes.md](recipes.md)：配方总表，活着的和已死的配方各一行，带决策号。
 - [next-round/overnight.md](next-round/overnight.md)：2026-10-09 夜的执行任务书：NC 失败分类、真值几何 oracle、离轨 warp 行。
 - `lit/`：文献长报告，只在这台 Mac 上，不进 git。
