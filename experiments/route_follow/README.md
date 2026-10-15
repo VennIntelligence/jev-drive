@@ -185,6 +185,23 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   - Runway completion barely changes: 4 / 22 vs 3 / 22. The other 14 strict turns go 7 vs 2; strict 36 11 vs 5; shape gate 8 vs 1.
   - Harm: all 281 -0.062 [-0.108, -0.016], spins 29 vs 2, offroad zeros 32 vs 14, control 75 6 zeros vs 0.
   - Look at the per-scene table in the mechanism file: compare entry speed and completion on the runway rows.
+  **APPROACH COURSE v2 (APP2)** (prereg `plans/2026-10-15-approach-v2-prereg.md`, Amendments 1-2; [results/approach/v2/](results/approach/v2/)):
+  the same rows with the term scoped to its purpose (`rm_train.py --app-v2`; on_approach v2 branch; sidecar `rf_apppool.py v2`):
+  - no term in the first 1.5 s after the handoff
+  - the speed term only with the ego <= 26 m before the entry
+  - a symmetric speed term to the human on the straights
+  - a 0.5 m lateral dead zone to the human entry offset, clipped inward at 0.75 m
+  - a 2 s over-turn guard
+
+  Flags off and the v1 path are bit-identical ([ident2off.json](results/approach/v2/ident2off.json), [ident2app1.json](results/approach/v2/ident2app1.json)).
+  - Pilot guard gate ([gate/](results/approach/v2/gate/)): W 0.5 passes (G-real 0.5403, line 0.5435); W 1 fails (0.5508).
+  - **APP2W05-L18-s0 fails H1 on held 460, stopped before PAI** ([held/confirm.md](results/approach/v2/held/confirm.md)):
+    - zeros 70 vs 26, +44 [+29, +60]; at-fault +24; offroad 34 vs 17, corridor 27 vs 6; dev ADE +0.025
+    - held turns 14 / 24 vs 16 / 24
+    - the car still enters further inside, +0.16 [+0.08, +0.23] m ([held/entry.md](results/approach/v2/held/entry.md))
+    - 35 of its 50 new zeros are also APP1X's new zeros, so the harm is common to both term designs
+
+  Look at the confirm table next to APP1X's [held/confirm.md](results/approach/held/confirm.md): the zero count and the kind split barely move.
 - [results/corridor/](results/corridor/check.md): ROUTE-LANE CORRIDOR labels and the offline check (turn-night.md section 6; prereg
   `plans/2026-10-15-corridor-check-prereg.md`, Amendments 1-4; `scripts/rf_corridor.py` lanes | plans | build | check, `scripts/rf_corridor.sh`).
   Labels: the route's own lane chain (entry lane -> connector -> exit lane, the target lane at a lane change) + 0.3 m, classes corridor /

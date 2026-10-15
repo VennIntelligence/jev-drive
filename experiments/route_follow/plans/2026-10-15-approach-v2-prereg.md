@@ -127,3 +127,30 @@ the shape gate, zeros by kind, and new non-turn zeros.
   - neg_dv is the plan speed minus the human's on the dev straights (base -1.95 m/s). It rises, i.e. no slow-down was learnt on the
     straights.
   - By section 3, **W 1 is not trained**. W 0.5 trains in full (APP2W05-L18-s0, launched 13:24, held read and report2 chained).
+
+## Amendment 2 (full training and held 460: H1 fails, stop; 2026-10-15 ~14:00)
+
+- **APP2W05-L18-s0** (W 0.5, 2 500 gentle steps; `results/approach/v2/gate/APP2W05-L18-s0.md`). Dev ADE 0.5284 -> 0.5537 (+0.025; at 1 000
+  steps 0.5617). The final checkpoint's guard reads are reported, not gating: G-real FAIL at the 0.015 line, G-rely 0.0100 FAIL, G-ST and
+  G-over pass. On the dev straights the plan speeds up toward the human: neg_dv -1.96 -> -1.43 m/s, +0.52 [+0.39, +0.72].
+- **Held 460 H1 FAILS** (`results/approach/v2/held/confirm.md`, held18, 452 paired, 39 logs, vs RSG-L18-s0):
+
+  | read | RSG-L18-s0 | APP2W05 | paired difference [95 % CI] | APP1X (v1) |
+  |:--|--:|--:|:--|:--|
+  | zeros | 26 | 70 | **+44.0 [+29.4, +59.5]** | +44.0 [+30.4, +58.3] |
+  | at-fault zeros | 21 | 45 | +24.0 [+12.5, +35.4] | +26.0 [+15.5, +36.9] |
+  | collision / offroad / corridor zeros | 4 / 17 / 6 | 11 / 34 / 27 | | 6 / 41 / 25 |
+  | mean score | | | -0.042 [-0.079, -0.006] | -0.126 [-0.156, -0.098] |
+  | GT distance (m) | 1.135 | 1.808 | +0.673 [+0.526, +0.833] | +0.116 |
+
+- **Held turns** (`held/entry.md`, `held/follow.md`). Completion 14 / 24 vs 16 / 24 (APP1X 8). Entry speed +0.10 [+0.04, +0.16] m/s. The
+  inward offset at the entry is still +0.16 [+0.08, +0.23] m (median 0.58 vs 0.34 m), so v2 does not remove the inward entry seen in
+  APP1X (+0.17).
+- **Where the harm is** (descriptive, per_scene.csv of both reports). APP2W05 has 50 new zeros over RSG (21 offroad, 20 corridor, 10
+  collision at fault). 35 of them are also new zeros of APP1X (52). The rollouts travel on average 5.7 m further than RSG's over the 18
+  decisions.
+  - The harm is common to both term designs. It is not specific to the handoff, straight-slowdown or lateral-pull parts that v2 changed.
+  - Candidate common causes (not tested): the pool mix (~7 approach rows of 128 that carry the S hinges without imitation; PAI rows have no
+    road raster) or any approach-row gradient at all. The diagnostic would be a full 2 500-step W 0 control on on1_APP. It is not
+    registered and was not run.
+- **Verdict by section 4.** W 0.5 fails H1, and W 1 was not trained (pilot G-real FAIL). No weight passes H1: **stop, no PAI read**.
