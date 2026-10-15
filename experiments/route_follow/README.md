@@ -45,6 +45,12 @@ or weak schedules are worse: (0.1, 1250) +9, (0.03, 2500) +6. Addendum, seed 1 o
 score +0.0005 [-0.0032, +0.0041], zeros +0.0 [-5.5, +5.8], at-fault +0.0, GT -0.012 m). See [results/lrsteps/lrsteps.md](results/lrsteps/lrsteps.md),
 prereg `plans/2026-10-15-lrsteps-pilot-prereg.md`, chain `scripts/rf_lrsteps.sh`.
 
+ON-K pilot (2026-10-15, decision 309): on-policy rows per batch on RSG-L18-s0's exact command, never varied before (13 = round(0.1 x 128)).
+Arms are `--on-k` 26 and 51 at ho-w 3 (hinge pressure 2.2x and 5.8x of k13, because n_imit shrinks as k grows) and 51 at ho-w 1 (1.9x). Held 452
+zeros vs RSG-L18-s0, seed 0: k26 -4.0 [-9.6, +1.2], k51 -1.0 [-6.4, +4.1], k51w1 -3.0 [-7.7, +1.1]. Score: k51w1 +0.0130 [+0.0037, +0.0240] is a
+candidate on the score clause, the others' CIs reach 0. More rows do not hurt. The 5.8x arm is the weakest (turn completion -8 pp). Seed 1 of all
+three is running. See [results/onk/onk.md](results/onk/onk.md), prereg `plans/2026-10-15-onk-pilot-prereg.md`, chain `scripts/rf_onk.sh`.
+
 **Next.** Turning-school reads P0-P2 (`research/turning-school-checks.md`, to appear); the holdlead PAI exam read (coordinator exception);
 spin-fix lateral bound v2; Tokyo PAI 281: RB0-F-s0 (same-gains base reference), RBSGc-PAI.
 
