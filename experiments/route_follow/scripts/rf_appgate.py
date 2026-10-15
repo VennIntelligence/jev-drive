@@ -3,7 +3,8 @@
 against its base on the held-out approach dev rows (dev logs of rf_apppool.py, never in the pool), plus the route v2 gates of the same
 checkpoint (rf_v2gate.py's JSON: G-real, G-ST, G-over, G-rely). envs/op-train, one GPU (pool job --vram 20 --cpu 4 --ram 48).
 
-  rf_appgate.py --tag APP1P-L18-s0 [--base RSG-L18-s0] [--v2 <rf_v2gate json>] [--B 10000]
+  rf_appgate.py --tag APP1P-L18-s0 [--base RSG-L18-s0] [--v2 <rf_v2gate json>] [--B 10000] [--rows train --n 2000]  (train: diagnostic
+      read on the pool's own rows, written as <tag>_trainrows)
       -> experiments/route_follow/results/approach/gate/<tag>.{json,md} (box repo) and $DATA_DIR/runs/route_follow/approach/gate/
 
 Reads (on_approach.terms on each model's own plan, no dead zone): A-lat = mean |lateral offset to the human path| of the plan at the entry
@@ -45,7 +46,11 @@ def main(a):
     rows = {}
     for s, pool in SRC:
         L = np.load(AP / f"lab_{s}.npz")
-        r = np.sort(dz[f"{s}_rows"])
+        if a.rows == "train":                                         # diagnostic: the pool's own rows (fit, not held out), <= n per source
+            tr = np.flatnonzero(np.isin(L["cls"], ["turn", "neg"]) & ~L["dev"])
+            r = np.sort(np.random.default_rng(0).choice(tr, min(a.n, len(tr)), replace=False))
+        else:
+            r = np.sort(dz[f"{s}_rows"])
         tb, fz = np.load(CR / f"on1_{pool}" / "tab.npz"), np.load(FEAT / f"on1_{pool}.npz")
         assert np.array_equal(tb["names"], L["names"]) and np.array_equal(fz["names"], L["names"])
         f = fz["f"][r].astype(np.float32)
@@ -114,6 +119,8 @@ def main(a):
         gates["G-v2"] = dict(value=None, line=f"{v2} missing", pass_=False)
     res["gates"], res["all_pass"] = gates, all(x["pass_"] for x in gates.values())
     out = [REPO / "experiments/route_follow/results/approach/gate", D / "runs/route_follow/approach/gate"]
+    if a.rows == "train":
+        a.tag += "_trainrows"
     f3 = lambda x: ", ".join(f"{y:.3f}" for y in x) if isinstance(x, list) else ("-" if x is None else f"{x:.4f}")  # noqa: E731
     md = [f"# Approach gate: {a.tag} vs {a.base}", "", f"dev rows: {res['rows']['turn']} turn ({json.dumps(res['rows']['by_src'])}), {res['rows']['speed']} with the speed "
           f"read, {res['rows']['neg']} straight negatives; held-out logs, never in the pool.", "",
@@ -134,4 +141,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tag", required=True), ap.add_argument("--base", default="RSG-L18-s0"), ap.add_argument("--v2", default="")
     ap.add_argument("--B", type=int, default=10000)
+    ap.add_argument("--rows", default="dev", choices=("dev", "train"), help="train: a diagnostic read on the pool's own rows (no gate)")
+    ap.add_argument("--n", type=int, default=2000)
     main(ap.parse_args())
