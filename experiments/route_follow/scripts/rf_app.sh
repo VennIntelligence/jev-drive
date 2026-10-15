@@ -24,15 +24,19 @@
 #   [AFTER=ids] rf_app.sh pilot2 <W>    APP2P<W>-L18-s0: the v1 pilot recipe with --app-lam W --app-v2; guard gates only (G-real <= base + 0.015)
 #   rf_app.sh train2 <W> <seed>         APP2W<W>-L18-s<seed>: 2 500 gentle steps + guard gates + held 460 read (6 chunks) -> $O/v2/{reads,bases}.txt
 #   rf_app.sh report2 [tags]            the report stage into $O/v2/report
+#   rf_app.sh control <seed>            v2 Amendment 3, the W 0 control: APP0C-L18-s<seed> = 2 500 gentle steps on pool on1_APP, --app-lam 0
+#                                       (approach rows with the S hinges only), reported guard gates, held 460 read -> $O/w0/{reads,bases}.txt
+#                                       (bases: RSG-L18-s<seed> and APP2W05-L18-s0)
+#   rf_app.sh report0 [tags]            the report stage into $O/w0/report (every base line of a tag is paired)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
-O=${APP_O:-$DATA_DIR/runs/route_follow/approach}; O2=$DATA_DIR/runs/route_follow/approach/v2; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
+O=${APP_O:-$DATA_DIR/runs/route_follow/approach}; O2=$DATA_DIR/runs/route_follow/approach/v2; O3=$DATA_DIR/runs/route_follow/approach/w0; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; ME=experiments/route_follow/scripts/rf_app.sh
 PRIO=${PRIO:-12}; BASE_REV=${BASE_REV:-107e2002}; RES=experiments/route_follow/results/approach
 # RSG-L18-s0's command (meta.json argv) without --init / --steps / --seed / --tag (= rf_v2.sh REC)
 REC="--warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
 LANE="--lane-lam 1 --lane-dz 0.5 --lane-neg 0.2"
 pool() { echo "--on on1_APP --on-weight $(python3 -c "import json; print(json.load(open('$RES/rows.json'))['on_weight'])")"; }
-mkdir -p $O/pool $O2
+mkdir -p $O/pool $O2 $O3
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner approach --name "$name" --tries 1 --priority $PRIO --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 gates() {  # tag base after: rf_v2gate (G-real / G-ST / G-over / G-rely), then rf_appgate
@@ -76,6 +80,19 @@ train2)
         -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6 >> $O2/reads.txt || exit 1
   done
   echo "$T $B" >> $O2/bases.txt; tail -9 $O/jobs.txt ;;
+control)
+  s=$2; B=RSG-L18-s$s; T=APP0C-L18-s$s; F="$(pool) --app-lam 0"
+  [[ ! -e $CK/$T ]] || { echo "$CK/$T exists"; exit 1; }
+  t=$(sub app0-train-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- bash $ME body-train $T $B $s 2500 128 20 $F --allow-init) || exit 1
+  GATE_FLAGS="--guards-only --real-tol 0.015 --res-sub w0/gate" gates $T $B $t
+  for i in 0 1 2 3 4 5; do
+    sub app0-read-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+        -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6 >> $O3/reads.txt || exit 1
+  done
+  printf '%s %s\n%s %s\n' $T $B $T APP2W05-L18-s0 >> $O3/bases.txt; tail -9 $O/jobs.txt ;;
+report0)
+  shift; sub app0-report --after "$(paste -sd, $O3/reads.txt)" --env APP_O=$O3 --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1
+  tail -1 $O/jobs.txt ;;
 report2)
   shift; sub app2-report --after "$(paste -sd, $O2/reads.txt)" --env APP_O=$O2 --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1
   tail -1 $O/jobs.txt ;;
@@ -119,12 +136,12 @@ body-train)
   exec $TR experiments/route_mem/scripts/rm_train.py train --tag $T --init $I --steps $N --batch $BS --on-k $K --seed $s $REC "$@" ;;
 body-report)
   shift; TAGS="${*:-$(cut -d' ' -f1 $O/bases.txt | awk '!s[$0]++' | paste -sd' ')}"
-  REF=$(for t in $TAGS; do grep "^$t " $O/bases.txt | tail -1 | cut -d' ' -f2; done | awk 'NF && !s[$0]++' | paste -sd' ')
+  REF=$(for t in $TAGS; do grep "^$t " $O/bases.txt | cut -d' ' -f2; done | awk 'NF && !s[$0]++' | paste -sd' ')
   ALL=$(for t in $TAGS $REF; do ls $M/$t/c*/run/aggregate/results-summary.json > /dev/null 2>&1 && echo $t; done | awk '!s[$0]++' | paste -sd' ')
   mkdir -p $O/report; R=""; H=(); F=(); PH=(); PF=(); MN=(); MP=()
   for t in $ALL; do d=$(ls -d $M/$t/c*/run | paste -sd,); R="$R $t=$d"; H+=("$t@held18=$d"); F+=("$t@18=$d"); done
-  for t in $TAGS; do b=$(grep "^$t " $O/bases.txt | tail -1 | cut -d' ' -f2)
-    [[ " $ALL " == *" $b "* && $b != $t ]] && { PH+=("$t:$b"); PF+=("$t@18:$b@18"); }; done
+  for t in $TAGS; do for b in $(grep "^$t " $O/bases.txt | cut -d' ' -f2 | awk '!s[$0]++'); do       # every base line of the tag
+    [[ " $ALL " == *" $b "* && $b != $t ]] && { PH+=("$t:$b"); PF+=("$t@18:$b@18"); }; done; done
   for f in $(for t in $TAGS; do echo ${t%-s*}; done | awk '!s[$0]++'); do
     [[ " $ALL " == *" $f-s0 "* && " $ALL " == *" $f-s1 "* ]] && { MN+=("$f=$f-s0,$f-s1"); MP+=("$f:RSG-L18"); }; done
   [[ ${#MN[@]} -gt 0 ]] && MN+=("RSG-L18=RSG-L18-s0,RSG-L18-s1")
@@ -133,5 +150,5 @@ body-report)
   $P experiments/route_follow/scripts/rf_follow.py --runs "${F[@]}" --out $O/report/follow --workers 16 --pairs "${PF[@]}" > /dev/null; rc2=$?
   $P experiments/route_follow/scripts/rf_appheld.py --follow $O/report/follow --out $O/report/entry --pairs "${PF[@]}"; rc3=$?
   echo "held $rc0 held18 $rc1 follow $rc2 entry $rc3"; exit $((rc0 + rc1 + rc2 + rc3)) ;;
-*) echo "rf_app.sh build | ident <suffix> [flags] | pilot <W> | gate <tag> | train A1|A2 <W> <seed> | report [tags] | guard <tag> .. | v2rows | pilot2 <W> | gate2 <tag> | train2 <W> <seed> | report2 [tags]" >&2; exit 2 ;;
+*) echo "rf_app.sh build | ident <suffix> [flags] | pilot <W> | gate <tag> | train A1|A2 <W> <seed> | report [tags] | guard <tag> .. | v2rows | pilot2 <W> | gate2 <tag> | train2 <W> <seed> | report2 [tags] | control <seed> | report0 [tags]" >&2; exit 2 ;;
 esac

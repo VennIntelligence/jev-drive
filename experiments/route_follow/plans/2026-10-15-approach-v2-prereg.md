@@ -154,3 +154,18 @@ the shape gate, zeros by kind, and new non-turn zeros.
     road raster) or any approach-row gradient at all. The diagnostic would be a full 2 500-step W 0 control on on1_APP. It is not
     registered and was not run.
 - **Verdict by section 4.** W 0.5 fails H1, and W 1 was not trained (pilot G-real FAIL). No weight passes H1: **stop, no PAI read**.
+
+## Amendment 3 (coordinator, 2026-10-15 ~14:10, after Amendment 2, before any W 0 read): the W 0 control
+
+The question: does the held harm shared by APP1X and APP2W05 come from the pool mix or from the approach gradient?
+
+- **Run.** APP0C-L18-s0 = 2 500 gentle steps on RSG-L18-s0, seed 0 (batch 128, on-k 20), pool on1_APP with the same --on-weight, and
+  `--app-lam 0`: the approach rows are present as S-hinge-only rows and get no approach gradient (`rf_app.sh control 0`).
+- **Gates.** The guard gates are reported, not gating (`results/approach/w0/gate/`).
+- **Held 460 read**, paired vs RSG-L18-s0 and vs APP2W05-L18-s0 (`rf_app.sh report0`; the report now pairs every base line of a tag):
+  - zeros, at-fault zeros, the collision / offroad / corridor split
+  - completion on the 24 held turns and the rf_appheld entry table
+- **Reading rule.**
+  - W 0 reproduces the +44 zeros: the harm is the pool mix (approach rows as S-only rows), and the approach terms are exonerated.
+  - W 0 is level with RSG: the approach gradient, of either design, is the harm.
+- Either way: report and stop. The verdict on the approach line is the coordinator's.
