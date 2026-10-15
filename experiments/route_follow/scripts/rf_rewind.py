@@ -324,6 +324,10 @@ def table(a):
           f"- sessions {len(chk)}; served plans before h bit-identical {sum(x == 0 for x in pm)} / {len(pm)} (max {max(pm, default=float('nan')):.2g});"
           f" controller track before h identical {sum(x == 0 for x in tm)} / {len(tm)} (max {max(tm, default=float('nan')):.2g}); "
           f"|v(h) expert - v(h) identity| max {max(dv, default=float('nan')):.3g} m/s"]
+    rep = [(s, tg) for s in by for tg in ("D1", "D2", "D3") if tg in by[s] and by[s][tg].get("h") is None and "id" in by[s]]
+    if rep:                                                  # D launches replay the identity on scenes without a handover at that Delta
+        L.append(f"- identity replays inside the D launches (no handover at that Delta): score and outcome equal to id "
+                 f"{sum(by[s][tg]['score'] == by[s]['id']['score'] and by[s][tg]['outcome'] == by[s]['id']['outcome'] for s, tg in rep)} / {len(rep)}")
     ib = [s for s in by if "idB" in by[s]]
     if ib:
         L.append(f"- smoke idB (second identity session): scores equal {sum(by[s]['idB']['score'] == by[s]['id']['score'] for s in ib)} / {len(ib)}")
@@ -705,7 +709,7 @@ def n_table(a):
     for st_, units in (("A", A), ("A-event", [s for s in A if U[s]["src"] == "zero"]), ("A-off", [s for s in A if U[s]["src"].startswith("off")]),
                        ("A-short", [s for s in A if U[s]["src"] == "short_end"]), ("B", Bv)):
         for d in DELTAS:
-            uu = [s for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing")]
+            uu = [s for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing") and by[s][f"D{d}"].get("h") is not None]
             xr = [by[s][f"D{d}"] for s in uu]
             pc = [by[s]["id"]["completed"] for s in uu]
             b = br([r["completed"] for r in xr], uu)
@@ -724,7 +728,7 @@ def n_table(a):
         u = U[s]
         for tg in ("D1", "D2", "D3", "xp0"):
             r = by[s].get(tg)
-            if r is None or r.get("missing"):
+            if r is None or r.get("missing") or (tg != "xp0" and r.get("h") is None):
                 continue
             gf = "+".join(k for k, v in (r.get("gate") or {}).items() if not v)
             csv.append(",".join(str(v) for v in (s, u["stratum"], u["src"], u["outcome"], u["k_ref"], "+".join(u.get("items") or []), tg, r.get("h"),
@@ -739,7 +743,7 @@ def n_table(a):
     L += ["## Expert outcomes per stratum and Delta", "", "| stratum | Delta | completed | event (collision / offroad / corridor) | off | short |", "|:--|--:|--:|--:|--:|--:|"]
     for st_, units in (("A", A), ("B", Bv)):
         for d in DELTAS:
-            xr = [by[s][f"D{d}"] for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing")]
+            xr = [by[s][f"D{d}"] for s in units if f"D{d}" in by[s] and not by[s][f"D{d}"].get("missing") and by[s][f"D{d}"].get("h") is not None]
             c = _count(r["outcome"] for r in xr)
             ev = _count(r["zkind"] for r in xr if r["outcome"] == "event")
             L.append(f"| {st_} | {d} s | {c.get('completed', 0)} | {c.get('event', 0)} ({ev.get('collision', 0)} / {ev.get('offroad', 0)} / "
@@ -777,6 +781,10 @@ def n_table(a):
           f"- sessions {len(chk)}; served plans before h bit-identical {sum(x == 0 for x in pm)} / {len(pm)} (max {max(pm, default=float('nan')):.2g}); "
           f"controller track before h identical {sum(x == 0 for x in tm)} / {len(tm)} (max {max(tm, default=float('nan')):.2g}); "
           f"|v(h) - v_id(h)| max {max(dv, default=float('nan')):.3g} m/s"]
+    rep = [(s, tg) for s in by for tg in ("D1", "D2", "D3") if tg in by[s] and by[s][tg].get("h") is None and "id" in by[s]]
+    if rep:                                                  # D launches replay the identity on scenes without a handover at that Delta
+        L.append(f"- identity replays inside the D launches (no handover at that Delta): score and outcome equal to id "
+                 f"{sum(by[s][tg]['score'] == by[s]['id']['score'] and by[s][tg]['outcome'] == by[s]['id']['outcome'] for s, tg in rep)} / {len(rep)}")
     ib = [s for s in by if "idB" in by[s]]
     if ib:
         L.append(f"- idB (second identity session): scores equal {sum(by[s]['idB']['score'] == by[s]['id']['score'] for s in ib)} / {len(ib)}, outcomes equal "

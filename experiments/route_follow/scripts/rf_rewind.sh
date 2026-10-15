@@ -14,7 +14,8 @@
 #   rf_rewind.sh train64 <root> units                  the 64 turn scenes of the stored train-pool follow table -> <root>/units.txt, scenes.txt
 #   rf_rewind.sh train64 <root> pack                   pool CPU job: expert packs of those scenes (rf_expert.py pack on the stored roll configs)
 #   rf_rewind.sh train64 <root> stage <name> <list> [chunks]   one stage, every job queued at once: `id` (+ `idB` with SMOKE=1) and `xp0`
-#                                                      (GPU, <chunks> jobs each) -> n-tfail (CPU, after id) -> D1 / D2 / D3 (GPU, after n-tfail)
+#                                                      (GPU, <chunks> jobs each) -> n-tfail (CPU, after id) -> D1 / D2 / D3 (GPU, after n-tfail; the id chunk's
+#                                                      own scene list: same simulator composition, so pre-h is bit-identical; scenes without h replay the identity)
 #                                                      -> read + table (CPU, after all) -> <root>/<name>/rewind_train64.{md,csv,json}
 #   rf_rewind.sh train64 <root> read <stage,stage..> <out dir>   the combined read of several stages (job body of a stage's read too)
 #   job body: train64 <root> nsim <run dir> <list> id|xp0|<from file>
@@ -87,8 +88,9 @@ train64() {
     local name=${1:?name} L=${2:?scene list} n=${3:-4} S i tg ids=() tf all=()
     S=$O/$name; [[ ! -e $S/SUBMITTED ]] || { echo "$S already submitted" >&2; exit 1; }
     [[ -d $W ]] || git -C "$repo" worktree add -q --detach "$W" HEAD || exit 1
+    git -C "$W" checkout -q --detach "$(git -C "$repo" rev-parse HEAD)" || exit 1     # every stage serves the repo's HEAD (code.json per stage)
     echo "{\"served\": \"$W\", \"commit\": \"$(git -C "$W" rev-parse HEAD)\", \"dirty\": $(git -C "$W" status --porcelain -uno | grep -c .)}" > "$O/code.json"
-    mkdir -p "$S/lists"; for i in $(seq 0 $((n - 1))); do awk -v i=$i -v n=$n '(NR - 1) % n == i {print $1}' "$L" > "$S/lists/c$i.txt"; done
+    mkdir -p "$S/lists"; cp "$O/code.json" "$S/code.json"; for i in $(seq 0 $((n - 1))); do awk -v i=$i -v n=$n '(NR - 1) % n == i {print $1}' "$L" > "$S/lists/c$i.txt"; done
     local X="bash $W/experiments/route_follow/scripts/rf_rewind.sh train64 $O"
     local G=(--vram ${RW_VRAM:-20} --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=${RW_HIST:-alpasim-read4} --env "JEV_PY=$PY")
     for tg in id xp0 ${SMOKE:+idB}; do for i in $(seq 0 $((n - 1))); do
@@ -98,9 +100,9 @@ train64() {
     tf=$(nsub rwn-tfail --after "$(IFS=,; echo "${ids[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 --log-dir "$S/pool/tfail" -- \
          "$APY" "$W/experiments/route_follow/scripts/rf_rewind.py" n-tfail --stage "$S" --chunks $n) || exit 1
     for d in 1 2 3; do for i in $(seq 0 $((n - 1))); do
-      all+=($(nsub rwn-D$d-c$i --after "$tf" "${G[@]}" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/list_D${d}_c$i.txt" "$S/from_D$d.txt")) || exit 1
+      all+=($(nsub rwn-D$d-c$i --after "$tf" "${G[@]}" --log-dir "$S/pool/D$d-c$i" -- $X nsim "$S/D$d/c$i/run" "$S/lists/c$i.txt" "$S/from_D$d.txt")) || exit 1
     done; done
-    nsub rwn-read --after "$(IFS=,; echo "${all[*]}")" --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$S/pool/read" -- $X read "$S" > /dev/null || exit 1
+    nsub rwn-read --after "$(IFS=,; echo "${all[*]}")" --env "JEV_PY=$PY" --vram 0.5 --cpu 16 --ram 64 --timeout-h 1 --log-dir "$S/pool/read" -- $X read "$S" > /dev/null || exit 1
     date > "$S/SUBMITTED"; tail -$(( ${#all[@]} + 2 )) "$O/jobs.txt" ;;
   nsim)   # <run dir> <list> id|xp0|<from file>: one 18-decision launch of the held-read serving, resumable
     local R=$1 L=$2 M=$3 E=()
