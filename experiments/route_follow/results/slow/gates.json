@@ -1,0 +1,126 @@
+{
+ "G0_everything_off": {
+  "a": "SLOWG-old-off",
+  "b": "SLOWG-new-off",
+  "note": "old code vs new code, every new flag off (RSG-L18 recipe, 60 steps)",
+  "scalars": 89,
+  "only_a": [],
+  "only_b": [],
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.529079020023346,
+   0.529079020023346
+  ],
+  "identical": true,
+  "rsg_l18_s0_on_hash_60": "ea8cacc3e451c577"
+ },
+ "G0_repeat": {
+  "a": "SLOWG-new-off",
+  "b": "SLOWG-new-off2",
+  "note": "new code twice (run-to-run determinism)",
+  "scalars": 89,
+  "only_a": [],
+  "only_b": [],
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.529079020023346,
+   0.529079020023346
+  ],
+  "identical": true
+ },
+ "G1_open_flag_off": {
+  "a": "SLOWG-old-d05",
+  "b": "SLOWG-new-d05",
+  "note": "--ego-drop-speed 0.5 alone: old code vs new code (--ego-drop-open off)",
+  "scalars": 89,
+  "only_a": [],
+  "only_b": [],
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.6759406924247742,
+   0.6759406924247742
+  ],
+  "identical": true
+ },
+ "G2_paitv_weight0": {
+  "a": "SLOWG-new-s1",
+  "b": "SLOWG-new-s2w0",
+  "note": "S1 on on1_L18RB0 vs S1 flags on the merged on1_RSGPAITV, --on-mode mixed, PAITV weight 0",
+  "scalars": 80,
+  "only_a": [
+   "loss/on/n_hinge",
+   "loss/on/n_imit",
+   "loss/on/off_agent_rows"
+  ],
+  "only_b": [],
+  "scalar_max_abs_diff": 0.0,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "on_hash_60": [
+   "ea8cacc3e451c577",
+   "ea8cacc3e451c577"
+  ],
+  "dev_ade": [
+   0.5584679245948792,
+   0.5584679245948792
+  ],
+  "identical": true
+ },
+ "S1_smoke_drop": {
+  "store": {
+   "cells": "runs/route_follow/lon_diag/openloop/cells/cells.npz",
+   "pack": "/root/autodl-tmp/ujs/runs/onpol_nuplan/rows/L18RB0/lon.npz",
+   "off": {
+    "rows": 103288,
+    "labelled": 103288,
+    "open": 20889,
+    "open_share": 0.20224033769653785
+   },
+   "yr": {
+    "rows": 69572,
+    "labelled": 69572,
+    "open": 20230,
+    "open_share": 0.29077789915483243
+   },
+   "pool": {
+    "rows": 17429,
+    "labelled": 17429,
+    "open": 6473,
+    "open_share": 0.3713925067416375
+   }
+  },
+  "realised": {
+   "rows": 6170,
+   "dropped": 736,
+   "dropped_share": 0.1192868719611021,
+   "open_share": 0.23630470016207455,
+   "expected": 0.11815235008103728,
+   "ratio_to_expected": 1.00960219478738,
+   "open_share_off": 0.20498915401301518,
+   "rows_off": 4610,
+   "open_share_yr": 0.2641025641025641,
+   "rows_yr": 780,
+   "open_share_pool": 0.3935897435897436,
+   "rows_pool": 780
+  }
+ },
+ "pass": true
+}

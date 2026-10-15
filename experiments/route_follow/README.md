@@ -393,6 +393,7 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   (the expert's red path on the dashed chain against the human's blue path through six turns RSG fails or barely makes) and the per-turn
   list `results/rule_expert/held_XP-L12-E46/xp_turns.md`; [figs/rule_expert_pai_fails.png](figs/rule_expert_pai_fails.png) for the
   PAI failures (yield waits behind same-direction traffic). Scripts `rf_expert.py` (pack | fig | report), `rf_expert.sh`.
+- [results/slow/](results/slow/pilot.md): SLOW S1 / S2 round (prereg `plans/2026-10-15-slow-s1s2-prereg.md`, Amendments 1-3; running): bit-identity gates (`gates.json`, all 0), PAITV pool gates (`gates_PAITV*.json`, `pool.json`; BEV sheets `figs/pait_bev_PAITV80.png`, `figs/pait_bev_PAITVn.png`: look at the red demo on the blue logged path with no box on it within 40 m), pilot gate table (`pilot.md`: S1 / S2 / S3 pass, Sall fails dev ADE); chain `scripts/rf_slow.sh`, line 3 `rf_londiag.py pai`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

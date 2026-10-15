@@ -1,0 +1,294 @@
+[
+ {
+  "arm": "S1",
+  "seed": 0,
+  "tag": "RSGS1P-L18-s0",
+  "dev_ade": 0.5303594470024109,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5302414298057556,
+   "ade_masked": 0.5473019480705261,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.026776211336255074,
+   "d_straight": 0.003208357375115156,
+   "d_all": 0.01706048659980297,
+   "diff": 0.02356785349547863,
+   "diff_lo": 0.010306291007882936,
+   "diff_hi": 0.03650341077403774,
+   "ade_on_junction": 0.5607720613479614,
+   "ade_on_straight": 0.4732702672481537,
+   "read": true
+  },
+  "drop": {
+   "rows": 102666,
+   "dropped": 11955,
+   "dropped_share": 0.11644556133481386,
+   "open_share": 0.2331735920363119,
+   "expected": 0.11658679601815596,
+   "ratio_to_expected": 0.9987885876603033,
+   "open_share_off": 0.2021756710927921,
+   "rows_off": 76666,
+   "open_share_yr": 0.27876923076923077,
+   "rows_yr": 13000,
+   "open_share_pool": 0.37038461538461537,
+   "rows_pool": 13000
+  },
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "drop": true
+  },
+  "passed": true
+ },
+ {
+  "arm": "S1",
+  "seed": 1,
+  "tag": "RSGS1P-L18-s1",
+  "dev_ade": 0.530829131603241,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5307410359382629,
+   "ade_masked": 0.5480106472969055,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.02716001309454441,
+   "d_straight": 0.0019001227337867022,
+   "d_all": 0.017269622534513474,
+   "diff": 0.025259889662265778,
+   "diff_lo": 0.011520837077886942,
+   "diff_hi": 0.03865338527821498,
+   "ade_on_junction": 0.5590589046478271,
+   "ade_on_straight": 0.4778018593788147,
+   "read": true
+  },
+  "drop": {
+   "rows": 102527,
+   "dropped": 12107,
+   "dropped_share": 0.11808596759877886,
+   "open_share": 0.2362207028392521,
+   "expected": 0.11811035141962604,
+   "ratio_to_expected": 0.9997935505181883,
+   "open_share_off": 0.2050256772119644,
+   "rows_off": 76527,
+   "open_share_yr": 0.28892307692307695,
+   "rows_yr": 13000,
+   "open_share_pool": 0.36715384615384616,
+   "rows_pool": 13000
+  },
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "drop": true
+  },
+  "passed": true
+ },
+ {
+  "arm": "Sall",
+  "seed": 0,
+  "tag": "RSGSallP-L18-s0",
+  "dev_ade": 0.5460296869277954,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5461316108703613,
+   "ade_masked": 0.5620655417442322,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.02599566988646984,
+   "d_straight": 0.002591662108898163,
+   "d_all": 0.015933893620967865,
+   "diff": 0.023404007777571678,
+   "diff_lo": 0.01055566730185931,
+   "diff_hi": 0.036681414947468516,
+   "ade_on_junction": 0.5804418921470642,
+   "ade_on_straight": 0.48975273966789246,
+   "read": true
+  },
+  "drop": null,
+  "ok": {
+   "ade": false,
+   "rely": true
+  },
+  "passed": false
+ },
+ {
+  "arm": "Sall",
+  "seed": 1,
+  "tag": "RSGSallP-L18-s1",
+  "dev_ade": 0.5502068996429443,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5501852035522461,
+   "ade_masked": 0.5655228495597839,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.02369121089577675,
+   "d_straight": 0.0006424364983104169,
+   "d_all": 0.015337662771344185,
+   "diff": 0.023048775270581245,
+   "diff_lo": 0.008302030533779444,
+   "diff_hi": 0.0379853566689806,
+   "ade_on_junction": 0.5820708274841309,
+   "ade_on_straight": 0.499349981546402,
+   "read": true
+  },
+  "drop": null,
+  "ok": {
+   "ade": false,
+   "rely": true
+  },
+  "passed": false
+ },
+ {
+  "arm": "S3",
+  "seed": 0,
+  "tag": "RSGS3P-L18-s0",
+  "dev_ade": 0.5292932391166687,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5292220711708069,
+   "ade_masked": 0.5445070266723633,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.024175260215997696,
+   "d_straight": 0.001817717682570219,
+   "d_all": 0.015284895896911621,
+   "diff": 0.02235754206776619,
+   "diff_lo": 0.010509964876797812,
+   "diff_hi": 0.03391246655380344,
+   "ade_on_junction": 0.5577013492584229,
+   "ade_on_straight": 0.47199925780296326,
+   "read": true
+  },
+  "drop": null,
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "imit": true
+  },
+  "passed": true
+ },
+ {
+  "arm": "S3",
+  "seed": 1,
+  "tag": "RSGS3P-L18-s1",
+  "dev_ade": 0.5281869769096375,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5281846523284912,
+   "ade_masked": 0.5452509522438049,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.02717318758368492,
+   "d_straight": 0.0016858724411576986,
+   "d_all": 0.017066307365894318,
+   "diff": 0.02548731490969658,
+   "diff_lo": 0.0143030291501739,
+   "diff_hi": 0.03729933408980282,
+   "ade_on_junction": 0.5537247657775879,
+   "ade_on_straight": 0.47457772493362427,
+   "read": true
+  },
+  "drop": null,
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "imit": true
+  },
+  "passed": true
+ },
+ {
+  "arm": "S2",
+  "seed": 0,
+  "tag": "RSGS2P-L18-s0",
+  "dev_ade": 0.5326391458511353,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5326376557350159,
+   "ade_masked": 0.5480799674987793,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.024772604927420616,
+   "d_straight": 0.0018585557118058205,
+   "d_all": 0.015442301519215107,
+   "diff": 0.02291404828429222,
+   "diff_lo": 0.010555772304642785,
+   "diff_hi": 0.034775466823645636,
+   "ade_on_junction": 0.564767599105835,
+   "ade_on_straight": 0.4756665825843811,
+   "read": true
+  },
+  "drop": {
+   "rows": 102666,
+   "dropped": 11762,
+   "dropped_share": 0.11456567899791557,
+   "open_share": 0.2282547289268112,
+   "expected": 0.1141273644634056,
+   "ratio_to_expected": 1.0038405735256466,
+   "open_share_off": 0.2021756710927921,
+   "rows_off": 76666,
+   "open_share_yr": 0.27876923076923077,
+   "rows_yr": 13000,
+   "open_share_pool": 0.33153846153846156,
+   "rows_pool": 13000
+  },
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "drop": true,
+   "imit": true
+  },
+  "passed": true
+ },
+ {
+  "arm": "S2",
+  "seed": 1,
+  "tag": "RSGS2P-L18-s1",
+  "dev_ade": 0.5325043201446533,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5325379967689514,
+   "ade_masked": 0.5497045516967773,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.026172850281000137,
+   "d_straight": 0.0025964691303670406,
+   "d_all": 0.01716657727956772,
+   "diff": 0.02357638068497181,
+   "diff_lo": 0.012303127696157332,
+   "diff_hi": 0.035723455658671945,
+   "ade_on_junction": 0.56192547082901,
+   "ade_on_straight": 0.479299932718277,
+   "read": true
+  },
+  "drop": {
+   "rows": 102527,
+   "dropped": 11913,
+   "dropped_share": 0.1161937831010368,
+   "open_share": 0.2320949603519073,
+   "expected": 0.11604748017595365,
+   "ratio_to_expected": 1.0012607160867373,
+   "open_share_off": 0.2050256772119644,
+   "rows_off": 76527,
+   "open_share_yr": 0.28892307692307695,
+   "rows_yr": 13000,
+   "open_share_pool": 0.3346153846153846,
+   "rows_pool": 13000
+  },
+  "ok": {
+   "ade": true,
+   "rely": true,
+   "drop": true,
+   "imit": true
+  },
+  "passed": true
+ }
+]
