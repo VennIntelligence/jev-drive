@@ -75,6 +75,8 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [research/route-follow/pai-follow.md](../../research/route-follow/pai-follow.md): PAI 281 turn completion with the real route (RSG 13.9 %,
   RBSG2 25.0 % of 36 turns) and the map topology of every corridor zero (14 / 22 route zeros have a straight road ahead; the ego never slows
   into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
+- [results/hard_train14/hard_train14.md](results/hard_train14/hard_train14.md): stored r281 reads (path 0) on the 14 strict hard_train turns
+  (+ 3 trainable): completed / completed + d293 shape gate RSG 0 / 0 of 14, RBSG2 4 / 4 of 14; of 17 RSG 2 / 2, RBSG2 6 / 6; `scripts/rf_ht14.py`.
 - [research/route-follow/late-turns.md](../../research/route-follow/late-turns.md): turn completion by class (late >= 40 m / delayed 20-40 m /
   early / fork) on nuPlan @18 and PAI: late turns barely exist @18 (4 of 1473 scenes; window median 47 m); entry >= 20 m RSG 18 %, RSGboth 68 %,
   RB0 14 % (22), mostly "too slow"; forks no harder than other turns; PAI late 1 / 15 for RSG; `scripts/rf_lateturn.py` (+ `.sh`), `results/lateturn/`.
