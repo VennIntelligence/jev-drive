@@ -13,8 +13,9 @@ Per decision (rear-axle pose, speed, time):
   speed     cruise = max(vlog, V_FLOOR) where known, else V_DEF (the trajdata map has no speed limits); from DECEL_D m before every turn entry
             linear in distance down to V_E, V_E through the turn, then up at A_ACC; capped by v^2 |kappa| <= ALAT on the path's curvature;
             a braking envelope at A_DEC makes the profile reachable
-  yield     the plan's ego box (sides + SIDE) against every replayed box ahead of it (centre ahead of the ego box centre), 0.1 s steps over
-            YIELD_T s: at the first contact the profile stops STOP_M before the contact pose (up to 3 passes for later contacts)
+  yield     the plan's swept footprint within YIELD_T s (ego box, sides + SIDE, 0.1 s poses) against every replayed box ahead (centre ahead
+            of the ego box centre at t0) at any time within the same YIELD_T s: the profile stops STOP_M before the first intersected
+            pose (up to 3 passes)
   path      pure pursuit from the rear axle on the chain, lookahead max(LA_MIN, LA_T * v), curvature within KMAX, kinematic bicycle at 0.1 s
   output    the 8 rear-axle poses at 0.5 .. 4.0 s in the anchor frame (the model's plan format) + an info dict (logged as drive.jsonl `expert`)
 Stop lines and traffic lights are ignored (prereg).
@@ -192,24 +193,33 @@ def envelope(sc: Scene, s0, stop):
 
 
 def contact(sc: Scene, st, t0):
-    """First contact of the plan's ego box with a replayed box ahead within YIELD_T -> (step, object id) or None."""
+    """The plan's swept footprint within YIELD_T against every replayed box ahead over the same YIELD_T: the first plan pose (0.1 s steps,
+    the current pose excluded) whose box any such box overlaps at any time -> (step, object id) or None. Ahead = the box centre at t0
+    ahead of the ego box centre (followers and boxes beside are not yielded to); boxes touching the ego box at t0 are ignored."""
     m = int(round(YIELD_T / DT))
     t = t0 + 1e6 * DT * np.arange(m + 1)
     X, HW, V, ids = sc.boxes(t)
     if not len(ids):
         return None
     rear, front, hw = sc.dims
+    x0, y0, h0 = st[0, :3]
+    rel = (X[:, 0, 0] - x0) * np.cos(h0) + (X[:, 0, 1] - y0) * np.sin(h0)
+    keep = (rel > 0.5 * (rear + front)) & (np.hypot(X[:, 0, 0] - x0, X[:, 0, 1] - y0) < 60.0) & V[:, 0]
+    keep |= ~V[:, 0] & V.any(1) & (np.nanmin(np.hypot(X[..., 0] - x0, X[..., 1] - y0), 1) < 40.0)     # appearing inside the window
     E = corners(st[:m + 1, 0], st[:m + 1, 1], st[:m + 1, 2], front, rear, hw + SIDE)                       # (m+1, 4, 2)
     O = corners(X[..., 0], X[..., 1], X[..., 2], HW[:, None, 0], -HW[:, None, 0], HW[:, None, 1])          # (n, m+1, 4, 2)
-    hit = overlap(E[None], O) & V & np.isfinite(X[..., 0])
-    c = 0.5 * (rear + front)
-    ch, sh = np.cos(st[:m + 1, 2]), np.sin(st[:m + 1, 2])
-    ahead = (X[..., 0] - st[None, :m + 1, 0]) * ch + (X[..., 1] - st[None, :m + 1, 1]) * sh > c
-    hit &= ahead & ~hit[:, :1]                                                                                # touching now: nothing to yield
+    now = overlap(E[None, :1], O[:, :1])[:, 0] & V[:, 0]
+    keep &= ~now
+    if not keep.any():
+        return None
+    O, V, X = O[keep], V[keep], X[keep]
+    ids = [i for i, k in zip(ids, keep) if k]
+    hit = overlap(E[None, 1:, None], O[:, None]) & V[:, None, :] & np.isfinite(X[:, None, :, 0])                # (n, poses 1..m, times)
     if not hit.any():
         return None
-    n, j = np.argwhere(hit)[np.argmin(np.argwhere(hit)[:, 1])]
-    return int(j), ids[int(n)]
+    w = np.argwhere(hit)
+    n, j, _ = w[np.argmin(w[:, 1])]
+    return int(j) + 1, ids[int(n)]
 
 
 def plan(session: str, scene_id: str, t0: int, pose, v: float):
