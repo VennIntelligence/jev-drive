@@ -32,9 +32,10 @@ flags() {  # arm [W] -> the arm's trainer flags
   local f=$O/flags_$(pool_of $1).txt; [[ -s $f ]] || { echo "no $f (rf_recov.sh pack $1)" >&2; exit 1; }
   local F W=${2:-}; F=$(cat $f)
   if [[ $W == *u ]]; then W=${W%u}; F=${F/--on-weight /--on-weight env=free:0,}; fi    # diagnostic: upper bounds only (free rows never drawn)
-  if [[ $W == k* ]]; then                                            # R dose: k recovery rows per batch instead of the pack's 3
+  if [[ $W == k* ]]; then                                            # R dose: k<n>[_<L weight>]: n recovery rows per batch instead of the pack's 3
+    local KR=${W%%_*}; [[ $W == *_* ]] && W=${W#*_} || W=""
     F=$(python3 -c "import re,sys; f,k=sys.argv[1],int(sys.argv[2]); m=re.search(r'pool=r:([0-9.]+)',f); n=re.search(r'--on-k ([0-9]+)',f)
-print(f.replace(m.group(0),'pool=r:%.5f'%(float(m.group(1))*k/3)).replace(n.group(0),'--on-k %d'%(int(n.group(1))+k-3)))" "$F" ${W#k}); W=${3:-}; fi
+print(f.replace(m.group(0),'pool=r:%.5f'%(float(m.group(1))*k/3)).replace(n.group(0),'--on-k %d'%(int(n.group(1))+k-3)))" "$F" ${KR#k}); fi
   if [[ $W == *l* ]]; then F="$F --env-lo-scale $(python3 -c "print(round(float('${W#*l}') / float('${W%l*}'), 6))")"; W=${W%l*}; fi   # <up>l<lo>
   [[ $(kind_of $1) != R ]] && F="$F --env-lam ${W:?W}"; echo "$F"; }
 FW=(--train --vram 24 --cpu 6 --ram 70)                              # measured peak 19.6 GB (rcv-pilot history)
