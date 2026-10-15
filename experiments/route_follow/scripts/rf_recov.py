@@ -497,9 +497,7 @@ def turn_read(tag):
         rel, sg = st - t[0], float(np.sign(t[2]))
         rows.append(dict(scene=sc, k=k, row=int(r), rel=rel, bin=str(pd.cut([rel], [-40, -20, -10, 0, 10, 30], right=False)[0]),
                          h4=float(np.degrees(sg * P[j, 7, 2])), y4=float(sg * P[j, 7, 1]), log=str(m["log"][r]), sg=sg, j=j))
-    X = pd.DataFrame(rows)
-    X.attrs["P"] = P
-    return X
+    return pd.DataFrame(rows), P
 
 
 def heading_at_arc(P, a):
@@ -515,7 +513,7 @@ def arc4(P):
 
 
 def gate_turn(tag, base):
-    A, B = turn_read(tag), turn_read(base)
+    (A, PA), (B, PB) = turn_read(tag), turn_read(base)
     X = A.merge(B, on=["scene", "k", "row", "rel", "bin", "log"], suffixes=("", "_b"))
     win = (X.rel >= -40) & (X.rel < 10)
     dh = (X.h4 - X.h4_b)[win]
@@ -524,7 +522,6 @@ def gate_turn(tag, base):
     out = dict(n=int(win.sum()), scenes=int(X[win].scene.nunique()), dh4_mean=float(dh.mean()), dh4_median=float(dh.median()), ci=[r["lo"], r["hi"]], by_bin=by)
     # Amendment 3: the same heading at EQUAL ARC (a* = the shorter of the two 4 s plans): a slower plan reaches less far into the turn in 4 s,
     # which lowers h4 without any change of the path's shape (APP1X's failure was at unchanged arc, decision 303 Amendment 5)
-    PA, PB = A.attrs["P"], B.attrs["P"]
     ha, hb, da = [], [], []
     for _, x in X[win].iterrows():
         pa, pb = PA[int(x.j)], PB[int(x.j_b)]
