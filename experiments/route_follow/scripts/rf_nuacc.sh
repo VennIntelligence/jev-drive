@@ -5,6 +5,7 @@
 #                         VCONT + LEAD + ACC on 8 non-held scenes) -> gate (rf_nuacc.py ident) -> held 460 @18 x 3 arms (ref = no switch,
 #                         acc = VCONT 1.0 + LEAD + ACC, vl = VCONT 1.0 + LEAD; rm_chain.sh read ... <sfx> -> route_mem/read/RSG-L18-s0-<sfx>)
 #                         -> report (ol_confirm base ref, rf_follow, rf_nuacc.py report) -> $O/report/nuacc.md
+#   rf_nuacc.sh held      (Amendment 1) the 18 held reads + report, no gate
 #   rf_nuacc.sh report    (job body)
 # Env: PRIO (13), OLD_REV (dd4c8d24 = the commit before the nuPlan wiring).
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -42,6 +43,18 @@ submit)
   printf '%s\n' "code=$(git rev-parse --short HEAD)" "old=$OLD_REV" "ref=$T-re1016 (no switch)" "acc=$T-acc (JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1)" \
     "vl=$T-vl (JEV_VCONT=1.0 JEV_LEAD=1)" "stored=$T (2026-10-13)" "mode=official (ALPASIM_FAST unset)" > $O/config.txt
   echo "smoke ${g[*]} -> gate $gt; held ${h[*]}; report $r" ;;
+held)   # Amendment 1: the held reads + report without the smoke gate (official nuPlan reads are not bit-reproducible run to run)
+  for x in re1016 acc vl; do [[ ! -e $M/$T-$x/c0/run/aggregate/results-summary.json ]] || { echo "$M/$T-$x already read" >&2; exit 1; }; done
+  h=()
+  for x in re1016 acc vl; do
+    sw=(); [[ $x == acc ]] && sw=("${ACC[@]}"); [[ $x == vl ]] && sw=("${VL[@]}")
+    for i in 0 1 2 3 4 5; do
+      h+=($(sub nuacc2-held-$x-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 "${sw[@]}" -- bash $RM read $T $i 6 $x)) || exit 1
+    done
+  done
+  r=$(sub nuacc2-report --after "$(IFS=,; echo "${h[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report) || exit 1
+  echo "code=$(git rev-parse --short HEAD) (Amendment 1 resubmit)" >> $O/config.txt
+  echo "held ${h[*]}; report $r" ;;
 report)
   R=$O/report; mkdir -p $R; H=(); F=()
   for X in $T-re1016 $T-acc $T-vl $T; do d=$(ls -d $M/$X/c*/run | paste -sd,); H+=("$X@held18=$d"); F+=("$X@18=$d"); done
