@@ -71,3 +71,21 @@ A failed closed-loop line writes `$O/STOPPED` and submits nothing further. A fai
 - `python -m jevdrive.cl top` shows `wait-train` jobs queued with idle cards for > 30 min: check `--after` ids against failed jobs.
 - After `wt-finish` is done, `wt-bitcmp` and `wt-gate-pilot` should exist in `$O/jobs.txt` within ~1 h. After a PASS gate, the next stage's job names
   appear in `$O/jobs.txt` within minutes.
+
+## Amendment C (2026-10-17): WAIT + desire composed arm WD replaces the WAIT-only formal
+
+Prereg Amendment C + 补记 C1-C3 (`plans/2026-10-16-wait-train-prereg.md`). Changes to the chain above:
+
+- `wt-gate-pilot` no longer runs `wt.sh full`: it writes the picked dose (j2 | j5 | STOP) to `$O/pilot_pick.txt`. `wt.sh full` refuses unless
+  `WT_FALLBACK=1` (exit 3).
+- Done before the WAIT pilot: `wd_code_identity.json` (code 520e9407 vs the D1 / D2 code with both off: bit-identical, RSG hash), D2 teacher
+  `runs/desire_cap/train/teacher/navtrain_full.s*of12.npz` (G-proto 0.0), 40-step smoke `WDSMOKE-s0` (scratch).
+- Waiting on `pilot_pick.txt`: `wd-launch` (1017-011520-986b) -> `wt.sh wd-pilot`: `wd-rows` (dt.py rows on on1_L18RBW, D0's rule) ->
+  `wd-gg-w0` + `wd-bitcmp` (vs WTGG-off -> `wd_identity.json`) -> `WD<J2|J5>P1-L18-s0` / `WD<J2|J5>P3-L18-s0` (D2 weight 1 / 3, 1 000 steps)
+  -> WAIT reads + `dc.py plans` -> `wd-gate-pilot` (`wt.py wdgate --submit`, verdict `$O/wd_pilot_gate.{json,md}`):
+  PASS -> `$O/WD_PASS`, `wt.sh wd-full <lam>`: WD<dose>-L18-s{0,1} 2 500 steps, reads, held 460 @18, `wd-follow` (rf_follow on J + C held reads,
+  `$O/wd_heldturn/follow`), `wd-clgate-held` (zeros J <= C + 3 AND held turns 2-seed mean J >= C - 2 on `held_turns24.txt`) -> stage-sub ->
+  stage-pub -> stage-pai exactly as above. FAIL -> `$O/FALLBACK`, WAIT-only formal (`full <dose>`).
+- `wd-deadline` (1017-011521-c597): sleeps until 24 h after `pilot_gate.json`; no `WD_PASS` and no `FALLBACK` -> writes `FALLBACK`, WAIT-only formal.
+  WAIT pilot STOP -> neither the composed pilot nor any formal runs.
+- Stall signs: `ls $O/pool/wd-*/ERROR`; `wd-rows` waits on `lib/route_desire.py` in the box tree (it is there since f7e5919e).
