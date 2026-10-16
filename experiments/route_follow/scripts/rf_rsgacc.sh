@@ -141,7 +141,8 @@ PY
     ;;
   pool)
     $P experiments/route_mem/scripts/rm_build.py pool --name $N --workers 32 || exit 1
-    $P $RF/poolgate.py $N; rc=$?; [[ $K == smoke ]] && exit 0; exit $rc ;;
+    $P $RF/poolgate.py $N                     # the route-night record (NaN route0_d counted as misses)
+    $TR $PY poolgate --pool $N; rc=$?; [[ $K == smoke ]] && exit 0; exit $rc ;;   # Amendment 2: G-route over rows with a served route0
   esac ;;
 rows-pai)  # rows-pai <K> <T> <N> rows|cache|pool|r1|clean: onp_rows -> onp_cache -> rf_pai_pool on $O/roll/pai/<K>, native (rf_selfpool's box backend)
   K=$2; T=$3; N=$4; RR=$O/roll/pai/$K; ROWS=$O/rows/pai; STG=$DATA_DIR/tmp/rsgacc_$N; J=$(( $(nproc) > 24 ? 24 : $(nproc) ))

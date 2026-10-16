@@ -96,3 +96,11 @@
   差随时距增长（第 1 点 p99 1 cm，第 8 点 7 cm），是 fp16 舍入（served 是 batch 1，重算是 batch 256），与 PAIONP 补记 1 同类；错 seed 的 RSG-L18-s1 与 s0 同 init，
   中位差只 6 cm、份额 0.51，不能当错模型。新线（docs/long-runs.md 的等值闸规则）：模型中位 ≤ 0.02 m 且份额 ≤ 0.10，错模型 = 另一个 RB0 底座（RB0-F-s1，RB0-F-s1 自己的池用 RB0-F-s0），
   份额 ≥ 0.9。nuPlan 的 R1 不变。
+
+## 补记 2（第一个真实池 L18Ag0 之后、合池与任何读数之前，2026-10-16 22:45 box 时间）
+
+- nuPlan 池闸照 ol_chain 读 R1 的修订版（模型输出 mu 前 15 点一个 ulp 或 0.03 m 的份额，L18Ag0 0.9986；错 seed 0.0003）与 R2（自车 0.018 m、actor 0.99998）；
+  on_rows tok 自己的 8-pose R1 对的是 served plan，ACC 下 served ≠ 模型（中位差 1.0 m），旧池也是 `written_pass False`，不用。ol_labels 的 K0（走廊标签项 K 是否可训）
+  只管 K 课，S 行不用，不进闸（L18Ag0 的 kcorr 在日志未来上活跃 2.4 % > 2 %）。
+- poolgate 的 G-route（首个路线点对 served route0 ≤ 0.05 m 的份额 ≥ 0.99）把 route0_d 为 NaN 的行（没有 served route0 可比，ACC 下开过路线尽头更多）算作不过：
+  L18Ag0 0.9896，183 行全是 NaN、有限的行 0 个超 0.05 m；旧 L18RSG 同样有 97 行 NaN。改为只在有限的行上算（≥ 0.99），NaN 份额照报。其余线不变。

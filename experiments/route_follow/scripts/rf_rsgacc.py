@@ -84,13 +84,29 @@ def cmd_r1(a):
     raise SystemExit(0 if r["pass_"] else 2)
 
 
+def cmd_poolgate(a):
+    """Amendment 2: poolgate.py's lines with G-route over the rows that have a served route0 (route0_d finite; NaN = nothing to compare,
+    e.g. past the route's end, which ACC reaches more often); the NaN share is reported."""
+    f = np.load(D / "runs/route_mem/feat" / f"on1_{a.pool}.npz")
+    r = np.load(CR / f"on1_{a.pool}" / "route.npz")
+    ok, d = f["ok"], f["route0_d"]
+    fin = ok & np.isfinite(d)
+    res = dict(pool=a.pool, rows=int(len(ok)), feat_ok=float(ok.mean()), route_ok=float(r["ok"].mean()), cov20=float(r["cov20"].mean()),
+               route0_nan_share=float((ok & ~np.isfinite(d)).mean()), route0_share_005_finite=float((d[fin] <= 0.05).mean()))
+    res["pass"] = bool(res["rows"] >= 10000 and res["route_ok"] >= 0.95 and res["route0_share_005_finite"] >= 0.99)
+    (O / "gates").mkdir(parents=True, exist_ok=True)
+    (O / "gates" / f"poolgate_{a.pool}.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps(res))
+    raise SystemExit(0 if res["pass"] else 2)
+
+
 def pool_ok(x):
     """-> (nuPlan ok, PAI ok, facts) for one checkpoint's two pools."""
     n, p = f"L18A{x}", f"PAIA{x}"
     f = {}
     try:
         g = jload(D / "runs/onpol_long/rows" / n / "gates.json")
-        pg = jload(RF / "report" / f"poolgate-{n}.json")
+        pg = jload(O / "gates" / f"poolgate_{n}.json")
         import ast
         r1, r2 = g["R1"], ast.literal_eval(g["R2"]) if isinstance(g["R2"], str) else g["R2"]
         ok1 = all(v >= 0.99 for v in r1["a_one_ulp"].values()) and all(v < 0.2 for v in r1["c_wrong_seed"].values())
@@ -361,6 +377,8 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("r1")
     p.add_argument("--pool", required=True), p.add_argument("--tag", required=True), p.add_argument("--control", required=True)
+    p = sp.add_parser("poolgate")
+    p.add_argument("--pool", required=True)
     p = sp.add_parser("merge")
     p.add_argument("--tags", nargs="+", required=True)
     p = sp.add_parser("weights")
@@ -368,4 +386,4 @@ if __name__ == "__main__":
     p = sp.add_parser("gate")
     p.add_argument("--stage", required=True, choices=("pilot", "full", "held", "pub", "pai"))
     a = ap.parse_args()
-    dict(r1=cmd_r1, merge=cmd_merge, weights=cmd_weights, gate=cmd_gate)[a.cmd](a)
+    dict(r1=cmd_r1, poolgate=cmd_poolgate, merge=cmd_merge, weights=cmd_weights, gate=cmd_gate)[a.cmd](a)
