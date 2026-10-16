@@ -21,6 +21,11 @@
 # Prereg 补记 D (exploratory reads after the pilot STOP; never writes a registered verdict file):
 #   wt.sh explore               devall + held 460 @18 / static scene @10 / PAI stop17 for WTJ2P, WTJ5P, WTCP -> rf_follow -> wx-xheld -> explore-pub
 #   wt.sh explore-pub <J,..|-> <C>   public 1491 @10 for the J tags meeting the held lines and C -> wx-xsum ($O/explore/FINISHED)
+# Prereg 补记 E (diagnostics after decision 335; no training, no verdict file):
+#   wt.sh explore-e             static scene @10 (frame dump) for P0 / P2-F / RB0 / RSG and JEV_VHIST=zero for those + WTCP / WTJ2P / WTJ5P; held 460 @18 and
+#                               PAI stop17 for the stages without a stored read; c1_replay of the static scene (plain / zero history); cap_audit collect on
+#                               the WTJ2P / WTCP held reads; c1_extract logs + map of the J2P-only offroad zeros -> $O/explore_e/
+#   wt.sh xe-replay <tag> <run> | xe-logs | xe-heldca | xe-offroad      job bodies
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -157,6 +162,65 @@ explore-pub)   # explore-pub <J,..|-> <C>: 补记 D (c) public 1491 @10 for the 
   JS=$(python3 -c "import json, sys; print(','.join(json.load(open(sys.argv[1]))['arms']))" $X/held.json) || exit 1
   s=$(sub wx-xsum --after "$(cat $X/sub_ids.txt)${rr:+,$(csv ${rr[@]})}" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY xsum --j $JS --c $C) || exit 1
   echo "explore-pub ($2): ${#rr[@]} public reads, xsum $s" | tee -a $X/jobs.txt $O/stages.txt ;;
+explore-e)   # prereg 补记 E: every closed-loop read is the 补记 D instrument (readlist static @10, rm_chain held @18, pai_box stop17 in the PAI config)
+  XE=$O/explore_e; X=$O/explore; mkdir -p $XE/static $XE/paisub; [[ ! -e $XE/jobs.txt ]] || { echo "$XE already submitted" >&2; exit 1; }
+  st() {  # st <tag> <label> [after] [env K=V]: the static public scene @10 with the frame dump -> echo id
+    local T=$1 L=$2 A=${3:-} e=(); [[ -n ${4:-} ]] && e=(--env $4)
+    sub xe-static-$L --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 --env SH30_DUMP=1 "${e[@]}" ${A:+--after $A} \
+      -- bash experiments/onpol_long/scripts/ol_chain.sh readlist $T $X/static.txt 10 $XE/static/$L/run; }
+  p0=$(st P0 P0) || exit 1; ss=($p0); declare -A sid
+  for T in P2-F-s0 RB0-F-s0 RSG-L18-s0; do sid[$T]=$(st $T $T) || exit 1; ss+=(${sid[$T]}); done
+  for T in WTCP-L18-s0 WTJ2P-L18-s0 WTJ5P-L18-s0 P2-F-s0 RB0-F-s0 RSG-L18-s0; do ss+=($(st $T $T-vhzero "" JEV_VHIST=zero)) || exit 1; done
+  hh=(); for T in P0 P2-F-s0; do A=; [[ $T == P0 ]] && A=$p0
+    for i in 0 1 2 3 4 5; do hh+=($(sub xe-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 ${A:+--after $A} \
+        -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done; done
+  pp=(); for T in P0 P2-F-s0 RB0-F-s0 RSG-L18-s0; do A=; [[ $T == P0 ]] && A=$p0
+    AFTER=$A CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $XE/paisub/$T $T $X/stop17.txt > $XE/paisub/$T.submit.txt || exit 1
+    p=$(awk '{print $1}' $XE/paisub/$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $p ]] || { echo "no PAI stop17 job for $T" >&2; exit 1; }; pp+=($p); done
+  rr=(); for T in WTCP-L18-s0 WTJ2P-L18-s0 WTJ5P-L18-s0; do rr+=($(sub xe-replay-$T --vram 10 --cpu 4 --ram 30 --timeout-h 1 -- bash $ME xe-replay $T $X/sub/$T/run)) || exit 1; done
+  for T in RB0-F-s0 RSG-L18-s0; do rr+=($(sub xe-replay-$T --vram 10 --cpu 4 --ram 30 --timeout-h 1 --after ${sid[$T]} -- bash $ME xe-replay $T $XE/static/$T/run)) || exit 1; done
+  lg=$(sub xe-logs --after "$(csv ${ss[@]})" --vram 0.1 --cpu 8 --ram 32 --timeout-h 1 -- bash $ME xe-logs) || exit 1
+  hc=$(sub xe-heldca --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- bash $ME xe-heldca) || exit 1
+  of=$(sub xe-offroad --vram 0.1 --cpu 8 --ram 32 --timeout-h 1 -- bash $ME xe-offroad) || exit 1
+  d=$(sub xe-done --after "$(csv ${ss[@]} ${hh[@]} ${pp[@]} ${rr[@]}),$lg,$hc,$of" --vram 0.1 --cpu 1 --ram 1 --timeout-h 1 -- touch $XE/FINISHED) || exit 1
+  echo "explore-e: static $(csv ${ss[@]}) held $(csv ${hh[@]}) stop17 $(csv ${pp[@]}) replay $(csv ${rr[@]}) logs $lg heldca $hc offroad $of done $d" | tee -a $XE/jobs.txt $O/stages.txt ;;
+xe-replay)   # xe-replay <tag> <run dir>: the static scene's stored driver messages through the driver class again (c1_replay, open loop on the logged
+             # frames and states): JEV_VHIST off (= the reproduction of the logged plans) and zero (the adapter fed a standing car's speed history)
+  T=$2; D=$O/explore_e/replay/$T; mkdir -p $D; echo $STATIC > $D/scene.txt; echo "{\"$STATIC\": {\"all\": true, \"frames\": true}}" > $D/spec.json
+  $AP experiments/alpasim/scripts/c1_extract.py msgs --run $3 --scenes $D/scene.txt --out $D/msgs --jobs 1 || exit 1
+  for m in off zero; do env SH30_TAG=$T JEV_VHIST=$m ALPASIM_SRC=$DATA_DIR/third_party/alpasim OMP_NUM_THREADS=2 \
+      $TR experiments/alpasim/scripts/c1_replay.py --driver sh30 --msgs $D/msgs --spec $D/spec.json --out $D/replay_$m.pkl || exit 1; done ;;
+xe-logs)     # c1_extract logs + frames of every 补记 D / E static-scene run -> explore_e/logs/<label>/
+  for R in $O/explore_e/static/*/run $O/explore/sub/*/run; do L=$(basename $(dirname $R)); mkdir -p $O/explore_e/logs/$L
+    $AP experiments/alpasim/scripts/c1_extract.py logs --run $R --out $O/explore_e/logs/$L/logs.pkl --jobs 1 || exit 1
+    $AP experiments/alpasim/scripts/c1_extract.py frames --run $R --scenes $O/explore/static.txt --out $O/explore_e/logs/$L/frames.pkl --jobs 1 || exit 1; done ;;
+xe-heldca)   # cap_audit collect, measures unchanged, on the held 460 @18 reads of WTJ2P / WTCP (YR10m10-F-s0 is the collect's scene-config label)
+  CA_EXTRA='{"WTJ2P-L18-s0": ["route_mem/read/WTJ2P-L18-s0/c*/run"], "WTCP-L18-s0": ["route_mem/read/WTCP-L18-s0/c*/run"]}' \
+  CA_ONLY=YR10m10-F-s0,WTJ2P-L18-s0,WTCP-L18-s0 exec $AP experiments/cap_audit/scripts/ca.py collect --set held --workers 32 ;;
+xe-offroad)  # the J2P-only offroad zeros on held 460 @18 (offroad in J2P, not in WTCP): per J2P chunk, c1_extract logs (zero rollouts keep their asl) and map
+  F=$O/explore_e/offroad; mkdir -p $F
+  python3 - $DATA_DIR/runs/route_mem/read $F <<'PY' || exit 1
+import glob, json, sys
+R, F = sys.argv[1], sys.argv[2]
+def summ(t):
+    o = {}
+    for d in sorted(glob.glob(f"{R}/{t}/c*/run")):
+        for r in json.load(open(f"{d}/aggregate/results-summary.json"))["rollouts"]:
+            o.setdefault(r["clipgt_id"], (d, float((r.get("metrics") or {}).get("offroad") or 0), r.get("score")))
+    return o
+J, C = summ("WTJ2P-L18-s0"), summ("WTCP-L18-s0")
+new = sorted(s for s, v in J.items() if v[1] > 0 and s in C and not C[s][1] > 0)
+by = {}
+for s in new:
+    by.setdefault(J[s][0], []).append(s)
+for d, ss in by.items():
+    open(f"{F}/{d.split('/')[-2]}.txt", "w").write("\n".join(ss) + "\n")
+json.dump(dict(j_only=new, c_only=sorted(s for s, v in C.items() if v[1] > 0 and s in J and not J[s][1] > 0)), open(f"{F}/scenes.json", "w"), indent=1)
+print(len(new), "J2P-only offroad scenes in", len(by), "chunks")
+PY
+  for f in $F/c*.txt; do c=$(basename $f .txt); R=$DATA_DIR/runs/route_mem/read/WTJ2P-L18-s0/$c/run
+    $AP experiments/alpasim/scripts/c1_extract.py map --run $R --scenes $f --out $F/map_$c.pkl --radius 120 || exit 1
+    $AP experiments/alpasim/scripts/c1_extract.py logs --run $R --out $F/logs_$c.pkl --jobs 8 || exit 1; done ;;
 wd-teacher)
   ids=(); for i in $(seq 0 11); do ids+=($(sub wd-teacher-s$i --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $DT teacher --data navtrain_full.s${i}of12)) || exit 1; done
   echo "wd-teacher: $(csv ${ids[@]})" | tee -a $O/stages.txt ;;
