@@ -567,6 +567,66 @@ def cmd_clgate(a):
         (OUT / "STOPPED").write_text(f"stage {st} failed its line: no {nxt}\n")
 
 
+# ---------------------------------------------------------------- yield census (navsim2, CPU; human-only, no model output)
+def _ycount_job(p):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("led", REPO / "experiments/cap_ledger/scripts/led.py")
+    led = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(led)
+    fr = pickle.load(open(p, "rb"))
+    ok = [(NAV / "sensor_blobs/trainval" / f["cams"]["CAM_F0"]["data_path"]).exists() for f in fr]
+    out = []
+    for r in led.log_cells(p):
+        c = led.cells_of(r)
+        out.append(dict(log=r["log"], frame=r["frame"], cam=bool(all(ok[r["frame"] - 3:r["frame"] + 1])), v0=r["v0"],
+                        **{k: bool(c[k]) for k in ("Y_P", "Y_V", "S_L", "S_R")}, wc=wc.cell_of(r) or ""))
+    return out
+
+
+def cmd_ycount(a):
+    """Decision 331's yield cells (cap_ledger led.py cells_of, unchanged) on the WAIT-TRAIN logs: frames, 2 s-thinned rows, logs, and how many
+    have their 4 history CAM_F0 on disk now -> runs/wait_cap/train/ycount.{json,md} (+ results/wait_train/)."""
+    from jevdrive import par
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    os.environ.setdefault("NUPLAN_MAPS_ROOT", str(NAV / "maps"))
+    os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
+    want = [l for l in (REPO / "experiments/wait_cap/results/trainval_logs.txt").read_text().split() if l]
+    dv = splits.load("navsim/op-parity-full-dev")
+    devlogs = set()
+    for i in range(12):
+        z = np.load(CR / f"navtrain_full.s{i}of12/tab.npz")
+        devlogs |= set(z["log"][dv.mask(z["names"])].tolist())
+    logs = [l for l in want if l not in devlogs]
+    with Run("wait_cap", "train-ycount", config=vars(a)) as run:
+        res = par.pmap(_ycount_job, [NAV / f"navsim_logs/trainval/{l}.pkl" for l in logs], run=run, workers=a.workers, desc="logs")
+        res.raise_if_failed()
+        rows = [r for v in res.values for r in v]
+        rec = dict(logs=len(logs), frames=len(rows), cam_frames=sum(r["cam"] for r in rows))
+        md = [f"WAIT-TRAIN yield census (human-only; led.py cells_of on {len(logs)} trainval logs, {len(rows)} eligible frames, "
+              f"{rec['cam_frames']} with history cameras on disk now)", "", "| cell | frames | rows (same log >= 2 s) | logs | rows with cameras now | frames also in a wc cell |",
+              "|---|--:|--:|--:|--:|--:|"]
+        for c in ("Y_P", "Y_V", "S_L", "S_R"):
+            cand = sorted((r for r in rows if r[c]), key=lambda r: (r["log"], r["frame"]))
+            thin, last = [], {}
+            for r in cand:
+                if r["frame"] - last.get(r["log"], -99) >= wc.GAP_FR:
+                    thin.append(r)
+                    last[r["log"]] = r["frame"]
+            rec[c] = dict(frames=len(cand), rows=len(thin), logs=len({r["log"] for r in thin}), rows_cam=sum(r["cam"] for r in thin),
+                          in_wc_cell={k: sum(r["wc"] == k for r in cand) for k in ("S_L", "S_N") if any(r["wc"] == k for r in cand)})
+            md.append(f"| {c} | {len(cand)} | {len(thin)} | {rec[c]['logs']} | {rec[c]['rows_cam']} | {rec[c]['in_wc_cell']} |")
+        yy = {(r["log"], r["frame"]) for r in rows if r["Y_P"] or r["Y_V"]}
+        rec["Y_any_frames"] = len(yy)
+        md.append(f"\nY_P or Y_V frames {len(yy)}")
+        OUT.mkdir(parents=True, exist_ok=True)
+        RES.mkdir(parents=True, exist_ok=True)
+        for d in (OUT, RES):
+            (d / "ycount.json").write_text(json.dumps(rec, indent=1))
+            (d / "ycount.md").write_text("\n".join(md) + "\n")
+        print("\n".join(md))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -574,6 +634,8 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=16)
     for c in ("index", "teacher", "pack", "bitcmp"):
         sp.add_parser(c)
+    p = sp.add_parser("ycount")
+    p.add_argument("--workers", type=int, default=16)
     p = sp.add_parser("devplans")
     p.add_argument("--tags", nargs="+", required=True)
     p = sp.add_parser("gate")
@@ -587,5 +649,5 @@ if __name__ == "__main__":
     p.add_argument("--c", required=True)
     p.add_argument("--submit", action="store_true")
     a = ap.parse_args()
-    dict(select=cmd_select, index=cmd_index, teacher=cmd_teacher, pack=cmd_pack, bitcmp=cmd_bitcmp, devplans=cmd_devplans, gate=cmd_gate,
+    dict(select=cmd_select, index=cmd_index, teacher=cmd_teacher, pack=cmd_pack, bitcmp=cmd_bitcmp, devplans=cmd_devplans, gate=cmd_gate, ycount=cmd_ycount,
          clgate=cmd_clgate)[a.cmd](a)
