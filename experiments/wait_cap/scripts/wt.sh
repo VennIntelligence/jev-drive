@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # WAIT-TRAIN chain (plans/2026-10-16-wait-train-prereg.md). Box, repo root; every job through the GPU pool, --after chained; ids in $O/jobs.txt.
-#   wt.sh rows                  one submit: select (W / G / S cells + d331's Y_P / Y_V, + leak check, split) -> index -> pp_prep W -> route memory -> teacher -> pack (on1_WAIT, merged
-#                               on1_L18RBW, flags) -> the 60-step identity runs WTGG-off (RSG-L18 recipe) / WTGG-w0 (merged pool, new rows weight 0) -> bitcmp
-#   wt.sh pilot                 WTJ2P / WTJ5P / WTCP -L18-s0, 1 000 steps -> waitcap_test plans + dev plans -> gate (on PASS submits `full <dose>`)
-#   wt.sh full <j2|j5>          WTJ{2,5}-L18-s{0,1} and WTC-L18-s{0,1}, 2 500 steps -> plans -> held 460 @18 (6 chunks each) -> clgate held
-#   wt.sh stage-sub J0,J1 C0,C1 the public static scene @10 (4 tags) + PAI stop17 (J0, submission config) -> clgate sub
-#   wt.sh stage-pub J0,J1 C0,C1 public 1491 @10 (10 chunks each) -> clgate pub
-#   wt.sh stage-pai J0,J1 C0,C1 PAI 281, J0, submission config (gains 10 + JEV_ACC=1, the reference's 8 chunk lists) -> clgate pai
-#   wt.sh train <off|w0|j2|j5> <seed> <steps> <tag>      (job body)
+#   wt.sh rows-batch <B>        one log batch (the used logs of the archives with .done that no earlier batch took): select (W / G / S cells + d331's
+#                               Y_P / Y_V, leak check, split waitcap_tr<B>) -> index -> pp_prep W -> route memory + teacher (parallel)
+#   wt.sh pack <B1,B2,..>       after every batch: pack (cap over the union, on1_WAIT, merged on1_L18RBW, flags) -> the 60-step identity runs WTGG-off
+#                               (RSG-L18 recipe) / WTGG-w0 (merged pool, new rows weight 0, --on-lon wc_arc) -> bitcmp
+#   wt.sh control               the control arm with the RSG-L18 recipe (Amendment B: bit-identical to the merged pool at weight 0, proven by bitcmp):
+#                               WTCP-L18-s0 1 000 steps, WTC-L18-s{0,1} 2 500 steps -> their reads (waitcap / dev / ledger F plans, held 460 @18)
+#   wt.sh pilot                 WTJ2P / WTJ5P -L18-s0, 1 000 steps (after bitcmp) -> reads -> gate (on PASS submits `full <dose>`)
+#   wt.sh full <j2|j5>          WTJ{2,5}-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 (6 chunks each) -> clgate held (with the control's held reads)
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -24,41 +24,58 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 FW=(--train --vram 24 --cpu 6 --ram 70)
 csv() { local IFS=,; echo "$*"; }
+jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $O/jobs.txt; }       # last pool id of a job name
+reads() {  # <after ids> <tags..>: waitcap / dev / ledger-F plans -> echo the three ids
+  local af=$1; shift
+  local a b c
+  a=$(sub wt-plans-$1 --after $af --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags "$@") || exit 1
+  b=$(sub wt-dev-$1 --after $af --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- $TR $PY devplans --tags "$@") || exit 1
+  c=$(sub wt-led-$1 --after $af --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/cap_ledger/scripts/led.py plans --tags "$@" --conds F) || exit 1
+  echo "$a,$b,$c"; }
+held() {  # <after id> <tag>: 6 held chunks -> echo ids
+  local i ids=(); for i in 0 1 2 3 4 5; do ids+=($(sub wt-held-$2-$i --after $1 --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+      -- bash experiments/route_mem/scripts/rm_chain.sh read $2 $i 6)) || exit 1; done; csv ${ids[@]}; }
 case ${1:-} in
-rows)
-  s=$(sub wt-select --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 -- $NS $PY select --workers 16) || exit 1
-  i=$(sub wt-index --after $s --vram 0.5 --cpu 4 --ram 32 --timeout-h 2 -- $NS $PY index) || exit 1
-  p=$(sub wt-prep --after $i --vram 10 --cpu 12 --ram 48 --timeout-h 2 -- $TR experiments/op_parity/scripts/pp_prep.py --data $D --frames warp --no-side --synth cpu --workers 12) || exit 1
-  r=$(sub wt-rmnav --after $p --vram 0.5 --cpu 12 --ram 40 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py nav --data $D --workers 12) || exit 1
-  t=$(sub wt-teacher --after $p --vram 10 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY teacher) || exit 1
-  k=$(sub wt-pack --after $r,$t --vram 0.5 --cpu 4 --ram 96 --timeout-h 1 -- $TR $PY pack) || exit 1
+rows-batch)
+  B=${2:?batch}; D=idx_waitcap_tr$B
+  s=$(sub wt-select-$B --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 -- $NS $PY select --batch $B --workers 16) || exit 1
+  i=$(sub wt-index-$B --after $s --vram 0.5 --cpu 4 --ram 32 --timeout-h 2 -- $NS $PY index --batch $B) || exit 1
+  p=$(sub wt-prep-$B --after $i --vram 10 --cpu 16 --ram 48 --timeout-h 2 -- $TR experiments/op_parity/scripts/pp_prep.py --data $D --frames warp --no-side --synth cpu --workers 16) || exit 1
+  r=$(sub wt-rmnav-$B --after $p --vram 0.5 --cpu 16 --ram 40 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py nav --data $D --workers 16) || exit 1
+  t=$(sub wt-teacher-$B --after $p --vram 10 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY teacher --batch $B) || exit 1
+  echo "batch $B: select $s index $i prep $p rmnav $r teacher $t" | tee -a $O/rows.txt ;;
+pack)
+  BS=${2:?B1,B2}; af=(); for B in ${BS//,/ }; do af+=($(jid wt-rmnav-$B) $(jid wt-teacher-$B)) || { echo "batch $B not submitted" >&2; exit 1; }; done
+  k=$(sub wt-pack --after "$(csv ${af[@]})" --vram 0.5 --cpu 4 --ram 120 --timeout-h 1 -- $TR $PY pack --batches $BS) || exit 1
   g=(); for x in off w0; do g+=($(sub wt-gg-$x "${FW[@]}" --after $k --timeout-h 1 -- bash $ME train $x 0 60 WTGG-$x)) || exit 1; done
   b=$(sub wt-bitcmp --after "$(csv ${g[@]})" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp) || exit 1
-  echo "select $s index $i prep $p rmnav $r teacher $t pack $k identity ${g[*]} bitcmp $b" | tee -a $O/rows.txt ;;
+  echo "pack $k identity ${g[*]} bitcmp $b" | tee -a $O/rows.txt ;;
+control)
+  t0=$(sub wt-train-WTCP-L18-s0 "${FW[@]}" --timeout-h 1 -- bash $ME train off 0 1000 WTCP-L18-s0) || exit 1
+  r0=$(reads $t0 WTCP-L18-s0) || exit 1
+  tt=(); for s in 0 1; do tt+=($(sub wt-train-WTC-L18-s$s "${FW[@]}" --timeout-h 2 -- bash $ME train off $s 2500 WTC-L18-s$s)) || exit 1; done
+  r1=$(reads "$(csv ${tt[@]})" WTC-L18-s0 WTC-L18-s1) || exit 1
+  h0=$(held ${tt[0]} WTC-L18-s0) || exit 1; h1=$(held ${tt[1]} WTC-L18-s1) || exit 1
+  echo "control: pilot C $t0 reads $r0; full C ${tt[*]} reads $r1; held $h0 $h1" | tee -a $O/stages.txt ;;
 pilot)
-  [[ -s $O/identity.json ]] && grep -q '"identical": true' $O/identity.json || { echo "identity not proven ($O/identity.json)" >&2; exit 1; }
-  ids=(); TT=(WTJ2P-L18-s0 WTJ5P-L18-s0 WTCP-L18-s0)
-  for q in j2 j5 w0; do T=WT${q^^}P-L18-s0; [[ $q == w0 ]] && T=WTCP-L18-s0; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
-    ids+=($(sub wt-pilot-$T "${FW[@]}" --timeout-h 1 -- bash $ME train $q 0 1000 $T)) || exit 1; done
-  pl=$(sub wt-plans-pilot --after "$(csv ${ids[@]})" --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags ${TT[@]}) || exit 1
-  dp=$(sub wt-dev-pilot --after "$(csv ${ids[@]})" --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- $TR $PY devplans --tags ${TT[@]}) || exit 1
-  lp=$(sub wt-led-pilot --after "$(csv ${ids[@]})" --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/cap_ledger/scripts/led.py plans --tags ${TT[@]} --conds F) || exit 1
-  gg=$(sub wt-gate-pilot --after $pl,$dp,$lp --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
+  b=$(jid wt-bitcmp) || { echo "no bitcmp job" >&2; exit 1; }
+  ids=(); for q in j2 j5; do T=WT${q^^}P-L18-s0; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
+    ids+=($(sub wt-train-$T "${FW[@]}" --after $b --timeout-h 1 -- bash $ME train $q 0 1000 $T)) || exit 1; done
+  rj=$(reads "$(csv ${ids[@]})" WTJ2P-L18-s0 WTJ5P-L18-s0) || exit 1
+  rc="$(jid wt-plans-WTCP-L18-s0),$(jid wt-dev-WTCP-L18-s0),$(jid wt-led-WTCP-L18-s0)" || { echo "control reads not submitted" >&2; exit 1; }
+  gg=$(sub wt-gate-pilot --after $rj,$rc,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
        $TR $PY gate --j WTJ2P-L18-s0 WTJ5P-L18-s0 --c WTCP-L18-s0 --dose-of j2=WTJ2P-L18-s0,j5=WTJ5P-L18-s0 --submit) || exit 1
-  echo "pilot trainings ${ids[*]} plans $pl dev $dp gate $gg" | tee -a $O/stages.txt ;;
+  echo "pilot trainings ${ids[*]} reads $rj gate $gg" | tee -a $O/stages.txt ;;
 full)    # full <j2|j5>
-  q=${2:?dose}; J=WT${q^^}-L18; tr=(); JJ=($J-s0 $J-s1); CC=(WTC-L18-s0 WTC-L18-s1)
-  for s in 0 1; do for x in $q w0; do T=$J-s$s; [[ $x == w0 ]] && T=WTC-L18-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
-    tr+=($(sub wt-train-$T "${FW[@]}" --timeout-h 2 -- bash $ME train $x $s 2500 $T)) || exit 1; done; done
-  pl=$(sub wt-plans-full --after "$(csv ${tr[@]})" --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags ${JJ[@]} ${CC[@]}) || exit 1
-  dp=$(sub wt-dev-full --after "$(csv ${tr[@]})" --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- $TR $PY devplans --tags ${JJ[@]} ${CC[@]}) || exit 1
-  lp=$(sub wt-led-full --after "$(csv ${tr[@]})" --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/cap_ledger/scripts/led.py plans --tags ${JJ[@]} ${CC[@]} --conds F) || exit 1
-  hh=(); k=0; for T in $J-s0 WTC-L18-s0 $J-s1 WTC-L18-s1; do
-    for i in 0 1 2 3 4 5; do hh+=($(sub wt-held-$T-$i --after ${tr[$k]} --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
-        -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done; k=$((k + 1)); done
-  g=$(sub wt-clgate-held --after "$(csv ${hh[@]})" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
+  q=${2:?dose}; J=WT${q^^}-L18; JJ=($J-s0 $J-s1); CC=(WTC-L18-s0 WTC-L18-s1); tr=()
+  for s in 0 1; do T=$J-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
+    tr+=($(sub wt-train-$T "${FW[@]}" --timeout-h 2 -- bash $ME train $q $s 2500 $T)) || exit 1; done
+  rj=$(reads "$(csv ${tr[@]})" ${JJ[@]}) || exit 1
+  hj=$(held ${tr[0]} ${JJ[0]}),$(held ${tr[1]} ${JJ[1]}) || exit 1
+  hc=(); for T in ${CC[@]}; do for i in 0 1 2 3 4 5; do hc+=($(jid wt-held-$T-$i)) || { echo "control held reads not submitted" >&2; exit 1; }; done; done
+  g=$(sub wt-clgate-held --after "$hj,$(csv ${hc[@]})" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
       $TR $PY clgate --stage held --j $(csv ${JJ[@]}) --c $(csv ${CC[@]}) --submit) || exit 1
-  echo "full $q: trainings ${tr[*]} plans $pl dev $dp held ${#hh[@]} jobs gate $g" | tee -a $O/stages.txt ;;
+  echo "full $q: trainings ${tr[*]} reads $rj held $hj gate $g" | tee -a $O/stages.txt ;;
 stage-sub)
   JS=${2:?J0,J1}; CS=${3:?C0,C1}; J0=${JS%%,*}; rr=(); mkdir -p $O/sub $O/paisub
   echo $STATIC > $O/sub/static.txt

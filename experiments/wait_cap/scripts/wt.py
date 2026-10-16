@@ -112,26 +112,44 @@ def leak(logs):
     return dict(logs=len(L), sets=sets, clean=all(not v["db_overlap"] for v in sets.values()))
 
 
-def cmd_select(a):
-    from jevdrive import par
+def bsplit(b):
+    return f"waitcap_tr{b}"
+
+
+def used_logs():
+    """The 111 listed logs minus the ones holding a navtrain dev token -> (used logs, dropped)."""
     from jevdrive.data import splits
-    from jevdrive.run import Run
-    os.environ.setdefault("NUPLAN_MAPS_ROOT", str(NAV / "maps"))
-    os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
     want = [l for l in (REPO / "experiments/wait_cap/results/trainval_logs.txt").read_text().split() if l]
     dv = splits.load("navsim/op-parity-full-dev")
     devlogs = set()
     for i in range(12):
         z = np.load(CR / f"navtrain_full.s{i}of12/tab.npz")
         devlogs |= set(z["log"][dv.mask(z["names"])].tolist())
-    logs = [l for l in want if l not in devlogs]
-    with Run("wait_cap", "train-select", config=vars(a), seed=wc.SEED) as run:
-        run.use_split(dv)
+    return [l for l in want if l not in devlogs], sorted(set(want) & devlogs)
+
+
+def cmd_select(a):
+    """Batch B: the used logs of the archives whose .done exists and that no earlier batch took; every cell row after the 2 s thinning (the
+    5 000 cap is applied over the union at pack) -> runs/wait_cap/train/batches/<B>/{rows.npz, logs.txt, cells.md, select.json}, split navsim/waitcap_tr<B>."""
+    from jevdrive import par
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    os.environ.setdefault("NUPLAN_MAPS_ROOT", str(NAV / "maps"))
+    os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
+    logs_all, dropped = used_logs()
+    amap = json.loads((REPO / "experiments/wait_cap/results/trainval_archive_logs.json").read_text())
+    done = {k for k in amap if (NAV / "_archives/state" / f"{k}.done").exists()}
+    ready = {l for k in done for l in amap[k]}
+    out = OUT / "batches" / a.batch
+    assert not (out / "rows.npz").exists(), f"batch {a.batch} exists"
+    taken = {l for f in (OUT / "batches").glob("*/logs.txt") for l in f.read_text().split()}
+    logs = [l for l in logs_all if l in ready and l not in taken]
+    assert logs, "no new log ready"
+    with Run("wait_cap", f"train-select-{a.batch}", config=vars(a), seed=wc.SEED) as run:
         res = par.pmap(_log_job, [NAV / f"navsim_logs/trainval/{l}.pkl" for l in logs], run=run, workers=a.workers, desc="logs")
         res.raise_if_failed()
         rows = [r for v, _, _ in res.values for r in v]
         cams = dict(frames=sum(n for _, _, n in res.values), cam_f0=sum(c for _, c, _ in res.values))
-        rng = np.random.default_rng(wc.SEED)
         keep, census = [], {}
         for c in STAT + STOP + YIELD:
             cand = sorted((r for r in rows if r["cell"] == c), key=lambda r: (r["log"], r["frame"]))
@@ -140,40 +158,35 @@ def cmd_select(a):
                 if r["frame"] - last.get(r["log"], -99) >= wc.GAP_FR:
                     thin.append(r)
                     last[r["log"]] = r["frame"]
-            pick = [thin[k] for k in sorted(rng.permutation(len(thin))[:CAP])]
-            census[c] = dict(frames=len(cand), thinned=len(thin), rows=len(pick), logs=len({r["log"] for r in pick}))
-            keep += pick
-        out = OUT / "select"
+            census[c] = dict(frames=len(cand), thinned=len(thin), logs=len({r["log"] for r in thin}))
+            keep += thin
         out.mkdir(parents=True, exist_ok=True)
         cols = [k for k in keep[0] if k not in ("fut", "ref")]
         np.savez(out / "rows.npz", fut=np.stack([r["fut"] for r in keep]), ref=np.stack([r["ref"] for r in keep]), **{k: np.array([r[k] for r in keep]) for k in cols})
-        (out / "tokens.txt").write_text("\n".join(r["token"] for r in keep) + "\n")
+        (out / "logs.txt").write_text("\n".join(logs) + "\n")
         lk = leak(sorted({r["log"] for r in keep}))
-        rec = dict(logs_listed=len(want), dropped_dev_logs=sorted(set(want) & devlogs), logs_used=len(logs), eligible_frames=len(rows), **cams, census=census,
-                   rows=len(keep), row_logs=len({r["log"] for r in keep}), leak=lk)
-        md = [f"trainval logs listed {len(want)}, dropped (hold a navtrain dev token) {len(set(want) & devlogs)}, used {len(logs)}; frames {cams['frames']}, "
-              f"CAM_F0 on disk {cams['cam_f0']}; frames in a cell with history cameras on disk {len(rows)} (one cell per frame: wc cell first, then Y_P, then Y_V); rows {len(keep)} in {rec['row_logs']} logs", "",
-              "| cell | frames | thinned | rows | logs |", "|---|--:|--:|--:|--:|"]
-        md += [f"| {c} | {v['frames']} | {v['thinned']} | {v['rows']} | {v['logs']} |" for c, v in census.items()]
+        rec = dict(batch=a.batch, archives_done=sorted(done), logs=len(logs), dropped_dev_logs=dropped, cell_frames=len(rows), **cams, census=census,
+                   rows=len(keep), leak=lk)
+        md = [f"batch {a.batch}: {len(logs)} logs ({len(done)} archives done); frames {cams['frames']}, CAM_F0 on disk {cams['cam_f0']}; frames in a cell with "
+              f"history cameras {len(rows)} (one cell per frame: wc cell first, then Y_P, then Y_V); rows after the 2 s thinning {len(keep)}", "",
+              "| cell | frames | rows | logs |", "|---|--:|--:|--:|"] + [f"| {c} | {v['frames']} | {v['thinned']} | {v['logs']} |" for c, v in census.items()]
         md += ["", "leak check (exact nuPlan db / drive session date_veh): " + "; ".join(
             f"{k} {len(v['db_overlap'])} / {len(v['session_overlap'])}" for k, v in lk["sets"].items()) + f" -> clean {lk['clean']}"]
         (out / "cells.md").write_text("\n".join(md) + "\n")
         (out / "select.json").write_text(json.dumps(rec, indent=1))
-        RES.mkdir(parents=True, exist_ok=True)
-        for f in ("cells.md", "select.json"):
-            (RES / f).write_text((out / f).read_text())
         run.summary |= dict(rows=len(keep), census=census, leak_clean=lk["clean"])
         print((out / "cells.md").read_text())
         assert lk["clean"], "a training log is an evaluation log"
-        splits.define("navsim", SPLIT, sorted(r["token"] for r in keep), unit="token",
-                      origin="WAIT-TRAIN select (experiments/wait_cap/scripts/wt.py): wait / launch / stop cells of NAVSIM trainval frames of the "
-                             "downloaded camera archives (results/trainval_archives.tsv); rows $DATA_DIR/runs/wait_cap/train/select/rows.npz",
-                      status="frozen", used_by=["experiments/wait_cap"], notes="training rows (pool on1_WAIT); never an evaluation set")
+        splits.define("navsim", bsplit(a.batch), sorted(r["token"] for r in keep), unit="token",
+                      origin=f"WAIT-TRAIN select batch {a.batch} (experiments/wait_cap/scripts/wt.py): wait / launch / stop / yield cells of NAVSIM trainval "
+                             f"frames of the downloaded camera archives; rows $DATA_DIR/runs/wait_cap/train/batches/{a.batch}/rows.npz",
+                      status="frozen", used_by=["experiments/wait_cap"], notes="training row candidates (pool on1_WAIT after the cap); never an evaluation set")
 
 
 # ---------------------------------------------------------------- index (navsim2 venv)
 def cmd_index(a):
     import importlib.util
+    split, sel = bsplit(a.batch), OUT / "batches" / a.batch / "rows.npz"
     os.environ.setdefault("OPENSCENE_DATA_ROOT", str(NAV))
     os.environ.setdefault("NUPLAN_MAPS_ROOT", str(NAV / "maps"))
     os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
@@ -183,7 +196,7 @@ def cmd_index(a):
     from navsim.common.dataclasses import SceneFilter
     from navsim.common.dataloader import SceneLoader
     from jevdrive.navsim_zs import root
-    z = np.load(OUT / "select/rows.npz")
+    z = np.load(sel)
     toks, logs = z["token"].tolist(), sorted(set(z["log"].tolist()))
     sf = SceneFilter(num_history_frames=4, num_future_frames=8, frame_interval=1, has_route=True, log_names=logs, tokens=toks)
     real = NAV / "sensor_blobs/trainval"
@@ -199,10 +212,10 @@ def cmd_index(a):
         out.append(nzi.entry(t, "one", L.get_agent_input_from_token(t), [f["cams"] for f in frames[:4]], real, meta))
         fut.append(L.get_scene_from_token(t).get_future_trajectory(8).poses)
     nmiss = sum(not Path(c["CAM_F0"]["path"]).exists() for e in out for c in e["cams"])
-    with open(root("index") / f"{SPLIT}.pkl", "wb") as f:
+    with open(root("index") / f"{split}.pkl", "wb") as f:
         pickle.dump(out, f, protocol=4)
-    np.savez(root("index") / f"{SPLIT}_future.npz", tokens=np.array([e["token"] for e in out]), poses=np.stack(fut).astype(np.float32))
-    print(f"{SPLIT}: {len(out)} tokens, not loaded {len(miss)}, missing CAM_F0 files {nmiss}")
+    np.savez(root("index") / f"{split}_future.npz", tokens=np.array([e["token"] for e in out]), poses=np.stack(fut).astype(np.float32))
+    print(f"{split}: {len(out)} tokens, not loaded {len(miss)}, missing CAM_F0 files {nmiss}")
     assert nmiss == 0 and len(miss) <= 0.01 * len(toks)
 
 
@@ -214,14 +227,14 @@ def cmd_teacher(a):
     from jevdrive import op_adapt as A
     from jevdrive.data import splits
     from jevdrive.run import Run
-    d = f"idx_{SPLIT}"
+    d = f"idx_{bsplit(a.batch)}"
     tab = np.load(CR / d / "tab.npz")
     front = np.load(CR / f"{d}@warp/front.npy", mmap_mode="r")
     n = len(tab["names"])
     assert front.shape == (n, 8, 32, 512), front.shape
     dev = torch.device("cuda")
-    with Run("wait_cap", "train-teacher", config=vars(a)) as run:
-        run.use_split(splits.load(f"navsim/{SPLIT}"))
+    with Run("wait_cap", f"train-teacher-{a.batch}", config=vars(a)) as run:
+        run.use_split(splits.load(f"navsim/{bsplit(a.batch)}"))
         net, _ = PP.encoder(dev)
         di, pi = A.distill_index(net.slices), A.plan_index(net.slices)
         o_, plan = np.zeros((n, len(di)), np.float32), np.zeros((n, 33, 15), np.float32)
@@ -272,16 +285,43 @@ def human_arc(fut):
 
 
 def cmd_pack(a):
+    """Union of the batches (every used log covered), the 5 000 cap per cell over the union (seed 20261016, rows sorted by log / frame), then
+    on1_WAIT from the batch caches, merged on1_L18RBW, wc_arc.npz, flags; split navsim/waitcap_train = the packed tokens."""
+    from jevdrive.data import splits
     assert not (CR / POOL / "tab.npz").exists() or os.environ.get("WT_FORCE"), f"{POOL} exists (a training may read it): WT_FORCE=1"
-    d = f"idx_{SPLIT}"
-    tb = dict(np.load(CR / d / "tab.npz"))
-    sel = np.load(OUT / "select/rows.npz")
-    cell_of = dict(zip(sel["token"].tolist(), sel["cell"].tolist()))
+    bs = a.batches.split(",")
+    logs_all, dropped = used_logs()
+    got = [l for b in bs for l in (OUT / "batches" / b / "logs.txt").read_text().split()]
+    assert sorted(got) == sorted(logs_all), f"batches cover {len(set(got))} of {len(logs_all)} used logs"
+    parts = []                                                        # (batch, cache tab, sel rows by token)
+    for b in bs:
+        d = f"idx_{bsplit(b)}"
+        tb = dict(np.load(CR / d / "tab.npz"))
+        sl = np.load(OUT / "batches" / b / "rows.npz")
+        pos = {t: i for i, t in enumerate(sl["token"].tolist())}
+        j = np.array([pos[t] for t in tb["names"].tolist()])
+        parts.append((b, d, tb, {k: sl[k][j] for k in ("cell", "log", "frame")}))
+    cell_all = np.concatenate([p[3]["cell"] for p in parts]).astype("U4")
+    key = [(str(l), int(f)) for p in parts for l, f in zip(p[3]["log"], p[3]["frame"])]
+    rng = np.random.default_rng(wc.SEED)
+    take = np.zeros(len(cell_all), bool)
+    census = {}
+    for c in STAT + STOP + YIELD:
+        idx = sorted(np.flatnonzero(cell_all == c), key=lambda i: key[i])
+        pick = [idx[k] for k in sorted(rng.permutation(len(idx))[:CAP])]
+        take[pick] = True
+        census[c] = dict(rows_before_cap=len(idx), rows=len(pick), logs=len({key[i][0] for i in pick}))
+    off = np.cumsum([0] + [len(p[2]["names"]) for p in parts])
+    sel = [np.flatnonzero(take[off[k]:off[k + 1]]) for k in range(len(parts))]
+    cat = lambda k: np.concatenate([p[2][k][s_] for p, s_ in zip(parts, sel)])  # noqa: E731
+    tb = {k: cat(k) for k in ("names", "log", "ego", "pose", "vel", "acc", "cmd", "fut", "cam", "lht", "speed")}
+    cell = np.concatenate([cell_all[off[k]:off[k + 1]][s_] for k, s_ in enumerate(sel)])
     names = tb["names"]
     n = len(names)
-    cell = np.array([cell_of[t] for t in names.tolist()], "U4")
-    has = np.isfinite(tb["fut"]).all((1, 2))
-    assert has.all(), f"{(~has).sum()} rows without a full future"
+    splits.define("navsim", SPLIT, sorted(names.tolist()), unit="token",
+                  origin="WAIT-TRAIN pack (experiments/wait_cap/scripts/wt.py): the batches' rows after the 5 000 cap per cell; pool on1_WAIT",
+                  status="frozen", used_by=["experiments/wait_cap"], notes="training rows; never an evaluation set")
+    assert np.isfinite(tb["fut"]).all(), "rows without a full future"
     stop = np.isin(cell, STOP + YIELD)                  # S and Y rows: constant-velocity history, over-the-human-only arc loss
     ego = tb["ego"].copy()
     ego[stop] = flat_rows(tb["ego"][stop])
@@ -301,16 +341,27 @@ def cmd_pack(a):
     Bq = np.load(CR / BASE / "route.npz", mmap_mode="r")
     np.savez(src / "route.npz", tokens=pn, ok=np.zeros(n, bool), poly=np.zeros((n,) + Bq["poly"].shape[1:], np.float32),
              seglen=np.zeros((n,) + Bq["seglen"].shape[1:], np.float32), dz=np.zeros(n, np.float32), cov20=np.zeros(n, bool))
-    fz = np.load(FEAT / f"{d}.npz")
-    assert np.array_equal(fz["names"], names), "route features rows != cache rows"
-    np.savez(FEAT / f"{NEW}.npz", names=pn, f=fz["f"].astype(np.float16), k=fz["k"].astype(np.int64), ok=fz["ok"])
-    th = np.load(CR / f"{d}@warp/teacher.npz")
-    np.savez(dw / "teacher.npz", out=th["out"], plan=th["plan"], di=th["di"], pi=th["pi"])
-    fr = np.load(CR / f"{d}@warp/front.npy", mmap_mode="r")
-    o = np.lib.format.open_memmap(dw / "front.npy", "w+", fr.dtype, fr.shape)
-    for i in range(0, n, 2048):
-        o[i:i + 2048] = fr[i:i + 2048]
+    FZ, TH, FR = [], [], []
+    for (b, d, t_, _), s_ in zip(parts, sel):
+        fz = np.load(FEAT / f"{d}.npz")
+        assert np.array_equal(fz["names"], t_["names"]), f"{d}: route features rows != cache rows"
+        FZ.append({k: fz[k][s_] for k in ("f", "k", "ok")})
+        th = np.load(CR / f"{d}@warp/teacher.npz")
+        assert np.array_equal(th["di"], np.load(CR / f"{parts[0][1]}@warp/teacher.npz")["di"])
+        TH.append((th["out"][s_], th["plan"][s_], th["di"], th["pi"]))
+        FR.append((np.load(CR / f"{d}@warp/front.npy", mmap_mode="r"), s_))
+    np.savez(FEAT / f"{NEW}.npz", names=pn, f=np.concatenate([z["f"] for z in FZ]).astype(np.float16), k=np.concatenate([z["k"] for z in FZ]).astype(np.int64),
+             ok=np.concatenate([z["ok"] for z in FZ]))
+    fz = dict(ok=np.concatenate([z["ok"] for z in FZ]))
+    np.savez(dw / "teacher.npz", out=np.concatenate([t[0] for t in TH]), plan=np.concatenate([t[1] for t in TH]), di=TH[0][2], pi=TH[0][3])
+    o = np.lib.format.open_memmap(dw / "front.npy", "w+", FR[0][0].dtype, (n,) + FR[0][0].shape[1:])
+    i0 = 0
+    for f_, s_ in FR:
+        for i in range(0, len(s_), 1024):
+            o[i0 + i:i0 + min(i + 1024, len(s_))] = f_[s_[i:i + 1024]]
+        i0 += len(s_)
     o.flush()
+    fr = o
     p = subprocess.run([sys.executable, str(REPO / "experiments/route_follow/scripts/rf_pait.py"), "merge", "--pools", f"{BASE}:s", f"{NEW}:w", "--out", POOL[4:]],
                        capture_output=True, text=True)
     if p.returncode:
@@ -357,7 +408,7 @@ def cmd_pack(a):
     flags["w0"] = f"--on {POOL} --on-k {K_ON} --on-mode self --on-lon wc_arc --on-weight pool=w:0"
     for k_, f in flags.items():
         (OUT / f"flags_{k_}.txt").write_text(f + "\n")
-    rec = dict(check=chk, cells=cnt, groups=ng, shares=sh, y_raised=bool(sh["Y"] > ng["Y"] / (ng["S"] + ng["Y"]) / 3 + 1e-12), s_y_rows_cv_history=int(stop.sum()), flags=flags, weights=wts,
+    rec = dict(batches=bs, census=census, check=chk, cells=cnt, groups=ng, shares=sh, y_raised=bool(sh["Y"] > ng["Y"] / (ng["S"] + ng["Y"]) / 3 + 1e-12), s_y_rows_cv_history=int(stop.sum()), flags=flags, weights=wts,
                expected_new_per_batch={d: k for d, k in DOSES.items()}, route_feat_ok_new=float(fz["ok"].mean()))
     (OUT / "pack.json").write_text(json.dumps(rec, indent=1))
     RES.mkdir(parents=True, exist_ok=True)
@@ -687,8 +738,11 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("select")
     p.add_argument("--workers", type=int, default=16)
-    for c in ("index", "teacher", "pack", "bitcmp"):
-        sp.add_parser(c)
+    p.add_argument("--batch", required=True)
+    for c in ("index", "teacher"):
+        sp.add_parser(c).add_argument("--batch", required=True)
+    sp.add_parser("pack").add_argument("--batches", required=True)
+    sp.add_parser("bitcmp")
     p = sp.add_parser("ycount")
     p.add_argument("--workers", type=int, default=16)
     p = sp.add_parser("devplans")
