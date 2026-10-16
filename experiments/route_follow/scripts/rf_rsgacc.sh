@@ -76,6 +76,9 @@ roll)      # roll nu|pai <T..>
 pilot)
   shift; dep=(); for T in "$@"; do dep+=($(cat $O/rows_nu_$T.txt $O/rows_pai_$T.txt)); done
   m=$(sub ra-merge --after "$(csv "${dep[@]}")" --vram 0.5 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME merge "$@") || exit 1
+  bash $ME pilot-after $m ;;
+pilot-after)   # pilot-after <merge job id>: the pilot trainings, forward reads and gate (resubmit path)
+  m=$2
   t=(); for c in a b c p0k13 p0k26; do t+=($(sub ra-train-pilot-$c --after $m --train --vram 28 --cpu 6 --ram 120 --timeout-h 2 -- bash $ME train $c RSGACCp$c-L18-s0 1000)) || exit 1; done
   TG=$(for c in a b c p0k13 p0k26; do printf RSGACCp%s-L18-s0, $c; done)
   f1=$(sub ra-fwd-pilot-held --after "$(csv "${t[@]}")" --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- $TR $S/rf_recov.py fwd --pool L18RSGallheld --rows held01 --tags RSG-L18-s0,${TG%,}) || exit 1
