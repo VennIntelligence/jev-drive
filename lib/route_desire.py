@@ -22,6 +22,9 @@ lc_intent / intent (stateless, numpy, vectorised over rows)
   blocked   d_turn <= BLOCK_M (20 m: the stop line / junction mouth; no new lane change starts there) or in_turn or a < A_MIN
   offset    y_t = the route point at a relative to the ego, across the chord direction href = the median route heading over 0 .. a (a
             constant-curvature road reads ~0, a lane change its lane offset); every slot 0 .. a valid, none > LC_MAX_DEG off href
+  off_route |y_0| >= Y0_MAX: the ego is already off the route's lane where the memory starts; no desire (user decision 2026-10-17 after
+            decision 334: 151 of 165 PAI starts were such returns, and they carried the extra contacts). Only a lane change the route asks
+            for ahead, with the ego still in its lane, fires
   side      sign(y_t) when |y_t| >= ON_M (half a lane), else 0; +1 = left (laneChangeLeft, log.Desire 3), -1 = right (laneChangeRight, 4)
 
 RouteDesire (stateful, one per session): openpilot desire_helper.py's lane-change states, the blinker = lc_intent
@@ -61,10 +64,11 @@ LOOK, LOOK_FAR, PRE_M, A_MIN = 40.0, 60.0, 4.0, 12.0
 SETTLE_M, STRAIGHT_DEG = 1.0, 10.0
 TURN_DEG, TURN_IN, BLOCK_M = 30.0, 30.0, 20.0
 GAP_MAX, GAP_YAW = 44.0, 5.0              # memory starting ahead: first valid point within 44 m, ego within 5 deg of the road
+Y0_MAX = 1.0                          # the ego within 1 m of the route where it starts (decision 334's route-ahead / return split)
 LC_MAX_DEG = 25.0                     # a lane-change route segment may slant this much (rf_dc P_lca: 0-60 m < 25 deg)
 DESIRE = {1: 3, -1: 4}                # side -> log.Desire (laneChangeLeft 3, laneChangeRight 4)
 QUEUE_S = 6.6
-WHY = ("ok", "small", "no_route", "in_turn", "near_junction", "curved", "unsettled", "short")
+WHY = ("ok", "small", "no_route", "in_turn", "near_junction", "curved", "unsettled", "short", "off_route")
 
 
 def _slot(a):
@@ -130,10 +134,10 @@ def intent(F) -> dict:
     hab = _cmed(h, v & (rng >= ia[:, None]) & (rng <= ib[:, None]))      # a .. a + 20 m: still moving across (a curve's chord reads 0)
     settled = ~later | (np.abs(-np.sin(hab) * (x[R, ib] - x[R, ia]) + np.cos(hab) * (y[R, ib] - y[R, ia])) <= SETTLE_M)
     blocked = in_turn | (d_turn <= BLOCK_M) | (a < A_MIN)
-    why = np.select([~ok_route, in_turn, d_turn <= BLOCK_M, a < A_MIN, ~straight, ~settled, np.abs(y_t) < ON_M],
-                    [2, 3, 4, 7, 5, 6, 1], 0)
-    side = np.where(why == 0, np.sign(y_t), 0).astype(int)
     y_0 = np.where(ok_route, -s * x[R, s0] + c * y[R, s0], 0.0)         # the ego's own offset from the route where it starts (return-to-route when large)
+    why = np.select([~ok_route, in_turn, d_turn <= BLOCK_M, a < A_MIN, ~straight, ~settled, np.abs(y_t) < ON_M, np.abs(y_0) >= Y0_MAX],
+                    [2, 3, 4, 7, 5, 6, 1, 8], 0)
+    side = np.where(why == 0, np.sign(y_t), 0).astype(int)
     out = dict(side=side, y_t=y_t, y_0=y_0, a=a, d_turn=d_turn, blocked=blocked, in_turn=in_turn, gap=gap & ~near_ok, why=why)
     return {k: w[0] for k, w in out.items()} if one else out
 
