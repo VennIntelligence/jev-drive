@@ -142,12 +142,14 @@ def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000, k
     return cur, valid, real
 
 
-def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False, route=None, ego_fn=None) -> dict:
+def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False, route=None, ego_fn=None,
+         selfstate=None) -> dict:
     """One decision from the slot frames (array, or key_slots' tensor on the card): sh30_core.Core.plan after its frame synthesis. P (4, 3),
     V (4, 2) history at op_interp.T_KEY in the t0 frame, acc (2,), cmd (4,) one-hot [L, S, R, unknown] -> poses (8, 3) rear-axle x, y, yaw
     at 0.5 .. 4 s, stage times. route: rmem features (core.rm_dim,) appended to the ego row when the core serves the ROUTE-MEM branch
     (core.rm, set by pai_driver; None = an empty memory; ignored otherwise) -> also "rmem", the fed features. ego_fn: the measured ego row
-    -> the row fed to the adapter (vhist.py, JEV_VHIST; None = unchanged) -> also "ego_fed"; "ego" stays the measured row."""
+    -> the row fed to the adapter (vhist.py, JEV_VHIST; None = unchanged) -> also "ego_fed"; "ego" stays the measured row. selfstate: the
+    reflex module's self-state appended last when the core serves the module (core.rx; sh30_core.Core.plan's rule) -> also "rx"."""
     torch, A = core.torch, core.A
     t0 = time.perf_counter()
     gpu = not isinstance(cur, np.ndarray)
@@ -163,7 +165,12 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
         if getattr(core, "rm", False):
             rf = np.zeros(core.rm_dim, np.float32) if route is None else np.asarray(route, np.float32).reshape(core.rm_dim)
         fed = ego if ego_fn is None else ego_fn(ego)
-        ego_t = torch.from_numpy((fed if rf is None else np.r_[fed, rf])[None]).to(core.dev)
+        row, sf = (fed if rf is None else np.r_[fed, rf]), None
+        if getattr(core, "rx", False):                      # STACK reflex module: valid 0 without a self-state or with JEV_REFLEX_OFF=1
+            RX = core.RX
+            sf = RX.empty() if selfstate is None or RX.OFF else np.asarray(selfstate, np.float32).reshape(RX.SF)
+            row = np.r_[row, sf]
+        ego_t = torch.from_numpy(row[None]).to(core.dev)
         out = core.model(H, ego_t, tc).float()
         mu = out[0, core.pi].reshape(33, 15).cpu().numpy()
         sl = core.model.net.slices                          # the lead outputs of the same pass, for serve_fix.py (JEV_LEAD)
@@ -173,5 +180,5 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
             ld["poses_base"] = I.to_rear(mb[:, 0:3], mb[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t2 = time.perf_counter()
     poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
-    return {"poses": poses, "mu": mu, "ego": ego, **ld, **({"rmem": rf} if rf is not None else {}),
+    return {"poses": poses, "mu": mu, "ego": ego, **ld, **({"rmem": rf} if rf is not None else {}), **({"rx": sf} if sf is not None else {}),
             **({"ego_fed": fed} if ego_fn is not None else {}), "ms": {"encode": 1e3 * (t1 - t0), "policy": 1e3 * (t2 - t1), "export": 1e3 * (time.perf_counter() - t2)}}

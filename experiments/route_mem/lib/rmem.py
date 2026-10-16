@@ -416,12 +416,22 @@ def load_pmodel(tag: str, dev):
     import pp_train as T
     if not has_branch(tag):
         return T.load_pmodel(tag, dev)
-    kw = json.loads((T.proot("runs", tag) / SIDECAR).read_text()).get("head", {})
+    side = json.loads((T.proot("runs", tag) / SIDECAR).read_text())
     ck = torch.load(T.proot("runs", tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)
     m = T.PModel(ck["model"]["arm"]).to(dev)
-    attach(m, **kw)
+    attach(m, **side.get("head", {}))
+    if side.get("reflex") is not None:                       # STACK reflex module (lib/reflex.py): the adapter state carries rx.*
+        import reflex as RX
+        RX.attach(m, rx=side["reflex"].get("rx"))
     m.load_state(ck["model"])
     return m.eval()
+
+
+def reflex_of(tag: str) -> dict | None:
+    """The sidecar's `reflex` entry (lib/reflex.py SIDE_KEY: the module's config) of a checkpoint, None without the module."""
+    import pp_train as T
+    p = T.proot("runs", tag) / SIDECAR
+    return json.loads(p.read_text()).get("reflex") if p.exists() else None
 
 
 def write_sidecar(tag: str, head: dict, extra: dict):

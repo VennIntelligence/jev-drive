@@ -16,6 +16,10 @@ What the simulator gives -> what the core is fed (docs/alpasim.md, "What a nuPla
   route mem only for a checkpoint with the ROUTE-MEM branch (experiments/route_mem; its sidecar route_mem.json): every route message of the
             session kept with its time, carried into the decision's rig frame by the received ego poses (rmem.Tracker), fed after the ego
             row and logged as drive.jsonl `rmem`; SH30_RMEM=0 feeds an empty memory instead (the branch-off read)
+  self      only for a checkpoint with the STACK reflex module (sidecar `reflex`, lib/reflex.py): every served decision (t0, anchor, the
+            poses actually served: after every serve-side switch, the feasible reference under JEV_TRACK) is kept (lib/reflex_mem.py);
+            the self-state of the decision 0.5 s back against the anchor now is fed after the route memory and logged as `rx` (with
+            `rx_dt`); JEV_REFLEX_OFF=1 feeds valid 0 (the module's switch-off)
 
 Yaw damping (decision 205): SH30_MOTION = the share of the ego's own turning shown to the model in the synthesised slots (sh30_core.py;
 default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route message is a straight line that passes the ego
@@ -80,6 +84,7 @@ import vhist as VH  # noqa: E402
 import sh30_core as C  # noqa: E402
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
+RXM = None                                           # lib/reflex_mem.py (the reflex module's efference memory), set in main() for a checkpoint with it
 BD = None                                            # BODY1 switches (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0 or JEV_REPLAN
 if float(os.environ.get("JEV_STOP", "0") or 0) > 0 or os.environ.get("JEV_REPLAN", "0") not in ("", "0"):
     sys.path.append(str(Path(__file__).resolve().parents[2] / "body1" / "lib"))
@@ -136,6 +141,7 @@ class Session:
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
         self.rt = RMEM.Tracker() if RMEM else None
+        self.rxm = RXM.Memory() if RXM else None         # the served decisions (t0, plan frame, served poses) for the self-state
         self.gt = None                                   # JEV_ROUTE=log: the latest recording ground truth (times us, xy)
         self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
         self.lock = threading.Lock()
@@ -284,6 +290,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 return (*_xy(s.poses[near]), yaw_from_quat(s.poses[near].pose.quat))
             if s.rt is not None and self.core.rm and self.rmem_on:
                 rf = s.rt.features(t0, pose_of, (*_xy(anchor), yaw0))
+            sf = sfi = None
+            if s.rxm is not None:                            # the reflex module's self-state: the previous served plan against the pose now
+                sf, sfi = s.rxm.features(t0, (*_xy(anchor), yaw0), float(np.hypot(*dyn[-1][0])))
             if RP.ON:                                        # JEV_ROUTE (route_path.py): the carried route as the served path
                 rM = s.rt.polyline(t0, pose_of, (*_xy(anchor), yaw0))
                 rG = RP.log_arcs(*s.gt, t0) if RP.NEED_GT and s.gt is not None else None
@@ -299,7 +308,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 t_g = time.perf_counter()
                 mo = self.motion(s)
                 o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo,
-                                   **({"route": rf} if self.core.rm else {}), **({"ego_fn": efn} if efn else {}))
+                                   **({"route": rf} if self.core.rm else {}), **({"ego_fn": efn} if efn else {}),
+                                   **({"selfstate": sf} if s.rxm is not None else {}))
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -338,6 +348,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 tri["tilt"] = round(float((ax[2] - yaw0 + np.pi) % (2 * np.pi) - np.pi), 3)
         else:
             plan = make_cached_plan(t0, anchor, o["poses"])
+        if s.rxm is not None:                                # what was served, in its own frame (the feasible reference under JEV_TRACK)
+            with s.lock:
+                s.rxm.add(t0, ax if TR.ON else (*_xy(anchor), yaw0), TR.poses8(ref) if TR.ON else o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "t0": t0, "k": s.count["drive"] - 1,
@@ -358,6 +371,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                        **({"route_arcs": np.round(rG, 3).tolist()} if RP.NEED_GT and rG is not None else {}))
         if "rmem" in o:
             rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+        if "rx" in o:                                        # the fed self-state (valid 0: no previous decision, or JEV_REFLEX_OFF=1)
+            rec.update(rx=np.asarray(o["rx"], np.float64).round(5).tolist(), rx_dt=(sfi or {}).get("dt"))
         if "poses_k" in o:                                   # flow head (thead.pt): its samples of noise rows 0 .. K - 1
             rec.update(th_k=np.asarray(o["poses_k"], np.float64).round(4).tolist())
         if bd is not None:
@@ -426,7 +441,11 @@ def main() -> None:
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
-    global RMEM
+    global RMEM, RXM
+    if core.rx:
+        import reflex_mem as RXM
+        LOG.info("serving the REFLEX module (lib/reflex.py), self-state %s, lag %.2f s", "OFF (JEV_REFLEX_OFF=1, valid 0)" if core.RX.OFF else "on",
+                 RXM.LAG_US * 1e-6)
     if core.rm or RP.ON:
         import rmem as RMEM
         RMEM.SERVE_ORDER = bool(getattr(core, "rm_order", False))   # route v2: the ordered layout (sidecar head `order`)
