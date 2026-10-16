@@ -9,6 +9,9 @@
   3. PAI ACC identity (nuPlan wiring, plans/2026-10-16-nuplan-acc-prereg.md): with JEV_ACC=1 and the default handoff (PAI's 1.6 s) the
      poses and log equal serve_fix at <acc_ref> (the revision the PAI ACC read ran on), bit for bit, on random sessions with routes and clocks
   4. nuPlan handoff: Serve(acc_t_hand=ACC_T_HAND_NUPLAN) on a 0.5 s session clock locks v_set at the 0.5 s call (the nuPlan handoff step)
+  5. JEV_GAP (plans/2026-10-16-acc-gap-prereg.md): jevdrive/openpilot/lead_long.py at <lead_ref> and now give the same LeadPlanner
+     solutions and logs with default parameters, bit for bit (checks 1 and 3 import the current lead_long, so they do not cover it);
+     with JEV_GAP set the suffix carries it and the following distance shrinks
   The nuPlan driver's own off-identity (sh30_driver.py with JEV_ACC unset against the previous revision) is a closed-loop check on the box
   (rf_nuacc.sh ident), not here.
   acc_check.py [--ref <rev>] [--acc-ref <rev>] [--n 3000]
@@ -92,6 +95,45 @@ def acc_identity(ref, n):
             assert bad == 0
 
 
+def gap_identity(ref, n):
+    """5: lead_long at ref vs now with default T_FOLLOW / STOP_DISTANCE; JEV_GAP set shortens the steady-state gap."""
+    import jevdrive.openpilot.lead_long as LN
+    with tempfile.TemporaryDirectory() as d:
+        old = os.path.join(d, "lead_long_ref.py")
+        open(old, "w").write(subprocess.check_output(["git", "-C", REPO, "show", f"{ref}:jevdrive/openpilot/lead_long.py"], text=True))
+        spec = importlib.util.spec_from_file_location("lead_long_ref", old)
+        LO = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(LO)
+    rng, bad = np.random.default_rng(2), 0
+    for sess in range(n // 50):
+        a, b = LO.LeadPlanner(2.3), LN.LeadPlanner(2.3)
+        for k in range(50):
+            o, v, acc = rand_case(rng)
+            t, ae = 10**6 * sess + 100_000 * k, float(rng.normal(0, 1))
+            va, ia = a.update(t, v, acc, o["lead"], o["lead_prob"], float(o["mu"][0, 3]), ae)
+            vb, ib = b.update(t, v, acc, o["lead"], o["lead_prob"], float(o["mu"][0, 3]), ae)
+            same_in = a.inside(v, o["lead"], o["lead_prob"], 1.0) == b.inside(v, o["lead"], o["lead_prob"], 1.0)
+            bad += int(not (np.array_equal(va, vb) and ia == ib and same_in))
+    print(f"lead_long identity vs {ref}: {n // 50 * 50} decisions, {bad} differ")
+    assert bad == 0
+    sys.path.insert(0, LIB)
+    F = load(os.path.join(LIB, "serve_fix.py"), "fx_gap", {"JEV_VCONT": "1.0", "JEV_LEAD": "1", "JEV_ACC": "1", "JEV_GAP": "1.0,3.0"})
+    assert F.GAP == (1.0, 3.0) and F.SUFFIX.endswith("-gap1_3"), F.SUFFIX
+    s = F.Serve(F.VCONT, F.LEAD, 2.3, 0, True, F.ACC_T_HAND, F.GAP)
+    assert s.lead.mpc.tf == 1.0 and s.lead.mpc.sd == 3.0
+    for tf, sd in ((LN.T_FOLLOW, LN.STOP_DISTANCE), (1.0, 3.0)):     # point-mass ego behind a 10 m/s lead, 40 s at 20 Hz
+        lp, x, xl, v = LN.LeadPlanner(0.0, tf, sd), 0.0, 30.0, 10.0
+        for k in range(800):
+            mu = np.zeros(144)
+            mu[0], mu[2] = xl - x, 10.0
+            lp.update(50_000 * k, v, lp.a_out, mu, np.array([5.0, -5.0, -5.0]), v, 2.0)
+            v = max(v + lp.a_out * 0.05, 0.0)
+            x, xl = x + v * 0.05, xl + 10.0 * 0.05
+        print(f"steady follow at 10 m/s, T_FOLLOW {tf} STOP {sd}: gap {xl - x:.1f} m (law {tf * 10 + sd:.1f})")
+        assert abs(xl - x - (tf * 10 + sd)) < 2.0
+    print("gap ok")
+
+
 def nuplan_handoff():
     """4: the nuPlan handoff (0.5 s steps): v_set locks at the 0.5 s call, not at PAI's 1.6 s."""
     sys.path.insert(0, LIB)
@@ -153,9 +195,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", default="fc245afc~1")       # the parent of the commit that added JEV_ACC
     ap.add_argument("--acc-ref", default="dd4c8d24")   # serve_fix as the PAI ACC read ran it (unchanged since bed9cb8e)
+    ap.add_argument("--lead-ref", default="d78c9f1b")  # lead_long before JEV_GAP
     ap.add_argument("--n", type=int, default=3000)
     a = ap.parse_args()
     identity(a.ref, a.n)
     acc_identity(a.acc_ref, a.n)
     nuplan_handoff()
     behaviour()
+    gap_identity(a.lead_ref, a.n)
