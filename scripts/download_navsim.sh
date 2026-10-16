@@ -11,7 +11,9 @@
 #   waittrain whole-log trainval camera archives listed in $WAIT_LIST (first column = file name, e.g.
 #             openscene_sensor_trainval_camera_20.tgz; experiments/wait_cap/results/trainval_archives.tsv) -> sensor_blobs/trainval/
 #             (existing files are never overwritten; strip is detected from the first member)
-# Env: JOBS (concurrent archives, default 8), ROUTE (direct|clash for HF archives, default direct), HF_ENDPOINT (default https://hf-mirror.com).
+#   trainvalall every trainval camera archive except those named in $SKIP_LIST (same format; e.g. the waittrain list while
+#             that run is still going) -> sensor_blobs/trainval/ (only named when wanted; with CAMS=CAM_F0 about 1/8 of 1.2 TB lands)
+# Env: CAMS (comma list, e.g. CAM_F0: extract only these camera dirs; default all), JOBS (concurrent archives, default 8), ROUTE (direct|clash for HF archives, default direct), HF_ENDPOINT (default https://hf-mirror.com).
 # Each archive runs download -> size + sha256 check -> extract (LiDAR skipped) -> delete, in its own slot,
 # so extraction overlaps with the other slots' downloads. Safe to re-run: finished archives are skipped,
 # partial downloads resume.
@@ -26,6 +28,7 @@ REPO=datasets/OpenDriveLab/OpenScene
 MAPS_URL=https://motional-nuplan.s3-ap-northeast-1.amazonaws.com/public/nuplan-v1.1/nuplan-maps-v1.1.zip
 CLASH=http://127.0.0.1:7890
 LIDAR=(--exclude='*/MergedPointCloud' --exclude='*/MergedPointCloud/*' --exclude='*.pcd')
+export CAMS=${CAMS:-}
 
 log() { printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$RUN/log.txt"; }
 event() { printf '{"t": %s, "kind": "%s", %s}\n' "$(date +%s.%N)" "$1" "$2" >> "$RUN/events.jsonl"; }
@@ -67,7 +70,8 @@ one() {
       strip=$({ tar -I pigz -tf "$f" || true; } | head -1 | awk -F/ '{for (i = 1; i <= NF; i++) if ($i ~ /^20[0-9][0-9]\.[0-9][0-9]\./) {print i - 1; exit}}')
       [[ -n $strip ]] || { log "FAIL $name cannot detect the log directory level"; return 1; }
     fi
-    n=$(tar -I pigz -xvf "$f" -C "$dest" --strip-components="$strip" --skip-old-files "${LIDAR[@]}" | wc -l)
+    local sel=(); [[ -n $CAMS ]] && { sel=(--wildcards); for c in ${CAMS//,/ }; do sel+=("*/$c/*"); done; }
+    n=$(tar -I pigz -xvf "$f" -C "$dest" --strip-components="$strip" --skip-old-files "${LIDAR[@]}" "${sel[@]}" | wc -l)
   fi
   (( n > 0 )) || { log "FAIL $name extracted nothing"; return 1; }
   echo "$n" > "$STATE/$name.done"; rm -f "$f"
@@ -98,6 +102,7 @@ jobs_for() {
     navhard)  dir=navsim-v2; pat='navsim_v2\.2_navhard_two_stage_.*'; dest=$ROOT; strip=0 ;;
     navtest)  dir=openscene-v1.1/openscene_sensor_test_camera; pat='.*'; dest=$ROOT/sensor_blobs; strip=2 ;;
     waittrain) dir=openscene-v1.1/openscene_sensor_trainval_camera; pat=$(cut -f1 "${WAIT_LIST:?WAIT_LIST is not set}" | sed 's/\./\\./g' | paste -sd'|' | sed 's/.*/(&)/'); dest=$ROOT/sensor_blobs/trainval; strip=auto ;;
+    trainvalall) dir=openscene-v1.1/openscene_sensor_trainval_camera; pat='openscene_sensor_trainval_camera_[0-9]+\.tgz'; dest=$ROOT/sensor_blobs/trainval; strip=auto ;;
     navtrain) dir=navsim; pat='navtrain_(current|history)_[0-9]+\.tgz'; dest=$ROOT/sensor_blobs/trainval; strip=1 ;;
     *) echo "unknown part: $part" >&2; exit 1 ;;
   esac
@@ -108,7 +113,8 @@ for e in sorted(json.load(sys.stdin), key=lambda e: [int(x) if x.isdigit() else 
     name = e["path"].rsplit("/", 1)[-1]
     if e["type"] == "file" and re.fullmatch(pat, name) and "lfs" in e:
         print(name, base + "/" + e["path"], e["lfs"]["size"], e["lfs"]["oid"], dest, strip, route, sep="\t")
-' "$pat" "$HF_ENDPOINT/$REPO/resolve/main" "$dest" "$strip" "$ROUTE"
+' "$pat" "$HF_ENDPOINT/$REPO/resolve/main" "$dest" "$strip" "$ROUTE" | if [[ $part == trainvalall && -n ${SKIP_LIST:-} ]]; then
+    grep -vFf <(cut -f1 "$SKIP_LIST" | sed 's/$/\t/') || true; else cat; fi
 }
 
 if [[ ${1:-} == _one ]]; then IFS=$'\t' read -r -a a <<< "$2"; one "${a[@]}"; exit; fi
@@ -116,7 +122,7 @@ if [[ ${1:-} == _one ]]; then IFS=$'\t' read -r -a a <<< "$2"; one "${a[@]}"; ex
 parts=("$@"); (( ${#parts[@]} )) || parts=(maps logs navhard navtest navtrain)
 export RUN=$DATA_DIR/runs/download/navsim/$(date +%Y%m%d-%H%M%S)
 mkdir -p "$RUN" "$STATE" "$ROOT"
-log "parts: ${parts[*]}, jobs: $JOBS, endpoint: $HF_ENDPOINT, root: $ROOT, run: $RUN"
+log "parts: ${parts[*]}, jobs: $JOBS, cams: ${CAMS:-all}, endpoint: $HF_ENDPOINT, root: $ROOT, run: $RUN"
 event start "\"parts\": \"${parts[*]}\", \"jobs\": $JOBS"
 for p in "${parts[@]}"; do jobs_for "$p"; done > "$RUN/jobs.tsv"
 todo=$(cut -f1 "$RUN/jobs.tsv" | while read -r n; do [[ -e $STATE/$n.done ]] || echo; done | wc -l)
