@@ -26,7 +26,7 @@ CH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks          # the Tokyo ref
 STRICT=experiments/route_follow/results/pai281/strict36.txt; WL=$O/pai_wl.pkl; REFT=RSG-L18-s0
 WIZ=controller.gains.rel_front_steering_angle_weight=20
 X=$O/post; mkdir -p $X                               # one-off jobs (fetch, reference) of this script; $O is shared with the training half
-kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; JDG*) echo J ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
+kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; JDG*) echo J ;; STK*) echo S ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
 AR=${ARMROOT:-$O}
 held_submit() {  # <log> <tag> <after|-> -> the 6 held chunk ids (comma list)
   local log=$1 T=$2 t=$3 i ids=()

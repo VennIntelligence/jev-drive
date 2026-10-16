@@ -129,6 +129,12 @@ def lines(a):
         m3 = 0 if kind == "J" else 3                                     # JOINT-DAGGER registers cor_route_end <= reference
         L["PAI_cor_route_end"] = dict(v=[n["cor_route_end"], r["cor_route_end"]], line=f"<= ref{' - 3' if m3 else ''}", ok=n["cor_route_end"] <= r["cor_route_end"] - m3)
         L["PAI_rear_ended"] = dict(v=[n["rear_ended"], r["rear_ended"]], line="<= ref + 3", ok=n["rear_ended"] <= r["rear_ended"] + 3)
+    if pl and same_path and kind == "S":                              # STACK (plans/2026-10-16-stack-prereg.md 4): fewer crashes, at-fault = collision zeros
+        n, r = pl["new"], pl["ref_counts"]
+        L["PAI_S_crash"] = dict(v=[n["zeros"], r["zeros"], n["coll_zeros"], r["coll_zeros"]], line="zeros <= ref - 5 OR at-fault (collision zeros) <= ref - 3",
+                                ok=n["zeros"] <= r["zeros"] - 5 or n["coll_zeros"] <= r["coll_zeros"] - 3)
+    if ps and same_path and kind == "S":
+        L["PAI_S_strict"] = dict(v=[ps["arm"]["completed"], ps["ref"]["completed"]], line=">= reference", ok=ps["arm"]["completed"] >= ps["ref"]["completed"])
     if ps and same_path:
         L["PAI_strict36"] = dict(v=[ps["arm"]["completed"], ps["ref"]["completed"]], line=">= 10 (registered reference 4)", ok=ps["arm"]["completed"] >= 10)
 
@@ -139,7 +145,7 @@ def lines(a):
     H1, G = all_ok(["H1_zeros", "H1_at_fault", "H1_gt"]), all_ok(["guard_score", "guard_zeros"])
     own_keys = dict(R=["H2_held_turns", "PAI_strict36", "PAI_zeros"], L=["PAI_cor_route_end", "PAI_rear_ended", "PAI_zeros"],
                     RL=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end", "PAI_rear_ended"],
-                    J=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end"])[kind]
+                    J=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end"], S=["PAI_S_crash", "PAI_S_strict"])[kind]
     OWN = all_ok(own_keys)
     if not two:                                                        # the registered lines are 2-seed means: no verdict on seed 0 alone
         verdict = "PENDING (seed 1 not read)" if (H1 is not False and G is not False and OWN is not False) else "NOT ADOPTED (seed 0 already fails)"
@@ -149,7 +155,7 @@ def lines(a):
         verdict = "ADOPT" if H1 and G and OWN else "NOT ADOPTED"
     ok = lambda x: {None: "pending", True: "PASS", False: "FAIL"}[x]  # noqa: E731
     f = lambda v, p=1: f"{v[0]:+.{p}f} [{v[1]:+.{p}f}, {v[2]:+.{p}f}]"  # noqa: E731
-    md = [f"# {'JOINT-DAGGER' if kind == 'J' else 'RECOVERY-ENVELOPE'} {arm} ({kind}): registered lines vs RSG-L18", "",
+    md = [f"# {dict(J='JOINT-DAGGER', S='STACK').get(kind, 'RECOVERY-ENVELOPE')} {arm} ({kind}): registered lines vs RSG-L18", "",
           f"Tags {', '.join(tags)}{'' if two else ' (seed 1 pending: seed-0 numbers against the RSG-L18 2-seed mean)'}; reference RSG-L18-s0 / -s1 "
           f"(stored reads). Held: {nh} paired scenes / {lh} logs; public: {ng} scenes / {lg} logs; log-clustered 95 % CI, {B} draws, seed {SEED}.", "",
           f"**Verdict: {verdict}** (H1 {ok(H1)}, guard {ok(G)}, own lines {ok(OWN)}: {', '.join(own_keys)})", "",
@@ -157,11 +163,14 @@ def lines(a):
     rowfmt = dict(H1_zeros=lambda v: f(v), H1_at_fault=lambda v: f(v), H1_gt=lambda v: f(v, 3), H1_score=lambda v: f(v, 4), guard_score=lambda v: f(v, 4),
                   guard_zeros=lambda v: f(v), H2_held_turns=lambda v: f(v),
                   PAI_zeros=lambda v: f"{v[0]} vs {v[1]} (d {v[0] - v[1]:+d})", PAI_cor_route_end=lambda v: f"{v[0]} vs {v[1]} (d {v[0] - v[1]:+d})",
-                  PAI_rear_ended=lambda v: f"{v[0]} vs {v[1]} (d {v[0] - v[1]:+d})", PAI_strict36=lambda v: f"{v[0]} / 36 vs {v[1]} / 36")
+                  PAI_rear_ended=lambda v: f"{v[0]} vs {v[1]} (d {v[0] - v[1]:+d})", PAI_strict36=lambda v: f"{v[0]} / 36 vs {v[1]} / 36",
+                  PAI_S_crash=lambda v: f"zeros {v[0]} vs {v[1]} (d {v[0] - v[1]:+d}), at-fault {v[2]} vs {v[3]} (d {v[2] - v[3]:+d})",
+                  PAI_S_strict=lambda v: f"{v[0]} / 36 vs {v[1]} / 36")
     names = dict(H1_zeros="H1 held zeros d", H1_at_fault="H1 held at-fault zeros d", H1_gt="H1 held GT distance d (m)", H1_score="held mean score d",
                  guard_score="guard public mean score d", guard_zeros="guard public zeros d", H2_held_turns="H2 held turns completed d (of ~24)",
                  PAI_zeros="PAI all-281 zeros, arm vs ref", PAI_cor_route_end="PAI cor_route_end, arm vs ref", PAI_rear_ended="PAI rear-ended, arm vs ref",
-                 PAI_strict36="PAI strict 36 completed, arm vs ref")
+                 PAI_strict36="PAI strict 36 completed, arm vs ref", PAI_S_crash="STACK: PAI zeros / at-fault, arm vs ref",
+                 PAI_S_strict="STACK: PAI strict 36, arm vs ref")
     for k in names:
         if k in L:
             md.append(f"| {names[k]} | {rowfmt[k](L[k]['v'])} | {L[k]['line']} | {ok(L[k]['ok']) if L[k]['ok'] is not None else '-'} |")
@@ -191,6 +200,9 @@ def lines(a):
            "RL = all five. PAI reference = RSG-L18-s0 read on the box (box and Tokyo PAI reads are deterministic per host but not equal, "
            "results/p4_self/box_det.md); the strict-36 threshold stays the registered absolute 10.",
            f"Sources: {d}/held18, confirm, follow, pai_londiag.json, pai_turns.json." + (f" {a.note}" if a.note else "")]
+    if kind == "S":                                                    # STACK's own registration (plans/2026-10-16-stack-prereg.md 4)
+        md[-2] = ("Lines (STACK prereg, verbatim): H1 zeros <= +3, at-fault <= +3, GT <= +0.03 m; guard score CI low > -0.01, zeros <= +5; PAI zeros <= "
+                  "reference - 5 OR at-fault <= reference - 3; strict turns not below reference. At-fault on PAI = rf_londiag collision zeros. Reads staged.")
     if kind == "J":                                                    # JOINT-DAGGER's own registration (plans/2026-10-16-joint-dagger-prereg.md)
         md[-2] = ("Lines (JOINT-DAGGER prereg, verbatim): H1 zeros <= +3, at-fault <= +3, GT <= +0.03 m; H2 held 24 turns seed mean >= +3; PAI strict 36 "
                   ">= 10 (reference 4), PAI zeros <= reference + 3, cor_route_end <= reference; guard score CI low > -0.01, zeros <= +5. Reads staged: "
@@ -223,7 +235,7 @@ def main():
     m.add_argument("--tsv", default="")
     q = sp.add_parser("lines")
     q.add_argument("--arm", required=True)
-    q.add_argument("--kind", required=True, choices=("R", "L", "RL", "J"))
+    q.add_argument("--kind", required=True, choices=("R", "L", "RL", "J", "S"))
     q.add_argument("--tags", nargs="+", required=True)
     q.add_argument("--dir", required=True)
     q.add_argument("--strict", required=True)
