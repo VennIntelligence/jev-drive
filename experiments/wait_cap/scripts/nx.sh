@@ -9,14 +9,14 @@
 #                           rtgate --variant a --dry with RSG-L18-s0 as a stand-in arm
 #   nx.sh smoke             40-step smoke runs RTSMOKE-F-s0 (--kd-lam 3 --d2-lam 3) and ACSMOKE-L18-s0 (--ego-scale-speed 0.5 --ego-scale-max 0.4)
 #   nx.sh smoke-rt          40-step smoke runs of both (iii) variants (RTSMOKEA-L18-s0, RTSMOKEB-F-s0; lambda 3, approach rows on)
-#   nx.sh rta-pilot         (iii-a) RTA1P-L18-s0 / RTA3P-L18-s0: RSG-L18 recipe 1 000 steps + --kd-lam L --kd-nav .. --kd-nav-k 8 --d2-lam L
+#   nx.sh rta-pilot         (iii-a) RTA03P-L18-s0 / RTA1P-L18-s0: RSG-L18 recipe 1 000 steps + --kd-lam L --kd-nav .. --kd-nav-k 8 --d2-lam 1, L 0.3 / 1
 #                           (after the ac identity: same recipe) -> waitcap / ledger F / desire / dev / hist / arrival reads -> rtgate --variant a (C WTCP-L18-s0)
-#   nx.sh rtb-pilot         (iii-b) RTB1-F-s0 / RTB3-F-s0: RB0-F recipe 10 000 steps + the same terms (after the rt identity) -> the same reads
+#   nx.sh rtb-pilot         (iii-b) RTB1-F-s0 / RTB3-F-s0: RB0-F recipe 10 000 steps + the same terms, L 1 / 3 (after the rt identity) -> the same reads
 #                           -> rtgate --variant b (C RB0-F-s0)
 #   nx.sh ac-pilot          (iv) ACS2P-L18-s0 / ACS4P-L18-s0: RSG-L18 recipe 1 000 steps + --ego-scale-speed 0.5 --ego-scale-max 0.2 | 0.4 (after ac identity)
 #                           -> dev plans, history-scale read, waitcap plans -> nx.py acgate --submit (control WTCP-L18-s0; PASS -> ac-held)
 #   nx.sh ac-held T,T       held 460 @18 (6 chunks per tag) -> rf_follow (tags + WTCP-L18-s0) -> nx.py acheld
-#   nx.sh train <arm> <seed> <steps> <tag>   job body; arm: rb0 | rsg (the recipes, flags off) | rta1 | rta3 | rtb1 | rtb3 | rtsmoke | rtsmokea |
+#   nx.sh train <arm> <seed> <steps> <tag>   job body; arm: rb0 | rsg (the recipes, flags off) | rta0.3 | rta1 | rtb1 | rtb3 | rtsmoke | rtsmokea |
 #                           rtsmokeb | acs2 | acs4 | acsmoke
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -28,7 +28,7 @@ RB0="--yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 
 RSG="--init RB0-F-s0 --warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on on1_L18RB0 --on-k 13 --on-mode self"                # wt.sh `train off` = RSG-L18 / WTCP
 TEA=$DATA_DIR/runs/desire_cap/train/teacher; RSG_HASH60=ea8cacc3e451c577
-RTA=(RTA1P-L18-s0 RTA3P-L18-s0); RTB=(RTB1-F-s0 RTB3-F-s0); ACJ=(ACS2P-L18-s0 ACS4P-L18-s0); RTC=RB0-F-s0; ACC=WTCP-L18-s0
+RTA=(RTA03P-L18-s0 RTA1P-L18-s0); RTB=(RTB1-F-s0 RTB3-F-s0); ACJ=(ACS2P-L18-s0 ACS4P-L18-s0); RTC=RB0-F-s0; ACC=WTCP-L18-s0
 NAV=runs/wait_cap/next/approach_nav.npz; KD="--kd-nav $NAV --kd-nav-k 8 --d2-teacher $TEA"
 mkdir -p $X/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-next --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
@@ -75,11 +75,11 @@ smoke-rt)
   echo "smoke-rt: a $a b $b" | tee -a $X/stages.txt ;;
 rta-pilot|rtb-pilot)
   ap=$(jid nx-approach) || { echo "no approach job" >&2; exit 1; }
-  if [[ $1 == rta-pilot ]]; then V=a; JJ=(${RTA[@]}); C=$ACC; ARM=rta; N=1000; b=$(jid nx-bitcmp-ac); TH=1
-  else V=b; JJ=(${RTB[@]}); C=$RTC; ARM=rtb; N=10000; b=$(jid nx-bitcmp-rt); TH=2; fi
+  if [[ $1 == rta-pilot ]]; then V=a; JJ=(${RTA[@]}); C=$ACC; ARM=rta; N=1000; b=$(jid nx-bitcmp-ac); TH=1; LL=(0.3 1)   # smoke: lambda 3 moved dev ADE +0.17 in 40 steps
+  else V=b; JJ=(${RTB[@]}); C=$RTC; ARM=rtb; N=10000; b=$(jid nx-bitcmp-rt); TH=2; LL=(1 3); fi
   [[ -n $b ]] || { echo "no identity job (nx.sh codecheck)" >&2; exit 1; }; fresh ${JJ[@]}
-  t1=$(sub nx-train-${JJ[0]} "${FK[@]}" --after $b,$ap --timeout-h $TH -- bash $ME train ${ARM}1 0 $N ${JJ[0]}) || exit 1
-  t3=$(sub nx-train-${JJ[1]} "${FK[@]}" --after $b,$ap --timeout-h $TH -- bash $ME train ${ARM}3 0 $N ${JJ[1]}) || exit 1
+  t1=$(sub nx-train-${JJ[0]} "${FK[@]}" --after $b,$ap --timeout-h $TH -- bash $ME train ${ARM}${LL[0]} 0 $N ${JJ[0]}) || exit 1
+  t3=$(sub nx-train-${JJ[1]} "${FK[@]}" --after $b,$ap --timeout-h $TH -- bash $ME train ${ARM}${LL[1]} 0 $N ${JJ[1]}) || exit 1
   T=$t1,$t3
   r1=$(sub nx-wc-rt$V --after $T --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags ${JJ[@]}) || exit 1
   r2=$(sub nx-led-rt$V --after $T --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/cap_ledger/scripts/led.py plans --tags ${JJ[@]} --conds F) || exit 1
@@ -88,7 +88,7 @@ rta-pilot|rtb-pilot)
   r5=$(sub nx-hist-rt$V --after $T --vram 24 --cpu 6 --ram 80 --timeout-h 1 -- $TR $PY hist --tags $C ${JJ[@]}) || exit 1
   r6=$(sub nx-arr-rt$V --after $T --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags P0 $C ${JJ[@]}) || exit 1
   g=$(sub nx-rtgate-$V --after $r1,$r2,$r3,$r4,$r5,$r6 --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY rtgate --variant $V --j ${JJ[@]} --c $C \
-      --lam-of 1=${JJ[0]},3=${JJ[1]}) || exit 1
+      --lam-of ${LL[0]}=${JJ[0]},${LL[1]}=${JJ[1]}) || exit 1
   echo "$1: trainings $t1 $t3 reads $r1 $r2 $r3 $r4 $r5 $r6 gate $g" | tee -a $X/stages.txt ;;
 ac-pilot)
   b=$(jid nx-bitcmp-ac) || { echo "no ac identity job (nx.sh codecheck)" >&2; exit 1; }; fresh ${ACJ[@]}
@@ -112,7 +112,7 @@ train)   # train <arm> <seed> <steps> <tag>
   case $2 in
     rb0) F="$RB0" ;;
     rsg) F="$RSG" ;;
-    rta1|rta3) L=${2#rta}; F="$RSG --kd-lam $L --d2-lam $L $KD" ;;
+    rta0.3|rta1) L=${2#rta}; F="$RSG --kd-lam $L --d2-lam 1 $KD" ;;     # D2 fixed at 1 (Amendment C 4: the preferred D2 weight)
     rtb1|rtb3) L=${2#rtb}; F="$RB0 --kd-lam $L --d2-lam $L $KD" ;;
     rtsmokea) F="$RSG --kd-lam 3 --d2-lam 3 $KD" ;;
     rtsmokeb) F="$RB0 --kd-lam 3 --d2-lam 3 $KD" ;;

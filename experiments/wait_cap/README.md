@@ -30,10 +30,12 @@ No formal was run.
 Zeroing the adapter's speed history does not help. J2P's offroad doubling is mostly a +0.08 m closed-loop left drift on edge-hugging
 paths. Details: [results/wait_train/explore_e.md](results/wait_train/explore_e.md).
 
-**Prepared, not launched (2026-10-17 night).** Two follow-up pilots for the morning choice between decision 335's options (iii) and (iv),
-draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:
-- (iii) RETAIN: the RB0-F base stage + LwF-style distillation toward shipped Cinque's plan on the on1_WAIT rows + D2 desire distillation, lambda 1 / 3 (`nx.sh rt-pilot`);
-- (iv) ANTI-COPY: the RSG-L18 recipe + speed-history scale noise on the imitation rows, 1 000 steps (`nx.sh ac-pilot`).
+**Prepared, not launched (2026-10-17 night).** Follow-up pilots for the morning choice between decision 335's options (iii) and (iv), re-aimed
+by decision 336; draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:
+- (iii) RETAIN, favoured: distil shipped Cinque's speed profile only (arc length, the lateral path untouched) on rolling-arrival / standing-wait
+  rows (on1_WAIT) and navtrain approach rows fed a flat history, + D2 desire distillation, lambda 1 / 3; (iii-a) a 1 000-step patch on the
+  RSG-L18 recipe (`nx.sh rta-pilot`, ~0.6 card-h), (iii-b) the RB0-F base rebuilt (`nx.sh rtb-pilot`, ~1.6 card-h); arrival-replay line;
+- (iv) ANTI-COPY, lower priority: the RSG-L18 recipe + speed-history scale noise on the imitation rows, 1 000 steps (`nx.sh ac-pilot`).
 
 **Next (before WAIT-TRAIN).** Training design for the user to critique, not launched: [plans/2026-10-16-wait-train-design.md](plans/2026-10-16-wait-train-design.md)
 (same-domain wait / launch / stop rows from a trainval camera download, arc-length-only loss, one joint arm + weight-0 control, 1 000-step dose pilot, ~22 card-h).
