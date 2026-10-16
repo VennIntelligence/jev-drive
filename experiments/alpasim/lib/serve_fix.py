@@ -43,10 +43,12 @@ model's plan is never changed; only where along it the returned poses sit. Three
                  following distance (filtered probability > 0.5 and dRel + v_lead^2 / 5 < d(v_ego)), where the base profile is served.
                  Composes with the other two: (a) blends from the ego speed into whichever profile was chosen, (b) limits it.
 
-  JEV_ACC=1      (d) openpilot-style longitudinal (experiments/route_follow/plans/2026-10-16-pai-acc-prereg.md; PAI driver only, it passes the
-                 route and the session clock). The path stays the model's (geometry unchanged); the speed profile is re-timed to
+  JEV_ACC=1      (d) openpilot-style longitudinal (experiments/route_follow/plans/2026-10-16-pai-acc-prereg.md, nuPlan:
+                 2026-10-16-nuplan-acc-prereg.md; the PAI and nuPlan drivers pass the route and the session clock; the handoff time is the
+                 driver's: ACC_T_HAND on PAI, ACC_T_HAND_NUPLAN in sh30_driver). The path stays the model's (geometry unchanged); the speed
+                 profile is re-timed to
                    v_target = min(v_set, v_curve(s)) [, model]  then (b)'s lead limit as before (min), then placed on the path
-                 - v_set: the ego speed at the simulator handoff (first call with t_s >= ACC_T_HAND; the force-GT speed is the human's), held as
+                 - v_set: the ego speed at the simulator handoff (first call with t_s >= t_hand; the force-GT speed is the human's), held as
                    cruise set speed; at each decision max(v_hand, the current model plan's own 2 .. 4 s speed), so a standstill handoff gets the
                    model's own launch target instead of 0. (A running maximum of the model's speed, the smoke's first version, ratcheted up: the
                    model follows its own faster history; a174faed 2.3 -> 19.1 m/s. The current value has no ratchet: decision 315's g < 1)
@@ -118,7 +120,8 @@ def join(vp, v0: float, tau: float):
 
 
 # ---------------------------------------------------------------- (d) JEV_ACC
-ACC_T_HAND = 1.6                                          # s since the session's first call: AlpaSim's force-GT ends at 1.7 s
+ACC_T_HAND = 1.6                                          # s since the session's first call: AlpaSim's force-GT ends at 1.7 s (PAI)
+ACC_T_HAND_NUPLAN = 0.5                                   # nuPlan: force-GT 0.5 s at 0.5 s steps; the call at 0.5 s is the handoff step
 ACC_ALAT = 2.4                                            # m/s^2: human median peak lateral acceleration in PAI turns (decision 293)
 ACC_DCURVE = 1.5                                          # m/s^2: comfortable deceleration into a curve (backward pass)
 ACC_DMAX = 2.5                                            # m/s^2: the profile's own deceleration bound (openpilot COMFORT_BRAKE)
@@ -169,14 +172,14 @@ def route_limit(M, v_set: float):
 class Acc:
     """(d): the session's set speed and the model's previous plan (guard)."""
 
-    def __init__(self):
-        self.v_hand, self.arc, self.dec = None, np.inf, 0.0
+    def __init__(self, t_hand: float = ACC_T_HAND):
+        self.v_hand, self.arc, self.dec, self.t_hand = None, np.inf, 0.0, float(t_hand)
 
     def profile(self, poses, v0: float, vm, M, t_s):
         """-> (v on TG, log record). vm = the model's own profile as (a) serves it (on TG)."""
         p = np.r_[np.zeros((1, 2)), np.asarray(poses, np.float64)[:, :2]]
         seg = np.hypot(*np.diff(p, axis=0).T) / 0.5
-        if self.v_hand is None and (t_s is None or t_s >= ACC_T_HAND):
+        if self.v_hand is None and (t_s is None or t_s >= self.t_hand):
             self.v_hand = v0
         vset = max(self.v_hand, float(seg[4:].mean())) if self.v_hand is not None else v0
         guard = "stop" if self.arc < ACC_REL_ARC else "brake" if self.dec >= ACC_DEC_REL else ""
@@ -212,10 +215,11 @@ def won(info: dict, v15: float, cap15) -> None:
 class Serve:
     """One per session. __call__(plan output, ego speed, ego acceleration, decision time) -> the poses to return and a log record."""
 
-    def __init__(self, vcont: float = 0.0, lead: bool = False, cam_to_front: float = 2.26, base: int = 0, acc: bool = False):
+    def __init__(self, vcont: float = 0.0, lead: bool = False, cam_to_front: float = 2.26, base: int = 0, acc: bool = False,
+                 acc_t_hand: float = ACC_T_HAND):
         self.vcont, self.lead, self.base = float(vcont), LeadPlanner(cam_to_front) if lead else None, int(base)
         self.gate = LeadPlanner(cam_to_front) if base == 2 else None      # its probability filter only
-        self.acc = Acc() if acc else None
+        self.acc = Acc(acc_t_hand) if acc else None
 
     def __call__(self, o: dict, v0: float, a0: float, t_us: int, route=None, t_s=None):
         t = time.perf_counter()
@@ -266,9 +270,10 @@ def cam_to_front(vehicle, cam_x: float) -> float:
     return float(vehicle.rig_to_bounding_box.vec.x + vehicle.bounding_box.size_x / 2 - cam_x)
 
 
-def new(vehicle, cam_x: float):
-    """The session's Serve, or None when both switches are off (the driver then returns the plan as before, bit for bit)."""
-    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x), BASE, ACC) if ON else None
+def new(vehicle, cam_x: float, acc_t_hand: float = ACC_T_HAND):
+    """The session's Serve, or None when every switch is off (the driver then returns the plan as before, bit for bit).
+    acc_t_hand: JEV_ACC's handoff time (s since the session's first call), per track."""
+    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x), BASE, ACC, acc_t_hand) if ON else None
 
 
 def apply(fix, o: dict, v0: float, a0: float, t_us: int, **acc):

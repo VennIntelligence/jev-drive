@@ -27,7 +27,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (a feasible reference for the controller
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD / JEV_ACC (the served speed profile: serve_fix.py; all off by default; JEV_ACC gets the carried route (rmem.Tracker.polyline) and the session clock here, handoff FX.ACC_T_HAND_NUPLAN), JEV_TRACK / JEV_TRACK_CFG (a feasible reference for the controller
 built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), JEV_VHIST (off | hold | zero | holdlead: the speed history fed to the
 adapter, vhist.py; logged as drive.jsonl `vhist`, `ego` stays the measured row; off by default), JEV_ROUTE (off | own | log: the carried route as the
 served path with the plan's / the log's arc lengths, route_path.py; logged as drive.jsonl `route`, `route_path`, `poses_model`; off by default), JEV_EXPERT (a pack directory: the rule expert's plan
@@ -91,6 +91,7 @@ if os.environ.get("JEV_TTS", "") not in ("", "0"):
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
 RXM = None                                           # lib/reflex_mem.py (the reflex module's efference memory), set in main() for a checkpoint with it
+ACCR = None                                          # rmem (its Tracker.polyline) for JEV_ACC's route, set in main() when JEV_ACC=1
 BD = None                                            # BODY1 switches (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0 or JEV_REPLAN
 if float(os.environ.get("JEV_STOP", "0") or 0) > 0 or os.environ.get("JEV_REPLAN", "0") not in ("", "0"):
     sys.path.append(str(Path(__file__).resolve().parents[2] / "body1" / "lib"))
@@ -143,10 +144,12 @@ class Session:
         self.cam = C.camera([[p.focal_length_x, 0, p.principal_point_x], [0, p.focal_length_y, p.principal_point_y], [0, 0, 1]],
                             quat_R(c.rig_to_camera.quat), [t.x, t.y, t.z], [k[0], k[1], tg[0], tg[1], k[2]])
         self.n, self.scene = n, req.debug_info.scene_id if req.HasField("debug_info") else ""
-        self.fix = FX.new(req.rollout_spec.vehicle, t.x)
+        self.fix = FX.new(req.rollout_spec.vehicle, t.x, FX.ACC_T_HAND_NUPLAN)
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
         self.rt = RMEM.Tracker() if RMEM else None
+        self.racc = (self.rt if self.rt is not None else ACCR.Tracker()) if FX.ACC else None   # JEV_ACC: the carried route
+        self.t_first = None                              # JEV_ACC: time_now of the session's first drive call
         self.rxm = RXM.Memory() if RXM else None         # the served decisions (t0, plan frame, served poses) for the self-state
         self.gt = None                                   # JEV_ROUTE=log: the latest recording ground truth (times us, xy)
         self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
@@ -252,6 +255,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         if s.rt is not None:
             with s.lock:
                 s.rt.add(int(req.route.timestamp_us), [[w.x, w.y] for w in req.route.waypoints])
+        if s.racc is not None and s.racc is not s.rt:
+            with s.lock:
+                s.racc.add(int(req.route.timestamp_us), [[w.x, w.y] for w in req.route.waypoints])
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
@@ -303,6 +309,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             if RP.ON:                                        # JEV_ROUTE (route_path.py): the carried route as the served path
                 rM = s.rt.polyline(t0, pose_of, (*_xy(anchor), yaw0))
                 rG = RP.log_arcs(*s.gt, t0) if RP.NEED_GT and s.gt is not None else None
+            acc = {}
+            if FX.ACC:                                       # JEV_ACC (serve_fix.py (d)): the carried route and the session clock
+                s.t_first = now if s.t_first is None else s.t_first
+                acc = dict(route=s.racc.polyline(t0, pose_of, (*_xy(anchor), yaw0)), t_s=(now - s.t_first) / 1e6)
         t_q = time.perf_counter()
         vi, efn = {}, None
         if s.vh is not None:                                 # JEV_VHIST (vhist.py): the fed speed history
@@ -329,7 +339,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             with self.gpu:
                 o["poses_own"] = o["poses"]
                 o["poses"], ti = TS.SEL.select(o, o.get("rmem"))
-        fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
+        fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0, **acc)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         ri = rp = None
         if RP.ON:
@@ -455,7 +465,7 @@ def main() -> None:
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
-    global RMEM, RXM
+    global RMEM, RXM, ACCR
     if core.rx:
         import reflex_mem as RXM
         LOG.info("serving the REFLEX module (lib/reflex.py), self-state %s, lag %.2f s", "OFF (JEV_REFLEX_OFF=1, valid 0)" if core.RX.OFF else "on",
@@ -465,6 +475,11 @@ def main() -> None:
         RMEM.SERVE_ORDER = bool(getattr(core, "rm_order", False))   # route v2: the ordered layout (sidecar head `order`)
         LOG.info("serving the ROUTE-MEM branch, memory %s, layout %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)",
                  "ordered" if RMEM.SERVE_ORDER else "-6..+72")
+    if FX.ACC:                                               # JEV_ACC (serve_fix.py (d)): the route polyline from rmem's merge
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "route_mem" / "lib"))
+        import rmem as ACCR
+        LOG.info("serving JEV_ACC: a_lat %g, curve decel %g, decel %g, handoff %g s, releases arc %g m / dec %g m/s^2", FX.ACC_ALAT,
+                 FX.ACC_DCURVE, FX.ACC_DMAX, FX.ACC_T_HAND_NUPLAN, FX.ACC_REL_ARC, FX.ACC_DEC_REL)
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])

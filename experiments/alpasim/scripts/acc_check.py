@@ -6,7 +6,12 @@
      configuration (VCONT 1.0 + LEAD) and three more switch sets
   2. behaviour (JEV_ACC=1): set speed held at the handoff, curve limit from a route with a 90 deg turn, the stop guard on a stopping plan,
      the straight extension past the plan's end
-  acc_check.py [--ref <rev>] [--n 3000]
+  3. PAI ACC identity (nuPlan wiring, plans/2026-10-16-nuplan-acc-prereg.md): with JEV_ACC=1 and the default handoff (PAI's 1.6 s) the
+     poses and log equal serve_fix at <acc_ref> (the revision the PAI ACC read ran on), bit for bit, on random sessions with routes and clocks
+  4. nuPlan handoff: Serve(acc_t_hand=ACC_T_HAND_NUPLAN) on a 0.5 s session clock locks v_set at the 0.5 s call (the nuPlan handoff step)
+  The nuPlan driver's own off-identity (sh30_driver.py with JEV_ACC unset against the previous revision) is a closed-loop check on the box
+  (rf_nuacc.sh ident), not here.
+  acc_check.py [--ref <rev>] [--acc-ref <rev>] [--n 3000]
 """
 import argparse, importlib.util, os, subprocess, sys, tempfile
 
@@ -63,6 +68,44 @@ def identity(ref, n):
             assert bad == 0
 
 
+def acc_identity(ref, n):
+    """3: JEV_ACC=1, PAI's default handoff: new serve_fix == serve_fix at ref, with routes and session clocks."""
+    with tempfile.TemporaryDirectory() as d:
+        old = os.path.join(d, "serve_fix_accref.py")
+        open(old, "w").write(subprocess.check_output(["git", "-C", REPO, "show", f"{ref}:experiments/alpasim/lib/serve_fix.py"], text=True))
+        sys.path.insert(0, LIB)
+        for env in ({"JEV_VCONT": "1.0", "JEV_LEAD": "1", "JEV_ACC": "1"}, {"JEV_VCONT": "1.0", "JEV_ACC": "1"}):
+            A, B = load(old, "fxa_ref", env), load(os.path.join(LIB, "serve_fix.py"), "fxa_new", env)
+            assert A.ACC and B.ACC and A.SUFFIX == B.SUFFIX
+            rng, bad = np.random.default_rng(1), 0
+            for sess in range(n // 50):
+                sa, sb = A.Serve(A.VCONT, A.LEAD, 2.3, 0, True), B.Serve(B.VCONT, B.LEAD, 2.3, 0, True)
+                for k in range(50):
+                    o, v, a = rand_case(rng)
+                    M = rand_case(rng)[0]["poses"][:, :2] * 3 + rng.uniform(-10, 40, 2) if rng.random() < 0.8 else None
+                    t, t_s = 10**6 * sess + 100_000 * k, 0.1 * k
+                    oa, ob = {**o}, {**o}
+                    ia, ib = A.apply(sa, oa, v, a, t, route=M, t_s=t_s), B.apply(sb, ob, v, a, t, route=M, t_s=t_s)
+                    ia.pop("ms", None), ib.pop("ms", None)
+                    bad += int(not (np.array_equal(oa["poses"], ob["poses"]) and ia == ib))
+            print(f"ACC identity vs {ref} {env}: {n // 50 * 50} decisions, {bad} differ")
+            assert bad == 0
+
+
+def nuplan_handoff():
+    """4: the nuPlan handoff (0.5 s steps): v_set locks at the 0.5 s call, not at PAI's 1.6 s."""
+    sys.path.insert(0, LIB)
+    F = load(os.path.join(LIB, "serve_fix.py"), "fx_nu", {"JEV_VCONT": "1.0", "JEV_ACC": "1"})
+    s = F.Serve(F.VCONT, False, 2.3, 0, True, F.ACC_T_HAND_NUPLAN)
+    straight = lambda v: dict(poses=np.c_[v * 0.5 * np.arange(1, 9), np.zeros(8), np.zeros(8)])  # noqa: E731
+    i0 = F.apply(s, straight(5.0), 12.0, 0.0, 0, route=None, t_s=0.0)["acc"]       # forced step: no v_set yet (the ego speed)
+    i1 = F.apply(s, straight(5.0), 11.0, 0.0, 1, route=None, t_s=0.5)["acc"]       # handoff: v_hand = 11 (the human's speed)
+    i2 = F.apply(s, straight(5.0), 8.0, 0.0, 2, route=None, t_s=1.0)["acc"]
+    print("nuPlan handoff", i0["v_hand"], i1["v_hand"], i2["v_set"])
+    assert i0["v_hand"] is None and i1["v_hand"] == 11.0 and i2["v_set"] == 11.0
+    print("nuPlan handoff ok")
+
+
 def behaviour():
     sys.path.insert(0, LIB)
     F = load(os.path.join(LIB, "serve_fix.py"), "fx_acc", {"JEV_VCONT": "1.0", "JEV_ACC": "1"})
@@ -109,7 +152,10 @@ def behaviour():
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", default="fc245afc~1")       # the parent of the commit that added JEV_ACC
+    ap.add_argument("--acc-ref", default="dd4c8d24")   # serve_fix as the PAI ACC read ran it (unchanged since bed9cb8e)
     ap.add_argument("--n", type=int, default=3000)
     a = ap.parse_args()
     identity(a.ref, a.n)
+    acc_identity(a.acc_ref, a.n)
+    nuplan_handoff()
     behaviour()
