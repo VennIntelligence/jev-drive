@@ -45,7 +45,7 @@ PY
     [[ " $miss " == *" $c "* ]] && { echo "$c: scenes missing from the cache, not submitted"; continue; }
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram "${VRAM:-28}" --cpu 6 --ram "${RAM:-40}" --timeout-h 3 \
-           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$([[ $FAST != 0 ]] && echo fast || echo read)${CONC:-4}" --env "CONC=${CONC:-4}" \
+           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$(case $FAST in 0) echo read ;; solo) echo solo ;; *) echo fast ;; esac)${CONC:-4}" --env "CONC=${CONC:-4}" \
            --env "WIZ=${WIZ:-}" --env "ALPASIM_FAST=$FAST" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
