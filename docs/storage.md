@@ -116,6 +116,8 @@ Cosmos-Reason2 / Qwen3.5 (about 45G) and the top-level scratch files. Tier 2 of 
 `envs/{ultralytics,sam3}` + `models/sam3.1` 16G, `runs/op_parity/{s2_thinhead/ft,wa_xboard}` 29G. Kept on purpose: every
 `datasets/` entry, `runs/alpasim/ap2/cache` (120G, read by `route_follow/scripts/rf_cf.py`), all live-lane rollouts.
 
+2026-10-16 cleanup (user-asked; both machines; manifests [box](../experiments/cl_infra/cleanup/2026-10-16-box.md), [Tokyo](../experiments/cl_infra/cleanup/2026-10-16-tokyo.md), raw per-file lists `cleanup_2026-10-16.txt` next to each data root): box 1.1T -> 1703G free (651.7 GiB: rollout.asl of closed arms' reads, P4 and closed-arm on-policy rolls with their driver dumps, `runs/junction_eyes/px_side` (the last hard link of the vis_train side cache), leaked nvimgcodec temp dirs in `tmp/`, pilot / gate-smoke checkpoint weights, smoke pools); Tokyo /data 188G -> 1075G free (886.6 GiB of rollout.asl of closed PAI 281 reads and smokes). Reference and candidate reads, the STACK inputs and the RECOVERY-ENVELOPE round (no decision line yet) were kept; the class C lists in the manifests are for the user.
+
 Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank,samples,bank2}` non-CARLA parts ~300G (H line, last trained 2026-10-03, no live reader; `runs/`
 and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 52G (`t/H`, `gate_curve/*.npy`, `readout`),
