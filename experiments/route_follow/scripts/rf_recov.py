@@ -388,7 +388,7 @@ def cmd_fwd(a):
     tab = np.load(CR / pool / "tab.npz")
     F = np.load(FEAT / f"{pool}.npz")
     E = S.ego[on0:on0 + len(tab["names"])].cpu().numpy()
-    gate = dict(ego_equal=float(np.abs(E[:, :20] - tab["ego"]).max()), feat_equal=float(np.abs(E[:, 20:] - F["f"]).max()), rows=int(len(rows)))
+    gate = dict(ego_equal=float(np.abs(E[:, :20] - tab["ego"]).max()), feat_equal=float(np.abs(E[:, 20:20 + F["f"].shape[1]] - F["f"]).max()), rows=int(len(rows)))
     pi = torch.as_tensor(S.pi, device=dev)
 
     def fwd(rr, bs=256):

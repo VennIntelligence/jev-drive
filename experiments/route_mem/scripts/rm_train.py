@@ -120,6 +120,14 @@ RECOVERY-ENVELOPE (2026-10-16, experiments/route_follow/plans/2026-10-16-recover
   --on-lon-all      with --on-mode mixed: the --on-lon terms on every pool row of the batch (on_train LossesOn._lon_all), not only on the
             `both` rows (the RL arm: envelope on the S / envelope self rows, recovery rows as `both`).
 
+STACK (2026-10-16, experiments/route_follow/plans/2026-10-16-stack-prereg.md); every flag off = the recipe above operation for operation:
+  --rx [--rx-drop 0.25 --rx-lr 3e-4 --rx-warmup 100]   the reflex module of lib/reflex.py on the route branch (self-state appended to the fed row
+            from $DATA_DIR/runs/route_follow/stack/self/<POOL>.npz for the pool rows, zeros + valid 0 elsewhere; zeroed on a share --rx-drop of
+            the pool rows of every batch, own rng stream [seed, 0, 113]); its parameters are a fourth group (own lr / warm-up, not x --lr-scale)
+            and take only the constraint side's gradient (lib/stack_train.py); sidecar key `reflex`. An --init / --rm-from with the module
+            loads it; an init without it starts the module at its zero-output init.
+  --dual / --dual-tau / --dual-level / --dual-eta, --cons PATH, --imit-drop, --pref W   lib/stack_train.py (its docstring).
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -251,6 +259,14 @@ def build(a, dev):
     RM.attach(ns.model, **head)
     src = a.rm_from or (a.init if a.init and RM.has_branch(a.init) else "")
     ns.head, ns.converted = head, False
+    rxc = None
+    if src and RM.has_branch(src):
+        rxc = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()).get("reflex")
+    if rxc is not None or getattr(a, "rx", False):                    # STACK reflex module (lib/reflex.py)
+        import reflex as RX
+        a.rx = True
+        RX.attach(ns.model, rx=(rxc or {}).get("rx"))
+    ns.rx = bool(getattr(a, "rx", False))
     if src:                                                           # a checkpoint with the branch: the whole state, branch included
         ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
         sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
@@ -260,6 +276,8 @@ def build(a, dev):
         if (head.get("order") and not sh.get("order")) or (head.get("latfeat") and not sh.get("latfeat")):   # route v2: converted init
             ck["model"]["parity"] = RM.order_state(ck["model"]["parity"], head.get("latfeat", False))
             ns.converted = True
+        if ns.rx and not any(k.startswith("rx.") for k in ck["model"]["parity"]):   # an init without the module: the module at its init
+            ck["model"]["parity"] = dict(ck["model"]["parity"]) | {k: v.detach().cpu() for k, v in ns.model.adapter.state_dict().items() if k.startswith("rx.")}
         ns.model.load_state(ck["model"])
         st = ns.model.adapter.state_dict()
         assert set(st) == set(ck["model"]["parity"]), "adapter keys differ from the checkpoint's"
@@ -273,9 +291,29 @@ def build(a, dev):
     F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane)
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
     rp = list(ns.model.adapter.route.parameters())
-    ids = {id(p) for p in rp}
+    ns.rxp = list(ns.model.adapter.rx.parameters()) if ns.rx else []
+    ids = {id(p) for p in rp + ns.rxp}
     ns.new = [p for p in ns.model.adapter.parameters() if id(p) not in ids]
+    if ns.rx:
+        ns.S.ego, ns.rx_rec = rx_feats(ns, dev)
     return ns, rp, JD, TU, okc
+
+
+def rx_feats(ns, dev):
+    """The fed row ++ the self-state (reflex.SF): pool rows from runs/route_follow/stack/self/<POOL>.npz (names asserted equal), else zeros."""
+    import torch
+    import reflex as RX
+    from jevdrive.common import data_dir
+    S = ns.S
+    X = torch.zeros(S.n, RX.SF, device=dev)
+    rec = dict(pool=None)
+    if ns.n_on:
+        pool = ns.cfg.data[-1]
+        z = np.load(data_dir() / "runs/route_follow/stack/self" / f"{pool}.npz")
+        assert np.array_equal(z["names"].astype(str), S.tab["names"][ns.on0:].astype(str)), f"self-state rows differ from {pool}'s"
+        X[ns.on0:] = torch.as_tensor(z["f"].astype(np.float32), device=dev)
+        rec = dict(pool=pool, rows=int(len(z["names"])), valid=float(z["f"][:, 0].mean()))
+    return torch.cat([S.ego, X], 1), rec
 
 
 # ---------------------------------------------------------------- route v2: lane hinge, negatives, lane-change pairs
@@ -613,8 +651,20 @@ def cmd_train(a):
     esp = torch.as_tensor(EGO_SPEED, device=dev)
     sha = hashlib.sha1()
     lb, ln = (cfg.lr, cfg.lr_new) if a.lr_scale == 1.0 else (cfg.lr * a.lr_scale, cfg.lr_new * a.lr_scale)
-    opt = torch.optim.AdamW([{"params": base, "lr": lb, "base": lb, "wu": cfg.warmup}, {"params": new, "lr": ln, "base": ln, "wu": cfg.warmup},
-                             {"params": rp, "lr": a.rm_lr, "base": a.rm_lr, "wu": a.rm_warmup}], weight_decay=cfg.wd)
+    groups = [{"params": base, "lr": lb, "base": lb, "wu": cfg.warmup}, {"params": new, "lr": ln, "base": ln, "wu": cfg.warmup},
+              {"params": rp, "lr": a.rm_lr, "base": a.rm_lr, "wu": a.rm_warmup}]
+    rxp = ns.rxp
+    if ns.rx:                                                         # STACK reflex module: its own group
+        assert not (lane_on or lc_on), "--rx with the route v2 lane terms: the fakes write the route block only"
+        groups.append({"params": rxp, "lr": a.rx_lr, "base": a.rx_lr, "wu": a.rx_warmup})
+        xrng = np.random.default_rng([cfg.seed, 0, 113])
+        import reflex as RX
+        nr_ = RM.EGO_DIM + model.adapter.route.dim
+    opt = torch.optim.AdamW(groups, weight_decay=cfg.wd)
+    ST = None
+    if a.dual or a.cons or a.imit_drop or a.pref > 0 or ns.rx:      # STACK terms (lib/stack_train.py)
+        import stack_train
+        ST = stack_train.Stack(a, ns, LS, dev)
     scaler = torch.amp.GradScaler()
 
     pw, caprec = None, {}
@@ -724,6 +774,9 @@ def cmd_train(a):
             else:
                 keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev) | is_pool[rows]
             ego[:, RM.EGO_DIM:] = ego[:, RM.EGO_DIM:] * keep[:, None].float()
+            if ns.rx:                                                 # self-state dropped on a share of the pool rows
+                xd = torch.as_tensor(xrng.random(len(r)) < a.rx_drop, device=dev) & is_pool[rows]
+                ego[:, nr_:] = ego[:, nr_:] * (~xd)[:, None].float()
             n_neg = 0
             if lane_on and a.lane_neg > 0:                            # negatives: a fake input memory, the original route stays the target
                 nm = n_main if lc_on else len(r)
@@ -790,18 +843,33 @@ def cmd_train(a):
                     if bs_[2 + 2 * c] > 0:
                         Ls[f"drop/open_{q}"] = bs_[3 + 2 * c] / bs_[2 + 2 * c]
                 Ls["drop/open_all"] = (bs_[3] + bs_[5] + bs_[7]) / bs_[0].clamp_min(1)
+            if ST is not None:
+                total, total_C, Ls = ST.terms(out, S, rows, anchor, front, total, Ls, n_main if lc_on else None)
+                if ns.rx:
+                    Ls["rx/gate"] = model.adapter.rx.gate.detach().float().abs().sum()
+                    lr_ = model.adapter.last_res
+                    if lr_ is not None:
+                        Ls["rx/res_abs"] = lr_.detach().abs().mean()
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
+            if ns.rx:                                                 # the module learns from the constraint side only
+                g_rx = (torch.autograd.grad(scaler.scale(total_C), rxp, retain_graph=True, allow_unused=True) if total_C.requires_grad
+                        else [None] * len(rxp))
             scaler.scale(total).backward()
+            if ns.rx:
+                for p_, g_ in zip(rxp, g_rx):
+                    p_.grad = g_ if g_ is not None else torch.zeros_like(p_)
             if lc_on and a.lc_adapter_only:
                 for p_, g_ in zip(ap_lc, g_lc):
                     if g_ is not None:
                         p_.grad = g_ if p_.grad is None else p_.grad + g_
             scaler.unscale_(opt)
-            torch.nn.utils.clip_grad_norm_(base + new + rp, 1.0)
+            torch.nn.utils.clip_grad_norm_(base + new + rp + rxp, 1.0)
             scaler.step(opt)
             scaler.update()
+            if ST is not None:
+                ST.update(Ls, step)
             hist.append({q: float(v) for q, v in Ls.items()})
             if (step + 1) % 25 == 0 or step + 1 == cfg.steps:
                 keys = sorted({q for h in hist for q in h})
@@ -828,8 +896,12 @@ def cmd_train(a):
         torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": ns.head}, d / "ckpt-final.pt")
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
         v2 = dict(lane_lam=a.lane_lam, lane_dz=a.lane_dz, lane_neg=a.lane_neg, lc_cf=a.lc_cf) if (lane_on or lc_on or ns.head.get("order")) else {}
+        rx_side = dict(reflex=dict(sf=__import__("reflex").SF, rx=None, drop=a.rx_drop, lr=a.rx_lr)) if ns.rx else {}
         RM.write_sidecar(a.tag, ns.head, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop, rm_drop_pool=False,
-                                              on=a.on, on_lon=a.on_lon, steps=cfg.steps, dev_ade=ev.get("ade"), **v2))
+                                              on=a.on, on_lon=a.on_lon, steps=cfg.steps, dev_ade=ev.get("ade"), **v2, **rx_side))
+        if ST is not None:
+            run.summary.update(stack=ST.summary(), **({"rx_feats": ns.rx_rec} if ns.rx else {}))
+            run.info(f"stack: {json.dumps(ST.summary())}")
         rr = rely(model, Sd, dv_o, LS.W, JD, TU, S.tab["log"])
         run.info(f"reliance: {json.dumps(rr)}")
         (_pl.Path(run.dir) / "rely.json").write_text(json.dumps(rr, indent=1))
@@ -957,6 +1029,17 @@ if __name__ == "__main__":
         p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--env-lo-scale", type=float, default=1.0, help="RECOVERY-ENVELOPE: on_envelope's lower-bound term x this (1 = as --env-lam)")
         p.add_argument("--on-lon-all", action="store_true", help="--on-mode mixed: the --on-lon terms on every pool row (self rows too)")
+        p.add_argument("--rx", action="store_true", help="STACK: the reflex module (lib/reflex.py)")
+        p.add_argument("--rx-drop", type=float, default=0.25)
+        p.add_argument("--rx-lr", type=float, default=3e-4)
+        p.add_argument("--rx-warmup", type=int, default=100)
+        p.add_argument("--dual", default="", help="STACK: constraints with Lagrangian multipliers, e.g. agent,road,envU,cons")
+        p.add_argument("--dual-tau", default="", help="reference violation rates c=r,..; missing or 'auto' = 0.5 x the first 25 steps' mean")
+        p.add_argument("--dual-level", type=float, default=1.0)
+        p.add_argument("--dual-eta", type=float, default=0.02)
+        p.add_argument("--cons", default="", help="STACK: frozen consequence head checkpoint (lib/conshead.py) as a hinge on every row")
+        p.add_argument("--imit-drop", action="store_true", help="STACK: imitation dropout on rows with an active constraint")
+        p.add_argument("--pref", type=float, default=0.0, help="STACK: one-sided minimal-correction preference weight (0 = off)")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")
