@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """ALPASIM_FAST: the one place that turns an AlpaSim read into a fast local read (docs/alpasim.md "Fast local reads", results/pai_fast.md).
 Wizard overrides that turn the eval video off (the official ec2 presets run with it off; it is drawn after scoring) and shrink the camera set:
-  ALPASIM_FAST=1     every preset camera stays (same ids, frame intervals, shutters), the driver's camera at the preset's own resolution,
-                     the others at TINY px height: the runtime anchors the rollout clock on the first frame end over the requested cameras
-                     (alpasim_runtime unbound_rollout.py, render_start_us), so keeping them keeps every decision time; the driver's image is
-                     the same request. Scores should not move.
+  ALPASIM_FAST=1     every preset camera stays (same ids and shutters), the driver's camera exactly as the preset asks, the others at
+                     TINY px height and one frame per rollout (frame interval ONCE_US): the runtime anchors the rollout clock on the first
+                     frame end over the requested cameras (alpasim_runtime unbound_rollout.py, render_start_us), so keeping them keeps every
+                     decision time; the driver's image is the same request. Scores should not move. (At 64 px but the preset's 10 Hz the
+                     five extra PAI cameras cost as much as at 1080 px: Tokyo, bit-identical but no faster.)
   ALPASIM_FAST=solo  the driver's camera alone: cheaper, but on PAI scenes the clock moves by 0-30 ms (the cameras' first frames differ), so
                      the run is a perturbed copy, not the same run (results/pai_fast.md).
 The driver and the image scorer read only that camera; official submissions keep the full set.
@@ -21,7 +22,7 @@ import ast, os, re, sys
 
 import yaml
 
-TINY = 64          # px height of the cameras nobody reads under ALPASIM_FAST=1 (aspect kept)
+TINY, ONCE_US = 64, 100_000_000     # the cameras nobody reads under ALPASIM_FAST=1: px height (aspect kept), frame interval (> a rollout)
 
 
 def driver_camera(driver_py, env=None):
@@ -70,7 +71,7 @@ def overrides(src, wizard_args, driver_py, env=None, mode="1"):
     keep = []
     for c in (entry if mode == "solo" else cams):
         if c["logical_id"] != cam:
-            c = dict(c, height=TINY, width=-(-c["width"] * TINY // c["height"]) // 2 * 2)
+            c = dict(c, height=TINY, width=-(-c["width"] * TINY // c["height"]) // 2 * 2, frame_interval_us=ONCE_US)
         keep.append("{" + ",".join(f"{k}:{v}" for k, v in c.items()) + "}")
     return [f"runtime.simulation_config.cameras=[{','.join(keep)}]", "eval.video.render_video=false"]
 
