@@ -1,0 +1,305 @@
+{
+ "scene": "clipgt-1bfad87c-4f52-4353-9f42-763a6ab8fbf5",
+ "rollout_spec": {
+  "vehicle": {
+   "availableCameras": [
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 962.3486328125,
+       "principalPointY": 750.8803100585938,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.0010563335381448269,
+        2.1566712860021653e-08,
+        -4.252220450751132e-11,
+        9.109075662814756e-14,
+        -3.600549123342859e-17
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        945.8583984375,
+        -10.741833686828613,
+        12.07738971710205,
+        -43.497154235839844,
+        17.639873504638672
+       ],
+       "maxAngle": 1.3493140447168162,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_front_wide_120fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 1.7850746,
+       "y": -0.049618192,
+       "z": 1.214237
+      },
+      "quat": {
+       "w": -0.500414,
+       "x": 0.49183995,
+       "y": -0.49797872,
+       "z": 0.5096042
+      }
+     },
+     "logicalId": "camera_front_wide_120fov"
+    },
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 788.3628540039062,
+       "principalPointY": 565.1841430664062,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.00027109539951197803,
+        3.979676144183486e-09,
+        -1.079027752565187e-11,
+        9.195048321114941e-15,
+        -2.635783311349702e-18
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        3688.789306640625,
+        -200.78466796875,
+        2004.458984375,
+        -6296.53515625,
+        6655.32275390625
+       ],
+       "maxAngle": 0.34243359924128747,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_front_tele_30fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 1.6797491,
+       "y": -0.093288295,
+       "z": 1.2083062
+      },
+      "quat": {
+       "w": -0.5070084,
+       "x": 0.5124849,
+       "y": -0.4866031,
+       "z": 0.49347663
+      }
+     },
+     "logicalId": "camera_front_tele_30fov"
+    },
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 956.09423828125,
+       "principalPointY": 740.9805297851562,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.0010670641204342246,
+        4.003340325908766e-09,
+        -1.2514982973554911e-11,
+        5.5674008561960517e-14,
+        -1.9700404783803824e-17
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        936.723388671875,
+        0.4953497648239136,
+        -0.7792311310768127,
+        -29.806486129760742,
+        11.421632766723633
+       ],
+       "maxAngle": 1.3508848410436112,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_cross_left_120fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 2.3346756,
+       "y": 0.94184214,
+       "z": 0.7693209
+      },
+      "quat": {
+       "w": 0.69929385,
+       "x": -0.6878185,
+       "y": 0.13939883,
+       "z": -0.13587424
+      }
+     },
+     "logicalId": "camera_cross_left_120fov"
+    },
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 967.107421875,
+       "principalPointY": 744.947998046875,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.001067258999682963,
+        -4.013581467177119e-09,
+        5.55503993499018e-12,
+        3.725485021931034e-14,
+        -1.2454064389822887e-17
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        936.6701049804688,
+        6.007547378540039,
+        -11.487922668457031,
+        -20.5216121673584,
+        8.216963768005371
+       ],
+       "maxAngle": 1.3571680263507908,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_cross_right_120fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 2.3269901,
+       "y": -0.9164944,
+       "z": 0.76346666
+      },
+      "quat": {
+       "w": -0.14441836,
+       "x": 0.13049203,
+       "y": -0.69097257,
+       "z": 0.6961839
+      }
+     },
+     "logicalId": "camera_cross_right_120fov"
+    },
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 941.059326171875,
+       "principalPointY": 557.5880737304688,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.0006380882114171982,
+        7.649417099742095e-09,
+        -3.992788738527153e-11,
+        6.931704288250934e-14,
+        -3.8034098746155684e-17
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        1567.967529296875,
+        -41.83590316772461,
+        302.77569580078125,
+        -777.70556640625,
+        646.819091796875
+       ],
+       "maxAngle": 0.714712328691678,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_rear_left_70fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 1.8080214,
+       "y": 0.9980114,
+       "z": 0.88140273
+      },
+      "quat": {
+       "w": 0.6041238,
+       "x": -0.60391754,
+       "y": -0.37746036,
+       "z": 0.3575497
+      }
+     },
+     "logicalId": "camera_rear_left_70fov"
+    },
+    {
+     "intrinsics": {
+      "fthetaParam": {
+       "principalPointX": 956.9669799804688,
+       "principalPointY": 556.9577026367188,
+       "referencePoly": "PIXELDIST_TO_ANGLE",
+       "pixeldistToAnglePoly": [
+        0.0,
+        0.0006370515911839902,
+        4.538660558495167e-09,
+        -3.091810835131881e-11,
+        6.06044619870516e-14,
+        -3.530464426146956e-17
+       ],
+       "angleToPixeldistPoly": [
+        0.0,
+        1570.4058837890625,
+        -28.322607040405273,
+        242.20846557617188,
+        -686.6910400390625,
+        603.38427734375
+       ],
+       "maxAngle": 0.7052875507309087,
+       "linearCde": {
+        "linearC": 1.0
+       }
+      },
+      "logicalId": "camera_rear_right_70fov",
+      "resolutionH": 1080,
+      "resolutionW": 1920,
+      "shutterType": "ROLLING_TOP_TO_BOTTOM"
+     },
+     "rigToCamera": {
+      "vec": {
+       "x": 1.8366367,
+       "y": -0.958452,
+       "z": 0.8854143
+      },
+      "quat": {
+       "w": -0.36444047,
+       "x": 0.37363636,
+       "y": 0.6049721,
+       "z": -0.60132164
+      }
+     },
+     "logicalId": "camera_rear_right_70fov"
+    }
+   ],
+   "boundingBox": {
+    "sizeX": 4.688,
+    "sizeY": 1.999,
+    "sizeZ": 1.439
+   },
+   "rigToBoundingBox": {
+    "vec": {
+     "x": 1.3120002,
+     "z": 0.7195
+    },
+    "quat": {
+     "w": 1.0
+    }
+   }
+  }
+ }
+}

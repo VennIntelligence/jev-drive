@@ -5,6 +5,9 @@
 # Measures: cold start (docker run -> "listening"), peak GPU memory of the card while 2 concurrent synthetic rollouts run (probe.py inside
 # the container), client- and server-side `drive` latency, /tmp and /run high-water marks, files changed outside them (docker diff).
 #   experiments/alpasim/docker/test.sh <image:version> <out dir> [JEV_TAG] [gpu index]
+# A PAI image (JEV_DRIVER=pai baked in) is probed as the PAI track: 200 decisions at 10 Hz per rollout, 6 f-theta cameras (probe.py --track pai).
+# Env: PROBE (probe.py arguments, default "--sessions 2 --rollouts 8" nuPlan / "--track pai --sessions 2 --rollouts 2" PAI), DRV_ENV ("K=V ..."
+# for the driver, e.g. JEV_ACC=1; the organisers pass none, so the pushed image is tested without).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, result.json, probe.json, drive.jsonl, driver.log, cmd.txt}. The card must be idle.
 set -uo pipefail
 IMG=$1 OUT=$2 TAG=${3:-} GPU=${4:-0}
@@ -17,7 +20,9 @@ run=(docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privi
      --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network none --gpus "device=$GPU"
      -e ALPASIM_CONTESTANT_REPLICA_INDEX=0 -e ALPASIM_CONTESTANT_REPLICAS=1)
 [[ -n $TAG ]] && run+=(-e "JEV_TAG=$TAG")
+for kv in ${DRV_ENV:-}; do run+=(-e "$kv"); done
 run+=("$IMG")
+fam=$(docker image inspect "$IMG" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^JEV_DRIVER=//p')
 printf '%q ' "${run[@]}" > "$OUT/cmd.txt"; echo >> "$OUT/cmd.txt"
 
 base=$(used); st "start $IMG ${TAG:-<image default>} on GPU $GPU (card holds $base MiB)"
@@ -36,8 +41,8 @@ cold=$(echo "$(date +%s.%N) - $t0" | bc); idle=$(used); st "listening after $col
     read -r a b < <(docker exec "$N" sh -c 'df -B1 --output=used /tmp /run | tail -2 | tr "\n" " "' 2>/dev/null); (( ${a:-0} > tmp )) && tmp=$a; (( ${b:-0} > runm )) && runm=$b
     echo "$peak $tmp $runm" > "$OUT/.peak"; sleep 0.5
   done ) & sampler=$!
-st "probe: 2 concurrent rollouts x 8, as fast as the driver answers"
-P="--sessions 2 --rollouts 8"
+if [[ $fam == pai ]]; then P=${PROBE:-"--track pai --sessions 2 --rollouts 2"}; else P=${PROBE:-"--sessions 2 --rollouts 8"}; fi
+st "probe ($P), as fast as the driver answers"
 docker exec "$N" python /app/probe.py $P > "$OUT/probe.json" || die "probe failed"
 cat "$OUT/probe.json"
 docker exec "$N" cat /tmp/alpasim-driver/drive.jsonl > "$OUT/drive.jsonl"
@@ -50,10 +55,11 @@ python3 - "$OUT" "$IMG" "${TAG:-default}" "$cold" "$base" "$idle" "$peak" "$tmp"
 import json, re, subprocess, sys
 out, img, tag, cold, base, idle, peak, tmp, runm, stop, rc, gpu = sys.argv[1:]
 rows = [json.loads(l) for l in open(f"{out}/drive.jsonl")]
-dr = [r["ms"] for r in rows if r.get("kind") == "drive"]
+# nuPlan drivers log every stage under `ms` (total included); the PAI driver logs `total_ms` per call and the stages of inferring calls
+dr = [{**(r.get("ms") or {}), **({"total": r["total_ms"]} if "total_ms" in r else {})} for r in rows if r.get("kind") == "drive"]
 pct = lambda v, q: round(sorted(v)[min(len(v) - 1, int(q * len(v)))], 1)
-srv = {k: {"p50": pct([d[k] for d in dr], .5), "p90": pct([d[k] for d in dr], .9), "p99": pct([d[k] for d in dr], .99), "max": round(max(d[k] for d in dr), 1)}
-       for k in ("total", "wait", "frames", "encode", "policy")}
+keys = [k for k in ("total", "wait", "frames", "encode", "policy", "prep", "slots") if any(k in d for d in dr)]
+srv = {k: {"p50": pct(v, .5), "p90": pct(v, .9), "p99": pct(v, .99), "max": round(max(v), 1)} for k in keys for v in [[d[k] for d in dr if k in d]]}
 log = open(f"{out}/driver.log").read()
 # docker diff under --read-only lists what the runtime injects (NVIDIA libraries and tools, docker-init, the refreshed ld.so cache) and
 # their parent directories; anything else would be a write of ours outside /tmp and /run.

@@ -1,5 +1,6 @@
-# Submission image of the AlpaSim nuPlan track: one image, every openpilot + adapter driver of experiments/alpasim/lib, the driver family
-# and checkpoint picked at run time (serve.py: JEV_TAG / JEV_DRIVER). Built by build.sh from a staged context; never by hand.
+# Submission image of the AlpaSim nuPlan and PAI tracks: one image, every openpilot + adapter driver of experiments/alpasim/lib, the driver
+# family and checkpoint picked at run time (serve.py: JEV_TAG / JEV_DRIVER; `pai` = pai_driver.py, build.sh TRACK=pai). Built by build.sh
+# from a staged context; never by hand.
 # Layers, most stable first, so a new checkpoint or default costs one thin layer (no re-pull, no re-push of the rest):
 #   python + torch -> pinned packages -> alpasim_grpc -> openpilot base model -> driver code -> stable checkpoints -> extra checkpoints -> defaults
 # Conventions follow the shipped samples (e2e_challenge/sample_submission_simscale_navsim_transfuser/Dockerfile at 0bb4c4b): gRPC on
@@ -42,12 +43,13 @@ COPY models /app/data/models
 COPY alpasim/e2e_challenge /app/alpasim/e2e_challenge
 COPY alpasim/LICENSE /app/alpasim/LICENSE
 COPY jev-drive /app/jev-drive
-COPY serve.py probe.py verify.py /app/
+COPY serve.py probe.py verify.py pai_spec.json /app/
 RUN groupadd --gid 10001 alpasim \
     && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /app --shell /usr/sbin/nologin alpasim
 
-# Checkpoints: the stable set, then the tags added since (build.sh TAGS / EXTRA). verify.py imports every driver, reads each checkpoint
-# and writes tags.json (tag -> driver family) for serve.py. build.sh stages the context world-readable (the image runs as uid 10001).
+# Checkpoints: the stable set, then the tags added since (build.sh TAGS / EXTRA), each ckpt-final.pt with its sidecar route_mem.json when it
+# has one. verify.py imports every driver, reads each checkpoint (a ROUTE-MEM one through pai_driver's loader) and writes tags.json
+# (tag -> driver family) for serve.py. build.sh stages the context world-readable (the image runs as uid 10001).
 COPY ckpt /app/data/runs/op_parity/runs
 COPY ckpt-extra /app/data/runs/op_parity/runs
 RUN python /app/verify.py
@@ -56,15 +58,19 @@ RUN python /app/verify.py
 ARG TAG=P2H10-F-s0
 ARG DRIVER=auto
 ARG GIT_HASH=local
-# The served speed profile (lib/serve_fix.py): VCONT = seconds of the speed-continuous blend (0 = off), LEAD = 1 for the openpilot lead limit.
+# The served speed profile (lib/serve_fix.py): VCONT = seconds of the speed-continuous blend (0 = off), LEAD = 1 for the openpilot lead limit,
+# ACC = 1 for the openpilot-style longitudinal (PAI driver only); VHIST = the fed speed history (lib/vhist.py: "" = off, holdlead, ...).
+# JEV_TRACK is deliberately never set: pai_driver.py then serves its default, the v8 `gate` reference (decision 309), as every box read does.
 ARG VCONT=0
 ARG LEAD=0
+ARG ACC=0
+ARG VHIST=""
 # torch.compile (SH30_COMPILE=1, the drivers' default on the box since LAT1) cannot run in this image: triton's default cache is
 # $HOME/.triton (read-only here; pointed at /tmp below) and inductor needs a C compiler, which python:slim does not have. The driver
 # then falls back to the interpreted passes with a logged traceback, which test.sh counts as a failure. SH30_COMPILE=0 makes the
 # image serve the interpreted passes on purpose (what every image so far has served; the box's compiled passes differ at fp16
 # rounding level, results/lat1_frame_synthesis.md). Set in this last layer so that the package layers above stay cached.
-ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD} \
+ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD} JEV_ACC=${ACC} JEV_VHIST=${VHIST} \
     SH30_COMPILE=0 TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
 EXPOSE 6789
 STOPSIGNAL SIGTERM

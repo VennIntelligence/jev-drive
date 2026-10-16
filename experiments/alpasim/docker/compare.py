@@ -26,10 +26,11 @@ def stats(s: dict) -> dict:
 
 def latency(f) -> dict:
     rows = [json.loads(l) for l in open(f) if l.strip()]
-    dr = [r["ms"] for r in rows if r.get("kind") == "drive"]
+    # nuPlan drivers: every stage under `ms`; the PAI driver: `total_ms` per call, stages (encode, policy, wait, ...) of inferring calls only
+    dr = [{**(r.get("ms") or {}), **({"total": r["total_ms"]} if "total_ms" in r else {})} for r in rows if r.get("kind") == "drive"]
     if not dr:
         return {}
-    q = lambda k, p: round(sorted(d[k] for d in dr)[min(len(dr) - 1, int(p * len(dr)))], 1)  # noqa: E731
+    q = lambda k, p: (lambda v: round(v[min(len(v) - 1, int(p * len(v)))], 1) if v else None)(sorted(d[k] for d in dr if k in d))  # noqa: E731
     cl = [r for r in rows if r.get("kind") == "close"]
     return {"drives": len(dr), "sessions": len(cl), "inference_errors": sum(r.get("inference_error", 0) for r in cl),
             "input_errors": sum(r.get("input_error", 0) for r in cl),
@@ -60,9 +61,14 @@ def main() -> None:
         diff = [(s, run[s], ref[s]) for s in both if abs(run[s][0] - ref[s][0]) > 1e-9]
         res["ref"], res["common"], res["differ"] = stats({s: ref[s] for s in both}), len(both), len(diff)
         res["max_abs_diff"] = round(max((abs(r[0] - f[0]) for _, r, f in diff), default=0.0), 4)
+        d = [run[s][0] - ref[s][0] for s in both]
+        res["mean_diff"] = round(sum(d) / max(len(d), 1), 4)
+        res["within_001"], res["within_005"] = sum(abs(x) <= 0.01 for x in d), sum(abs(x) <= 0.05 for x in d)
+        res["zeros_agree"] = sum((run[s][0] == 0) == (ref[s][0] == 0) for s in both)
         res["missing_in_run"], res["missing_in_ref"] = sorted(set(ref) - set(run)), sorted(set(run) - set(ref))
         lines += [f"native reference: n {res['ref']['n']}, mean {res['ref']['mean']:.4f}, zeros {res['ref']['zeros']}, at 1 {res['ref']['ones']}",
-                  f"scenes that differ: {len(diff)} of {len(both)} (max |diff| {res['max_abs_diff']})", ""]
+                  f"scenes that differ: {len(diff)} of {len(both)} (max |diff| {res['max_abs_diff']}); paired mean diff {res['mean_diff']:+.4f}, "
+                  f"within 0.01: {res['within_001']}, within 0.05: {res['within_005']}, zero / non-zero agree: {res['zeros_agree']} of {len(both)}", ""]
         if diff:
             lines += ["| scene | containerised | native | why (containerised / native) |", "|---|--:|--:|---|"]
             lines += [f"| {s} | {r[0]:.4f} | {f[0]:.4f} | {r[1] or '-'} / {f[1] or '-'} |" for s, r, f in diff]

@@ -1,5 +1,7 @@
-# Repo files the drivers import (sys.modules of sh30_driver + ap2_driver + ens_driver on the box, 2026-10-09). build.sh copies exactly
-# these into the image; verify.py fails the build when an import needs a file that is not listed.
+# Repo files the drivers import (sys.modules of sh30_driver + ap2_driver + ens_driver on the box, 2026-10-09; + pai_driver with a ROUTE-MEM
+# checkpoint loaded, JEV_ACC=1 and JEV_VHIST=holdlead, CPU only, 2026-10-16). build.sh copies exactly these into the image; verify.py fails
+# the build when an import needs a file that is not listed. Not in the image (imported only when their switch is set, none served):
+# intent_hold.py (JEV_INTENT_HOLD), tts.py (JEV_TTS), reflex.py / reflex_mem.py (a STACK checkpoint), body1 (JEV_STOP / JEV_REPLAN).
 jevdrive/__init__.py
 jevdrive/common.py
 jevdrive/navsim_zs.py
@@ -20,3 +22,12 @@ experiments/alpasim/lib/ap2_core.py
 experiments/alpasim/lib/ap2_driver.py
 experiments/alpasim/lib/ap2_inputs.py
 experiments/alpasim/lib/ens_driver.py
+experiments/alpasim/lib/pai_core.py
+experiments/alpasim/lib/pai_driver.py
+experiments/alpasim/lib/perturb.py
+experiments/alpasim/lib/route_path.py
+experiments/alpasim/lib/rule_expert.py
+experiments/alpasim/lib/track_ref.py
+experiments/alpasim/lib/turn_gain.py
+experiments/alpasim/lib/vhist.py
+experiments/route_mem/lib/rmem.py
