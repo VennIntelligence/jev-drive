@@ -208,7 +208,7 @@ def humanlog(a):
 def fit(H, out):
     import pandas as pd
     H.to_parquet(out)
-    st = H[(H.gap <= D_FOLLOW) & (H.veh_v >= V_LEAD_MOV) & ((H.v_h - H.veh_v).abs() < 1.0) & (H.v_h >= 1.0)]
+    st = H[(H.gap > 0.5) & (H.gap <= D_FOLLOW) & (H.veh_v >= V_LEAD_MOV) & ((H.v_h - H.veh_v).abs() < 1.0) & (H.v_h >= 1.0)]
     c = np.linalg.lstsq(np.c_[np.ones(len(st)), st.v_h], st.gap, rcond=None)[0]
     print(f"{H.scene.nunique()} scenes, {len(H)} steps; steady following {len(st)} steps in {st.scene.nunique()} scenes: gap = {c[0]:.2f} + {c[1]:.3f} v")
     b = pd.cut(st.v_h, [1, 3, 5, 8, 12, 18, 40])
