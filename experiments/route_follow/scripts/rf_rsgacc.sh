@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # RSG-ACC (plans/2026-10-17-rsg-acc-prereg.md): RSG-L18's recipe on on-policy rows rolled under the ACC(+GAP) serve, nuPlan onpol-train
 # (18 decisions, sh30) and PAI train160 (pai_box), one joint arm + one control. Box, repo root; every job through the GPU pool; ids in $O/jobs.txt.
-#   rf_rsgacc.sh smoke              stage 1: RSG-L18-s0 on 4 nuPlan + 4 PAI train scenes, both row pipelines -> smoke pools L18Asm / PAIAsm
-#   rf_rsgacc.sh roll <T..>         rollouts of each checkpoint on both tracks + its row chains (nuPlan: ol_chain's geo / tok / strip, rm_build pool,
-#                                   poolgate; PAI: onp_rows rows / cold, onp_cache, rf_pai_pool, R1, asl + dump cleanup); last row job ids -> $O/rows_<T>.txt
+#   rf_rsgacc.sh smoke nu|pai       stage 1: RSG-L18-s0 on 4 nuPlan / 4 PAI train scenes (in the scene cache), the row pipeline -> smoke pool L18Asm / PAIAsm
+#   rf_rsgacc.sh roll nu|pai <T..>  rollouts of each checkpoint on one track + its row chain (nuPlan: ol_chain's geo / tok / strip, rm_build pool,
+#                                   poolgate; PAI: onp_rows rows / cold, onp_cache, rf_pai_pool, R1, asl + dump cleanup); last row job id -> $O/rows_<trk>_<T>.txt
 #   rf_rsgacc.sh pilot <T..>        merge (after the row chains of these T) -> 5 pilot trainings (1 000 steps) -> forward reads -> pilot gate job; the gate
 #                                   job submits `full <cell>` when a cell passes
 #   rf_rsgacc.sh full <cell>        arm + control at 2 500 steps -> forward reads -> full gate -> (gate) held 452 reads -> held gate -> (gate) public 1491
@@ -27,11 +27,12 @@ csv() { local IFS=,; echo "$*"; }
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
 LONG=("runtime.scene_provider.trajdata.cache_location=$DATA_DIR/datasets/alpasim_nuplan_long/after160" "runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=160")
 
-roll_one() {  # roll_one <K> <T> <nuPlan lists dir or chunk count> <PAI list>: submits both tracks' rollouts and row chains; echoes the last row job ids
-  local K=$1 T=$2 NL=$3 PL=$4 x N NP nu=() ids=() g k p q
+pre() { [[ $1 == smoke ]] && echo sm || short $2; }
+roll_nu() {  # roll_nu <K> <T> <dir of chunk lists c*.txt>: nuPlan rollouts + row chain; echoes the pool job id
+  local K=$1 T=$2 NL=$3 x N nu=() g k p
   [[ -f $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || { echo "no $T" >&2; exit 1; }
-  [[ $K == smoke ]] && x=sm || x=$(short $T) || exit 1; N=L18A$x; NP=PAIA$x
-  [[ ! -e $O/roll/nu/$K/c0 && ! -e $CR/on1_$N && ! -e $CR/on1_$NP ]] || { echo "$K already rolled / pools exist: never overwritten" >&2; exit 1; }
+  x=$(pre $K $T) || exit 1; N=L18A$x
+  [[ ! -e $O/roll/nu/$K/c0 && ! -e $CR/on1_$N ]] || { echo "$K / $N exists: never overwritten" >&2; exit 1; }
   mkdir -p $O/roll/nu/$K
   for f in $NL/c*.txt; do i=$(basename $f .txt); i=${i#c}
     nu+=($(sub ra-roll-nu-$x-$i --vram 32 --cpu 8 --ram 60 --timeout-h 3 "${X[@]}" -- env LIST=$f bash $ME roll-nu $K $T $i)) || exit 1; done
@@ -39,28 +40,41 @@ roll_one() {  # roll_one <K> <T> <nuPlan lists dir or chunk count> <PAI list>: s
   k=$(sub ra-tok-$x --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME rows-nu $K $T $N tok) || exit 1
   sub ra-strip-$x --after $k --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $ME rows-nu $K $T $N strip > /dev/null || exit 1
   p=$(sub ra-pool-$x --after $k --vram 0.5 --cpu 32 --ram 80 --timeout-h 2 -- bash $ME rows-nu $K $T $N pool) || exit 1
-  ids+=($p)
-  CHUNK=32 SERVE="$SERVE PAI_DUMP=100000" WIZ=$WIZ KEEP_ASL=1 PRIO=$PRIO bash experiments/alpasim/scripts/pai_box.sh submit $O/roll/pai/$K $T $PL > /dev/null || exit 1
+  echo $p; }
+roll_pai() {  # roll_pai <K> <T> <scene list>: PAI rollouts (every chunk must be submitted: all scenes in the cache) + row chain; echoes the R1 job id
+  local K=$1 T=$2 PL=$3 x NP q g k p n
+  x=$(pre $K $T) || exit 1; NP=PAIA$x
+  [[ ! -e $O/roll/pai/$K/jobs.txt && ! -e $CR/on1_$NP ]] || { echo "$K / $NP exists: never overwritten" >&2; exit 1; }
+  CHUNK=32 SERVE="$SERVE PAI_DUMP=100000" WIZ=$WIZ KEEP_ASL=1 PRIO=$PRIO bash experiments/alpasim/scripts/pai_box.sh submit $O/roll/pai/$K $T $PL >&2 || exit 1
+  n=$(ls $O/roll/pai/$K/chunks/*.txt | wc -l); [[ -f $O/roll/pai/$K/jobs.txt && $(wc -l < $O/roll/pai/$K/jobs.txt) == $n ]] || { echo "PAI $K: not every chunk submitted" >&2; exit 1; }
   q=$(awk '{print $1}' $O/roll/pai/$K/jobs.txt | paste -sd,)
   g=$(sub ra-prow-$x --after $q --vram 0.5 --cpu 24 --ram 96 --timeout-h 3 -- bash $ME rows-pai $K $T $NP rows) || exit 1
   k=$(sub ra-pcache-$x --after $g --vram 20 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME rows-pai $K $T $NP cache) || exit 1
   p=$(sub ra-ppool-$x --after $k --vram 0.5 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME rows-pai $K $T $NP pool) || exit 1
   q=$(sub ra-pr1-$x --after $p --vram 16 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME rows-pai $K $T $NP r1) || exit 1
   sub ra-pclean-$x --after $q --vram 0.5 --cpu 2 --ram 4 --timeout-h 1 -- bash $ME rows-pai $K $T $NP clean > /dev/null || exit 1
-  ids+=($q); echo "${ids[*]}"; }
+  echo $q; }
 
 case ${1:-} in
-smoke)
+smoke)     # smoke nu | pai
   mkdir -p $O/pool $O/smoke
-  head -4 $W/lists/smoke5.txt > $O/smoke/c0.txt
-  awk -F'\t' 'NR > 1 {print $1}' $T160 | head -4 > $O/smoke/pai4.txt
-  r=$(roll_one smoke RSG-L18-s0 $O/smoke $O/smoke/pai4.txt) || exit 1; echo "$r" > $O/rows_smoke.txt
-  echo "smoke: last row jobs $r"; tail -n 14 $O/jobs.txt ;;
-roll)
-  shift; mkdir -p $O/pool; awk -F'\t' 'NR > 1 {print $1}' $T160 > $O/pai160.txt
-  for T in "$@"; do r=$(roll_one $T $T $W/lists $O/pai160.txt) || exit 1; echo "$r" > $O/rows_$T.txt; echo "$T: last row jobs $r"; done ;;
+  if [[ ${2:-} == nu ]]; then head -4 $W/lists/smoke5.txt > $O/smoke/c0.txt; r=$(roll_nu smoke RSG-L18-s0 $O/smoke) || exit 1
+  else python3 - $T160 $DATA_DIR > $O/smoke/pai4.txt <<'PY' || exit 1
+import csv, os, sys
+t = [l.split("\t")[0] for l in open(sys.argv[1]).read().split("\n")[1:] if l]; D = sys.argv[2]; have = set(os.listdir(f"{D}/datasets/nurec/all-usdzs")); m = {}
+for f in ("sim_scenes.csv", "sim_scenes_2604.csv"):
+    m |= {r["scene_id"]: r["uuid"] for r in csv.DictReader(open(f"{D}/third_party/alpasim/data/scenes/{f}"))}
+print("\n".join([s for s in t if m.get(s, "") + ".usdz" in have][:4]))
+PY
+    r=$(roll_pai smoke RSG-L18-s0 $O/smoke/pai4.txt) || exit 1; fi
+  echo "smoke ${2:-pai}: last row job $r" ;;
+roll)      # roll nu|pai <T..>
+  trk=$2; shift 2; mkdir -p $O/pool; awk -F'\t' 'NR > 1 {print $1}' $T160 > $O/pai160.txt
+  for T in "$@"; do
+    if [[ $trk == nu ]]; then r=$(roll_nu $T $T $W/lists) || exit 1; else r=$(roll_pai $T $T $O/pai160.txt) || exit 1; fi
+    echo "$r" > $O/rows_${trk}_$T.txt; echo "$T $trk: last row job $r"; done ;;
 pilot)
-  shift; dep=(); for T in "$@"; do dep+=($(cat $O/rows_$T.txt)); done
+  shift; dep=(); for T in "$@"; do dep+=($(cat $O/rows_nu_$T.txt $O/rows_pai_$T.txt)); done
   m=$(sub ra-merge --after "$(csv "${dep[@]}")" --vram 0.5 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME merge "$@") || exit 1
   t=(); for c in a b c p0k13 p0k26; do t+=($(sub ra-train-pilot-$c --after $m --train --vram 28 --cpu 6 --ram 120 --timeout-h 2 -- bash $ME train $c RSGACCp$c-L18-s0 1000)) || exit 1; done
   TG=$(for c in a b c p0k13 p0k26; do printf RSGACCp%s-L18-s0, $c; done)
