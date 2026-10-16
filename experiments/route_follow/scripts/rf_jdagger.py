@@ -400,7 +400,8 @@ def cmd_pack(a):
     for nm, keep in (("JDGd", Lz["valid"] & ~Lz["dev"]), ("JDGdev", Lz["valid"] & Lz["dev"])):
         r = np.flatnonzero(keep)
         RC.subset("L18RSG", r, nm, dict(fut=Lz["target"][r].astype(tab["fut"].dtype), jw=jw[r].astype("U4"), jwin=np.where(Lz["win"][r], "1", "0"),
-                                       jseg=Lz["seg"][r].astype("U9"), kind=np.where(Lz["win"][r], "win", "own").astype("U4")))
+                                       jseg=Lz["seg"][r].astype("U9"), kind=np.where(Lz["win"][r], "win", "own").astype("U4"),
+                                       dev=np.full(len(r), "1" if nm == "JDGdev" else "0")))   # rf_recov.dev_of reads it (the tab `log` is not the nuPlan log file)
         rec[nm] = dict(rows=int(len(r)), hi=int(Lz["hi"][r].sum()), win=int(Lz["win"][r].sum()))
     RC.merge(["on1_L18RB0:s:self", "on1_JDGd:d:both"], "JDG")
     Mt = dict(np.load(CR / "on1_JDG" / "tab.npz"))
