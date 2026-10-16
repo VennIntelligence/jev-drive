@@ -293,3 +293,9 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   - 四个 pilot（档 A / B × lr 0.1 / 0.3，后果 hinge 关）全不过：转弯 −0.34 到 −1.38°，dev 自身行接触 0.103 → 0.124–0.159（升 20–54 %），4 s 弧长短 2.5–3.9 m；λ_agent 全部顶到 10 倍上限（人类率 0.0005 达不到），自身行 agent 违反率训练中反而上升。
   - 拆开看（serve 端关反射，描述性）：接触回到 0.108–0.115、plan 长度复原 → 接触变多是反射模块把 plan 缩短 27–43 %、被回放后车追上（新接触 83–86 % 物体在后轴前 < 2 m）；转弯损失在关反射后仍在（−0.6 到 −1.5°），来自约束 + 偏好训练（偏好标签约六成是横向偏移）。
   - 花费约 3 card-h（含两个子会话的 C2 与 serve 核验约 4 card-h）。按用户 11:40 的决定：合一臂不帮忙 → 换方法。
+- 10-16 ~14:20 JST：**TTS（serve 端测试时候选选择，不训练）开工**（预登记 `experiments/route_follow/plans/2026-10-16-tts-prereg.md`；代码 `lib/tts.py`、驱动 `JEV_TTS`、`scripts/rf_tts.{py,sh}`；结果 `experiments/route_follow/results/tts/`）。
+  - 候选 K = 16（自己 plan + 横向 ±0.5 / ±1.0 m、曲率 0.8 / 1.2 / 1.4、弧长 0.9 / 1.1、曲率 × 弧长 6 个）；打分 = STACK 后果头 road + agent 概率 + 到喂入路线折线的距离 + 对自己 plan 的偏离，带换手 margin。
+  - 权重拟合（只用 train 行，`fit.md`）：冻结 w_agent 0.5、w_route 0.1 / m、w_dev 0.1 / m、margin 0.02；train 接触 0.099 → 0.063（−3.6 pp，换 10 %，平均偏离 0.06 m），停止线没碰到。
+    **但 train 是头自己的训练行**：头没见过的 inner log −0.2 pp、dev 4 个 log −0.44 pp [−0.75, +0.10]（agent +0.08 pp）；oracle 上限 0.048。离线诚实增益很小，闭环读数照登记走。
+  - 逐位闸过（`ident.json`）：nuPlan 2 场景 36 决策、PAI 2 场景 398 推理，JEV_TTS 未设与改动前代码逐位相同；开 TTS 的 smoke 每个推理都有记录，nuPlan 0 / 36 换、PAI 24 / 398 换（多是横向 −0.5 / −1 m），选择一步 p50 8 ms（nuPlan）/ 14 ms（PAI）。
+  - held 460 @18 + JEV_TTS 已在跑（6 块，priority 9）；held 零分增加不超过 +3 时自动接 PAI 281。

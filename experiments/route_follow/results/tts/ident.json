@@ -1,0 +1,52 @@
+{
+ "nuplan": {
+  "scenes": 2,
+  "decisions": 36,
+  "unmatched": 0,
+  "equal_share": 1.0,
+  "max_abs_m": 0.0,
+  "identical": true
+ },
+ "pai": {
+  "scenes": 2,
+  "decisions": 398,
+  "unmatched": 0,
+  "equal_share": 1.0,
+  "max_abs_m": 0.0,
+  "identical": true
+ },
+ "nuplan_on": {
+  "scenes": 2,
+  "inferences": 36,
+  "with_tts": 36,
+  "switched": 0,
+  "picked": {},
+  "reasons": {
+   "own": 36
+  },
+  "ms_p50": 8.295,
+  "ms_p95": 14.6775,
+  "ok": true
+ },
+ "pai_on": {
+  "scenes": 2,
+  "inferences": 398,
+  "with_tts": 398,
+  "switched": 24,
+  "picked": {
+   "lat-0.5": 12,
+   "lat-1": 7,
+   "lat+0.5": 1,
+   "g0.8": 1,
+   "g0.8s0.9": 3
+  },
+  "reasons": {
+   "own": 374,
+   "switch": 24
+  },
+  "ms_p50": 14.24,
+  "ms_p95": 28.5045,
+  "ok": true
+ },
+ "pass": true
+}
