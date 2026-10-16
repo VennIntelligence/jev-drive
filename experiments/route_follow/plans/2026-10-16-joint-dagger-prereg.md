@@ -65,3 +65,21 @@ rf_recov_post 读数链）全部复用。用户 2026-10-16 09:10 JST 批准本�
 
 `experiments/alpasim/lib/rule_expert.py`（停止线规则）、`experiments/route_follow/scripts/rf_jdagger.{py,sh}`、`rf_expert.sh --expert-stop`、
 `rf_recov_post.{sh,py}`（`submit-held` / `stage2` 分阶段、`ARMROOT` / `RESSUB`、kind J）。盒上 `$DATA_DIR/runs/route_follow/joint_dagger/`，结果 `experiments/route_follow/results/joint_dagger/`。
+
+## Amendment 1（2026-10-16 ~10:00 JST，主会话 09:55 决定；任何新 pilot 之前写好、提交、推送）
+
+原因：四个剂量 pilot 全不过（[pilot.md](../results/joint_dagger/pilot.md)）。标签学得会、迁移得了（dev 标签 ADE −42 至 −49 %），但转弯朝错的方向（等弧长 −1.0 至 −1.5°）：
+弯前专家比策略少转 0.9°、4 s 多走 1.4 m；路口里多转 3.2°，失败前 3 s 多转 2.3°。dev ADE 与 G-rely 由份额决定。所以只留老师比策略好的行，降份额。
+
+- **标签子集**：只要 on1_JDGd 里路口段（DAGGER-CHECK seg = junction）或失败转弯前 3 s（jwin）的行；弯前段与直路 / 自由路行丢掉。标签定义（专家几何按 min(带停止线规则的专家速度,
+  包络上界) 重新计时、去接触）、dev 划分都不变。实际行数：训练 1 162 行 / 26 log（路口 986、窗口 398、两者都是 222），dev 114 行 / 6 log（路口 99、窗口 34）。
+  （主会话写的「路口约 1 085」是训练 + dev 的路口行 986 + 99。）子集内均匀抽取（原 hi ×3 不再有意义：子集全是 hi 行）。
+- **池**：on1_JDGjd（子集）、on1_JDGJ = on1_L18RB0（S，self）+ on1_JDGjd（both），`--on-mode mixed`（`rf_jdagger.py packj`）。
+- **剂量**：DAgger 行占 128 行 batch 的 10 % / 15 % → 取最近整数行：每 batch 期望 13 / 19 行（实际份额 10.2 / 14.8 %），`--on-k` 26 / 32，S 期望 13 行，
+  `--on-weight pool=d:w` 按期望配；人类模仿行 102 → 89 / 83，yaw-rate 13 不变。`--lr-scale 0.3`，route 分支 lr 规则不变（--rm-lr 3e-4）。
+  2 个 pilot：JDGPJ10L03-L18-s0、JDGPJ15L03-L18-s0，1 000 步，seed 0，并行。
+- **闸（线不变）**：dev ADE ≤ 0.56；G-rely true；等弧长转弯（登记的 [−40, 10) m 窗口）≥ +0.3°，另报弯前 [−40, 0) 与路口 [0, 10) 两段（及整个弯 rel ≥ 0，描述）；
+  dev log 行上的 DAgger 标签 ADE 降幅 ≥ 30 %，**判在训练的那类行上（dev 的路口 ∪ 窗口 114 行）**，全部 dev 行、路口行、窗口行、弯前行另报。
+- **之后**：过闸 pilot 由闸作业自己提交 held 460 @18（6 块）；H1 过（零分 ≤ +3；单个晚的、无关的零分按用户口径算噪声，判读时写明）→ 起该剂量全量：
+  2 seed × 2 500 步（JDGJ<share>L03-L18-s{0,1}）→ held 460 → stage 2（公开护栏 + 盒上 PAI 281 seed 0，与盒上参照配对），线按第 5 节。两个都过 H1 → 取转弯增益大的。
+- 两个都不过离线闸：停，报告哪条闸、按段读，不起任何东西。

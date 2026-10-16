@@ -20,7 +20,11 @@ longitudinal) DAgger labels on RSG-L18-s0's own states, the training pools and t
         -> $JD/labels.npz, $JD/labels.json (counts, how often each bound binds, target vs served / expert)
   rf_jdagger.py pack                                          CPU: on1_JDGd (train-log rows, fut = target, jw = hi / lo), on1_JDGdev (dev-log rows,
         never trained), on1_JDG = on1_L18RB0 (S rows, self) + on1_JDGd (both), and the flags per dose -> $JD/flags_<dose>.txt, $JD/pack.json
-  rf_jdagger.py gate --tag T [--base RSG-L18-s0] [--submit-held]   CPU: the registered pilot gates (G-real dev ADE <= 0.56, G-rely, equal-arc
+  rf_jdagger.py packj                                         CPU, Amendment 1: on1_JDGjd = the on1_JDGd rows where the teacher beats the policy
+        (junction segment or the 3 s before a failed turn; turn approach and straight / free-road rows dropped), on1_JDGJ = on1_L18RB0 (S, self)
+        + on1_JDGjd (both), uniform draw inside the subset, flags per dose (j10 / j15: 13 / 19 DAgger rows per 128-row batch, expected)
+        -> $JD/flags_j<share>.txt, $JD/pack_j.json
+  rf_jdagger.py gate --tag T [--base RSG-L18-s0] [--sub] [--submit-held]   CPU: the registered pilot gates (G-real dev ADE <= 0.56, G-rely, equal-arc
         turning >= +0.3 deg, DAgger-label ADE on dev rows drop >= 30 %; failure-window rows reported apart) -> $JD/gate/<tag>.json and a copy in
         results/joint_dagger/; --submit-held: on PASS, the held 460 @18 read and its report (rf_recov_post.sh submit-held)
   rf_jdagger.py xpgate --dir DIR                              (AlpaSim venv) the expert's held read with the stop rule against the stored one
@@ -62,6 +66,7 @@ A_ACC, A_DEC, A_MAX, STOP_M, MARGIN_UP, DT = 1.5, 3.0, 6.0, 1.5, 1.0, 0.1
 LINE_LAT = 3.0
 K_S = 13
 DOSES = {"25": 32, "50": 64}                      # DAgger share of the 128-row batch -> DAgger rows per batch
+DOSES_J = {"j10": 13, "j15": 19}                  # Amendment 1: 10 / 15 % of 128 = 12.8 / 19.2 -> the nearest whole rows (10.2 / 14.8 %)
 HI_W = 3.0
 LINES = dict(dev_ade=0.56, turn=0.3, lab_drop=0.30)
 
@@ -424,6 +429,67 @@ def cmd_pack(a):
     print(json.dumps(rec, indent=1))
 
 
+def cmd_packj(a):
+    """Amendment 1: the junction + failure-window subset of on1_JDGd, merged with the S rows; uniform draw inside the subset."""
+    import rf_recov as RC
+    assert not (CR / "on1_JDGJ" / "tab.npz").exists() or os.environ.get("JDG_FORCE"), "on1_JDGJ exists: JDG_FORCE=1 to rebuild"
+    T = dict(np.load(CR / "on1_JDGd" / "tab.npz"))
+    seg, win = T["jseg"].astype(str), T["jwin"].astype(str) == "1"
+    keep = np.flatnonzero((seg == "junction") | win)
+    RC.subset("JDGd", keep, "JDGjd", {})
+    RC.merge(["on1_L18RB0:s:self", "on1_JDGjd:d:both"], "JDGJ")
+    Mt = dict(np.load(CR / "on1_JDGJ" / "tab.npz"))
+    pool = Mt["pool"].astype(str)
+    n_s, n_d = int((pool == "s").sum()), int((pool == "d").sum())
+    assert n_d == len(keep) and (pool[:n_s] == "s").all(), "merge order: S rows first"
+    Td = dict(np.load(CR / "on1_JDGdev" / "tab.npz"))
+    dsub = (Td["jseg"].astype(str) == "junction") | (Td["jwin"].astype(str) == "1")
+    flags, batch = {}, {}
+    for share, kd in DOSES_J.items():
+        w = kd * n_s / (K_S * n_d)                                  # expected S rows 13, DAgger rows kd per batch (weighted draw with replacement)
+        flags[share] = f"--on on1_JDGJ --on-k {K_S + kd} --on-mode mixed --on-weight pool=d:{w:.6f}"
+        p = kd / (K_S + kd)
+        batch[share] = dict(total=128, yaw_rate=13, s_expected=K_S, dagger_expected=kd, dagger_share=kd / 128, dagger_sd=float(np.sqrt((K_S + kd) * p * (1 - p))),
+                            normal=128 - 13 - K_S - kd, draws_per_row_1000=float(1000 * kd / n_d))
+    for k_, f in flags.items():
+        (JD / f"flags_{k_}.txt").write_text(f + "\n")
+    rec = dict(src="on1_JDGd", rows=int(len(keep)), junction=int((seg[keep] == "junction").sum()), win=int(win[keep].sum()),
+               both=int(((seg == "junction") & win).sum()), logs=len(set(T["log"][keep].astype(str))), dropped=dict(turn_appr=int(((seg == "turn_appr") & ~win).sum()), other=int(((seg != "turn_appr") & (seg != "junction") & ~win).sum())),
+               dev=dict(rows=int(dsub.sum()), junction=int((Td["jseg"].astype(str) == "junction").sum()), win=int((Td["jwin"].astype(str) == "1").sum()),
+                        logs=len(set(Td["log"][dsub].astype(str)))),
+               s_rows=n_s, flags=flags, batch=batch)
+    (JD / "pack_j.json").write_text(json.dumps(rec, indent=1))
+    RES.mkdir(parents=True, exist_ok=True)
+    (RES / "pack_j.json").write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec, indent=1))
+
+
+def turn_seg(tag, base):
+    """Amendment 1: rf_recov's equal-arc turning read split by the row's place on the held turn: approach rel in [-40, 0) m, junction rel in
+    [0, 10) m (both inside the registered [-40, 10) window), and the whole turn rel >= 0 (to exit + 10 m, descriptive)."""
+    import rf_recov as RC
+    (A, PA), (B, PB) = RC.turn_read(tag), RC.turn_read(base)
+    X = A.merge(B, on=["scene", "k", "row", "rel", "bin", "log"], suffixes=("", "_b"))
+    ha, hb, da = [], [], []
+    for _, x in X.iterrows():
+        pa, pb = PA[int(x.j)], PB[int(x.j_b)]
+        a_ = min(RC.arc4(pa), RC.arc4(pb))
+        ha.append(np.degrees(x.sg * RC.heading_at_arc(pa, a_)))
+        hb.append(np.degrees(x.sg * RC.heading_at_arc(pb, a_)))
+        da.append(RC.arc4(pa) - RC.arc4(pb))
+    ha, hb, da = np.array(ha), np.array(hb), np.array(da)
+    rel, lg = X.rel.to_numpy(), X.log.to_numpy()
+    out = {}
+    for nm, m in (("window", (rel >= -40) & (rel < 10)), ("approach", (rel >= -40) & (rel < 0)), ("junction", (rel >= 0) & (rel < 10)), ("turn_all", rel >= 0)):
+        if m.sum() < 2:
+            out[nm] = None
+            continue
+        r = RC.boot_diff(ha[m], hb[m], lg[m])
+        out[nm] = dict(n=int(m.sum()), scenes=int(X[m].scene.nunique()), dh_mean=float((ha - hb)[m].mean()), ci=[r["lo"], r["hi"]],
+                       d_arc4_mean=float(da[m].mean()))
+    return out
+
+
 # ---------------------------------------------------------------- gates
 def lab_read(tag, base, pool, rows):
     """ADE of the tag's and the base's plans to the DAgger target (tab fut) on a fwd row set -> dict (all rows, window rows)."""
@@ -435,10 +501,12 @@ def lab_read(tag, base, pool, rows):
     Tb = np.load(CR / f"on1_{pool}" / "tab.npz")
     f, lg, w = Tb["fut"][rr], Tb["log"][rr].astype(str), Tb["jwin"][rr].astype(str) == "1"
     hi = Tb["jw"][rr].astype(str) == "hi"
+    sg = Tb["jseg"][rr].astype(str)
     ade = lambda P: np.hypot(*(P[..., :2] - f[..., :2]).transpose(2, 0, 1)).mean(1)  # noqa: E731
     at, ab = ade(Pt), ade(Pb)
     out = {}
-    for nm, m in (("all", np.ones(len(rr), bool)), ("hi", hi), ("win", w)):
+    for nm, m in (("all", np.ones(len(rr), bool)), ("hi", hi), ("win", w), ("junction", sg == "junction"), ("sub", (sg == "junction") | w),
+                  ("approach", (sg == "turn_appr") & ~w), ("rest", (sg != "turn_appr") & (sg != "junction") & ~w)):
         if not m.any():
             out[nm] = None
             continue
@@ -459,8 +527,11 @@ def cmd_gate(a):
     L["rely"] = bool(rl["read"]) if "read" in rl else None
     res["turn"], _ = RC.gate_turn(a.tag, a.base)
     L["turn"] = res["turn"]["equal_arc"]["dh_mean"] >= LINES["turn"]
+    if a.sub:                                                       # Amendment 1: turning by segment, the label line on the trained row classes
+        res["turn_seg"] = turn_seg(a.tag, a.base)
     res["lab_dev"] = lab_read(a.tag, a.base, "JDGdev", "dev-rec")
-    L["lab"] = res["lab_dev"]["all"]["drop"] >= LINES["lab_drop"]
+    res["lab_key"] = "sub" if a.sub else "all"
+    L["lab"] = res["lab_dev"][res["lab_key"]]["drop"] >= LINES["lab_drop"]
     try:
         res["lab_train"] = lab_read(a.tag, a.base, "JDGd", "train-rec")         # descriptive: the rows it trains on
     except FileNotFoundError:
@@ -584,12 +655,14 @@ if __name__ == "__main__":
     p = sp.add_parser("label")
     p.add_argument("--workers", type=int, default=24)
     sp.add_parser("pack")
+    sp.add_parser("packj")
     p = sp.add_parser("gate")
     p.add_argument("--tag", required=True), p.add_argument("--base", default="RSG-L18-s0"), p.add_argument("--submit-held", action="store_true")
+    p.add_argument("--sub", action="store_true", help="Amendment 1: label line on the junction + failure-window dev rows, turning by segment")
     p = sp.add_parser("xpgate")
     p.add_argument("--dir", required=True), p.add_argument("--st", default="RSG-L18-s0-XP-L12-E46-ST"), p.add_argument("--xp", default="RSG-L18-s0-XP-L12-E46")
     sp.add_parser("bitcmp")
     sp.add_parser("table")
     a = ap.parse_args()
     JD.mkdir(parents=True, exist_ok=True)
-    dict(stops=cmd_stops, label=cmd_label, pack=cmd_pack, gate=cmd_gate, xpgate=cmd_xpgate, bitcmp=cmd_bitcmp, table=cmd_table)[a.cmd](a)
+    dict(stops=cmd_stops, label=cmd_label, pack=cmd_pack, packj=cmd_packj, gate=cmd_gate, xpgate=cmd_xpgate, bitcmp=cmd_bitcmp, table=cmd_table)[a.cmd](a)

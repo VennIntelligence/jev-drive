@@ -4,9 +4,11 @@
 #   rf_jdagger.sh prep          the whole preparation in one submit: stop files (held pack + the d319 stage packs) -> expert held read with the
 #                               stop rule (rf_expert.sh box-read --expert-stop) -> xpgate; labels -> pools -> reference forward reads; the 60-step
 #                               identity runs (RSG-L18 recipe vs pool on1_JDG at DAgger weight 0) -> bitcmp
-#   rf_jdagger.sh pilot <share> <lr>     1 000-step pilot JDGP<share>L<lr>-L18-s0 (share 25 | 50 % of the 128-row batch, --lr-scale lr) -> forward
-#                               reads -> gate (on PASS the gate job submits the held 460 @18 read + its report itself)
-#   rf_jdagger.sh full <share> <lr>      JDG<share>L<lr>-L18-s{0,1} 2 500 steps (+ X5K=1: JDG<share>L<lr>x5k-L18-s0, 5 000 steps) -> held 460 ->
+#   rf_jdagger.sh packj         Amendment 1: one CPU job building on1_JDGJ (S rows + the junction / failure-window DAgger rows) and flags_j{10,15}
+#   rf_jdagger.sh pilot <share> <lr>     1 000-step pilot JDGP<share>L<lr>-L18-s0 (share 25 | 50 % of the 128-row batch, or j10 | j15 = Amendment 1's
+#                               subset at 10 | 15 %: tag JDGPJ10L03-...; --lr-scale lr) -> forward reads -> gate (j*: --sub; on PASS the gate job
+#                               submits the held 460 @18 read + its report itself)
+#   rf_jdagger.sh full <share> <lr>      JDG<SHARE>L<lr>-L18-s{0,1} 2 500 steps (+ X5K=1: JDG<share>L<lr>x5k-L18-s0, 5 000 steps) -> held 460 ->
 #                               report -> stage2 (public guard + PAI 281 seed 0 only if H1 passes) (rf_recov_post.sh submit-held, STAGE2=1)
 #   rf_jdagger.sh train <share|w0|off> <lr> <seed> <steps> <tag>      (job body)
 # Env: PRIO (pool priority, default 8), AFTER (ids gating prep's first jobs / pilot / full)
@@ -36,16 +38,19 @@ prep)
   g=(); for x in off w0; do g+=($(sub jdg-g-$x "${FW[@]}" --after $k --timeout-h 1 -- bash $ME train $x 0.1 0 60 JDGG-$x)) || exit 1; done
   b=$(sub jdg-bitcmp --after "$(IFS=,; echo "${g[*]}")" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp) || exit 1
   echo "stops $s xpread $(awk '{print $1}' $JD/xpread.txt | paste -sd,) xpgate $xg label $l pack $k fwd-base $f1 gates ${g[*]} bitcmp $b" | tee -a $JD/prep.txt ;;
+packj)
+  k=$(sub jdg-packj --vram 0.5 --cpu 8 --ram 96 --timeout-h 1 ${AFTER:+--after $AFTER} -- $TR $PY packj) || exit 1
+  echo "packj $k" | tee -a $JD/prep.txt ;;
 pilot)   # pilot <share> <lr>
-  SH=$2; LR=$3; T=JDGP${SH}L$(lrtag $LR)-L18-s0
+  SH=$2; LR=$3; T=JDGP${SH^^}L$(lrtag $LR)-L18-s0; GS=; [[ $SH == j* ]] && GS=--sub
   [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
   t=$(sub jdg-pilot-$T "${FW[@]}" --timeout-h 1 ${AFTER:+--after $AFTER} -- bash $ME train $SH $LR 0 1000 $T) || exit 1
   f=$(sub jdg-fwd-$T --after $t --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- bash -c \
       "$TR $RC fwd --pool L18RSGallheld --rows held01 --tags $T && $TR $RC fwd --pool JDGdev --rows dev-rec --tags $T && $TR $RC fwd --pool JDGd --rows train-rec --tags $T") || exit 1
-  gg=$(sub jdg-gate-$T --after $f --vram 0.5 --cpu 4 --ram 32 --timeout-h 1 --env PRIO=${PRIO:-8} -- $TR $PY gate --tag $T --submit-held) || exit 1
+  gg=$(sub jdg-gate-$T --after $f --vram 0.5 --cpu 4 --ram 32 --timeout-h 1 --env PRIO=${PRIO:-8} -- $TR $PY gate --tag $T $GS --submit-held) || exit 1
   echo "$T: train $t fwd $f gate $gg" | tee -a $JD/pilots.txt ;;
 full)    # full <share> <lr>
-  SH=$2; LR=$3; A=JDG${SH}L$(lrtag $LR); ids=()
+  SH=$2; LR=$3; A=JDG${SH^^}L$(lrtag $LR); ids=()
   for s in 0 1; do T=$A-L18-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
     ids+=($(sub jdg-train-$T "${FW[@]}" --timeout-h 2 ${AFTER:+--after $AFTER} -- bash $ME train $SH $LR $s 2500 $T)) || exit 1; done
   ARMROOT=$JD KIND=J RESSUB=joint_dagger STAGE2=1 PRIO=${PRIO:-8} bash experiments/route_follow/scripts/rf_recov_post.sh submit-held $A $A-L18-s0 $A-L18-s1 ${ids[0]} ${ids[1]} || exit 1
