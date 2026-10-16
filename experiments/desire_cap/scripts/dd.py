@@ -193,11 +193,67 @@ def cmd_lowreport(a):
     print("\n".join(L))
 
 
+# ---------------------------------------------------------------- gates (GPU, op-train)
+def cmd_gates(a):
+    """G-none: pai_core.plan / sh30_core.Core.plan with desire None = the pre-D0 code (bc194ff7) and = an all-zero queue, bit for bit, on
+    RSG-L18-s0 with real served route memories; G-feed: an LCR / LCL pulse moves the 4 s plan to its side."""
+    import importlib.util
+    import subprocess
+    import tempfile
+    import torch
+    sys.path[:0] = [str(REPO / "experiments/alpasim/lib")]
+    import pai_core as PC
+    C = PC.C
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / "pai_core_old.py").write_text(subprocess.run(["git", "show", "bc194ff7:experiments/alpasim/lib/pai_core.py"], cwd=REPO, capture_output=True,
+                                                         text=True, check=True).stdout)
+    spec = importlib.util.spec_from_file_location("pai_core_old", tmp / "pai_core_old.py")
+    OLD = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(OLD)
+    core = C.Core("RSG-L18-s0", "cuda")
+    recs = []
+    for line in open(sorted(glob.glob(str(REF281 / "runs/*/driver/drive.jsonl")))[0]):
+        if '"rmem"' in line and '"infer": true' in line:
+            r = json.loads(line)
+            if r["k"] % 37 == 5:
+                recs.append(r)
+        if len(recs) >= 6:
+            break
+    g = torch.Generator().manual_seed(0)
+    res = dict(rows=[])
+    for r in recs:
+        cur = torch.randint(0, 256, (8,) + C.FRAME, generator=g, dtype=torch.uint8).numpy()
+        P, V = np.asarray(r["hist"], np.float64), np.tile([[10.0 * r["ego"][4], 0.0]], (4, 1))
+        args = (cur, np.ones(8, bool), P, V, np.zeros(2), np.eye(4)[r["cmd"]], [1.7, 0.0, 1.5])
+        rf = np.asarray(r["rmem"], np.float32)
+        o_old = OLD.plan(core, *args, route=rf)
+        o_new = PC.plan(core, *args, route=rf)
+        o_zero = PC.plan(core, *args, route=rf, desire=np.zeros((1, 33, 8), np.float32))
+        o_r = PC.plan(core, *args, route=rf, desire=RD.desire_queue(4, 0.0, 0.0))
+        o_l = PC.plan(core, *args, route=rf, desire=RD.desire_queue(3, 0.0, 0.0))
+        k = dict(k=r["k"], scene=r["scene"][7:15], g_none=bool(np.array_equal(o_old["mu"], o_new["mu"]) and np.array_equal(o_old["poses"], o_new["poses"])),
+                 g_zero=bool(np.array_equal(o_new["mu"], o_zero["mu"])), dy4_R=float(o_r["poses"][7, 1] - o_new["poses"][7, 1]),
+                 dy4_L=float(o_l["poses"][7, 1] - o_new["poses"][7, 1]))
+        res["rows"].append(k)
+        print(k)
+    keys = [np.zeros(C.FRAME, np.uint8)] * 4
+    b = [core.plan(keys, np.zeros((4, 3)), np.tile([[8.0, 0.0]], (4, 1)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5], route=rf, desire=d)
+         for d in (None, np.zeros((1, 33, 8), np.float32))]
+    res["sh30_g_zero"] = bool(np.array_equal(b[0]["mu"], b[1]["mu"]))
+    res["G_none"] = all(x["g_none"] and x["g_zero"] for x in res["rows"]) and res["sh30_g_zero"]
+    res["G_feed"] = all(x["dy4_R"] < -0.05 for x in res["rows"])
+    Path(a.out).write_text(json.dumps(res, indent=1) + "\n")
+    print("G-none", res["G_none"], "G-feed (right)", res["G_feed"], "sh30 zero", res["sh30_g_zero"])
+    assert res["G_none"], "G-none failed"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("scenes")
     sp.add_parser("lowrows")
+    p = sp.add_parser("gates")
+    p.add_argument("--out", default=str(D0 / "gates.json"))
     p = sp.add_parser("lowplans")
     p.add_argument("--tags", nargs="+", default=["P0", "RSG-L18-s0", "RSG-L18-s1"])
     p.add_argument("--force", action="store_true")
@@ -205,7 +261,7 @@ def main():
     p.add_argument("--root", default=str(OUT))
     p.add_argument("--out", default=str(RES))
     a = ap.parse_args()
-    {"scenes": cmd_scenes, "lowrows": cmd_lowrows, "lowplans": cmd_lowplans, "lowreport": cmd_lowreport}[a.cmd](a)
+    {"scenes": cmd_scenes, "lowrows": cmd_lowrows, "lowplans": cmd_lowplans, "lowreport": cmd_lowreport, "gates": cmd_gates}[a.cmd](a)
 
 
 if __name__ == "__main__":

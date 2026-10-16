@@ -34,6 +34,10 @@ RouteDesire (stateful, one per session): openpilot desire_helper.py's lane-chang
   v_min     the speed gate (openpilot LANE_CHANGE_SPEED_MIN = 8.9 m/s, 20 mph; below it openpilot sends turn desires, which decision 332
             shows are not a junction-turn pathway): a parameter, chosen by the low-speed read (plans/2026-10-17-desire-d0-prereg.md)
 
+Serving (pai_driver / sh30_driver): JEV_DESIRE=1 turns it on, JEV_DESIRE_VMIN the gate (default V_MIN); one RouteDesire per session, stepped
+at every inference on the fed route memory and the measured vx; serve() -> the queue for PModel.forward(desire=) (None while empty: the call
+is then the one without JEV_DESIRE) and the drive.jsonl `desire` record.
+
 desire_queue(d, t_on, t): the policy's desire input `_to_copy` (1, 33, 8) as modeld builds it: 20 Hz queue of 132 steps, max over 4 ->
   33 blocks of 0.2 s, block 32 = the newest; a pulse of age A s sits in block 32 - floor(A / 0.2) while A < 6.6 s. Zeros when d = 0 or the
   state is off (a cleared state clears the queue: unlike modeld, the route can take a desire back). dc.py's open-loop ages 0 / 0.4 / 1 / 2 s
@@ -41,6 +45,7 @@ desire_queue(d, t_on, t): the policy's desire input `_to_copy` (1, 33, 8) as mod
 """
 from __future__ import annotations
 
+import os
 import warnings
 
 import numpy as np
@@ -197,3 +202,16 @@ def desire_queue(d: int, t_on, t) -> np.ndarray:
     if b is not None:
         q[0, b, d] = 1.0
     return q
+
+
+ON = os.environ.get("JEV_DESIRE", "") not in ("", "0")          # drivers: feed the route's lane-change desire (off by default)
+SERVE_VMIN = float(os.environ.get("JEV_DESIRE_VMIN", "") or V_MIN)
+SUFFIX = f"-des{SERVE_VMIN:g}" if ON else ""
+
+
+def serve(rd: RouteDesire, t: float, v: float, f):
+    """One served decision: step the session's machine and build the queue -> (queue (1, 33, 8) or None when nothing is in it, log dict).
+    None keeps the driver's model call exactly as without JEV_DESIRE."""
+    d = rd.step(t, v, f)
+    b = block_of(rd.t_on, t) if d else None
+    return (desire_queue(d, rd.t_on, t) if b is not None else None), {**rd.log(), "d": d, "blk": b}

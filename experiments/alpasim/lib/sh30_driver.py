@@ -85,6 +85,10 @@ import perturb as PT  # noqa: E402
 import vhist as VH  # noqa: E402
 import sh30_core as C  # noqa: E402
 
+RDS = None                                           # JEV_DESIRE (lib/route_desire.py, on sh30_core's path): not imported unless set
+if os.environ.get("JEV_DESIRE", "") not in ("", "0"):
+    import route_desire as RDS  # noqa: E402
+
 TS = None                                            # JEV_TTS (lib/tts.py, on sh30_core's path): not imported unless set
 if os.environ.get("JEV_TTS", "") not in ("", "0"):
     import tts as TS  # noqa: E402
@@ -302,6 +306,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 return (*_xy(s.poses[near]), yaw_from_quat(s.poses[near].pose.quat))
             if s.rt is not None and self.core.rm and self.rmem_on:
                 rf = s.rt.features(t0, pose_of, (*_xy(anchor), yaw0))
+            dq = dlog = None
+            if RDS is not None:                              # JEV_DESIRE: the route's lane-change desire on the fed memory and the measured vx
+                s.rd = getattr(s, "rd", None) or RDS.RouteDesire(RDS.SERVE_VMIN)
+                dq, dlog = RDS.serve(s.rd, t0 * 1e-6, float(dyn[-1][0][0]), rf)
             sf = sfi = None
             if s.rxm is not None:                            # the reflex module's self-state: the previous served plan against the pose now
                 rxp = TR.anchor((*_xy(anchor), yaw0), anchor.pose.quat)[0] if TR.ON else (*_xy(anchor), yaw0)   # the served frame's convention (tilt)
@@ -326,7 +334,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 mo = self.motion(s)
                 o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo,
                                    **({"route": rf} if self.core.rm else {}), **({"ego_fn": efn} if efn else {}),
-                                   **({"selfstate": sf} if s.rxm is not None else {}))
+                                   **({"selfstate": sf} if s.rxm is not None else {}), **({"desire": dq} if dq is not None else {}))
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -393,6 +401,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                        **({"route_arcs": np.round(rG, 3).tolist()} if RP.NEED_GT and rG is not None else {}))
         if "rmem" in o:
             rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+        if dlog is not None:
+            rec.update(desire=dlog)
         if "rx" in o:                                        # the fed self-state (valid 0: no previous decision, or JEV_REFLEX_OFF=1)
             rec.update(rx=np.asarray(o["rx"], np.float64).round(5).tolist(), rx_dt=(sfi or {}).get("dt"))
         if "poses_k" in o:                                   # flow head (thead.pt): its samples of noise rows 0 .. K - 1
@@ -412,7 +422,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{RP.SUFFIX}{VH.SUFFIX}{XP.SUFFIX}{PT.SUFFIX}{BD.SUFFIX if BD else ''}{TS.SUFFIX if TS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{RP.SUFFIX}{VH.SUFFIX}{XP.SUFFIX}{PT.SUFFIX}{BD.SUFFIX if BD else ''}{TS.SUFFIX if TS else ''}{RDS.SUFFIX if RDS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 
@@ -480,6 +490,9 @@ def main() -> None:
         import rmem as ACCR
         LOG.info("serving JEV_ACC: a_lat %g, curve decel %g, decel %g, handoff %g s, releases arc %g m / dec %g m/s^2", FX.ACC_ALAT,
                  FX.ACC_DCURVE, FX.ACC_DMAX, FX.ACC_T_HAND_NUPLAN, FX.ACC_REL_ARC, FX.ACC_DEC_REL)
+    if RDS is not None:
+        assert core.rm and os.environ.get("SH30_RMEM", "1") != "0", "JEV_DESIRE reads the fed route memory: a ROUTE-MEM checkpoint with the memory on"
+        LOG.info("serving JEV_DESIRE: route lane-change desire, v_min %g m/s (lib/route_desire.py)", RDS.SERVE_VMIN)
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])

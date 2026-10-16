@@ -33,7 +33,8 @@ the controller is a feasible reference built from the plan and the ego state, ne
 guard, which reads the time since the session's first drive call and whether the lead limit cuts the served speed; **default `gate`** since
 decision 309, JEV_TRACK=0 = the old path; the old path is forced with JEV_EXPERT, JEV_TURN_GAIN != 1 or JEV_INTENT_HOLD), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
-row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
+row; off by default), JEV_DESIRE / JEV_DESIRE_VMIN (1 / <m/s>: the route's lane-change desire in the policy's desire queue, lib/route_desire.py,
+on the fed route memory; logged as `desire`; off by default: not imported), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
 travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
 turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default), JEV_EXPERT (a pack directory:
 the rule expert's plan replaces the model's, rule_expert.py, mounted by pai_run.sh; `poses` = the expert's plan, `poses_model` the model's,
@@ -75,6 +76,10 @@ import vhist as VH
 from pai_core import C, I
 
 TS = getattr(S, "TS", None)                          # JEV_TTS (lib/tts.py), imported by sh30_driver only when set (the Tokyo image's older sh30_driver has none)
+
+RDS = None                                           # JEV_DESIRE (lib/route_desire.py): imported only when set
+if os.environ.get("JEV_DESIRE", "") not in ("", "0"):
+    import route_desire as RDS
 
 IH = None                                            # JEV_INTENT_HOLD (intent_hold.py): imported only when set, so other mounts need not carry it
 if os.environ.get("JEV_INTENT_HOLD", "") not in ("", "0"):
@@ -140,6 +145,7 @@ class Session:
         self.lock = threading.Lock()
         self.t_first = None                          # time_now of the session's first drive call (track_ref's v9 handoff guard)
         self.ih = IH.new() if IH is not None else None   # JEV_INTENT_HOLD: the session's intent path
+        self.rd = RDS.RouteDesire(RDS.SERVE_VMIN) if RDS is not None else None   # JEV_DESIRE: the route's lane-change state machine
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
     def pose_at(self, ts: int):
@@ -290,6 +296,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 acc = dict(route=s.racc.polyline(t0, s.rpose.get, p0), t_s=(now - s.t_first) * 1e-6) if FX.ACC else {}
                 if RM_SC and rf is not None and len(rf) == RMEM.DIM_O:   # JEV_RM_SC: the ordered memory's 3 scalars changed (diagnostic)
                     rf = rm_scalars(rf)
+                dq = dlog = None
+                if s.rd is not None:                         # JEV_DESIRE: the route's lane-change desire on the fed memory and the measured vx
+                    dq, dlog = RDS.serve(s.rd, t0 * 1e-6, float(V[-1][0]), rf)
                 sf = sfi = None
                 if s.rxm is not None:                        # reflex self-state: the decision 0.5 s back (reflex_mem.LAG_US) against the pose now,
                     rxp = (TR.anchor(p0, s.poses[min(s.poses, key=lambda t: abs(t - t0))].pose.quat)[0] if TR.ON else p0)   # in the served frame's convention
@@ -312,7 +321,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 with self.gpu:
                     t_g = time.perf_counter()
                     o = PC.plan(self.core, cur, valid, P, V, dyn[-1][1], cmd, s.cam_t, self.lht, **({"route": rf} if s.rt is not None else {}),
-                                **({"ego_fn": efn} if efn else {}), **({"selfstate": sf} if s.rxm is not None else {}))
+                                **({"ego_fn": efn} if efn else {}), **({"selfstate": sf} if s.rxm is not None else {}), **({"desire": dq} if dq is not None else {}))
             except Exception as e:
                 s.count["inference_error"] += 1
                 LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -378,6 +387,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(tg=tgr, **({"poses_branch": np.round(served, 4).tolist()} if tgr["on"] else {}))
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+            if dlog is not None:
+                rec.update(desire=dlog)
             if ti is not None:
                 rec.update(tts=ti, **({"poses_own": np.asarray(o["poses_own"]).round(4).tolist()} if ti["k"] else {}))
             if "rx" in o:
@@ -398,7 +409,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}{TS.SUFFIX if TS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}{TS.SUFFIX if TS else ''}{RDS.SUFFIX if RDS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -470,6 +481,9 @@ def main() -> None:
         TS.load(core.dev)
         LOG.info("serving JEV_TTS: K %d candidates, weights %s (%s)", TS.K, TS.SEL.w, TS.SEL.wfile)
     LOG.info("JEV_RM_SC %s", RM_SC or "unset")
+    if RDS is not None:
+        assert RMEM and os.environ.get("SH30_RMEM", "1") != "0", "JEV_DESIRE reads the fed route memory: a ROUTE-MEM checkpoint with the memory on"
+        LOG.info("serving JEV_DESIRE: route lane-change desire, v_min %g m/s (lib/route_desire.py)", RDS.SERVE_VMIN)
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.NAME,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros

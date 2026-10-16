@@ -272,7 +272,7 @@ class Core:
         return time.perf_counter()
 
     def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, motion: float | None = None, route=None,
-             ego_fn=None, selfstate=None) -> dict:
+             ego_fn=None, selfstate=None, desire=None) -> dict:
         """One decision. keys: the m <= 4 newest keyframes (packed, 0.5 s apart, oldest first, the last at t0); pose (m, 3) x, y, yaw of
         the rear axle at those times in the t0 frame; vel (m, 2) body velocities; acc (2,) and cmd (4,) NAVSIM one-hot [L, S, R, unknown]
         at t0; cam_t the camera position in the ego frame; yaw_rate of the oldest state (cold start only); motion: the share of the
@@ -280,7 +280,8 @@ class Core:
         features (rmem.DIM,) of a checkpoint with the ROUTE-MEM branch (None = an empty memory; ignored without the branch); ego_fn: the
         measured ego row (20,) -> the row fed to the adapter (vhist.py, JEV_VHIST; None = the measured row, unchanged); selfstate: the
         reflex module's self-state (reflex.SF,) of a checkpoint with the module (None, or JEV_REFLEX_OFF=1: reflex.empty(), valid 0;
-        ignored without the module) -> also "rx", the fed self-state.
+        ignored without the module) -> also "rx", the fed self-state; desire: the policy's desire queue (1, 33, 8) (lib/route_desire.py,
+        JEV_DESIRE; None = the shipped zeros, the call unchanged; with a queue the policy runs uncompiled through PModel.forward(desire=)).
         -> poses (8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in the t0 frame, mu (33, 15), ego (20,) (the measured row), ego_fed (only with ego_fn),
         frames, stage times (ms)."""
         torch, A = self.torch, self.A
@@ -311,7 +312,10 @@ class Core:
                 sf = RX.empty() if selfstate is None or RX.OFF else np.asarray(selfstate, np.float32).reshape(RX.SF)
                 row = np.r_[row, sf]
             ego_t = torch.from_numpy(row[None]).to(self.dev)
-            out = (self._pol or self.model)(H, ego_t, tc)
+            if desire is None:
+                out = (self._pol or self.model)(H, ego_t, tc)
+            else:
+                out = self.model(H, ego_t, tc, desire=torch.as_tensor(np.asarray(desire, np.float32), device=self.dev).reshape(1, 1, 33, 8))
             out, h = out if self.th is not None else (out, None)
             out = out.float()
             th = {}

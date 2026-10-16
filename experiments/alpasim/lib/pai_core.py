@@ -143,14 +143,15 @@ def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000, k
 
 
 def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False, route=None, ego_fn=None,
-         selfstate=None) -> dict:
+         selfstate=None, desire=None) -> dict:
     """One decision from the slot frames (array, or key_slots' tensor on the card): sh30_core.Core.plan after its frame synthesis. P (4, 3),
     V (4, 2) history at op_interp.T_KEY in the t0 frame, acc (2,), cmd (4,) one-hot [L, S, R, unknown] -> poses (8, 3) rear-axle x, y, yaw
     at 0.5 .. 4 s, stage times. route: rmem features (core.rm_dim,) appended to the ego row when the core serves the ROUTE-MEM branch
     (core.rm, set by pai_driver; None = an empty memory; ignored otherwise) -> also "rmem", the fed features. ego_fn: the measured ego row
     -> the row fed to the adapter (vhist.py, JEV_VHIST; None = unchanged) -> also "ego_fed"; "ego" stays the measured row. selfstate: the
     reflex module's self-state appended last when the core serves the module (core.rx; sh30_core.Core.plan's rule) -> also "rx".
-    "tokens" / "valid": the fed slots' tokens and the slot mask, as sh30_core.Core.plan returns them (lib/tts.py, JEV_TTS)."""
+    "tokens" / "valid": the fed slots' tokens and the slot mask, as sh30_core.Core.plan returns them (lib/tts.py, JEV_TTS). desire: the policy's
+    desire queue (1, 33, 8) (lib/route_desire.py, JEV_DESIRE) through PModel.forward(desire=); None = the shipped zeros, the call unchanged."""
     torch, A = core.torch, core.A
     t0 = time.perf_counter()
     gpu = not isinstance(cur, np.ndarray)
@@ -172,7 +173,8 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
             sf = RX.empty() if selfstate is None or RX.OFF else np.asarray(selfstate, np.float32).reshape(RX.SF)
             row = np.r_[row, sf]
         ego_t = torch.from_numpy(row[None]).to(core.dev)
-        out = core.model(H, ego_t, tc).float()
+        dq = None if desire is None else torch.as_tensor(np.asarray(desire, np.float32), device=core.dev).reshape(1, 1, 33, 8)
+        out = (core.model(H, ego_t, tc) if dq is None else core.model(H, ego_t, tc, desire=dq)).float()
         mu = out[0, core.pi].reshape(33, 15).cpu().numpy()
         sl = core.model.net.slices                          # the lead outputs of the same pass, for serve_fix.py (JEV_LEAD)
         ld = {k: out[0, sl[k]].cpu().numpy() for k in ("lead", "lead_prob")} if getattr(core, "lead_out", False) else {}
