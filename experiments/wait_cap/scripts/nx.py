@@ -20,6 +20,12 @@ Outputs: box runs/wait_cap/next/, repo results/next/.
   acgate --j T2 T4 --c C --dose-of 0.2=T2,0.4=T4 [--submit]   (CPU)  the (iv) lines -> results/next/ac_pilot_gate.{json,md}; --submit: held
                 460 @18 for the passing arms (nx.sh ac-held), then `acheld`
   acheld --j T.. --c C   (CPU)  held 460 @18 per arm vs C (one seed; wt.xpair) + rf_follow turns -> results/next/ac_held.{json,md}
+Prereg 补记 1 (the user's exploratory continuation of RTB1-F-s0 after its pilot STOP; no registered verdict file is touched):
+  devdecomp --j T.. --c C --out NAME   (CPU)  wt_devdecomp on the gate-4 dev rows: plans = next/hist s = 1 (each reproduced its DONE dev ADE),
+                P0 = 补记 D's devall (same rows) -> next/devdecomp/devall.npz -> results/next/NAME.{json,md}
+  cont --j T --dir D --out NAME   (CPU)  one continuation arm vs RSG-L18-s0 and WTC-L18-s0: held 460 @18 (wt.xpair), 24 held turns (rf_follow in
+                D/follow), the static public scene @10 (distance, contact), PAI stop17 zeros, arrival replay, dev ADE; references P0 / RSG-L18-s0 /
+                WTCP-L18-s0 from 补记 D / E -> results/next/NAME.{json,md}, D/FINISHED
 """
 from __future__ import annotations
 
@@ -371,6 +377,90 @@ def cmd_acheld(a):
     write("ac_held", res, L)
 
 
+# ---------------------------------------------------------------- prereg 补记 1: RTB1 continuation (exploratory)
+XD, XE = wt.OUT / "explore", wt.OUT / "explore_e"
+REFS = ("RSG-L18-s0", "WTC-L18-s0")
+CL_REF = {"P0": (XE / "static/P0/run", XE / "paisub/P0"), "RSG-L18-s0": (XE / "static/RSG-L18-s0/run", XE / "paisub/RSG-L18-s0"),
+          "WTCP-L18-s0": (XD / "sub/WTCP-L18-s0/run", XD / "paisub/WTCP-L18-s0")}
+
+
+def cmd_devdecomp(a):
+    import shutil
+    import wt_devdecomp as DD
+    d = np.load(XD / "devall.npz")
+    H = {t: np.load(NX / "hist" / f"{t}.npz") for t in a.j + [a.c]}
+    for t, h in H.items():
+        assert np.array_equal(h["rows"], d["rows"]) and np.allclose(h["fut"], d["fut"], atol=1e-5), t
+    w = np.load(NX / "hist" / "WTCP-L18-s0.npz")["plan_1.0"]                 # the hist read (no side input) against devall's (side input) plan
+    print("WTCP-L18-s0 hist s = 1 vs devall plan: max |diff|", float(np.abs(w - d["plan_WTCP-L18-s0"]).max()), "m")
+    o = NX / "devdecomp"
+    o.mkdir(parents=True, exist_ok=True)
+    np.savez(o / "devall.npz", **{k: d[k] for k in ("rows", "names", "log", "fut", "speed", "plan_P0", "lead_gap", "lead_close", "ped", "ctx_ok")},
+             tags=np.array(["P0"] + a.j + [a.c]), **{f"plan_{t}": H[t]["plan_1.0"] for t in H})
+    DD.main(str(o / "devall.npz"), str(o / a.out), ctl=a.c)
+    RES.mkdir(parents=True, exist_ok=True)
+    for x in ("json", "md"):
+        shutil.copy(o / f"{a.out}.{x}", RES / f"{a.out}.{x}")
+
+
+def static_of(run):
+    f = Path(run) / "aggregate/results-summary.json"
+    if not f.exists():
+        return None
+    r = next((r for r in json.loads(f.read_text())["rollouts"] if r["clipgt_id"] == wt.STATIC_PUB), None)
+    m = (r or {}).get("metrics") or {}
+    return None if r is None else dict(score=float(r.get("score") or 0.0), dist=float(m.get("dist_traveled_m", np.nan)),
+                                       collision=bool(m.get("collision_any", 0) > 0), min_gap=float(m.get("min_distance_to_obstacle_m", np.nan)))
+
+
+def stop17_of(d):
+    m = wt.metrics(glob.glob(f"{d}/runs/*/sim"))
+    full = [wt.pai_full(p) for p in wt.STOP17]
+    return dict(zeros=sum(m[s][0] == 0 for s in full if s in m), n=sum(s in m for s in full))
+
+
+def cmd_cont(a):
+    sys.path.insert(0, str(REPO / "experiments/route_follow/scripts"))
+    import rf_recov_post as RP
+    t, D = a.j, Path(a.dir)
+    MJ = wt.metrics(glob.glob(wt.xdirs("held", t)))
+    res = dict(arm=t, held={}, cl={}, arrival={}, dev_ade={})
+    for c in REFS:
+        r = wt.xpair(MJ, wt.metrics(glob.glob(wt.xdirs("held", c))))
+        h = RP.h2_held(D, [t], [c])
+        r["turns"] = None if h is None else dict(completed={k: v["completed"] for k, v in h["counts"].items()}, turns={k: v["turns"] for k, v in h["counts"].items()},
+                                                 paired=h["paired"], common=h["common_turns"])
+        r["line_zeros"] = bool(r["J"]["zeros"] <= r["C"]["zeros"] + 3)
+        r["line_turns"] = bool(h is not None and h["counts"][t]["completed"] >= h["counts"][c]["completed"] - 2)
+        res["held"][c] = r
+    for k, (st, pd) in {t: (D / f"static/{t}/run", D / f"paisub/{t}"), **CL_REF}.items():
+        res["cl"][k] = dict(static=static_of(st), stop17=stop17_of(pd))
+    for k in (t, "RTB1-F-s0", "RB0-F-s0", "RSG-L18-s0", "WTCP-L18-s0", "P0"):
+        f = NX / "arrival" / f"{k}.json"
+        res["arrival"][k] = arrival_of(k)[1] if f.exists() else None
+        if k != "P0":
+            res["dev_ade"][k] = wt.dev_ade(k)
+    s = res["cl"][t]["static"]
+    res["stop_seen"] = bool((s is not None and not s["collision"] and s["dist"] <= 1.0) or res["cl"][t]["stop17"]["zeros"] <= 15)
+    L = [f"# 补记 1 (exploratory): {t} closed loop, one seed", "", "| vs | zeros (<= C + 3) | mean | paired [session CI] | progress_rel | offroad | at-fault | "
+         "turns /24 (>= C - 2) |", "|---|--:|--:|--:|--:|--:|--:|--:|"]
+    for c, r in res["held"].items():
+        tc = (r["turns"] or {}).get("completed", {})
+        L.append(f"| {c} | {r['J']['zeros']} (C {r['C']['zeros']}) | {r['J']['mean']:.3f} (C {r['C']['mean']:.3f}) | {r['paired']} | {r['J']['progress_rel']:.3f} "
+                 f"(C {r['C']['progress_rel']:.3f}) | {r['J']['offroad']} (C {r['C']['offroad']}) | {r['J']['at_fault']} (C {r['C']['at_fault']}) | {tc.get(t)} (C {tc.get(c)}) |")
+    L += ["", "| tag | static: distance (m) | static: contact | static: min gap (m) | stop17 zeros | arrival 4 s arc @k=1 (m) | dev ADE |", "|---|--:|:-:|--:|--:|--:|--:|"]
+    for k in [t] + list(CL_REF):
+        s, p = res["cl"][k]["static"], res["cl"][k]["stop17"]
+        ar, de = res["arrival"].get(k), res["dev_ade"].get(k)
+        f2 = lambda x, q=".2f": "-" if x is None else format(x, q)  # noqa: E731
+        L.append(f"| {k} | {f2(s and s['dist'])} | {'-' if s is None else ('yes' if s['collision'] else 'no')} | {f2(s and s['min_gap'])} | "
+                 f"{p['zeros']} / {p['n']} | {f2(ar)} | {f2(de, '.4f')} |")
+    L += ["", f"arrival-stop seen in closed loop (static no contact and <= 1.0 m, or stop17 zeros <= 15): {res['stop_seen']}",
+          "dev ADE: " + ", ".join(f"{k} {v:.4f}" for k, v in res["dev_ade"].items())]
+    write(a.out, res, L)
+    (D / "FINISHED").write_text("ok\n")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -391,5 +481,9 @@ if __name__ == "__main__":
     p.add_argument("--submit", action="store_true"), p.add_argument("--dry", action="store_true", help="print only")
     p = sp.add_parser("acheld")
     p.add_argument("--j", required=True), p.add_argument("--c", required=True)
+    p = sp.add_parser("devdecomp")
+    p.add_argument("--j", nargs="+", required=True), p.add_argument("--c", required=True), p.add_argument("--out", required=True)
+    p = sp.add_parser("cont")
+    p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
+    dict(devdecomp=cmd_devdecomp, cont=cmd_cont, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)

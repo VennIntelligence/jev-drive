@@ -16,8 +16,15 @@
 #   nx.sh ac-pilot          (iv) ACS2P-L18-s0 / ACS4P-L18-s0: RSG-L18 recipe 1 000 steps + --ego-scale-speed 0.5 --ego-scale-max 0.2 | 0.4 (after ac identity)
 #                           -> dev plans, history-scale read, waitcap plans -> nx.py acgate --submit (control WTCP-L18-s0; PASS -> ac-held)
 #   nx.sh ac-held T,T       held 460 @18 (6 chunks per tag) -> rf_follow (tags + WTCP-L18-s0) -> nx.py acheld
+#   nx.sh rtb-cont          prereg 补记 1 (the user's exploratory continuation of RTB1-F-s0 after its pilot STOP), one chain, two variants:
+#                           (A) RTB1O-L18-s0 = the RSG-L18 recipe (WTC-L18-s0's command, 2 500 steps) with --init RTB1-F-s0 on the existing pool on1_L18RB0;
+#                           (B) RTB1-F-s0 rolls onpol-train at 18 decisions (ol_chain roll1 x 6) -> rows L18RTB1 (ol_chain geo / tok, control smoke10eY /
+#                           strip) -> rm_build pool -> poolgate -> RTB1N-L18-s0 = the same recipe on on1_L18RTB1; after each training `cont-reads`
+#   nx.sh rtb-decomp        补记 1: wt_devdecomp of RTB1-F-s0 / RTB3-F-s0 vs RB0-F-s0 on the gate-4 dev rows -> results/next/rtb_devdecomp.{json,md}
+#   nx.sh cont-reads <a|b> <tag>   job body (after the training): held 460 @18 (6 chunks), static public scene @10 (SH30_DUMP), PAI stop17 (PAI
+#                           config), arrival replay -> rf_follow (tag + RSG-L18-s0 + WTC-L18-s0) -> nx.py cont -> results/next/rtb_cont_<a|b>, cont/<a|b>/FINISHED
 #   nx.sh train <arm> <seed> <steps> <tag>   job body; arm: rb0 | rsg (the recipes, flags off) | rta0.3 | rta1 | rtb1 | rtb3 | rtsmoke | rtsmokea |
-#                           rtsmokeb | acs2 | acs4 | acsmoke
+#                           rtsmokeb | acs2 | acs4 | acsmoke | rtbo | rtbn
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 X=$DATA_DIR/runs/wait_cap/next; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/nx.sh; PY=experiments/wait_cap/scripts/nx.py
@@ -30,6 +37,10 @@ RSG="--init RB0-F-s0 --warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --ag
 TEA=$DATA_DIR/runs/desire_cap/train/teacher; RSG_HASH60=ea8cacc3e451c577
 RTA=(RTA03P-L18-s0 RTA1P-L18-s0); RTB=(RTB1-F-s0 RTB3-F-s0); ACJ=(ACS2P-L18-s0 ACS4P-L18-s0); RTC=RB0-F-s0; ACC=WTCP-L18-s0
 NAV=runs/wait_cap/next/approach_nav.npz; KD="--kd-nav $NAV --kd-nav-k 8 --d2-teacher $TEA"
+OLW=$DATA_DIR/runs/onpol_long; OL=experiments/onpol_long/scripts/ol_chain.sh; B0=RTB1-F-s0; NP=L18RTB1                   # 补记 1
+STATIC=2021.09.16.15.12.03_veh-42_01037_01434-b5b8d20688385790; PAICH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks      # = wt.sh
+STOP17="054b5901 095cf563 127c4f85 2d10a08d 35e082a4 3fe2bac8 44df49fe 4cb7f7ac 4ecc114d 559d4ad6 68c3be44 7d994ed3 9f8acd00 ba40be62 bc309fd6 cbd87234 fc9fde87"
+PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1"; PAIWIZ=controller.gains.rel_front_steering_angle_weight=10
 mkdir -p $X/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-next --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $X/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $X/jobs.txt; echo "$id"; }
@@ -108,6 +119,40 @@ ac-held)
   f=$(sub nx-acfollow --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash -c "mkdir -p $X/acfollow && $AP experiments/route_follow/scripts/rf_follow.py --runs $R --out $X/acfollow/follow --workers 16") || exit 1
   g=$(sub nx-acheld --after $f --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY acheld --j $JJ --c $ACC) || exit 1
   echo "ac-held $JJ: held $(csv ${hh[@]}) follow $f summary $g" | tee -a $X/stages.txt ;;
+rtb-cont)
+  Y=$X/cont; [[ ! -e $Y ]] || { echo "$Y exists" >&2; exit 1; }; fresh RTB1O-L18-s0 RTB1N-L18-s0
+  [[ -f $CK/$B0/ckpt-final.pt && ! -e $OLW/roll/$B0 && ! -e $OLW/rows/$NP && ! -e $DATA_DIR/runs/op_parity/cache/on1_$NP ]] || { echo "no $B0 or $NP exists" >&2; exit 1; }
+  mkdir -p $Y/a $Y/b $OLW/roll/$B0; echo $STATIC > $Y/static.txt
+  cat $PAICH/*.txt | grep -E "^clipgt-($(echo $STOP17 | tr ' ' '|'))" | sort -u > $Y/stop17.txt
+  (( $(wc -l < $Y/stop17.txt) == 17 )) || { echo "stop17 list: $(wc -l < $Y/stop17.txt) scenes" >&2; exit 1; }
+  ta=$(sub nx-train-RTB1O-L18-s0 "${FW[@]}" --timeout-h 2 -- bash $ME train rtbo 0 2500 RTB1O-L18-s0) || exit 1
+  pa=$(sub nx-cont-a --after $ta --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads a RTB1O-L18-s0) || exit 1
+  rr=$(.venv/bin/python -m jevdrive.cl fanout --arms 0,1,2,3,4,5 --name nx-roll-$B0 --owner wait-next --vram 32 --cpu 8 --ram 60 --tries 1 --priority ${PRIO:-9} \
+       --timeout-h 3 --no-check --log-dir "$OLW/roll/$B0/c{arm}/pool" -- bash $OL roll1 $B0 "{arm}" < /dev/null | awk '{print $1}' | grep -E '^[0-9]{4}-[0-9]{6}-' | paste -sd,)
+  [[ $(echo $rr | tr , '\n' | wc -l) == 6 ]] || { echo "roll fanout: $rr" >&2; exit 1; }; echo "$rr nx-roll-$B0" >> $X/jobs.txt
+  g=$(sub nx-geo-$NP --after $rr --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $OL geo $B0 $NP) || exit 1
+  k=$(sub nx-tok-$NP --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $OL tok $NP smoke10eY) || exit 1
+  s=$(sub nx-strip-$NP --after $k --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $OL strip $B0 $NP) || exit 1
+  p=$(sub nx-pool-$NP --after $k --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py pool --name $NP --workers 32) || exit 1
+  q=$(sub nx-poolgate-$NP --after $p --vram 0.5 --cpu 1 --ram 16 --timeout-h 1 -- $AP $DATA_DIR/runs/route_follow/poolgate.py $NP) || exit 1
+  tb=$(sub nx-train-RTB1N-L18-s0 "${FW[@]}" --after $q --timeout-h 2 -- bash $ME train rtbn 0 2500 RTB1N-L18-s0) || exit 1
+  pb=$(sub nx-cont-b --after $tb --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads b RTB1N-L18-s0) || exit 1
+  echo "rtb-cont: A train $ta reads-submitter $pa; B roll $rr geo $g tok $k strip $s pool $p poolgate $q train $tb reads-submitter $pb" | tee -a $X/stages.txt ;;
+rtb-decomp)   # 补记 1: the dev-ADE decomposition of RTB1 / RTB3 against RB0-F-s0 (CPU, stored plans)
+  d=$(sub nx-rtb-decomp --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY devdecomp --j RTB1-F-s0 RTB3-F-s0 --c $RTC --out rtb_devdecomp) || exit 1
+  echo "rtb-decomp: $d" | tee -a $X/stages.txt ;;
+cont-reads)   # cont-reads <a|b> <tag> (job body, after the training): the reads, rf_follow, the summary
+  V=$2; T=$3; Y=$X/cont; [[ -f $CK/$T/ckpt-final.pt ]] || { echo "no $T" >&2; exit 1; }; hh=()
+  for i in 0 1 2 3 4 5; do hh+=($(sub nx-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+      -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+  st=$(sub nx-static-$T --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 --env SH30_DUMP=1 \
+      -- bash $OL readlist $T $Y/static.txt 10 $Y/$V/static/$T/run) || exit 1
+  CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $Y/$V/paisub/$T $T $Y/stop17.txt > $Y/$V/paisub.submit.txt || exit 1
+  pp=$(awk '{print $1}' $Y/$V/paisub.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || { echo "no PAI stop17 job" >&2; exit 1; }
+  ar=$(sub nx-arr-$T --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags $T) || exit 1
+  f=$(sub nx-follow-$T --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash experiments/wait_cap/scripts/wt.sh follow $T RSG-L18-s0,WTC-L18-s0 $Y/$V) || exit 1
+  c=$(sub nx-cont-sum-$V --after "$f,$st,$pp,$ar" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY cont --j $T --dir $Y/$V --out rtb_cont_$V) || exit 1
+  echo "cont-reads $V $T: held $(csv ${hh[@]}) static $st stop17 $pp arrival $ar follow $f summary $c" | tee -a $X/stages.txt ;;
 train)   # train <arm> <seed> <steps> <tag>
   case $2 in
     rb0) F="$RB0" ;;
@@ -119,8 +164,10 @@ train)   # train <arm> <seed> <steps> <tag>
     rtsmoke) F="$RB0 --kd-lam 3 --d2-lam 3 --kd-mode full --kd-groups W:1,G:1,SY:1 --d2-teacher $TEA" ;;   # the first (full-plan) design's smoke
     acs2) F="$RSG --ego-scale-speed 0.5 --ego-scale-max 0.2" ;;
     acs4|acsmoke) F="$RSG --ego-scale-speed 0.5 --ego-scale-max 0.4" ;;
+    rtbo) F="${RSG/--init RB0-F-s0/--init $B0}" ;;                                       # 补记 1 (A): the RSG-L18 recipe from RTB1, old pool
+    rtbn) F="${RSG/--init RB0-F-s0/--init $B0}"; F="${F/--on on1_L18RB0/--on on1_$NP}" ;;   # 补记 1 (B): RTB1's own L18 pool
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,25p $0; exit 2 ;;
+*) sed -n 2,32p $0; exit 2 ;;
 esac
