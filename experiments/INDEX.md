@@ -14,7 +14,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [others_turn](others_turn/README.md): live; held 24 turns: RSG 16, rule expert 22, WA-JEPA 7, garage 1, LTF 0, DD 0 [dnone]
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]
-- [wait_cap](wait_cap/README.md): live; shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP, the dev-ADE rise is a real closed-loop cost, no closed-loop waiting [d335]
+- [wait_cap](wait_cap/README.md): live; shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP, the dev-ADE rise is a real closed-loop cost, no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]
 - [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): concluded; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 stopped by the user before any arm [d283]
 - [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]

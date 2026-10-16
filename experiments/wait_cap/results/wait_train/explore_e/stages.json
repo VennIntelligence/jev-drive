@@ -1,0 +1,162 @@
+{
+ "P0": {
+  "wait_W": 0.9783333333333334,
+  "static": {
+   "score": 1.0,
+   "dist": 0.4818839568211376,
+   "t_coll": null,
+   "min_gap": 1.5537515544961518
+  },
+  "static_vhzero": null,
+  "stop17": {
+   "zeros": 14,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 213,
+   "mean": 0.4048158787548225,
+   "offroad": 98,
+   "at_fault": 24,
+   "dist": 36.321914004160455
+  }
+ },
+ "P2-F-s0": {
+  "wait_W": 0.014583333333333334,
+  "static": {
+   "score": 0.0,
+   "dist": 2.668256442760412,
+   "t_coll": 3.5,
+   "min_gap": 0.0
+  },
+  "static_vhzero": 2.1131339543004284,
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 93,
+   "mean": 0.7519211857589986,
+   "offroad": 39,
+   "at_fault": 15,
+   "dist": 45.50064165418227
+  }
+ },
+ "RB0-F-s0": {
+  "wait_W": 0.00625,
+  "static": {
+   "score": 0.0,
+   "dist": 2.3463905823404225,
+   "t_coll": 4.5,
+   "min_gap": 0.0
+  },
+  "static_vhzero": 2.5187854765661197,
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 59,
+   "mean": 0.8220188480776934,
+   "offroad": 29,
+   "at_fault": 7,
+   "dist": 46.24021073507095
+  }
+ },
+ "RSG-L18-s0": {
+  "wait_W": 0.005,
+  "static": {
+   "score": 0.0,
+   "dist": 2.6120445810414736,
+   "t_coll": 5.0,
+   "min_gap": 0.20316329375196618
+  },
+  "static_vhzero": 2.405750680108386,
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 34,
+   "mean": 0.8655703107497491,
+   "offroad": 17,
+   "at_fault": 4,
+   "dist": 45.89803306888128
+  }
+ },
+ "WTCP-L18-s0": {
+  "wait_W": 0.006666666666666667,
+  "static": {
+   "score": 0.0,
+   "dist": 2.3956902213015763,
+   "t_coll": 4.5,
+   "min_gap": 0.0
+  },
+  "static_vhzero": 2.553184181669428,
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 41,
+   "mean": 0.851699999243397,
+   "offroad": 14,
+   "at_fault": 6,
+   "dist": 45.90187684839354
+  }
+ },
+ "WTJ2P-L18-s0": {
+  "wait_W": 0.8608333333333333,
+  "static": {
+   "score": 0.0,
+   "dist": 2.450027327028758,
+   "t_coll": 4.5,
+   "min_gap": 0.0
+  },
+  "static_vhzero": 2.5139974552979063,
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 53,
+   "mean": 0.739288063197937,
+   "offroad": 28,
+   "at_fault": 7,
+   "dist": 40.923974750918106
+  }
+ },
+ "WTJ5P-L18-s0": {
+  "wait_W": 0.9045833333333333,
+  "static": {
+   "score": 0.0,
+   "dist": 2.2952909737111087,
+   "t_coll": 4.0,
+   "min_gap": 0.0
+  },
+  "static_vhzero": 2.427991155112567,
+  "stop17": {
+   "zeros": 17,
+   "n": 17
+  },
+  "held": {
+   "scenes": 460,
+   "zeros": 58,
+   "mean": 0.6241430415240662,
+   "offroad": 39,
+   "at_fault": 6,
+   "dist": 36.42734503541089
+  }
+ },
+ "RSG-L18-s0 archive": {
+  "stop17": {
+   "zeros": 16,
+   "n": 17
+  }
+ }
+}

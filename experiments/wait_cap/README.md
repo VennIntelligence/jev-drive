@@ -1,8 +1,8 @@
 # wait_cap: does each training stage wait where the human waits
 
 status: live
-decisions: 326, 335
-index: shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP on dev ADE, the rise is a real closed-loop cost (held -0.112, offroad x2), no closed-loop waiting [d335]
+decisions: 326, 335, 336
+index: shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP on dev ADE, the rise is a real closed-loop cost (held -0.112, offroad x2), no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]
 
 **Question.** On frames where the human waits (stopped car ahead, light / stop line) or stops, and contrasting frames where the human goes,
 does each stage of our lineage (shipped Cinque P0 -> P2-F -> P2H10-F -> YR10m10-F / APY10m10-AB -> YS-L18 -> RB0-F -> RSG-L18 -> RBSG2-L18)
@@ -23,6 +23,12 @@ all 14 of our labels drive into the car, their lateral offset appears only after
 - the static public scene and PAI stop17 do not change.
 
 No formal was run.
+
+**补记 E (decision 336, diagnostics).** The closed loop can show waiting: shipped Cinque stops in the static scene (0.48 m, the human
+0.50 m), and every adapter stage, the WAIT pilots included, drives into the lead. Replayed on P0's own standing inputs, J2P / J5P wait
+(4 s plans of 0.1-0.4 m). On arrival, though, they plan 2.0-2.3 m where P0 plans 0.43 m, so the car never reaches standstill.
+Zeroing the adapter's speed history does not help. J2P's offroad doubling is mostly a +0.08 m closed-loop left drift on edge-hugging
+paths. Details: [results/wait_train/explore_e.md](results/wait_train/explore_e.md).
 
 **Prepared, not launched (2026-10-17 night).** Two follow-up pilots for the morning choice between decision 335's options (iii) and (iv),
 draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:

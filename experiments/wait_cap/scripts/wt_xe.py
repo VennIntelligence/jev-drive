@@ -45,9 +45,10 @@ STOP17 = "054b5901 095cf563 127c4f85 2d10a08d 35e082a4 3fe2bac8 44df49fe 4cb7f7a
 PAI_REF = DATA / "runs/route_follow/pai_g10/acc"
 STAGES = ("P0", "P2-F-s0", "RB0-F-s0", "RSG-L18-s0", "WTCP-L18-s0", "WTJ2P-L18-s0", "WTJ5P-L18-s0")
 T0, DT = 17_000, 500_000
-# reference palette (dataviz skill references/palette.md), categorical slots in fixed order; light surface
-PAL = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6"]
-INK, INK2, SURF = "#0b0b0b", "#52514e", "#fcfcfb"
+sys.path.insert(0, str(HERE.parents[2] / "research"))
+import plot_style as PS  # noqa: E402  (research/plot_style.py: CVPR widths, Okabe-Ito)
+PAL = [PS.PALETTE[c] for c in ("blue", "vermillion", "green", "orange", "purple", "sky_blue", "black")]
+INK2 = PS.BASELINE
 
 
 def arc(P, n=8):
@@ -64,11 +65,11 @@ def run_of(lab):
 
 def load_run(d):
     """A static-scene run dir -> dict(rec (drive.jsonl drive records by k), metrics {name: (t, value) array}, summary)."""
-    import pandas as pd
+    import polars as pl                                       # c1_extract's read: the parquet's timestamps are wider than 64 bits
     rec = [json.loads(l) for l in open(d / "driver-logs/drive.jsonl")]
     rec = sorted((r for r in rec if r["kind"] == "drive" and r["scene"] == STATIC), key=lambda r: r["k"])
-    m = pd.read_parquet(glob.glob(str(d / f"rollouts/{STATIC}/*/metrics.parquet"))[0])
-    M = {n: np.c_[g.timestamps_us.to_numpy(np.float64), g["values"].to_numpy(np.float64)] for n, g in m.groupby("name")}
+    m = pl.read_parquet(glob.glob(str(d / f"rollouts/{STATIC}/*/metrics.parquet"))[0]).select("name", pl.col("timestamps_us").cast(pl.Int64), "values")
+    M = {n[0]: np.array([g["timestamps_us"].to_list(), g["values"].to_list()], np.float64).T for n, g in m.group_by("name")}
     summ = next(r for r in json.loads((d / "aggregate/results-summary.json").read_text())["rollouts"] if r["clipgt_id"] == STATIC)
     return dict(rec=rec, metrics=M, summary=summ)
 
@@ -98,10 +99,14 @@ def plt_setup():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    plt.rcParams.update({"figure.facecolor": SURF, "axes.facecolor": SURF, "axes.edgecolor": INK2, "axes.labelcolor": INK, "text.color": INK,
-                         "xtick.color": INK2, "ytick.color": INK2, "axes.grid": True, "grid.color": "#e4e3df", "grid.linewidth": 0.6,
-                         "axes.spines.top": False, "axes.spines.right": False, "font.size": 9, "lines.linewidth": 2, "legend.frameon": False})
+    PS.apply()
     return plt
+
+
+def save_png(fig, path, dpi=300):
+    fig.savefig(path, dpi=dpi, pil_kwargs={"optimize": True, "compress_level": 9})
+    kb = Path(path).stat().st_size >> 10
+    print(path, kb, "KB", "(over 500 KB)" if kb > 500 else "")
 
 
 # ---------------------------------------------------------------- static scene
@@ -112,7 +117,7 @@ def static_rows(o, tag):
         P = np.asarray(r["poses"], float)
         e = r["ego"]
         fed = r.get("vhist")
-        rows.append(dict(k=int(r["k"]), t=(t0 - T0) / 1e6, n_keys=int(r["n_keys"]), v=10 * float(e[4]), v_fed=None if fed is None else 10 * float(fed[4]),
+        rows.append(dict(k=int(r["k"]), t=(t0 - T0) / 1e6, n_keys=int(r["n_keys"]), v=10 * float(e[4]), v_fed=None if fed is None else float(fed["v_fed"]),
                          hist15=float(np.hypot(*np.asarray(r["hist"])[0][:2])), arc2=arc(P, 4), arc4=arc(P), y4=float(P[-1, 1]),
                          gap=series(o, "min_distance_to_obstacle_m", t0), coll=series(o, "collision_any", t0)))
     return rows
@@ -194,7 +199,7 @@ def cmd_static(a):
 
 def static_figs(res, order, out):
     plt = plt_setup()
-    fig, ax = plt.subplots(1, 3, figsize=(13, 3.8))
+    fig, ax = plt.subplots(1, 3, figsize=(PS.DOUBLE_COLUMN_IN, 2.5))
     plain = [x for x in order if not x.endswith("-vhzero")]
     for i, lab in enumerate(plain):
         c = PAL[i % len(PAL)]
@@ -203,32 +208,32 @@ def static_figs(res, order, out):
                 continue
             R = res[zl]["rows"]
             t = [x["t"] for x in R]
-            ax[0].plot(t, [x["arc4"] for x in R], ls, color=c, label=f"{lab}{' (history zeroed)' if zl != lab else ''}")
+            ax[0].plot(t, [x["arc4"] for x in R], ls, color=c, label=lab if zl == lab else None)
             ax[1].plot(t, [x["v"] for x in R], ls, color=c)
             ax[2].plot(t, [x["gap"] for x in R], ls, color=c)
     ax[0].axhline(1.0, color=INK2, lw=1, ls="--")
-    ax[0].text(0.05, 1.15, "wait line (4 s arc < 1 m)", color=INK2, fontsize=8)
-    ax[0].set(title="served plan, 4 s arc (m)", xlabel="time (s)")
-    ax[1].set(title="measured speed (m/s)", xlabel="time (s)")
-    ax[2].set(title="evaluator distance to nearest obstacle (m)", xlabel="time (s)")
-    ax[0].legend(fontsize=7, loc="upper left", ncol=1)
-    fig.suptitle("Static public scene: solid = measured history fed, dotted = JEV_VHIST=zero (standing-car history)", fontsize=10, color=INK)
-    fig.tight_layout()
-    fig.savefig(out / "figs/static_traces.png", dpi=130)
+    ax[0].set(ylabel="plan 4 s arc (m)", xlabel="time (s)")
+    ax[1].set(ylabel="measured speed (m/s)", xlabel="time (s)")
+    ax[2].set(ylabel="gap to nearest obstacle (m)", xlabel="time (s)")
+    ax[0].plot([], [], ":", color=INK2, label="history zeroed")
+    ax[0].legend(fontsize=6, loc="upper left", handlelength=1.6)
+    fig.tight_layout(pad=0.3)
+    save_png(fig, out / "figs/static_traces.png")
     plt.close(fig)
     from PIL import Image
     import io
     labs = [x for x in ("P0", "WTJ2P-L18-s0-vhzero") if (XE / f"static/{x}/run/driver-logs/dump/s00_k0.npz").exists()]
     if labs:                                                  # the CAM_F0 JPEG the driver received at t0 (SH30_DUMP)
-        fig, ax = plt.subplots(len(labs), 4, figsize=(14, 2.3 * len(labs)), squeeze=False)
+        fig, ax = plt.subplots(len(labs), 4, figsize=(PS.DOUBLE_COLUMN_IN, 1.05 * len(labs)), squeeze=False)
         for r, lab in enumerate(labs):
             for c, k in enumerate((0, 3, 6, 9)):
                 z = np.load(XE / f"static/{lab}/run/driver-logs/dump/s00_k{k}.npz")
                 ax[r, c].imshow(Image.open(io.BytesIO(z["jpeg"].tobytes())))
-                ax[r, c].set_title(f"{lab}  k={k}  t={k * 0.5:.1f} s", fontsize=8)
+                ax[r, c].text(0.02, 0.97, f"{lab.replace('-vhzero', ' (history zeroed)')}, t = {k * 0.5:.1f} s", transform=ax[r, c].transAxes,
+                              va="top", fontsize=5.5, color="white")
                 ax[r, c].axis("off")
-        fig.tight_layout()
-        fig.savefig(out / "figs/static_frames.png", dpi=110)
+        fig.subplots_adjust(0, 0, 1, 1, 0.01, 0.02)
+        save_png(fig, out / "figs/static_frames.png", dpi=140)
         plt.close(fig)
 
 
@@ -396,24 +401,24 @@ def offroad_figs(res, logs, maps, D, out):
         if r["cls"] == "?" or s not in maps:
             continue
         o = logs[s]
-        fig, ax = plt.subplots(1, 2, figsize=(12, 5.2), gridspec_kw=dict(width_ratios=[1.4, 1]))
+        fig, ax = plt.subplots(1, 2, figsize=(PS.DOUBLE_COLUMN_IN, 2.9), gridspec_kw=dict(width_ratios=[1.3, 1]))
         for ar in maps[s]["areas"]:
             ax[0].fill(*ar["ext"].T, color="#ecebe7", lw=0)
             for h in ar["holes"]:
-                ax[0].fill(*h.T, color=SURF, lw=0)
+                ax[0].fill(*h.T, color="white", lw=0)
         for ln in maps[s]["lanes"]:
             for e in (ln["left"], ln["right"]):
                 if e is not None:
                     ax[0].plot(*e.T, color="#c9c8c3", lw=0.6)
         eg = o["logged"][0]["traj"]
-        ax[0].plot(eg[:, 1], eg[:, 2], color=INK2, lw=1.5, ls="--", label="log (human)")
+        ax[0].plot(eg[:, 1], eg[:, 2], color=INK2, lw=1, ls="--", label="log (human)")
         for lab, c in (("WTJ2P-L18-s0", PAL[1]), ("WTCP-L18-s0", PAL[0])):
             X = D[(D.label == lab) & (D.scene == s)].sort_values("k")
-            ax[0].plot(X.x, X.y, color=c, label=lab, marker="o", ms=3)
+            ax[0].plot(X.x, X.y, color=c, label=lab, marker="o", ms=1.8)
             if lab == "WTJ2P-L18-s0":
                 ko = X[X.k == r["k_off"]]
                 if len(ko):
-                    ax[0].plot(ko.x, ko.y, "x", color=INK, ms=10, mew=2, label=f"J2P offroad k={r['k_off']}")
+                    ax[0].plot(ko.x, ko.y, "x", color="black", ms=6, mew=1.2, label=f"J2P offroad k={r['k_off']}")
         recs = {int(x["k"]): x for x in o.get("rec", [])}
         for k in range(max(r["k_off"] - 4, 0), r["k_off"] + 1):
             if k in recs:
@@ -423,18 +428,18 @@ def offroad_figs(res, logs, maps, D, out):
         X = D[(D.label == "WTJ2P-L18-s0") & (D.scene == s)]
         cx, cy = float(X.x.median()), float(X.y.median())
         R_ = max(25.0, float(np.ptp(X.x)), float(np.ptp(X.y))) * 0.75
-        ax[0].set(xlim=(cx - R_, cx + R_), ylim=(cy - R_, cy + R_), aspect="equal", title=f"class {r['cls']}: J2P plans (thin) at k_off-4..k_off")
-        ax[0].legend(fontsize=7, loc="best")
+        ax[0].set(xlim=(cx - R_, cx + R_), ylim=(cy - R_, cy + R_), aspect="equal", xlabel="x (m)", ylabel="y (m)")
+        ax[0].text(0.02, 0.98, f"class {r['cls']}; thin: J2P plans, k_off-4..k_off", transform=ax[0].transAxes, va="top", fontsize=6)
+        ax[0].legend(fontsize=5.5, loc="lower right")
         k = np.arange(1, 19) * 0.5
-        ax[1].plot(k, r["v_log"], color=INK2, ls="--", lw=1.5, label="log")
+        ax[1].plot(k, r["v_log"], color=INK2, ls="--", lw=1, label="log")
         ax[1].plot(k, r["v_C"], color=PAL[0], label="WTCP-L18-s0")
         ax[1].plot(k, r["v_J"], color=PAL[1], label="WTJ2P-L18-s0")
-        ax[1].axvline(r["k_off"] * 0.5, color=INK, lw=1, ls=":")
-        ax[1].set(title="speed (m/s)", xlabel="time (s)")
-        ax[1].legend(fontsize=7)
-        fig.suptitle(s, fontsize=9, color=INK)
-        fig.tight_layout()
-        fig.savefig(out / f"figs/offroad_{i:02d}_{r['cls']}.png", dpi=110)
+        ax[1].axvline(r["k_off"] * 0.5, color="black", lw=0.8, ls=":")
+        ax[1].set(ylabel="speed (m/s)", xlabel="time (s)")
+        ax[1].legend(fontsize=6)
+        fig.tight_layout(pad=0.3)
+        save_png(fig, out / f"figs/offroad_{i:02d}_{r['cls']}.png", dpi=200)
         plt.close(fig)
 
 

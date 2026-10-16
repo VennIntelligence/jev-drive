@@ -91,6 +91,8 @@ Static scene and stop17:
 - On the static scene, the three tags drive the same 2.3-2.45 m into a lead 1.6 m ahead, whatever their open-loop wait share (0.007 vs
   0.86 / 0.91). That suggests the motion in that scene is not set by the plan, for example initial speed or controller lag. This is a
   hypothesis, not checked.
+  **Corrected by 补记 E ([explore_e.md](explore_e.md)): the motion is set by the plan. P0 stops in this scene (0.48 m); the J pilots wait only
+  once the car stands, and they never get it to a standstill.**
 - PAI stop17 is identical per scene for CP, J2 and the archive.
 
 Lines (补记 D):
