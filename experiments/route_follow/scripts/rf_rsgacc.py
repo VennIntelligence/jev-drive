@@ -91,8 +91,12 @@ def pool_ok(x):
     try:
         g = jload(D / "runs/onpol_long/rows" / n / "gates.json")
         pg = jload(RF / "report" / f"poolgate-{n}.json")
-        f[n] = dict(rows_gates=bool(g.get("pass")), poolgate=pg)
-        okn = bool(g.get("pass")) and bool(pg.get("pass"))
+        import ast
+        r1, r2 = g["R1"], ast.literal_eval(g["R2"]) if isinstance(g["R2"], str) else g["R2"]
+        ok1 = all(v >= 0.99 for v in r1["a_one_ulp"].values()) and all(v < 0.2 for v in r1["c_wrong_seed"].values())
+        ok2 = r2["ego_max_m"] <= 0.3 and r2["act_share_within"] >= 0.9999
+        f[n] = dict(R1=ok1, R2=ok2, K0_not_applied=g.get("pass"), poolgate=pg)
+        okn = ok1 and ok2 and bool(pg.get("pass"))
     except FileNotFoundError as e:
         f[n], okn = dict(missing=str(e)), False
     try:

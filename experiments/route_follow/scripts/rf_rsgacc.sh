@@ -122,7 +122,8 @@ PY
     $NAV $E/scripts/ol_labels.py build --name $N --workers 32 ;;
   tok)
     $TR $ON/scripts/on_rows.py tok --name $N --control smoke10eY; rc=$?
-    $TR $E/scripts/ol_labels.py gate --name $N --out $W/rows/$N; rc=$((rc + $?)); [[ $K == smoke ]] && exit 0; exit $rc ;;
+    $TR $E/scripts/ol_labels.py gate --name $N --out $W/rows/$N    # its K0 (corridor-label item) does not apply to S rows; R1 / R2 are read in merge
+    [[ $K == smoke ]] && exit 0; exit $rc ;;
   strip)
     $TR - "$R" <<'PY'
 import glob, os, sys
