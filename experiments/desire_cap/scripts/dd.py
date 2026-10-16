@@ -193,6 +193,230 @@ def cmd_lowreport(a):
     print("\n".join(L))
 
 
+# ---------------------------------------------------------------- D0 report (CPU)
+SETS = {"pai281": ("pai", D0 / "pai281", REF281), "pai160": ("pai", D0 / "pai160", D0 / "pai160_ref"), "held": ("held", D0 / "held/d0", D0 / "held/ref")}
+
+
+def run_dirs(kind, root):
+    return sorted(glob.glob(str(root / ("runs/*/sim" if kind == "pai" else "c*")))) 
+
+
+def facts(kind, root):
+    """{scene: score, zero kind, lateral contact, at-fault collision, rear-ended} from the read's results summaries (one rollout per scene)."""
+    out = {}
+    for d in run_dirs(kind, root):
+        f = Path(d) / "aggregate/results-summary.json"
+        if not f.exists():
+            continue
+        for r in json.loads(f.read_text())["rollouts"]:
+            m = r.get("metrics") or {}
+            sc = float(r.get("score") or 0)
+            out[r["clipgt_id"]] = dict(score=sc, lat=bool(m.get("collision_lateral")), fault=bool(m.get("collision_at_fault")), rear=bool(m.get("collision_rear")),
+                                       kind="" if sc else ("collision" if m.get("collision_at_fault") else "offroad" if m.get("offroad")
+                                                           else "corridor" if m.get("left_corridor_laterally") else "other"))
+    return out
+
+
+def logs(kind, root):
+    return sorted(glob.glob(str(root / ("runs/*/driver/drive.jsonl" if kind == "pai" else "c*/driver-logs/drive.jsonl"))))
+
+
+def episodes(files, v_min, served):
+    """Lane-change starts and their outcomes per scene: served = the D0 arm's logged `desire` records; else RouteDesire replayed on the
+    logged route memory (the reference: what the rule would have asked, not fed). -> {scene: [dict(side, kind, why, v)]}, replay agreement."""
+    out, agree = {}, [0, 0]
+    for f in files:
+        ses = {}
+        for line in open(f):
+            if '"rmem"' not in line or '"infer": false' in line:
+                continue
+            r = json.loads(line)
+            if r.get("kind") != "drive":
+                continue
+            S = ses.setdefault(r["session"], dict(rd=RD.RouteDesire(v_min=v_min), open=None, scene=r["scene"]))
+            rd, was = S["rd"], S["rd"].state
+            rd.step(r["t0"] * 1e-6, 10.0 * float(r["ego"][4]), np.asarray(r["rmem"], np.float32))
+            st = r["desire"] if served and "desire" in r else rd.log()
+            if served and "desire" in r:
+                agree[0] += st["state"] == rd.state
+                agree[1] += 1
+                w, now_state = st["why"], st["state"]
+                started = now_state == "starting" and w == "start" and (S["open"] is None)
+            else:
+                w, now_state = rd.why, rd.state
+                started = was == "off" and now_state == "starting"
+            if S["open"] is not None and now_state == "off":
+                S["open"]["why"] = w
+                S["open"] = None
+            if started:
+                last = rd.last if not served else dict(y_0=st.get("y_0", 0.0), gap=False)
+                e = dict(side=int(st["side"]), v=round(10.0 * float(r["ego"][4]), 2), why="open",
+                         kind="ahead" if abs(float(last.get("y_0", 0.0))) < 1.0 and not bool(rd.last.get("gap", False)) else "other")
+                out.setdefault(S["scene"], []).append(e)
+                S["open"] = e
+    return out, agree
+
+
+def m1_sites(kind, pkl, lanes, fa):
+    """d299 Amendment 3 map lane-change site per rollout (rf_laneoff.lc_map_job) -> {scene: row} for sites with gap <= 6 m."""
+    import pickle
+    sys.path[:0] = [str(REPO / "experiments/route_follow/scripts")]
+    import rf_laneoff as LO
+    import rf_tax as TX
+    if not Path(pkl).exists():
+        return {}
+    rolls = pickle.load(open(pkl, "rb"))["rolls"]
+    out = {}
+    for o in rolls:
+        if "ctrl" not in o or o["scene"] not in lanes or o["scene"] not in fa:
+            continue
+        try:
+            zt = TX.classify(o)[0].get("zero_type", "")
+            r = LO.lc_map_job(("x", o, dict(zero_type=zt), None, lanes[o["scene"]]))
+        except Exception as ex:  # noqa: BLE001
+            print("lc_map", o["scene"], repr(ex)[:120])
+            continue
+        if r and r.get("site") and float(r.get("gap", 99)) <= 6.0:
+            r["completed"] = bool(r.get("shifted")) and bool(r.get("in_lane_after"))
+            out[o["scene"]] = r
+    return out
+
+
+def boot_diff(a, b, B=10000, seed=0):
+    """Scene-paired mean difference a - b with a percentile bootstrap over scenes."""
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    d = a - b
+    i = np.random.default_rng(seed).integers(0, len(d), (B, len(d)))
+    return float(d.mean()), *np.percentile(d[i].mean(1), [2.5, 97.5]).tolist()
+
+
+def share_diff(A, Rf, scenes, kinds=("ahead",), B=10000, seed=0):
+    """done share (starts of the given kinds) D0 - ref, bootstrap over scenes -> (d0 share, ref share, diff, lo, hi, n d0, n ref)."""
+    def cnt(E):
+        st = np.array([sum(e["kind"] in kinds for e in E.get(s, [])) for s in scenes], float)
+        dn = np.array([sum(e["kind"] in kinds and e["why"] == "done" for e in E.get(s, [])) for s in scenes], float)
+        return st, dn
+    sa, da = cnt(A)
+    sr, dr = cnt(Rf)
+    if sa.sum() == 0 or sr.sum() == 0:
+        return (float("nan"),) * 5 + (int(sa.sum()), int(sr.sum()))
+    i = np.random.default_rng(seed).integers(0, len(scenes), (B, len(scenes)))
+    with np.errstate(all="ignore"):
+        bd = da[i].sum(1) / sa[i].sum(1) - dr[i].sum(1) / sr[i].sum(1)
+    lo, hi = np.nanpercentile(bd, [2.5, 97.5])
+    return da.sum() / sa.sum(), dr.sum() / sr.sum(), da.sum() / sa.sum() - dr.sum() / sr.sum(), float(lo), float(hi), int(sa.sum()), int(sr.sum())
+
+
+def cmd_d0report(a):
+    import pickle
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    X = Path(a.extracts)
+    L, res = [f"# DESIRE-D0 closed-loop read (RSG-L18-s0, PAI submission config + JEV_DESIRE, v_min {a.vmin:g} m/s)", "",
+              "Paired by scene (both arms scored). PAI 281: D0 on the stored ACC read's chunk lists vs the stored read (pai_g10/acc); train160 and held: "
+              "D0 vs a same-code reference without desire. CIs: scene bootstrap, B 10 000, seed 0.", ""], {}
+    lanes = {"pai": {}, "held": {}}
+    for f in a.lanes:
+        k, p = f.split("=", 1)
+        if Path(p).exists():
+            lanes[k].update(pickle.load(open(p, "rb")))
+    M1 = {}
+    for name, (kind, droot, rroot) in SETS.items():
+        fd, fr = facts(kind, droot), facts(kind, rroot)
+        sc = sorted(set(fd) & set(fr))
+        if not sc:
+            L.append(f"## {name}: no paired scenes yet\n")
+            continue
+        Ed, ag = episodes(logs(kind, droot), a.vmin, True)
+        Er, _ = episodes(logs(kind, rroot), a.vmin, False)
+        sd = [fd[s]["score"] for s in sc]
+        sr = [fr[s]["score"] for s in sc]
+        cnt = lambda F, k: sum(F[s]["kind"] == k for s in sc)  # noqa: E731
+        z = lambda F: sum(F[s]["score"] == 0 for s in sc)  # noqa: E731
+        lat = lambda F: sum(F[s]["lat"] for s in sc)  # noqa: E731
+        rear = lambda F: sum(F[s]["rear"] for s in sc)  # noqa: E731
+        md = boot_diff(sd, sr)
+        new = [s[7:15] if s.startswith("clipgt") else s[-16:] for s in sc if fd[s]["score"] == 0 < fr[s]["score"]]
+        fix = [s[7:15] if s.startswith("clipgt") else s[-16:] for s in sc if fr[s]["score"] == 0 < fd[s]["score"]]
+        R = res.setdefault(name, {})
+        R.update(scenes=len(sc), mean_d0=float(np.mean(sd)), mean_ref=float(np.mean(sr)), diff=md, zeros=(z(fd), z(fr)), lat=(lat(fd), lat(fr)),
+                 fault=(cnt(fd, "collision"), cnt(fr, "collision")), corridor=(cnt(fd, "corridor"), cnt(fr, "corridor")),
+                 offroad=(cnt(fd, "offroad"), cnt(fr, "offroad")), rear=(rear(fd), rear(fr)), new=new, fixed=fix, replay_agree=ag)
+        L += [f"## {name}: {len(sc)} paired scenes", "",
+              "| arm | mean | zeros | at-fault collision | offroad | corridor | side contact (collision_lateral) | rear-ended |", "|:--|--:|--:|--:|--:|--:|--:|--:|",
+              f"| D0 | {np.mean(sd):.4f} | {z(fd)} | {cnt(fd, 'collision')} | {cnt(fd, 'offroad')} | {cnt(fd, 'corridor')} | {lat(fd)} | {rear(fd)} |",
+              f"| ref | {np.mean(sr):.4f} | {z(fr)} | {cnt(fr, 'collision')} | {cnt(fr, 'offroad')} | {cnt(fr, 'corridor')} | {lat(fr)} | {rear(fr)} |", "",
+              f"mean D0 - ref {md[0]:+.4f} [{md[1]:+.4f}, {md[2]:+.4f}]; new zeros {new}; fixed {fix}; served vs replayed machine state agreement "
+              f"{ag[0]} / {ag[1]}", ""]
+        # M2: rule-level outcomes
+        L += ["| starts (rule) | D0 done share | ref done share (replayed) | diff [CI] | starts D0 / ref |", "|:--|--:|--:|:--|:--|"]
+        for lab, kinds in (("route ahead (|y_0| < 1, no gap)", ("ahead",)), ("other (off the route's lane / gap)", ("other",)), ("all", ("ahead", "other"))):
+            for side in (0, 1, -1):
+                Ea = {s: [e for e in v if side == 0 or e["side"] == side] for s, v in Ed.items()}
+                Eb = {s: [e for e in v if side == 0 or e["side"] == side] for s, v in Er.items()}
+                q = share_diff(Ea, Eb, sc, kinds)
+                R.setdefault("m2", {})[f"{kinds}|{side}"] = q
+                L.append(f"| {lab}{'' if side == 0 else (' left' if side > 0 else ' right')} | {q[0]:.3f} | {q[1]:.3f} | {q[2]:+.3f} [{q[3]:+.3f}, {q[4]:+.3f}] | {q[5]} / {q[6]} |")
+        oc = {}
+        for E, lab in ((Ed, "D0"), (Er, "ref")):
+            oc[lab] = {}
+            for s in sc:
+                for e in E.get(s, []):
+                    oc[lab][e["why"]] = oc[lab].get(e["why"], 0) + 1
+        L += ["", f"outcomes D0 {oc['D0']}; ref {oc['ref']}", ""]
+        R["outcomes"] = oc
+        # M1: map sites
+        if kind == "pai":
+            pd_, pr_ = X / f"{name}_d0.pkl", (X / "acc.pkl" if name == "pai281" else X / f"{name}_ref.pkl")
+        else:
+            pd_, pr_ = X / "held_d0.pkl", X / "held_ref.pkl"
+        md1, mr1 = m1_sites(kind, pd_, lanes[kind], fd), m1_sites(kind, pr_, lanes[kind], fr)
+        both = sorted(set(md1) & set(mr1) & set(sc))
+        M1[name] = (md1, mr1, both)
+        if both:
+            L += ["| map site (gap <= 6 m) | side | reached D0 / ref | ego shift D0 / ref (m) | in route lane after | completed |", "|:--|:--|:--|:--|:--|:--|"]
+            for s in both:
+                x, y = md1[s], mr1[s]
+                L.append(f"| {s[7:15] if s.startswith('clipgt') else s[-16:]} | {x['side']} | {x['reached']} / {y['reached']} | {x['shift']:+.1f} / {y['shift']:+.1f} | "
+                         f"{x['in_lane_after']} / {y['in_lane_after']} | **{x['completed']}** / {y['completed']} |")
+            for side in ("L", "R", "all"):
+                k = [s for s in both if side == "all" or md1[s]["side"] == side]
+                R.setdefault("m1", {})[side] = (len(k), sum(md1[s]["completed"] for s in k), sum(mr1[s]["completed"] for s in k))
+            L += ["", "completed D0 / ref: " + ", ".join(f"{k} {v[1]} / {v[2]} of {v[0]}" for k, v in R["m1"].items()), ""]
+    # registered lines (PAI)
+    m1d = sum(res.get(n, {}).get("m1", {}).get("all", (0, 0, 0))[1] - res.get(n, {}).get("m1", {}).get("all", (0, 0, 0))[2] for n in ("pai281", "pai160"))
+    sites = sum(res.get(n, {}).get("m1", {}).get("all", (0, 0, 0))[0] for n in ("pai281", "pai160"))
+    ah = {}
+    for n in ("pai281", "pai160"):
+        if n in res:
+            ah[n] = res[n]["m2"]["('ahead',)|0"]
+    # pooled route-ahead done share over both PAI sets: recompute on the union
+    l1a, l1b = m1d >= 3, all(np.isfinite(v[3]) and v[3] > 0 for v in ah.values()) and len(ah) > 0
+    carry = "carries" if (l1a and l1b) else ("partial" if (l1a or l1b) else "does not carry")
+    P = res.get("pai281", {})
+    safe = None
+    if P:
+        safe = (P["lat"][0] <= P["lat"][1] + 2 and P["fault"][0] <= P["fault"][1] + 1 and P["zeros"][0] <= P["zeros"][1] + 2
+                and P["corridor"][0] <= P["corridor"][1] + 1 and P["diff"][1] > -0.02)
+    res["lines"] = dict(m1_delta=m1d, m1_sites=sites, m2_ahead=ah, carry=carry, safe=safe,
+                        stop=(carry == "does not carry") or (safe is False and carry != "carries"))
+    L += ["## Registered lines", "",
+          f"- Line 1 (carry): map-site completions D0 - ref = {m1d:+d} over {sites} PAI sites (line >= +3: {l1a}); route-ahead done share diff CI lower > 0 "
+          f"in every PAI set: {l1b} ({ {k: round(v[3], 3) for k, v in ah.items()} }) -> **{carry}**",
+          f"- Line 2 (safety, PAI 281): side contacts {P.get('lat')}, at-fault {P.get('fault')}, zeros {P.get('zeros')}, corridor {P.get('corridor')}, "
+          f"mean diff CI lower {P.get('diff', (0, float('nan')))[1]:+.4f} -> **{'ok' if safe else 'costs'}**",
+          f"- Line 3 (stop): {res['lines']['stop']}"]
+    if a.reidentity:
+        fo, fn = facts("pai", REF281), facts("pai", D0 / "acc_re")
+        c = sorted(set(fo) & set(fn))
+        eq = sum(fo[s]["score"] == fn[s]["score"] for s in c)
+        res["identity"] = (eq, len(c))
+        L.append(f"- Identity: same-code re-read without desire (chunk c000) vs the stored ACC read: equal scores {eq} / {len(c)}")
+    (out / "d0.md").write_text("\n".join(L) + "\n")
+    (out / "d0.json").write_text(json.dumps(res, indent=1, default=lambda x: x if not isinstance(x, (np.integer, np.floating, np.bool_)) else x.item()) + "\n")
+    print("\n".join(L))
+
+
 # ---------------------------------------------------------------- gates (GPU, op-train)
 def cmd_gates(a):
     """G-none: pai_core.plan / sh30_core.Core.plan with desire None = the pre-D0 code (bc194ff7) and = an all-zero queue, bit for bit, on
@@ -252,6 +476,13 @@ def main():
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("scenes")
     sp.add_parser("lowrows")
+    p = sp.add_parser("d0report")
+    p.add_argument("--vmin", type=float, required=True)
+    p.add_argument("--extracts", default=str(D0 / "extract"))
+    p.add_argument("--lanes", nargs="*", default=[f"pai={DATA / 'runs/route_follow/corridor/in/lanes_pai.pkl'}", f"pai={D0 / 'extract/lanes_pai160.pkl'}",
+                                                  f"held={DATA / 'runs/route_follow/progress/lanes_held.pkl'}"])
+    p.add_argument("--reidentity", action="store_true")
+    p.add_argument("--out", default=str(D0 / "report"))
     p = sp.add_parser("gates")
     p.add_argument("--out", default=str(D0 / "gates.json"))
     p = sp.add_parser("lowplans")
@@ -261,7 +492,7 @@ def main():
     p.add_argument("--root", default=str(OUT))
     p.add_argument("--out", default=str(RES))
     a = ap.parse_args()
-    {"scenes": cmd_scenes, "lowrows": cmd_lowrows, "lowplans": cmd_lowplans, "lowreport": cmd_lowreport, "gates": cmd_gates}[a.cmd](a)
+    {"scenes": cmd_scenes, "lowrows": cmd_lowrows, "lowplans": cmd_lowplans, "lowreport": cmd_lowreport, "gates": cmd_gates, "d0report": cmd_d0report}[a.cmd](a)
 
 
 if __name__ == "__main__":

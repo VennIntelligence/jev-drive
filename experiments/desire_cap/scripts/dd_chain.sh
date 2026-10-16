@@ -39,8 +39,13 @@ d0)
   r=$(sub dd-d0report "$all" --vram 0.5 --cpu 16 --ram 48 --timeout-h 3 -- bash $S/dd_chain.sh report $VMIN) || exit 1
   printf '%s\n' "code=$(git rev-parse --short HEAD)" "v_min=$VMIN" "serve=$ACC $DS" "wiz=$WIZ" > $O/config.txt
   echo "d0 report $r" ;;
-report)
-  VMIN=${2:?v_min}
-  $V $S/dd.py d0report --vmin $VMIN --out $O/report && touch $O/D0_DONE || { touch $O/D0_ERROR; exit 1; } ;;
+report)   # job body: rf_tax extracts of every arm (AlpaSim venv), lanes of the train160 scenes, then dd.py d0report
+  VMIN=${2:?v_min}; P=$DATA_DIR/third_party/alpasim/.venv/bin/python; RF=experiments/route_follow/scripts; X=$O/extract; mkdir -p $X
+  ln -sfn $DATA_DIR/runs/route_follow/acc_gap/acc.pkl $X/acc.pkl
+  ex() { [[ -s $X/$1.pkl ]] || $P $RF/rf_tax.py extract --runs "${@:2}" --out $X/$1.pkl --workers 16 > $X/$1.log 2>&1; }
+  ex pai281_d0 $O/pai281/runs/*/sim; ex pai160_d0 $O/pai160/runs/*/sim; ex pai160_ref $O/pai160_ref/runs/*/sim
+  ex held_d0 $O/held/d0/c*; ex held_ref $O/held/ref/c*
+  [[ -s $X/lanes_pai160.pkl ]] || $P $RF/rf_laneoff.py lanes --runs $O/pai160_ref/runs/*/sim --out $X/lanes_pai160.pkl --workers 8 > $X/lanes.log 2>&1
+  $V $S/dd.py d0report --vmin $VMIN --reidentity --out $O/report && touch $O/D0_DONE || { touch $O/D0_ERROR; exit 1; } ;;
 *) sed -n '2,8p' "$0"; exit 2 ;;
 esac
