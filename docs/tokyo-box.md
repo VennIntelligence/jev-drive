@@ -132,6 +132,11 @@ headers, so without a DKMS nvidia module. Fixed the same day:
   DKMS nvidia 580.178.04 module. Do not boot 7.0.0-38 before `linux-headers-7.0.0-38-generic` is installed and `dkms status`
   lists nvidia for it.
 - After the reboot both cards report 580.178.04 (module and userspace) and `docker run --gpus all` works.
+- 2026-10-16: the prebuilt `linux-modules-nvidia-580-7.0.0-38-generic` had sat half-configured since then (its postinst
+  needs the missing 7.0.0-38 headers' `objtool`), so every apt run and the daily unattended upgrade failed. Purged it with
+  its objects / signatures and the `linux-modules-nvidia-{550,580}-generic-hwe-24.04` metapackages (no reboot);
+  `dpkg --audit` is clean. The box now uses DKMS only, so a new kernel gets its nvidia module from DKMS once its headers
+  are installed. DKMS also builds the `mediatek-mt7927` Wi-Fi module.
 
 Reboot checklist: nothing but restartable downloads in tmux; `postgres` restarts itself; tmux sessions are gone afterwards.
 Clash after a boot: `clash-verge-boot.service` starts the core and picks a region group; when every node of the
