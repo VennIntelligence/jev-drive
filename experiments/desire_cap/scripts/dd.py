@@ -48,9 +48,11 @@ def starts_in_log(path, v_min=V_SCENE):
     """drive.jsonl -> {scene: [(t0 s, side, speed)]} of RouteDesire starts on the served memory (one machine per session)."""
     ses, out = {}, {}
     for line in open(path):
-        if '"infer": true' not in line or '"rmem"' not in line:
+        if '"rmem"' not in line or '"infer": false' in line:              # PAI logs mark inferences; the nuPlan driver infers on every call
             continue
         r = json.loads(line)
+        if r.get("kind") != "drive":
+            continue
         rd = ses.setdefault(r["session"], RD.RouteDesire(v_min=v_min))
         t, v = r["t0"] * 1e-6, 10.0 * float(r["ego"][4])
         was = rd.state
