@@ -641,9 +641,16 @@ def cmd_wdgate(a):
     for p in (OUT / "wd_pilot_gate.md", RES / "wd_pilot_gate.md"):
         p.write_text("\n".join(L) + "\n")
     print("\n".join(L))
-    if a.submit and pick:
+    if not a.submit:
+        return
+    fb = OUT / "FALLBACK"                                                    # written by whichever of this gate / wt.sh wd-deadline falls back first
+    if pick and not fb.exists():
+        (OUT / "WD_PASS").write_text(f"{pick} D2 {res['pick_lam']}\n")
         subprocess.run(["bash", str(HERE / "wt.sh"), "wd-full", res["pick_lam"]], check=True)
-    elif a.submit:
+    elif pick:
+        print(f"composed arm {pick} passed after the 24 h fallback ({fb.read_text().strip()}): no composed formal", flush=True)
+    elif not fb.exists():
+        fb.write_text("composed pilot failed\n")
         subprocess.run(["bash", str(HERE / "wt.sh"), "full", res["dose"]], check=True, env=dict(os.environ, WT_FALLBACK="1"))
 
 

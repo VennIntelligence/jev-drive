@@ -12,7 +12,8 @@
 # Amendment C (the composed WAIT + desire arm WD; experiments/desire_cap/scripts/dt.py, lib/desire_train.py):
 #   wt.sh wd-teacher            D2 teacher: shipped Cinque's desire increments on every navtrain shard (12 jobs)
 #   wt.sh wd-codecheck <rev>    60-step RSG-L18 recipe with the code of <rev> (before D1 / D2) vs this code -> bitcmp wd_code_identity
-#   wt.sh wd-launch <after ids> one pool job waiting on $O/pilot_pick.txt (the WAIT pilot's dose) and the ids -> `wd-pilot`
+#   wt.sh wd-launch <after ids> one pool job waiting on $O/pilot_pick.txt (the WAIT pilot's dose) and the ids -> `wd-pilot`; plus wd-deadline
+#                               (one sleeping job: 24 h after the WAIT verdict, the WAIT-only formal unless $O/WD_PASS exists; Amendment C 5)
 #   wt.sh wd-pilot              (pilot_pick j2 | j5) D1 rows -> 60-step WDGG-w0 + bitcmp vs WTGG-off -> WD<dose>P{1,3}-L18-s0 (D2 weight 1 / 3,
 #                               1 000 steps) -> WAIT reads + dc.py plans -> wd-gate-pilot (wt.py wdgate --submit: wd-full <lam> or the fallback)
 #   wt.sh wd-full <lam>         WD<dose>-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 -> rf_follow (J + C held reads) -> clgate held --follow
@@ -136,7 +137,15 @@ wd-codecheck)
   echo "wd-codecheck: old $a new $b bitcmp $c" | tee -a $O/stages.txt ;;
 wd-launch)
   l=$(sub wd-launch --vram 0.1 --cpu 1 --ram 2 --timeout-h 48 --when-exists $O/pilot_pick.txt ${2:+--after $2} --env PRIO=${PRIO:-9} -- bash $ME wd-pilot) || exit 1
-  echo "wd-launch: $l (waits on $O/pilot_pick.txt${2:+, after $2})" | tee -a $O/stages.txt ;;
+  d=$(sub wd-deadline --vram 0.1 --cpu 1 --ram 1 --timeout-h 26 --when-exists $O/pilot_pick.txt --env PRIO=${PRIO:-9} -- bash $ME wd-deadline) || exit 1
+  echo "wd-launch: $l (waits on $O/pilot_pick.txt${2:+, after $2}); deadline job $d" | tee -a $O/stages.txt ;;
+wd-deadline)   # Amendment C 5: 24 h after the WAIT pilot verdict (pilot_gate.json's mtime), the WAIT-only formal unless a composed arm passed
+  w=$(( $(stat -c %Y $O/pilot_gate.json) + 86400 - $(date +%s) )); (( w > 0 )) && sleep $w
+  q=$(cat $O/pilot_pick.txt); [[ $q == j2 || $q == j5 ]] || { echo "deadline: WAIT pilot $q, no formal"; exit 0; }
+  [[ -e $O/WD_PASS ]] && { echo "deadline: a composed arm passed ($(cat $O/WD_PASS)), no fallback"; exit 0; }
+  [[ -e $O/FALLBACK ]] && { echo "deadline: fallback already run ($(cat $O/FALLBACK))"; exit 0; }
+  echo "deadline $(date -Is)" > $O/FALLBACK; echo "deadline: no composed arm passed within 24 h -> WAIT-only formal $q" | tee -a $O/stages.txt
+  WT_FALLBACK=1 exec bash $ME full $q ;;
 wd-pilot)
   q=$(cat $O/pilot_pick.txt); [[ $q == j2 || $q == j5 ]] || { echo "WAIT pilot verdict $q: no composed pilot, no formal (Amendment C 5)" | tee -a $O/stages.txt; exit 0; }
   r=$(sub wd-rows --vram 0.5 --cpu 4 --ram 64 --timeout-h 1 -- $TR $DT rows) || exit 1
