@@ -13,7 +13,7 @@
 #             (existing files are never overwritten; strip is detected from the first member)
 #   trainvalall every trainval camera archive except those named in $SKIP_LIST (same format; e.g. the waittrain list while
 #             that run is still going) -> sensor_blobs/trainval/ (only named when wanted; with CAMS=CAM_F0 about 1/8 of 1.2 TB lands)
-# Env: CAMS (comma list, e.g. CAM_F0: extract only these camera dirs; default all), JOBS (concurrent archives, default 8), ROUTE (direct|clash for HF archives, default direct), HF_ENDPOINT (default https://hf-mirror.com).
+# Env: RANGES (parallel range requests per archive, default 1 = one curl), CAMS (comma list, e.g. CAM_F0: extract only these camera dirs; default all), JOBS (concurrent archives, default 8), ROUTE (direct|clash for HF archives, default direct), HF_ENDPOINT (default https://hf-mirror.com).
 # Each archive runs download -> size + sha256 check -> extract (LiDAR skipped) -> delete, in its own slot,
 # so extraction overlaps with the other slots' downloads. Safe to re-run: finished archives are skipped,
 # partial downloads resume.
@@ -42,16 +42,18 @@ one() {
   if [[ ! -e $f ]]; then
     t0=$SECONDS; local have0; have0=$(stat -c %s "$part" 2>/dev/null || echo 0)
     log "get  $name ($(numfmt --to=iec "$size"), resume at $(numfmt --to=iec "$have0"))"
-    for try in $(seq 100); do
+    if (( ${RANGES:-1} > 1 )); then  # parallel range requests: the mirrors cap each connection, not the host
+      "$(dirname "$(realpath "$0")")/ranged_get.sh" "$url" "$part" "$size" "$RANGES" "${proxy[@]}" || true
+    else for try in $(seq 100); do
       # Re-resolve every try: the mirror redirects to signed URLs that expire. Abort stalls, then resume.
       curl -fsSL "${proxy[@]}" -C - --connect-timeout 30 --speed-limit 20480 --speed-time 120 \
         -o "$part" "$url" && break || true
       (( $(stat -c %s "$part" 2>/dev/null || echo 0) >= size )) && break
       log "retry $name (try $try, have $(numfmt --to=iec "$(stat -c %s "$part" 2>/dev/null || echo 0)"))"
       sleep 10  # also rides out the mirror's 429 resolver window (retry-after is seconds)
-    done
+    done; fi
     local got; got=$(stat -c %s "$part")
-    [[ $got == "$size" ]] || { log "FAIL $name size $got != $size"; rm -f "$part"; return 1; }
+    [[ $got == "$size" ]] || { log "FAIL $name size $got != $size (partial kept, re-run resumes)"; return 1; }
     if [[ $sha != - ]] && ! echo "$sha  $part" | sha256sum -c --quiet - >/dev/null 2>&1; then
       log "FAIL $name sha256 mismatch, deleting"; rm -f "$part"; return 1
     fi
