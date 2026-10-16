@@ -74,7 +74,7 @@ import rule_expert as XP
 import vhist as VH
 from pai_core import C, I
 
-TS = S.TS                                            # JEV_TTS (lib/tts.py), imported by sh30_driver only when set
+TS = getattr(S, "TS", None)                          # JEV_TTS (lib/tts.py), imported by sh30_driver only when set (the Tokyo image's older sh30_driver has none)
 
 IH = None                                            # JEV_INTENT_HOLD (intent_hold.py): imported only when set, so other mounts need not carry it
 if os.environ.get("JEV_INTENT_HOLD", "") not in ("", "0"):
