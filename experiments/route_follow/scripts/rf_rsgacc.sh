@@ -147,9 +147,9 @@ rows-pai)  # rows-pai <K> <T> <N> rows|cache|pool|r1|clean: onp_rows -> onp_cach
   case $5 in
   rows)
     mkdir -p $STG
-    env $SERVE PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AS/.venv/bin/python experiments/onpol_pai/scripts/onp_rows.py rows --pass $N --runs "$RR/runs/*" \
+    env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AS/.venv/bin/python experiments/onpol_pai/scripts/onp_rows.py rows --pass $N --runs "$RR/runs/*" \
         --out $ROWS --stage $STG --tag $T --jobs $J || exit 1
-    env $SERVE PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $N --out $ROWS --stage $STG --jobs $J || exit 1
+    env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $N --out $ROWS --stage $STG --jobs $J || exit 1
     env PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py report --pass $N --out $ROWS > $ROWS/report_$N.log 2>&1; tail -3 $ROWS/report_$N.log ;;
   cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $N --rows $ROWS/$N --out $O/cache ;;
   pool)  $TR $S/rf_pai_pool.py --name $N --rows $ROWS/$N --cache $O/cache/$N --runs "$RR/runs/*" --split $T160 ;;
