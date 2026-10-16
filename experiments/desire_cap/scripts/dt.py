@@ -34,6 +34,7 @@ import desire_train as DT  # noqa: E402
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 OUT = DATA / "runs/desire_cap/train"
 POOL = "on1_L18RBW"
+SHARDS = [f"navtrain_full.s{i}of12" for i in range(12)]          # joint_train.FULL (the trainer's --data)
 
 
 # ---------------------------------------------------------------- teacher (GPU)
@@ -115,12 +116,10 @@ def _rule_rev():
 def cmd_rows(a):
     cr, ft = DATA / "runs/op_parity/cache", DATA / "runs/route_mem/feat"
     POOL, OUT_ = a.pool, Path(a.out)
-    sys.path[:0] = [str(REPO / "experiments/onpol_nuplan/scripts")]
-    import joint_train as JT
     N, S_, SRC = [], [], []
     import route_desire as RD
     rec = dict(rule=_rule_rev(), v_min=RD.V_MIN, pool_name=POOL, nav={}, pool={})
-    for d in JT.FULL:
+    for d in SHARDS:
         z = np.load(DATA / "runs/route_follow/cf/rows" / f"{d}.npz")
         t = np.load(cr / d / "tab.npz")
         fz = np.load(ft / f"{d}.npz")
