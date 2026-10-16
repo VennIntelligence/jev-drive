@@ -16,8 +16,9 @@ to RSG-L18's pool on1_L18RB0 -> on1_L18RBW; the pilot / closed-loop gates. Box, 
   bitcmp                     the 60-step identity runs WTGG-off (RSG-L18 recipe, pool on1_L18RB0) vs WTGG-w0 (on1_L18RBW, new rows weight 0,
                              --on-lon wc_arc): scalars, weights, on_hash_60 = RSG-L18-s0's stored hash -> results/wait_train/identity.json
   devplans --tags T..  (GPU) plans of the moving (>= 2 m/s) navtrain dev rows of shard s0 -> runs/wait_cap/train/devplans/<tag>.npz
-  gate --j T.. --c T [--submit]   (CPU) the registered pilot gates -> results/wait_train/pilot_gate.{json,md}; --submit: on a passing dose the full
-                             stage (wt.sh full <dose>)
+  gate --j T.. --c T [--submit]   (CPU) the registered pilot gates -> results/wait_train/pilot_gate.{json,md}; --submit: write the picked dose
+                             (j2 | j5 | STOP) to runs/wait_cap/train/pilot_pick.txt. Amendment C: it no longer submits the WAIT-only formal
+                             (wt.sh full); the composed WAIT + desire pilot takes the dose, `full` runs only as the registered fallback
   clgate --stage held|sub|pub|pai --j T0,T1 --c T0,T1 [--submit]   (CPU) closed-loop stage lines; --submit: the next stage on PASS
 """
 from __future__ import annotations
@@ -588,9 +589,9 @@ def cmd_gate(a):
     (RES / "pilot_gate.md").write_text("\n".join(L) + "\n")
     (OUT / "pilot_gate.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
-    if a.submit and pick:
-        dose = {v: k for k, v in a.dose_of.items()}[pick] if a.dose_of else pick
-        subprocess.run(["bash", str(HERE / "wt.sh"), "full", dose], check=True)
+    if a.submit:                    # Amendment C: the gate no longer submits the WAIT-only formal; it hands the picked dose to the composed line
+        dose = ({v: k for k, v in a.dose_of.items()}[pick] if a.dose_of else pick) if pick else "STOP"
+        (OUT / "pilot_pick.txt").write_text(dose + "\n")   # j2 | j5 | STOP; the composed pilot (wt.sh wd-pilot) waits on this file
 
 
 # ---------------------------------------------------------------- closed-loop stage lines (CPU)

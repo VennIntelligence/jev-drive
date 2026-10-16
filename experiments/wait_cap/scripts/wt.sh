@@ -6,8 +6,9 @@
 #                               (RSG-L18 recipe) / WTGG-w0 (merged pool, new rows weight 0, --on-lon wc_arc) -> bitcmp
 #   wt.sh control               the control arm with the RSG-L18 recipe (Amendment B: bit-identical to the merged pool at weight 0, proven by bitcmp):
 #                               WTCP-L18-s0 1 000 steps, WTC-L18-s{0,1} 2 500 steps -> their reads (waitcap / dev / ledger F plans, held 460 @18)
-#   wt.sh pilot                 WTJ2P / WTJ5P -L18-s0, 1 000 steps (after bitcmp) -> reads -> gate (on PASS submits `full <dose>`)
-#   wt.sh full <j2|j5>          WTJ{2,5}-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 (6 chunks each) -> clgate held (with the control's held reads)
+#   wt.sh pilot                 WTJ2P / WTJ5P -L18-s0, 1 000 steps (after bitcmp) -> reads -> gate (writes the picked dose to $O/pilot_pick.txt;
+#                               Amendment C: it no longer submits `full`)
+#   wt.sh full <j2|j5>          Amendment C fallback only (WT_FALLBACK=1 by hand): WTJ{2,5}-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 -> clgate held
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -76,7 +77,8 @@ pilot)
   gg=$(sub wt-gate-pilot --after $rj,$rc,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
        $TR $PY gate --j WTJ2P-L18-s0 WTJ5P-L18-s0 --c WTCP-L18-s0 --dose-of j2=WTJ2P-L18-s0,j5=WTJ5P-L18-s0 --submit) || exit 1
   echo "pilot trainings ${ids[*]} reads $rj gate $gg" | tee -a $O/stages.txt ;;
-full)    # full <j2|j5>
+full)    # full <j2|j5>: Amendment C fallback only (the WAIT-only formal); refuses unless WT_FALLBACK=1 is set by hand
+  [[ ${WT_FALLBACK:-0} == 1 ]] || { echo "full: held by prereg Amendment C (WAIT-only formal = fallback only; set WT_FALLBACK=1 by hand)" >&2; exit 3; }
   q=${2:?dose}; J=WT${q^^}-L18; JJ=($J-s0 $J-s1); CC=(WTC-L18-s0 WTC-L18-s1); tr=()
   for s in 0 1; do T=$J-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
     tr+=($(sub wt-train-$T "${FW[@]}" --timeout-h 2 -- bash $ME train $q $s 2500 $T)) || exit 1; done
