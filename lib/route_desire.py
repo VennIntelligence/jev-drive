@@ -16,6 +16,9 @@ lc_intent / intent (stateless, numpy, vectorised over rows)
             STRAIGHT_DEG of hn, when a turn is ahead (turn-lane entry happens 30-100 m before the junction, so the design's "no lane change
             within 60 m of a turn" rule is gone); a = LOOK (40 m) without a turn ahead, with the route settled there (the +a + 20 m point within
             SETTLE_M of a across the a .. a + 20 m chord, when that slot is valid)
+  gap       memory that starts ahead (the first route message lies ~42 m out; held reads of 18 decisions never see +0 m): the first valid
+            slot (<= GAP_MAX) replaces +0 m, hn is taken over its next 20 m, and the ego's own heading must be within GAP_YAW of hn (the
+            road is taken as straight through the gap); in_turn is not judged there
   blocked   d_turn <= BLOCK_M (20 m: the stop line / junction mouth; no new lane change starts there) or in_turn or a < A_MIN
   offset    y_t = the route point at a relative to the ego, across the chord direction href = the median route heading over 0 .. a (a
             constant-curvature road reads ~0, a lane change its lane offset); every slot 0 .. a valid, none > LC_MAX_DEG off href
@@ -52,6 +55,7 @@ ON_M, OFF_M = 1.75, 0.5               # start at half a lane of route offset; do
 LOOK, LOOK_FAR, PRE_M, A_MIN = 40.0, 60.0, 4.0, 12.0
 SETTLE_M, STRAIGHT_DEG = 1.0, 10.0
 TURN_DEG, TURN_IN, BLOCK_M = 30.0, 30.0, 20.0
+GAP_MAX, GAP_YAW = 44.0, 5.0              # memory starting ahead: first valid point within 44 m, ego within 5 deg of the road
 LC_MAX_DEG = 25.0                     # a lane-change route segment may slant this much (rf_dc P_lca: 0-60 m < 25 deg)
 DESIRE = {1: 3, -1: 4}                # side -> log.Desire (laneChangeLeft 3, laneChangeRight 4)
 QUEUE_S = 6.6
@@ -79,7 +83,8 @@ def _cmed(h, m):
 
 def intent(F) -> dict:
     """Route features (n, D) or (D,) of either rmem layout -> dict of (n,) arrays: side (-1 / 0 / +1), y_t (signed target offset, m, left +),
-    a (judge arc, m), d_turn (m, inf = none ahead), blocked, in_turn (bool), why (index into WHY; 0 = a lane change is asked for)."""
+    y_0 (the route's offset from the ego where the memory starts: ~0 = a lane change ahead on the route, ~y_t = the ego is off the route's
+    lane already), a (judge arc, m), d_turn (m, inf = none ahead), blocked, in_turn, gap (bool), why (index into WHY; 0 = a lane change)."""
     F = np.asarray(F, np.float32)
     one = F.ndim == 1
     F = F.reshape(-1, F.shape[-1])
@@ -88,24 +93,28 @@ def intent(F) -> dict:
     v = P[..., 0] > 0.5
     x, y, h = 20.0 * P[..., 1], 20.0 * P[..., 2], np.arctan2(P[..., 4], P[..., 3])
     i0 = int(_slot(0.0))
-    near = v & (OFFS[None] <= 10.0)                                        # -6 .. +10 m
-    hn = _cmed(h, v & (OFFS[None] <= 20.0))                                 # the road's direction at the ego (a lane-change slant is a minority)
+    first = np.argmax(v & (rng >= i0), 1)                                  # the first valid slot at or after +0 m
+    near_ok = v[:, i0]
+    gap = ~near_ok & v[R, first] & (OFFS[first] <= GAP_MAX)                # memory starts ahead (first decisions; held 18 at all)
+    s0 = np.where(near_ok, i0, first)
+    win = v & (OFFS[None] <= OFFS[s0][:, None] + 20.0) & ((rng >= s0[:, None]) | near_ok[:, None])
+    hn = _cmed(h, win)                                                     # the road's direction (a lane-change slant is a minority)
+    gap &= np.degrees(np.abs(hn)) <= GAP_YAW                               # without the near route: the ego must run along the road
     dn = np.degrees(np.abs(_wrap(h - hn[:, None])))
-    hh = np.where(near, _wrap(h - hn[:, None]), np.nan)
+    hh = np.where(v & (OFFS[None] <= 10.0) & near_ok[:, None], _wrap(h - hn[:, None]), np.nan)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         in_turn = np.nan_to_num(np.nanmax(hh, 1) - np.nanmin(hh, 1)) >= np.radians(TURN_IN)
-    tc = v & (dn >= TURN_DEG)
+    tc = v & (dn >= TURN_DEG) & (rng >= s0[:, None])
     tc[:, :-1] &= tc[:, 1:] | ~v[:, 1:]                                    # persistent over the next slot (a merge kink is one segment)
-    tc[:, :i0] = False
     d_turn = np.where(tc.any(1), OFFS[np.argmax(tc, 1)], np.inf)
     turn = np.isfinite(d_turn)
-    top = np.where(turn, np.minimum(_slot(np.where(turn, d_turn, 0.0) - PRE_M), _slot(LOOK_FAR)), _slot(LOOK))
-    flat = v & (dn <= STRAIGHT_DEG) & (rng >= i0) & (rng <= top[:, None])
-    ia = np.where(turn, np.where(flat.any(1), N_PT - 1 - np.argmax(flat[:, ::-1], 1), i0), top)   # just before the junction / LOOK
+    top = np.where(turn, np.minimum(_slot(np.where(turn, d_turn, 0.0) - PRE_M), _slot(LOOK_FAR)), np.maximum(_slot(LOOK), s0))
+    flat = v & (dn <= STRAIGHT_DEG) & (rng >= s0[:, None]) & (rng <= top[:, None])
+    ia = np.where(turn, np.where(flat.any(1), N_PT - 1 - np.argmax(flat[:, ::-1], 1), s0), top)   # just before the junction / LOOK
     a = OFFS[ia]
-    span = (rng >= i0) & (rng <= ia[:, None])
-    ok_route = v[:, i0] & ~(span & ~v).any(1)
+    span = (rng >= s0[:, None]) & (rng <= ia[:, None])
+    ok_route = (near_ok | gap) & ~(span & ~v).any(1)
     href = _cmed(h, span & v)                                              # chord direction of 0 .. a: a constant curve reads 0 offset
     c, s = np.cos(href), np.sin(href)
     y_t = np.where(ok_route, -s * x[R, ia] + c * y[R, ia], 0.0)           # the route at a, relative to the ego, across the road
@@ -119,7 +128,8 @@ def intent(F) -> dict:
     why = np.select([~ok_route, in_turn, d_turn <= BLOCK_M, a < A_MIN, ~straight, ~settled, np.abs(y_t) < ON_M],
                     [2, 3, 4, 7, 5, 6, 1], 0)
     side = np.where(why == 0, np.sign(y_t), 0).astype(int)
-    out = dict(side=side, y_t=y_t, a=a, d_turn=d_turn, blocked=blocked, in_turn=in_turn, why=why)
+    y_0 = np.where(ok_route, -s * x[R, s0] + c * y[R, s0], 0.0)         # the ego's own offset from the route where it starts (return-to-route when large)
+    out = dict(side=side, y_t=y_t, y_0=y_0, a=a, d_turn=d_turn, blocked=blocked, in_turn=in_turn, gap=gap & ~near_ok, why=why)
     return {k: w[0] for k, w in out.items()} if one else out
 
 
@@ -165,7 +175,7 @@ class RouteDesire:
 
     def log(self) -> dict:
         r = getattr(self, "last", {})
-        return dict(state=self.state, side=self.side, t_on=self.t_on, why=self.why, y_t=round(float(r.get("y_t", 0.0)), 3),
+        return dict(state=self.state, side=self.side, t_on=self.t_on, why=self.why, y_t=round(float(r.get("y_t", 0.0)), 3), y_0=round(float(r.get("y_0", 0.0)), 3),
                     d_turn=float(r["d_turn"]) if np.isfinite(r.get("d_turn", np.inf)) else None, intent=int(r.get("side", 0)),
                     iwhy=WHY[int(r.get("why", 2))])
 

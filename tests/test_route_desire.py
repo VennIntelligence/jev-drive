@@ -83,6 +83,15 @@ class TestIntent(unittest.TestCase):
         self.assertFalse(RD.desire_queue(0, 1.0, 1.0).any())
         self.assertEqual([RD.block_of(0.0, a) for a in (0.0, 0.4, 1.0, 2.0)], [32, 30, 27, 22])   # dc.py's open-loop ages
 
+    def test_memory_gap(self):
+        def gapped(f):
+            f = f.reshape(40, 5).copy()
+            f[RD.OFFS < 42] = 0
+            return f.reshape(-1)
+        self.assertEqual(int(RD.intent(gapped(feats(lc(10, 30, 3.5))))["side"]), 1)
+        self.assertEqual(int(RD.intent(gapped(feats(lc(0, 1, 0), yaw=np.radians(3))))["side"]), 0)
+        self.assertEqual(int(RD.intent(gapped(feats(lc(10, 30, 3.5), yaw=np.radians(8))))["why"]), 2)    # ego off the road direction
+
     def test_batch_matches_rows(self):
         F = np.stack([feats(lc(15, 35, 3.5)), feats(curve(150)), feats(junction(50, -3.5, 15, 35, side=-1))])
         r = RD.intent(F)
