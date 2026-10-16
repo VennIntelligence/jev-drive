@@ -49,6 +49,7 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 | GPU | Two RTX 3090 24 GB, driver 580.178.04 (since 2026-10-10, see "Driver and kernel are upgraded by hand"), PCI `01:00.0` (index 0) and `03:00.0` (index 1) |
 | Disks | `/` 1.8 TB (1.4 TB free), `/data` 3.6 TB (nearly empty) |
 | Desktop | GNOME Wayland + Xwayland on `:0`, seat0, 3840x2160 |
+| Remote desktop | xrdp (XFCE on `:10`, `~/.xsession`), x11vnc on `:0`, ToDesk. The xrdp session leaks `DISPLAY=:10.0` into the shared systemd user manager, so Files / Settings clicked on the monitor open invisibly in the RDP desktop; since 2026-10-16 `~/.xsession` resets it to `:0` (check: `systemctl --user show-environment \| grep DISPLAY`) |
 | Code | `~/mycode/jev-drive` (clean clone, `origin` is plain `github.com`) |
 | Data | `/data` — treat it as `DATA_DIR`, same layout as the GPU box |
 
