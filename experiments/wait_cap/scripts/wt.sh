@@ -44,6 +44,16 @@ rows-batch)
   r=$(sub wt-rmnav-$B --after $p --vram 0.5 --cpu 16 --ram 40 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py nav --data $D --workers 16) || exit 1
   t=$(sub wt-teacher-$B --after $p --vram 10 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY teacher --batch $B) || exit 1
   echo "batch $B: select $s index $i prep $p rmnav $r teacher $t" | tee -a $O/rows.txt ;;
+waitdl)   # pool-side wait for the 17 archives: one tiny job per missing .done (--when-exists, chained), then `finish`
+  S=$DATA_DIR/datasets/navsim/_archives/state; prev=""
+  for a in $(cut -f1 experiments/wait_cap/results/trainval_archives.tsv); do [[ -e $S/$a.done ]] && continue
+    prev=$(sub wt-dl-${a//[^0-9]/} --vram 0.1 --cpu 1 --ram 0.1 --timeout-h 12 --when-exists $S/$a.done ${prev:+--after $prev} -- true) || exit 1; done
+  f=$(sub wt-finish --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 ${prev:+--after $prev} -- bash $ME finish) || exit 1
+  echo "waitdl: last wait ${prev:-none} finish $f" | tee -a $O/stages.txt ;;
+finish)   # every archive done: the last batch (if any log is new), pack over all batches, pilot
+  have=$(ls $O/batches | sort | paste -sd,); B=$(ls $O/batches | sort | tail -1 | tr 'A-Y' 'B-Z')
+  bash $ME rows-batch $B || exit 1
+  bash $ME pack $have,$B && bash $ME pilot ;;
 pack)
   BS=${2:?B1,B2}; af=(); for B in ${BS//,/ }; do af+=($(jid wt-rmnav-$B) $(jid wt-teacher-$B)) || { echo "batch $B not submitted" >&2; exit 1; }; done
   k=$(sub wt-pack --after "$(csv ${af[@]})" --vram 0.5 --cpu 4 --ram 120 --timeout-h 1 -- $TR $PY pack --batches $BS) || exit 1
