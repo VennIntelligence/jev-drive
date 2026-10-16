@@ -140,3 +140,45 @@ f. held 的线用 2 seed 平均零分；公开护栏用每 scene 2 seed 平均�
 ## 补记 0（读数之前）
 
 （select / pack / 恒等运行完成后填：行数与格子（含 Y）、泄漏检查、pack 检查、抽样份额、bitcmp 结果。）
+
+## 修订 C：WAIT 与 desire 训练（D1 + D2）合成一个正式臂、一条闭环链（用户决定 2026-10-17，方案 A；写在 WAIT pilot 任何输出之前）
+
+来源：第 332 条（出厂 Cinque 的变道 desire 通路是部分、分级的；P2-F 起被洗掉 69 %、左边 97 %）与 [desire_cap 方案草图](../../desire_cap/plans/2026-10-16-desire-route-design.md) 第 2 节（D1 / D2 / D3）。
+用户决定：开 D1 + D2，与 WAIT-TRAIN 合成**一个**联合正式臂，由**一条**闭环链读；另在 held 段加转弯完成数的线。本修订替换上文与之冲突处；写时
+WAIT 的 pilot 尚未开始（链在等最后 5 个 trainval 归档），对照臂 C 的任何能力数都没有读过。
+
+1. **链的改动（已推 54020417，先于本文）**：pilot 照第 6 节跑、照登记的闸与选剂量规则判（不变）；但 `wt-gate-pilot` **不再提交 WAIT-only 全量**，只把选中的剂量
+   （j2 / j5 / STOP）写进 `runs/wait_cap/train/pilot_pick.txt`。`wt.sh full` 只在第 5 条的退路下手动跑（`WT_FALLBACK=1`），否则拒绝。
+2. **正式臂（a）**：**WD** = WAIT（pilot 选中的剂量，池 on1_L18RBW + `--on-lon wc_arc`，抽样与第 5 节相同）+ D1 + D2，一个臂，2 seed × 2 500 步，
+   RSG-L18 配方从 RB0-F-s0 起（与第 5 节相同）；tag `WD{J2|J5}-L18-s{0,1}`。对照 **C 不变** = WTC-L18-s{0,1}（pilot 用 WTCP-L18-s0）。
+   **C 为什么仍有效**：D1 / D2 全关（不喂 desire = 今天的全 0 队列、不抽 D1 行、无 D2 项）时，trainer 必须与 WAIT 配方逐操作相同：D1 与 D2 各用自己的 rng 流
+   （[seed, 0, 131] / [seed, 0, 127]），关时不建、不抽、不多一次前向。证明：60 步 **WDGG-w0**（合成命令：WAIT 新行权重 0、D1 每 batch 0 行、D2 权重 0）对 WTGG-off，
+   标量与权重逐位相同、on_hash_60 = RSG-L18-s0 的 ea8cacc3e451c577（`wt.py bitcmp` 同一比较）。逐位相同 → C 的三个 checkpoint 就是合成命令在权重 0 下的对照（与修订 B 同一逻辑）；
+   不相同 → C 作废，用合成命令在权重 0 下重训 C（WDC*），合成 pilot 与之后各段都等它。
+3. **D1 / D2 的做法（实现细节在合成 pilot 之前补进补记 C1）**：
+   - 前向：策略的 desire 队列（`_to_copy`，(B, 1, 33, 8)，块 32 = 最近 0.2 s）作可选输入；None = 今天的 0，调用不变（逐位）。脉冲格式与 dc.py 完全相同。
+   - **D1（变道行带 desire，模仿人）**：navtrain 训练 split 的 `lc` 行（rf_cfpool geom：4 s 内换车道且 +4 s 离 t0 车道 ≥ 2 m）中，用行自己的路线记忆跑
+     `lib/route_desire.py` 的规则（lc_intent 与速度门，D0 线所有，**只 import 不复制**）触发、且触发方向与人 4 s 横移方向一致的行；
+     每 batch 抽 4 行（自己的 rng 流）替换最后 4 个普通行（同 `--lc-cf` 的位置），喂规则给出的变道 desire，目标 = 人的真实轨迹（普通模仿项，不加新项）。
+     合并池（on1_L18RBW，含 WAIT 行）里规则在其喂入路线记忆上触发的行：抽到时同样喂该 desire，损失照该行自己的配方（S 行 = hinge + 蒸馏；WAIT 行 = 弧长项），
+     **不加模仿目标**（RSG 的 `self` 行没有人的目标，`fut` 是恢复路径、配方从不读）。脉冲年龄：缓存里 navtrain 行是孤立帧、读不到规则在该 log 上的首次触发时刻，
+     所以每次抽到时从 {0, 0.4, 1, 2} s 均匀抽（dc.py 的年龄集）。所用规则版本（git hash）记在行表与 run summary；合成 pilot 之后不再换版本。
+   - **D2（desire 增量蒸馏，保通路）**：每 batch 的锚行（adapter 关）与非锚普通行中按 1 / 8 抽的行（自己的 rng 流），随机侧（LCL / LCR）与年龄 ∈ {0, 0.4, 1, 2} s，
+     对这些行再前向一次带 desire；损失 = 行平均的 8 个后轴位姿 (x, y) 上 ‖(plan_θ(x, d) − sg[plan_θ(x, 0)]) − (plan_P0(x, d) − plan_P0(x, 0))‖ 的均值（m），× λ_D2；
+     plan_θ(x, 0) 取同一 batch 主前向并停梯度（none 的 plan 不受这一项影响）。教师 = 出厂 Cinque 同一输入（dc.py 的同一脉冲写法），离线存 `teacher_desire.npz`。
+   - **D3（守卫）**：即第 2 条的逐位证明；dev ADE 线见下。
+4. **合成 pilot（b）**：seed 0、1 000 步，WAIT 用 pilot 选中的剂量，D2 两个剂量 **λ_D2 ∈ {1, 3}**（方案草图「D2 权重 1 / 3」按本仓库写法读作两个剂量；两臂只差 λ_D2），
+   tag `WD{J2|J5}P{1|3}-L18-s0`；在 WDGG 逐位证明之后训练。每臂**全部成立才算过**：
+   - WAIT 的五条 pilot 闸 + launch-lock 形状（第 6 节原文、原读数、对 WTCP-L18-s0）；其中闸 4 即 dev ADE ≤ C + 0.01 m；
+   - desire 离线闸（dc.py plans 协议，capledger_test 的 C_fast 行，年龄 0，LCL / LCR 合并、带符号朝 desire 一侧）：4 s 横移均值 ≥ 0.9 × P0（P0 = 同一读数的存档 P0 plan，1.04 m）、
+     LCL 与 LCR 各 ≥ 0.8 m、方向对（4 s 响应 > 0.1 m 的比例）≥ 0.95；
+   - 只报：PAI on-policy 行 P_lca（路线要求变道处）朝路线一侧 4 s 响应（对 1.5 m 报，不判），turn desire 行与 RSG-L18 同口径（第 332 条线 2）。
+   - 选：只一个过 → 用它；两个都过 → λ_D2 = 1（干预小的）。都不过 → 第 5 条退路，不做第三个变体。
+5. **退路（c）**：截止 = WAIT pilot 判词（`pilot_gate.json` 写出）后 **24 h**。截止前合成 pilot 没有一个臂过（两臂都不过、D0 规则未落地、或 D1 / D2 未就绪）
+   → 按原登记跑 WAIT-only 全量（`WT_FALLBACK=1 wt.sh full <dose>`，第 7 节不变），WAIT 不丢。WAIT pilot 本身判 STOP（两剂量都不过或 launch-lock）→ 不做任何全量，合成的也不做。
+6. **held 段新增转弯线（d）**：第 (1) 段除「零分 J ≤ C + 3」外，加 **held 转弯完成数**：rf_follow.py 在同一 held 460 @18 读数上（6 chunk / tag）数 `turn` 场景的
+   `completed`；转弯场景由 log 自己在 18 个决策内转完的弯定义，所有 checkpoint 同一集合（第 303 / 307 条的 24 个）。线：**2 seed 平均 J ≥ C − 2**（容差，不要求严格相等），
+   每 seed 也报，并报共同转弯场景上的配对差（log 聚类）。两条都过才放行 (2)。这一条抓「变慢 → 转弯变差」。
+7. **其余不变（e）**：闭环链 held → 逐场景 → 公开护栏 → PAI 281 的线、读法、对照（C 与 RSG-L18-s0 存档 PAI 参照）全部照第 7 节，只是 J 换成 WD。
+   serve 配置也照登记（driver 不喂 desire，队列全 0）：这条链量的是 WAIT 能力与「desire 训练关着 desire 时不伤闭环」；desire 在闭环里的作用是 D0 线（driver 侧喂 desire）的读数，不在本链。
+8. **成本增量**：教师 desire 预算 ~0.7 卡时、WDGG 60 步 ~0.05、合成 pilot 2 臂 + 读 ~0.5、dc 读 ~0.2；正式 + 闭环链与原登记相同（~20 卡时，WAIT-only 全量不再跑）。
