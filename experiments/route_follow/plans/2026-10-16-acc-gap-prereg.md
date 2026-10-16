@@ -56,3 +56,9 @@ d(v) = v²/5 + T_FOLLOW v + STOP_DISTANCE 里的两个常数。不设时逐位�
 
 阶段 1：4 个 chunk job（约 19 场景各约 30 分钟），阶段 2：8 个（约 52 分钟各，box 1–1.5 小时墙钟）。1 seed、按场景配对；阶段 1 与已存读数的 chunk 表不同，
 跨表噪声由 s1acc 描述。这是当前唯一的 PAI 读数。若全过，它是下一次 PAI 提交的候选（需要新镜像，本 lane 不建）。
+
+## 补记 1（读数之后，2026-10-16 晚）
+
+- 阶段 1 PASS（[results/acc_gap/stage1.md](../results/acc_gap/stage1.md)）：被追尾 9 → 2，碰撞 1 对 1，零分 4 对 3；同表 ACC 重跑与已存读数 37 / 37 完全相同。gate 自动提交了阶段 2。
+- 阶段 2 PASS（[results/acc_gap/stage2.md](../results/acc_gap/stage2.md)、`stage2_table.md`）：+0.017 [−0.008, +0.044]，考题 +0.005，零分 75 对 75，spin 0 对 0；被追尾 40 → 28，碰撞 9 对 9。
+- 决定 [330](../../../research/decisions/330.md)。
