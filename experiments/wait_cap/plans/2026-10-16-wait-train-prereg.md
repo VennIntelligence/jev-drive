@@ -201,3 +201,10 @@ WAIT 的 pilot 尚未开始（链在等最后 5 个 trainval 归档），对照�
 - **held 转弯集合**：`results/wait_train/held_turns24.txt`（RSG-L18 的 rf_follow 24 个转弯场景，与第 303 / 307 条同一集合）；每个 tag 的转弯场景必须等于这个集合，否则 gate 报错不判。
 - **退路的执行**：`wd-deadline` 一个池作业，WAIT 判词（pilot_gate.json）后睡到 24 h，没有 `WD_PASS` 就跑 WAIT-only 全量；合成 gate 失败也立即退路；`FALLBACK` / `WD_PASS`
   两个标记保证两条路只走一条。
+
+## 补记 C2：代码恒等与教师（合成 pilot 之前）
+
+- `results/wait_train/wd_code_identity.json`：60 步 RSG-L18 原配方，520e9407 的代码对现代码（D1 / D2 关）：89 个标量、全部权重逐位相同，on_hash_60 都 = ea8cacc3e451c577，
+  dev ADE 0.529079 两边相同 → **identical**。C（旧代码训的 WTCP / WTC）对现代码在关闭状态下仍是同一配方。
+- 教师 12 个分片（103 288 行）全部写出，G-proto 每个分片最大差 0.0。40 步冒烟（假 D1 表 = 人侧、不是规则；tag WDSMOKE-s0，不用于任何读数）：D1 / D2 路径跑通，20.6 GB、2.5 it/s。
+- WDGG-w0 对 WTGG-off 的逐位比较（第 2 条）在 WAIT 的 pack 之后由 `wd-pilot` 跑，结果写 `wd_identity.json`，D1 行表 `d1_rows.json`（行数统计）随后补。

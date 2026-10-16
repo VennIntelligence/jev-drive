@@ -148,7 +148,7 @@ wd-deadline)   # Amendment C 5: 24 h after the WAIT pilot verdict (pilot_gate.js
   WT_FALLBACK=1 exec bash $ME full $q ;;
 wd-pilot)
   q=$(cat $O/pilot_pick.txt); [[ $q == j2 || $q == j5 ]] || { echo "WAIT pilot verdict $q: no composed pilot, no formal (Amendment C 5)" | tee -a $O/stages.txt; exit 0; }
-  r=$(sub wd-rows --vram 0.5 --cpu 4 --ram 64 --timeout-h 1 -- $TR $DT rows) || exit 1
+  r=$(sub wd-rows --vram 0.5 --cpu 4 --ram 64 --timeout-h 24 --when-exists $PWD/lib/route_desire.py -- $TR $DT rows) || exit 1   # the D0 line's rule
   g=$(sub wd-gg-w0 "${FW[@]}" --timeout-h 1 -- bash $ME train wdw0 0 60 WDGG-w0) || exit 1
   b=$(sub wd-bitcmp --after $g --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a WTGG-off --b WDGG-w0 --out wd_identity \
       --note "Amendment C 2: RSG-L18 recipe vs the composed command with WAIT rows at weight 0, D1 0 rows, D2 weight 0") || exit 1
