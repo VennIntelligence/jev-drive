@@ -25,7 +25,7 @@
 #   wt.sh explore-e             static scene @10 (frame dump) for P0 / P2-F / RB0 / RSG and JEV_VHIST=zero for those + WTCP / WTJ2P / WTJ5P; held 460 @18 and
 #                               PAI stop17 for the stages without a stored read; c1_replay of the static scene (plain / zero history); cap_audit collect on
 #                               the WTJ2P / WTCP held reads; c1_extract logs + map of the J2P-only offroad zeros -> $O/explore_e/
-#   wt.sh xe-replay <tag> <run> | xe-logs | xe-heldca | xe-offroad      job bodies
+#   wt.sh xe-replay <tag> <run> | xe-logs | xe-xreplay | xe-heldca | xe-offroad      job bodies; analysis: scripts/wt_xe.py
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -191,9 +191,12 @@ xe-replay)   # xe-replay <tag> <run dir>: the static scene's stored driver messa
   for m in off zero; do env SH30_TAG=$T JEV_VHIST=$m ALPASIM_SRC=$DATA_DIR/third_party/alpasim OMP_NUM_THREADS=2 \
       $TR experiments/alpasim/scripts/c1_replay.py --driver sh30 --msgs $D/msgs --spec $D/spec.json --out $D/replay_$m.pkl || exit 1; done ;;
 xe-logs)     # c1_extract logs + frames of every 补记 D / E static-scene run -> explore_e/logs/<label>/
-  for R in $O/explore_e/static/*/run $O/explore/sub/*/run; do L=$(basename $(dirname $R)); mkdir -p $O/explore_e/logs/$L
+  for R in $O/explore_e/static/*/run $O/explore/sub/*/run; do L=$(basename $(dirname $R))
+    ls $R/rollouts/$STATIC/*/rollout.asl > /dev/null 2>&1 || { echo "$L: rollout.asl pruned (scored > 0), skipped"; continue; }; mkdir -p $O/explore_e/logs/$L
     $AP experiments/alpasim/scripts/c1_extract.py logs --run $R --out $O/explore_e/logs/$L/logs.pkl --jobs 1 || exit 1
     $AP experiments/alpasim/scripts/c1_extract.py frames --run $R --scenes $O/explore/static.txt --out $O/explore_e/logs/$L/frames.pkl --jobs 1 || exit 1; done ;;
+xe-xreplay)  # every stage's plan on P0's own closed-loop static-scene inputs (its SH30_DUMP), measured and zeroed speed history -> explore_e/out/xreplay.json
+  exec $TR experiments/wait_cap/scripts/wt_xe.py xreplay ;;
 xe-heldca)   # cap_audit collect, measures unchanged, on the held 460 @18 reads of WTJ2P / WTCP (YR10m10-F-s0 is the collect's scene-config label)
   CA_EXTRA='{"WTJ2P-L18-s0": ["route_mem/read/WTJ2P-L18-s0/c*/run"], "WTCP-L18-s0": ["route_mem/read/WTCP-L18-s0/c*/run"]}' \
   CA_ONLY=YR10m10-F-s0,WTJ2P-L18-s0,WTCP-L18-s0 exec $AP experiments/cap_audit/scripts/ca.py collect --set held --workers 32 ;;
