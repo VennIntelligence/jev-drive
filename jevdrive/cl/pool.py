@@ -98,7 +98,8 @@ A job's process tree is recorded by (pid, start time) plus a CL_TOKEN env entry 
 member still alive is stopped through a pidfd; resources are freed only after the tree is empty. Cancel, timeout and the
 RSS cap stop the tree the same way. Nothing is ever found or killed by pattern.
 
-Job env: the dispatcher's env + the profile's thread env + the job's env + CUDA_VISIBLE_DEVICES={gpu}, CL_GPU, CL_IDX,
+Job env: the dispatcher's env + the profile's thread env + disk.job_env (TMPDIR = $DATA_DIR/tmp/cl/<id>, removed when
+the tree has exited; shared torch.compile / Triton / CUDA JIT caches under $DATA_DIR/cache) + the job's env + CUDA_VISIBLE_DEVICES={gpu}, CL_GPU, CL_IDX,
 CL_SPAN, CL_CPUS, CL_POOL_JOB, CL_JOB_DIR, B2D_DRAIN_FILE, B2D_PIDS_WAIT. cmd and env may use {gpu} {idx} {span}
 {carla} {workers} {cpus} {server_args} {client_threads} {pids_wait} {job_dir} {id}.
 log_dir gets log.txt (all tries), STATUS (one line), DONE (JSON) or ERROR (reason + log tail).
@@ -124,7 +125,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import capacity, procs, profiles
+from . import capacity, disk, procs, profiles
 from .box import CARLA_BIN, format_cpus, parse_cpus, probe, processes, smi
 
 REPO = Path(__file__).resolve().parents[2]
@@ -149,6 +150,7 @@ CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 STALE_S = 120.0                       # status.json older than this: the dispatcher is not running
 KILL_RCS = (137, -9)                  # a root that died of SIGKILL (bash reports 128 + 9)
 TRIM_EVERY_S = 30.0                   # at most one page-cache trim per this many seconds
+DISK_LOW_EVERY_S = 600.0              # a low system disk is pruned at most this often (disk.py)
 LIST_EVERY_S = 3600.0                 # how often the dispatcher has the trimmer's file list re-walked ahead of need
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
                 max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0,
@@ -157,7 +159,8 @@ DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, 
                 # a start needs its RAM + ws_reserve_gb of margin below it, the trimmer keeps ws_keep_gb free, a job
                 # without ram_gb counts as ram_default_gb, a SIGKILLed job is retried kill_retries times beyond tries
                 ws_kill_frac=0.98, ws_reserve_gb=16.0, ws_keep_gb=80.0, ram_default_gb=8.0, kill_retries=3, trim=True,
-                trim_roots=None, ws_wait_s=600.0)
+                trim_roots=None, ws_wait_s=600.0,
+                disk=True)                     # job temp + compile caches on the data disk, system disk pruned (disk.py)
 FINAL = ("done", "failed", "cancelled")
 
 
@@ -811,6 +814,7 @@ class Dispatcher:
                 live[jid] = members
                 continue
             self.children.pop(jid, None)
+            self.release_tmp(jid)
             try:
                 rc = int((d / ("rc.%d" % j["tries"])).read_text().strip())
             except (OSError, ValueError):
@@ -1163,6 +1167,11 @@ class Dispatcher:
         env = dict(os.environ)
         if s.profile or s.carla:
             env.update(prof.environ())
+        if self.cfg().get("disk"):
+            try:
+                env.update(disk.job_env(jid))             # per-job TMPDIR + shared compile caches on the data disk
+            except OSError as e:
+                self.log("disk_env_failed", id=jid, err=str(e))
         env.update({kk: fill(v) for kk, v in s.env.items()})
         env.update(CUDA_VISIBLE_DEVICES=str(g), CL_GPU=str(g), CL_IDX=str(subs["idx"]), CL_SPAN=str(span),
                    CL_CPUS=cpus, CL_POOL_JOB=jid, CL_JOB_DIR=str(ld), CL_OWNER=s.owner or jid,
@@ -1259,6 +1268,32 @@ class Dispatcher:
         except OSError as e:
             self.log("trim_failed", err=str(e))
 
+    def release_tmp(self, jid: str) -> None:
+        """Remove the job's TMPDIR (disk.job_env) once its whole tree has exited, whatever the rc."""
+        try:
+            n = disk.release(jid)
+        except OSError as e:
+            return self.log("disk_release_failed", id=jid, err=str(e))
+        if n:
+            self.log("disk_release", id=jid, gb=round(n / disk.G, 3))
+
+    def keep_disk(self, cfg: dict) -> None:
+        """Start a detached disk.prune pass (deletions logged as `disk_prune` events) when the system disk is low
+        (at most every DISK_LOW_EVERY_S) or every disk.cfg()["every_s"]."""
+        if not cfg.get("disk") or self.probe_fn:
+            return
+        now, c = time.time(), disk.cfg()
+        since = now - getattr(self, "disk_t", 0.0)
+        if since < DISK_LOW_EVERY_S or (since < c["every_s"] and not disk.low(c=c)):
+            return
+        self.disk_t = now
+        try:
+            subprocess.Popen([sys.executable, "-m", "jevdrive.cl.disk", "prune", "--log", str(self.pool / "events.jsonl")],
+                             cwd=str(REPO), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError as e:
+            self.log("disk_prune_failed", err=str(e))
+
     def keep_boxwatch(self) -> None:
         """Start scripts/boxwatch.sh detached when it is not running (it takes its own lock and exits at once when
         another instance holds it). The sampler is the only record of what the box looked like before a SIGKILL and
@@ -1305,6 +1340,7 @@ class Dispatcher:
         if not self.halt:
             self.admit(box, rows, live, holds, cfg)
             self.keep_margin(box, cfg)
+            self.keep_disk(cfg)
             self.usage(box)
             self.keep_boxwatch()
         self.save()

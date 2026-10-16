@@ -9,6 +9,9 @@ threads it has and how hard it oversubscribes its core slice:
   client_threads carla.Client worker threads in the route process; 0 = CARLA's default, one per host hardware thread.
   num_threads    OMP / MKL / OPENBLAS / NUMBA threads of the route process (the agent's numeric libraries); None = unset.
 
+Where a job's temp files and compile caches go (TMPDIR, TORCHINDUCTOR_CACHE_DIR, TRITON_CACHE_DIR, CUDA_CACHE_PATH)
+is not a profile knob either: every pool job and tmux_run.sh job gets disk.job_env (jevdrive/cl/disk.py), on both boxes.
+
 OPENBLAS_CORETYPE is not a profile knob: it is a correctness setting of particular envs (Haswell for the NAVSIM devkit
 on the GPU box, Barcelona to replay Tokyo-recorded controller goldens bit for bit). Put it in a job's env.
 

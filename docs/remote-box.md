@@ -72,6 +72,16 @@ with a monitor, for looking at CARLA with your own eyes.
 - Shell: interactive login is fish. Scripts and `ssh autodl '<cmd>'` run bash.
 - Disk: the system disk is 30 GB, keep it empty. The data disk is 4.2 TB since 2026-09-28 (3.1 TB before; 1.4 TB free after the move). Put everything in `~/data`, see [storage.md](storage.md).
   Caches (HF, torch, pip, uv, modelscope) already point there.
+  Jobs keep off it by themselves (`jevdrive/cl/disk.py`, since 2026-10-16): every pool job and every
+  `scripts/tmux_run.sh` job gets TMPDIR = `$DATA_DIR/tmp/cl/<job>` (removed when the job ends, any rc) and shared
+  torch.compile / Triton / CUDA JIT caches under `$DATA_DIR/cache/{torchinductor,triton,cuda}` (CUDA_CACHE_MAXSIZE 4 GiB,
+  seeded from `~/.nv/ComputeCache`). The dispatcher prunes the system disk when it has < 20 % free and every 6 h:
+  job temp dirs no live process holds, `/tmp/__nvrtc_auto_pch_<pid>_*` of dead pids, compile caches over their cap
+  (oldest leaf dirs first; `/tmp/torchinductor_ujs` 2 GB), each deletion logged as a `disk_prune` event in the pool's
+  events.jsonl. Other /tmp files are only listed (`python3 -m jevdrive.cl.disk prune --dry`), never deleted. What filled
+  it before: nvimgcodec's ~157 MB temp dir per AlpaSim host process (~1.5 GB/day under read load), torch.compile's
+  /tmp cache (0.5-1.8 GB on compile days). Thresholds and caps per host: `$DATA_DIR/runs/disk.json` (keys of
+  `disk.DEFAULTS`). A job that needs short Unix-socket paths (Ray) sets its own TMPDIR / RAY_TMPDIR in its env.
 - Public datasets: `/autodl-pub` (read-only). Check it before downloading big data.
 - Code: `~/data/jev-drive`. Update with `git pull`. It uses a read-only deploy key (ssh alias `github-jev-drive`),
   so do not commit or push from the box. Delete `~/.ssh/id_ed25519_jev_drive` before saving an image.

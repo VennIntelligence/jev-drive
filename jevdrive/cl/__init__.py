@@ -5,6 +5,7 @@
   box        live probe: cgroup CPU quota, pids.max, memory, NUMA, cards (nvidia-smi, cached), CARLA servers per card
   profiles   named worker profiles: CARLA thread pools, client threads, numeric-library threads
   capacity   thread model per worker, PID admission from pids.max, per-card sizing, usable server indices
+  disk       job temp + compile caches on the data disk, safe prune of the system disk, docker prune (both boxes)
   procs      owned process trees by (pid, start time); stop through pidfd, never by pattern
 
 CLI: python -m jevdrive.cl {submit, queue, show, cancel, top, hold, holds, unhold, dispatch, probe, plan, profiles}.

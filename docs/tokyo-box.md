@@ -265,6 +265,14 @@ Same rule as the GPU box ([long-runs.md](long-runs.md)), and here it has a secon
 person sitting at the monitor sees the same pane you do. Sessions in use: `jev` for project work,
 `dl` for downloads and installs.
 
+**Disk (2026-10-16).** The same module as the GPU box, `jevdrive/cl/disk.py` (DATA_DIR falls back to `~/data` = `/data`):
+`scripts/tmux_run.sh` jobs get a per-job TMPDIR under `/data/tmp/cl/` (removed at the end) and the shared compile caches
+under `/data/cache/`, and prune `/` when it has < 20 % free; deletions go to `/data/runs/disk.jsonl`. Docker is the big
+consumer here (build cache 36.9 GB, unused tagged images 28 GB on 2026-10-16; no dangling images):
+`python3 -m jevdrive.cl.disk docker` shows what a prune would remove (dangling images no container uses, build cache
+unused for 72 h) and lists unused tagged images without touching them; `--run` removes it and needs the user's go-ahead.
+It never removes a tagged image (so never `jev-alpasim:*`) or one a container uses; it costs a slower next `build.sh`.
+
 ## Network: Clash in global mode, and nodes that decay
 
 Clash Verge runs on the desktop: mixed port **7890**, **mode `global`**, external controller on

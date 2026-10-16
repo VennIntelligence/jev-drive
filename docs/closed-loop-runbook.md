@@ -179,6 +179,14 @@ history key `CL_HIST_KEY=alpasim-read4` (the old key `ol-fast-read` holds 8-conc
 under-declared). A read queued before that change runs the new settings too, but keeps its old key and declaration: leave it at 26 (retargeting it to 20 alone gets it booked at its key's old peaks).
 Rollouts (`ol-roll`) keep 32 (frame dumps, more RAM). research/alpasim-read-profile.md.
 
+**Disk.** Every job's env carries `disk.job_env` (after the profile env, before the job's own env, which wins):
+TMPDIR = `$DATA_DIR/tmp/cl/<id>`, removed when the job's whole tree has exited (event `disk_release`), and shared
+`TORCHINDUCTOR_CACHE_DIR` / `TRITON_CACHE_DIR` / `CUDA_CACHE_PATH` under `$DATA_DIR/cache/`. When the system disk has
+less than 20 % free (at most every 10 min) and every 6 h the dispatcher starts a detached `python -m jevdrive.cl.disk
+prune` that removes only job temp dirs no live process holds, NVRTC pch dirs of dead pids and capped compile caches
+(oldest first), logging each path as a `disk_prune` event. Config key `disk` (default true) turns both off.
+Details and the rule: docs/remote-box.md "Disk", `jevdrive/cl/disk.py`.
+
 **Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
 jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
 and queued jobs survive. Stop it with SIGTERM to its pid only (`status.json` has it): the handler lets the round
