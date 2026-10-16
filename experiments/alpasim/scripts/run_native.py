@@ -17,8 +17,8 @@ A runtime worker that dies (SIGKILLed from outside on this box, docs/alpasim.md 
 alive but stuck: "Worker N died with exit code -9", "Result pump failed", then no rollout ever finishes. The launcher
 watches the runtime's log for those lines and ends the run with rc 1 at once, so the pool job fails in seconds.
 
-ALPASIM_FAST=1 (env) appends lib/sim_fast.py's overrides: only the camera the driver (the *_driver.py in --driver) consumes, eval
-video off (docs/alpasim.md "Fast local reads"); local reads only.
+ALPASIM_FAST=1 | solo (env) appends lib/sim_fast.py's overrides: the camera the driver (the *_driver.py in --driver) consumes at full
+size, the others tiny (1) or dropped (solo), eval video off (docs/alpasim.md "Fast local reads"); local reads only.
 
 Run it as a GPU-pool job with the AlpaSim env's python (the pool sets CUDA_VISIBLE_DEVICES):
   python -m jevdrive.cl submit --name alpasim-dev --vram 30 --cpu 12 -- bash experiments/alpasim/scripts/run.sh ...
@@ -202,14 +202,15 @@ def main() -> int:
                                    f"--upstream 127.0.0.1:{up} --out {out / 'driver_tap.jsonl'}", base, src)
                 procs.wait_port("tap", port, 120)
 
-        if os.environ.get("ALPASIM_FAST") == "1":
+        if os.environ.get("ALPASIM_FAST", "0") != "0":
             sys.path.insert(0, str(HERE.parent / "lib"))
             import sim_fast
             drv = re.search(r"(\S+_driver\.py)\b", a.driver or "")
             if not drv:
                 raise SystemExit("ALPASIM_FAST=1 needs a --driver command naming its *_driver.py")
             denv = dict(os.environ, **dict(t.split("=", 1) for t in shlex.split(a.driver) if re.fullmatch(r"[A-Z_][A-Z0-9_]*=.*", t)))
-            a.overrides += sim_fast.overrides(src, a.overrides, str((Path(a.driver_cwd or src) / drv[1]).resolve()), denv)
+            a.overrides += sim_fast.overrides(src, a.overrides, str((Path(a.driver_cwd or src) / drv[1]).resolve()), denv,
+                                            os.environ["ALPASIM_FAST"])
         # The wizard hands out the first free ports at or above baseport; start from a random one per run.
         if a.scene_list:
             ids = ",".join(f'"{x}"' for x in Path(a.scene_list).read_text().split())

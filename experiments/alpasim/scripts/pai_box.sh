@@ -9,8 +9,8 @@
 #   default the served configuration "JEV_VCONT=1.0 JEV_LEAD=1"; other driver env such as JEV_VHIST=holdlead or SH30_RMEM=0 goes here too),
 #   WIZ (wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"), PRIO (pool priority, 13),
 #   AFTER (pool job ids the chunks wait for), KEEP_VIDEO=1 / KEEP_ASL=1 (keep the rollout mp4s / the rollout.asl of scored rollouts; dropped by
-#   default: a read of 147 scenes is then ~10 GB instead of ~60 GB), ALPASIM_FAST=1 (local reads only: only the driver's camera, eval
-#   video off; lib/sim_fast.py via run_native.py, docs/alpasim.md "Fast local reads"; PAI_FAST=1 is the old name), VRAM / RAM (per job, 28 / 40 GB).
+#   default: a read of 147 scenes is then ~10 GB instead of ~60 GB), ALPASIM_FAST=1 | solo (local reads only: the driver's camera at full
+#   size, the others tiny | dropped, eval video off; lib/sim_fast.py via run_native.py, docs/alpasim.md "Fast local reads"; PAI_FAST=1 is the old name), VRAM / RAM (per job, 28 / 40 GB).
 # Layout as pai_eval.sh, so pai_eval_report.py reads it unchanged: <out>/{chunks/cNNN.txt, jobs.txt, runs/<lowercase tag>_cNNN/{sim/, driver ->
 #   sim/driver-logs, pool/, SUBMITTED, DONE | ERROR}}. A second submit skips finished and pending chunks and resubmits failed ones (resume);
 #   a chunk with a scene not yet in the scene cache is left out until a later submit.
@@ -45,7 +45,7 @@ PY
     [[ " $miss " == *" $c "* ]] && { echo "$c: scenes missing from the cache, not submitted"; continue; }
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram "${VRAM:-28}" --cpu 6 --ram "${RAM:-40}" --timeout-h 3 \
-           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$([[ $FAST == 1 ]] && echo fast || echo read)${CONC:-4}" --env "CONC=${CONC:-4}" \
+           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$([[ $FAST != 0 ]] && echo fast || echo read)${CONC:-4}" --env "CONC=${CONC:-4}" \
            --env "WIZ=${WIZ:-}" --env "ALPASIM_FAST=$FAST" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
