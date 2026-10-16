@@ -45,6 +45,16 @@ GAP_R, GAP_CAP = 40.0, 5.0
 
 # ---------------------------------------------------------------- labels -> run dirs
 def run_dirs(st):
+    """label -> run dirs of set st. CA_EXTRA (JSON {label: [glob, ..]}, globs under $DATA_DIR/runs) adds labels, CA_ONLY (comma list) keeps only
+    those labels (wait_cap 2026-10-16: the same collect for P2-F / P2H10-F / RSG / RBSG2 rollouts; the measures are unchanged)."""
+    d = _run_dirs(st)
+    for lab, gl in json.loads(os.environ.get("CA_EXTRA", "{}")).items():
+        d[lab] = sorted(x for g in gl for x in glob.glob(str(RUNS / g)))
+    only = [x for x in os.environ.get("CA_ONLY", "").split(",") if x]
+    return {k: v for k, v in d.items() if not only or k in only}
+
+
+def _run_dirs(st):
     if st == "pub":
         ra = RUNS / "alpasim"
         o3, cf, c0c = (json.loads((ra / f).read_text()) for f in ("ot3/a/manifest.json", "cf1/a/manifest.json", "c0c/manifest.json"))
