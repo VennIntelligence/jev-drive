@@ -208,3 +208,11 @@ WAIT 的 pilot 尚未开始（链在等最后 5 个 trainval 归档），对照�
   dev ADE 0.529079 两边相同 → **identical**。C（旧代码训的 WTCP / WTC）对现代码在关闭状态下仍是同一配方。
 - 教师 12 个分片（103 288 行）全部写出，G-proto 每个分片最大差 0.0。40 步冒烟（假 D1 表 = 人侧、不是规则；tag WDSMOKE-s0，不用于任何读数）：D1 / D2 路径跑通，20.6 GB、2.5 it/s。
 - WDGG-w0 对 WTGG-off 的逐位比较（第 2 条）在 WAIT 的 pack 之后由 `wd-pilot` 跑，结果写 `wd_identity.json`，D1 行表 `d1_rows.json`（行数统计）随后补。
+
+## 补记 C3：D1 行数与槽数改为 2（合成 pilot 之前，只有行统计）
+
+- D0 的规则（`lib/route_desire.py` f7e5919e 前后版本，`intent` + V_MIN 8.9，D0 低速读后速度门不变）在 navtrain 的 3 972 个 `lc` 行上只触发 104 个、与人侧一致 98 个（左右见 d1_rows.json）。
+  不触发的原因：3 162 个 `no_route`（行自己的路线记忆在 0 .. a 不连续有效），406 个 `small`，其余 in_turn / curved 等；`lc` 行只有 10.6 % 速度 ≥ 8.9 m/s（中位 5.5 m/s）。
+  池 on1_L18RB0 的 17 429 行里触发 217 行（左 86 / 右 131）；WAIT 行在 pack 之后由 wd-rows 数。规则是 D0 线的，本线不改（只 import）。
+- 只有约 100 行，第 3 条的「每 batch 4 个 D1 槽」在 2 500 步里每行要重复约 100 次（--lc-cf 的约 2 400 行 × 8 槽是每行约 8 次 / 1 000 步）。**改为每 batch 2 个槽**
+  （pilot 每行约 20 次、正式约 50 次）；其余不变。D1 在这一臂里因此很弱，desire 通路主要靠 D2；合成 pilot 的 desire 闸照登记判。

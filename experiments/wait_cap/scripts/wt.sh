@@ -30,7 +30,7 @@ PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1"; PAIWIZ=controller.gains.rel_front
 STATIC=2021.09.16.15.12.03_veh-42_01037_01434-b5b8d20688385790
 STOP17="054b5901 095cf563 127c4f85 2d10a08d 35e082a4 3fe2bac8 44df49fe 4cb7f7ac 4ecc114d 559d4ad6 68c3be44 7d994ed3 9f8acd00 ba40be62 bc309fd6 cbd87234 fc9fde87"
 DT=experiments/desire_cap/scripts/dt.py; DC=experiments/desire_cap/scripts/dc.py
-TEA=$DATA_DIR/runs/desire_cap/train/teacher; D1R=$DATA_DIR/runs/desire_cap/train/d1_rows.npz; D1K=4
+TEA=$DATA_DIR/runs/desire_cap/train/teacher; D1R=$DATA_DIR/runs/desire_cap/train/d1_rows.npz; D1K=2
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-train --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
