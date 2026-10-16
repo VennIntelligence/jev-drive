@@ -24,6 +24,10 @@ to RSG-L18's pool on1_L18RB0 -> on1_L18RBW; the pilot / closed-loop gates. Box, 
                              (rf_follow in DIR/follow: 2-seed mean completed J >= C - 2)
   Amendment C (the composed WAIT + desire arm WD):
   bitcmp --a T --b T --out NAME   the same identity comparison for any two 60-step runs (default WTGG-off vs WTGG-w0 -> identity.json)
+  补记 D (exploratory, after the pilot STOP; outputs under runs/wait_cap/train/explore, no registered verdict file touched):
+  devall --tags T..   (GPU)  the gate-4 dev rows (dev_eval's call) -> explore/devall.npz (plans, human future, P0 teacher plan, agent context)
+  xheld / xsum --j T,T --c T [--submit]   (CPU) held 460 @18 lines on one seed -> explore/held.json (+ public reads for J meeting them);
+                             every closed-loop read -> explore/cl.{json,md}, explore/FINISHED
   wdgate --j T1 T3 --c T --lam-of 1=T1,3=T3 [--submit]   the composed pilot: every WAIT pilot gate + launch-lock (cmd_gate's per-arm read)
                              and the desire offline gates (dt.desire_read) -> results/wait_train/wd_pilot_gate.{json,md}; --submit: a passing
                              arm (both: D2 weight 1) -> wt.sh wd-full <lam>; none -> the registered fallback WT_FALLBACK=1 wt.sh full <dose>
@@ -496,6 +500,182 @@ def cmd_devplans(a):
         print(tag, len(rows), "ADE", float(np.hypot(P[..., 0] - f[..., 0], P[..., 1] - f[..., 1]).mean()), flush=True)
 
 
+# ---------------------------------------------------------------- 补记 D (exploratory, after the pilot STOP; no registered file is touched)
+XO = OUT / "explore"
+
+
+def lead_ctx(names):
+    """Agent-label context at t0 per dev row (rear-axle frame, runs/op_parity/agent_labels/navtrain_all-k32.npz): gap to the nearest vehicle in the
+    lane corridor (|y| < 1.8 m, 0 < x < 20 m; inf if none), its closing speed from t0 -> 0.5 s, and a pedestrian within x 0-20 m, |y| < 5 m."""
+    z = np.load(DATA / "runs/op_parity/agent_labels/navtrain_all-k32.npz")
+    pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
+    cls = z["classes"].tolist()
+    veh, ped = cls.index("vehicle"), cls.index("pedestrian")
+    zb, zv, zc, zo = z["box"], z["valid"], z["cls"], z["ok"]                   # once: every z[...] access decompresses the whole array
+    gap, close, pd_, ok = (np.full(len(names), np.inf), np.zeros(len(names)), np.zeros(len(names), bool), np.zeros(len(names), bool))
+    for n, t in enumerate(names.tolist()):
+        i = pos.get(t)
+        if i is None or not zo[i]:
+            continue
+        ok[n] = True
+        b, v, c = zb[i], zv[i], zc[i]
+        x, y = b[0, :, 0], b[0, :, 1]
+        m = v[0] & (c == veh) & (np.abs(y) < 1.8) & (x > 0) & (x < 20)
+        if m.any():
+            k = np.flatnonzero(m)[np.argmin(x[m])]
+            gap[n] = x[k]
+            close[n] = (x[k] - b[1, k, 0]) / 0.5 if v[1, k] else 0.0      # > 0: the gap shrinks (in the t0 frame; ego motion not removed)
+        pd_[n] = bool((v[0] & (c == ped) & (x > 0) & (x < 20) & (np.abs(y) < 5)).any())
+    return dict(lead_gap=gap, lead_close=close, ped=pd_, ctx_ok=ok)
+
+
+def cmd_devall(a):
+    """The gate-4 dev rows (rm_train's dev_eval call: every navtrain dev row with a future, route memory on) for each tag -> XO/devall.npz with
+    the plans, the human future, shipped Cinque's stored teacher plan (P0) and the context; asserts each tag reproduces its DONE dev_ade."""
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    import torch
+    torch.backends.cudnn.deterministic, torch.backends.cudnn.benchmark = True, False
+    from types import SimpleNamespace
+    sys.path[:0] = [str(REPO / "experiments/route_mem/scripts"), str(REPO / "experiments/route_follow/scripts")]
+    import rm_train as RT
+    import pp_train as T
+    from rf_lonread import REC
+    dev = torch.device("cuda")
+    ns, _, _, _, _ = RT.build(SimpleNamespace(**(REC | dict(data=RT.OT.JT.FULL, yr_mass=0.1)), road_labels=RT.OT.JT.ROAD, on=BASE, init="",
+                                              rm_from=a.tags[0], tag=a.tags[0], exp="wait_cap", lr_scale=1.0, prefetch=1, dev_card_gb=4.0), dev)
+    S, model, W = ns.S, ns.model, ns.losses(ns.mode).W
+    Sd = T.dev_store(S, ns.dv_rows, 4.0)
+    pi = torch.as_tensor(S.pi, device=dev)
+    rows = ns.dv_o[S.has_fut[torch.as_tensor(ns.dv_o, device=dev)].cpu().numpy().astype(bool)]
+    out = {}
+    for j, tag in enumerate(a.tags):
+        if j:
+            model.load_state(torch.load(T.proot("runs", tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"])
+        model.eval()
+        res, tp = [], []
+        with torch.no_grad():
+            for i in range(0, len(rows), 128):
+                r = torch.as_tensor(rows[i:i + 128], device=dev)
+                side = Sd.side[r] if Sd.side is not None else (Sd.mem[r] if getattr(Sd, "mem", None) is not None else None)
+                p = model(Sd.front[r], Sd.ego[r], Sd.tc[r], side, None, inputs_on=True, nv=None if Sd.nv is None else Sd.nv[r]).float()[:, pi].view(-1, 33, 15)
+                res.append(torch.stack(T.rear(p, Sd.cam_x[r], W), -1).cpu())
+                if not j:
+                    tp.append(torch.stack(T.rear(Sd.t_plan[r], Sd.cam_x[r], W), -1).cpu())
+        out[tag] = torch.cat(res).numpy().astype(np.float32)
+        if not j:
+            out["P0"] = torch.cat(tp).numpy().astype(np.float32)
+            fut = S.fut[torch.as_tensor(rows, device=dev)].cpu().numpy().astype(np.float32)
+        ade = float(np.hypot(*(out[tag][..., :2] - fut[..., :2]).transpose(2, 0, 1)).mean())
+        ref = dev_ade(tag)
+        print(tag, len(rows), "ADE", ade, "DONE", ref, flush=True)
+        assert abs(ade - ref) < 1e-3, f"{tag}: dev ADE {ade} does not reproduce DONE {ref}"
+    names = S.tab["names"][rows]
+    XO.mkdir(parents=True, exist_ok=True)
+    np.savez(XO / "devall.npz", rows=rows, names=names, log=S.tab["log"][rows], fut=fut, speed=S.tab["speed"][rows], tags=np.array(["P0"] + a.tags),
+             **{f"plan_{k}": v for k, v in out.items()}, **lead_ctx(names))
+
+
+def metrics(dirs):
+    """scene -> (score, progress_rel, at-fault collision, offroad) of the first rollout per scene over the run dirs (aggregate/results-summary.json)."""
+    M = {}
+    for D in dirs:
+        f = Path(D) / "aggregate/results-summary.json"
+        if f.exists():
+            for r in json.loads(f.read_text())["rollouts"]:
+                m = r.get("metrics") or {}
+                M.setdefault(r["clipgt_id"], (float(r.get("score") or 0.0), float(m.get("progress_rel", np.nan)), float(m.get("collision_at_fault", np.nan)),
+                                              float(m.get("offroad", np.nan))))
+    return M
+
+
+def xdirs(stage, tag):
+    return dict(held=f"{DATA}/runs/route_mem/read/{tag}/c*/run", pub=f"{XO}/read10/{tag}/b*", sub=f"{XO}/sub/{tag}/run",
+                pai=f"{XO}/paisub/{tag}/runs/*/sim")[stage]
+
+
+def xpair(MJ, MC):
+    """Paired J vs C on the common scenes: zeros, mean score with the session-clustered CI, progress, at-fault collisions, offroad."""
+    from jevdrive import stats
+    common = sorted(set(MJ) & set(MC))
+    A, B = (np.array([M[s] for s in common]) for M in (MJ, MC))
+    p = stats.paired(A[:, 0], B[:, 0], groups=np.array(["_".join(s.split("_")[:2]) for s in common]))
+    f = lambda X: dict(zeros=int((X[:, 0] == 0).sum()), mean=float(X[:, 0].mean()), progress_rel=float(np.nanmean(X[:, 1])),  # noqa: E731
+                       at_fault=int(np.nansum(X[:, 2] > 0)), offroad=int(np.nansum(X[:, 3] > 0)))
+    return dict(scenes=len(common), J=f(A), C=f(B), paired=stats.fmt(p), paired_lo=float(p["lo"]), zero_flips=dict(
+        J_only=[s for s, x, y in zip(common, A[:, 0], B[:, 0]) if x == 0 < y], C_only=[s for s, x, y in zip(common, A[:, 0], B[:, 0]) if y == 0 < x]))
+
+
+def cmd_xheld(a):
+    """补记 D (a): held 460 @18 of each J vs C (one seed); the registered held lines moved to one seed (zeros J <= C + 3, turns J >= C - 2);
+    --submit: public 1491 @10 (wt.sh explore-pub) for the J tags meeting both, then the summary job."""
+    sys.path.insert(0, str(REPO / "experiments/route_follow/scripts"))
+    import rf_recov_post as RP
+    J, C = a.j.split(","), a.c
+    MC = metrics(glob.glob(xdirs("held", C)))
+    res = dict(C=C, arms={})
+    want = set((RES / "held_turns24.txt").read_text().split())
+    for t in J:
+        r = xpair(metrics(glob.glob(xdirs("held", t))), MC)
+        h = RP.h2_held(XO, [t], [C])
+        r["turns"] = None if h is None else dict(completed={k: v["completed"] for k, v in h["counts"].items()},
+                                                 turns={k: v["turns"] for k, v in h["counts"].items()}, paired=h["paired"], common=h["common_turns"])
+        if h is not None:
+            import pandas as pd
+            S = pd.read_csv(XO / "follow/scenes.csv")
+            T_ = S[S.turn.astype(str).str.lower().isin(("true", "1", "1.0"))]
+            r["turns"]["set_is_turns24"] = {k: set(T_[T_.label == f"{k}@18"].scene) == want for k in (t, C)}
+        r["line_zeros"] = bool(r["J"]["zeros"] <= r["C"]["zeros"] + 3)
+        r["line_turns"] = bool(h is not None and h["counts"][t]["completed"] >= h["counts"][C]["completed"] - 2)
+        r["meets"] = r["line_zeros"] and r["line_turns"]
+        res["arms"][t] = r
+    res["public_for"] = [t for t in J if res["arms"][t]["meets"]]
+    (XO / "held.json").write_text(json.dumps(res, indent=1, default=float))
+    print(json.dumps(res, indent=1, default=float))
+    if a.submit:
+        subprocess.run(["bash", str(HERE / "wt.sh"), "explore-pub", ",".join(res["public_for"]) or "-", C], check=True)
+
+
+def cmd_xsum(a):
+    """补记 D: every closed-loop read -> XO/cl.{json,md}; then XO/FINISHED."""
+    J, C = a.j.split(","), a.c
+    H = json.loads((XO / "held.json").read_text())
+    ref = metrics(glob.glob(f"{PAI_REF}/runs/*/sim"))
+    full = {pai_full(p): p for p in STOP17}
+    res = dict(held=H, static={}, stop17={}, pub={})
+    for t in J + [C]:
+        res["static"][t] = metrics(glob.glob(xdirs("sub", t))).get(STATIC_PUB)
+        m = metrics(glob.glob(xdirs("pai", t)))
+        res["stop17"][t] = dict(zeros=sum(m[s][0] == 0 for s in full if s in m), n=sum(s in m for s in full),
+                                mean=float(np.mean([m[s][0] for s in full if s in m])) if m else None, per={full[s]: m.get(s, (None,))[0] for s in full})
+    res["stop17"]["RSG-L18-s0 (archive)"] = dict(zeros=sum(ref[s][0] == 0 for s in full if s in ref), n=sum(s in ref for s in full),
+                                                 per={full[s]: ref.get(s, (None,))[0] for s in full})
+    MC = metrics(glob.glob(xdirs("pub", C)))
+    for t in H["public_for"]:
+        r = xpair(metrics(glob.glob(xdirs("pub", t))), MC)
+        r["line"] = bool(r["paired_lo"] > -0.01 and r["J"]["zeros"] <= r["C"]["zeros"] + 5)
+        res["pub"][t] = r
+    L = ["# 补记 D closed-loop reads (exploratory; 1 000-step pilots, seed 0; control WTCP-L18-s0)", "",
+         "| tag | held zeros | held mean | paired vs C | progress_rel | at-fault | offroad | turns /24 | static scene @10 | stop17 zeros |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for t in J + [C]:
+        r = H["arms"].get(t) or H["arms"][J[0]]
+        side = "J" if t in J else "C"
+        tc = (r.get("turns") or {}).get("completed", {}).get(t)
+        st = res["static"][t]
+        L.append(f"| {t} | {r[side]['zeros']} | {r[side]['mean']:.3f} | {r['paired'] if t in J else '-'} | {r[side]['progress_rel']:.3f} | {r[side]['at_fault']} | "
+                 f"{r[side]['offroad']} | {tc} | {st[0] if st else None} | {res['stop17'][t]['zeros']} / {res['stop17'][t]['n']} |")
+    L.append(f"| RSG-L18-s0 archive (PAI config) | | | | | | | | | {res['stop17']['RSG-L18-s0 (archive)']['zeros']} / {res['stop17']['RSG-L18-s0 (archive)']['n']} |")
+    L += ["", "public 1491 @10 (only J tags meeting the held lines):"]
+    for t, r in res["pub"].items():
+        L.append(f"- {t}: {r['scenes']} scenes, zeros {r['J']['zeros']} vs {r['C']['zeros']}, mean {r['J']['mean']:.4f} vs {r['C']['mean']:.4f}, paired {r['paired']}, "
+                 f"progress {r['J']['progress_rel']:.3f} vs {r['C']['progress_rel']:.3f}, at-fault {r['J']['at_fault']} vs {r['C']['at_fault']}; line {'met' if r['line'] else 'not met'}")
+    if not res["pub"]:
+        L.append("- none ran")
+    (XO / "cl.json").write_text(json.dumps(res, indent=1, default=float))
+    (XO / "cl.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+    (XO / "FINISHED").write_text("ok\n")
+
+
 # ---------------------------------------------------------------- pilot gate (CPU)
 def cap_read(tag):
     """Open-loop capability on the waitcap_test rows (wc.classify): wait W, wait G, D, into lead W_L, S_N stop / over median."""
@@ -849,6 +1029,12 @@ if __name__ == "__main__":
     p.add_argument("--c", required=True)
     p.add_argument("--follow", default="", help="Amendment C 6: dir holding rf_follow's follow/ of the held reads (held stage)")
     p.add_argument("--submit", action="store_true")
+    sp.add_parser("devall").add_argument("--tags", nargs="+", required=True)
+    for c in ("xheld", "xsum"):
+        p = sp.add_parser(c)
+        p.add_argument("--j", required=True)
+        p.add_argument("--c", required=True)
+        p.add_argument("--submit", action="store_true")
     a = ap.parse_args()
     dict(select=cmd_select, index=cmd_index, teacher=cmd_teacher, pack=cmd_pack, bitcmp=cmd_bitcmp, devplans=cmd_devplans, gate=cmd_gate, ycount=cmd_ycount,
-         clgate=cmd_clgate, wdgate=cmd_wdgate)[a.cmd](a)
+         clgate=cmd_clgate, wdgate=cmd_wdgate, devall=cmd_devall, xheld=cmd_xheld, xsum=cmd_xsum)[a.cmd](a)

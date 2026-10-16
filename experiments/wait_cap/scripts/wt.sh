@@ -18,6 +18,9 @@
 #                               1 000 steps) -> WAIT reads + dc.py plans -> wd-gate-pilot (wt.py wdgate --submit: wd-full <lam> or the fallback)
 #   wt.sh wd-full <lam>         WD<dose>-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 -> rf_follow (J + C held reads) -> clgate held --follow
 #   wt.sh follow J0,J1 C0,C1 D  rf_follow over the held reads of the four tags -> D/follow
+# Prereg 补记 D (exploratory reads after the pilot STOP; never writes a registered verdict file):
+#   wt.sh explore               devall + held 460 @18 / static scene @10 / PAI stop17 for WTJ2P, WTJ5P, WTCP -> rf_follow -> wx-xheld -> explore-pub
+#   wt.sh explore-pub <J,..|-> <C>   public 1491 @10 for the J tags meeting the held lines and C -> wx-xsum ($O/explore/FINISHED)
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -125,6 +128,35 @@ stage-pai)
   [[ -n $pp ]] || { echo "no PAI job" >&2; exit 1; }
   g=$(sub wt-clgate-pai --after $pp --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY clgate --stage pai --j $JS --c $CS) || exit 1
   echo "stage-pai: $(echo $pp | tr , '\n' | wc -l) chunk jobs gate $g" | tee -a $O/stages.txt ;;
+explore)   # prereg 补记 D (exploratory, after the pilot STOP; nothing here writes a registered verdict file): devall; held 460 @18, the static public
+           # scene @10 and PAI stop17 for the two 1 000-step J pilots and WTCP -> rf_follow -> wx-xheld (public 1491 @10 for J meeting the held lines) -> wx-xsum
+  JJ=(WTJ2P-L18-s0 WTJ5P-L18-s0); C=WTCP-L18-s0; X=$O/explore; mkdir -p $X/sub $X/paisub
+  [[ ! -e $X/held.json && ! -e $X/jobs.txt ]] || { echo "$X already submitted" >&2; exit 1; }
+  echo $STATIC > $X/static.txt
+  cat $PAICH/*.txt | grep -E "^clipgt-($(echo $STOP17 | tr ' ' '|'))" | sort -u > $X/stop17.txt
+  (( $(wc -l < $X/stop17.txt) == 17 )) || { echo "stop17 list: $(wc -l < $X/stop17.txt) scenes" >&2; exit 1; }
+  d=$(sub wx-devall --vram 24 --cpu 6 --ram 80 --timeout-h 1 -- $TR $PY devall --tags ${JJ[@]} $C) || exit 1
+  hh=(); ss=()
+  for T in ${JJ[@]} $C; do
+    for i in 0 1 2 3 4 5; do hh+=($(sub wx-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+        -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+    ss+=($(sub wx-sub-$T --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 \
+        -- bash experiments/onpol_long/scripts/ol_chain.sh readlist $T $X/static.txt 10 $X/sub/$T/run)) || exit 1
+    CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $X/paisub/$T $T $X/stop17.txt > $X/paisub/$T.submit.txt || exit 1
+    p=$(awk '{print $1}' $X/paisub/$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $p ]] || { echo "no PAI stop17 job for $T" >&2; exit 1; }; ss+=($p)
+  done
+  csv ${ss[@]} > $X/sub_ids.txt
+  f=$(sub wx-follow --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash $ME follow $(csv ${JJ[@]}) $C $X) || exit 1
+  g=$(sub wx-xheld --after $f --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- $TR $PY xheld --j $(csv ${JJ[@]}) --c $C --submit) || exit 1
+  echo "explore: devall $d held $(csv ${hh[@]}) static+stop17 $(cat $X/sub_ids.txt) follow $f xheld $g" | tee -a $X/jobs.txt $O/stages.txt ;;
+explore-pub)   # explore-pub <J,..|-> <C>: 补记 D (c) public 1491 @10 for the J tags meeting the held lines + C, then wx-xsum (after every read)
+  X=$O/explore; C=${3:?}; rr=()
+  if [[ $2 != - ]]; then for T in ${2//,/ } $C; do [[ ! -e $X/read10/$T ]] || { echo "$X/read10/$T exists" >&2; exit 1; }
+    for i in $(seq 0 9); do rr+=($(sub wx-g10-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+        -- bash experiments/onpol_long/scripts/ol_chain.sh readlist $T $OL/lists/all_n10/c$i.txt 10 $X/read10/$T/b$i)) || exit 1; done; done; fi
+  JS=$(python3 -c "import json, sys; print(','.join(json.load(open(sys.argv[1]))['arms']))" $X/held.json) || exit 1
+  s=$(sub wx-xsum --after "$(cat $X/sub_ids.txt)${rr:+,$(csv ${rr[@]})}" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY xsum --j $JS --c $C) || exit 1
+  echo "explore-pub ($2): ${#rr[@]} public reads, xsum $s" | tee -a $X/jobs.txt $O/stages.txt ;;
 wd-teacher)
   ids=(); for i in $(seq 0 11); do ids+=($(sub wd-teacher-s$i --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $DT teacher --data navtrain_full.s${i}of12)) || exit 1; done
   echo "wd-teacher: $(csv ${ids[@]})" | tee -a $O/stages.txt ;;
