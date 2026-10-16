@@ -50,7 +50,7 @@ def main():
         cnt = {n: (w, m, e) for n, w, m, e in pl.imap_unordered(job, paths, chunksize=4)}
     arch = []
     for k, logs in idx.items():
-        arch.append(dict(name=k, size=size[k + ".tgz"], w=sum(cnt.get(l, (0, 0, 0))[0] for l in logs), miss=sum(cnt.get(l, (0, 0, 0))[1] for l in logs),
+        arch.append(dict(name=k, size=size[k.replace("trainval_", "trainval_camera_") + ".tgz"], w=sum(cnt.get(l, (0, 0, 0))[0] for l in logs), miss=sum(cnt.get(l, (0, 0, 0))[1] for l in logs),
                          missing=sum(l not in cnt for l in logs), logs=logs))
     arch.sort(key=lambda r: (-r["miss"] / r["size"], int(r["name"].rsplit("_", 1)[1])))
     pick, tot = [], 0
@@ -60,7 +60,7 @@ def main():
             tot += r["size"]
     pick.sort(key=lambda r: int(r["name"].rsplit("_", 1)[1]))
     (RES / "trainval_logs.txt").write_text("\n".join(sorted(l for r in pick for l in r["logs"])) + "\n")
-    (RES / "trainval_archives.tsv").write_text("".join(f"{r['name']}.tgz\t{r['size']}\t{r['w']}\t{r['miss']}\t{len(r['logs'])}\n" for r in pick))
+    (RES / "trainval_archives.tsv").write_text("".join(f"{r['name'].replace('trainval_', 'trainval_camera_')}.tgz\t{r['size']}\t{r['w']}\t{r['miss']}\t{len(r['logs'])}\n" for r in pick))
     allw = sum(r["w"] for r in arch)
     (RES / "trainval_pick.md").write_text(
         f"{len(paths)} trainval logs, {allw} W-cell frames with history (all 200 archives); picked {len(pick)} archives, {tot / 1e9:.1f} GB, "
