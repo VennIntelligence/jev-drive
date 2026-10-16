@@ -131,9 +131,9 @@ The 4 s heading is +0.96 / +0.01 deg. The label read on the training rows (descr
     from 10 to 15 % makes this about 4x worse.
   - The approach rows were not trained. Even so, the dev approach rows moved 27-30 % toward the teacher's approach labels, which are faster and
     turn less per metre.
-  - So the junction / window labels generalise onto the approach. Dropping the approach rows removes the direct signal, but not the teacher's
-    speed and late-turn style that the junction rows carry too: the junction rows' re-timed expert speed sits on the human speed and the
-    3 m/s floor.
+  - So what the junction / window rows teach spreads onto the approach. Dropping the approach rows removes the direct signal, not the transfer.
+  - Which part of the teacher transfers is not identified here. The junction labels are shorter than the served plans (arc -1.23 m), yet the
+    pilots' approach plans got longer. So the transfer is not simply "copy the teacher's speed".
   - The 5 junction rows point the same way (-1.1 / -3.6 deg, CI contains 0).
 - **What this leaves (not registered; for the main session):**
   - The dose line is now clear: below 10 % the label gain shrinks, and at 10 % reliance is already gone.
