@@ -52,7 +52,13 @@ def _lib():
 def sessions(run) -> dict:
     """drive.jsonl of a run -> {(scene, n): [(uuid, start record, drive records sorted by k)]}."""
     S, rec = {}, collections.defaultdict(list)
-    for line in open(Path(run) / "driver-logs/drive.jsonl"):
+    run = Path(run)
+    log = run / "driver-logs" if (run / "driver-logs/drive.jsonl").exists() else run       # PAI: drive.jsonl + start.jsonl in the run dir
+    if (log / "start.jsonl").exists():
+        for line in open(log / "start.jsonl"):
+            r = json.loads(line)
+            S[r["session"]] = r
+    for line in open(log / "drive.jsonl"):
         r = json.loads(line)
         if r["kind"] == "start":
             S[r["session"]] = r
@@ -261,7 +267,7 @@ def cmd_replay(a):
             if rx:
                 mem.add(r["t0"], r["anchor"], np.asarray(r["poses"], np.float64))       # the stored rollout's served plan, as the driver keeps it
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(a.out, **{k: np.array(v) for k, v in out.items()}, tag=a.tag, code=a.code, rx=np.array(out["rx"]), off=os.environ.get("JEV_REFLEX_OFF", ""))
+    np.savez(a.out, **{k: np.array(v) for k, v in out.items()}, tag=a.tag, code=a.code, off=os.environ.get("JEV_REFLEX_OFF", ""))
     print(f"{a.tag} ({a.code}): {len(out['k'])} decisions -> {a.out}; plan vs stored served max {np.abs(np.array(out['poses']) - np.array(out['served'])).max():.4f} m")
 
 
