@@ -1,0 +1,37 @@
+{
+ "a": "/root/autodl-tmp/ujs/runs/route_follow/rewind_passes/bit/pt317/run",
+ "b": "/root/autodl-tmp/ujs/runs/route_follow/rewind_self/smoke/D3-g1.15s1.1/c0/run",
+ "scenes": 2,
+ "identical": 2,
+ "all_identical": true,
+ "per_scene": {
+  "2021.08.30.13.45.25_veh-40_00610_00771-e1886e081b945907": {
+   "k": 30,
+   "n_a": 30,
+   "n_b": 30,
+   "plan": 0.0,
+   "anchor": 0.0,
+   "ego": 0.0,
+   "identical": true,
+   "perturbed_k": [
+    11,
+    12
+   ],
+   "expert_k": []
+  },
+  "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0": {
+   "k": 30,
+   "n_a": 30,
+   "n_b": 30,
+   "plan": 0.0,
+   "anchor": 0.0,
+   "ego": 0.0,
+   "identical": true,
+   "perturbed_k": [
+    2,
+    3
+   ],
+   "expert_k": []
+  }
+ }
+}

@@ -1,0 +1,121 @@
+{
+ "0": {
+  "turns": 166,
+  "failed": 82,
+  "rewindable_units": 155,
+  "outcome": {
+   "off": 17,
+   "event": 65,
+   "completed": 71,
+   "short": 13
+  }
+ },
+ "A": {
+  "scenes_read": 1014,
+  "turns": 136,
+  "failed": 81,
+  "outcome": {
+   "event": 64,
+   "completed": 46,
+   "off": 17,
+   "short": 9
+  },
+  "rewindable_units": 131,
+  "failed_also_p0": 57,
+  "failed_new_vs_p0": 24,
+  "failed_new_vs_earlier": 24,
+  "p0_failed_not_here": 25,
+  "turns_not_in_p0": 0,
+  "rewindable_new_vs_p0": 38,
+  "rewindable_new_vs_earlier": 38,
+  "disp_pos": {
+   "4": {
+    "n": 1014,
+    "median": 0.16260397968984816,
+    "p90": 0.25904511012380727,
+    "share_gt_0p5": 0.0
+   },
+   "10": {
+    "n": 1014,
+    "median": 2.393958176666218,
+    "p90": 4.585412985078266,
+    "share_gt_0p5": 0.9003944773175543
+   },
+   "20": {
+    "n": 999,
+    "median": 2.8743964957847115,
+    "p90": 10.981548560306019,
+    "share_gt_0p5": 0.8748748748748749
+   },
+   "29": {
+    "n": 973,
+    "median": 3.238020531909947,
+    "p90": 14.881173187434523,
+    "share_gt_0p5": 0.8735868448098664
+   }
+  },
+  "v_ratio_k4": {
+   "n": 911,
+   "median": 1.0727544914842053,
+   "p10": 1.0658850049283815,
+   "p90": 1.0815527875818403
+  },
+  "identical_to_p0": 0
+ },
+ "B": {
+  "scenes_read": 1014,
+  "turns": 159,
+  "failed": 87,
+  "outcome": {
+   "short": 12,
+   "completed": 60,
+   "event": 75,
+   "off": 12
+  },
+  "rewindable_units": 162,
+  "failed_also_p0": 72,
+  "failed_new_vs_p0": 15,
+  "failed_new_vs_earlier": 8,
+  "p0_failed_not_here": 10,
+  "turns_not_in_p0": 0,
+  "rewindable_new_vs_p0": 29,
+  "rewindable_new_vs_earlier": 18,
+  "disp_pos": {
+   "4": {
+    "n": 1014,
+    "median": 0.15625724195244423,
+    "p90": 0.25155409291543795,
+    "share_gt_0p5": 0.0
+   },
+   "10": {
+    "n": 1014,
+    "median": 2.4870789915057876,
+    "p90": 5.233867047864348,
+    "share_gt_0p5": 0.8994082840236687
+   },
+   "20": {
+    "n": 999,
+    "median": 2.7503741500355305,
+    "p90": 13.405323545167203,
+    "share_gt_0p5": 0.8798798798798799
+   },
+   "29": {
+    "n": 973,
+    "median": 3.3868121525166153,
+    "p90": 16.637955603356303,
+    "share_gt_0p5": 0.9003083247687564
+   }
+  },
+  "v_ratio_k4": {
+   "n": 911,
+   "median": 0.9288341301782894,
+   "p10": 0.9211587444904322,
+   "p90": 0.9351594927024521
+  },
+  "identical_to_p0": 0
+ },
+ "union": {
+  "failed": 114,
+  "rewindable_units": 211
+ }
+}

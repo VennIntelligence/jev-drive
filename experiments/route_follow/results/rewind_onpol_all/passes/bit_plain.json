@@ -1,0 +1,31 @@
+{
+ "a": "/root/autodl-tmp/ujs/runs/route_follow/rewind_passes/bit/plain/run",
+ "b": "/root/autodl-tmp/ujs/runs/route_follow/rewind_onpol_all/rest/id/c0/run",
+ "scenes": 2,
+ "identical": 1,
+ "all_identical": false,
+ "per_scene": {
+  "2021.05.25.14.16.10_veh-35_00083_00485-0c318d7923d15b78": {
+   "k": 30,
+   "n_a": 30,
+   "n_b": 30,
+   "plan": 0.0,
+   "anchor": 0.0,
+   "ego": 0.0,
+   "identical": true,
+   "perturbed_k": [],
+   "expert_k": []
+  },
+  "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013": {
+   "k": 30,
+   "n_a": 30,
+   "n_b": 30,
+   "plan": 8.272600173950195,
+   "anchor": 6.084795263113151,
+   "ego": 0.6106400042772293,
+   "identical": false,
+   "perturbed_k": [],
+   "expert_k": []
+  }
+ }
+}

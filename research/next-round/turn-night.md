@@ -278,3 +278,9 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   - 附带发现（不是 DAgger 特有）：memory 第一个有效槽在 +24 m（中位），路口行 69 % 在 +18 m 内没有槽，标签 4 s 点只有 20 % 落在 memory 覆盖内。
     NAVSIM 训练行同样（+24 m，61 %）。
   - reliance 为何塌仍未定位；候选与读法见报告末节。
+- 10-16 11:30 JST：**恢复行数据放大**（RECOVERY-ENVELOPE 补记 7，`experiments/route_follow/results/rewind_onpol_all/passes.md`）。用户停了旧配方的放大臂，交接、合并、RLFD 训练和读数 09:10 撤掉，只剩两次 identity 全量。
+  - 扰动：决策 2、3 推一下（A：g 1.15、s 1.04；B：g 0.85、s 0.96）。窗末位移 16 cm、速度 ±7 %，4 s 后中位 2.4–2.5 m，没有一个场景与 pass 0 逐位相同。
+  - 失败弯：pass 0 是 82 个；A 新增 24 个，B 再新增 8 个，并集 114（+39 %）。可倒回单元 155 → 211。新失败都在 pass 0 已有的严格弯上（同一路口换了失败方式或时机）。
+  - identity 没有帧和 token（SH30_DUMP 0，asl 已删），要当自身行用，需要带帧重跑，每个 pass 约 1 card-h。
+  - 驱动改动：JEV_PERTURB 可与 JEV_EXPERT_FROM 同开，317 的 session 重跑逐位相同。另修了 n-read 的交接判定。整条链 smoke 全通：79 行，合并、pack、20 步训练都跑过。
+  - 花费 2.3 card-h。
