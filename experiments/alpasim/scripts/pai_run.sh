@@ -9,7 +9,8 @@
 #   CONC (concurrent rollouts, default 1), NRE_CACHE (scenes the renderer keeps loaded, default CONC + 1; about 3 GB of VRAM each), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
 #   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py; `-e JEV_TURN_GAIN=1.25`, lib/turn_gain.py; `-e JEV_INTENT_HOLD=1 [-e JEV_IH_A=0.15]`, lib/intent_hold.py; `-e JEV_EXPERT=<pack dir in the container> -v <packs>:<that dir>:ro`, lib/rule_expert.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
-#   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container).
+#   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container),
+#   ALPASIM_FAST=1 (local reads only: only the driver's camera, eval video off; lib/sim_fast.py, docs/alpasim.md "Fast local reads").
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, usage.jsonl (2 s: per-process VRAM, per-container RAM / CPU), driver/ (drive.jsonl,
 # start.jsonl, dump/), sim/ (the run: aggregate/results-summary.json, rollouts/, txt-logs/)}.
 set -uo pipefail
@@ -74,6 +75,10 @@ wiz=(uv run alpasim_wizard +e2e_challenge=dev "scenes.scene_ids=[$(echo "$ids" |
      "runtime.endpoints.renderer.n_concurrent_rollouts=$CONC" "runtime.endpoints.driver.n_concurrent_rollouts=$CONC"
      "runtime.endpoints.physics.n_concurrent_rollouts=$CONC" "runtime.endpoints.controller.n_concurrent_rollouts=$CONC"
      "defines.nre_cache_size=${NRE_CACHE:-$((CONC + 1))}" wizard.run_method=NONE "wizard.log_dir=$R" "$@")
+if [[ ${ALPASIM_FAST:-0} == 1 ]]; then   # the driver's camera: PAI_CAM as the driver container gets it from DRV_ENV
+  fast=$(env $(grep -o 'PAI_CAM=[^ ]*' <<< "${DRV_ENV:-}") python3 "$lib/sim_fast.py" "$SRC" "$lib/${DRV_PY:-pai_driver.py}" "${wiz[@]}") || die "sim_fast"
+  mapfile -t fast <<< "$fast"; wiz+=("${fast[@]}")
+fi
 printf '%q ' "${wiz[@]}" > "$OUT/wizard_cmd.txt"; echo >> "$OUT/wizard_cmd.txt"
 docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" -v "$NUREC:$NUREC" -e "PYTHONPATH=$SRC/src/wizard:$SRC/src/utils" -e HF_HUB_OFFLINE=1 \
   -e "ALPASIM_DRIVER_HOST=$ip" -e ALPASIM_DRIVER_PORT=6789 "$BASE" \
@@ -99,5 +104,5 @@ wall=$(( $(date +%s) - t1 ))
 stop_all; wait "$sampler"; rm -f "$OUT/.stop"
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
-echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"nre_cache\": ${NRE_CACHE:-$((CONC + 1))}, \"harmonizer\": ${HARMONIZER:-0}, \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
+echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"nre_cache\": ${NRE_CACHE:-$((CONC + 1))}, \"harmonizer\": ${HARMONIZER:-0}, \"fast\": ${ALPASIM_FAST:-0}, \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"
