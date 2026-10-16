@@ -61,7 +61,8 @@ def slim_one(f):
 
 def slim(a):
     from concurrent.futures import ProcessPoolExecutor
-    fs = [str(Path(r) / "driver/drive.jsonl") for r in a.runs if (Path(r) / "driver/drive.jsonl").exists()]
+    fs = [str(f) for r in a.runs for f in (Path(r) / "driver/drive.jsonl", Path(r) / "driver-logs/drive.jsonl") if f.exists()]
+    fs = list(dict.fromkeys(os.path.realpath(f) for f in fs))
     out = {}
     with ProcessPoolExecutor(max(1, min(a.workers, len(fs)))) as ex:
         for d in ex.map(slim_one, fs):
