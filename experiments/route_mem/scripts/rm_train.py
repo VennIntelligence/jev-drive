@@ -128,6 +128,17 @@ STACK (2026-10-16, experiments/route_follow/plans/2026-10-16-stack-prereg.md); e
             loads it; an init without it starts the module at its zero-output init.
   --dual / --dual-tau / --dual-level / --dual-eta, --cons PATH, --imit-drop, --pref W   lib/stack_train.py (its docstring).
 
+DESIRE D1 / D2 (2026-10-17, WAIT-TRAIN prereg Amendment C; lib/desire_train.py); every flag off = the recipe above operation for operation:
+  --desire-rows F   D1 row table (dt.py rows: names, side +1 left / -1 right, src nav | pool; the rule is lib/route_desire.py's): every non-anchor
+            row of the table in a batch is fed the lane-change desire of its side (PModel.forward desire=, dc.py's queue), pulse age drawn per
+            row from desire_train.AGES (own rng stream [seed, 0, 137]); the row's loss is its own recipe's (navtrain rows: imitation of the log;
+            pool rows: their hinges / --on-lon). --d1-k K: K table rows of the navtrain train split replace the last K normal rows of every batch
+            (own stream [seed, 0, 131]; --lc-cf's slots).
+  --d2-lam L [--d2-frac 0.125 --d2-teacher DIR]   desire-delta distillation: the anchor rows and a share --d2-frac of the other normal rows
+            without a D1 desire (own stream [seed, 0, 127]: side, age, membership) get a second forward with a random lane-change desire; loss =
+            desire_train.d2_loss of (plan(x, d) - sg[plan(x, 0)]) against shipped Cinque's increment from DIR/<data>.npz (dt.py teacher), mean
+            over those rows x L. 0 = off: no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -684,6 +695,32 @@ def cmd_train(a):
     OPEN, orec = open_rows(a, ns, dev) if a.ego_drop_open else (None, {})
 
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
+    des_on, d2_on = bool(a.desire_rows), a.d2_lam > 0                # DESIRE D1 / D2 (docstring); both off: no operation below is added
+    k_d1 = a.d1_k if des_on else 0
+    if des_on or d2_on:
+        import desire_train as DT
+        from jevdrive.common import data_dir as _dd
+        assert not (lc_on or ns.rx or ST is not None), "--desire-rows / --d2-lam: not with --lc-cf / --rx / STACK terms"
+        n_base = sum(len(np.load(_dd() / "runs/op_parity/cache" / d / "tab.npz")["names"]) for d in a.data)
+        drec = dict(n_base=n_base)
+        pi_t = torch.as_tensor(S.pi, device=dev)
+    if des_on:
+        dz = np.load(a.desire_rows if a.desire_rows.startswith("/") else _dd() / a.desire_rows)
+        side_np, d1_nav = DT.rows_side(S.tab["names"], n_base, ns.on0, dz)
+        d1_nav = d1_nav[np.isin(d1_nav, tr_o)]                         # the K slots: train-split rows only
+        assert k_d1 < nN and (k_d1 == 0 or len(d1_nav) >= k_d1), "--d1-k: slots / table rows"
+        SIDE = torch.as_tensor(side_np, device=dev)
+        arng = np.random.default_rng([cfg.seed, 0, 137])              # pulse ages of the fed rows
+        drec |= dict(table=str(a.desire_rows), rule=str(dz["rule"]) if "rule" in dz.files else None, k=k_d1, nav_train_rows=int(len(d1_nav)),
+                     store_rows=int((side_np != 0).sum()), pool_rows=int((side_np[ns.on0:] != 0).sum()), left=int((side_np > 0).sum()),
+                     right=int((side_np < 0).sum()))
+    if k_d1:
+        d1rng = np.random.default_rng([cfg.seed, 0, 131])
+    if d2_on:
+        d2rng = np.random.default_rng([cfg.seed, 0, 127])
+        TD = torch.as_tensor(DT.load_teacher([_pl.Path(a.d2_teacher) / f"{d}.npz" for d in a.data], S.tab["names"][:n_base]), device=dev)
+        side_d2 = side_np[:n_base] if des_on else np.zeros(n_base, np.int8)
+        drec |= dict(d2_lam=a.d2_lam, d2_frac=a.d2_frac, d2_teacher=str(a.d2_teacher))
 
     def draw():
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
@@ -705,6 +742,9 @@ def cmd_train(a):
             r = r.copy()
             r[nN - k_lc:nN], an[nN - k_lc:nN] = lr, False
             return np.concatenate([r, lr]), an, sha.hexdigest()[:16], j
+        if k_d1:                                                      # D1: K table rows replace the last K normal rows
+            r, an = r.copy(), an.copy()
+            r[nN - k_d1:nN], an[nN - k_d1:nN] = d1_nav[d1rng.choice(len(d1_nav), k_d1, replace=False)], False
         return r, an, sha.hexdigest()[:16]
 
     def fetch(dr):
@@ -746,6 +786,9 @@ def cmd_train(a):
                      f"tokens excluded {LN.junction_rows}); lc pairs {('k ' + str(k_lc) + ' of ' + str(LN.n_lc) + ', lam ' + str(lc_lam)) if lc_on else 'off'}")
         elif ns.head.get("order"):
             run.info("route v2: layout ordered, no lane terms")
+        if des_on or d2_on:
+            run.info(f"DESIRE D1 / D2: {json.dumps(drec)}")
+            run.summary.update(desire=drec)
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -810,11 +853,38 @@ def cmd_train(a):
                     bs_ = torch.stack([na.sum(), (dm & na).sum()] + [x for c in range(3) for x in ((na & (cl == c)).sum(), (na & op & (cl == c)).sum())]).double()
                     dacc += bs_
                 ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
-            out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
+            dq = None
+            if des_on:                                                # D1: the table rows' desire (anchor rows never)
+                sd_ = SIDE[rows].long() * (~anchor).long()
+                ag_ = torch.as_tensor(arng.integers(0, len(DT.AGES), len(r)), device=dev)
+                if (sd_ != 0).any():
+                    dq = DT.queue(sd_, ag_, dev)
+            out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows], desire=dq)
             if lc_on:
                 total, Ls = LS(out[:n_main], S, rows[:n_main], anchor[:n_main])
             else:
                 total, Ls = LS(out, S, rows, anchor)
+            if des_on:
+                Ls["d1/rows"] = (sd_ != 0).sum().float()
+            if d2_on:                                                 # D2: desire increment of the plan against shipped Cinque's
+                u2, s2, a2 = d2rng.random(nN), d2rng.choice(np.array([1, -1]), nN), d2rng.integers(0, len(DT.AGES), nN)
+                an_ = an[:nN]
+                ii = np.flatnonzero(an_ | ((u2 < a.d2_frac) & (side_d2[r[:nN]] == 0)))
+                if len(ii):
+                    it = torch.as_tensor(ii, device=dev)
+                    ri = rows[it]
+                    q2 = DT.queue(torch.as_tensor(s2[ii], device=dev), torch.as_tensor(a2[ii], device=dev), dev)
+                    o2 = model(front[it.to(front.device)], ego[it], S.tc[ri], None, None, nv=None if ns.nv is None else ns.nv[ri], desire=q2)
+                    xd, yd, _ = T.rear(o2.float()[:, pi_t].view(-1, 33, 15), S.cam_x[ri], LS.W)
+                    x0, y0, _ = T.rear(out.float()[it][:, pi_t].view(-1, 33, 15), S.cam_x[ri], LS.W)
+                    td = TD[ri, torch.as_tensor(DT.arm_of(s2[ii], a2[ii]), device=dev)]
+                    l2 = DT.d2_loss(torch.stack([xd, yd], -1), torch.stack([x0, y0], -1), td)
+                    Ls["d2"] = l2.mean()
+                    total = total + a.d2_lam * Ls["d2"]
+                    sg = torch.as_tensor(s2[ii], device=dev, dtype=torch.float32)
+                    Ls["d2/n"], Ls["d2/anchor"] = torch.tensor(float(len(ii))), torch.tensor(float(an_[ii].sum()))
+                    Ls["d2/resp4"] = (sg * (yd - y0)[:, 7]).mean().detach()
+                    Ls["d2/resp4_p0"] = (sg * td[:, 7, 1]).mean()
             if lane_on or lc_on:                                      # route v2 terms on the plan in each row's own frame
                 x, y, psi = T.rear(out.float()[:, pi_t].view(-1, 33, 15), S.cam_x[rows], LS.W)
                 xyp = torch.stack([x, y, psi], -1)
@@ -1031,6 +1101,11 @@ if __name__ == "__main__":
         p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--env-lo-scale", type=float, default=1.0, help="RECOVERY-ENVELOPE: on_envelope's lower-bound term x this (1 = as --env-lam)")
         p.add_argument("--on-lon-all", action="store_true", help="--on-mode mixed: the --on-lon terms on every pool row (self rows too)")
+        p.add_argument("--desire-rows", default="", help="DESIRE D1: row table npz (dt.py rows; '' = off)")
+        p.add_argument("--d1-k", type=int, default=0, help="DESIRE D1: table navtrain rows replacing the last K normal rows of a batch")
+        p.add_argument("--d2-lam", type=float, default=0.0, help="DESIRE D2: weight of the desire-delta distillation (0 = off)")
+        p.add_argument("--d2-frac", type=float, default=0.125, help="DESIRE D2: share of the non-anchor normal rows (anchors always)")
+        p.add_argument("--d2-teacher", default="", help="DESIRE D2: dir of dt.py teacher files <data>.npz")
         p.add_argument("--rx", action="store_true", help="STACK: the reflex module (lib/reflex.py)")
         p.add_argument("--rx-drop", type=float, default=0.25)
         p.add_argument("--rx-lr", type=float, default=3e-4)

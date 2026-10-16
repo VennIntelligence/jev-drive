@@ -9,6 +9,14 @@
 #   wt.sh pilot                 WTJ2P / WTJ5P -L18-s0, 1 000 steps (after bitcmp) -> reads -> gate (writes the picked dose to $O/pilot_pick.txt;
 #                               Amendment C: it no longer submits `full`)
 #   wt.sh full <j2|j5>          Amendment C fallback only (WT_FALLBACK=1 by hand): WTJ{2,5}-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 -> clgate held
+# Amendment C (the composed WAIT + desire arm WD; experiments/desire_cap/scripts/dt.py, lib/desire_train.py):
+#   wt.sh wd-teacher            D2 teacher: shipped Cinque's desire increments on every navtrain shard (12 jobs)
+#   wt.sh wd-codecheck <rev>    60-step RSG-L18 recipe with the code of <rev> (before D1 / D2) vs this code -> bitcmp wd_code_identity
+#   wt.sh wd-launch <after ids> one pool job waiting on $O/pilot_pick.txt (the WAIT pilot's dose) and the ids -> `wd-pilot`
+#   wt.sh wd-pilot              (pilot_pick j2 | j5) D1 rows -> 60-step WDGG-w0 + bitcmp vs WTGG-off -> WD<dose>P{1,3}-L18-s0 (D2 weight 1 / 3,
+#                               1 000 steps) -> WAIT reads + dc.py plans -> wd-gate-pilot (wt.py wdgate --submit: wd-full <lam> or the fallback)
+#   wt.sh wd-full <lam>         WD<dose>-L18-s{0,1}, 2 500 steps -> reads -> held 460 @18 -> rf_follow (J + C held reads) -> clgate held --follow
+#   wt.sh follow J0,J1 C0,C1 D  rf_follow over the held reads of the four tags -> D/follow
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/wait_cap/train; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/wt.sh; PY=experiments/wait_cap/scripts/wt.py
@@ -20,6 +28,8 @@ PAICH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks
 PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1"; PAIWIZ=controller.gains.rel_front_steering_angle_weight=10
 STATIC=2021.09.16.15.12.03_veh-42_01037_01434-b5b8d20688385790
 STOP17="054b5901 095cf563 127c4f85 2d10a08d 35e082a4 3fe2bac8 44df49fe 4cb7f7ac 4ecc114d 559d4ad6 68c3be44 7d994ed3 9f8acd00 ba40be62 bc309fd6 cbd87234 fc9fde87"
+DT=experiments/desire_cap/scripts/dt.py; DC=experiments/desire_cap/scripts/dc.py
+TEA=$DATA_DIR/runs/desire_cap/train/teacher; D1R=$DATA_DIR/runs/desire_cap/train/d1_rows.npz; D1K=4
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-train --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
@@ -114,8 +124,56 @@ stage-pai)
   [[ -n $pp ]] || { echo "no PAI job" >&2; exit 1; }
   g=$(sub wt-clgate-pai --after $pp --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY clgate --stage pai --j $JS --c $CS) || exit 1
   echo "stage-pai: $(echo $pp | tr , '\n' | wc -l) chunk jobs gate $g" | tee -a $O/stages.txt ;;
-train)   # train <off|w0|j2|j5> <seed> <steps> <tag>
-  case $2 in off) F="$RB" ;; *) f=$O/flags_$2.txt; [[ -s $f ]] || { echo "no $f (wt.py pack)" >&2; exit 1; }; F=$(cat $f) ;; esac
+wd-teacher)
+  ids=(); for i in $(seq 0 11); do ids+=($(sub wd-teacher-s$i --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $DT teacher --data navtrain_full.s${i}of12)) || exit 1; done
+  echo "wd-teacher: $(csv ${ids[@]})" | tee -a $O/stages.txt ;;
+wd-codecheck)
+  rev=${2:?rev}; W=$DATA_DIR/tmp/wd_old_$rev; [[ -d $W ]] || git worktree add --detach $W $rev > /dev/null || exit 1
+  a=$(sub wd-gg-old "${FW[@]}" --timeout-h 1 -- bash $W/experiments/wait_cap/scripts/wt.sh train off 0 60 WDGG-old) || exit 1
+  b=$(sub wd-gg-new "${FW[@]}" --timeout-h 1 -- bash $ME train off 0 60 WDGG-new) || exit 1
+  c=$(sub wd-codecmp --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a WDGG-old --b WDGG-new --out wd_code_identity \
+      --note "RSG-L18 recipe 60 steps: code $rev (before D1 / D2) vs this code with D1 / D2 off") || exit 1
+  echo "wd-codecheck: old $a new $b bitcmp $c" | tee -a $O/stages.txt ;;
+wd-launch)
+  l=$(sub wd-launch --vram 0.1 --cpu 1 --ram 2 --timeout-h 48 --when-exists $O/pilot_pick.txt ${2:+--after $2} --env PRIO=${PRIO:-9} -- bash $ME wd-pilot) || exit 1
+  echo "wd-launch: $l (waits on $O/pilot_pick.txt${2:+, after $2})" | tee -a $O/stages.txt ;;
+wd-pilot)
+  q=$(cat $O/pilot_pick.txt); [[ $q == j2 || $q == j5 ]] || { echo "WAIT pilot verdict $q: no composed pilot, no formal (Amendment C 5)" | tee -a $O/stages.txt; exit 0; }
+  r=$(sub wd-rows --vram 0.5 --cpu 4 --ram 64 --timeout-h 1 -- $TR $DT rows) || exit 1
+  g=$(sub wd-gg-w0 "${FW[@]}" --timeout-h 1 -- bash $ME train wdw0 0 60 WDGG-w0) || exit 1
+  b=$(sub wd-bitcmp --after $g --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a WTGG-off --b WDGG-w0 --out wd_identity \
+      --note "Amendment C 2: RSG-L18 recipe vs the composed command with WAIT rows at weight 0, D1 0 rows, D2 weight 0") || exit 1
+  TT=(WD${q^^}P1-L18-s0 WD${q^^}P3-L18-s0); ids=()
+  for L in 1 3; do T=WD${q^^}P$L-L18-s0; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
+    ids+=($(sub wd-train-$T "${FW[@]}" --after $r,$b --timeout-h 1 -- bash $ME train wd$L 0 1000 $T)) || exit 1; done
+  rj=$(reads "$(csv ${ids[@]})" ${TT[@]}) || exit 1
+  dd=$(sub wd-dc-${TT[0]} --after "$(csv ${ids[@]})" --vram 16 --cpu 4 --ram 40 --timeout-h 1 -- $TR $DC plans --tags ${TT[@]} --srcs nav pai) || exit 1
+  gg=$(sub wd-gate-pilot --after $rj,$dd --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
+       $TR $PY wdgate --j ${TT[@]} --c WTCP-L18-s0 --lam-of 1=${TT[0]},3=${TT[1]} --submit) || exit 1
+  echo "wd-pilot ($q): rows $r identity $g bitcmp $b trainings ${ids[*]} reads $rj dc $dd gate $gg" | tee -a $O/stages.txt ;;
+wd-full)   # wd-full <lam>
+  L=${2:?lam}; q=$(cat $O/pilot_pick.txt); J=WD${q^^}-L18; JJ=($J-s0 $J-s1); CC=(WTC-L18-s0 WTC-L18-s1); tr=()
+  for s in 0 1; do T=$J-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }
+    tr+=($(sub wd-train-$T "${FW[@]}" --timeout-h 2 -- bash $ME train wd$L $s 2500 $T)) || exit 1; done
+  rj=$(reads "$(csv ${tr[@]})" ${JJ[@]}) || exit 1
+  dd=$(sub wd-dc-$J --after "$(csv ${tr[@]})" --vram 16 --cpu 4 --ram 40 --timeout-h 1 -- $TR $DC plans --tags ${JJ[@]} --srcs nav pai) || exit 1
+  hj=$(held ${tr[0]} ${JJ[0]}),$(held ${tr[1]} ${JJ[1]}) || exit 1
+  hc=(); for T in ${CC[@]}; do for i in 0 1 2 3 4 5; do hc+=($(jid wt-held-$T-$i)) || { echo "control held reads not submitted" >&2; exit 1; }; done; done
+  f=$(sub wd-follow-$J --after "$hj,$(csv ${hc[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash $ME follow $(csv ${JJ[@]}) $(csv ${CC[@]}) $O/wd_heldturn) || exit 1
+  g=$(sub wd-clgate-held --after "$hj,$(csv ${hc[@]}),$f" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 --env PRIO=${PRIO:-9} -- \
+      $TR $PY clgate --stage held --j $(csv ${JJ[@]}) --c $(csv ${CC[@]}) --follow $O/wd_heldturn --submit) || exit 1
+  echo "wd-full (D2 $L, WAIT $q): trainings ${tr[*]} reads $rj dc $dd held $hj follow $f gate $g" | tee -a $O/stages.txt ;;
+follow)    # follow J0,J1 C0,C1 DIR: rf_follow on the held 460 @18 reads (rm_chain.sh read dirs) of the four tags
+  R=(); for T in ${2//,/ } ${3//,/ }; do R+=("$T@18=$(ls -d $DATA_DIR/runs/route_mem/read/$T/c*/run | paste -sd,)"); done
+  mkdir -p $4; exec $AP experiments/route_follow/scripts/rf_follow.py --runs "${R[@]}" --out $4/follow --workers 16 ;;
+train)   # train <off|w0|j2|j5|wdw0|wd1|wd3> <seed> <steps> <tag>
+  case $2 in
+    off) F="$RB" ;;
+    wdw0) F="$(cat $O/flags_w0.txt) --d1-k 0 --d2-lam 0" ;;                               # Amendment C 2: D1 / D2 off
+    wd*) q=$(cat $O/pilot_pick.txt); f=$O/flags_$q.txt; [[ -s $f && -s $D1R ]] || { echo "no $f or $D1R" >&2; exit 1; }
+         F="$(cat $f) --desire-rows $D1R --d1-k $D1K --d2-lam ${2#wd} --d2-teacher $TEA" ;;
+    *) f=$O/flags_$2.txt; [[ -s $f ]] || { echo "no $f (wt.py pack)" >&2; exit 1; }; F=$(cat $f) ;;
+  esac
   PYTHONPATH=$PWD/experiments/wait_cap/lib${PYTHONPATH:+:$PYTHONPATH} exec $TR experiments/route_mem/scripts/rm_train.py train --tag $5 $REC --lr-scale 0.1 $F --steps $4 --seed $3 ;;
 *) sed -n 2,11p $0; exit 2 ;;
 esac

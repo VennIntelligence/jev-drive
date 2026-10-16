@@ -19,7 +19,14 @@ to RSG-L18's pool on1_L18RB0 -> on1_L18RBW; the pilot / closed-loop gates. Box, 
   gate --j T.. --c T [--submit]   (CPU) the registered pilot gates -> results/wait_train/pilot_gate.{json,md}; --submit: write the picked dose
                              (j2 | j5 | STOP) to runs/wait_cap/train/pilot_pick.txt. Amendment C: it no longer submits the WAIT-only formal
                              (wt.sh full); the composed WAIT + desire pilot takes the dose, `full` runs only as the registered fallback
-  clgate --stage held|sub|pub|pai --j T0,T1 --c T0,T1 [--submit]   (CPU) closed-loop stage lines; --submit: the next stage on PASS
+  clgate --stage held|sub|pub|pai --j T0,T1 --c T0,T1 [--follow DIR] [--submit]   (CPU) closed-loop stage lines; --submit: the next stage
+                             on PASS; --follow (Amendment C 6, the composed arm): held stage also needs the held turn completion line
+                             (rf_follow in DIR/follow: 2-seed mean completed J >= C - 2)
+  Amendment C (the composed WAIT + desire arm WD):
+  bitcmp --a T --b T --out NAME   the same identity comparison for any two 60-step runs (default WTGG-off vs WTGG-w0 -> identity.json)
+  wdgate --j T1 T3 --c T --lam-of 1=T1,3=T3 [--submit]   the composed pilot: every WAIT pilot gate + launch-lock (cmd_gate's per-arm read)
+                             and the desire offline gates (dt.desire_read) -> results/wait_train/wd_pilot_gate.{json,md}; --submit: a passing
+                             arm (both: D2 weight 1) -> wt.sh wd-full <lam>; none -> the registered fallback WT_FALLBACK=1 wt.sh full <dose>
 """
 from __future__ import annotations
 
@@ -430,20 +437,20 @@ def run_of(tag):
 
 
 def cmd_bitcmp(a):
-    (sa, da, ma), (sb, db, mb) = run_of("WTGG-off"), run_of("WTGG-w0")
+    (sa, da, ma), (sb, db, mb) = run_of(a.a), run_of(a.b)
     keys = [k for k in sorted(set(sa) & set(sb), key=str) if not k[0].startswith(("throughput/", "loss/drop/"))]
     dl = max(abs(sa[k] - sb[k]) for k in keys)
     dw = max(float((ma[g][k].float() - mb[g][k].float()).abs().max()) for g in ("net", "parity") for k in ma[g])
     same = all(set(ma[g]) == set(mb[g]) for g in ("net", "parity"))
     extra = sorted({k[0] for k in sb} - {k[0] for k in sa})
     wz = [sb[k] for k in sb if k[0].startswith("on/wcarc")]
-    r = dict(a="WTGG-off", b="WTGG-w0", note=f"RSG-L18 recipe 60 steps vs pool {POOL} with the new rows at weight 0 (--on-lon wc_arc)", scalars=len(keys),
+    r = dict(a=a.a, b=a.b, note=a.note or f"RSG-L18 recipe 60 steps vs pool {POOL} with the new rows at weight 0 (--on-lon wc_arc)", scalars=len(keys),
              scalar_max_abs_diff=dl, weight_max_abs_diff=dw, weight_keys_equal=same, on_hash_60=[da.get("on_hash_60"), db.get("on_hash_60")],
              rsg_l18_s0_on_hash_60=RSG_HASH60, dev_ade=[da.get("dev_ade"), db.get("dev_ade")], b_only_scalars=extra,
              wcarc_scalars_max_abs=max(map(abs, wz)) if wz else None)
     r["identical"] = bool(dl == 0 and dw == 0 and same and r["on_hash_60"][0] == r["on_hash_60"][1] == RSG_HASH60)
     RES.mkdir(parents=True, exist_ok=True)
-    for p in (OUT / "identity.json", RES / "identity.json"):
+    for p in (OUT / f"{a.out}.json", RES / f"{a.out}.json"):
         p.write_text(json.dumps(r, indent=1, default=float))
     print(json.dumps(r, indent=1, default=float))
     raise SystemExit(0 if r["identical"] else 2)
@@ -537,29 +544,35 @@ def ledger_read(tag):
     return out
 
 
-def cmd_gate(a):
+def wait_arm(t, c, Cc, cx, c_ade):
+    """The registered WAIT pilot gates of one arm t against the control c (section 6, unchanged): five gates + launch-lock, secondary ledger F."""
     from jevdrive import stats
+    Jc, jx = cap_read(t)
+    dv = dev_read(t, c)
+    ade = dev_ade(t)
+    dW = stats.paired(jx["wait"][jx["W"]], cx["wait"][cx["W"]], groups=jx["g"][jx["W"]])
+    dG = stats.paired(jx["wait"][jx["G"]], cx["wait"][cx["G"]], groups=jx["g"][jx["G"]])
+    dWm = Jc["wait_W"] - Cc["wait_W"]
+    dD = Jc["D"] - Cc["D"]
+    g = dict(wait_W=Jc["wait_W"] >= 0.60, go_G=Jc["go_G"] >= 0.85, into_WL=Jc["into_WL"] <= 0.05, dev_ade=ade <= c_ade + 0.01,
+             lat2s=dv["lat2s_med_absdiff"] <= 0.05)
+    lock = bool(dWm >= 0.20 and dD < 0.5 * dWm)
+    r = dict(cap=Jc, dev=dv, dev_ade=ade, d_wait_W=stats.fmt(dW), d_wait_G=stats.fmt(dG), dD=dD, gates=g, launch_lock=lock,
+             passed=bool(all(g.values()) and not lock))
+    try:                                                               # secondary (not a gate): d331's ledger cells on the F read
+        lj, lc = ledger_read(t), ledger_read(c)
+        r["ledger_F"] = {k: dict(J=float(lj[k][0].mean()), C=float(lc[k][0].mean()), n=int(len(lj[k][0])),
+                                 diff=stats.fmt(stats.paired(lj[k][0], lc[k][0], groups=lj[k][1]))) for k in lj}
+    except FileNotFoundError as e:
+        r["ledger_F"] = f"missing: {e}"
+    return r
+
+
+def cmd_gate(a):
     Cc, cx = cap_read(a.c)
     res = dict(control=a.c, C=Cc | dict(dev_ade=dev_ade(a.c)), arms={})
     for t in a.j:
-        Jc, jx = cap_read(t)
-        dv = dev_read(t, a.c)
-        ade = dev_ade(t)
-        dW = stats.paired(jx["wait"][jx["W"]], cx["wait"][cx["W"]], groups=jx["g"][jx["W"]])
-        dG = stats.paired(jx["wait"][jx["G"]], cx["wait"][cx["G"]], groups=jx["g"][jx["G"]])
-        dWm, dGm = Jc["wait_W"] - Cc["wait_W"], Jc["wait_G"] - Cc["wait_G"]
-        dD = Jc["D"] - Cc["D"]
-        g = dict(wait_W=Jc["wait_W"] >= 0.60, go_G=Jc["go_G"] >= 0.85, into_WL=Jc["into_WL"] <= 0.05, dev_ade=ade <= res["C"]["dev_ade"] + 0.01,
-                 lat2s=dv["lat2s_med_absdiff"] <= 0.05)
-        lock = bool(dWm >= 0.20 and dD < 0.5 * dWm)
-        res["arms"][t] = dict(cap=Jc, dev=dv, dev_ade=ade, d_wait_W=stats.fmt(dW), d_wait_G=stats.fmt(dG), dD=dD, gates=g, launch_lock=lock,
-                              passed=bool(all(g.values()) and not lock))
-        try:                                                           # secondary (not a gate): d331's ledger cells on the F read
-            lj, lc = ledger_read(t), ledger_read(a.c)
-            res["arms"][t]["ledger_F"] = {c: dict(J=float(lj[c][0].mean()), C=float(lc[c][0].mean()), n=int(len(lj[c][0])),
-                                                  diff=stats.fmt(stats.paired(lj[c][0], lc[c][0], groups=lj[c][1]))) for c in lj}
-        except FileNotFoundError as e:
-            res["arms"][t]["ledger_F"] = f"missing: {e}"
+        res["arms"][t] = wait_arm(t, a.c, Cc, cx, res["C"]["dev_ade"])
     ok = [t for t in a.j if res["arms"][t]["passed"]]
     if len(ok) == 2:
         d0, d1 = (res["arms"][t]["cap"]["D"] for t in ok)
@@ -592,6 +605,59 @@ def cmd_gate(a):
     if a.submit:                    # Amendment C: the gate no longer submits the WAIT-only formal; it hands the picked dose to the composed line
         dose = ({v: k for k, v in a.dose_of.items()}[pick] if a.dose_of else pick) if pick else "STOP"
         (OUT / "pilot_pick.txt").write_text(dose + "\n")   # j2 | j5 | STOP; the composed pilot (wt.sh wd-pilot) waits on this file
+
+
+def cmd_wdgate(a):
+    """Amendment C 4: the composed pilot arms (D2 weight 1 / 3) on every WAIT gate + the desire offline gates; pick; fallback (C 5)."""
+    sys.path.insert(0, str(REPO / "experiments/desire_cap/scripts"))
+    import dt
+    Cc, cx = cap_read(a.c)
+    res = dict(control=a.c, C=Cc | dict(dev_ade=dev_ade(a.c)), arms={}, dose=(OUT / "pilot_pick.txt").read_text().strip())
+    for t in a.j:
+        r = wait_arm(t, a.c, Cc, cx, res["C"]["dev_ade"])
+        r["desire"] = dt.desire_read(t)
+        r["wait_passed"], r["passed"] = r["passed"], bool(r["passed"] and r["desire"]["passed"])
+        res["arms"][t] = r
+    lam = {v: k for k, v in a.lam_of.items()}
+    ok = [t for t in a.j if res["arms"][t]["passed"]]
+    pick = min(ok, key=lambda t: float(lam[t])) if ok else None              # both pass: D2 weight 1
+    res |= dict(passed=ok, pick=pick, pick_lam=lam.get(pick), verdict="PASS" if pick else "FAIL: fallback to the WAIT-only formal (Amendment C 5)")
+    P0 = next(iter(res["arms"].values()))["desire"]["P0"]
+    L = ["# WAIT + desire composed pilot gates (Amendment C 4; 1 000 steps, seed 0; WAIT dose " + res["dose"] + ")", "",
+         "| arm | wait W (>= 0.60) | go G (>= 0.85) | into W_L (<= 0.05) | D | dev ADE (<= C + 0.01) | lat 2 s (<= 0.05 m) | launch-lock | "
+         "LC 4 s (>= 0.9 x P0) | LCL 4 s (>= 0.8) | LCR 4 s (>= 0.8) | dir (>= 0.95) | PAI P_lca 4 s (report, 1.5) | pass |",
+         "|---|--:|--:|--:|--:|--:|--:|:-:|--:|--:|--:|--:|--:|:-:|",
+         f"| {a.c} (C) | {Cc['wait_W']:.3f} | {Cc['go_G']:.3f} | {Cc['into_WL']:.3f} | {Cc['D']:.3f} | {res['C']['dev_ade']:.4f} | - | - | - | - | - | - | - | - |",
+         f"| P0 | - | - | - | - | - | - | - | {P0['mean4']:.2f} | {P0['lcl4']:.2f} | {P0['lcr4']:.2f} | {P0['dir']:.3f} | {P0['pai_lca4']:.2f} | - |"]
+    for t in a.j:
+        r, d = res["arms"][t], res["arms"][t]["desire"]["arm"]
+        L.append(f"| {t} (D2 {lam[t]}) | {r['cap']['wait_W']:.3f} | {r['cap']['go_G']:.3f} | {r['cap']['into_WL']:.3f} | {r['cap']['D']:.3f} | "
+                 f"{r['dev_ade']:.4f} | {r['dev']['lat2s_med_absdiff']:.3f} | {'yes' if r['launch_lock'] else 'no'} | {d['mean4']:.2f} | {d['lcl4']:.2f} | "
+                 f"{d['lcr4']:.2f} | {d['dir']:.3f} | {d['pai_lca4']:.2f} | {'PASS' if r['passed'] else 'fail'} |")
+    L += ["", f"verdict: {res['verdict']}" + (f"; D2 weight {res['pick_lam']} ({pick})" if pick else "")]
+    RES.mkdir(parents=True, exist_ok=True)
+    for p in (OUT / "wd_pilot_gate.json", RES / "wd_pilot_gate.json"):
+        p.write_text(json.dumps(res, indent=1, default=float))
+    for p in (OUT / "wd_pilot_gate.md", RES / "wd_pilot_gate.md"):
+        p.write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+    if a.submit and pick:
+        subprocess.run(["bash", str(HERE / "wt.sh"), "wd-full", res["pick_lam"]], check=True)
+    elif a.submit:
+        subprocess.run(["bash", str(HERE / "wt.sh"), "full", res["dose"]], check=True, env=dict(os.environ, WT_FALLBACK="1"))
+
+
+def held_turns(d, J, C):
+    """Amendment C 6: rf_follow's completed held turns (DIR/follow) per tag, 2-seed means, the line J >= C - 2, paired (rf_recov_post.h2_held)."""
+    sys.path.insert(0, str(REPO / "experiments/route_follow/scripts"))
+    import rf_recov_post as RP
+    h = RP.h2_held(Path(d), J, C)
+    assert h is not None, f"{d}/follow: rf_follow output missing for {J + C}"
+    turns = {t: h["counts"][t]["turns"] for t in J + C}
+    assert len(set(turns.values())) == 1, f"turn sets differ between tags: {turns}"
+    cj, cc = (float(np.mean([h["counts"][t]["completed"] for t in X])) for X in (J, C))
+    return dict(turns=turns[J[0]], completed={t: h["counts"][t]["completed"] for t in J + C}, mean_J=cj, mean_C=cc, line=bool(cj >= cc - 2),
+                paired=h["paired"], common_turns=h["common_turns"], logs=h["logs"])
 
 
 # ---------------------------------------------------------------- closed-loop stage lines (CPU)
@@ -642,6 +708,10 @@ def cmd_clgate(a):
         if st == "held":
             res["passed"] = bool(zj <= zc + 3)
             res["static_scene"] = None
+            if a.follow:                                              # Amendment C 6: the held turn completion line
+                res["held_turns"] = held_turns(a.follow, J, C)
+                res["zeros_line"] = res["passed"]
+                res["passed"] = bool(res["passed"] and res["held_turns"]["line"])
         else:
             res["passed"] = bool(pd_["lo"] > -0.01 and zj <= zc + 5)
     elif st == "sub":                                            # stage 2: the static public scene (4 tags) + PAI stop17 (J s0) under the submission config
@@ -743,7 +813,9 @@ if __name__ == "__main__":
     for c in ("index", "teacher"):
         sp.add_parser(c).add_argument("--batch", required=True)
     sp.add_parser("pack").add_argument("--batches", required=True)
-    sp.add_parser("bitcmp")
+    p = sp.add_parser("bitcmp")
+    p.add_argument("--a", default="WTGG-off"), p.add_argument("--b", default="WTGG-w0"), p.add_argument("--out", default="identity")
+    p.add_argument("--note", default="")
     p = sp.add_parser("ycount")
     p.add_argument("--workers", type=int, default=16)
     p = sp.add_parser("devplans")
@@ -753,11 +825,17 @@ if __name__ == "__main__":
     p.add_argument("--c", required=True)
     p.add_argument("--submit", action="store_true")
     p.add_argument("--dose-of", type=lambda s: dict(x.split("=") for x in s.split(",")), default={}, help="dose=tag,...")
+    p = sp.add_parser("wdgate")
+    p.add_argument("--j", nargs="+", required=True)
+    p.add_argument("--c", required=True)
+    p.add_argument("--lam-of", type=lambda s: dict(x.split("=") for x in s.split(",")), required=True, help="lam=tag,...")
+    p.add_argument("--submit", action="store_true")
     p = sp.add_parser("clgate")
     p.add_argument("--stage", required=True, choices=("held", "sub", "pub", "pai"))
     p.add_argument("--j", required=True)
     p.add_argument("--c", required=True)
+    p.add_argument("--follow", default="", help="Amendment C 6: dir holding rf_follow's follow/ of the held reads (held stage)")
     p.add_argument("--submit", action="store_true")
     a = ap.parse_args()
     dict(select=cmd_select, index=cmd_index, teacher=cmd_teacher, pack=cmd_pack, bitcmp=cmd_bitcmp, devplans=cmd_devplans, gate=cmd_gate, ycount=cmd_ycount,
-         clgate=cmd_clgate)[a.cmd](a)
+         clgate=cmd_clgate, wdgate=cmd_wdgate)[a.cmd](a)

@@ -210,10 +210,12 @@ class PModel(nn.Module):
         if self.adapter is not None:
             self.adapter.in_tf = PA.ego_transform(self.tr1.get("noax", False), self.tr1.get("hist_cv", False), self.tr1.get("noego", False))
 
-    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None, lead=None):
+    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None, lead=None, desire=None):
         """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)
         -> outputs (B, n_out). The 9 - n older slots are zero and invalid. inputs_on False / no adapter: the bias is not added.
-        nv (B,) int, mixed-domain batches only: the number of real (newest) slots of each row; the older ones are invalid."""
+        nv (B,) int, mixed-domain batches only: the number of real (newest) slots of each row; the older ones are invalid.
+        desire (B, 1, 33, 8): the policy's desire queue (`_to_copy`, block 32 = the newest 0.2 s; lib/desire_train.queue); None = the shipped
+        zeros, the call unchanged (bit for bit)."""
         B, n = front.shape[:2]
         H = torch.cat([front.new_zeros(B, A.CONTEXT - n, *front.shape[2:]), front], 1).to(self.net.dtype)
         valid = torch.zeros(B, A.CONTEXT, dtype=torch.bool, device=H.device)
@@ -245,7 +247,10 @@ class PModel(nn.Module):
             else:
                 H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
         H = H * valid[:, :, None, None].to(H.dtype)
-        o = self.net.run_batched(A.policy_feeds(self.net, H, AT, tc.to(self.net.dtype)), ["outputs"] + ([self.tap] if self.tap else []))
+        feeds = A.policy_feeds(self.net, H, AT, tc.to(self.net.dtype))
+        if desire is not None:
+            feeds["_to_copy"] = desire.to(feeds["_to_copy"].dtype).expand_as(feeds["_to_copy"]).contiguous()
+        o = self.net.run_batched(feeds, ["outputs"] + ([self.tap] if self.tap else []))
         return (o["outputs"].reshape(B, -1), o[self.tap].reshape(B, -1)) if self.tap else o["outputs"].reshape(B, -1)
 
     def groups(self):
