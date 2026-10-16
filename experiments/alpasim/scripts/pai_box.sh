@@ -9,7 +9,9 @@
 #   default the served configuration "JEV_VCONT=1.0 JEV_LEAD=1"; other driver env such as JEV_VHIST=holdlead or SH30_RMEM=0 goes here too),
 #   WIZ (wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"), PRIO (pool priority, 13),
 #   AFTER (pool job ids the chunks wait for), KEEP_VIDEO=1 / KEEP_ASL=1 (keep the rollout mp4s / the rollout.asl of scored rollouts; dropped by
-#   default: a read of 147 scenes is then ~10 GB instead of ~60 GB).
+#   default: a read of 147 scenes is then ~10 GB instead of ~60 GB), PAI_FAST=1 (local reads only: render the front camera alone, at the
+#   preset's resolution / frame interval / shutter, and no eval video; the driver and the image scorer read only that camera, so scores should
+#   not move: results/pai_fast.md; official submissions keep the 6-camera set), VRAM / RAM (declared per job, 28 / 40 GB).
 # Layout as pai_eval.sh, so pai_eval_report.py reads it unchanged: <out>/{chunks/cNNN.txt, jobs.txt, runs/<lowercase tag>_cNNN/{sim/, driver ->
 #   sim/driver-logs, pool/, SUBMITTED, DONE | ERROR}}. A second submit skips finished and pending chunks and resubmits failed ones (resume);
 #   a chunk with a scene not yet in the scene cache is left out until a later submit.
@@ -26,7 +28,7 @@ submit)
     else for f in "$@"; do if head -1 "$f" | grep -q '^scene_id'; then awk -F'\t' 'NR > 1 && $8 <= 1 {print $1}' "$f"; else grep . "$f"; fi; done \
            | awk '!seen[$0]++' | split -l "${CHUNK:-25}" -d -a 3 --additional-suffix=.txt - "$O/chunks/c"; fi
   fi
-  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "KEEP_ASL=${KEEP_ASL:-0}" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
+  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "KEEP_ASL=${KEEP_ASL:-0}" "PAI_FAST=${PAI_FAST:-0}" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
   X=(); for kv in ${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}; do X+=(--env "$kv"); done
   miss=$(python3 - "$DATA_DIR/third_party/alpasim/data/scenes" "${NUREC:-$DATA_DIR/datasets/nurec}/all-usdzs" "$O"/chunks/*.txt <<'PY'
 import csv, os, sys                 # chunks with a scene whose usdz is not in the cache yet (a copy still running): left for a later submit
@@ -42,17 +44,19 @@ PY
     [[ -f $r/SUBMITTED && ! -f $r/ERROR ]] && continue                # queued or running
     [[ " $miss " == *" $c "* ]] && { echo "$c: scenes missing from the cache, not submitted"; continue; }
     mkdir -p "$r/pool"
-    id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram 28 --cpu 6 --ram 40 --timeout-h 3 \
-           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env CL_HIST_KEY=pai-read4 --env "CONC=${CONC:-4}" \
-           --env "WIZ=${WIZ:-}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
+    id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram "${VRAM:-28}" --cpu 6 --ram "${RAM:-40}" --timeout-h 3 \
+           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$([[ ${PAI_FAST:-0} == 1 ]] && echo fast || echo read)${CONC:-4}" --env "CONC=${CONC:-4}" \
+           --env "WIZ=${WIZ:-}" --env "PAI_FAST=${PAI_FAST:-0}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
   done ;;
 run)
   c=$1; r=$O/runs/${L}_$c; R=$r/sim
   rm -rf "$R" "$r"/{DONE,ERROR}; mkdir -p "$r"; ln -sfn sim/driver-logs "$r/driver"
+  fast=(); [[ ${PAI_FAST:-0} == 1 ]] && fast=(eval.video.render_video=false   # the 6cam_1080 preset's front camera, alone
+    "runtime.simulation_config.cameras=[{logical_id:camera_front_wide_120fov,height:1080,width:1900,frame_interval_us:100000,shutter_duration_us:30000}]")
   # shellcheck disable=SC2086
-  env SH30_TAG="$T" CONC="${CONC:-4}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" ${WIZ:-}; rc=$?
+  env SH30_TAG="$T" CONC="${CONC:-4}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" "${fast[@]}" ${WIZ:-}; rc=$?
   rm -rf "$R/nre-cache" "$R/driver-tmp"; [[ ${KEEP_VIDEO:-0} == 1 ]] || find "$R/rollouts" -name '*.mp4' -delete 2>/dev/null
   [[ ${KEEP_ASL:-0} == 1 || ! -f $R/aggregate/results-summary.json ]] || python3 - "$R" <<'PY'
 import glob, json, os, sys                  # rollout.asl (~0.4 GB a scene) is kept for zero-score rollouts only, as the nuPlan reads do
