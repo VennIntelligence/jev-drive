@@ -1,0 +1,35 @@
+{
+ "JDGd": {
+  "rows": 12178,
+  "hi": 2585,
+  "win": 398
+ },
+ "JDGdev": {
+  "rows": 1814,
+  "hi": 247,
+  "win": 34
+ },
+ "s_rows": 17429,
+ "d_lo": 9593,
+ "d_hi": 2585,
+ "hi_weight": 3.0,
+ "hi_draw_share": 0.4470255937283837,
+ "flags": {
+  "25": "--on on1_JDG --on-k 45 --on-mode mixed --on-weight pool=d:2.473032,jw=hi:3",
+  "50": "--on on1_JDG --on-k 77 --on-mode mixed --on-weight pool=d:4.946063,jw=hi:3",
+  "w0": "--on on1_JDG --on-k 13 --on-mode mixed --on-weight pool=d:0"
+ },
+ "batch": {
+  "total": 128,
+  "yaw_rate": 13,
+  "s": 13,
+  "dagger": {
+   "25": 32,
+   "50": 64
+  },
+  "normal": {
+   "25": 70,
+   "50": 38
+  }
+ }
+}

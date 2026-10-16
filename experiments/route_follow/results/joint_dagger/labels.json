@@ -1,0 +1,125 @@
+{
+ "rows": 17474,
+ "scenes_with_pack": 1019,
+ "stop_files": 1019,
+ "bit": {
+  "stop_rule_off_equals_stored": true,
+  "max_abs": 0.0
+ },
+ "expert_rows": 17464,
+ "expert_errors": 0,
+ "stop_rule_rows": 1332,
+ "target_rows": 17464,
+ "own": {
+  "rows": 15426,
+  "scenes": 1019,
+  "logs": 97
+ },
+ "valid": {
+  "rows": 13992,
+  "scenes": 1011,
+  "logs": 97
+ },
+ "valid_train": {
+  "rows": 12178,
+  "scenes": 886,
+  "logs": 81
+ },
+ "valid_dev": {
+  "rows": 1814,
+  "scenes": 125,
+  "logs": 16
+ },
+ "dropped": {
+  "no_label": 0,
+  "agent": 1058,
+  "road": 368,
+  "t0": 144
+ },
+ "hi": {
+  "all": {
+   "rows": 2832,
+   "scenes": 269,
+   "logs": 68
+  },
+  "train": {
+   "rows": 2585,
+   "scenes": 247,
+   "logs": 58
+  },
+  "dev": {
+   "rows": 247,
+   "scenes": 22,
+   "logs": 10
+  },
+  "win_train": {
+   "rows": 398,
+   "scenes": 82,
+   "logs": 47
+  },
+  "win_dev": {
+   "rows": 34,
+   "scenes": 7,
+   "logs": 5
+  },
+  "junction_appr_train": {
+   "rows": 2187,
+   "scenes": 231,
+   "logs": 58
+  }
+ },
+ "seg": {
+  "junction": {
+   "rows": 1085,
+   "bind_stop": 0.0,
+   "bind_turn": 0.0,
+   "bind_lead": 0.009216589861751152
+  },
+  "turn_appr": {
+   "rows": 1655,
+   "bind_stop": 0.0012084592145015106,
+   "bind_turn": 0.03323262839879154,
+   "bind_lead": 0.024773413897280966
+  },
+  "stop_appr": {
+   "rows": 865,
+   "bind_stop": 0.048554913294797684,
+   "bind_turn": 0.0,
+   "bind_lead": 0.24046242774566473
+  },
+  "straight": {
+   "rows": 9128,
+   "bind_stop": 0.0,
+   "bind_turn": 0.0,
+   "bind_lead": 0.01654250657318142
+  },
+  "other": {
+   "rows": 1259,
+   "bind_stop": 0.0,
+   "bind_turn": 0.0,
+   "bind_lead": 0.018268467037331215
+  }
+ },
+ "bind_share": {
+  "stop": 0.0031446540880503146,
+  "turn": 0.003930817610062893,
+  "lead": 0.030946255002858778,
+  "any": 0.03673527730131504
+ },
+ "unbound_target_vs_expert_max_m": {
+  "p50": 0.0,
+  "max": 3.81655945602688e-06
+ },
+ "contact_free_own": {
+  "target": 0.9070400622325944,
+  "expert_stop": 0.8939452871774926,
+  "served": 0.8866848178400104
+ },
+ "disagree_valid": {
+  "d2_med": 2.208163261413574,
+  "d4_med": 5.172039031982422,
+  "lat4_abs_med": 0.4317172169685364,
+  "lon4_mean": -1.6229487657546997,
+  "dh4_abs_med": 1.2881189584732056
+ }
+}

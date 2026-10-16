@@ -1,0 +1,62 @@
+{
+ "turns": {
+  "RSG-L18-s0-XP-L12-E46-ST": {
+   "completed": 22,
+   "event": 0,
+   "off": 0,
+   "short": 2,
+   "turns": 24
+  },
+  "RSG-L18-s0-XP-L12-E46": {
+   "completed": 22,
+   "event": 0,
+   "off": 0,
+   "short": 2,
+   "turns": 24
+  }
+ },
+ "paired": {
+  "score": [
+   -0.0011749236829054414,
+   -0.0038114749139229152,
+   0.0
+  ],
+  "zero": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "z_atf": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "gt": [
+   -0.006886990488190497,
+   -0.016140817622910083,
+   -0.0011096861989100483
+  ],
+  "at_fault_km": [
+   -0.0016870774284725165,
+   -0.005461605593819707,
+   -9.800488235099399e-05
+  ]
+ },
+ "scenes": 460,
+ "zeros": {
+  "RSG-L18-s0-XP-L12-E46-ST": 30,
+  "RSG-L18-s0-XP-L12-E46": 30
+ },
+ "human_stop_scenes": 44,
+ "zeros_human_stop": {
+  "RSG-L18-s0-XP-L12-E46-ST": 2,
+  "RSG-L18-s0-XP-L12-E46": 2
+ },
+ "mean": {
+  "RSG-L18-s0-XP-L12-E46-ST": 0.9006921983568601,
+  "RSG-L18-s0-XP-L12-E46": 0.9018466885844107
+ },
+ "expert_decisions": 8129,
+ "decisions_with_line_stop": 452,
+ "gross_regression": false
+}

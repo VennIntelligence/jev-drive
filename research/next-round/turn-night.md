@@ -255,3 +255,10 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   删了今晚的部分输出 `v2pai/RCVRL-L18-s1-gate`（约 15 分钟的 rollout）和拉到 Tokyo 的 `op_parity/runs/RCVRL-L18-s1`、`RCVRLF-L18-s1`；盒上原检查点未动。
   `slowq`、`jl281`、`rcvq`、`dguard` 四个 tmux 窗口和磁盘守卫都已关，`jev` 会话只剩 main 窗口，Tokyo 两卡空闲（49 / 18 MiB）。磁盘守卫整夜没有触发，没有删任何旧读；`/data` 剩 188 GB（95 %）。
   今晚 Tokyo 实际读完的：RSGS1 / RSGS2 / RSGS3（SLOW 线 3，全 FAIL）、spin_v9 jlon 84 + 29 场景与 jlon281（用户豁免后按常规读）。Tokyo 上留着 `line3/` 提取（`/data/runs/route_follow/slow/line3`）和 `/data/venv_line3`。
+- 10-16 09:40 JST：**JOINT-DAGGER**（预登记 `experiments/route_follow/plans/2026-10-16-joint-dagger-prereg.md`，pilot `experiments/route_follow/results/joint_dagger/pilot.md`）。
+  标签 = 规则专家（+ 停止线规则）从 on1_L18RSG 每个自身状态出发的路径，按 on_envelope 上界重新计时（上界只在 3.7 % 的行上起作用，基本就是专家）；去接触后 13 992 行（训练 12 178 / dev 1 814），
+  失败前 3 s + 路口 / 弯前 ×3 抽取。逐位闸过（权重 0 = RSG-L18，hash 相同）；专家停止线开关关时与存档逐位相同。
+  **四个 pilot（份额 25 / 50 % × lr 0.3 / 1.0）离线闸全不过**：dev ADE 0.60–0.74（线 0.56）、G-rely 全假、等弧长转弯 −1.0 至 −1.5°（线 +0.3）；标签闸大幅过（dev −42 至 −49 %，与训练行同步，失败窗口行同样动）。
+  读法：标签学得会也迁移得了，但老师在弯前比策略快、每米转得少（标签对 served 等弧长 −0.9°，弧长 +1.4 m），只在路口里多转（+3.2°）；转弯仪器的行多在弯前，pilot 学到的是弯前。剂量由份额决定。
+  停止线规则：专家 held 读数 8 129 个决策里停了 452 个，零分 22 对 22、转弯 22 / 24 两边一样，人停过线的 44 个场景零分 2 对 2：中性（d314 那些「人停了它接着开」的零分是排队 / 前车，不是停止线）。
+  按登记不起全量。可选（未登记，待定）：只用路口 + 失败窗口行；份额 ≤ 10 %。花费约 2 GPU job-h，墙钟 17 分钟。

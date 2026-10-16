@@ -1,0 +1,19 @@
+{
+ "a": "JDGG-off",
+ "b": "JDGG-w0",
+ "note": "RSG-L18 recipe 60 steps vs pool on1_JDG with the DAgger rows at weight 0 (--on-mode mixed, on-k 13)",
+ "scalars": 80,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "on_hash_60": [
+  "ea8cacc3e451c577",
+  "ea8cacc3e451c577"
+ ],
+ "rsg_l18_s0_on_hash_60": "ea8cacc3e451c577",
+ "dev_ade": [
+  0.529079020023346,
+  0.529079020023346
+ ],
+ "identical": true
+}
