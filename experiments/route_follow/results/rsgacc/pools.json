@@ -1,0 +1,470 @@
+{
+ "parts": [
+  {
+   "pool": "on1_L18RB0",
+   "prefix": "s",
+   "policy": "RB0-F-s0 (RSG's pool, default serve)",
+   "track": "nuPlan",
+   "rows": 17429,
+   "scenes": 28,
+   "train_rows": 17429,
+   "dev_rows": 0
+  },
+  {
+   "pool": "on1_L18Ag0",
+   "prefix": "ng0",
+   "policy": "RSG-L18-s0",
+   "track": "nuPlan",
+   "rows": 17577,
+   "scenes": 28,
+   "train_rows": 13956,
+   "dev_rows": 3621
+  },
+  {
+   "pool": "on1_PAIAg0",
+   "prefix": "pg0",
+   "policy": "RSG-L18-s0",
+   "track": "PAI",
+   "rows": 25634,
+   "scenes": 160,
+   "train_rows": 22384,
+   "dev_rows": 3250
+  },
+  {
+   "pool": "on1_L18Aa0",
+   "prefix": "na0",
+   "policy": "RB0-F-s0",
+   "track": "nuPlan",
+   "rows": 17562,
+   "scenes": 28,
+   "train_rows": 13930,
+   "dev_rows": 3632
+  },
+  {
+   "pool": "on1_PAIAa0",
+   "prefix": "pa0",
+   "policy": "RB0-F-s0",
+   "track": "PAI",
+   "rows": 25578,
+   "scenes": 160,
+   "train_rows": 22331,
+   "dev_rows": 3247
+  },
+  {
+   "pool": "on1_L18Aa1",
+   "prefix": "na1",
+   "policy": "RB0-F-s1",
+   "track": "nuPlan",
+   "rows": 17657,
+   "scenes": 28,
+   "train_rows": 13994,
+   "dev_rows": 3663
+  },
+  {
+   "pool": "on1_PAIAa1",
+   "prefix": "pa1",
+   "policy": "RB0-F-s1",
+   "track": "PAI",
+   "rows": 25364,
+   "scenes": 159,
+   "train_rows": 22258,
+   "dev_rows": 3106
+  },
+  {
+   "pool": "on1_L18Ag1",
+   "prefix": "ng1",
+   "policy": "RSG-L18-s1",
+   "track": "nuPlan",
+   "rows": 17610,
+   "scenes": 28,
+   "train_rows": 13971,
+   "dev_rows": 3639
+  },
+  {
+   "pool": "on1_PAIAg1",
+   "prefix": "pg1",
+   "policy": "RSG-L18-s1",
+   "track": "PAI",
+   "rows": 25531,
+   "scenes": 159,
+   "train_rows": 22283,
+   "dev_rows": 3248
+  },
+  {
+   "pool": "on1_L18Al0",
+   "prefix": "nl0",
+   "policy": "RSGlr03n5000-L18-s0",
+   "track": "nuPlan",
+   "rows": 17596,
+   "scenes": 28,
+   "train_rows": 13957,
+   "dev_rows": 3639
+  },
+  {
+   "pool": "on1_PAIAl0",
+   "prefix": "pl0",
+   "policy": "RSGlr03n5000-L18-s0",
+   "track": "PAI",
+   "rows": 25933,
+   "scenes": 159,
+   "train_rows": 22771,
+   "dev_rows": 3162
+  },
+  {
+   "pool": "on1_L18Ak0",
+   "prefix": "nk0",
+   "policy": "RSGk51w1-L18-s0",
+   "track": "nuPlan",
+   "rows": 17580,
+   "scenes": 28,
+   "train_rows": 13942,
+   "dev_rows": 3638
+  },
+  {
+   "pool": "on1_PAIAk0",
+   "prefix": "pk0",
+   "policy": "RSGk51w1-L18-s0",
+   "track": "PAI",
+   "rows": 25687,
+   "scenes": 160,
+   "train_rows": 22443,
+   "dev_rows": 3244
+  }
+ ],
+ "facts": {
+  "RSG-L18-s0": {
+   "L18Ag0": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Ag0",
+     "rows": 17577,
+     "feat_ok": 1.0,
+     "route_ok": 0.9999431074699892,
+     "cov20": 0.5096432838368322,
+     "route0_nan_share": 0.010411332991978153,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAg0": {
+    "r1": {
+     "pool": "PAIAg0",
+     "tag": "RSG-L18-s0",
+     "control": "RB0-F-s1",
+     "model": {
+      "share_over": 0.03050635874229539,
+      "median_m": 0.00948399305343628,
+      "p99_m": 0.07069976806640621,
+      "rows": 25634
+     },
+     "wrong_seed": {
+      "share_over": 0.9712101115705704,
+      "median_m": 0.3249831199645996,
+      "p99_m": 2.646432952880846,
+      "rows": 25634
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAg0",
+     "rows": 25634,
+     "scenes": 160,
+     "rows_cached": 31772,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25634,
+     "served_max_abs_diff": 0.0578460693359375,
+     "c20": 0.7899664508075213,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.5092430114746094,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAg0"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 85 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 0.964 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAg0.md\n"
+   }
+  },
+  "RB0-F-s0": {
+   "L18Aa0": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Aa0",
+     "rows": 17562,
+     "feat_ok": 1.0,
+     "route_ok": 0.9998861177542421,
+     "cov20": 0.5104202254868466,
+     "route0_nan_share": 0.010306343241088714,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAa0": {
+    "r1": {
+     "pool": "PAIAa0",
+     "tag": "RB0-F-s0",
+     "control": "RB0-F-s1",
+     "model": {
+      "share_over": 0.03198060833528814,
+      "median_m": 0.00943756103515625,
+      "p99_m": 0.0737993812561035,
+      "rows": 25578
+     },
+     "wrong_seed": {
+      "share_over": 0.9652044725936352,
+      "median_m": 0.30901527404785156,
+      "p99_m": 2.0243287277221675,
+      "rows": 25578
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAa0",
+     "rows": 25578,
+     "scenes": 160,
+     "rows_cached": 31772,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25578,
+     "served_max_abs_diff": 0.06400400400161743,
+     "c20": 0.7895847994370162,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.4991380572319031,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAa0"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 86 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAa0.md\n"
+   }
+  },
+  "RB0-F-s1": {
+   "L18Aa1": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Aa1",
+     "rows": 17657,
+     "feat_ok": 1.0,
+     "route_ok": 0.9999433652375829,
+     "cov20": 0.5128277736874893,
+     "route0_nan_share": 0.010477431047176758,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAa1": {
+    "r1": {
+     "pool": "PAIAa1",
+     "tag": "RB0-F-s1",
+     "control": "RB0-F-s0",
+     "model": {
+      "share_over": 0.03158019239867529,
+      "median_m": 0.009403228759765625,
+      "p99_m": 0.07169212341308587,
+      "rows": 25364
+     },
+     "wrong_seed": {
+      "share_over": 0.9619933764390475,
+      "median_m": 0.30286502838134766,
+      "p99_m": 2.051255879402154,
+      "rows": 25364
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAa1",
+     "rows": 25364,
+     "scenes": 159,
+     "rows_cached": 31574,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25364,
+     "served_max_abs_diff": 0.010074567049741745,
+     "c20": 0.7882431793092572,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.37932002544403076,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAa1"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 87 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 0.972 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAa1.md\n"
+   }
+  },
+  "RSG-L18-s1": {
+   "L18Ag1": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Ag1",
+     "rows": 17610,
+     "feat_ok": 1.0,
+     "route_ok": 0.9999432140829074,
+     "cov20": 0.5114707552526974,
+     "route0_nan_share": 0.010562180579216355,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAg1": {
+    "r1": {
+     "pool": "PAIAg1",
+     "tag": "RSG-L18-s1",
+     "control": "RB0-F-s1",
+     "model": {
+      "share_over": 0.032431162116642515,
+      "median_m": 0.009449005126953125,
+      "p99_m": 0.07028274536132813,
+      "rows": 25531
+     },
+     "wrong_seed": {
+      "share_over": 0.970898123849438,
+      "median_m": 0.32743263244628906,
+      "p99_m": 2.433423233032229,
+      "rows": 25531
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAg1",
+     "rows": 25531,
+     "scenes": 159,
+     "rows_cached": 31574,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25531,
+     "served_max_abs_diff": 0.006449360400438309,
+     "c20": 0.7893149504523912,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.49586984515190125,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAg1"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 85 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAg1.md\n"
+   }
+  },
+  "RSGlr03n5000-L18-s0": {
+   "L18Al0": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Al0",
+     "rows": 17596,
+     "feat_ok": 1.0,
+     "route_ok": 1.0,
+     "cov20": 0.5108547397135713,
+     "route0_nan_share": 0.010513753125710389,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAl0": {
+    "r1": {
+     "pool": "PAIAl0",
+     "tag": "RSGlr03n5000-L18-s0",
+     "control": "RB0-F-s1",
+     "model": {
+      "share_over": 0.031234334631550533,
+      "median_m": 0.009273529052734375,
+      "p99_m": 0.07029037475585939,
+      "rows": 25933
+     },
+     "wrong_seed": {
+      "share_over": 0.9729688042262754,
+      "median_m": 0.3377532958984375,
+      "p99_m": 2.5791521453857422,
+      "rows": 25933
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAl0",
+     "rows": 25933,
+     "scenes": 159,
+     "rows_cached": 31573,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25933,
+     "served_max_abs_diff": 0.12130437791347504,
+     "c20": 0.7965140940114912,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.48189184069633484,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAl0"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 86 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAl0.md\n"
+   }
+  },
+  "RSGk51w1-L18-s0": {
+   "L18Ak0": {
+    "R1": true,
+    "R2": true,
+    "K0_not_applied": false,
+    "poolgate": {
+     "pool": "L18Ak0",
+     "rows": 17580,
+     "feat_ok": 1.0,
+     "route_ok": 1.0,
+     "cov20": 0.5097269624573378,
+     "route0_nan_share": 0.010580204778156996,
+     "route0_share_005_finite": 1.0,
+     "pass": true
+    }
+   },
+   "PAIAk0": {
+    "r1": {
+     "pool": "PAIAk0",
+     "tag": "RSGk51w1-L18-s0",
+     "control": "RB0-F-s1",
+     "model": {
+      "share_over": 0.029742671390197376,
+      "median_m": 0.009246826171875,
+      "p99_m": 0.07224727630615232,
+      "rows": 25687
+     },
+     "wrong_seed": {
+      "share_over": 0.9800677385447892,
+      "median_m": 0.3903694152832031,
+      "p99_m": 3.0869762420654254,
+      "rows": 25687
+     },
+     "pass_": true
+    },
+    "gin": 1.0,
+    "build": {
+     "name": "PAIAk0",
+     "rows": 25687,
+     "scenes": 160,
+     "rows_cached": 31772,
+     "route_in_ok": 1.0,
+     "rows_without_messages": 0,
+     "served_compared": 25687,
+     "served_max_abs_diff": 0.01013980619609356,
+     "c20": 0.7906723245221318,
+     "route_ok": 1.0,
+     "route_pts_med": 51.0,
+     "route_lat0_med": 0.5014266967773438,
+     "road_rows": 0,
+     "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIAk0"
+    },
+    "report_tail": "97/197 | 49 | 550 | 221 |\n| f8a680f2 | 199 | 1.000 |  | 0 | 20/20 | 199/199 | 39 | 132 | 49 |\n| fadc73da | 197 | 0.000 | left_corridor_laterally | 85 | 20/20 | 197/197 | 85 | 612 | 530 |\n| fbdce016 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 114 | 265 | 150 |\n| fdfb5073 | 198 | 1.000 |  | 0 | 20/20 | 198/198 | 197 | 322 | 201 |\n-> /root/autodl-tmp/ujs/runs/route_follow/rsgacc/rows/pai/rows_PAIAk0.md\n"
+   }
+  }
+ },
+ "unique": {
+  "nuPlan": 35503,
+  "PAI": 26590
+ }
+}

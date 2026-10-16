@@ -111,3 +111,8 @@
 nuPlan 与 PAI 的 rollout、行管线、每池闸与 `ra-merge` 保留，合池 `on1_RSGACC` 作为数据留给下一轮的联合臂（课与剂量在那个臂里判，不单独读）。
 理由：配方与 RSG-L18 相同、只换 serve 状态，近似「第二轮」（d286 补记 5 无增益）；S hinge 不针对 ACC 新增零分的主因（进弯快、高速漂移、开过停车点）；
 ACC 只服务 PAI（d329）；与当晚 WAIT + desire 合成臂是同一底座上的平行分支，赢了也要再并进联合臂、再跑一条读链，并与之争卡。
+
+## 结果（2026-10-17 01:47 box 时间）
+
+pilot 三格 G1–G3 过、G4 都不过（新 nuPlan dev 行接触率比对照高，a +0.27 pp [+0.07, +0.43]、b +0.10 [+0.03, +0.17]、c +0.36 [−0.02, +0.69]），按 §3 停，
+不做全量与闭环读数。[results/rsgacc/pilot.md](../results/rsgacc/pilot.md)，决定 [333](../../../research/decisions/333.md)。
