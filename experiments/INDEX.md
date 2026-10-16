@@ -6,7 +6,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 - [alpasim_human](alpasim_human/README.md): live; user drove PAI stage 1 at real time: 0.275 vs P2H10 0.154, alpamayo1 0.438 [dnone]
 - [b2d_monitor](b2d_monitor/README.md) (Tokyo B2D monitor, first-person viewer, op_arb_viz_agent, RSG on B2D, FIX1 B2D port, route picker): live; Tokyo B2D monitor; RSG memory moves left-turn onset, L/R flip is the lever [d288]
-- [route_follow](route_follow/README.md) (ROUTE-FOLLOW, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF, lr x steps, ON-K, on-k, on-policy rows per batch, TTS, test-time candidate selection, JEV_TTS): live; route-memory base relied on; RSG-L18 held zeros 34 vs 59, public ties YS2G [d284,286]
+- [route_follow](route_follow/README.md) (ROUTE-FOLLOW, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF, lr x steps, ON-K, on-k, on-policy rows per batch, TTS, test-time candidate selection, JEV_TTS, PAI gains 10, g10, g5, JEV_ACC, PAI ACC): live; route-memory base relied on; RSG-L18 held zeros 34 vs 59, public ties YS2G [d284,286]
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; PAI high-speed spins = force-GT handoff, MPC gain 20 fixes in replay; slowness = speed-history loop (CF +83 %) [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
 - [others_turn](others_turn/README.md): live; held 24 turns: RSG 16, rule expert 22, WA-JEPA 7, garage 1, LTF 0, DD 0 [dnone]
