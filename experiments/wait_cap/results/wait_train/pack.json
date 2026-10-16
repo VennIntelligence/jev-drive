@@ -1,0 +1,138 @@
+{
+ "batches": [
+  "A",
+  "B",
+  "C"
+ ],
+ "census": {
+  "W_L": {
+   "rows_before_cap": 4352,
+   "rows": 4352,
+   "logs": 66
+  },
+  "W_N": {
+   "rows_before_cap": 2534,
+   "rows": 2534,
+   "logs": 68
+  },
+  "G_L": {
+   "rows_before_cap": 233,
+   "rows": 233,
+   "logs": 57
+  },
+  "G_N": {
+   "rows_before_cap": 194,
+   "rows": 194,
+   "logs": 73
+  },
+  "S_L": {
+   "rows_before_cap": 169,
+   "rows": 169,
+   "logs": 51
+  },
+  "S_N": {
+   "rows_before_cap": 217,
+   "rows": 217,
+   "logs": 65
+  },
+  "Y_P": {
+   "rows_before_cap": 81,
+   "rows": 81,
+   "logs": 30
+  },
+  "Y_V": {
+   "rows_before_cap": 40,
+   "rows": 40,
+   "logs": 23
+  }
+ },
+ "check": {
+  "base_rows": 17429,
+  "new_rows": 7820,
+  "merged": 25249,
+  "base_first": true,
+  "base_names": true,
+  "base_ego_equal": true,
+  "base_fut_equal": true,
+  "keys": [
+   "acc",
+   "cam",
+   "cell",
+   "cmd",
+   "ego",
+   "fut",
+   "lht",
+   "log",
+   "names",
+   "pool",
+   "pose",
+   "speed",
+   "src",
+   "vel"
+  ],
+  "base_front_equal_64": true,
+  "new_front_equal_64": true,
+  "base_teacher_equal": true,
+  "base_feat_equal": true,
+  "agent_ok_new": 0,
+  "agent_ok_base_equal": true,
+  "road_ok_new": 0,
+  "road_ok_base_equal": true
+ },
+ "cells": {
+  "W_L": 4352,
+  "W_N": 2534,
+  "G_L": 233,
+  "G_N": 194,
+  "S_L": 169,
+  "S_N": 217,
+  "Y_P": 81,
+  "Y_V": 40
+ },
+ "groups": {
+  "W": 6886,
+  "G": 427,
+  "S": 386,
+  "Y": 121
+ },
+ "shares": {
+  "W": 0.3333333333333333,
+  "G": 0.3333333333333333,
+  "Y": 0.08333333333333333,
+  "S": 0.25
+ },
+ "y_raised": true,
+ "s_y_rows_cv_history": 507,
+ "flags": {
+  "j2": "--on on1_L18RBW --on-k 13 --on-mode self --on-lon wc_arc --on-weight cell=W_L:0.153399,cell=W_N:0.153399,cell=G_L:2.473778,cell=G_N:2.473778,cell=S_L:2.052402,cell=S_N:2.052402,cell=Y_P:2.182444,cell=Y_V:2.182444",
+  "j5": "--on on1_L18RBW --on-k 13 --on-mode self --on-lon wc_arc --on-weight cell=W_L:0.527308,cell=W_N:0.527308,cell=G_L:8.503610,cell=G_N:8.503610,cell=S_L:7.055133,cell=S_N:7.055133,cell=Y_P:7.502152,cell=Y_V:7.502152",
+  "w0": "--on on1_L18RBW --on-k 13 --on-mode self --on-lon wc_arc --on-weight pool=w:0"
+ },
+ "weights": {
+  "j2": {
+   "W_L": 0.15339863931208692,
+   "W_N": 0.15339863931208692,
+   "G_L": 2.4737775885316875,
+   "G_N": 2.4737775885316875,
+   "S_L": 2.0524022609514843,
+   "S_N": 2.0524022609514843,
+   "Y_P": 2.1824442774856,
+   "Y_V": 2.1824442774856
+  },
+  "j5": {
+   "W_L": 0.5273078226352986,
+   "W_N": 0.5273078226352986,
+   "G_L": 8.503610460577674,
+   "G_N": 8.503610460577674,
+   "S_L": 7.055132772020725,
+   "S_N": 7.055132772020725,
+   "Y_P": 7.502152203856749,
+   "Y_V": 7.502152203856749
+  }
+ },
+ "expected_new_per_batch": {
+  "j2": 2,
+  "j5": 5
+ },
+ "route_feat_ok_new": 0.970843989769821
+}

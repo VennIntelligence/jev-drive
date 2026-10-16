@@ -1,0 +1,25 @@
+{
+ "a": "WTGG-off",
+ "b": "WTGG-w0",
+ "note": "RSG-L18 recipe 60 steps vs pool on1_L18RBW with the new rows at weight 0 (--on-lon wc_arc)",
+ "scalars": 89,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "on_hash_60": [
+  "ea8cacc3e451c577",
+  "ea8cacc3e451c577"
+ ],
+ "rsg_l18_s0_on_hash_60": "ea8cacc3e451c577",
+ "dev_ade": [
+  0.529079020023346,
+  0.529079020023346
+ ],
+ "b_only_scalars": [
+  "loss/on/wcarc_ho",
+  "loss/on/wcarc_mean",
+  "loss/on/wcarc_pos"
+ ],
+ "wcarc_scalars_max_abs": null,
+ "identical": true
+}
