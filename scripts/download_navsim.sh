@@ -63,8 +63,8 @@ one() {
     rm -rf "$dest/maps"; mv "$ARC/maps_tmp/nuplan-maps-v1.0" "$dest/maps"; rm -rf "$ARC/maps_tmp"
     n=$(find "$dest/maps" -type f | wc -l)
   else
-    if [[ $strip == auto ]]; then  # components before the log directory (20YY.MM.DD...)
-      strip=$(tar -I pigz -tf "$f" | head -1 | awk -F/ '{for (i = 1; i <= NF; i++) if ($i ~ /^20[0-9][0-9]\.[0-9][0-9]\./) {print i - 1; exit}}')
+    if [[ $strip == auto ]]; then  # components before the log directory (20YY.MM.DD...); tar gets SIGPIPE from head, so its rc is ignored
+      strip=$({ tar -I pigz -tf "$f" || true; } | head -1 | awk -F/ '{for (i = 1; i <= NF; i++) if ($i ~ /^20[0-9][0-9]\.[0-9][0-9]\./) {print i - 1; exit}}')
       [[ -n $strip ]] || { log "FAIL $name cannot detect the log directory level"; return 1; }
     fi
     n=$(tar -I pigz -xvf "$f" -C "$dest" --strip-components="$strip" --skip-old-files "${LIDAR[@]}" | wc -l)
