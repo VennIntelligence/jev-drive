@@ -24,16 +24,16 @@ for i in $(seq 0 $((K - 1))); do
     --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network none --gpus "device=$GPU" \
     -e ALPASIM_CONTESTANT_REPLICA_INDEX=$i -e ALPASIM_CONTESTANT_REPLICAS=$K "$IMG" >/dev/null || die "docker run $i"
 done
-declare -A cold
-while (( ${#cold[@]} < K )); do
+cold=(); got=0                                         # indexed by replica; got = how many are listening
+while (( got < K )); do
   for i in $(seq 0 $((K - 1))); do
     [[ -n ${cold[$i]:-} ]] && continue
     [[ $(docker inspect -f '{{.State.Running}}' "$P0-$i") == true ]] || die "replica $i exited before listening"
-    docker logs "$P0-$i" 2>&1 | grep -q "listening on" && cold[$i]=$(echo "$(date +%s.%N) - $t0" | bc)
+    docker logs "$P0-$i" 2>&1 | grep -q "listening on" && { cold[$i]=$(echo "$(date +%s.%N) - $t0" | bc); got=$((got + 1)); }
   done
   (( $(date +%s) - ${t0%.*} > 600 )) && die "not all listening after 600 s"; sleep 0.3
 done
-idle=$(used); st "all $K listening (cold start $(for i in "${!cold[@]}"; do printf '%s ' "${cold[$i]}"; done)s), card $idle MiB"
+idle=$(used); st "all $K listening (cold start ${cold[*]} s), card $idle MiB"
 ( peak=0; declare -A per
   while [[ ! -f $OUT/.stop ]]; do
     u=$(used); (( u > peak )) && peak=$u
