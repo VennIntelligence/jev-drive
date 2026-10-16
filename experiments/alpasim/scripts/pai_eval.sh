@@ -7,7 +7,7 @@
 # Env: CARDS ("0 1"), CONC (4 rollouts per card), NRE_CACHE (pai_run.sh), CHUNK (scenes per stack start, 48: a start costs ~2 min, a failed
 #   chunk is rerun once and loses at most its own scenes), SERVE (driver switches, default the served configuration (JEV_TRACK unset = gate since decision 309; -e JEV_TRACK=0 for the old path)
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), WIZ (extra wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"),
-#   IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
+#   IMG / DRV_PY / HARMONIZER / ALPASIM_FAST as pai_run.sh. The checkpoint is mounted into the driver image.
 #   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,
 #   DONE / ERROR and eval.json to the first call. A card freed by another job is added this way.
 #   JOIN=1 CARDS=" " (no card): writes the chunk lists once, checks the checkpoint and returns (pai_queue.sh starts from this).
@@ -17,6 +17,9 @@
 # <out>/runs/<lowercase tag>_<chunk> (finished chunks are skipped: rerunning resumes). Read with pai_eval_report.py.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
+# temp files on the data disk, removed at exit (jevdrive/cl/disk.py); containers keep their /tmp inside and lose it on compose down
+eval "$(PYTHONPATH=$here/../../.. python3 -m jevdrive.cl.disk env --tag pai-$$ 2>/dev/null)"
+trap 'PYTHONPATH=$here/../../.. python3 -m jevdrive.cl.disk release --tag pai-$$ --guard 2>/dev/null' EXIT
 O=$(mkdir -p "$1" && cd "$1" && pwd) T=$2; shift 2
 D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${RUNPFX:-}${T,,}
 CARDS=${CARDS:-0 1}; CONC=${CONC:-4}; CHUNK=${CHUNK:-48}; SERVE=${SERVE--e JEV_VCONT=1.0 -e JEV_LEAD=1}
