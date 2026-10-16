@@ -24,6 +24,11 @@ all 14 of our labels drive into the car, their lateral offset appears only after
 
 No formal was run.
 
+**Prepared, not launched (2026-10-17 night).** Two follow-up pilots for the morning choice between decision 335's options (iii) and (iv),
+draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:
+- (iii) RETAIN: the RB0-F base stage + LwF-style distillation toward shipped Cinque's plan on the on1_WAIT rows + D2 desire distillation, lambda 1 / 3 (`nx.sh rt-pilot`);
+- (iv) ANTI-COPY: the RSG-L18 recipe + speed-history scale noise on the imitation rows, 1 000 steps (`nx.sh ac-pilot`).
+
 **Next (before WAIT-TRAIN).** Training design for the user to critique, not launched: [plans/2026-10-16-wait-train-design.md](plans/2026-10-16-wait-train-design.md)
 (same-domain wait / launch / stop rows from a trainval camera download, arc-length-only loss, one joint arm + weight-0 control, 1 000-step dose pilot, ~22 card-h).
 
