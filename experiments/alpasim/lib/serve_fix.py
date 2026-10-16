@@ -65,6 +65,14 @@ model's plan is never changed; only where along it the returned poses sit. Three
                  v_model (the model's profile at 1.5 s), the winning term at 1.5 s (set | curve | model | lead; `ramp` when the profile is still
                  more than 0.3 m/s from it), guard (stop | brake | ''), route cover (m ahead).
 
+  JEV_GAP=<t_follow>[,<stop m>]   (e) the following-gap calibration of (b)'s lead MPC (experiments/route_follow/plans/2026-10-16-acc-gap-prereg.md;
+                 needs JEV_LEAD=1): openpilot's T_FOLLOW (1.45 s) and STOP_DISTANCE (6 m) of the desired distance
+                 d(v) = v^2 / 5 + T_FOLLOW v + STOP_DISTANCE replaced by the given values (lead_long.LongMpc(t_follow, stop_distance)); unset = the
+                 defaults, bit for bit (acc_check.py check 5). Why: the MPC holds openpilot's law on the model's lead, but the lead head reads a
+                 moving lead ~1 m short and ~1 m/s slow (train scenes; x_obstacle = d + v_lead^2 / 5 loses ~0.45 v m), so the true gap sits
+                 4-7 m above openpilot's law and the human's (results/acc_gap/diagnosis.md). The prereg's value 0.7,2.7 is fitted on train scenes so
+                 that the true steady gap equals the human's (3.4 m + 1.13 s v) under that bias.
+
 No learned component, no simulator ground truth: inputs are the plan, the checkpoint's own lead / lead_prob outputs of the same forward
 pass, the ego speed / acceleration the simulator reports and the session's camera and ego box (camera to front bumper).
 """

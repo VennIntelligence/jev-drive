@@ -326,6 +326,56 @@ def report(a):
     print("\n".join(md))
 
 
+EXAM = HERE.parents[1] / "alpasim/results/pai_exam/hard_exam.txt"
+
+
+def lines(a):
+    """The prereg's lines for one stage (plans/2026-10-16-acc-gap-prereg.md section 4): `--arm` read root against `--ref` (the stored ACC
+    read), scene-paired on the scenes both scored (and, with --list, inside the list); rf_pai281.read's per-scene facts. Writes <out>.md and
+    <out>.json; exit status 0 = every line of the stage holds."""
+    sys.path.insert(0, str(HERE))
+    import rf_pai281 as R
+    A, B = R.read(a.arm), R.read(a.ref)
+    X = {k: R.read(v) for k, v in (x.split("=", 1) for x in a.extra)}
+    sc = sorted(set(A) & set(B) & (set(Path(a.list).read_text().split()) if a.list else set(A)))
+    exam = set(EXAM.read_text().split())
+    cnt = lambda D, f: sum(bool(f(D[s])) for s in sc)  # noqa: E731
+    z = lambda D: cnt(D, lambda r: r["score"] == 0)  # noqa: E731
+    col = lambda D: cnt(D, lambda r: r["kind"] == "collision")  # noqa: E731
+    rear = lambda D: cnt(D, lambda r: r["rear"])  # noqa: E731
+    spin = lambda D: cnt(D, lambda r: r["spin"])  # noqa: E731
+    x = np.array([A[s]["score"] - B[s]["score"] for s in sc])
+    bs = x[np.random.default_rng(0).integers(0, len(x), (10000, len(x)))].mean(1)
+    lo, hi = float(np.quantile(bs, 0.025)), float(np.quantile(bs, 0.975))
+    ex = [s for s in sc if s in exam]
+    xe = float(np.mean([A[s]["score"] - B[s]["score"] for s in ex])) if ex else np.nan
+    if a.stage == 1:
+        L = {"rear-ended down": rear(A) < rear(B), "at-fault collisions <= ACC + 1": col(A) <= col(B) + 1, "zeros <= ACC + 1": z(A) <= z(B) + 1}
+    else:
+        L = {"mean CI lo > -0.01 and point > 0": lo > -0.01 and x.mean() > 0, "exam point >= -0.01": xe >= -0.01, "zeros <= ACC + 2": z(A) <= z(B) + 2,
+             "spins <= ACC + 1": spin(A) <= spin(B) + 1}
+    md = [f"# ACC-GAP stage {a.stage}: {a.arm} vs {a.ref}", "", f"{len(sc)} scenes scored by both (exam {len(ex)})", "",
+          "| label | mean | zeros | at-fault collision | offroad | corridor | rear-ended | spins |", "|:--|--:|--:|--:|--:|--:|--:|--:|"]
+    for k, D in [("gap", A), ("acc", B)] + [(k, D) for k, D in X.items()]:
+        s2 = [s for s in sc if s in D]
+        md.append(f"| {k} | {np.mean([D[s]['score'] for s in s2]):.4f} | {sum(D[s]['score'] == 0 for s in s2)} | {sum(D[s]['kind'] == 'collision' for s in s2)} | "
+                  f"{sum(D[s]['kind'] == 'offroad' for s in s2)} | {sum(D[s]['kind'] == 'corridor' for s in s2)} | {sum(D[s]['rear'] for s in s2)} | {sum(D[s]['spin'] for s in s2)} |")
+    md += ["", f"gap - acc: {x.mean():+.4f} [{lo:+.4f}, {hi:+.4f}] (scene bootstrap 10 000, seed 0); exam {xe:+.4f}", "", "| line | holds |", "|:--|:--|"]
+    md += [f"| {k} | {'yes' if v else 'NO'} |" for k, v in L.items()]
+    new = [s for s in sc if A[s]["score"] == 0 < B[s]["score"]]
+    fixed = [s for s in sc if B[s]["score"] == 0 < A[s]["score"]]
+    md += ["", f"new zeros ({len(new)}): " + ", ".join(f"{s[7:15]} {A[s]['kind']}" for s in new),
+           f"fixed zeros ({len(fixed)}): " + ", ".join(f"{s[7:15]} {B[s]['kind']}" for s in fixed),
+           f"rear-ended only in gap: {', '.join(s[7:15] for s in sc if A[s]['rear'] and not B[s]['rear'])}; only in acc: {', '.join(s[7:15] for s in sc if B[s]['rear'] and not A[s]['rear'])}",
+           "", f"verdict: {'PASS' if all(L.values()) else 'FAIL'}"]
+    Path(a.out + ".md").write_text("\n".join(md) + "\n")
+    json.dump(dict(stage=a.stage, n=len(sc), diff=float(x.mean()), lo=lo, hi=hi, exam=xe, lines={k: bool(v) for k, v in L.items()},
+                   counts={k: dict(zeros=z(D), collision=col(D), rear=rear(D), spin=spin(D)) for k, D in (("gap", A), ("acc", B))},
+                   scenes={s: dict(gap=A[s], acc=B[s]) for s in sc}), open(a.out + ".json", "w"))
+    print("\n".join(md))
+    sys.exit(0 if all(L.values()) else 3)
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -348,13 +398,20 @@ def main():
     s.add_argument("--tax", nargs="+", required=True)
     s.add_argument("--out", required=True)
     s.add_argument("--workers", type=int, default=8)
+    s = sp.add_parser("lines")
+    s.add_argument("--stage", type=int, choices=(1, 2), required=True)
+    s.add_argument("--arm", required=True)
+    s.add_argument("--ref", required=True)
+    s.add_argument("--list")
+    s.add_argument("--extra", nargs="*", default=[])
+    s.add_argument("--out", required=True)
     s = sp.add_parser("humanlog")
     s.add_argument("--scenes", required=True)
     s.add_argument("--cfg", required=True)
     s.add_argument("--out", required=True)
     s.add_argument("--workers", type=int, default=8)
     a = ap.parse_args()
-    dict(slim=slim, table=table, report=report, human=human, humanlog=humanlog)[a.cmd](a)
+    dict(slim=slim, table=table, report=report, human=human, humanlog=humanlog, lines=lines)[a.cmd](a)
 
 
 if __name__ == "__main__":
