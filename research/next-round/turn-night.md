@@ -251,3 +251,7 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   均分 0.5855 对 0.5860（−0.0004 [−0.0166, +0.0165]）；spin 2 对 2，严格转弯完成 4 对 4，考题 72 +0.0052 [−0.0084, +0.0237]，被追尾 105 对 108。按 Amendment 6 文字（零分与 at-fault 的 CI 含 0 即持平）v8b 可替代 v8 作 PAI 默认，决定留给主会话。
   脚本小事：`sv9.sh jlon281` 里 `rf_v2pai.sh read` 的转弯表全是 missing（参照 pkl 的标签没映射），已用 `:label` 语法重算，原错表留在盒上 `turns_wrongref.*`。
 - 10-16 09:10：Tokyo 二号种子读（主会话改派）：RCVRL-L18-s1、RCVRLF-L18-s1（对 Tokyo 参照 RSG-L18-s0-gate 配对；检查点从盒上拉，md5 一致），08:54 起 RCVRL 在两卡上跑，随后 RCVRLF；之后线 3 与转弯表，结果写 `results/recovery_envelope/tokyo_pai.md`。
+- 10-16 09:30（收尾，用户决定 Tokyo 后续链不需要）：已停 `rcvq` 队列脚本和在跑的 RCVRL-L18-s1 读（按 PID 停，拆掉 pai-gate-rcvrl-l18-s1-c000 / c001 两个 docker 栈），RCVRLF-L18-s1 没启动；
+  删了今晚的部分输出 `v2pai/RCVRL-L18-s1-gate`（约 15 分钟的 rollout）和拉到 Tokyo 的 `op_parity/runs/RCVRL-L18-s1`、`RCVRLF-L18-s1`；盒上原检查点未动。
+  `slowq`、`jl281`、`rcvq`、`dguard` 四个 tmux 窗口和磁盘守卫都已关，`jev` 会话只剩 main 窗口，Tokyo 两卡空闲（49 / 18 MiB）。磁盘守卫整夜没有触发，没有删任何旧读；`/data` 剩 188 GB（95 %）。
+  今晚 Tokyo 实际读完的：RSGS1 / RSGS2 / RSGS3（SLOW 线 3，全 FAIL）、spin_v9 jlon 84 + 29 场景与 jlon281（用户豁免后按常规读）。Tokyo 上留着 `line3/` 提取（`/data/runs/route_follow/slow/line3`）和 `/data/venv_line3`。
