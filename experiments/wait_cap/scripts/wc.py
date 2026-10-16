@@ -369,6 +369,46 @@ def cmd_report(a):
     print((out / "wait_cap.md").read_text())
 
 
+# ---------------------------------------------------------------- closed loop (CPU, stored rollouts through cap_audit's collect)
+def cmd_closed(a):
+    """Per label and human stratum: driven distance, max |lateral offset from the log path|, launch / bypass shares, at-fault collisions, score.
+    Strata: public = SCENE-MIX (d325) public_windows.csv `stratum` (S static window, N near-stationary start, E ends stopped); held = the same
+    rules on cap_audit's log.parquet (human station s over the 18 decisions; S: s_end - s_0 < 1 m; N: v_0 < 1 m/s and path < 5 m; E: v_end < 0.5)."""
+    import pandas as pd
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    md = ["# WAIT-CAP closed loop (stored rollouts, descriptive)", "",
+          "launch = ego drove >= 2 m; bypass = launch and max |lat| >= 1.0 m from the log path; driven = path length of the decision poses.", ""]
+    rows = []
+    for st, dirs in (("pub", a.pub), ("held", a.held)):
+        D = pd.concat([pd.read_parquet(Path(d) / "dec.parquet") for d in dirs]).drop_duplicates(["label", "scene", "k"])
+        Rr = pd.concat([pd.read_parquet(Path(d) / "roll.parquet") for d in dirs]).drop_duplicates(["label", "scene"])
+        if st == "pub":
+            W = pd.read_csv(a.windows)
+            strat = dict(zip(W[W.kind == "public"].scene, W[W.kind == "public"].stratum))
+        else:
+            L = pd.concat([pd.read_parquet(Path(d) / "log.parquet") for d in dirs]).drop_duplicates(["scene", "k"]).sort_values(["scene", "k"])
+            g = L.groupby("scene").agg(s0=("s", "first"), s1=("s", "last"), v0=("v", "first"), v1=("v", "last"))
+            strat = dict(zip(g.index, np.select([g.s1 - g.s0 < 1.0, (g.v0 < 1.0) & (g.s1 - g.s0 < 5.0), g.v1 < 0.5], ["S", "N", "E"], "rest")))
+        D = D.sort_values(["label", "scene", "k"])
+        D["step"] = np.hypot(D.groupby(["label", "scene"]).x.diff(), D.groupby(["label", "scene"]).y.diff()).fillna(0.0)
+        G = D.groupby(["label", "scene"]).agg(driven=("step", "sum"), lat=("lat", lambda x: np.nanmax(np.abs(x)))).reset_index()
+        G = G.merge(Rr[["label", "scene", "score", "collision_at_fault"]], on=["label", "scene"], how="left")
+        G["stratum"] = G.scene.map(strat).fillna("rest")
+        G["launch"], G["bypass"] = G.driven >= 2.0, (G.driven >= 2.0) & (G.lat >= 1.0)
+        G["set"] = st
+        rows.append(G)
+        T = G[G.stratum != "rest"].groupby(["stratum", "label"]).agg(n=("scene", "size"), score=("score", "mean"), launch=("launch", "mean"),
+                                                                    bypass=("bypass", "mean"), coll=("collision_at_fault", "sum"),
+                                                                    driven_med=("driven", "median"), lat_p90=("lat", lambda x: np.percentile(x, 90))).reset_index()
+        md += [f"## {st}", "", "| stratum | label | n | score | launch | bypass | at-fault coll | driven med (m) | lat p90 (m) |", "|---|---|--:|--:|--:|--:|--:|--:|--:|"]
+        md += [f"| {r.stratum} | {r.label} | {r.n} | {r.score:.3f} | {r.launch:.2f} | {r.bypass:.2f} | {int(r.coll)} | {r.driven_med:.1f} | {r.lat_p90:.2f} |" for r in T.itertuples()]
+        md.append("")
+    pd.concat(rows).to_csv(out / "closed_scenes.csv.gz", index=False)
+    (out / "closed.md").write_text("\n".join(md) + "\n")
+    print((out / "closed.md").read_text())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -384,5 +424,10 @@ if __name__ == "__main__":
     p.add_argument("--plans", required=True)
     p.add_argument("--tags", nargs="+", required=True)
     p.add_argument("--out", required=True)
+    p = sp.add_parser("closed")
+    p.add_argument("--pub", nargs="+", required=True)
+    p.add_argument("--held", nargs="+", required=True)
+    p.add_argument("--windows", required=True)
+    p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"select": cmd_select, "index": cmd_index, "define": cmd_define, "plans": cmd_plans, "report": cmd_report}[a.cmd](a)
+    {"closed": cmd_closed, "select": cmd_select, "index": cmd_index, "define": cmd_define, "plans": cmd_plans, "report": cmd_report}[a.cmd](a)

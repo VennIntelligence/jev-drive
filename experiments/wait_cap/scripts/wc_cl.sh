@@ -14,9 +14,9 @@ d |= {t: [f"route_follow/guard/read10/{t}/b*"] for t in ("RSG-L18-s0", "RSG-L18-
 print(json.dumps(d))
 P
 )
-  CA_EXTRA="$X" CA_ONLY=P2-F-s0,P2-F-s1,P2H10-F-s0,P2H10-F-s1,RSG-L18-s0,RSG-L18-s1,RBSG2-L18-s0,RBSG2-L18-s1 $AP experiments/cap_audit/scripts/ca.py collect --set pub --workers 16 ;;
+  CA_EXTRA="$X" CA_ONLY=YR10m10-F-s0,P2-F-s0,P2-F-s1,P2H10-F-s0,P2H10-F-s1,RSG-L18-s0,RSG-L18-s1,RBSG2-L18-s0,RBSG2-L18-s1 $AP experiments/cap_audit/scripts/ca.py collect --set pub --workers 16 ;;
 held)
-  CA_EXTRA='{"RSG-L18-s0": ["onpol_long/roll/RSG-L18-s0-held/c*/run"], "RBSG2-L18-s0": ["onpol_long/roll/RBSG2-L18-s0-held/c*/run"]}' CA_ONLY=RSG-L18-s0,RBSG2-L18-s0 \
+  CA_EXTRA='{"RSG-L18-s0": ["onpol_long/roll/RSG-L18-s0-held/c*/run"], "RBSG2-L18-s0": ["onpol_long/roll/RBSG2-L18-s0-held/c*/run"]}' CA_ONLY=YR10m10-F-s0,RSG-L18-s0,RBSG2-L18-s0 \
     $AP experiments/cap_audit/scripts/ca.py collect --set held --workers 16 ;;
 *) echo "wc_cl.sh pub | held" >&2; exit 2 ;;
 esac
