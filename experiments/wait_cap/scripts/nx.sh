@@ -3,6 +3,7 @@
 # --after chained; ids in $X/jobs.txt. Nothing here launches a pilot unless called with rt-pilot / ac-pilot.
 #   nx.sh codecheck <rev>   60-step identity: RB0-F recipe and RSG-L18 recipe, code of <rev> vs this code with every new flag off -> nx.py bitcmp
 #                           (results/next/rt_identity.json, ac_identity.json; the RSG one also = RSG-L18-s0's on_hash_60)
+#   nx.sh check             the read code on existing checkpoints: controls' dev plans, history-scale read of WTCP / WTJ2P, both gates --dry
 #   nx.sh smoke             40-step smoke runs RTSMOKE-F-s0 (--kd-lam 3 --d2-lam 3) and ACSMOKE-L18-s0 (--ego-scale-speed 0.5 --ego-scale-max 0.4)
 #   nx.sh rt-pilot          (iii) RTN1-F-s0 / RTN3-F-s0: RB0-F recipe 10 000 steps + --kd-lam L --d2-lam L (after rt identity) -> waitcap / ledger F /
 #                           desire / dev plans -> nx.py rtgate (control RB0-F-s0)
@@ -46,6 +47,13 @@ smoke)
   a=$(sub nx-smoke-rt "${FK[@]}" --timeout-h 1 -- bash $ME train rtsmoke 0 40 RTSMOKE-F-s0) || exit 1
   b=$(sub nx-smoke-ac "${FW[@]}" --timeout-h 1 -- bash $ME train acsmoke 0 40 ACSMOKE-L18-s0) || exit 1
   echo "smoke: rt $a ac $b" | tee -a $X/stages.txt ;;
+check)     # the read code on existing checkpoints (no training): dev plans of the controls, the history-scale read of WTCP and WTJ2P (whose
+           # 4 s shortfall is known, decision 335), then both gates --dry (print only) with stand-in arms
+  d=$(sub nx-dev-check --vram 20 --cpu 6 --ram 64 --timeout-h 1 -- $TR $WT devplans --tags $RTC RSG-L18-s0) || exit 1
+  h=$(sub nx-hist-check --vram 24 --cpu 6 --ram 80 --timeout-h 1 -- $TR $PY hist --tags $ACC WTJ2P-L18-s0) || exit 1
+  g=$(sub nx-gate-check --after $d,$h --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $PY rtgate --dry --j RSG-L18-s0 --c $RTC --lam-of 1=RSG-L18-s0 && \
+      $TR $PY acgate --dry --j WTJ2P-L18-s0 --c $ACC --dose-of 0.2=WTJ2P-L18-s0") || exit 1
+  echo "check: devplans $d hist $h gates $g" | tee -a $X/stages.txt ;;
 rt-pilot)
   b=$(jid nx-bitcmp-rt) || { echo "no rt identity job (nx.sh codecheck)" >&2; exit 1; }; fresh ${RTJ[@]}
   t1=$(sub nx-train-${RTJ[0]} "${FK[@]}" --after $b --timeout-h 2 -- bash $ME train rt1 0 10000 ${RTJ[0]}) || exit 1
@@ -86,5 +94,5 @@ train)   # train <arm> <seed> <steps> <tag>
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,13p $0; exit 2 ;;
+*) sed -n 2,14p $0; exit 2 ;;
 esac
