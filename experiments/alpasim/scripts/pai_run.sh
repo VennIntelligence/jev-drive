@@ -10,7 +10,9 @@
 #   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py; `-e JEV_TURN_GAIN=1.25`, lib/turn_gain.py; `-e JEV_INTENT_HOLD=1 [-e JEV_IH_A=0.15]`, lib/intent_hold.py; `-e JEV_EXPERT=<pack dir in the container> -v <packs>:<that dir>:ro`, lib/rule_expert.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
 #   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container),
-#   ALPASIM_FAST=1 | solo (local reads only: the driver's camera at full size, the others tiny | dropped, eval video off; lib/sim_fast.py, docs/alpasim.md "Fast local reads").
+#   ALPASIM_FAST (default 1: every camera kept, the driver's as the preset asks, the others 64 px and one frame per rollout, eval video off,
+#   bit-identical to the official set; 0 = the official camera set and eval video; solo = the driver's camera alone; lib/sim_fast.py,
+#   docs/alpasim.md "Fast local reads"; submission images do not use this script), ALPASIM_VIDEO=1 (keep the eval video under ALPASIM_FAST).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, usage.jsonl (2 s: per-process VRAM, per-container RAM / CPU), driver/ (drive.jsonl,
 # start.jsonl, dump/), sim/ (the run: aggregate/results-summary.json, rollouts/, txt-logs/)}.
 set -uo pipefail
@@ -75,7 +77,8 @@ wiz=(uv run alpasim_wizard +e2e_challenge=dev "scenes.scene_ids=[$(echo "$ids" |
      "runtime.endpoints.renderer.n_concurrent_rollouts=$CONC" "runtime.endpoints.driver.n_concurrent_rollouts=$CONC"
      "runtime.endpoints.physics.n_concurrent_rollouts=$CONC" "runtime.endpoints.controller.n_concurrent_rollouts=$CONC"
      "defines.nre_cache_size=${NRE_CACHE:-$((CONC + 1))}" wizard.run_method=NONE "wizard.log_dir=$R" "$@")
-if [[ ${ALPASIM_FAST:-0} != 0 ]]; then   # the driver's camera: PAI_CAM as the driver container gets it from DRV_ENV
+export ALPASIM_FAST=${ALPASIM_FAST:-1}
+if [[ $ALPASIM_FAST != 0 ]]; then   # the driver's camera: PAI_CAM as the driver container gets it from DRV_ENV
   fast=$(env $(grep -o 'PAI_CAM=[^ ]*' <<< "${DRV_ENV:-}") python3 "$lib/sim_fast.py" "$SRC" "$lib/${DRV_PY:-pai_driver.py}" "${wiz[@]}") || die "sim_fast"
   mapfile -t fast <<< "$fast"; wiz+=("${fast[@]}")
 fi
@@ -104,5 +107,5 @@ wall=$(( $(date +%s) - t1 ))
 stop_all; wait "$sampler"; rm -f "$OUT/.stop"
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
-echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"nre_cache\": ${NRE_CACHE:-$((CONC + 1))}, \"harmonizer\": ${HARMONIZER:-0}, \"fast\": \"${ALPASIM_FAST:-0}\", \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
+echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"nre_cache\": ${NRE_CACHE:-$((CONC + 1))}, \"harmonizer\": ${HARMONIZER:-0}, \"fast\": \"$ALPASIM_FAST\", \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"

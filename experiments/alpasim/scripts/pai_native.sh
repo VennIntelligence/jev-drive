@@ -6,8 +6,10 @@
 #     bash experiments/alpasim/scripts/pai_native.sh <run dir> <scenes.tsv | file of scene ids> [wizard overrides...]
 # Env: CONC (concurrent rollouts, default 4), STAGE (rows of the tsv with stage <= this, default 1), SH30_TAG (checkpoint, default P2H10-F-s0),
 #   NUREC (scene cache, default $DATA_DIR/datasets/nurec), NRE_ROOT (default $DATA_DIR/tools/nre-rootfs), JEV_VCONT / JEV_LEAD / PAI_* (drivers/pai.sh).
+#   ALPASIM_FAST (default 1: lib/sim_fast.py through run_native.py; 0 = the official camera set and eval video).
 # The pool sets CUDA_VISIBLE_DEVICES: the card is index 0 inside the run.
 set -euo pipefail
+export ALPASIM_FAST=${ALPASIM_FAST:-1}
 here=$(cd "$(dirname "$0")" && pwd); source "$here/env.sh"
 OUT=$1 LIST=$2; shift 2
 SRC=${ALPASIM_SRC:-$DATA_DIR/third_party/alpasim}; NUREC=${NUREC:-$DATA_DIR/datasets/nurec}; ROOT=${NRE_ROOT:-$DATA_DIR/tools/nre-rootfs}; CONC=${CONC:-4}

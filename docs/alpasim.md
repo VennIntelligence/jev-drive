@@ -443,7 +443,8 @@ Last verified: 2026-10-10
 ### Tokyo-style chunked reads through the pool (`pai_box.sh`, 2026-10-13)
 
 Read this to take a `pai_eval.sh` read (Tokyo, one Docker stack per 3090) to the GPU box. `pai_box.sh submit` cuts the scene lists into
-chunks (`CHUNK` 25) and submits one pool job per chunk (`pai_native.sh`, `--vram 28 --cpu 6 --ram 40`, history key `pai-read4`), so a read
+chunks (`CHUNK` 25) and submits one pool job per chunk (`pai_native.sh`, `--vram 22 --cpu 6 --ram 30` under the default `ALPASIM_FAST=1`,
+`--vram 28 --ram 40` with `ALPASIM_FAST=0`; history keys `pai-fast4` / `pai-read4`), so a read
 spreads over every card with room; the out dir has `pai_eval.sh`'s layout and `pai_eval_report.py` reads it unchanged. A second submit
 resumes: finished and pending chunks are skipped, failed ones resubmitted, and a chunk whose scenes are not all in `$DATA_DIR/datasets/nurec`
 yet is left for a later submit. Mp4s and the `rollout.asl` of scored rollouts are dropped (`KEEP_VIDEO=1` / `KEEP_ASL=1` keep them).
@@ -473,4 +474,27 @@ sorted order, not list order: copy the scenes of a chunk you need first one file
 | Output per scene | 0.41 GB with `rollout.asl`, mp4s already dropped; under 2 MB without |
 
 Last verified: 2026-10-13
+
+### Fast local reads (`ALPASIM_FAST`, 2026-10-16)
+
+Read this before timing or comparing local AlpaSim reads.
+
+- **The switch:** `ALPASIM_FAST`, defined once in `experiments/alpasim/lib/sim_fast.py`. `run_native.py` applies it on the GPU box
+  (`pai_native.sh` / `pai_box.sh`, and `run.sh` for nuPlan) and `pai_run.sh` on Tokyo (`pai_eval.sh`); each runner only passes it on.
+- **What the default does:** `1`, the default of the PAI runners, keeps all six preset cameras. The camera the driver consumes (the
+  driver's `CAM`; PAI `camera_front_wide_120fov`) is rendered exactly as the preset asks. The others are rendered at 64 px, once per
+  rollout. The eval video is off.
+- **Why the extra cameras stay:** the runtime anchors the rollout clock on the first frame end over the requested cameras. Keeping them
+  keeps the clock, so the run is the same run.
+- **Result:** bit-identical to the official set, 36 of 36 scenes, scores and controller traces, on g10 chunk c001; 6 of 6 on Tokyo. It
+  runs at 2.55x the speed (34.8 instead of 88.8 s per scene on a shared box card) and 3x less CPU per scene.
+- **Other modes:**
+  - `ALPASIM_FAST=0` is the official camera set and video.
+  - `solo` is the driver's camera alone. It moves decision times by 6 us to 30 ms and passes a paired check, but it is not faster.
+  - `ALPASIM_VIDEO=1` keeps the eval video under either mode (`pai_box.sh` sets it from `KEEP_VIDEO=1`); use it for reads that are watched.
+- **Scope:** official submissions do not use these scripts. nuPlan reads stay at `0` until measured.
+- **Results:** tables, phase split, packing and verification in
+  [experiments/alpasim/results/pai_fast.md](../experiments/alpasim/results/pai_fast.md).
+
+Last verified: 2026-10-16
 

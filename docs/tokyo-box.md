@@ -159,6 +159,11 @@ tmux new-window -d -t jev -n pai "bash experiments/alpasim/scripts/pai_eval.sh /
 python3 experiments/alpasim/scripts/pai_eval_report.py --rows a='/data/runs/alpasim/<out>/runs/*' b='<other run dirs>' --mean ab=a,b --pair a-b --out read.md
 ```
 
+Reads run in `ALPASIM_FAST=1` mode by default since 2026-10-16. The mode keeps every camera, renders the unread ones once at 64 px and
+turns the eval video off. It is bit-identical to the official camera set and 1.6x faster on a 3090 (6 scenes: 271 s instead of 433 s).
+`ALPASIM_FAST=0` restores the official set; `ALPASIM_VIDEO=1` keeps the rollout mp4s for `pai_videos.py`. See
+[alpasim.md, "Fast local reads"](alpasim.md#fast-local-reads-alpasim_fast-2026-10-16).
+
 `pai_eval.sh` cuts the scene lists into chunks (`CHUNK`, default 48) and runs one `pai_run.sh` stack per card (`CARDS`, default `0 1`) on the
 next unclaimed chunk; `CONC` 4 rollouts per card; the served configuration (`JEV_VCONT=1.0 JEV_LEAD=1`) is the default `SERVE`. Checkpoints
 other than the image's own are mounted from `/data/runs/op_parity/runs/<tag>`. A rerun resumes (finished chunks are skipped); `JOIN=1 CARDS=0`

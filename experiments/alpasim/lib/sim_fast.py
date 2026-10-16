@@ -8,7 +8,8 @@ Wizard overrides that turn the eval video off (the official ec2 presets run with
                      five extra PAI cameras cost as much as at 1080 px: Tokyo, bit-identical but no faster.)
   ALPASIM_FAST=solo  the driver's camera alone: cheaper, but on PAI scenes the clock moves by 0-30 ms (the cameras' first frames differ), so
                      the run is a perturbed copy, not the same run (results/pai_fast.md).
-The driver and the image scorer read only that camera; official submissions keep the full set.
+The driver and the image scorer read only that camera; official submissions keep the full set. ALPASIM_VIDEO=1 keeps the eval video
+(it draws the driver's camera only, so it works with either mode).
 
 The camera comes from the driver itself: its module-level `CAM` (a literal, or os.environ.get(<var>, <default>) honouring <var> in the
 environment or in the driver command), e.g. pai_driver.py -> camera_front_wide_120fov (PAI_CAM), sh30_driver.py -> CAM_F0. The entry comes
@@ -16,7 +17,8 @@ from the preset named in the wizard arguments (+e2e_challenge=dev, +e2e_challeng
 
   python3 sim_fast.py <alpasim src> <driver .py> <wizard args...>     prints the overrides (mode from ALPASIM_FAST), one per line
   from sim_fast import overrides                                      overrides(src, wizard_args, driver_py, env, mode) -> [str]
-Runners pass the switch only: run_native.py (box: pai_native.sh / pai_box.sh, run.sh nuPlan) and pai_run.sh (Tokyo Docker).
+Runners pass the switch only: run_native.py (box: pai_native.sh / pai_box.sh, run.sh nuPlan) and pai_run.sh (Tokyo Docker). The PAI runners
+default to ALPASIM_FAST=1 (2026-10-16), run.sh / run_native.py (nuPlan) to 0: the nuPlan path is not verified; ALPASIM_FAST=0 is the official set.
 """
 import ast, os, re, sys
 
@@ -73,7 +75,8 @@ def overrides(src, wizard_args, driver_py, env=None, mode="1"):
         if c["logical_id"] != cam:
             c = dict(c, height=TINY, width=-(-c["width"] * TINY // c["height"]) // 2 * 2, frame_interval_us=ONCE_US)
         keep.append("{" + ",".join(f"{k}:{v}" for k, v in c.items()) + "}")
-    return [f"runtime.simulation_config.cameras=[{','.join(keep)}]", "eval.video.render_video=false"]
+    video = (os.environ if env is None else env).get("ALPASIM_VIDEO", "0") == "1"      # 1 = keep the preset's eval video (front camera)
+    return [f"runtime.simulation_config.cameras=[{','.join(keep)}]"] + ([] if video else ["eval.video.render_video=false"])
 
 
 if __name__ == "__main__":
