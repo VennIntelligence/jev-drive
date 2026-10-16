@@ -89,3 +89,60 @@ read on the 12 178 training rows (descriptive).
   - 6 forward jobs: ~0.2 job-h.
 - CPU: stops, labels, pack, gates and xpgate: ~1.5 core-h.
 - Wall 09:23-09:40 JST (box 08:23-08:40 CST); one rerun of the base forward job after the dev-tag fix.
+
+## Amendment 1 pilots: junction + failure-window labels only, 10 / 15 % (2026-10-16 ~10:50 JST)
+
+Prereg Amendment 1. Pool on1_JDGJ = on1_L18RB0 (S, self) + on1_JDGjd. on1_JDGjd holds the on1_JDGd rows in the junction segment or in the 3 s
+before a failed turn: 1 162 rows / 26 logs (junction 986, window 398, both 222). Dropped: 1 423 approach rows and 9 593 others. The draw inside
+the subset is uniform. Copy of the pack record: [pack_j.json](pack_j.json).
+
+Realised batch (expected values; weighted draw with replacement):
+- j10: `--on-k 26`, 13 S + 13 DAgger rows (10.2 %, sd 2.5), 89 human rows.
+- j15: `--on-k 32`, 13 S + 19 DAgger rows (14.8 %, sd 2.8), 83 human rows.
+- Each subset row is drawn about 11 / 16 times in 1 000 steps.
+- lr-scale 0.3, seed 0, 1 000 steps.
+
+Dev label rows: 114 rows / 6 logs (junction 99, window 34). Copies: `gate_JDGPJ{10,15}L03-L18-s0.json`.
+
+| pilot | dev ADE | G-rely d_junction [diff CI] | equal-arc turn, window [-40, 10) m | approach [-40, 0) | junction [0, 10) | label ADE dev: trained classes (gate) | junction / window / approach / rest | result |
+|:--|--:|:--|:--|:--|:--|:--|:--|:--|
+| RSG-L18-s0 (ref) | 0.528 | +0.025 [+0.012, +0.038] true | - | - | - | 2.819 m | - | - |
+| JDGPJ10L03 | 0.5530 | +0.005 [-0.016, +0.030] **false** | **-0.36 [-0.63, -0.08]** (n 276, arc +0.33 m) | -0.34 [-0.62, -0.06] (n 271) | -1.10 [-2.46, +0.36] (n 5, 3 scenes) | 1.715 (-39.2 %) | -43.4 / -31.3 / -27.1 / -8.7 % | FAIL: rely, turn |
+| JDGPJ15L03 | 0.5599 | +0.001 [-0.018, +0.022] **false** | **-1.32 [-1.82, -0.77]** (arc +0.37 m) | -1.27 [-1.77, -0.73] | -3.64 [-8.15, +0.40] (n 5) | 1.629 (-42.2 %) | -44.8 / -37.6 / -30.1 / -10.6 % | FAIL: rely, turn |
+
+The 4 s heading is +0.96 / +0.01 deg. The label read on the training rows (descriptive) gives:
+- trained classes: -43.0 / -48.4 %;
+- approach rows (not trained): -18.8 / -21.2 %.
+
+**Verdict: both fail. Not launched** (Amendment 1: both fail -> stop and report).
+
+### Reading, by gate and segment
+
+- **Dev ADE passes now, and the label gate passes.** Dev ADE is 0.553 / 0.560 against the 0.56 line; at 10 % it is +0.025 over the reference.
+  The trained classes move 39-42 % toward the teacher on held-out logs.
+- **Route reliance still collapses, even at 13 rows per batch.**
+  - d_junction falls from +0.025 [+0.012, +0.038] (RSG-L18-s0; RB0-F-s0 +0.025) to +0.005 / +0.001, with CIs that contain 0.
+  - Masking the route memory now costs the pilots almost nothing (0.557 vs 0.553).
+  - The teacher's lane-chain junction paths are exactly where the route memory used to pay. A small share of them is enough to make it redundant.
+- **Turning still goes the wrong way, and the sign comes from the approach.**
+  - The registered window has 276 rows, of which 271 are approach rows (held decisions 0 / 1 sit before the entry). Only 5 rows / 3 scenes are
+    inside the junction, so the turning instrument cannot see the junction at all.
+  - On the approach rows, the pilots turn less at equal arc (-0.34 / -1.27 deg) and run further (+0.33 / +0.37 m in 4 s). Raising the share
+    from 10 to 15 % makes this about 4x worse.
+  - The approach rows were not trained. Even so, the dev approach rows moved 27-30 % toward the teacher's approach labels, which are faster and
+    turn less per metre.
+  - So the junction / window labels generalise onto the approach. Dropping the approach rows removes the direct signal, but not the teacher's
+    speed and late-turn style that the junction rows carry too: the junction rows' re-timed expert speed sits on the human speed and the
+    3 m/s floor.
+  - The 5 junction rows point the same way (-1.1 / -3.6 deg, CI contains 0).
+- **What this leaves (not registered; for the main session):**
+  - The dose line is now clear: below 10 % the label gain shrinks, and at 10 % reliance is already gone.
+  - Making this teacher useful would need its approach behaviour to match the policy's. One way: re-time the junction labels at the policy's
+    own speed (geometry only). Another: freeze or regularise the route branch's use against the DAgger rows.
+  - Either is a new design, not a dose. A junction-row turning instrument (held rows inside [0, exit + 10) m with k > 1) would be needed to see
+    any junction gain.
+
+Cost:
+- GPU: 2 pilots + 2 forward jobs, about 0.25 GPU job-h.
+- CPU: packj and the gates, under 0.2 core-h.
+- Wall: 6 min (box 09:46-09:52 CST).

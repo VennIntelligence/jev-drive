@@ -1,0 +1,45 @@
+{
+ "src": "on1_JDGd",
+ "rows": 1162,
+ "junction": 986,
+ "win": 398,
+ "both": 222,
+ "logs": 26,
+ "dropped": {
+  "turn_appr": 1423,
+  "other": 9593
+ },
+ "dev": {
+  "rows": 114,
+  "junction": 99,
+  "win": 34,
+  "logs": 6
+ },
+ "s_rows": 17429,
+ "flags": {
+  "j10": "--on on1_JDGJ --on-k 26 --on-mode mixed --on-weight pool=d:14.999139",
+  "j15": "--on on1_JDGJ --on-k 32 --on-mode mixed --on-weight pool=d:21.921819"
+ },
+ "batch": {
+  "j10": {
+   "total": 128,
+   "yaw_rate": 13,
+   "s_expected": 13,
+   "dagger_expected": 13,
+   "dagger_share": 0.1015625,
+   "dagger_sd": 2.5495097567963922,
+   "normal": 89,
+   "draws_per_row_1000": 11.187607573149743
+  },
+  "j15": {
+   "total": 128,
+   "yaw_rate": 13,
+   "s_expected": 13,
+   "dagger_expected": 19,
+   "dagger_share": 0.1484375,
+   "dagger_sd": 2.7782638463616087,
+   "normal": 83,
+   "draws_per_row_1000": 16.351118760757316
+  }
+ }
+}
