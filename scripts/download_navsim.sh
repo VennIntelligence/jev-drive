@@ -2,13 +2,16 @@
 # Download NAVSIM (OpenScene + nuPlan maps) into $DATA_DIR/datasets/navsim, camera only (no LiDAR).
 # See docs/navsim.md. Run on the box inside tmux:
 #   scripts/tmux_run.sh navsim scripts/download_navsim.sh [part ...]
-# Parts (default: all, in this order): maps logs navhard navtest navtrain
+# Parts (default: all, in this order): maps logs navhard navtest navtrain (waittrain only when named)
 #   maps      nuPlan maps v1.1                         -> maps/
 #   logs      OpenScene trainval + test log pickles    -> navsim_logs/{trainval,test}/
 #   navhard   navhard_two_stage synthetic scenes       -> navhard_two_stage/
 #   navtest   OpenScene test camera blobs              -> sensor_blobs/test/
 #   navtrain  navtrain current + history camera blobs  -> sensor_blobs/trainval/
-# Env: JOBS (concurrent archives, default 8), HF_ENDPOINT (default https://hf-mirror.com).
+#   waittrain whole-log trainval camera archives listed in $WAIT_LIST (first column = file name, e.g.
+#             openscene_sensor_trainval_camera_20.tgz; experiments/wait_cap/results/trainval_archives.tsv) -> sensor_blobs/trainval/
+#             (existing files are never overwritten; strip is detected from the first member)
+# Env: JOBS (concurrent archives, default 8), ROUTE (direct|clash for HF archives, default direct), HF_ENDPOINT (default https://hf-mirror.com).
 # Each archive runs download -> size + sha256 check -> extract (LiDAR skipped) -> delete, in its own slot,
 # so extraction overlaps with the other slots' downloads. Safe to re-run: finished archives are skipped,
 # partial downloads resume.
@@ -16,7 +19,7 @@ set -euo pipefail
 
 : "${DATA_DIR:?DATA_DIR is not set, see docs/storage.md}"
 export ROOT=$DATA_DIR/datasets/navsim ARC=$DATA_DIR/datasets/navsim/_archives
-export STATE=$ARC/state HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
+export STATE=$ARC/state ROUTE=${ROUTE:-direct} HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
 export HF_HUB_DISABLE_XET=1  # Xet storage breaks through proxies; plain HTTP resolve URLs work
 JOBS=${JOBS:-8}
 REPO=datasets/OpenDriveLab/OpenScene
@@ -36,13 +39,13 @@ one() {
   if [[ ! -e $f ]]; then
     t0=$SECONDS; local have0; have0=$(stat -c %s "$part" 2>/dev/null || echo 0)
     log "get  $name ($(numfmt --to=iec "$size"), resume at $(numfmt --to=iec "$have0"))"
-    for try in $(seq 30); do
+    for try in $(seq 100); do
       # Re-resolve every try: the mirror redirects to signed URLs that expire. Abort stalls, then resume.
       curl -fsSL "${proxy[@]}" -C - --connect-timeout 30 --speed-limit 20480 --speed-time 120 \
         -o "$part" "$url" && break || true
       (( $(stat -c %s "$part" 2>/dev/null || echo 0) >= size )) && break
       log "retry $name (try $try, have $(numfmt --to=iec "$(stat -c %s "$part" 2>/dev/null || echo 0)"))"
-      sleep 20
+      sleep 10  # also rides out the mirror's 429 resolver window (retry-after is seconds)
     done
     local got; got=$(stat -c %s "$part")
     [[ $got == "$size" ]] || { log "FAIL $name size $got != $size"; rm -f "$part"; return 1; }
@@ -60,7 +63,11 @@ one() {
     rm -rf "$dest/maps"; mv "$ARC/maps_tmp/nuplan-maps-v1.0" "$dest/maps"; rm -rf "$ARC/maps_tmp"
     n=$(find "$dest/maps" -type f | wc -l)
   else
-    n=$(tar -I pigz -xvf "$f" -C "$dest" --strip-components="$strip" "${LIDAR[@]}" | wc -l)
+    if [[ $strip == auto ]]; then  # components before the log directory (20YY.MM.DD...)
+      strip=$(tar -I pigz -tf "$f" | head -1 | awk -F/ '{for (i = 1; i <= NF; i++) if ($i ~ /^20[0-9][0-9]\.[0-9][0-9]\./) {print i - 1; exit}}')
+      [[ -n $strip ]] || { log "FAIL $name cannot detect the log directory level"; return 1; }
+    fi
+    n=$(tar -I pigz -xvf "$f" -C "$dest" --strip-components="$strip" --skip-old-files "${LIDAR[@]}" | wc -l)
   fi
   (( n > 0 )) || { log "FAIL $name extracted nothing"; return 1; }
   echo "$n" > "$STATE/$name.done"; rm -f "$f"
@@ -90,17 +97,18 @@ jobs_for() {
     logs)     dir=openscene-v1.1; pat='openscene_metadata_(trainval|test)\.tgz'; dest=$ROOT/navsim_logs; strip=2 ;;
     navhard)  dir=navsim-v2; pat='navsim_v2\.2_navhard_two_stage_.*'; dest=$ROOT; strip=0 ;;
     navtest)  dir=openscene-v1.1/openscene_sensor_test_camera; pat='.*'; dest=$ROOT/sensor_blobs; strip=2 ;;
+    waittrain) dir=openscene-v1.1/openscene_sensor_trainval_camera; pat=$(cut -f1 "${WAIT_LIST:?WAIT_LIST is not set}" | sed 's/\./\\./g' | paste -sd'|' | sed 's/.*/(&)/'); dest=$ROOT/sensor_blobs/trainval; strip=auto ;;
     navtrain) dir=navsim; pat='navtrain_(current|history)_[0-9]+\.tgz'; dest=$ROOT/sensor_blobs/trainval; strip=1 ;;
     *) echo "unknown part: $part" >&2; exit 1 ;;
   esac
   curl -sf --retry 5 -m 60 "$HF_ENDPOINT/api/$REPO/tree/main/$dir" | python3 -c '
 import json, re, sys
-pat, base, dest, strip = sys.argv[1:]
+pat, base, dest, strip, route = sys.argv[1:]
 for e in sorted(json.load(sys.stdin), key=lambda e: [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", e["path"])]):
     name = e["path"].rsplit("/", 1)[-1]
     if e["type"] == "file" and re.fullmatch(pat, name) and "lfs" in e:
-        print(name, base + "/" + e["path"], e["lfs"]["size"], e["lfs"]["oid"], dest, strip, "direct", sep="\t")
-' "$pat" "$HF_ENDPOINT/$REPO/resolve/main" "$dest" "$strip"
+        print(name, base + "/" + e["path"], e["lfs"]["size"], e["lfs"]["oid"], dest, strip, route, sep="\t")
+' "$pat" "$HF_ENDPOINT/$REPO/resolve/main" "$dest" "$strip" "$ROUTE"
 }
 
 if [[ ${1:-} == _one ]]; then IFS=$'\t' read -r -a a <<< "$2"; one "${a[@]}"; exit; fi
