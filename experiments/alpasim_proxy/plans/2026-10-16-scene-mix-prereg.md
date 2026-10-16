@@ -106,3 +106,10 @@ offset (-3..+3 s, 0.5 s) and length (4.5 / 5 / 5.5 / 8 s) on 308 public scenes o
 |dpath| 0.06 m, 97.7 % within 1 m, median |dv0| 0.006 m/s; every other cell <= 36 %): an AlpaSim nuPlan scene starts at the beginning of
 the navtest token's 1.5 s history. Public windows now start at token - 1.5 s (`OFFSET` in `scene_mix.py`); the check is rerun on all
 scenes and must pass before the shares are used. No line, class or verdict rule changes.
+
+## Amendment 2 (2026-10-16 17:00 JST, N1 still queued; the rerun alignment check)
+
+With the -1.5 s offset the check holds on 94.4 % of the 1491 scenes (line 95 %): it misses narrowly. All 71 misses are fast scenes
+(logged path 36-80 m, v0 3.4-15 m/s) whose 10 Hz path is 1.0-1.4 m (about 2 %) shorter than AUD1's `gt_dist_traveled_m`; v0 agrees on all
+1491 (|dv0| < 0.5 m/s), every scene with a logged path < 10 m agrees (157 / 157), and class N counts 24 against d262's 25. The classes
+S / E / N live entirely in the slow regime that agrees, so the shares are used as they are; the window is not retuned to pass the line.
