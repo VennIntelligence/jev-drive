@@ -268,3 +268,13 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   分段：转弯仪器 276 行里 271 行在弯前，路口只有 5 行（−1.1 / −3.6°，CI 含 0），仪器看不到路口；没训过的弯前行也朝老师的弯前标签动了 27–30 %，
   即路口 / 窗口行学到的东西泛化到了弯前（泛化的是老师哪一部分没定位：路口标签比 served 短 1.2 m，pilot 的弯前 plan 却长了 0.3 m），份额 15 % 比 10 % 坏 4 倍。读法与可选项（按策略自己的速度重新计时只取几何；约束 route 分支；路口行转弯仪器）
   写在 `experiments/route_follow/results/joint_dagger/pilot.md` 末节，待主会话定。花费约 0.25 GPU job-h，墙钟 6 分钟。
+- 10-16 ~11:10 JST：**JOINT-DAGGER 路线核对**（`experiments/route_follow/results/joint_dagger/route_check.md`，CPU 21 s，不训练）。
+  - 问题：DAgger 行上喂给模型的 route memory 和专家标签走的路径是否不同，导致梯度教模型忽略路线。**结论：不是，也没有 join 错误。**
+  - 两者是同一条 AlpaSim MAP 路线（日志投到车道中心线），中位横向差几毫米。
+  - 训练的路口行出口分叉（+40 m 航向差 > 30°）4.3 %，同时相距 > 2 m 的只有 2.8 %（27 / 972）；dev 为 0。
+  - 分叉时专家的出口与人一致（10 / 10，memory 0 / 10）。
+  - 标签比策略自己的 served plan 更贴路线：路口行到 memory 0.15 m 对 1.15 m，96 % 的行更近。
+  - join 全部逐位一致：特征、池 tab、标签、meta；喂入 memory 对驾驶时实际 served 的 memory ≤ 0.001；20 行重跑专家与存档相等。
+  - 附带发现（不是 DAgger 特有）：memory 第一个有效槽在 +24 m（中位），路口行 69 % 在 +18 m 内没有槽，标签 4 s 点只有 20 % 落在 memory 覆盖内。
+    NAVSIM 训练行同样（+24 m，61 %）。
+  - reliance 为何塌仍未定位；候选与读法见报告末节。

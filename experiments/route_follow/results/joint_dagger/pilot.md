@@ -146,3 +146,14 @@ Cost:
 - GPU: 2 pilots + 2 forward jobs, about 0.25 GPU job-h.
 - CPU: packj and the gates, under 0.2 core-h.
 - Wall: 6 min (box 09:46-09:52 CST).
+
+## Follow-up: route check (2026-10-16)
+
+[route_check.md](route_check.md) tests whether the route memory fed on the DAgger rows and the expert's path disagree, which would make
+the gradient teach the model to ignore the route.
+
+**Verdict: no mismatch and no join bug.**
+- The two are the same AlpaSim MAP route. On the trained junction rows they are > 2 m apart on 2.8 % of rows, and on 0 dev rows. Where
+  they do split, the expert's exit matches the human's.
+- The labels are closer to the route memory than the served plans on 96 % of rows.
+- The reliance collapse comes from elsewhere (open).
