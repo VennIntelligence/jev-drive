@@ -283,8 +283,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 if RM_SC and rf is not None and len(rf) == RMEM.DIM_O:   # JEV_RM_SC: the ordered memory's 3 scalars changed (diagnostic)
                     rf = rm_scalars(rf)
                 sf = sfi = None
-                if s.rxm is not None:                        # reflex self-state: the decision 0.5 s back (reflex_mem.LAG_US) against p0
-                    sf, sfi = s.rxm.features(t0, p0, float(np.hypot(*dyn[-1][0])))
+                if s.rxm is not None:                        # reflex self-state: the decision 0.5 s back (reflex_mem.LAG_US) against the pose now,
+                    rxp = (TR.anchor(p0, s.poses[min(s.poses, key=lambda t: abs(t - t0))].pose.quat)[0] if TR.ON else p0)   # in the served frame's convention
+                    sf, sfi = s.rxm.features(t0, rxp, float(np.hypot(*dyn[-1][0])))
         if infer:
             try:
                 t_f = time.perf_counter()

@@ -292,7 +292,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rf = s.rt.features(t0, pose_of, (*_xy(anchor), yaw0))
             sf = sfi = None
             if s.rxm is not None:                            # the reflex module's self-state: the previous served plan against the pose now
-                sf, sfi = s.rxm.features(t0, (*_xy(anchor), yaw0), float(np.hypot(*dyn[-1][0])))
+                rxp = TR.anchor((*_xy(anchor), yaw0), anchor.pose.quat)[0] if TR.ON else (*_xy(anchor), yaw0)   # the served frame's convention (tilt)
+                sf, sfi = s.rxm.features(t0, rxp, float(np.hypot(*dyn[-1][0])))
             if RP.ON:                                        # JEV_ROUTE (route_path.py): the carried route as the served path
                 rM = s.rt.polyline(t0, pose_of, (*_xy(anchor), yaw0))
                 rG = RP.log_arcs(*s.gt, t0) if RP.NEED_GT and s.gt is not None else None
