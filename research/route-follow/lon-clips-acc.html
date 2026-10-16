@@ -1,0 +1,73 @@
+<!doctype html><html lang=zh><meta charset=utf-8><title>PAI 纵向丢分回放（ACC 读数，RSG-L18-s0，gains 10 + JEV_ACC，281 scene）</title>
+<style>body{font:15px/1.5 sans-serif;max-width:1180px;margin:20px auto;padding:0 12px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:3px 9px;text-align:right}td:first-child,th:first-child{text-align:left}.c{display:inline-block;vertical-align:top;margin:6px 10px 14px 0;width:560px}video{width:560px;background:#000}h2{margin-top:30px;border-bottom:2px solid #444}.m{font-size:13px;color:#333}</style>
+<body><h1>PAI 纵向丢分回放（ACC 读数，RSG-L18-s0，gains 10 + JEV_ACC，281 scene）</h1>
+<p>来源：box 读数 pai_g10/acc（RSG-L18-s0，steering weight 10，SERVE JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1，281 scene，PAI 轨提交的那一版）。该读数没留 mp4，所以对选中的 42 个 scene 用同一检查点、同一配置重放并保存前视视频；重放分数与原读数 42/42 个 scene 逐位一致（差 < 0.01）。事件时刻按视频时钟（秒），播放器从事件前 3 s 开始并循环，只在画面内时播放。人 = 日志里的自车速度，同一时刻对比。右侧 g10 列是同一类别定义下的 g10 读数（lon-clips-g10.html）。</p>
+<table><tr><th>类别</th><th>scene 数</th><th>丢分（点）</th><th>占总丢分 32.6 点</th><th>g10 scene 数</th><th>g10 丢分（点）</th><th>g10 占 43.1 点</th></tr>
+<tr><td><a href='#slow_rear'>慢（前方无车）且被后车追尾截断</a></td><td>4</td><td>0.47</td><td>1.4 %</td><td>51</td><td>9.12</td><td>21.2 %</td></tr>
+<tr><td><a href='#slow_free'>慢（前方无车），未被追尾</a></td><td>3</td><td>0.26</td><td>0.8 %</td><td>26</td><td>3.48</td><td>8.1 %</td></tr>
+<tr><td><a href='#slow_lead'>慢且跟在前车后面</a></td><td>9</td><td>1.52</td><td>4.7 %</td><td>0</td><td>0.00</td><td>0.0 %</td></tr>
+<tr><td><a href='#rear_only'>被追尾截断（速度比日志略低）</a></td><td>7</td><td>0.99</td><td>3.0 %</td><td>9</td><td>1.18</td><td>2.7 %</td></tr>
+<tr><td><a href='#with_log'>停在日志也慢 / 也停的地方（没起步）</a></td><td>0</td><td>0.00</td><td>0.0 %</td><td>5</td><td>1.07</td><td>2.5 %</td></tr>
+<tr><td><a href='#unexpl'>无故停车</a></td><td>0</td><td>0.00</td><td>0.0 %</td><td>6</td><td>1.00</td><td>2.3 %</td></tr>
+<tr><td><a href='#late'>晚起步 / 没起步</a></td><td>2</td><td>0.40</td><td>1.2 %</td><td>0</td><td>0.00</td><td>0.0 %</td></tr>
+<tr><td><a href='#route_end'>人停了、车没停（cor_route_end）</a></td><td>21</td><td>7.47</td><td>22.9 %</td><td>18</td><td>6.41</td><td>14.9 %</td></tr>
+<tr><td><a href='#coll_lead'>撞前车 / 静止车</a></td><td>4</td><td>1.42</td><td>4.4 %</td><td>2</td><td>0.71</td><td>1.7 %</td></tr>
+<tr><th>纵向合计</th><th>50</th><th>12.54</th><th>38.4 %</th><th>117</th><th>22.96</th><th>53.3 %</th></tr>
+<tr><td>非纵向（转弯 / 变道 / 碰撞 / 出路 / 其余轻微丢分）</td><td>68</td><td>20.10</td><td>61.6 %</td><td>66</td><td>20.12</td><td>46.7 %</td></tr></table>
+<p class=m>丢分（点）= 该类 scene 的 (1 − 分) 之和 / 281 × 100。主类按 rf_tax.py 的规则；「慢」类里被追尾的单列。每类下面只挂丢了分的 scene，按丢分从大到小、尽量分散在不同日志地点。</p>
+<h2 id=newzero>ACC 新造的零分</h2><p>g10 非零、ACC 为零的 15 个 scene。每段标：g10 分 → ACC 分，零分类型，转弯角（acc.json turn），事件时刻本车与人的速度。</p>
+<div class=c><div class=m><b>0e05cb0c</b> g10 0.47 → ACC 0.00；零分类型 corridor（cor_drift）；转弯角 -1；事件 t = 15.0 s（评估器判零的时刻）；该时刻本车 32.5 m/s，人 32.5 m/s</div></div>
+<div class=c><div class=m><b>26004ca8</b> g10 0.32 → ACC 0.00；零分类型 corridor（cor_lane_change）；转弯角 -45；事件 t = 6.2 s（评估器判零的时刻）；该时刻本车 20.0 m/s，人 27.4 m/s</div></div>
+<div class=c><div class=m><b>2c0ef536</b> g10 1.00 → ACC 0.00；零分类型 collision（coll_veh_ahead）；转弯角 -26；事件 t = 19.4 s（评估器判零的时刻）；该时刻本车 4.4 m/s，人 3.8 m/s</div></div>
+<div class=c><div class=m><b>32be03e4</b> g10 0.44 → ACC 0.00；零分类型 corridor（cor_drift）；转弯角 7；事件 t = 13.1 s（评估器判零的时刻）；该时刻本车 36.2 m/s，人 35.7 m/s</div></div>
+<div class=c><div class=m><b>382a7247</b> g10 1.00 → ACC 0.00；零分类型 collision（coll_veh_oncoming）；转弯角 59；事件 t = 19.5 s（评估器判零的时刻）；该时刻本车 8.9 m/s，人 9.9 m/s</div></div>
+<div class=c><div class=m><b>444fca69</b> g10 1.00 → ACC 0.00；零分类型 corridor（cor_route_end）；转弯角 179；事件 t = 12.4 s（评估器判零的时刻）；该时刻本车 8.4 m/s，人 3.0 m/s</div></div>
+<div class=c><div class=m><b>47db2eb6</b> g10 1.00 → ACC 0.00；零分类型 corridor（cor_route_end）；转弯角 -60；事件 t = 14.5 s（评估器判零的时刻）；该时刻本车 6.2 m/s，人 0.0 m/s</div></div>
+<div class=c><div class=m><b>4cb05d65</b> g10 0.70 → ACC 0.00；零分类型 corridor（cor_drift）；转弯角 1；事件 t = 13.2 s（评估器判零的时刻）；该时刻本车 38.5 m/s，人 38.0 m/s</div></div>
+<div class=c><div class=m><b>4f7cb072</b> g10 0.40 → ACC 0.00；零分类型 offroad（off_straight）；转弯角 -16；事件 t = 2.8 s（评估器判零的时刻）；该时刻本车 20.7 m/s，人 23.4 m/s</div></div>
+<div class=c><div class=m><b>596af0c7</b> g10 0.42 → ACC 0.00；零分类型 offroad（off_straight）；转弯角 -55；事件 t = 10.8 s（评估器判零的时刻）；该时刻本车 19.9 m/s，人 26.9 m/s</div></div>
+<div class=c><div class=m><b>9b6c68b4</b> g10 1.00 → ACC 0.00；零分类型 corridor（cor_route_end）；转弯角 -103；事件 t = 13.9 s（评估器判零的时刻）；该时刻本车 6.4 m/s，人 0.0 m/s</div></div>
+<div class=c><div class=m><b>a68ad579</b> g10 0.43 → ACC 0.00；零分类型 offroad（off_junc_inside）；转弯角 90；事件 t = 7.6 s（评估器判零的时刻）；该时刻本车 9.6 m/s，人 14.2 m/s</div></div>
+<div class=c><div class=m><b>abd45a30</b> g10 1.00 → ACC 0.00；零分类型 corridor（cor_straight_at_turn）；转弯角 2；事件 t = 13.4 s（评估器判零的时刻）；该时刻本车 4.3 m/s，人 3.7 m/s</div></div>
+<div class=c><div class=m><b>b661da67</b> g10 1.00 → ACC 0.00；零分类型 offroad（off_straight）；转弯角 4；事件 t = 18.3 s（评估器判零的时刻）；该时刻本车 4.7 m/s，人 6.4 m/s</div></div>
+<div class=c><div class=m><b>e0f6ebe1</b> g10 1.00 → ACC 0.00；零分类型 corridor（cor_turn_under）；转弯角 -88；事件 t = 16.1 s（评估器判零的时刻）；该时刻本车 7.1 m/s，人 3.7 m/s</div></div>
+<h2 id=slow_rear>慢（前方无车）且被后车追尾截断</h2><p>前方路面空着、本车比日志慢很多，后车按日志速度追上来；看慢是从哪一刻开始的、有没有任何前方原因。</p>
+<div class=c><div class=m><b>bd97de34</b> 得分 0.49（丢 0.18 点）；事件 t = 5.4 s（本车落后日志 10 m 的时刻）；该时刻人 12.5 m/s，本车 7.1 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<div class=c><div class=m><b>b65e55e9</b> 得分 0.51（丢 0.17 点）；事件 t = 6.4 s（本车落后日志 10 m 的时刻）；该时刻人 20.0 m/s，本车 13.8 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<div class=c><div class=m><b>91d84204</b> 得分 0.83（丢 0.06 点）；事件 t = 5.8 s（本车落后日志 10 m 的时刻）；该时刻人 20.3 m/s，本车 16.6 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended+partial_corridor</div></div>
+<div class=c><div class=m><b>fbf97438</b> 得分 0.84（丢 0.06 点）；事件 t = 8.2 s（本车落后日志 10 m 的时刻）；该时刻人 15.1 m/s，本车 12.5 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<h2 id=slow_free>慢（前方无车），未被追尾</h2><p>同上但没被追尾；进度不够 80 % 就丢分。看画面里本车为什么不加速。</p>
+<div class=c><div class=m><b>ddb6a43a</b> 得分 0.73（丢 0.10 点）；事件 t = 9.0 s（本车落后日志 10 m 的时刻）；该时刻人 14.2 m/s，本车 4.6 m/s，本车落后日志 11 m；主类 low_slow_free</div></div>
+<div class=c><div class=m><b>9d9e7f39</b> 得分 0.74（丢 0.09 点）；事件 t = 10.4 s（本车落后日志 10 m 的时刻）；该时刻人 14.3 m/s，本车 4.2 m/s，本车落后日志 10 m；主类 low_slow_free</div></div>
+<div class=c><div class=m><b>a2c5ae46</b> 得分 0.81（丢 0.07 点）；事件 t = 7.2 s（本车落后日志 10 m 的时刻）；该时刻人 12.4 m/s，本车 7.4 m/s，本车落后日志 10 m；主类 low_slow_free</div></div>
+<h2 id=slow_lead>慢且跟在前车后面</h2><p>前车在动、本车落后；看时距是否过大。</p>
+<div class=c><div class=m><b>132ae6cb</b> 得分 0.04（丢 0.34 点）；事件 t = 6.9 s（本车落后日志 10 m 的时刻）；该时刻人 7.6 m/s，本车 4.5 m/s，本车落后日志 10 m；主类 low_slow_behind_lead+rear_ended</div></div>
+<div class=c><div class=m><b>a686c7d0</b> 得分 0.07（丢 0.33 点）；事件 t = 12.9 s（本车落后日志 10 m 的时刻）；该时刻人 8.5 m/s，本车 7.1 m/s，本车落后日志 10 m；主类 low_slow_behind_lead+rear_ended</div></div>
+<div class=c><div class=m><b>6fd8cf30</b> 得分 0.28（丢 0.26 点）；事件 t = 8.0 s（本车落后日志 10 m 的时刻）；该时刻人 4.8 m/s，本车 2.8 m/s，本车落后日志 10 m；主类 low_slow_behind_lead+rear_ended+partial_corridor</div></div>
+<div class=c><div class=m><b>21829be5</b> 得分 0.61（丢 0.14 点）；事件 t = 17.2 s（本车落后日志 10 m 的时刻）；该时刻人 4.3 m/s，本车 1.8 m/s，本车落后日志 10 m；主类 low_slow_behind_lead+rear_ended</div></div>
+<div class=c><div class=m><b>fce18b62</b> 得分 0.63（丢 0.13 点）；事件 t = 15.1 s（本车落后日志最多的时刻）；该时刻人 1.6 m/s，本车 1.6 m/s，本车落后日志 9 m；主类 low_slow_behind_lead+rear_ended</div></div>
+<h2 id=rear_only>被追尾截断（速度比日志略低）</h2><p>本车比日志只慢一点，但后车撞上来、进度被截断；看追尾那一刻。</p>
+<div class=c><div class=m><b>9f393c8a</b> 得分 0.31（丢 0.24 点）；事件 t = 6.4 s（被追尾）；该时刻人 7.2 m/s，本车 5.7 m/s，本车落后日志 2 m；主类 low_rear_ended+rear_ended+partial_corridor</div></div>
+<div class=c><div class=m><b>074e5ee3</b> 得分 0.41（丢 0.21 点）；事件 t = 11.3 s（被追尾）；该时刻人 19.1 m/s，本车 6.3 m/s，本车落后日志 46 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><div class=m><b>a174faed</b> 得分 0.51（丢 0.17 点）；事件 t = 11.9 s（被追尾）；该时刻人 4.3 m/s，本车 2.9 m/s，本车落后日志 11 m；主类 low_rear_ended+rear_ended+partial_corridor</div></div>
+<div class=c><div class=m><b>4b5a7c8b</b> 得分 0.56（丢 0.16 点）；事件 t = 11.3 s（被追尾）；该时刻人 14.9 m/s，本车 11.0 m/s，本车落后日志 18 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><div class=m><b>404541da</b> 得分 0.72（丢 0.10 点）；事件 t = 14.0 s（被追尾）；该时刻人 8.0 m/s，本车 6.0 m/s，本车落后日志 17 m；主类 low_rear_ended+rear_ended</div></div>
+<h2 id=with_log>停在日志也慢 / 也停的地方（没起步）</h2><p>日志在这里也很慢或停着，本车起步后仍长时间不动；看人什么时候起步、本车晚了多久。</p>
+<p class=m>本次读数里这一类没有 scene。</p>
+<h2 id=unexpl>无故停车</h2><p>日志在同位置有速度（&gt;= 2 m/s）而本车停了 &gt;= 1.5 s；看画面有没有任何停下的理由。</p>
+<p class=m>本次读数里这一类没有 scene。</p>
+<h2 id=late>晚起步 / 没起步</h2><p>前车走后本车迟迟不动。</p>
+<div class=c><div class=m><b>f18c6340</b> 得分 0.16（丢 0.30 点）；事件 t = 15.8 s（本车落后日志最多的时刻）；该时刻人 1.4 m/s，本车 1.5 m/s，本车落后日志 8 m；主类 low_late_start+rear_ended+late_start</div></div>
+<div class=c><div class=m><b>5c4a277a</b> 得分 0.72（丢 0.10 点）；事件 t = 15.3 s（本车落后日志 10 m 的时刻）；该时刻人 4.8 m/s，本车 3.0 m/s，本车落后日志 10 m；主类 low_late_start+rear_ended+late_start</div></div>
+<h2 id=route_end>人停了、车没停（cor_route_end）</h2><p>人在灯口 / 停止线 / 排队处停到结束，本车以 8–16 m/s 开过去、越过日志终点被判走廊零分；看红灯、停止线、前车。</p>
+<div class=c><div class=m><b>095cf563</b> 得分 0.00（丢 0.36 点）；事件 t = 18.1 s（评估器判零的时刻）；该时刻人 5.8 m/s，本车 4.6 m/s，本车落后日志 -12 m；主类 cor_route_end+junction</div></div>
+<div class=c><div class=m><b>127c4f85</b> 得分 0.00（丢 0.36 点）；事件 t = 12.6 s（评估器判零的时刻）；该时刻人 1.5 m/s，本车 2.6 m/s，本车落后日志 -2 m；主类 cor_route_end+junction</div></div>
+<div class=c><div class=m><b>2466266e</b> 得分 0.00（丢 0.36 点）；事件 t = 12.1 s（评估器判零的时刻）；该时刻人 4.1 m/s，本车 7.5 m/s，本车落后日志 -7 m；主类 cor_route_end</div></div>
+<div class=c><div class=m><b>2d10a08d</b> 得分 0.00（丢 0.36 点）；事件 t = 12.6 s（评估器判零的时刻）；该时刻人 6.8 m/s，本车 16.0 m/s，本车落后日志 -10 m；主类 cor_route_end+junction</div></div>
+<div class=c><div class=m><b>35e082a4</b> 得分 0.00（丢 0.36 点）；事件 t = 4.6 s（评估器判零的时刻）；该时刻人 2.5 m/s，本车 6.9 m/s，本车落后日志 -5 m；主类 cor_route_end</div></div>
+<h2 id=coll_lead>撞前车 / 静止车</h2><p>本车在慢速下撞上同向前车或静止车；看撞前的刹车。</p>
+<div class=c><div class=m><b>09528162</b> 得分 0.00（丢 0.36 点）；事件 t = 7.6 s（评估器判零的时刻）；该时刻人 4.1 m/s，本车 6.3 m/s，本车落后日志 -3 m；主类 coll_stationary+spin+oncoming_lane</div></div>
+<div class=c><div class=m><b>22fa5c92</b> 得分 0.00（丢 0.36 点）；事件 t = 8.9 s（评估器判零的时刻）；该时刻人 1.4 m/s，本车 4.4 m/s，本车落后日志 -21 m；主类 coll_stationary+junction</div></div>
+<div class=c><div class=m><b>2c0ef536</b> 得分 0.00（丢 0.36 点）；事件 t = 19.4 s（评估器判零的时刻）；该时刻人 3.8 m/s，本车 4.4 m/s，本车落后日志 -2 m；主类 coll_veh_ahead</div></div>
+<div class=c><div class=m><b>b680a689</b> 得分 0.00（丢 0.36 点）；事件 t = 11.5 s（评估器判零的时刻）；该时刻人 1.0 m/s，本车 4.8 m/s，本车落后日志 -12 m；主类 coll_stationary+spin+junction</div></div>
+</body></html>
