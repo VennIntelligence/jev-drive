@@ -210,10 +210,10 @@ def cmd_teacher(a):
                 o = A._policy(net, H, (0.275, 0.525), torch.from_numpy(tc_all[r]).to(dev), valid)["outputs"].float()
                 o_[r], plan[r] = o[:, di].cpu().numpy(), o[:, pi].cpu().numpy().reshape(-1, 33, 15)
         np.savez(CR / f"{d}@warp/teacher.npz", out=o_, plan=plan, di=di, pi=pi)
-        # the same call on 64 navtrain rows reproduces their stored teacher (the protocol check)
-        zb = np.load(CR / "navtrain_full.s0of12@warp/teacher.npz") if (CR / "navtrain_full.s0of12@warp/teacher.npz").exists() else np.load(CR / "navtrain_full.s0of12/teacher.npz")
-        fb = np.load(CR / "navtrain_full.s0of12@warp/front.npy", mmap_mode="r")
-        tb = np.load(CR / "navtrain_full.s0of12/tab.npz")
+        # the same call on 64 rows of on1_L18RB0 reproduces their stored teacher (on_rows make_teacher, the protocol check)
+        zb = np.load(CR / f"{BASE}@warp/teacher.npz")
+        fb = np.load(CR / f"{BASE}@warp/front.npy", mmap_mode="r")
+        tb = np.load(CR / BASE / "tab.npz")
         with torch.no_grad():
             H = torch.from_numpy(np.ascontiguousarray(fb[:64])).to(dev)
             H = torch.cat([torch.zeros_like(H[:, :1]), H], 1)
@@ -222,7 +222,7 @@ def cmd_teacher(a):
             tc = torch.from_numpy(np.where(tb["lht"][:64, None], [[0.0, 1.0]], [[1.0, 0.0]]).astype(np.float32)).to(dev)
             o = A._policy(net, H, (0.275, 0.525), tc, valid)["outputs"].float()[:, di].cpu().numpy()
         err = float(np.abs(o - zb["out"][:64]).max())
-        run.info(f"teacher {n} rows; protocol check on 64 navtrain rows: max |diff| {err:.3g}")
+        run.info(f"teacher {n} rows; protocol check on 64 on1_L18RB0 rows: max |diff| {err:.3g}")
         run.summary |= dict(rows=n, protocol_max_abs=err)
         assert np.array_equal(di, zb["di"]) and np.array_equal(pi, zb["pi"]) and err < 1e-2, err
 
