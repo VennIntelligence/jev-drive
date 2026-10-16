@@ -138,6 +138,11 @@ rtb-cont)
   tb=$(sub nx-train-RTB1N-L18-s0 "${FW[@]}" --after $q --timeout-h 2 -- bash $ME train rtbn 0 2500 RTB1N-L18-s0) || exit 1
   pb=$(sub nx-cont-b --after $tb --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads b RTB1N-L18-s0) || exit 1
   echo "rtb-cont: A train $ta reads-submitter $pa; B roll $rr geo $g tok $k strip $s pool $p poolgate $q train $tb reads-submitter $pb" | tee -a $X/stages.txt ;;
+rtb-cont-a)   # 补记 1 (A) again after its first training stopped on rm_train's init guard (--allow-init added; the recipe is unchanged)
+  fresh RTB1O-L18-s0
+  ta=$(sub nx-train-RTB1O-L18-s0 "${FW[@]}" --timeout-h 2 -- bash $ME train rtbo 0 2500 RTB1O-L18-s0) || exit 1
+  pa=$(sub nx-cont-a --after $ta --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads a RTB1O-L18-s0) || exit 1
+  echo "rtb-cont-a: train $ta reads-submitter $pa" | tee -a $X/stages.txt ;;
 rtb-decomp)   # 补记 1: the dev-ADE decomposition of RTB1 / RTB3 against RB0-F-s0 (CPU, stored plans)
   d=$(sub nx-rtb-decomp --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY devdecomp --j RTB1-F-s0 RTB3-F-s0 --c $RTC --out rtb_devdecomp) || exit 1
   echo "rtb-decomp: $d" | tee -a $X/stages.txt ;;
@@ -164,8 +169,8 @@ train)   # train <arm> <seed> <steps> <tag>
     rtsmoke) F="$RB0 --kd-lam 3 --d2-lam 3 --kd-mode full --kd-groups W:1,G:1,SY:1 --d2-teacher $TEA" ;;   # the first (full-plan) design's smoke
     acs2) F="$RSG --ego-scale-speed 0.5 --ego-scale-max 0.2" ;;
     acs4|acsmoke) F="$RSG --ego-scale-speed 0.5 --ego-scale-max 0.4" ;;
-    rtbo) F="${RSG/--init RB0-F-s0/--init $B0}" ;;                                       # 补记 1 (A): the RSG-L18 recipe from RTB1, old pool
-    rtbn) F="${RSG/--init RB0-F-s0/--init $B0}"; F="${F/--on on1_L18RB0/--on on1_$NP}" ;;   # 补记 1 (B): RTB1's own L18 pool
+    rtbo) F="${RSG/--init RB0-F-s0/--init $B0 --allow-init}" ;;                                       # 补记 1 (A): the RSG-L18 recipe from RTB1, old pool
+    rtbn) F="${RSG/--init RB0-F-s0/--init $B0 --allow-init}"; F="${F/--on on1_L18RB0/--on on1_$NP}" ;;   # 补记 1 (B): RTB1's own L18 pool
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
