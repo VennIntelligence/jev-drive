@@ -488,7 +488,7 @@ def cmd_xpgate(a):
     lab_st, lab_x = a.st, a.xp
     J = json.loads((d / "follow/follow.json").read_text())
     turns = {lb: J["labels"][f"{lb}@18"]["outcomes"] | dict(turns=J["labels"][f"{lb}@18"]["turns"]) for lb in (lab_st, lab_x) if f"{lb}@18" in J["labels"]}
-    conf = json.loads((d / "held18/confirm.json").read_text())["held18"].get(f"{lab_st} - {lab_x}")
+    conf = json.loads((d / "held18/confirm.json").read_text())["held18"].get(lab_st)          # ol_confirm: pairs keyed by the first label
     X = dict(np.load(D / "runs/onpol_nuplan/ctx/ctx.npz"))
     hs = (X["ln_elig"].astype(bool) & (X["ln_type"] > 0) & np.isfinite(X["ln_tstop"].astype(float))).any(1)
     hstop = set(X["scene"].astype(str)[hs].tolist())
@@ -505,12 +505,16 @@ def cmd_xpgate(a):
     common = sorted(set(S[lab_st]) & set(S[lab_x]))
     zs = lambda lb, ss: int(sum(S[lb][s] == 0 for s in ss))  # noqa: E731
     hsc = [s for s in common if s in hstop]
-    st_lines = 0
+    st_lines, xp_dec = 0, 0                                         # expert decisions, and those the stop rule stopped (info `line`)
     for f in glob.glob(str(M / lab_st / "c*/run/runs/*/driver/drive.jsonl")) + glob.glob(str(M / lab_st / "c*/run/driver-logs/drive.jsonl")):
-        st_lines += sum("\"line\": [" in ln for ln in open(f, errors="replace"))
+        for ln in open(f, errors="replace"):
+            if '"expert"' in ln:
+                x = json.loads(ln).get("expert") or {}
+                xp_dec += 1
+                st_lines += "line" in x
     res = dict(turns=turns, paired=conf, scenes=len(common), zeros={lb: zs(lb, common) for lb in (lab_st, lab_x)}, human_stop_scenes=len(hsc),
                zeros_human_stop={lb: zs(lb, hsc) for lb in (lab_st, lab_x)}, mean={lb: float(np.mean([S[lb][s] for s in common])) for lb in (lab_st, lab_x)},
-               decisions_with_line_stop=st_lines,
+               expert_decisions=xp_dec, decisions_with_line_stop=st_lines,
                gross_regression=bool(turns.get(lab_st, {}).get("completed", 0) < turns.get(lab_x, {}).get("completed", 0) - 2))
     (d / "xpgate.json").write_text(json.dumps(res, indent=1, default=float))
     RES.mkdir(parents=True, exist_ok=True)
