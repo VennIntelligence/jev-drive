@@ -1,0 +1,11 @@
+{
+ "valid_rows": 16454,
+ "rows": 512,
+ "max_abs_diff": 0.0,
+ "fed_cols": [
+  220,
+  234
+ ],
+ "res_abs": 0.0,
+ "identical": true
+}

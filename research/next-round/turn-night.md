@@ -286,3 +286,10 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   - 花费 2.3 card-h。
 - 10-16 11:00 JST（主会话）：JOINT-DAGGER 10 % pilot held 460 闭环零分 +38、at-fault +31、转弯 −6：关闭（决定 321）。几何目标在自身状态上打掉避让，第三次同向（d286、d303、d321）。
 - 10-16 13:00 JST（主会话）：RECOVERY-ENVELOPE 收尾（决定 322，无臂采用；RL PAI 零分 +7）。两台机器清理腾出约 1.5 TiB（清单 experiments/cl_infra/cleanup/）；Tokyo 上孤儿 SLOW PAITV 建池进程已停。
+- 10-16 ~13:20 JST：**STACK 合一臂**（预登记 `experiments/route_follow/plans/2026-10-16-stack-prereg.md` + 补记 1–2；`results/stack/checks.md`、`pilot.md`）：**按登记停止**。
+  - C1：Cinque 的 plan 是一个 MDN 分量（990 = 495 均值 + 495 spread），spread 不受训练：候选 = 自己 plan 的 8 个结构化扰动（`lib/stack_cand.py`）。
+  - C2 不过：后果头池化 AUC 0.773 [0.736, 0.813]（线 0.85；road 0.909、agent 0.713，human dev 0.906；执行 plan 0.740 对 d220 的 ≤ 0.72），梯度对齐 0.708（过，随机 0.473）。
+  - 逐位闸过（全关 = RSG-L18 配方，60 步 hash 同）；反射模块 step 0 精确为 0；反射 serve 端核验过（无模块逐位、零模块逐位、OFF 逐位）。
+  - 四个 pilot（档 A / B × lr 0.1 / 0.3，后果 hinge 关）全不过：转弯 −0.34 到 −1.38°，dev 自身行接触 0.103 → 0.124–0.159（升 20–54 %），4 s 弧长短 2.5–3.9 m；λ_agent 全部顶到 10 倍上限（人类率 0.0005 达不到），自身行 agent 违反率训练中反而上升。
+  - 拆开看（serve 端关反射，描述性）：接触回到 0.108–0.115、plan 长度复原 → 接触变多是反射模块把 plan 缩短 27–43 %、被回放后车追上（新接触 83–86 % 物体在后轴前 < 2 m）；转弯损失在关反射后仍在（−0.6 到 −1.5°），来自约束 + 偏好训练（偏好标签约六成是横向偏移）。
+  - 花费约 3 card-h（含两个子会话的 C2 与 serve 核验约 4 card-h）。按用户 11:40 的决定：合一臂不帮忙 → 换方法。

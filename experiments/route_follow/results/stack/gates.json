@@ -1,0 +1,15 @@
+{
+ "a": "JDGG-off (code before STACK)",
+ "b": "STKG-off (STACK code, every switch off)",
+ "scalars": 89,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "on_hash_60": [
+  "ea8cacc3e451c577",
+  "ea8cacc3e451c577"
+ ],
+ "rsg_l18_s0_on_hash_60": "ea8cacc3e451c577",
+ "identical": true
+}
