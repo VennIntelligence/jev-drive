@@ -3,6 +3,7 @@
 **日期** 2026-10-15。**对象** RSG-L18-s0，PAI 281 存档（gains 20，旧 serve 路径，与 [zero-taxonomy](zero-taxonomy.md) 同一份）+ 盒上一个开环反事实 job。
 **登记** [experiments/route_follow/plans/2026-10-15-longitudinal-diag-prereg.md](../experiments/route_follow/plans/2026-10-15-longitudinal-diag-prereg.md)。**决定** [315](decisions/315.md)。
 **读数** [experiments/route_follow/results/lon_diag/](../experiments/route_follow/results/lon_diag/)。不训练、不起新仿真。
+**回放页（2026-10-16，gains 10 的提交底座 g10，281 scene）** [route-follow/lon-clips-g10.html](route-follow/lon-clips-g10.html)：纵向各类的丢分表 + 32 段前视回放（视频在 Tokyo 桌面 `lon_review_1016/`，本页不含视频）；纵向合计 23.0 / 43.1 点。
 
 ## 0. 一句话
 

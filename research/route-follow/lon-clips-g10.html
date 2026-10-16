@@ -1,0 +1,60 @@
+<!doctype html><html lang=zh><meta charset=utf-8><title>PAI 纵向丢分回放（RSG-L18-s0，gains 10，281 scene）</title>
+<style>body{font:15px/1.5 sans-serif;max-width:1180px;margin:20px auto;padding:0 12px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:3px 9px;text-align:right}td:first-child,th:first-child{text-align:left}.c{display:inline-block;vertical-align:top;margin:6px 10px 14px 0;width:560px}video{width:560px;background:#000}h2{margin-top:30px;border-bottom:2px solid #444}.m{font-size:13px;color:#333}</style>
+<h1>PAI 纵向丢分回放（RSG-L18-s0，gains 10，281 scene）</h1>
+<p>来源：box 读数 pai_g10/g10（均分 0.569）。该读数没留 mp4，所以对选中的 32 个 scene 用同一检查点、同一配置（gains 10、默认 serve）重放并保存前视视频；重放分数与原读数 32/32 在 0.01 以内一致。事件时刻按视频时钟（秒），播放器从事件前 3 s 开始。人 = 日志里的自车速度，同一时刻对比。</p>
+<table><tr><th>类别</th><th>scene 数</th><th>丢分（点）</th><th>占总丢分 43.1 点</th></tr>
+<tr><td><a href='#slow_rear'>慢（前方无车）且被后车追尾截断</a></td><td>51</td><td>9.12</td><td>21.2 %</td></tr>
+<tr><td><a href='#slow_free'>慢（前方无车），未被追尾</a></td><td>26</td><td>3.48</td><td>8.1 %</td></tr>
+<tr><td><a href='#slow_lead'>慢且跟在前车后面</a></td><td>0</td><td>0.00</td><td>0.0 %</td></tr>
+<tr><td><a href='#rear_only'>被追尾截断（速度比日志略低）</a></td><td>9</td><td>1.18</td><td>2.7 %</td></tr>
+<tr><td><a href='#with_log'>停在日志也慢 / 也停的地方（没起步）</a></td><td>5</td><td>1.07</td><td>2.5 %</td></tr>
+<tr><td><a href='#unexpl'>无故停车</a></td><td>6</td><td>1.00</td><td>2.3 %</td></tr>
+<tr><td><a href='#late'>晚起步 / 没起步</a></td><td>0</td><td>0.00</td><td>0.0 %</td></tr>
+<tr><td><a href='#route_end'>人停了、车没停（cor_route_end）</a></td><td>18</td><td>6.41</td><td>14.9 %</td></tr>
+<tr><td><a href='#coll_lead'>撞前车 / 静止车</a></td><td>2</td><td>0.71</td><td>1.7 %</td></tr>
+<tr><th>纵向合计</th><th>117</th><th>22.96</th><th>53.3 %</th></tr>
+<tr><td>非纵向（转弯 / 变道 / 碰撞 / 出路 / 其余轻微丢分）</td><td>66</td><td>20.12</td><td>46.7 %</td></tr></table>
+<p class=m>丢分（点）= 该类 scene 的 (1 − 分) 之和 / 281 × 100。主类按 rf_tax.py 的规则；「慢」类里被追尾的单列。每类下面只挂丢了分的 scene，按丢分从大到小、尽量分散在不同日志地点。</p>
+<h2 id=slow_rear>慢（前方无车）且被后车追尾截断</h2><p>前方路面空着、本车比日志慢很多，后车按日志速度追上来；看慢是从哪一刻开始的、有没有任何前方原因。</p>
+<div class=c><video controls preload=metadata src='clips/slow_rear/01_132ae6cb_0.03.mp4#t=3.6'></video><div class=m><b>132ae6cb</b> 得分 0.03（丢 0.35 点）；事件 t = 6.6 s（本车落后日志 10 m 的时刻）；该时刻人 7.3 m/s，本车 3.4 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended+partial_corridor</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_rear/02_a686c7d0_0.05.mp4#t=8.5'></video><div class=m><b>a686c7d0</b> 得分 0.05（丢 0.34 点）；事件 t = 11.5 s（本车落后日志 10 m 的时刻）；该时刻人 6.8 m/s，本车 3.1 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_rear/03_ec1d0b2b_0.14.mp4#t=5.1'></video><div class=m><b>ec1d0b2b</b> 得分 0.14（丢 0.31 点）；事件 t = 8.1 s（本车落后日志 10 m 的时刻）；该时刻人 6.9 m/s，本车 4.4 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_rear/04_f18c6340_0.15.mp4#t=13.8'></video><div class=m><b>f18c6340</b> 得分 0.15（丢 0.30 点）；事件 t = 16.8 s（本车落后日志最多的时刻）；该时刻人 1.0 m/s，本车 1.0 m/s，本车落后日志 9 m；主类 low_slow_free+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_rear/05_52bd89ce_0.15.mp4#t=14.8'></video><div class=m><b>52bd89ce</b> 得分 0.15（丢 0.30 点）；事件 t = 17.8 s（本车落后日志 10 m 的时刻）；该时刻人 5.3 m/s，本车 2.3 m/s，本车落后日志 10 m；主类 low_slow_free+rear_ended</div></div>
+<h2 id=slow_free>慢（前方无车），未被追尾</h2><p>同上但没被追尾；进度不够 80 % 就丢分。看画面里本车为什么不加速。</p>
+<div class=c><video controls preload=metadata src='clips/slow_free/01_ddb6a43a_0.35.mp4#t=2.3'></video><div class=m><b>ddb6a43a</b> 得分 0.35（丢 0.23 点）；事件 t = 5.3 s（本车落后日志 10 m 的时刻）；该时刻人 10.4 m/s，本车 3.2 m/s，本车落后日志 11 m；主类 low_slow_free</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_free/02_32be03e4_0.44.mp4#t=0.4'></video><div class=m><b>32be03e4</b> 得分 0.44（丢 0.20 点）；事件 t = 3.4 s（本车落后日志 10 m 的时刻）；该时刻人 37.7 m/s，本车 29.4 m/s，本车落后日志 10 m；主类 low_slow_free</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_free/03_9d9e7f39_0.44.mp4#t=3.4'></video><div class=m><b>9d9e7f39</b> 得分 0.44（丢 0.20 点）；事件 t = 6.4 s（本车落后日志 10 m 的时刻）；该时刻人 9.9 m/s，本车 4.1 m/s，本车落后日志 10 m；主类 low_slow_free</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_free/04_ffe5b17d_0.46.mp4#t=0.9'></video><div class=m><b>ffe5b17d</b> 得分 0.46（丢 0.19 点）；事件 t = 3.9 s（本车落后日志 10 m 的时刻）；该时刻人 23.4 m/s，本车 15.1 m/s，本车落后日志 11 m；主类 low_slow_free</div></div>
+<div class=c><video controls preload=metadata src='clips/slow_free/05_88bbf0c9_0.49.mp4#t=1.4'></video><div class=m><b>88bbf0c9</b> 得分 0.49（丢 0.18 点）；事件 t = 4.4 s（本车落后日志 10 m 的时刻）；该时刻人 18.4 m/s，本车 11.7 m/s，本车落后日志 10 m；主类 low_slow_free</div></div>
+<h2 id=slow_lead>慢且跟在前车后面</h2><p>前车在动、本车落后；看时距是否过大。</p>
+<p class=m>本次读数里这一类没有 scene。</p>
+<h2 id=rear_only>被追尾截断（速度比日志略低）</h2><p>本车比日志只慢一点，但后车撞上来、进度被截断；看追尾那一刻。</p>
+<div class=c><video controls preload=metadata src='clips/rear_only/01_4b5a7c8b_0.32.mp4#t=4.7'></video><div class=m><b>4b5a7c8b</b> 得分 0.32（丢 0.24 点）；事件 t = 7.7 s（被追尾）；该时刻人 13.9 m/s，本车 5.0 m/s，本车落后日志 20 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/rear_only/02_a6941bb6_0.47.mp4#t=5.7'></video><div class=m><b>a6941bb6</b> 得分 0.47（丢 0.19 点）；事件 t = 8.7 s（被追尾）；该时刻人 31.8 m/s，本车 22.1 m/s，本车落后日志 38 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/rear_only/03_2fe500f7_0.50.mp4#t=5.9'></video><div class=m><b>2fe500f7</b> 得分 0.50（丢 0.18 点）；事件 t = 8.9 s（被追尾）；该时刻人 24.1 m/s，本车 17.2 m/s，本车落后日志 31 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/rear_only/04_c0c88642_0.52.mp4#t=5.9'></video><div class=m><b>c0c88642</b> 得分 0.52（丢 0.17 点）；事件 t = 8.9 s（被追尾）；该时刻人 22.4 m/s，本车 19.8 m/s，本车落后日志 13 m；主类 low_rear_ended+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/rear_only/05_404541da_0.69.mp4#t=10.7'></video><div class=m><b>404541da</b> 得分 0.69（丢 0.11 点）；事件 t = 13.7 s（被追尾）；该时刻人 8.1 m/s，本车 3.6 m/s，本车落后日志 17 m；主类 low_rear_ended+rear_ended</div></div>
+<h2 id=with_log>停在日志也慢 / 也停的地方（没起步）</h2><p>日志在这里也很慢或停着，本车起步后仍长时间不动；看人什么时候起步、本车晚了多久。</p>
+<div class=c><video controls preload=metadata src='clips/with_log/01_7b5c9fd6_0.11.mp4#t=0.0'></video><div class=m><b>7b5c9fd6</b> 得分 0.11（丢 0.32 点）；事件 t = 0.1 s（停车开始）；该时刻人 0.1 m/s，本车 0.1 m/s，本车落后日志 0 m；主类 low_with_log+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/with_log/02_7c6529f6_0.22.mp4#t=0.0'></video><div class=m><b>7c6529f6</b> 得分 0.22（丢 0.28 点）；事件 t = 0.1 s（停车开始）；该时刻人 0.6 m/s，本车 0.6 m/s，本车落后日志 0 m；主类 low_with_log+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/with_log/03_d641893f_0.37.mp4#t=0.0'></video><div class=m><b>d641893f</b> 得分 0.37（丢 0.22 点）；事件 t = 1.6 s（停车开始）；该时刻人 1.0 m/s，本车 1.0 m/s，本车落后日志 0 m；主类 low_with_log+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/with_log/04_5c4a277a_0.42.mp4#t=0.0'></video><div class=m><b>5c4a277a</b> 得分 0.42（丢 0.20 点）；事件 t = 2.1 s（停车开始）；该时刻人 1.1 m/s，本车 1.0 m/s，本车落后日志 0 m；主类 low_with_log+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/with_log/05_81dc4ece_0.86.mp4#t=0.0'></video><div class=m><b>81dc4ece</b> 得分 0.86（丢 0.05 点）；事件 t = 0.1 s（停车开始）；该时刻人 0.0 m/s，本车 0.0 m/s，本车落后日志 0 m；主类 low_with_log</div></div>
+<h2 id=unexpl>无故停车</h2><p>日志在同位置有速度（&gt;= 2 m/s）而本车停了 &gt;= 1.5 s；看画面有没有任何停下的理由。</p>
+<div class=c><video controls preload=metadata src='clips/unexpl/01_4f7cb072_0.40.mp4#t=6.0'></video><div class=m><b>4f7cb072</b> 得分 0.40（丢 0.21 点）；事件 t = 9.0 s（停车开始）；该时刻人 23.2 m/s，本车 1.0 m/s，本车落后日志 91 m；主类 low_unexplained</div></div>
+<div class=c><video controls preload=metadata src='clips/unexpl/02_3294623f_0.42.mp4#t=3.2'></video><div class=m><b>3294623f</b> 得分 0.42（丢 0.20 点）；事件 t = 6.2 s（停车开始）；该时刻人 12.4 m/s，本车 0.9 m/s，本车落后日志 27 m；主类 low_unexplained</div></div>
+<div class=c><video controls preload=metadata src='clips/unexpl/03_a68ad579_0.43.mp4#t=5.0'></video><div class=m><b>a68ad579</b> 得分 0.43（丢 0.20 点）；事件 t = 8.0 s（停车开始）；该时刻人 14.4 m/s，本车 1.0 m/s，本车落后日志 50 m；主类 low_unexplained</div></div>
+<div class=c><video controls preload=metadata src='clips/unexpl/04_92af888e_0.49.mp4#t=1.4'></video><div class=m><b>92af888e</b> 得分 0.49（丢 0.18 点）；事件 t = 4.4 s（停车开始）；该时刻人 2.1 m/s，本车 1.0 m/s，本车落后日志 1 m；主类 low_unexplained+rear_ended</div></div>
+<div class=c><video controls preload=metadata src='clips/unexpl/05_fce18b62_0.63.mp4#t=4.5'></video><div class=m><b>fce18b62</b> 得分 0.63（丢 0.13 点）；事件 t = 7.5 s（停车开始）；该时刻人 1.8 m/s，本车 1.0 m/s，本车落后日志 4 m；主类 low_unexplained+rear_ended</div></div>
+<h2 id=late>晚起步 / 没起步</h2><p>前车走后本车迟迟不动。</p>
+<p class=m>本次读数里这一类没有 scene。</p>
+<h2 id=route_end>人停了、车没停（cor_route_end）</h2><p>人在灯口 / 停止线 / 排队处停到结束，本车以 8–16 m/s 开过去、越过日志终点被判走廊零分；看红灯、停止线、前车。</p>
+<div class=c><video controls preload=metadata src='clips/route_end/01_054b5901_0.00.mp4#t=5.6'></video><div class=m><b>054b5901</b> 得分 0.00（丢 0.36 点）；事件 t = 8.6 s（评估器判零的时刻）；该时刻人 8.1 m/s，本车 15.9 m/s，本车落后日志 -20 m；主类 cor_route_end+ran_stop_line</div></div>
+<div class=c><video controls preload=metadata src='clips/route_end/02_095cf563_0.00.mp4#t=14.5'></video><div class=m><b>095cf563</b> 得分 0.00（丢 0.36 点）；事件 t = 17.5 s（评估器判零的时刻）；该时刻人 4.9 m/s，本车 8.4 m/s，本车落后日志 -15 m；主类 cor_route_end+junction</div></div>
+<div class=c><video controls preload=metadata src='clips/route_end/03_127c4f85_0.00.mp4#t=13.3'></video><div class=m><b>127c4f85</b> 得分 0.00（丢 0.36 点）；事件 t = 16.3 s（评估器判零的时刻）；该时刻人 0.0 m/s，本车 0.7 m/s，本车落后日志 -1 m；主类 cor_route_end</div></div>
+<div class=c><video controls preload=metadata src='clips/route_end/04_2d10a08d_0.00.mp4#t=9.1'></video><div class=m><b>2d10a08d</b> 得分 0.00（丢 0.36 点）；事件 t = 12.1 s（评估器判零的时刻）；该时刻人 8.3 m/s，本车 16.5 m/s，本车落后日志 -14 m；主类 cor_route_end+junction</div></div>
+<div class=c><video controls preload=metadata src='clips/route_end/05_35e082a4_0.00.mp4#t=1.4'></video><div class=m><b>35e082a4</b> 得分 0.00（丢 0.36 点）；事件 t = 4.4 s（评估器判零的时刻）；该时刻人 2.7 m/s，本车 8.3 m/s，本车落后日志 -5 m；主类 cor_route_end</div></div>
+<h2 id=coll_lead>撞前车 / 静止车</h2><p>本车在慢速下撞上同向前车或静止车；看撞前的刹车。</p>
+<div class=c><video controls preload=metadata src='clips/coll_lead/01_b680a689_0.00.mp4#t=7.6'></video><div class=m><b>b680a689</b> 得分 0.00（丢 0.36 点）；事件 t = 10.6 s（评估器判零的时刻）；该时刻人 1.6 m/s，本车 3.4 m/s，本车落后日志 10 m；主类 coll_stationary+oncoming_lane</div></div>
+<div class=c><video controls preload=metadata src='clips/coll_lead/02_c8641276_0.00.mp4#t=11.6'></video><div class=m><b>c8641276</b> 得分 0.00（丢 0.36 点）；事件 t = 14.6 s（评估器判零的时刻）；该时刻人 11.6 m/s，本车 5.1 m/s，本车落后日志 41 m；主类 coll_veh_ahead</div></div></html>
