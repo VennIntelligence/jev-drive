@@ -25,7 +25,7 @@ case ${1:-} in
 submit)
   [[ ! -e $M/$A && ! -e $O/ident ]] || { echo "$M/$A or $O/ident exists: never overwritten" >&2; exit 1; }
   [[ -d $OLD ]] || git worktree add --detach $OLD $OLD_REV || exit 1
-  f=$(sub tts-fit --vram 16 --cpu 8 --ram 64 --timeout-h 1 -- $TR $PY fit) || exit 1
+  f=$(sub tts-fit --vram 16 --cpu 8 --ram 64 --timeout-h 1 --preflight "$TR $PY fit --smoke" -- $TR $PY fit) || exit 1
   mkdir -p $O/ident; L=$O/ident/n2.txt; head -2 $DATA_DIR/runs/onpol_long/lists/held_n6/c0.txt > $L
   g=()
   for x in old new on; do
