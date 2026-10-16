@@ -50,8 +50,8 @@ def slim_one(f):
         S.setdefault(r["session"], dict(scene=r["scene"], rows=[]))["rows"].append(
             (int(r["k"]), int(r["now"]), nan(fx.get("v0")), nan(p[0]), nan(L.get("d")), nan(L.get("vl")), nan(L.get("a_mpc")), nan(L.get("a_e2e")),
              L.get("src") == "mpc", nan(L.get("cut")), str(A.get("won") or ""), str(A.get("near") or ""), nan(A.get("v_set")), nan(A.get("v_lead")),
-             nan(A.get("v15")), nan(A.get("v_model")), str(A.get("guard") or ""), nan(A.get("v_curve"))))
-    cols = ("k", "now", "v0", "p0", "d", "vl", "a_mpc", "a_e2e", "mpc", "cut", "won", "near", "v_set", "v_lead", "v15", "v_model", "guard", "v_curve")
+             nan(A.get("v15")), nan(A.get("v_model")), str(A.get("guard") or ""), nan(A.get("v_curve")), nan(L.get("vm"))))
+    cols = ("k", "now", "v0", "p0", "d", "vl", "a_mpc", "a_e2e", "mpc", "cut", "won", "near", "v_set", "v_lead", "v15", "v_model", "guard", "v_curve", "vm")
     out = {}
     for s, d in S.items():
         c = list(zip(*sorted(d["rows"], key=lambda x: x[0])))
@@ -107,6 +107,7 @@ def roll_rows(job):
                  p0=float(d["p0"][n]), d=float(d["d"][n]), vl=float(d["vl"][n]), a_mpc=float(d["a_mpc"][n]), a_e2e=float(d["a_e2e"][n]),
                  mpc=bool(d["mpc"][n]), cut=float(d["cut"][n]), won=str(d["won"][n]), near=str(d["near"][n]), v_set=float(d["v_set"][n]),
                  v_lead=float(d["v_lead"][n]), v15=float(d["v15"][n]), v_model=float(d["v_model"][n]), guard=str(d["guard"][n]),
+                 vm=float(d["vm"][n]) if "vm" in d else np.nan,
                  gap=np.nan, veh_v=np.nan, veh_id="", gap_h_t=np.nan, gap_h_s=np.nan, v_h_s=np.nan)
         if V:
             gap, vv, vid, _ = V[0]
