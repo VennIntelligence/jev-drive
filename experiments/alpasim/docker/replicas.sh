@@ -34,10 +34,12 @@ while (( got < K )); do
   (( $(date +%s) - ${t0%.*} > 600 )) && die "not all listening after 600 s"; sleep 0.3
 done
 idle=$(used); st "all $K listening (cold start ${cold[*]} s), card $idle MiB"
+echo "0 " > "$OUT/.peak"
 ( peak=0; declare -A per
   while [[ ! -f $OUT/.stop ]]; do
     u=$(used); (( u > peak )) && peak=$u
     while IFS=', ' read -r pid mem; do
+      [[ $pid =~ ^[0-9]+$ && $mem =~ ^[0-9]+$ ]] || continue          # "[N/A]" or no process: skip
       for i in $(seq 0 $((K - 1))); do
         id=$(docker inspect -f '{{.Id}}' "$P0-$i" 2>/dev/null | cut -c1-12)
         [[ -n $id ]] && grep -q "$id" "/proc/$pid/cgroup" 2>/dev/null && (( mem > ${per[$i]:-0} )) && per[$i]=$mem
