@@ -139,6 +139,19 @@ DESIRE D1 / D2 (2026-10-17, WAIT-TRAIN prereg Amendment C; lib/desire_train.py);
             desire_train.d2_loss of (plan(x, d) - sg[plan(x, 0)]) against shipped Cinque's increment from DIR/<data>.npz (dt.py teacher), mean
             over those rows x L. 0 = off: no operation is added.
 
+RETAIN / ANTI-COPY (2026-10-17, experiments/wait_cap/plans/2026-10-17-retain-anticopy-draft.md; decision 335 options iii / iv); every flag off
+= the recipe above operation for operation:
+  --kd-lam L [--kd-k 16 --kd-pool on1_WAIT --kd-groups W:1,G:1,SY:1]   P0 retention (lib/retain_train.py): every step K rows of the retention
+            pool (rows the stage never exercises: wait / launch / stop / yield) get a second forward and the anchor `cons` distance of their plan
+            to shipped Cinque's plan, mean x L; own rng stream [seed, 0, 151]. 0 = off: no operation is added.
+  --kd-own F        (with --kd-lam) the same distance on a share F of the non-anchor normal rows of the main forward (own stream [seed, 0, 157]),
+            x L, mean over those rows. 0 (default) = off.
+  --ego-scale-speed P [--ego-scale-max M]   history-speed noise (the ego-history bottleneck of ChauffeurNet's past-motion perturbation, against
+            the own-motion trend of decision 315): on a share P of the non-anchor, non-pool rows (the imitation rows), the fed speed history is
+            rescaled by s ~ U[1 - M, 1 + M]: vx, vy x s, ax, ay x s^2, the history poses' x, y x s (the same path at s x the speed; yaws, the
+            command and the route memory unchanged); the imitation target stays the log, so the plan's speed must come from the scene, not the
+            history's scale. Own rng stream [seed, 0, 149]; training only. 0 = off: no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -161,6 +174,7 @@ import rmem as RM  # noqa: E402
 FEAT = None
 HEAD = dict(d=128, layers=2, heads=4)
 EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_features: vx, vy, ax, ay, history poses x / y (not present, cmd, yaw)
+EGO_SCALE_POW = [1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]                  # --ego-scale-speed: power of s per EGO_SPEED column (velocity, acceleration, pose)
 
 
 def feats(cfg_data, S, dev, order=False, old=False):
@@ -721,6 +735,19 @@ def cmd_train(a):
         TD = torch.as_tensor(DT.load_teacher([_pl.Path(a.d2_teacher) / f"{d}.npz" for d in a.data], S.tab["names"][:n_base]), device=dev)
         side_d2 = side_np[:n_base] if des_on else np.zeros(n_base, np.int8)
         drec |= dict(d2_lam=a.d2_lam, d2_frac=a.d2_frac, d2_teacher=str(a.d2_teacher))
+    kd_on, kd_own = a.kd_lam > 0, a.kd_lam > 0 and a.kd_own > 0       # RETAIN (docstring); off: no operation below is added
+    if kd_on:
+        import retain_train as RTN
+        assert not (lc_on or ns.rx or ST is not None or ns.head.get("order")), "--kd-lam: not with --lc-cf / --rx / STACK terms / --rm-order"
+        RS = RTN.RetainSet(a.kd_pool, dev, a.kd_groups)
+        assert RS.ego.shape[1] == S.ego.shape[1], f"--kd-pool {a.kd_pool}: fed row {RS.ego.shape[1]} != the store's {S.ego.shape[1]}"
+        krng = np.random.default_rng([cfg.seed, 0, 151])
+        kdrec = RS.rec | dict(kd_lam=a.kd_lam, k=a.kd_k, own=a.kd_own)
+        if kd_own:
+            kown = np.random.default_rng([cfg.seed, 0, 157])
+    if a.ego_scale_speed > 0:                                         # ANTI-COPY history-speed noise (docstring)
+        srng = np.random.default_rng([cfg.seed, 0, 149])
+        spow = torch.as_tensor(EGO_SCALE_POW, device=dev, dtype=torch.float32)
 
     def draw():
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
@@ -789,6 +816,13 @@ def cmd_train(a):
         if des_on or d2_on:
             run.info(f"DESIRE D1 / D2: {json.dumps(drec)}")
             run.summary.update(desire=drec)
+        if kd_on:
+            run.info(f"RETAIN: P0 plan distillation, {json.dumps(kdrec)}")
+            run.summary.update(retain=kdrec)
+        if a.ego_scale_speed > 0:
+            screc = dict(share=a.ego_scale_speed, max=a.ego_scale_max, cols=EGO_SPEED, pow=EGO_SCALE_POW, rows="non-anchor, non-pool")
+            run.info(f"ANTI-COPY history-speed noise: {json.dumps(screc)}, rng [seed, 0, 149]")
+            run.summary.update(ego_scale=screc)
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -853,6 +887,12 @@ def cmd_train(a):
                     bs_ = torch.stack([na.sum(), (dm & na).sum()] + [x for c in range(3) for x in ((na & (cl == c)).sum(), (na & op & (cl == c)).sum())]).double()
                     dacc += bs_
                 ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
+            if a.ego_scale_speed > 0:                                 # history-speed noise on the imitation rows (anchor and pool rows never)
+                us = torch.as_tensor(srng.random((len(r), 2)), device=dev, dtype=torch.float32)
+                sm = (us[:, 0] < a.ego_scale_speed) & ~anchor[:len(r)] & ~is_pool[rows[:len(r)]]
+                sc = torch.where(sm, 1.0 + a.ego_scale_max * (2.0 * us[:, 1] - 1.0), torch.ones_like(us[:, 1]))
+                ego[:len(r), esp] = ego[:len(r), esp] * sc[:, None].pow(spow[None])
+                Ls_s = dict(scale_share=sm.float().mean(), scale_abs=((sc - 1).abs().sum() / sm.sum().clamp_min(1)))
             dq = None
             if des_on:                                                # D1: the table rows' desire (anchor rows never)
                 sd_ = SIDE[rows].long() * (~anchor).long()
@@ -866,6 +906,20 @@ def cmd_train(a):
                 total, Ls = LS(out, S, rows, anchor)
             if des_on:
                 Ls["d1/rows"] = (sd_ != 0).sum().float()
+            if a.ego_scale_speed > 0:
+                Ls["scale/share"], Ls["scale/abs"] = Ls_s["scale_share"], Ls_s["scale_abs"]
+            if kd_on:                                                 # RETAIN: P0's plan on the retention rows (second forward), own rows optional
+                ik = RS.draw(krng, a.kd_k)
+                lk, ww = RS.loss(model, ik, LS)
+                Ls["kd"], Ls["kd/wait_W"] = lk.mean(), ww
+                total = total + a.kd_lam * Ls["kd"]
+                if kd_own:
+                    so = torch.as_tensor(kown.random(nN) < a.kd_own, device=dev) & ~anchor[:nN] & S.has_fut[rows[:nN]]
+                    if so.any():
+                        sel = torch.zeros(len(r), dtype=torch.bool, device=dev)
+                        sel[:nN] = so
+                        Ls["kd_own"] = RTN.own_loss(out, S, rows, sel, LS).mean()
+                        total = total + a.kd_lam * Ls["kd_own"]
             if d2_on:                                                 # D2: desire increment of the plan against shipped Cinque's
                 u2, s2, a2 = d2rng.random(nN), d2rng.choice(np.array([1, -1]), nN), d2rng.integers(0, len(DT.AGES), nN)
                 an_ = an[:nN]
@@ -1106,6 +1160,13 @@ if __name__ == "__main__":
         p.add_argument("--d2-lam", type=float, default=0.0, help="DESIRE D2: weight of the desire-delta distillation (0 = off)")
         p.add_argument("--d2-frac", type=float, default=0.125, help="DESIRE D2: share of the non-anchor normal rows (anchors always)")
         p.add_argument("--d2-teacher", default="", help="DESIRE D2: dir of dt.py teacher files <data>.npz")
+        p.add_argument("--kd-lam", type=float, default=0.0, help="RETAIN: weight of the P0 plan distillation on the retention rows (0 = off)")
+        p.add_argument("--kd-k", type=int, default=16, help="RETAIN: retention rows per step (second forward)")
+        p.add_argument("--kd-pool", default="on1_WAIT", help="RETAIN: retention pool (cache dir with tab `cell`, @warp teacher, route features)")
+        p.add_argument("--kd-groups", default="W:1,G:1,SY:1", help="RETAIN: draw shares of the wait / launch / stop+yield groups")
+        p.add_argument("--kd-own", type=float, default=0.0, help="RETAIN: share of the non-anchor normal rows with the same term (0 = off)")
+        p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
+        p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
         p.add_argument("--rx", action="store_true", help="STACK: the reflex module (lib/reflex.py)")
         p.add_argument("--rx-drop", type=float, default=0.25)
         p.add_argument("--rx-lr", type=float, default=3e-4)
@@ -1131,6 +1192,8 @@ if __name__ == "__main__":
     assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop (--ego-drop-speed drops the speed history only)"
     assert 0 <= a.ego_drop_speed < 1, "--ego-drop-speed is a share in [0, 1)"
     assert not getattr(a, "ego_drop_open", False) or a.ego_drop_speed > 0, "--ego-drop-open: needs --ego-drop-speed"
+    assert 0 <= getattr(a, "ego_scale_speed", 0.0) <= 1 and 0 < getattr(a, "ego_scale_max", 0.2) < 1, "--ego-scale-speed in [0, 1], --ego-scale-max in (0, 1)"
+    assert getattr(a, "kd_own", 0.0) == 0 or getattr(a, "kd_lam", 0.0) > 0, "--kd-own: needs --kd-lam"
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False
