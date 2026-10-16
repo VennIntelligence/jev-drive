@@ -247,3 +247,7 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   产出：登记口径（专家无接触、不冲线、且分歧过线）12 832 自身行 / 1 007 场景 / 97 log，三分之二是直路速度；只看横向 / 航向 5 403 行（路口 + 弯前 1 990）；专家在 served 接触处给出干净 plan 的 1 156 行（路口 + 弯前 466，失败前 3 s 168）。
   逐行表和专家 plan 在盒上 `runs/route_follow/dagger_check/{rows.parquet,expert_L18RSG.npz}`。代价 < 0.05 card-h、约 1 core-h。下一轮怎么用（纵向是否屏蔽、停止线排除）由主会话定。
 
+- 10-16 09:10：**jlon281 读完**（spin_v9 常规读，Amendment 6 以用户豁免通过；`results/spin_v9/a6_jlon_281*.md`）：RSG-L18-s0 在 gate + jlon_v=8 下 PAI 281 对 RSG-L18-s0-gate 配对：零分 71 对 71（+0 [−5, +5]），at-fault 13 对 12（+1 [−2, +5]），
+  均分 0.5855 对 0.5860（−0.0004 [−0.0166, +0.0165]）；spin 2 对 2，严格转弯完成 4 对 4，考题 72 +0.0052 [−0.0084, +0.0237]，被追尾 105 对 108。按 Amendment 6 文字（零分与 at-fault 的 CI 含 0 即持平）v8b 可替代 v8 作 PAI 默认，决定留给主会话。
+  脚本小事：`sv9.sh jlon281` 里 `rf_v2pai.sh read` 的转弯表全是 missing（参照 pkl 的标签没映射），已用 `:label` 语法重算，原错表留在盒上 `turns_wrongref.*`。
+- 10-16 09:10：Tokyo 二号种子读（主会话改派）：RCVRL-L18-s1、RCVRLF-L18-s1（对 Tokyo 参照 RSG-L18-s0-gate 配对；检查点从盒上拉，md5 一致），08:54 起 RCVRL 在两卡上跑，随后 RCVRLF；之后线 3 与转弯表，结果写 `results/recovery_envelope/tokyo_pai.md`。
