@@ -8,6 +8,9 @@ Wizard overrides that turn the eval video off (the official ec2 presets run with
                      five extra PAI cameras cost as much as at 1080 px: Tokyo, bit-identical but no faster.)
   ALPASIM_FAST=solo  the driver's camera alone: cheaper, but on PAI scenes the clock moves by 0-30 ms (the cameras' first frames differ), so
                      the run is a perturbed copy, not the same run (results/pai_fast.md).
+On nuPlan presets (+e2e_challenge_nuplan=*) 1 means solo: the clock there is synthetic (scene start + shutter, the same for all 8
+cameras) and MTGS renders all of them in one pass at native size whatever is requested, so the unread ones cost only their JPEG encode,
+transport and logging (results/pai_fast.md "nuPlan"). The eval video is already off in the nuPlan `full` preset.
 The driver and the image scorer read only that camera; official submissions keep the full set. ALPASIM_VIDEO=1 keeps the eval video
 (it draws the driver's camera only, so it works with either mode).
 
@@ -25,6 +28,7 @@ import ast, os, re, sys
 import yaml
 
 TINY, ONCE_US = 64, 100_000_000     # the cameras nobody reads under ALPASIM_FAST=1: px height (aspect kept), frame interval (> a rollout)
+SHUTTER_US = 17_000                 # RuntimeCameraConfig.shutter_duration_us default (alpasim_runtime/config.py)
 
 
 def driver_camera(driver_py, env=None):
@@ -70,6 +74,13 @@ def overrides(src, wizard_args, driver_py, env=None, mode="1"):
         raise SystemExit(f"sim_fast: the driver's camera {cam} is not in preset {presets[0]}'s cameras {[c.get('logical_id') for c in cams]}")
     if mode not in ("1", "solo"):
         raise SystemExit(f"sim_fast: ALPASIM_FAST={mode}: 1 | solo")
+    # nuPlan (MTGS on trajdata scenes): the first frame is synthesised as scene start + shutter (unbound_rollout.py,
+    # _synthetic_first_camera_frame_ranges_us) and the renderer draws every asset camera at native size whatever is requested
+    # (plugins/mtgs/server/servicer.py, _render_aggregated_batch). Dropping the unread cameras keeps the clock whenever none of
+    # them closes its shutter earlier than the driver's, and a tiny request would come back full size anyway: there 1 = solo.
+    shutter = lambda c: c.get("shutter_duration_us", SHUTTER_US)
+    if presets[0][0].startswith("e2e_challenge_nuplan") and all(shutter(c) >= shutter(entry[0]) for c in cams):
+        mode = "solo"
     keep = []
     for c in (entry if mode == "solo" else cams):
         if c["logical_id"] != cam:
