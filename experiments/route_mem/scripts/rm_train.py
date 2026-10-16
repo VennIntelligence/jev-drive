@@ -307,7 +307,9 @@ def rx_feats(ns, dev):
     S = ns.S
     X = torch.zeros(S.n, RX.SF, device=dev)
     rec = dict(pool=None)
-    if ns.n_on:
+    if ns.n_on and RX.OFF:                                            # JEV_REFLEX_OFF=1 (reads only): the module's switch-off, valid 0 everywhere
+        rec = dict(pool=ns.cfg.data[-1], off=True)
+    elif ns.n_on:
         pool = ns.cfg.data[-1]
         z = np.load(data_dir() / "runs/route_follow/stack/self" / f"{pool}.npz")
         assert np.array_equal(z["names"].astype(str), S.tab["names"][ns.on0:].astype(str)), f"self-state rows differ from {pool}'s"
