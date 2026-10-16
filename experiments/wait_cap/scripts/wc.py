@@ -409,6 +409,55 @@ def cmd_closed(a):
     print((out / "closed.md").read_text())
 
 
+STAGES = (("P0", ["P0"]), ("P2-F", ["P2-F-s0", "P2-F-s1"]), ("P2H10-F", ["P2H10-F-s0", "P2H10-F-s1"]), ("YR10m10-F", ["YR10m10-F-s0", "YR10m10-F-s1"]),
+          ("APY10m10-AB", ["APY10m10-AB-s0", "APY10m10-AB-s1"]), ("YS-L18", ["YS-L18-s0", "YS-L18-s1"]), ("YS2G-L18", ["YS2G-L18-s0", "YS2G-L18-s1"]),
+          ("RB0-F", ["RB0-F-s0", "RB0-F-s1"]), ("RSG-L18", ["RSG-L18-s0", "RSG-L18-s1"]), ("RBSG2-L18", ["RBSG2-L18-s0", "RBSG2-L18-s1"]))
+PRED = {"P2-F": "P0", "P2H10-F": "P2-F", "YR10m10-F": "P2H10-F", "APY10m10-AB": "YR10m10-F", "YS-L18": "YR10m10-F", "YS2G-L18": "YS-L18",
+        "RB0-F": "P0", "RSG-L18": "RB0-F", "RBSG2-L18": "RB0-F"}
+
+
+def cmd_lines(a):
+    """The registered lines on 2-seed row means (prereg lines 1-4), the moving-cell stop rate, and the robustness thresholds."""
+    from jevdrive import stats
+    z = dict(np.load(a.rows, allow_pickle=False))
+    lead = {k: z[f"lead_{k}"] for k in ("x", "y", "yaw", "l", "w")}
+    C, g = z["cell"], z["log"]
+    Q = {}
+    for st, tags in STAGES:
+        acc = []
+        for t in tags:
+            p = np.load(Path(a.plans) / f"{t}.npz")
+            pos = {k: i for i, k in enumerate(p["names"].tolist())}
+            r = classify(p["plan"][np.array([pos[k] for k in z["token"].tolist()])], z["ref"], lead, None)
+            acc.append(dict(wait=r["cls"] == 0, byp=r["cls"] == 2, into=r["into"], stop=r["arc4"] <= z["a4"] + 2.0,
+                            wait05=r["arc4"] < 0.5, wait20=r["arc4"] < 2.0, byp05=(r["arc4"] >= 1.0) & (r["lat"] >= 0.5), over=r["arc4"] - z["a4"]))
+        Q[st] = {k: np.mean([x[k] for x in acc], 0).astype(float) for k in acc[0]}
+    W, G = np.isin(C, ("W_L", "W_N")), np.isin(C, ("G_L", "G_N"))
+    BL = np.isin(C, ("W_L", "S_L"))
+    L = ["# WAIT-CAP registered lines (2-seed row means; CI = log-clustered bootstrap B 10 000 seed 0)", "",
+         "| stage | wait W | wait G | D = W - G | bypass W_L+S_L | bypass F_L (base rate) | into lead W_L | stop S_L | stop S_N | over S_N med (m) | wait W @0.5 / @2.0 m | bypass W_L+S_L @0.5 m |",
+         "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    f = lambda x, m: stats.fmt(stats.bootstrap(x[m], groups=g[m]))  # noqa: E731
+    out = {}
+    for st, _ in STAGES:
+        q = Q[st]
+        dW, dG = stats.bootstrap(q["wait"][W], groups=g[W]), stats.bootstrap(q["wait"][G], groups=g[G])
+        L.append(f"| {st} | {stats.fmt(dW)} | {stats.fmt(dG)} | {dW['mean'] - dG['mean']:.3f} | {f(q['byp'], BL)} | {f(q['byp'], C == 'F_L')} | {f(q['into'], C == 'W_L')} | "
+                 f"{f(q['stop'], C == 'S_L')} | {f(q['stop'], C == 'S_N')} | {np.median(q['over'][C == 'S_N']):.2f} | "
+                 f"{q['wait05'][W].mean():.3f} / {q['wait20'][W].mean():.3f} | {q['byp05'][BL].mean():.3f} |")
+        out[st] = dict(wait_W=dW["mean"], wait_G=dG["mean"], D=dW["mean"] - dG["mean"], byp_BL=float(q["byp"][BL].mean()))
+    L += ["", "## paired stage differences (stage - predecessor; and stage - P0)", "", "| stage | vs | wait W | bypass W_L+S_L | into lead W_L |", "|---|---|--:|--:|--:|"]
+    for st, _ in STAGES[1:]:
+        for ref in dict.fromkeys((PRED[st], "P0")):
+            pr = lambda k, m: stats.fmt(stats.paired(Q[st][k][m], Q[ref][k][m], groups=g[m]))  # noqa: E731
+            L.append(f"| {st} | {ref} | {pr('wait', W)} | {pr('byp', BL)} | {pr('into', C == 'W_L')} |")
+    o = Path(a.out)
+    o.mkdir(parents=True, exist_ok=True)
+    (o / "lines.md").write_text("\n".join(L) + "\n")
+    (o / "lines.json").write_text(json.dumps(out, indent=1))
+    print((o / "lines.md").read_text())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -424,10 +473,14 @@ if __name__ == "__main__":
     p.add_argument("--plans", required=True)
     p.add_argument("--tags", nargs="+", required=True)
     p.add_argument("--out", required=True)
+    p = sp.add_parser("lines")
+    p.add_argument("--rows", required=True)
+    p.add_argument("--plans", required=True)
+    p.add_argument("--out", required=True)
     p = sp.add_parser("closed")
     p.add_argument("--pub", nargs="+", required=True)
     p.add_argument("--held", nargs="+", required=True)
     p.add_argument("--windows", required=True)
     p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"closed": cmd_closed, "select": cmd_select, "index": cmd_index, "define": cmd_define, "plans": cmd_plans, "report": cmd_report}[a.cmd](a)
+    {"lines": cmd_lines, "closed": cmd_closed, "select": cmd_select, "index": cmd_index, "define": cmd_define, "plans": cmd_plans, "report": cmd_report}[a.cmd](a)
