@@ -651,10 +651,16 @@ def held_turns(d, J, C):
     """Amendment C 6: rf_follow's completed held turns (DIR/follow) per tag, 2-seed means, the line J >= C - 2, paired (rf_recov_post.h2_held)."""
     sys.path.insert(0, str(REPO / "experiments/route_follow/scripts"))
     import rf_recov_post as RP
+    import pandas as pd
     h = RP.h2_held(Path(d), J, C)
     assert h is not None, f"{d}/follow: rf_follow output missing for {J + C}"
     turns = {t: h["counts"][t]["turns"] for t in J + C}
     assert len(set(turns.values())) == 1, f"turn sets differ between tags: {turns}"
+    S = pd.read_csv(Path(d) / "follow/scenes.csv")
+    T = S[S.turn.astype(str).str.lower().isin(("true", "1", "1.0"))]
+    want = set((RES / "held_turns24.txt").read_text().split())                # decisions 303 / 307: RSG-L18's 24 held turns (rf_follow)
+    for t in J + C:
+        assert set(T[T.label == f"{t}@18"].scene) == want, f"{t}: held turn scenes differ from held_turns24.txt"
     cj, cc = (float(np.mean([h["counts"][t]["completed"] for t in X])) for X in (J, C))
     return dict(turns=turns[J[0]], completed={t: h["counts"][t]["completed"] for t in J + C}, mean_J=cj, mean_C=cc, line=bool(cj >= cc - 2),
                 paired=h["paired"], common_turns=h["common_turns"], logs=h["logs"])
