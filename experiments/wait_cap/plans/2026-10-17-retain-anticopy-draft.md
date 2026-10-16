@@ -1,6 +1,6 @@
-# 草案：第 335 / 336 条之后的候选 pilot——(iii) 保留 P0 的「到达时停」（RETAIN，a 补丁 / b 重建底座）与 (iv) 打断自身运动趋势（ANTI-COPY）（2026-10-17 夜，未启动）
+# 草案：第 335 / 336 条之后的候选 pilot——(iii) 保留 P0 的「到达时停」（RETAIN，a 补丁 / b 重建底座）与 (iv) 打断自身运动趋势（ANTI-COPY）（2026-10-17 夜）
 
-**状态：草案**。代码、恒等检查、冒烟都已备好，**没有任何 pilot 启动**。第 336 条（补记 E）之后 (iii) 是首选、(iv) 降为次要；早上由用户选一条（或两条），选定后把本文件改成正式预登记
+**状态：正式预登记（2026-10-17 04:00 CST，主会话依用户当晚「遇异常读数可改道、卡要排满」的授权定稿）**。三条 pilot 都起：(iii-a) RTA03P / RTA1P、(iii-b) RTB1 / RTB3、(iv) AC 两档，各自按下文的线与 gate 判；pilot 都是开环判词，(iv) 过 gate 时自动交 held 460（链里自带），(iii-a) 过 gate 时由主会话补交 held 460 对 WTCP-L18-s0，(iii-b) 过 gate 不自动往下（重放 RB0 / L18 等用户）。任何正式臂（2 seed 全长）都等用户早上定。下面的线写在任何一个 pilot 臂的输出之前，未改。
 （去掉「草案」、补上选择理由），push 后再提交。下面的线写在任何一个 pilot 臂的输出之前。
 
 代码：`experiments/route_mem/scripts/rm_train.py`（`--kd-lam / --kd-mode / --kd-k / --kd-pool / --kd-groups / --kd-nav / --kd-nav-k`，`--ego-scale-speed / --ego-scale-max`，
