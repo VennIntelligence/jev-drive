@@ -182,3 +182,22 @@ WAIT 的 pilot 尚未开始（链在等最后 5 个 trainval 归档），对照�
 7. **其余不变（e）**：闭环链 held → 逐场景 → 公开护栏 → PAI 281 的线、读法、对照（C 与 RSG-L18-s0 存档 PAI 参照）全部照第 7 节，只是 J 换成 WD。
    serve 配置也照登记（driver 不喂 desire，队列全 0）：这条链量的是 WAIT 能力与「desire 训练关着 desire 时不伤闭环」；desire 在闭环里的作用是 D0 线（driver 侧喂 desire）的读数，不在本链。
 8. **成本增量**：教师 desire 预算 ~0.7 卡时、WDGG 60 步 ~0.05、合成 pilot 2 臂 + 读 ~0.5、dc 读 ~0.2；正式 + 闭环链与原登记相同（~20 卡时，WAIT-only 全量不再跑）。
+
+## 补记 C1：D1 / D2 的实现（合成 pilot 之前；不含任何 WD 臂读数）
+
+- 代码：`PModel.forward(desire=)`（pp_train；None 时调用不变）、`lib/desire_train.py`（队列、D1 表、D2 教师与损失）、rm_train `--desire-rows / --d1-k / --d2-lam / --d2-frac / --d2-teacher`
+  （全关时不加任何操作；rng 流 D1 槽 [seed, 0, 131]、脉冲年龄 [seed, 0, 137]、D2 [seed, 0, 127]）、`experiments/desire_cap/scripts/dt.py`（teacher / rows / read）、
+  wt.py `wdgate`、`clgate --follow`、wt.sh `wd-*`。
+- **代码恒等**：60 步 RSG-L18 原配方，520e9407 的代码（D1 / D2 之前）对现代码（D1 / D2 关）→ `wd_code_identity.json`（结果见补记 C2）。
+  这一条是必须的：WAIT 链的 WTGG-off / WTGG-w0 与 RSG 哈希只比较抽样，不比较新旧代码的数值；对照 C 是旧代码训的。
+- **D2 教师**：出厂 Cinque port fp16，训练 Store 同一 warp token，12 个 navtrain 分片全部行，8 个臂（LCL / LCR × 年龄 0 / 0.4 / 1 / 2 s）减 none 的后轴 (x, y)（8 个位姿）。
+  G-proto：每个分片前 256 行、每个臂，`desire=` 与 dc.py 的 policy_feeds 包装逐位相同（分片 0：最大差 0.0）。
+- **D2 抽样**：锚行全部 + 非锚普通行中无 D1 desire 的按 1 / 8；侧与年龄均匀。每步约 26 个锚行 + 约 9 个普通行（d_frac 0.25，普通行 102）。
+- **D1**：每 batch 4 个槽（navtrain 训练 split 的表行）；另外表里的任一行（navtrain 或池行）只要非锚、进了 batch 就喂它的 desire。navtrain `lc` 行要求规则侧 = 人侧：
+  人侧 = 人 4 s 后轴 y 对「留在原车道」中心线（rf_cfpool poly，在人 4 s 弧长处）的符号，poly 缺失时用人 4 s 的 y。池行（on1_L18RBW 全部，含 WAIT 行）只要规则触发。
+  规则 = `lib/route_desire.py` 的 `lc_intent` 与 `LC_MIN_V`（D0 线；本线只 import）；版本 hash 写进 d1_rows.npz / run summary。
+- **合成 pilot 读**：WAIT 读数与第 6 节相同；desire 读 = dc.py plans（nav + pai）+ `dt.desire_read`（dc.py 自己的 lc_pooled / resp / side_resp，P0 取存档 plan；
+  对 RSG-L18-s0 复现第 332 条：P0 1.04 / LCL 1.09 / LCR 0.98 / 方向 1.000，PAI P_lca 1.52）。
+- **held 转弯集合**：`results/wait_train/held_turns24.txt`（RSG-L18 的 rf_follow 24 个转弯场景，与第 303 / 307 条同一集合）；每个 tag 的转弯场景必须等于这个集合，否则 gate 报错不判。
+- **退路的执行**：`wd-deadline` 一个池作业，WAIT 判词（pilot_gate.json）后睡到 24 h，没有 `WD_PASS` 就跑 WAIT-only 全量；合成 gate 失败也立即退路；`FALLBACK` / `WD_PASS`
+  两个标记保证两条路只走一条。
