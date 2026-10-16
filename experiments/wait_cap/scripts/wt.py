@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WAIT-TRAIN (plans/2026-10-17-wait-train-prereg.md, design plans/2026-10-16-wait-train-design.md): same-domain wait / launch / stop rows from
+"""WAIT-TRAIN (plans/2026-10-16-wait-train-prereg.md, design plans/2026-10-16-wait-train-design.md): same-domain wait / launch / stop rows from
 the downloaded NAVSIM trainval camera archives, packed as on-policy pool rows that carry ONLY an arc-length speed loss (lib/wc_arc.py), appended
 to RSG-L18's pool on1_L18RB0 -> on1_L18RBW; the pilot / closed-loop gates. Box, repo root; chain in wt.sh.
 

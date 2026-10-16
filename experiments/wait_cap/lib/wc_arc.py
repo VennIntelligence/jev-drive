@@ -1,4 +1,4 @@
-"""WAIT-TRAIN arc-length speed loss (plans/2026-10-17-wait-train-prereg.md, "Loss"): the --on-lon module of onpol_nuplan's trainer
+"""WAIT-TRAIN arc-length speed loss (plans/2026-10-16-wait-train-prereg.md, "Loss"): the --on-lon module of onpol_nuplan's trainer
 (on_train.py --on-lon wc_arc, pool contract experiments/onpol_nuplan/plans/on_pool_format.md), for the merged pool on1_L18RBW.
 
     pack = wc_arc.load(pool_dir, names, device)   # <pool>/wc_arc.npz (wt.py pack): tokens = the pool names, s_h (N, 8) the human's arc length

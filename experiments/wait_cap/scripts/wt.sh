@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# WAIT-TRAIN chain (plans/2026-10-17-wait-train-prereg.md). Box, repo root; every job through the GPU pool, --after chained; ids in $O/jobs.txt.
+# WAIT-TRAIN chain (plans/2026-10-16-wait-train-prereg.md). Box, repo root; every job through the GPU pool, --after chained; ids in $O/jobs.txt.
 #   wt.sh rows                  one submit: select (+ leak check, split) -> index -> pp_prep W -> route memory -> teacher -> pack (on1_WAIT, merged
 #                               on1_L18RBW, flags) -> the 60-step identity runs WTGG-off (RSG-L18 recipe) / WTGG-w0 (merged pool, new rows weight 0) -> bitcmp
 #   wt.sh pilot                 WTJ2P / WTJ5P / WTCP -L18-s0, 1 000 steps -> waitcap_test plans + dev plans -> gate (on PASS submits `full <dose>`)
