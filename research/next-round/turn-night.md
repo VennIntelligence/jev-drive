@@ -285,3 +285,4 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
   - 驱动改动：JEV_PERTURB 可与 JEV_EXPERT_FROM 同开，317 的 session 重跑逐位相同。另修了 n-read 的交接判定。整条链 smoke 全通：79 行，合并、pack、20 步训练都跑过。
   - 花费 2.3 card-h。
 - 10-16 11:00 JST（主会话）：JOINT-DAGGER 10 % pilot held 460 闭环零分 +38、at-fault +31、转弯 −6：关闭（决定 321）。几何目标在自身状态上打掉避让，第三次同向（d286、d303、d321）。
+- 10-16 13:00 JST（主会话）：RECOVERY-ENVELOPE 收尾（决定 322，无臂采用；RL PAI 零分 +7）。两台机器清理腾出约 1.5 TiB（清单 experiments/cl_infra/cleanup/）；Tokyo 上孤儿 SLOW PAITV 建池进程已停。
