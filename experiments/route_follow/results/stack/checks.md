@@ -72,3 +72,69 @@ module at its zero init; STKRX1-test = the same with gate 1 and out weights N(0,
   offroad at 13.5 % of its duration: this is a test checkpoint with random weights, so that says nothing about the module.
 
 Cost: about 1 GPU-hour (ckpt 1 min; replays 2 x ~6 min; 6 three-scene reads ~5 min each; 2 one-scene PAI runs ~4.5 min each) + ~2 CPU-min.
+
+## C2: can a small consequence head learn per-time contact of any candidate plan?
+
+**Verdict: FAIL** (gate 1 misses; gate 2 lands exactly on its threshold). Under prereg 4.1 the `cons` constraint therefore comes **out**
+of the joint arm. The head is saved anyway (`$DATA_DIR/runs/route_follow/stack/cons/head.pt`, interface `lib/conshead.py`) and is not
+to be used as a training signal. Numbers: [c2.json](c2.json). Code: `scripts/rf_stack_c2.py` (labels / train / eval), `lib/conshead.py`.
+
+Setup. own = pool on1_L18RSG: 17 474 rows, 158 dropped for t0 contact, leaving 17 316 (dev 3 618 rows = **4 logs / 212 scenes**,
+train 13 698 rows / 24 logs). Candidate 0 = RSG-L18-s0's forward plan (rf_recov fwd; 6 mm median / 20 mm p95 from the served plan),
+then the 8 `stack_cand` candidates. human = navtrain op-parity-full: 38 000 train rows + all 1 789 dev rows (32 logs, none shared with
+train), 211 t0 rows dropped. Candidates: teacher plan, + 8, + log future. Box checks: `stack_cand` torch vs numpy 3e-14 m;
+`branch_np` == `perturb.branch_poses` bit for bit. Head: 0.84 M params (d 128; slots t and t - 1.0 s + ego make the memory; 8 pose
+queries, 2 decoder layers). BCE, 8 000 steps, 128 own + 128 human rows per step, each row with all its candidates + 2 random
+candidates (lat / gain / arc drawn at random, labelled on the fly with the same geometry). Seed 0, last step kept. An inner 10 % of
+the train logs was held out of the gradient and only watched: its own AUC was 0.808 at step 1k and 0.82 from step 2k to the end, so
+it plateaus rather than overfits; train-row AUC 0.985. Cost: about 0.4 card-hours in total (fwd ~6 min, smokes ~3 min, labels 1 min,
+train 9 min, eval 2 x ~3 min).
+
+CIs are log-clustered bootstraps (B 10 000, jevdrive.stats resampling). Own dev has only 4 logs, so the scene-clustered CI
+(212 scenes) is given next to it as a descriptive second view.
+
+| read (dev) | own: AUC [log CI] | own: [scene CI] | human: AUC [log CI] |
+|:--|--:|--:|--:|
+| **gate 1: pooled, all candidates, any contact (>= 0.85)** | **0.773 [0.736, 0.813] FAIL** | [0.743, 0.803] | 0.906 [0.880, 0.931] |
+| agent only | 0.713 [0.656, 0.784] | [0.670, 0.755] | 0.890 [0.842, 0.927] |
+| road only | 0.909 [0.889, 0.945] | [0.875, 0.936] | 0.941 [0.914, 0.966] |
+| perturbed candidates only (1-8) | 0.774 [0.739, 0.813] | | 0.902 [0.877, 0.927] |
+| executed plan (cand 0, across states; d220 <= 0.72) | 0.740 [0.683, 0.798] | [0.694, 0.786] | 0.917 [0.876, 0.952] |
+| within-state (mean over states with both outcomes) | 0.836 [0.814, 0.870], 1 655 states | [0.807, 0.863] | 0.922 [0.890, 0.942], 776 states |
+| baseline: candidate type + speed (logistic), pooled | 0.625 [0.615, 0.636] | [0.599, 0.654] | 0.705 [0.666, 0.749] |
+| baseline, executed | 0.538 [0.520, 0.589] | | 0.532 [0.468, 0.617] |
+| baseline, within-state | 0.799 [0.775, 0.821] | | 0.823 [0.786, 0.854] |
+| bin-level AUC (each of the 2 x 8 bins), point | 0.862 | | 0.961 |
+| human log future only (27 positives) | | | 0.908 [0.670, 0.951] |
+
+Gate 2 covers the 5 174 dev own candidates (1 848 rows) with true contact. Each takes one xy step of every pose along
+-grad(sum of predicted probabilities), yaw kept, scaled to an RMS of h per pose. The read is the share whose true contact depth
+strictly decreases:
+
+| h | gradient [log CI] | [scene CI] | random direction [log CI] | mean depth change, grad / random |
+|--:|--:|--:|--:|--:|
+| 0.05 m | 0.712 [0.664, 0.735] | [0.677, 0.749] | 0.490 [0.482, 0.497] | -0.26 / +0.01 |
+| **0.10 m (gate, >= 0.70)** | **0.708 [0.664, 0.729] (point >= 0.70; CI straddles)** | [0.672, 0.744] | 0.473 [0.462, 0.487] | -0.46 / +0.04 |
+| 0.20 m | 0.696 [0.647, 0.719] | [0.659, 0.734] | 0.451 [0.438, 0.467] | -0.74 / +0.19 |
+
+Rates (3), the dual-ascent reference inputs of prereg 4.1 (trainer geometry, margin 0.3):
+
+| rows | agent hinge violated (AgentHinge 0.3 / side 0, any of 41 steps) | road hinge violated (Hinge 0.3, JT.ROAD / pool road.npz) | max predicted contact p > 0.5 |
+|:--|--:|--:|--:|
+| navtrain train rows, log futures (101 499 rows, 1 160 logs) | **0.0005** [0.0002, 0.0007] | **0.127** [0.120, 0.134] | 0.024 [0.022, 0.026] (head-train rows 0.021, others 0.026) |
+| on1_L18RSG train rows, RSG-L18-s0's own plans (13 830 rows, 24 logs) | 0.072 [0.055, 0.088] | 0.131 [0.094, 0.162] | 0.091 [0.076, 0.107] |
+
+What to take from this:
+- The head reads the scene (it beats the type + speed baseline by 0.15 pooled and 0.20 on the executed plan), and on human rows it
+  would pass (0.906). On the policy's own states it does not: road contact is learnable (0.909), **agent contact is not (0.713)**,
+  and agent contact is half of the own positives. The executed-plan AUC (0.740) sits at decision 220's frozen-model ceiling (<= 0.72),
+  so a dedicated head does not lift it: the frozen tokens of the policy's own states carry little about which actors the plan will
+  touch.
+- Ranking inside a state is better (0.836), but the baseline that knows only the candidate type already gets 0.799 there, so most of
+  it is "a 1 m left offset hits more often".
+- The gradient does point away from contact (71 % against 47-49 % for a random step of the same size; mean depth falls), but only
+  at the gate level, and it weakens at larger steps.
+- The human agent reference rate is about 0 (5 in 10 000 log futures violate the margin-0.3 agent hinge), so a level x human-rate
+  target for `agent` sits at the prereg's 0.02 floor of the denominator. The road reference is 12.7 %, close to the policy's own
+  13.1 %. The human log futures' road violations come from the road-and-lane raster's margin, not from leaving the road (the
+  margin-0 contact of the log future is 1.5 %).
