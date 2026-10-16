@@ -141,11 +141,11 @@ DESIRE D1 / D2 (2026-10-17, WAIT-TRAIN prereg Amendment C; lib/desire_train.py);
 
 RETAIN / ANTI-COPY (2026-10-17, experiments/wait_cap/plans/2026-10-17-retain-anticopy-draft.md; decision 335 options iii / iv); every flag off
 = the recipe above operation for operation:
-  --kd-lam L [--kd-k 16 --kd-pool on1_WAIT --kd-groups W:1,G:1,SY:1]   P0 retention (lib/retain_train.py): every step K rows of the retention
-            pool (rows the stage never exercises: wait / launch / stop / yield) get a second forward and the anchor `cons` distance of their plan
-            to shipped Cinque's plan, mean x L; own rng stream [seed, 0, 151]. 0 = off: no operation is added.
-  --kd-own F        (with --kd-lam) the same distance on a share F of the non-anchor normal rows of the main forward (own stream [seed, 0, 157]),
-            x L, mean over those rows. 0 (default) = off.
+  --kd-lam L [--kd-mode lon --kd-k 16 --kd-pool on1_WAIT --kd-groups AR:2,W:1 --kd-nav FILE --kd-nav-k 0]   P0 retention (lib/retain_train.py,
+            decision 336's aim): every step K rows of the retention pool (rolling arrivals / stops / yields, standing waits; rows the stage never
+            exercises) and K_nav navtrain approach rows fed the constant-velocity history get a second forward; loss = their plan's arc-length
+            profile against shipped Cinque's (lon: the lateral path untouched; full: the anchor `cons` distance to the whole plan), summed over
+            the 8 poses, mean over the rows x L; own rng stream [seed, 0, 151]. 0 = off: no operation is added.
   --ego-scale-speed P [--ego-scale-max M]   history-speed noise (the ego-history bottleneck of ChauffeurNet's past-motion perturbation, against
             the own-motion trend of decision 315): on a share P of the non-anchor, non-pool rows (the imitation rows), the fed speed history is
             rescaled by s ~ U[1 - M, 1 + M]: vx, vy x s, ax, ay x s^2, the history poses' x, y x s (the same path at s x the speed; yaws, the
@@ -735,16 +735,17 @@ def cmd_train(a):
         TD = torch.as_tensor(DT.load_teacher([_pl.Path(a.d2_teacher) / f"{d}.npz" for d in a.data], S.tab["names"][:n_base]), device=dev)
         side_d2 = side_np[:n_base] if des_on else np.zeros(n_base, np.int8)
         drec |= dict(d2_lam=a.d2_lam, d2_frac=a.d2_frac, d2_teacher=str(a.d2_teacher))
-    kd_on, kd_own = a.kd_lam > 0, a.kd_lam > 0 and a.kd_own > 0       # RETAIN (docstring); off: no operation below is added
+    kd_on = a.kd_lam > 0                                              # RETAIN (docstring); off: no operation below is added
     if kd_on:
         import retain_train as RTN
+        from jevdrive.common import data_dir as _dd
         assert not (lc_on or ns.rx or ST is not None or ns.head.get("order")), "--kd-lam: not with --lc-cf / --rx / STACK terms / --rm-order"
-        RS = RTN.RetainSet(a.kd_pool, dev, a.kd_groups)
-        assert RS.ego.shape[1] == S.ego.shape[1], f"--kd-pool {a.kd_pool}: fed row {RS.ego.shape[1]} != the store's {S.ego.shape[1]}"
+        nb_ = sum(len(np.load(_dd() / "runs/op_parity/cache" / d / "tab.npz")["names"]) for d in a.data)
+        RS = RTN.RetainSet(a.kd_pool if a.kd_k else "", dev, a.kd_groups, S, a.kd_nav, nb_, tr_o)
+        assert not RS.n or RS.ego.shape[1] == S.ego.shape[1], f"--kd-pool {a.kd_pool}: fed row {RS.ego.shape[1]} != the store's {S.ego.shape[1]}"
+        assert RS.n or len(RS.nav), "--kd-lam: no retention row (--kd-k 0 and no --kd-nav)"
         krng = np.random.default_rng([cfg.seed, 0, 151])
-        kdrec = RS.rec | dict(kd_lam=a.kd_lam, k=a.kd_k, own=a.kd_own)
-        if kd_own:
-            kown = np.random.default_rng([cfg.seed, 0, 157])
+        kdrec = RS.rec | dict(kd_lam=a.kd_lam, mode=a.kd_mode, k=a.kd_k, k_nav=a.kd_nav_k if len(RS.nav) else 0)
     if a.ego_scale_speed > 0:                                         # ANTI-COPY history-speed noise (docstring)
         srng = np.random.default_rng([cfg.seed, 0, 149])
         spow = torch.as_tensor(EGO_SCALE_POW, device=dev, dtype=torch.float32)
@@ -817,7 +818,7 @@ def cmd_train(a):
             run.info(f"DESIRE D1 / D2: {json.dumps(drec)}")
             run.summary.update(desire=drec)
         if kd_on:
-            run.info(f"RETAIN: P0 plan distillation, {json.dumps(kdrec)}")
+            run.info(f"RETAIN: P0 speed-profile distillation, {json.dumps(kdrec)}")
             run.summary.update(retain=kdrec)
         if a.ego_scale_speed > 0:
             screc = dict(share=a.ego_scale_speed, max=a.ego_scale_max, cols=EGO_SPEED, pow=EGO_SCALE_POW, rows="non-anchor, non-pool")
@@ -908,18 +909,11 @@ def cmd_train(a):
                 Ls["d1/rows"] = (sd_ != 0).sum().float()
             if a.ego_scale_speed > 0:
                 Ls["scale/share"], Ls["scale/abs"] = Ls_s["scale_share"], Ls_s["scale_abs"]
-            if kd_on:                                                 # RETAIN: P0's plan on the retention rows (second forward), own rows optional
-                ik = RS.draw(krng, a.kd_k)
-                lk, ww = RS.loss(model, ik, LS)
-                Ls["kd"], Ls["kd/wait_W"] = lk.mean(), ww
+            if kd_on:                                                 # RETAIN: P0's speed profile on the retention rows (second forward)
+                lk, lg_ = RS.loss(model, RS.batch(krng, a.kd_k, a.kd_nav_k, S), LS, a.kd_mode)
+                Ls["kd"] = lk.mean()
+                Ls |= lg_
                 total = total + a.kd_lam * Ls["kd"]
-                if kd_own:
-                    so = torch.as_tensor(kown.random(nN) < a.kd_own, device=dev) & ~anchor[:nN] & S.has_fut[rows[:nN]]
-                    if so.any():
-                        sel = torch.zeros(len(r), dtype=torch.bool, device=dev)
-                        sel[:nN] = so
-                        Ls["kd_own"] = RTN.own_loss(out, S, rows, sel, LS).mean()
-                        total = total + a.kd_lam * Ls["kd_own"]
             if d2_on:                                                 # D2: desire increment of the plan against shipped Cinque's
                 u2, s2, a2 = d2rng.random(nN), d2rng.choice(np.array([1, -1]), nN), d2rng.integers(0, len(DT.AGES), nN)
                 an_ = an[:nN]
@@ -1160,11 +1154,13 @@ if __name__ == "__main__":
         p.add_argument("--d2-lam", type=float, default=0.0, help="DESIRE D2: weight of the desire-delta distillation (0 = off)")
         p.add_argument("--d2-frac", type=float, default=0.125, help="DESIRE D2: share of the non-anchor normal rows (anchors always)")
         p.add_argument("--d2-teacher", default="", help="DESIRE D2: dir of dt.py teacher files <data>.npz")
-        p.add_argument("--kd-lam", type=float, default=0.0, help="RETAIN: weight of the P0 plan distillation on the retention rows (0 = off)")
-        p.add_argument("--kd-k", type=int, default=16, help="RETAIN: retention rows per step (second forward)")
+        p.add_argument("--kd-lam", type=float, default=0.0, help="RETAIN: weight of the P0 speed-profile distillation (0 = off)")
+        p.add_argument("--kd-mode", default="lon", choices=("lon", "full"), help="RETAIN: arc-length profile only (lon) or the whole plan")
+        p.add_argument("--kd-k", type=int, default=16, help="RETAIN: retention pool rows per step (second forward)")
         p.add_argument("--kd-pool", default="on1_WAIT", help="RETAIN: retention pool (cache dir with tab `cell`, @warp teacher, route features)")
-        p.add_argument("--kd-groups", default="W:1,G:1,SY:1", help="RETAIN: draw shares of the wait / launch / stop+yield groups")
-        p.add_argument("--kd-own", type=float, default=0.0, help="RETAIN: share of the non-anchor normal rows with the same term (0 = off)")
+        p.add_argument("--kd-groups", default="AR:2,W:1", help="RETAIN: draw shares of the arrival / standing-wait / launch / stop+yield groups")
+        p.add_argument("--kd-nav", default="", help="RETAIN: navtrain approach rows (nx.py approach npz; '' = none)")
+        p.add_argument("--kd-nav-k", type=int, default=0, help="RETAIN: navtrain approach rows per step, fed the constant-velocity history")
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
         p.add_argument("--rx", action="store_true", help="STACK: the reflex module (lib/reflex.py)")
@@ -1193,7 +1189,6 @@ if __name__ == "__main__":
     assert 0 <= a.ego_drop_speed < 1, "--ego-drop-speed is a share in [0, 1)"
     assert not getattr(a, "ego_drop_open", False) or a.ego_drop_speed > 0, "--ego-drop-open: needs --ego-drop-speed"
     assert 0 <= getattr(a, "ego_scale_speed", 0.0) <= 1 and 0 < getattr(a, "ego_scale_max", 0.2) < 1, "--ego-scale-speed in [0, 1], --ego-scale-max in (0, 1)"
-    assert getattr(a, "kd_own", 0.0) == 0 or getattr(a, "kd_lam", 0.0) > 0, "--kd-own: needs --kd-lam"
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False

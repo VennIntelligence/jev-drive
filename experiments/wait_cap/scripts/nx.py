@@ -2,9 +2,10 @@
 """Decision 335's two follow-up pilots (prereg draft plans/2026-10-17-retain-anticopy-draft.md); box, repo root; chain in nx.sh.
 Outputs: box runs/wait_cap/next/, repo results/next/.
 
-  (iii) RETAIN  the base stage (RB0-F recipe, 10 000 steps from the shipped weights) + P0 plan distillation on the retention rows (on1_WAIT)
-                + D2 desire-delta distillation, both at lambda in {1, 3} (rm_train --kd-lam / --d2-lam); control = RB0-F-s0 (bit-identical recipe
-                with the flags off, proven by `bitcmp`).
+  (iii) RETAIN  P0's speed profile (arc length only, lateral untouched) distilled on rolling-arrival / standing-wait rows of on1_WAIT and on
+                navtrain approach rows fed the constant-velocity history, + D2 desire-delta distillation, lambda in {1, 3} (rm_train --kd-lam,
+                --kd-nav, --d2-lam; decision 336's aim). Variant a: a 1 000-step patch on the RSG-L18 recipe (C = WTCP-L18-s0); variant b: the
+                RB0-F base stage rebuilt, 10 000 steps from the shipped weights (C = RB0-F-s0). Both controls are the flags-off command (`bitcmp`).
   (iv) ANTI-COPY  the RSG-L18 recipe (1 000 steps, WAIT pilot's shape) + history-speed noise (rm_train --ego-scale-speed 0.5, --ego-scale-max in
                 {0.2, 0.4}); control = WTCP-L18-s0.
 
@@ -12,7 +13,10 @@ Outputs: box runs/wait_cap/next/, repo results/next/.
                 -> results/next/NAME.json; exit 2 unless identical
   hist --tags T..   (GPU)  the gate-4 dev rows (rm_train dev_eval's 1 789 rows), the speed history rescaled by s in {0.8, 1.0, 1.2} (rm_train
                 --ego-scale-speed's columns and powers) -> next/hist/<tag>.npz; s = 1 must reproduce the run's DONE dev_ade
-  rtgate --j T1 T3 --c C --lam-of 1=T1,3=T3   (CPU)  the (iii) lines -> results/next/rt_pilot_gate.{json,md}
+  approach  (CPU)  navtrain rolling-approach rows (0.2-6 m/s, stopped lead <= 15 m or TTC < 4 s; wt.lead_ctx) -> next/approach_nav.npz
+  arrival --tags T.. [--rmem-from RSG-L18-s0]   (GPU)  decision 336's replay on P0's closed-loop static-scene inputs (wt_xe xreplay's call)
+                -> next/arrival/<tag>.json; line: 4 s arc at the first decision after the handoff (k = 1) <= 1.0 m
+  rtgate --variant a|b --j T1 T3 --c C --lam-of 1=T1,3=T3 [--dry]   (CPU)  the (iii) lines -> results/next/rt<variant>_pilot_gate.{json,md}
   acgate --j T2 T4 --c C --dose-of 0.2=T2,0.4=T4 [--submit]   (CPU)  the (iv) lines -> results/next/ac_pilot_gate.{json,md}; --submit: held
                 460 @18 for the passing arms (nx.sh ac-held), then `acheld`
   acheld --j T.. --c C   (CPU)  held 460 @18 per arm vs C (one seed; wt.xpair) + rf_follow turns -> results/next/ac_held.{json,md}
@@ -152,7 +156,89 @@ def hist_read(tag, ctag):
     return out
 
 
-# ---------------------------------------------------------------- (iii) RETAIN lines (CPU)
+# ---------------------------------------------------------------- (iii) RETAIN rows and reads
+def cmd_approach(a):
+    """(CPU) navtrain rows of a rolling approach: 0.2 <= v0 <= 6 m/s and, from the t0 agent labels (wt.lead_ctx), a stopped lead (< 0.5 m/s)
+    <= 15 m ahead in the lane corridor, or a lead closing with time-to-contact < 4 s (wt_devdecomp's low-TTC rule) -> NX/approach_nav.npz."""
+    names, v0 = [], []
+    for d in sorted(glob.glob(str(wt.CR / "navtrain_full.s*of12" / "tab.npz")), key=lambda f: int(f.split(".s")[-1].split("of")[0])):
+        z = np.load(d)
+        names.append(z["names"].astype(str))
+        v0.append(z["speed"].astype(float))
+    names, v0 = np.concatenate(names), np.concatenate(v0)
+    roll = (v0 >= 0.2) & (v0 <= 6.0)
+    c = wt.lead_ctx(names[roll])
+    vl = -c["lead_close"]                                   # lead x(t0) - x(0.5 s) in the t0 frame / 0.5 = -(lead speed)
+    closing = v0[roll] - vl
+    stopped = c["ctx_ok"] & (c["lead_gap"] <= 15.0) & (vl < 0.5)
+    ttc = c["ctx_ok"] & (c["lead_gap"] < 20.0) & (closing > 0.1) & (c["lead_gap"] / np.maximum(closing, 1e-3) < 4.0)
+    m = stopped | ttc
+    NX.mkdir(parents=True, exist_ok=True)
+    np.savez(NX / "approach_nav.npz", names=names[roll][m], v0=v0[roll][m], lead_gap=c["lead_gap"][m], lead_v=vl[m], stopped=stopped[m], ttc=ttc[m])
+    r = dict(rows=int(len(names)), rolling=int(roll.sum()), labelled=int(c["ctx_ok"].sum()), approach=int(m.sum()), stopped_lead=int(stopped.sum()),
+             closing_ttc4=int(ttc.sum()), v0_median=float(np.median(v0[roll][m])) if m.any() else None)
+    write("approach_nav", r)
+
+
+def cmd_arrival(a):
+    """(GPU) decision 336's arrival replay: each tag's plan on the exact inputs P0 saw in its own closed-loop static-scene run (wt_xe.cmd_xreplay's
+    call, measured ego row), the route memory logged by --rmem-from's static run at the same decision (the same memory for every tag)
+    -> NX/arrival/<tag>.json (4 s arc per decision; k = 1 is the first decision after the handoff, 0.44 m/s, lead stopped 1.6 m ahead)."""
+    import torch
+    sys.path[:0] = [str(REPO / "experiments/alpasim/lib")]
+    import sh30_core as SC
+    import wt_xe as XE
+    from jevdrive import navsim_zs as Z
+    from jevdrive import op_interp as I
+    out = NX / "arrival"
+    out.mkdir(parents=True, exist_ok=True)
+    dumps = sorted(glob.glob(str(XE.XE / "static/P0/run/driver-logs/dump/s00_k*.npz")), key=lambda f: int(f.split("_k")[-1][:-4]))
+    Dz = [dict(np.load(f)) for f in dumps]
+    rm = {}
+    for l in open(XE.XE / f"static/{a.rmem_from}/run/driver-logs/drive.jsonl"):
+        r = json.loads(l)
+        if r["kind"] == "drive" and "rmem" in r:
+            rm[int(r["k"])] = np.asarray(r["rmem"], np.float32)
+    for tag in a.tags:
+        if (out / f"{tag}.json").exists():
+            continue
+        core = SC.Core(tag, "cuda", "backwarp")
+        arcs = []
+        for k, d in enumerate(Dz):
+            ego = d["ego"].astype(np.float32)
+            row = ego if not core.rm else np.r_[ego, rm.get(k, np.zeros(core.rm_dim, np.float32))]
+            cur, valid = d["cur"], d["valid"]
+            prev = np.concatenate([np.zeros((1,) + cur.shape[1:], np.uint8), cur[:-1]])
+            with torch.no_grad():
+                pp, cc = (torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
+                H = core.model.net.run_batched(core.A.vision_feeds(pp, cc), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *core.A.H_SHAPE)
+                o = core.model(H, torch.from_numpy(row[None]).to(core.dev), torch.tensor([[1.0, 0.0]], device=core.dev))
+                o = (o[0] if isinstance(o, tuple) else o).float()
+            mu = o[0, core.pi].reshape(33, 15).cpu().numpy()
+            P = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, d["cam_t"][:2].astype(np.float64), Z.T_OUT, "lever")
+            arcs.append(dict(k=k, v=10 * float(d["ego"][4]), arc4=XE.arc(P), dpose_vs_logged=float(np.abs(P - d["poses"]).max()) if tag == "P0" else None))
+        (out / f"{tag}.json").write_text(json.dumps(dict(tag=tag, rmem_from=a.rmem_from, arcs=arcs), indent=1))
+        print(tag, [round(x["arc4"], 2) for x in arcs], flush=True)
+        del core
+        torch.cuda.empty_cache()
+
+
+def arrival_of(tag):
+    return json.loads((NX / "arrival" / f"{tag}.json").read_text())["arcs"]
+
+
+def free_bias(tag, ctag):
+    """4 s arc bias (plan - human, own history, NX/hist s = 1) on the free-road dev rows (wt_devdecomp's context rule on wt.lead_ctx), arm and C."""
+    a, c = np.load(NX / "hist" / f"{tag}.npz"), np.load(NX / "hist" / f"{ctag}.npz")
+    assert np.array_equal(a["rows"], c["rows"])
+    x = wt.lead_ctx(a["names"])
+    near = x["lead_gap"] < 20                               # wt_devdecomp: lead near (low TTC is inside it), pedestrian, else free road
+    free = x["ctx_ok"] & ~near & ~x["ped"].astype(bool)
+    h = arc4(a["fut"])
+    ba, bc = arc4(a["plan_1.0"]) - h, arc4(c["plan_1.0"]) - h
+    return dict(rows=int(free.sum()), bias=float(ba[free].mean()), bias_c=float(bc[free].mean()), diff=float(ba[free].mean() - bc[free].mean()))
+
+
 def ledger_P0():
     """Ledger F cells of shipped Cinque (the P0 plans of led.py) -> {cell: success share}."""
     return {k: float(v[0].mean()) for k, v in wt.ledger_read("P0").items()}
@@ -163,52 +249,67 @@ def rely_of(tag):
 
 
 def cmd_rtgate(a):
+    """The (iii) lines of one variant (a: 1 000-step patch on the RSG-L18 recipe, C = WTCP-L18-s0; b: the RB0-F base rebuilt, C = RB0-F-s0)."""
     sys.path.insert(0, str(REPO / "experiments/desire_cap/scripts"))
     import dt
     from jevdrive import stats
     Cc, cx = wt.cap_read(a.c)
     P0c, _ = wt.cap_read("P0")
-    LP0, LC = ledger_P0(), {k: v for k, v in wt.ledger_read(a.c).items()}
+    LP0, LC = ledger_P0(), wt.ledger_read(a.c)
     dC = dt.desire_read(a.c)
     c_ade = wt.dev_ade(a.c)
-    res = dict(control=a.c, C=Cc | dict(dev_ade=c_ade, ledger_F={k: float(v[0].mean()) for k, v in LC.items()}, desire4=dC["arm"]["mean4"],
-                                        rely=rely_of(a.c)), P0=dict(wait_W=P0c["wait_W"], D=P0c["D"], ledger_F=LP0, desire4=dC["P0"]["mean4"]), arms={})
+    arrC, arrP0 = arrival_of(a.c)[1]["arc4"], arrival_of("P0")[1]["arc4"]
+    res = dict(variant=a.variant, control=a.c, C=Cc | dict(dev_ade=c_ade, ledger_F={k: float(v[0].mean()) for k, v in LC.items()}, desire4=dC["arm"]["mean4"],
+                                                         arrival_k1=arrC),
+               P0=dict(wait_W=P0c["wait_W"], go_G=P0c["go_G"], D=P0c["D"], ledger_F=LP0, desire4=dC["P0"]["mean4"], arrival_k1=arrP0), arms={})
+    if a.variant == "b":
+        res["C"]["rely"] = rely_of(a.c)
     lam = {v: k for k, v in a.lam_of.items()}
     for t in a.j:
         J, jx = wt.cap_read(t)
         LJ = wt.ledger_read(t)
         dJ = dt.desire_read(t)
-        rl = rely_of(t)
         ade = wt.dev_ade(t)
         dv = wt.dev_read(t, a.c)
+        fb = free_bias(t, a.c)
+        arr = arrival_of(t)
         half = {k: LC[k][0].mean() + 0.5 * (LP0[k] - LC[k][0].mean()) for k in LC}
-        g = dict(wait_W=J["wait_W"] >= 0.60, **{f"half_{k}": float(LJ[k][0].mean()) >= half[k] for k in ("S_L", "Y_P", "Y_V")},
-                 desire4=dJ["arm"]["mean4"] >= 0.8 * dJ["P0"]["mean4"], dev_ade=ade <= c_ade + 0.01, rely=bool(rl["read"]))
-        dWm, dD = J["wait_W"] - Cc["wait_W"], J["D"] - Cc["D"]
-        res["arms"][t] = dict(lam=lam[t], cap=J, dev_ade=ade, dev=dv, rely=rl, desire=dJ["arm"], half_line=half, gates=g, passed=bool(all(g.values())),
-                              ledger_F={k: dict(J=float(LJ[k][0].mean()), C=float(LC[k][0].mean()), P0=LP0[k], n=int(len(LJ[k][0])),
-                                                diff=stats.fmt(stats.paired(LJ[k][0], LC[k][0], groups=LJ[k][1]))) for k in LJ},
-                              d_wait_W=stats.fmt(stats.paired(jx["wait"][jx["W"]], cx["wait"][cx["W"]], groups=jx["g"][jx["W"]])),
-                              launch_lock_shape=bool(dWm >= 0.20 and dD < 0.5 * dWm))
+        g = dict(arrival=arr[1]["arc4"] <= 1.0, **{f"half_{k}": float(LJ[k][0].mean()) >= half[k] for k in ("S_L", "Y_P", "Y_V")},
+                 wait_W=J["wait_W"] >= 0.60, go_G=J["go_G"] >= 0.85, desire4=dJ["arm"]["mean4"] >= 0.8 * dJ["P0"]["mean4"],
+                 dev_ade=ade <= c_ade + 0.01, free_bias=abs(fb["diff"]) <= 0.10, lat2s=dv["lat2s_med_absdiff"] <= 0.05)
+        r = dict(lam=lam[t], cap=J, dev_ade=ade, dev=dv, free=fb, arrival=[x["arc4"] for x in arr], desire=dJ["arm"], half_line=half,
+                 ledger_F={k: dict(J=float(LJ[k][0].mean()), C=float(LC[k][0].mean()), P0=LP0[k], n=int(len(LJ[k][0])),
+                                   diff=stats.fmt(stats.paired(LJ[k][0], LC[k][0], groups=LJ[k][1]))) for k in LJ},
+                 d_wait_W=stats.fmt(stats.paired(jx["wait"][jx["W"]], cx["wait"][cx["W"]], groups=jx["g"][jx["W"]])))
+        if a.variant == "b":
+            r["rely"] = rely_of(t)
+            g["rely"] = bool(r["rely"]["read"])
+        r |= dict(gates=g, passed=bool(all(g.values())))
+        res["arms"][t] = r
     ok = [t for t in a.j if res["arms"][t]["passed"]]
     pick = min(ok, key=lambda t: float(lam[t])) if ok else None
     res |= dict(passed=ok, pick=pick, pick_lam=lam.get(pick), verdict="PASS" if pick else "STOP: no arm meets every line")
-    L = ["# (iii) RETAIN pilot lines (RB0-F recipe, 10 000 steps, seed 0; open loop)", "",
-         "| arm | wait W (>= 0.60) | go G | D | S_L F | Y_P F | Y_V F | desire 4 s (>= 0.8 x P0) | dev ADE (<= C + 0.01) | rely (read) | lat 2 s vs C | pass |",
-         "|---|--:|--:|--:|--:|--:|--:|--:|--:|:-:|--:|:-:|",
-         f"| P0 | {P0c['wait_W']:.3f} | {P0c['go_G']:.3f} | {P0c['D']:.3f} | {LP0['S_L']:.3f} | {LP0['Y_P']:.3f} | {LP0['Y_V']:.3f} | {dC['P0']['mean4']:.2f} | - | - | - | - |",
-         f"| {a.c} (C) | {Cc['wait_W']:.3f} | {Cc['go_G']:.3f} | {Cc['D']:.3f} | " + " | ".join(f"{res['C']['ledger_F'][k]:.3f}" for k in ("S_L", "Y_P", "Y_V"))
-         + f" | {dC['arm']['mean4']:.2f} | {c_ade:.4f} | {res['C']['rely']['read']} | - | - |"]
+    name = {"a": "1 000-step patch on the RSG-L18 recipe", "b": "the RB0-F base stage rebuilt, 10 000 steps"}[a.variant]
+    L = [f"# (iii-{a.variant}) RETAIN pilot lines ({name}; seed 0; open loop + the arrival replay)", "",
+         "| arm | arrival 4 s arc @0.5 s (<= 1.0 m) | S_L F | Y_P F | Y_V F | wait W (>= 0.60) | go G (>= 0.85) | D | desire 4 s (>= 0.8 x P0) | "
+         "dev ADE (<= C + 0.01) | free-road 4 s bias (C +- 0.10) | lat 2 s vs C (<= 0.05) |" + (" rely |" if a.variant == "b" else "") + " pass |",
+         "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|" + ("--|" if a.variant == "b" else "") + ":-:|",
+         f"| P0 | {arrP0:.2f} | {LP0['S_L']:.3f} | {LP0['Y_P']:.3f} | {LP0['Y_V']:.3f} | {P0c['wait_W']:.3f} | {P0c['go_G']:.3f} | {P0c['D']:.3f} | "
+         f"{dC['P0']['mean4']:.2f} | - | - | - |" + (" - |" if a.variant == "b" else "") + " - |",
+         f"| {a.c} (C) | {arrC:.2f} | " + " | ".join(f"{res['C']['ledger_F'][k]:.3f}" for k in ("S_L", "Y_P", "Y_V"))
+         + f" | {Cc['wait_W']:.3f} | {Cc['go_G']:.3f} | {Cc['D']:.3f} | {dC['arm']['mean4']:.2f} | {c_ade:.4f} | - | - |"
+         + (f" {res['C']['rely']['read']} |" if a.variant == "b" else "") + " - |"]
     for t in a.j:
         r = res["arms"][t]
-        L.append(f"| {t} (lambda {r['lam']}) | {r['cap']['wait_W']:.3f} | {r['cap']['go_G']:.3f} | {r['cap']['D']:.3f} | "
+        L.append(f"| {t} (lambda {r['lam']}) | {r['arrival'][1]:.2f} | "
                  + " | ".join(f"{r['ledger_F'][k]['J']:.3f} (>= {r['half_line'][k]:.3f})" for k in ("S_L", "Y_P", "Y_V"))
-                 + f" | {r['desire']['mean4']:.2f} | {r['dev_ade']:.4f} | {r['rely']['read']} | {r['dev']['lat2s_med_absdiff']:.3f} | {'PASS' if r['passed'] else 'fail'} |")
-    L += ["", "report only: launch-lock shape (wait W up >= 0.20 with D up < half of it): "
-          + "; ".join(f"{t} {res['arms'][t]['launch_lock_shape']}" for t in a.j),
+                 + f" | {r['cap']['wait_W']:.3f} | {r['cap']['go_G']:.3f} | {r['cap']['D']:.3f} | {r['desire']['mean4']:.2f} | {r['dev_ade']:.4f} | "
+                 f"{r['free']['bias']:+.2f} (C {r['free']['bias_c']:+.2f}) | {r['dev']['lat2s_med_absdiff']:.3f} |"
+                 + (f" {r['rely']['read']} |" if a.variant == "b" else "") + f" {'PASS' if r['passed'] else 'fail'} |")
+    L += ["", "arrival replay, 4 s arc per decision (k = 0 .. 9): " + "; ".join(f"{t} " + " ".join(f"{x:.2f}" for x in res["arms"][t]["arrival"]) for t in a.j),
           "paired vs C (log-clustered): " + "; ".join(f"{t}: wait W {res['arms'][t]['d_wait_W']}; " + ", ".join(f"{k} {v['diff']}" for k, v in res['arms'][t]['ledger_F'].items()) for t in a.j),
           "", f"verdict: {res['verdict']}" + (f"; lambda {res['pick_lam']} ({pick})" if pick else "")]
-    write("rt_pilot_gate", res, L, a.dry)
+    write(f"rt{a.variant}_pilot_gate", res, L, a.dry)
 
 
 # ---------------------------------------------------------------- (iv) ANTI-COPY lines (CPU)
@@ -278,7 +379,11 @@ if __name__ == "__main__":
     p.add_argument("--hash", default=""), p.add_argument("--note", default="")
     sp.add_parser("hist").add_argument("--tags", nargs="+", required=True)
     kv = lambda s: dict(x.split("=", 1) for x in s.split(","))  # noqa: E731
+    sp.add_parser("approach")
+    p = sp.add_parser("arrival")
+    p.add_argument("--tags", nargs="+", required=True), p.add_argument("--rmem-from", default="RSG-L18-s0")
     p = sp.add_parser("rtgate")
+    p.add_argument("--variant", choices=("a", "b"), required=True)
     p.add_argument("--j", nargs="+", required=True), p.add_argument("--c", required=True), p.add_argument("--lam-of", type=kv, required=True)
     p.add_argument("--dry", action="store_true", help="print only (a check of the read code on existing tags)")
     p = sp.add_parser("acgate")
@@ -287,4 +392,4 @@ if __name__ == "__main__":
     p = sp.add_parser("acheld")
     p.add_argument("--j", required=True), p.add_argument("--c", required=True)
     a = ap.parse_args()
-    dict(bitcmp=cmd_bitcmp, hist=cmd_hist, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
+    dict(bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
