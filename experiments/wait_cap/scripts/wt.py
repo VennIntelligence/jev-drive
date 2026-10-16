@@ -48,7 +48,7 @@ FEAT = DATA / "runs/route_mem/feat"
 RES = REPO / "experiments/wait_cap/results/wait_train"
 SPLIT = "waitcap_train"
 CAP = 5000
-STAT, STOP = ("W_L", "W_N", "G_L", "G_N"), ("S_L", "S_N")
+STAT, STOP, YIELD = ("W_L", "W_N", "G_L", "G_N"), ("S_L", "S_N"), ("Y_P", "Y_V")      # Y = decision 331's yield cells (Amendment A)
 BASE, POOL, NEW = "on1_L18RB0", "on1_L18RBW", "on1_WAIT"
 K_ON = 13
 DOSES = {"j2": 2, "j5": 5}                      # expected new rows among the 13 pool rows of a batch
@@ -64,11 +64,37 @@ def db_of(scene):
 
 
 # ---------------------------------------------------------------- select (CPU)
+def _led():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("led", REPO / "experiments/cap_ledger/scripts/led.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+WC_KEYS = None
+
+
 def _log_job(p):
+    """One trainval log -> wait_cap rows with one cell each: wc.cell_of first (W_L .. S_N), else decision 331's Y_P, else Y_V (led.cells_of,
+    unchanged), so a yield frame already in S_L / S_N stays there once; frames whose 4 history CAM_F0 are not on disk are dropped."""
+    led = _led()
     fr = pickle.load(open(p, "rb"))
     ok = [(NAV / "sensor_blobs/trainval" / f["cams"]["CAM_F0"]["data_path"]).exists() for f in fr]
-    rows = [r for r in wc.log_rows(p) if all(ok[r["frame"] - 3:r["frame"] + 1])]
-    return rows, sum(ok), len(fr)
+    out = []
+    for r in led.log_cells(p):
+        if not all(ok[r["frame"] - 3:r["frame"] + 1]):
+            continue
+        c = wc.cell_of(r)
+        if c is None:
+            lc = led.cells_of(r)
+            c = "Y_P" if lc["Y_P"] else "Y_V" if lc["Y_V"] else None
+        if c is None:
+            continue
+        q = {k: v for k, v in r.items() if not (k.startswith(("ln_", "lane", "grp")) or k in ("dpsi2", "dpsi4", "vmin4", "junc", "off0", "off2", "off4"))}
+        q["cell"] = c
+        out.append(q)
+    return out, sum(ok), len(fr)
 
 
 def leak(logs):
@@ -90,6 +116,8 @@ def cmd_select(a):
     from jevdrive import par
     from jevdrive.data import splits
     from jevdrive.run import Run
+    os.environ.setdefault("NUPLAN_MAPS_ROOT", str(NAV / "maps"))
+    os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
     want = [l for l in (REPO / "experiments/wait_cap/results/trainval_logs.txt").read_text().split() if l]
     dv = splits.load("navsim/op-parity-full-dev")
     devlogs = set()
@@ -103,11 +131,9 @@ def cmd_select(a):
         res.raise_if_failed()
         rows = [r for v, _, _ in res.values for r in v]
         cams = dict(frames=sum(n for _, _, n in res.values), cam_f0=sum(c for _, c, _ in res.values))
-        for r in rows:
-            r["cell"] = wc.cell_of(r)
         rng = np.random.default_rng(wc.SEED)
         keep, census = [], {}
-        for c in STAT + STOP:
+        for c in STAT + STOP + YIELD:
             cand = sorted((r for r in rows if r["cell"] == c), key=lambda r: (r["log"], r["frame"]))
             thin, last = [], {}
             for r in cand:
@@ -126,7 +152,7 @@ def cmd_select(a):
         rec = dict(logs_listed=len(want), dropped_dev_logs=sorted(set(want) & devlogs), logs_used=len(logs), eligible_frames=len(rows), **cams, census=census,
                    rows=len(keep), row_logs=len({r["log"] for r in keep}), leak=lk)
         md = [f"trainval logs listed {len(want)}, dropped (hold a navtrain dev token) {len(set(want) & devlogs)}, used {len(logs)}; frames {cams['frames']}, "
-              f"CAM_F0 on disk {cams['cam_f0']}; eligible frames (history cameras on disk) {len(rows)}; rows {len(keep)} in {rec['row_logs']} logs", "",
+              f"CAM_F0 on disk {cams['cam_f0']}; frames in a cell with history cameras on disk {len(rows)} (one cell per frame: wc cell first, then Y_P, then Y_V); rows {len(keep)} in {rec['row_logs']} logs", "",
               "| cell | frames | thinned | rows | logs |", "|---|--:|--:|--:|--:|"]
         md += [f"| {c} | {v['frames']} | {v['thinned']} | {v['rows']} | {v['logs']} |" for c, v in census.items()]
         md += ["", "leak check (exact nuPlan db / drive session date_veh): " + "; ".join(
@@ -256,7 +282,7 @@ def cmd_pack(a):
     cell = np.array([cell_of[t] for t in names.tolist()], "U4")
     has = np.isfinite(tb["fut"]).all((1, 2))
     assert has.all(), f"{(~has).sum()} rows without a full future"
-    stop = np.isin(cell, STOP)
+    stop = np.isin(cell, STOP + YIELD)                  # S and Y rows: constant-velocity history, over-the-human-only arc loss
     ego = tb["ego"].copy()
     ego[stop] = flat_rows(tb["ego"][stop])
     s_h = human_arc(tb["fut"])
@@ -313,22 +339,25 @@ def cmd_pack(a):
              kind=np.concatenate([np.zeros(ns, np.int8), kind]))
     assert all(v for k, v in chk.items() if k not in ("keys", "agent_ok_new", "road_ok_new") and isinstance(v, bool)) and chk["agent_ok_new"] == 0 \
         and chk["road_ok_new"] == 0, chk
-    # draw weights: base rows weight 1 (mass ns); new rows' mass q ns / (1 - q), q = dose / 13; W : G : S = 1 : 1 : 1 inside the new rows
-    cnt = {c: int((cell == c).sum()) for c in STAT + STOP}
-    grp = {"W": ("W_L", "W_N"), "G": ("G_L", "G_N"), "S": STOP}
+    # draw weights: base rows weight 1 (mass ns); new rows' mass q ns / (1 - q), q = dose / 13; inside the new rows W 1/3, G 1/3 (wait : go = 1 : 1),
+    # S + Y 1/3 split by their row counts, Y raised to 1/12 if under (Amendment A); natural proportions inside each group
+    cnt = {c: int((cell == c).sum()) for c in STAT + STOP + YIELD}
+    grp = {"W": ("W_L", "W_N"), "G": ("G_L", "G_N"), "S": STOP, "Y": YIELD}
     ng = {g: sum(cnt[c] for c in cs) for g, cs in grp.items()}
     assert all(ng.values()), ng
+    sh = {"W": 1 / 3, "G": 1 / 3, "Y": max(ng["Y"] / (ng["S"] + ng["Y"]) / 3, 1 / 12)}
+    sh["S"] = 1 / 3 - sh["Y"]
     flags, wts = {}, {}
     for dose, k in DOSES.items():
         q = k / K_ON
         mass = q * ns / (1 - q)
-        w = {c: mass / 3 / ng[g] for g, cs in grp.items() for c in cs}
+        w = {c: mass * sh[g] / ng[g] for g, cs in grp.items() for c in cs if cnt[c]}
         wts[dose] = w
-        flags[dose] = f"--on {POOL} --on-k {K_ON} --on-mode self --on-lon wc_arc --on-weight " + ",".join(f"cell={c}:{w[c]:.6f}" for c in STAT + STOP)
+        flags[dose] = f"--on {POOL} --on-k {K_ON} --on-mode self --on-lon wc_arc --on-weight " + ",".join(f"cell={c}:{w[c]:.6f}" for c in w)
     flags["w0"] = f"--on {POOL} --on-k {K_ON} --on-mode self --on-lon wc_arc --on-weight pool=w:0"
     for k_, f in flags.items():
         (OUT / f"flags_{k_}.txt").write_text(f + "\n")
-    rec = dict(check=chk, cells=cnt, groups=ng, s_rows_cv_history=int(stop.sum()), flags=flags, weights=wts,
+    rec = dict(check=chk, cells=cnt, groups=ng, shares=sh, y_raised=bool(sh["Y"] > ng["Y"] / (ng["S"] + ng["Y"]) / 3 + 1e-12), s_y_rows_cv_history=int(stop.sum()), flags=flags, weights=wts,
                expected_new_per_batch={d: k for d, k in DOSES.items()}, route_feat_ok_new=float(fz["ok"].mean()))
     (OUT / "pack.json").write_text(json.dumps(rec, indent=1))
     RES.mkdir(parents=True, exist_ok=True)
@@ -440,6 +469,22 @@ def dev_ade(tag):
     return float(json.load(open(d))["dev_ade"])
 
 
+def ledger_read(tag):
+    """Decision 331's ledger cells S_L, Y_P, Y_V on the F read (constant-velocity history; capledger_test rows, led.py measures / success
+    unchanged) -> {cell: (per-row success, logs)}; registered secondary reads, not gates."""
+    led = _led()
+    z = dict(np.load(DATA / "runs/cap_ledger/select/rows.npz", allow_pickle=False))
+    p = np.load(DATA / f"runs/cap_ledger/plans/F/{tag}.npz")
+    pos = {k: i for i, k in enumerate(p["names"].tolist())}
+    m = led.measures(p["plan"][np.array([pos[k] for k in z["token"].tolist()])], z)
+    out = {}
+    for c in ("S_L",) + YIELD:
+        msk = z["in_" + c]
+        zc = {k: v[msk] for k, v in z.items()}
+        out[c] = (led.success(c, {k: v[msk] for k, v in m.items()}, zc).astype(float), z["log"][msk])
+    return out
+
+
 def cmd_gate(a):
     from jevdrive import stats
     Cc, cx = cap_read(a.c)
@@ -457,6 +502,12 @@ def cmd_gate(a):
         lock = bool(dWm >= 0.20 and dD < 0.5 * dWm)
         res["arms"][t] = dict(cap=Jc, dev=dv, dev_ade=ade, d_wait_W=stats.fmt(dW), d_wait_G=stats.fmt(dG), dD=dD, gates=g, launch_lock=lock,
                               passed=bool(all(g.values()) and not lock))
+        try:                                                           # secondary (not a gate): d331's ledger cells on the F read
+            lj, lc = ledger_read(t), ledger_read(a.c)
+            res["arms"][t]["ledger_F"] = {c: dict(J=float(lj[c][0].mean()), C=float(lc[c][0].mean()), n=int(len(lj[c][0])),
+                                                  diff=stats.fmt(stats.paired(lj[c][0], lc[c][0], groups=lj[c][1]))) for c in lj}
+        except FileNotFoundError as e:
+            res["arms"][t]["ledger_F"] = f"missing: {e}"
     ok = [t for t in a.j if res["arms"][t]["passed"]]
     if len(ok) == 2:
         d0, d1 = (res["arms"][t]["cap"]["D"] for t in ok)
@@ -474,6 +525,10 @@ def cmd_gate(a):
         L.append(f"| {t} | {r['cap']['wait_W']:.3f} | {r['cap']['go_G']:.3f} | {r['cap']['into_WL']:.3f} | {r['cap']['D']:.3f} | {r['dev_ade']:.4f} | "
                  f"{r['dev']['lat2s_med_absdiff']:.3f} | {r['cap']['stop_SN']:.3f} / {r['cap']['over_SN_med']:.2f} | {'yes' if r['launch_lock'] else 'no'} | "
                  f"{'PASS' if r['passed'] else 'fail'} |")
+    L += ["", "secondary (not gates), decision 331's ledger cells on the F read (capledger_test, success share, J vs C paired):"]
+    for t in a.j:
+        lf = res["arms"][t].get("ledger_F")
+        L.append(f"- {t}: " + ("; ".join(f"{c} {v['J']:.3f} vs {v['C']:.3f} (n {v['n']}), diff {v['diff']}" for c, v in lf.items()) if isinstance(lf, dict) else str(lf)))
     L += ["", "paired vs C (log-clustered bootstrap): " + "; ".join(f"{t}: wait W {res['arms'][t]['d_wait_W']}, wait G {res['arms'][t]['d_wait_G']}" for t in a.j),
           "", f"verdict: {res['verdict']}" + (f"; dose {pick}" if pick else "")]
     RES.mkdir(parents=True, exist_ok=True)
