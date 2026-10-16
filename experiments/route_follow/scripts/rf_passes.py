@@ -12,6 +12,8 @@ reaches other states and fails on other turns in other ways; the expert labels a
          (anchor distance and speed ratio at k 4 / 10 / 20 / 29) -> S/disp.json
   bitid  --a <run dir> --b <run dirs, comma> [--out json]   per scene of a: max |diff| of served plan / anchor / ego over the common k
          against the same scene in b (the switch bit-identity checks); exit 0 when every compared scene is identical
+  fails  --base <pass-0 stage dirs> --passes A=<stage>,B=<stage> --out <json>   identity-only yield: turns, failed turns, rewindable units,
+         overlap / new against pass 0 and the earlier passes, displacement of the identity against pass 0
   tally  --p0 <pass-0 dir: units.csv, rows.csv, pool report> --passes A=<stage>,B=<stage> [--reports A=<report json>,..] --out <json>
          per pass and in total: strict turns, failed (event / off) turns, handovers, label rows / units / turns / logs, the overlap of failed
          turns with pass 0 and the new failed / label turns each pass adds
@@ -178,6 +180,57 @@ def tally(a):
     print(json.dumps(out, indent=1))
 
 
+def fails(a):
+    """Identity-only yield (the handovers were not run): per pass the strict turns, the failed (event / off) turns, the rewindable units
+    (h per Delta), their overlap with pass 0 and with the earlier passes, and the identity's displacement against pass 0 -> --out json."""
+    base = [x for x in a.base.split(",") if x]
+    def units(stages):
+        U = {}
+        for st in stages:
+            f = Path(st, "tfail.json")
+            if f.exists():
+                U.update(json.loads(f.read_text())["units"])
+        return U
+    def summ(U):
+        turn = {s for s, u in U.items() if u.get("turn")}
+        fail = {s for s, u in U.items() if u.get("turn") and u.get("outcome") in ("event", "off")}
+        rw = {(s, d) for s, u in U.items() for d, h in (u.get("h") or {}).items() if h is not None}
+        return turn, fail, rw
+    b0 = id_records(base)
+    t0, f0, r0 = summ(units(base))
+    out = {"0": dict(turns=len(t0), failed=len(f0), rewindable_units=len(r0), outcome={})}
+    for s, u in units(base).items():
+        if u.get("turn"):
+            out["0"]["outcome"][u["outcome"]] = out["0"]["outcome"].get(u["outcome"], 0) + 1
+    seen_f, seen_r = set(f0), set(r0)
+    for spec in a.passes.split(","):
+        k, st = spec.split("=")
+        U = units([st])
+        t, f, r = summ(U)
+        oc = {}
+        for u in U.values():
+            if u.get("turn"):
+                oc[u["outcome"]] = oc.get(u["outcome"], 0) + 1
+        me = id_records([st])
+        com = sorted(set(me) & set(b0))
+        D = {q: [diff(me[s][q], b0[s][q])[1] for s in com if q in me[s] and q in b0[s]] for q in KS}
+        vr = [speed_of(me[s][4]) / speed_of(b0[s][4]) for s in com if 4 in me[s] and 4 in b0[s] and speed_of(b0[s][4]) > 1.0]
+        pc = lambda x, p: float(np.percentile(x, p)) if len(x) else None  # noqa: E731
+        out[k] = dict(scenes_read=len(me), turns=len(t), failed=len(f), outcome=oc, rewindable_units=len(r),
+                      failed_also_p0=len(f & f0), failed_new_vs_p0=len(f - f0), failed_new_vs_earlier=len(f - seen_f),
+                      p0_failed_not_here=len(f0 - f), turns_not_in_p0=len(t - t0),
+                      rewindable_new_vs_p0=len(r - r0), rewindable_new_vs_earlier=len(r - seen_r),
+                      disp_pos={str(q): dict(n=len(x), median=pc(x, 50), p90=pc(x, 90), share_gt_0p5=float(np.mean(np.asarray(x) > 0.5)) if x else None)
+                                for q, x in D.items()},
+                      v_ratio_k4=dict(n=len(vr), median=pc(vr, 50), p10=pc(vr, 10), p90=pc(vr, 90)),
+                      identical_to_p0=sum(all(diff(me[s][q], b0[s][q])[:2] == (0.0, 0.0) for q in set(me[s]) & set(b0[s])) for s in com))
+        seen_f |= f
+        seen_r |= r
+    out["union"] = dict(failed=len(seen_f), rewindable_units=len(seen_r))
+    Path(a.out).write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -188,8 +241,10 @@ def main():
     p = sp.add_parser("tally")
     p.add_argument("--p0", required=True), p.add_argument("--passes", required=True), p.add_argument("--reports", default="")
     p.add_argument("--out", required=True)
+    p = sp.add_parser("fails")
+    p.add_argument("--base", required=True), p.add_argument("--passes", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(dups=dups, bitid=bitid, tally=tally)[a.cmd](a)
+    dict(dups=dups, bitid=bitid, tally=tally, fails=fails)[a.cmd](a)
 
 
 if __name__ == "__main__":
