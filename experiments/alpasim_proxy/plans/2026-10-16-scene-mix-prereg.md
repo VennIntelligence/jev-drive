@@ -113,3 +113,18 @@ With the -1.5 s offset the check holds on 94.4 % of the 1491 scenes (line 95 %):
 (logged path 36-80 m, v0 3.4-15 m/s) whose 10 Hz path is 1.0-1.4 m (about 2 %) shorter than AUD1's `gt_dist_traveled_m`; v0 agrees on all
 1491 (|dv0| < 0.5 m/s), every scene with a logged path < 10 m agrees (157 / 157), and class N counts 24 against d262's 25. The classes
 S / E / N live entirely in the slow regime that agrees, so the shares are used as they are; the window is not retuned to pass the line.
+
+## Amendment 3 (2026-10-16 17:15 JST, user decision, before any N1 number exists)
+
+N1 no longer runs all 1491 scenes. The five full-set jobs were cancelled while queued (none had started; ids 1016-152719-20f4,
+1016-152719-3509, 1016-152720-4c0c; the other two were never submitted). New N1:
+- **Primary set:** a log-stratified random sample of 300 public scenes: largest-remainder allocation proportional to each of AUD1's 44
+  logs' scene count, at least one per log, `numpy.random.default_rng(20261016)` (`scene_mix.py sample`; lists
+  `results/scene_mix/n1_sample.txt`). **Near-stationary set:** the 25 d262 scenes (AUD1 logged path < 5 m and v0 < 1 m/s;
+  `n1_nearstat.txt`), reported separately; 7 overlap with the sample; the run list is the union, 318 scenes (`n1_run.txt`), one pool job
+  at priority 25 (above the queued PAI reads at 20 / 12).
+- **Lines unchanged** (<= 0.70 supported, >= 0.78 refuted) but now applied with the 95 % CI of the sample mean (bootstrap over logs,
+  `jevdrive.stats`, 10 000 resamples): supported if the upper bound <= 0.70, refuted if the lower bound >= 0.78. If the CI straddles a
+  line, the result is reported as such (point side plus "CI straddles"), and the sample is not extended.
+- Every stored driver is reported on the same 300 / 25 scenes next to its 1491-scene number (a check that the sample is representative,
+  not a read). Zero types and N2c strata as before.

@@ -4,7 +4,8 @@ the 1491 public AlpaSim scenes (pre-registration: experiments/alpasim_proxy/plan
 
   scene_mix.py extract [--step 0.5]                                   (box, CPU; one pmap unit per log, about a minute)
   scene_mix.py report <windows.csv> --out DIR [--gs <go-straight per_scene.csv>]   (Mac)
-  scene_mix.py n1 <go-straight per_scene.csv> --out DIR                          (Mac, after report)
+  scene_mix.py sample --out DIR                                                  (Mac: amendment 3 scene lists)
+  scene_mix.py n1 <go-straight per_scene.csv> --out DIR                          (Mac, after report and sample)
 
 extract writes $DATA_DIR/runs/alpasim_proxy/scene_mix/n2/<ts>/windows.csv: one row per window (kind uniform | public), ego at the
 lidar_pc instants (20 Hz): v0 / v_end (|vx, vy|), path (10 Hz polyline), maxdisp (max distance from the start), dyaw (heading change),
@@ -161,44 +162,82 @@ def report(a):
     print("\n".join(lines))
 
 
-def n1(a):
-    """N1: go-straight's public metrics (as the anchors: 1491 in the score, failed scenes 0) against its private 0.799 / 0.258 / 1.15."""
+SEED = 20261016
+
+
+def sample(a):
+    """Amendment 3: log-stratified random sample of the public scenes (largest-remainder allocation over AUD1's 44 logs, at least one
+    per log, fixed seed) plus the 25 near-stationary scenes (d262: logged path < 5 m and v0 < 1 m/s), written as two scene lists."""
     out = Path(a.out)
-    P = pd.read_csv(out / "public_windows.csv")
+    m = pd.read_csv(REPO / "experiments/alpasim/results/aud1/per_scene.csv", usecols=["scene", "log", "v0", "APY10m10-AB-s0|gt_dist_traveled_m"])
+    q = m.groupby("log").size() * a.n / len(m)
+    k = np.maximum(1, np.floor(q)).astype(int)
+    k[(q - np.floor(q)).sort_values(ascending=False).index[:max(0, a.n - k.sum())]] += 1
+    rng = np.random.default_rng(SEED)
+    pick = sorted(s for lg, x in m.groupby("log") for s in rng.choice(sorted(x.scene), k[lg], replace=False))
+    ns = sorted(m.scene[(m["APY10m10-AB-s0|gt_dist_traveled_m"] < 5) & (m.v0 < 1)])
+    (out / "n1_sample.txt").write_text("\n".join(pick) + "\n")
+    (out / "n1_nearstat.txt").write_text("\n".join(ns) + "\n")
+    (out / "n1_run.txt").write_text("\n".join(sorted(set(pick) | set(ns))) + "\n")
+    print(f"sample {len(pick)} over {m.log.nunique()} logs, near-stationary {len(ns)}, overlap {len(set(pick) & set(ns))}, run list {len(set(pick) | set(ns))}")
+
+
+def metrics(x):
+    ok, sc = x.dist_traveled_m.notna(), x.score.fillna(0)
+    z = x[sc == 0]
+    fold, coll = z.dist_traveled_m.isna(), z.collision_at_fault.fillna(0) > 0
+    off = ~fold & ~coll & (z.offroad.fillna(0) > 0)
+    cor = ~fold & ~coll & ~off & (z.left_corridor_laterally.fillna(0) > 0)
+    return dict(n=len(x), score=sc.mean(), km=x.dist_traveled_m.sum() / max(x.offroad_or_collision_at_fault.sum(), 1e-9) / 1000,
+                gt=x.dist_to_gt_trajectory[ok].mean(), zeros=len(z), z_fold=int(fold.sum()), z_coll=int(coll.sum()), z_off=int(off.sum()),
+                z_corr=int(cor.sum()), driven_m=x.dist_traveled_m.mean())
+
+
+def n1(a):
+    """N1 (amendment 3): go-straight on the log-stratified sample (primary, log-clustered CI) and on the 25 near-stationary scenes; every
+    stored driver on the same scenes and on all 1491 for reference. Lines: <= 0.70 supported, >= 0.78 refuted (private 0.799)."""
+    from jevdrive import stats
+    out = Path(a.out)
+    m = pd.read_csv(REPO / "experiments/alpasim/results/aud1/per_scene.csv", usecols=["scene", "log"])
     S = pd.concat([pd.read_csv(a.gs).assign(driver="GS"), pd.read_csv(REPO / "tmp/aud1_drift/per_scene.csv")]
                   + [pd.read_csv(REPO / f"experiments/alpasim_proxy/results/anchors/{f}.csv") for f in ("ltf", "dd", "g0014")], ignore_index=True)
-    S = S.drop_duplicates(["driver", "scene"]).merge(P[["scene", "S", "N", "E"]], on="scene", how="left")
+    S = S.drop_duplicates(["driver", "scene"]).merge(m, on="scene", how="left")
+    sets = {k: set((out / f"n1_{k}.txt").read_text().split()) for k in ("sample", "nearstat")}
+    gs = set(S.scene[S.driver == "GS"])
+    miss = (sets["sample"] | sets["nearstat"]) - gs
     rows = []
     for d, x in S.groupby("driver", sort=False):
-        ok, sc = x.dist_traveled_m.notna(), x.score.fillna(0)
-        z = x[sc == 0]
-        fold, coll = z.dist_traveled_m.isna(), z.collision_at_fault.fillna(0) > 0
-        off = ~fold & ~coll & (z.offroad.fillna(0) > 0)
-        cor = ~fold & ~coll & ~off & (z.left_corridor_laterally.fillna(0) > 0)
-        r = dict(driver=d, n=len(x), score=sc.sum() / 1491, km=x.dist_traveled_m.sum() / x.offroad_or_collision_at_fault.sum() / 1000,
-                 gt=x.dist_to_gt_trajectory[ok].mean(), zeros=len(z), z_fold=int(fold.sum()), z_coll=int(coll.sum()), z_off=int(off.sum()),
-                 z_corr=int(cor.sum()), z_other=int(len(z) - fold.sum() - coll.sum() - off.sum() - cor.sum()))
-        for c in ("N", "S", "E"):
-            m = x[c].fillna(False).astype(bool)
-            r[f"{c}_n"], r[f"{c}_score"], r[f"{c}_zeros"] = int(m.sum()), sc[m].mean(), int((sc[m] == 0).sum())
-        rows.append(r)
+        for k, sc in [*sets.items(), ("all", None)]:
+            y = x if sc is None else x[x.scene.isin(sc)]
+            if sc is None and len(y) < 1491:
+                continue
+            r = dict(driver=d, set=k, **metrics(y))
+            b = stats.bootstrap(y.score.fillna(0).to_numpy(float), groups=y.log.to_numpy())
+            r.update(lo=b["lo"], hi=b["hi"])
+            rows.append(r)
     T = pd.DataFrame(rows)
     T.to_csv(out / "n1_table.csv", index=False)
-    g = T.set_index("driver").loc["GS"]
-    v = "supported" if g["score"] <= 0.70 else "refuted" if g["score"] >= 0.78 else "undetermined"
-    md = [f"# SCENE-MIX N1: go-straight (starter kit, unmodified) on the 1491 public scenes\n\nPublic {g['score']:.3f} / {g['km']:.3f} km / {g['gt']:.2f} m "
-          f"against private 0.799 / 0.258 km / 1.15 m. Lines <= 0.70 supported, >= 0.78 refuted: **{v}**.\n",
-          "| driver | score | at-fault km | GT m | zeros | route fold | collision at fault | offroad | corridor | other | N n / score / zeros | S n / score / zeros | E n / score / zeros |",
-          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    md += [f"| {x.driver} | {x.score:.3f} | {x.km:.3f} | {x.gt:.2f} | {x.zeros} | {x.z_fold} | {x.z_coll} | {x.z_off} | {x.z_corr} | {x.z_other} | "
-           + " | ".join(f"{getattr(x, c + '_n')} / {getattr(x, c + '_score'):.3f} / {getattr(x, c + '_zeros')}" for c in "NSE") + " |" for x in T.itertuples()]
-    (out / "n1.md").write_text("\n".join(md) + "\n\nZero types exclusive in this order: route fold (no metrics), collision at fault, offroad, corridor.\n")
+    g = T[(T.driver == "GS") & (T.set == "sample")].iloc[0]
+    v = "supported" if g["hi"] <= 0.70 else "refuted" if g["lo"] >= 0.78 else (
+        "point supported, CI straddles 0.70" if g["score"] <= 0.70 else "point refuted, CI straddles 0.78" if g["score"] >= 0.78 else "undetermined")
+    md = [f"# SCENE-MIX N1: go-straight (starter kit, unmodified), public sample (amendment 3)\n\nGo-straight on the {g['n']}-scene log-stratified "
+          f"sample: score {g['score']:.3f} [{g['lo']:.3f}, {g['hi']:.3f}] (log-clustered), at-fault {g['km']:.3f} km, GT {g['gt']:.2f} m; private 0.799 / "
+          f"0.258 km / 1.15 m. Lines <= 0.70 supported, >= 0.78 refuted: **{v}**. Scenes missing from the go-straight run: {len(miss)}.\n",
+          "| driver | set | n | score [95 % CI] | at-fault km | GT m | zeros | route fold | collision at fault | offroad | corridor | driven m |",
+          "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    md += [f"| {x.driver} | {x.set} | {x.n} | {x.score:.3f} [{x.lo:.3f}, {x.hi:.3f}] | {x.km:.3f} | {x.gt:.2f} | {x.zeros} | {x.z_fold} | {x.z_coll} | "
+           f"{x.z_off} | {x.z_corr} | {x.driven_m:.1f} |" for x in T.sort_values(["set", "driver"]).itertuples()]
+    (out / "n1.md").write_text("\n".join(md) + "\n\nScore = mean over the set, failed scenes 0. Zero types exclusive in this order: route fold "
+                               "(no metrics), collision at fault, offroad, corridor.\n")
     print("\n".join(md))
 
 
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    smp = sp.add_parser("sample")
+    smp.add_argument("--n", type=int, default=300)
+    smp.add_argument("--out", required=True)
     o = sp.add_parser("n1")
     o.add_argument("gs")
     o.add_argument("--out", required=True)
@@ -209,7 +248,7 @@ def main():
     r.add_argument("--out", required=True)
     r.add_argument("--gs")
     a = ap.parse_args()
-    {"extract": extract, "report": report, "n1": n1}[a.cmd](a)
+    {"extract": extract, "report": report, "sample": sample, "n1": n1}[a.cmd](a)
 
 
 if __name__ == "__main__":
