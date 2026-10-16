@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "capledger_test",
+ "version": 1,
+ "unit": "token",
+ "n": 5731,
+ "sha256": "d735e435ffa24713b7281401df94327125b853ee6cd8dd9d4d1d2727dc2b9bdc",
+ "origin": "cap_ledger select (experiments/cap_ledger/scripts/led.py): sampled behaviour cells of NAVSIM test-log frames, plans/2026-10-16-cap-ledger-prereg.md; rows $DATA_DIR/runs/cap_ledger/select/rows.npz",
+ "status": "frozen",
+ "used_by": [
+  "experiments/cap_ledger"
+ ],
+ "notes": "open-loop evaluation rows only; test logs, never trained on",
+ "members_file": "capledger_test.v1.txt.gz"
+}
