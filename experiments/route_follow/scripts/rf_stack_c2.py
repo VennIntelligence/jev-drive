@@ -461,10 +461,12 @@ def auc_ci(y, s, g, B, seed=0):
         w = cnt[:, codes]
         wp, wn = np.add.reduceat(w * y, starts, 1), np.add.reduceat(w * ~y, starts, 1)
         below = np.cumsum(wn, 1) - wn
-        vals.append((wp * (below + 0.5 * wn)).sum(1) / np.maximum(wp.sum(1) * wn.sum(1), 1e-12))
+        den = wp.sum(1) * wn.sum(1)
+        vals.append(np.where(den > 0, (wp * (below + 0.5 * wn)).sum(1) / np.maximum(den, 1e-12), np.nan))   # a draw without both outcomes: dropped
     b = np.concatenate(vals)
-    lo, hi = np.quantile(b, [0.025, 0.975])
-    return dict(auc=round(auc(y, s), 4), lo=round(float(lo), 4), hi=round(float(hi), 4), n=int(len(y)), pos=int(y.sum()), units=int(U))
+    lo, hi = np.nanquantile(b, [0.025, 0.975])
+    return dict(auc=round(auc(y, s), 4), lo=round(float(lo), 4), hi=round(float(hi), 4), n=int(len(y)), pos=int(y.sum()), units=int(U),
+                draws_dropped=int(np.isnan(b).sum()))
 
 
 def within(y, s, g, B):
@@ -499,7 +501,7 @@ def base_feats(K, speed, mu, sd):
     return X.reshape(n * K, K + 1)
 
 
-def grad_read(head, Dx, idx, dev, B, bs=256):
+def grad_read(head, Dx, idx, dev, B, bs=256, g2=None):
     """Gate 2 on the dev candidates with true contact: one xy step of every pose along -grad(sum of predicted probabilities) (yaw kept),
     scaled to an RMS displacement of h per pose; true depth strictly lower after the step? Same for a random xy direction of the same size."""
     import torch
@@ -531,7 +533,8 @@ def grad_read(head, Dx, idx, dev, B, bs=256):
     out = dict(candidates=int(len(ii)), rows=int(len(set(ii))), by_cand=np.bincount(kk, minlength=K).tolist())
     for h in STEPS_RMS:
         R = {k: np.concatenate(v) for k, v in res[h].items()}
-        out[f"rms_{h:.2f}"] = dict(grad=ci(R["g"], g, B), random=ci(R["r"], g, B), grad_mean_depth_change=float(R["gd"].mean()),
+        out[f"rms_{h:.2f}"] = dict(grad=ci(R["g"], g, B), random=ci(R["r"], g, B),
+                                   **({} if g2 is None else dict(grad_scene_ci=ci(R["g"], g2[idx][ii], B), random_scene_ci=ci(R["r"], g2[idx][ii], B))), grad_mean_depth_change=float(R["gd"].mean()),
                                    random_mean_depth_change=float(R["rd"].mean()), grad_pred_sum_decreases=float(R["ps"].mean()))
     return out
 
@@ -579,9 +582,17 @@ def cmd_eval(a, run):
                                         within_state=within(y_any, pb, Dx.log[dv], B))
         ptr = predict(head, Dx, trn[:: max(1, len(trn) // 4000)], dev)
         R["train_rows_auc_descriptive"] = auc(Dx.z["lab"][trn[:: max(1, len(trn) // 4000)]].any((2, 3)).ravel(), ptr.max((2, 3)).ravel())
+        if nm == "own":                                                # descriptive: own dev has 4 logs; the same reads clustered by scene
+            sc = np.array([n.split(":")[1] for n in Dx.z["names"][dv]])
+            gs = np.repeat(sc, K)
+            R["scene_clustered"] = dict(scenes=int(len(set(sc))), pooled=auc_ci(y_any.ravel(), s_any.ravel(), gs, B),
+                                       agent=auc_ci(L[:, :, 0].any(-1).ravel(), p[:, :, 0].max(-1).ravel(), gs, B),
+                                       road=auc_ci(L[:, :, 1].any(-1).ravel(), p[:, :, 1].max(-1).ravel(), gs, B),
+                                       executed=auc_ci(y_any[:, 0], s_any[:, 0], sc, B), within_state=within(y_any, s_any, sc, B),
+                                       baseline_pooled=auc_ci(y_any.ravel(), pb.ravel(), gs, B))
         out[nm] = R
         run.info(f"{nm}: pooled {R['pooled']} executed {R['executed']} baseline {R['baseline_type_speed']['pooled']}")
-    out["gradient"] = grad_read(head, Do, np.flatnonzero(Do.dev), dev, B)
+    out["gradient"] = grad_read(head, Do, np.flatnonzero(Do.dev), dev, B, g2=np.array([n.split(":")[1] for n in Do.z["names"]]))
     run.info(f"gradient {out['gradient']}")
     # ---- 3c: share of rows with max predicted contact probability > 0.5 (the cons constraint)
     NT = nav_tab()
