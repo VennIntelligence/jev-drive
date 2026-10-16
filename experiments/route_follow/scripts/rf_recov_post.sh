@@ -7,10 +7,15 @@
 #   rf_recov_post.sh fetch          pool network job: the PAI 281 scenes missing from the box scene cache (hf-mirror, pai_fetch.sh) -> $O/post/fetch.id
 #   rf_recov_post.sh ref-pai        the same-host PAI reference: RSG-L18-s0 on the 281, identical box path, + its extracts -> $O/post/ref_paix.id
 #   rf_recov_post.sh submit <ARM> <TAG_s0> <TAG_s1|-> <train_job_s0> <train_job_s1|->     the whole arm, --after its training jobs
+#   rf_recov_post.sh submit-held <ARM> <TAG_s0> <TAG_s1|-> <train_job_s0|-> <train_job_s1|->  staged (JOINT-DAGGER): the held 460 reads + a
+#                                   report job only; with STAGE2=1 a stage2 job after the report submits the public guard + PAI 281 seed 0 +
+#                                   extracts + final report only when the held lines say H1 passes ($A/lines.json H1 true), else writes $A/STAGE2
+#   rf_recov_post.sh stage2 <ARM> <TAG_s0> <TAG_s1|->     (job body) the conditional second stage
 #   rf_recov_post.sh post <ARM> <TAG_s0> <TAG_s1|->    a report job now, no dependencies (rerun after a failure / partial report)
 #   rf_recov_post.sh cost           job count and estimated job-hours per arm (+ the one-off reference)
 #   job bodies: report <ARM> <TAG_s0> <TAG_s1|-> | paix <PAI read dir> | fetchjob
-# Env: KIND (R | L | RL; default from the arm name: RCVRL* -> RL, RCVR* -> R, RCVL* -> L), PRIO (pool priority, 6), DRY=1 (submit / ref-pai /
+# Env: KIND (R | L | RL | J; default from the arm name: RCVRL* -> RL, RCVR* -> R, RCVL* -> L, JDG* -> J), PRIO (pool priority, 6), DRY=1 (submit / ref-pai /
+#   fetch: print the job specs, submit nothing), ARMROOT (arm dirs, default $O), RESSUB (results subdir in the repo, default recovery_envelope),
 #   fetch: print the job specs, submit nothing), report: PAI_ARM / PAI_REF (PAI read dirs, default $O/pai/<TAG_s0> / $O/pai/RSG-L18-s0),
 #   NOCOPY=1 (no copy into experiments/route_follow/results/recovery_envelope/<ARM>/).
 set -uo pipefail; cd "$(dirname "$0")/../../.."
@@ -21,7 +26,30 @@ CH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks          # the Tokyo ref
 STRICT=experiments/route_follow/results/pai281/strict36.txt; WL=$O/pai_wl.pkl; REFT=RSG-L18-s0
 WIZ=controller.gains.rel_front_steering_angle_weight=20
 X=$O/post; mkdir -p $X                               # one-off jobs (fetch, reference) of this script; $O is shared with the training half
-kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
+kind() { [[ -n ${KIND:-} ]] && { echo $KIND; return; }; case $1 in RCVRL*) echo RL ;; RCVR*) echo R ;; RCVL*) echo L ;; JDG*) echo J ;; *) echo "arm $1: set KIND" >&2; return 1 ;; esac; }
+AR=${ARMROOT:-$O}
+held_submit() {  # <log> <tag> <after|-> -> the 6 held chunk ids (comma list)
+  local log=$1 T=$2 t=$3 i ids=()
+  for i in 0 1 2 3 4 5; do
+    ids+=($(sub $log rcv-held-$T-$i $([[ $t != - ]] && echo "--after $t") --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+           -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1
+  done; (IFS=,; echo "${ids[*]}"); }
+rest_submit() {  # <ARM> <T0> <T1|-> <after|->: public guard reads of every tag, PAI 281 for T0, extracts, the final report
+  local ARM=$1 T0=$2 T1=$3 af0=$4 A=$AR/$1 LOG=$AR/$1/jobs.txt T i rr=() af
+  [[ -s $WL ]] || { echo "no $WL: copy the stored PAI wait lines first" >&2; exit 1; }
+  [[ ! -e $O/pai/$T0 ]] || { echo "$O/pai/$T0 exists: never overwritten" >&2; exit 1; }
+  af=$(fetchdep) || exit 1
+  for T in $T0 $T1; do [[ $T == - ]] && continue; [[ ! -e $O/read10/$T ]] || { echo "$O/read10/$T exists" >&2; exit 1; }
+    for i in $(seq 0 9); do
+      rr+=($(sub $LOG rcv-g10-$T-$i $([[ $af0 != - ]] && echo "--after $af0") --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+             -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1
+    done; done
+  local pa=""; [[ $af0 != - ]] && pa=$af0; [[ -n $af ]] && pa=${pa:+$pa,}$af
+  pids=$(pai_submit $O/pai/$T0 $T0 $LOG "$pa") || exit 1
+  x=$(sub $LOG paix-${T0,,} --after $pids --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME paix $O/pai/$T0) || exit 1
+  dep="$(IFS=,; echo "${rr[*]}"),$x"; [[ -s $X/ref_paix.id ]] && dep="$dep,$(cat $X/ref_paix.id)"
+  r=$(sub $LOG rcv-report2-$ARM --after $dep --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 $T1) || exit 1
+  echo "$ARM stage 2: ${#rr[@]} public read jobs, $(echo $pids | tr , '\n' | grep -c .) PAI chunk jobs, extracts $x, report $r"; }
 sub() { local log=$1 name=$2; shift 2; local id
   if [[ ${DRY:-0} == 1 ]]; then echo "DRY $name: cl submit --owner recovery-envelope --name $name --tries ${TRIES:-1} --priority ${PRIO:-6} $*" >&2; echo dry:$name; return; fi
   id=$(.venv/bin/python -m jevdrive.cl submit --owner recovery-envelope --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-6} --no-check \
@@ -94,7 +122,7 @@ submit)
   okafter ${JOBS[@]} || exit 1
   [[ -s $WL ]] || { echo "no $WL: copy the stored PAI wait lines first" >&2; exit 1; }
   af=$(fetchdep) || exit 1
-  A=$O/$ARM; LOG=$A/jobs.txt; rr=(); [[ ! -e $LOG ]] || { echo "$ARM already submitted ($LOG)" >&2; exit 1; }; [[ ${DRY:-0} == 1 ]] || mkdir -p $A/pool
+  A=$AR/$ARM; LOG=$A/jobs.txt; rr=(); [[ ! -e $LOG ]] || { echo "$ARM already submitted ($LOG)" >&2; exit 1; }; [[ ${DRY:-0} == 1 ]] || mkdir -p $A/pool
   for k in ${!TAGS[@]}; do T=${TAGS[$k]}; t=${JOBS[$k]}
     for i in 0 1 2 3 4 5; do
       rr+=($(sub $LOG rcv-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
@@ -111,9 +139,25 @@ submit)
   r=$(sub $LOG rcv-report-$ARM --after $dep --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 $T1) || exit 1
   echo "$ARM ($K): ${#rr[@]} held / public read jobs, $(echo $pids | tr , '\n' | grep -c .) PAI chunk jobs, extracts $x, report $r"
   [[ ${DRY:-0} == 1 ]] && echo "DRY: job specs above, nothing submitted" || echo "ids in $LOG" ;;
+submit-held)
+  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:?TAG_s1 or -}; J0=${5:?train job s0 or -}; J1=${6:?train job s1 or -}; K=$(kind $ARM) || exit 1
+  [[ $T1 == - ]] && J1=-; TAGS=($T0); JOBS=($J0); [[ $T1 != - ]] && { TAGS+=($T1); JOBS+=($J1); }
+  for T in ${TAGS[@]}; do [[ ! -e $M/$T ]] || { echo "$T: held reads exist ($M/$T): never overwritten" >&2; exit 1; }; done
+  jj=(); for j in ${JOBS[@]}; do [[ $j != - ]] && jj+=($j); done; (( ${#jj[@]} )) && { okafter ${jj[@]} || exit 1; }
+  A=$AR/$ARM; LOG=$A/jobs.txt; hh=(); [[ ! -e $LOG ]] || { echo "$ARM already submitted ($LOG)" >&2; exit 1; }; [[ ${DRY:-0} == 1 ]] || mkdir -p $A/pool
+  for k in ${!TAGS[@]}; do hh+=($(held_submit $LOG ${TAGS[$k]} ${JOBS[$k]})) || exit 1; done
+  r=$(sub $LOG rcv-report-$ARM --after "$(IFS=,; echo "${hh[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 $T1) || exit 1
+  s2=-; [[ ${STAGE2:-0} == 1 ]] && { s2=$(sub $LOG rcv-stage2-$ARM --after $r --vram 0.5 --cpu 1 --ram 4 --timeout-h 1 --env ARMROOT=$AR --env KIND=$K \
+      --env RESSUB=${RESSUB:-recovery_envelope} --env PRIO=${PRIO:-6} -- bash $ME stage2 $ARM $T0 $T1) || exit 1; }
+  echo "$ARM ($K): held reads ${hh[*]}, report $r, stage2 $s2" ;;
+stage2)
+  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:--}; A=$AR/$ARM
+  h1=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('H1'))" $A/lines.json 2>/dev/null)
+  if [[ $h1 != True ]]; then echo "$(date '+%F %T') H1 = ${h1:-missing}: no public guard / PAI (staged reads)" | tee $A/STAGE2; exit 0; fi
+  rest_submit $ARM $T0 $T1 - | tee $A/STAGE2 ;;
 post)
-  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:-}; kind $ARM > /dev/null || exit 1; mkdir -p $O/$ARM/pool
-  sub $O/$ARM/jobs.txt rcv-report-$ARM --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 ${T1:--} ;;
+  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:-}; kind $ARM > /dev/null || exit 1; mkdir -p $AR/$ARM/pool
+  sub $AR/$ARM/jobs.txt rcv-report-$ARM --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME report $ARM $T0 ${T1:--} ;;
 paix)        # <PAI read dir>: rf_tax extract (--asl-actors, AlpaSim venv), rf_londiag slim, rf_pai_follow extract (label x), serving path
   R=${2:?read dir}; pai_ok $R || { echo "$R: not every chunk DONE" >&2; exit 1; }
   [[ -s $R/tax.pkl ]] || { $P $S/rf_tax.py extract --runs $R/runs/*/sim --out $R/tax.tmp --asl-actors --workers 16 && mv $R/tax.tmp $R/tax.pkl; } || exit 1
@@ -121,7 +165,7 @@ paix)        # <PAI read dir>: rf_tax extract (--asl-actors, AlpaSim venv), rf_l
   [[ -s $R/follow.pkl ]] || { $P $S/rf_pai_follow.py extract --runs x=$R --out $R/follow.tmp --workers 16 && mv $R/follow.tmp $R/follow.pkl; } || exit 1
   python3 $S/rf_recov_post.py track --read $R > $R/track.txt; echo "$R: extracts done, serving path $(cat $R/track.txt)" ;;
 report)
-  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:--}; K=$(kind $ARM) || exit 1; A=$O/$ARM; mkdir -p $A
+  ARM=${2:?ARM}; T0=${3:?TAG_s0}; T1=${4:--}; K=$(kind $ARM) || exit 1; A=$AR/$ARM; mkdir -p $A
   ht=(); pt=(); for T in $T0 $T1; do [[ $T == - ]] && continue; held_ok $T && ht+=($T); pdir $T > /dev/null && pt+=($T); done
   echo "held complete: ${ht[*]:-none}; public complete: ${pt[*]:-none}"
   REF=(RSG-L18-s0 RSG-L18-s1); rc=0
@@ -150,7 +194,7 @@ report)
   TT=($T0); [[ $T1 != - ]] && TT+=($T1)
   $P $S/rf_recov_post.py lines --arm $ARM --kind $K --tags ${TT[@]} --dir $A --strict $STRICT \
     --note "Held complete: ${ht[*]:-none}; public complete: ${pt[*]:-none}." || exit 1
-  if [[ ${NOCOPY:-0} != 1 ]]; then D=experiments/route_follow/results/recovery_envelope/$ARM; mkdir -p $D; cp $A/lines.md $A/lines.json $D/; echo "-> $D"; fi
+  if [[ ${NOCOPY:-0} != 1 ]]; then D=experiments/route_follow/results/${RESSUB:-recovery_envelope}/$ARM; mkdir -p $D; cp $A/lines.md $A/lines.json $D/; echo "-> $D"; fi
   exit $rc ;;
 cost)
   cat <<'EOF'

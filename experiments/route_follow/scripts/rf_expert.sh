@@ -3,7 +3,8 @@
 # (experiments/alpasim/lib/rule_expert.py) on the box (held 460 / 18 decisions, sh30 driver) and Tokyo (PAI 281, gains 20).
 # The model (RSG-L18-s0) still runs in the driver and is logged as poses_model; the served plan is the expert's (drive.jsonl `poses`).
 # Variant flags (any command that drives): --expert-lookahead <s> (JEV_EXPERT_LA, default 1.2), --expert-entry-v <m/s> (JEV_EXPERT_EV,
-# default 4.6); label XP-L<la>-E<ev> (dots dropped: XP-L12-E46).
+# default 4.6); label XP-L<la>-E<ev> (dots dropped: XP-L12-E46); --expert-stop <dir> (JEV_EXPERT_STOP: the stop rule's line files,
+# rf_jdagger.py stops; JOINT-DAGGER) appends -ST to the label. Env AFTER (ids) gates box-read's chunk jobs.
 # box (repo root):
 #   rf_expert.sh box-pack                     pool CPU job: rf_expert.py pack on the held 460 (RSG-L18-s0's read configs) -> $O/pack_held
 #   [SFX=s] rf_expert.sh box-smoke [flags]    the 3 held smoke scenes (results/rule_expert/smoke_held.txt), one pool job -> $O/smoke/<label>
@@ -20,13 +21,14 @@
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$HERE/../../.." && pwd); RES=$REPO/experiments/route_follow/results
 cmd=${1:?command}; shift
-LA=1.2; EV=4.6; ARGS=()
+LA=1.2; EV=4.6; ARGS=(); XSTOP=""
 while (( $# )); do case $1 in
   --expert-lookahead) LA=$2; shift 2 ;;
   --expert-entry-v) EV=$2; shift 2 ;;
+  --expert-stop) XSTOP=$2; shift 2 ;;
   *) ARGS+=("$1"); shift ;;
 esac; done
-LABEL=XP-L${LA//./}-E${EV//./}
+LABEL=XP-L${LA//./}-E${EV//./}${XSTOP:+-ST}
 
 case $cmd in
 box-*)
@@ -34,7 +36,7 @@ box-*)
   P=$DATA_DIR/third_party/alpasim/.venv/bin/python; mkdir -p $O/pool
   sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner rule-expert --name "$name" --tries 1 --priority ${PRIO:-12} \
           --no-check --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
-  XENV=(--env JEV_EXPERT=$O/pack_held --env JEV_EXPERT_LA=$LA --env JEV_EXPERT_EV=$EV) ;;
+  XENV=(--env JEV_EXPERT=$O/pack_held --env JEV_EXPERT_LA=$LA --env JEV_EXPERT_EV=$EV ${XSTOP:+--env JEV_EXPERT_STOP=$XSTOP}) ;;
 tokyo-*)
   D=${DATA_DIR:-/data}; T=$D/runs/route_night/expert; REF=$D/runs/route_night/r281/rsg; EXAM=$REPO/experiments/alpasim/results/pai_exam
   export WIZ=controller.gains.rel_front_steering_angle_weight=20
@@ -51,7 +53,7 @@ box-smoke)
 box-read)
   ids=()
   for i in 0 1 2 3 4 5; do
-    ids+=($(sub xp-read-$LABEL-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 "${XENV[@]}" \
+    ids+=($(sub xp-read-$LABEL-$i ${AFTER:+--after $AFTER} --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 "${XENV[@]}" \
             -- bash experiments/route_mem/scripts/rm_chain.sh read RSG-L18-s0 $i 6 $LABEL)) || exit 1
   done
   sub xp-report-$LABEL --after "$(IFS=,; echo "${ids[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash "$HERE/rf_expert.sh" box-report $LABEL > /dev/null || exit 1

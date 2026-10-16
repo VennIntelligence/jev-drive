@@ -18,7 +18,18 @@ Per decision (rear-axle pose, speed, time):
             pose (up to 3 passes)
   path      pure pursuit from the rear axle on the chain, lookahead max(LA_MIN, LA_T * v), curvature within KMAX, kinematic bicycle at 0.1 s
   output    the 8 rear-axle poses at 0.5 .. 4.0 s in the anchor frame (the model's plan format) + an info dict (logged as drive.jsonl `expert`)
-Stop lines and traffic lights are ignored (prereg).
+Stop lines and traffic lights are ignored (prereg), unless the stop rule is on.
+
+Stop rule (JOINT-DAGGER, experiments/route_follow/plans/2026-10-16-joint-dagger-prereg.md; JEV_EXPERT_STOP = a directory of per-scene line files
+<scene>.npz written by experiments/route_follow/scripts/rf_jdagger.py stops; unset, or a scene without a file = off, every plan bit for bit as
+before). A file holds the scene's LONG-PROBE stop lines (onpol_nuplan ctx.npz) mapped onto this pack's path: st_s (L,) path station of the line,
+typ (L,) 1 stop sign / 2 traffic light, elig (L,) ln_elig, hs (L,) the human stopped before it (ln_tstop finite), kf_t (K,) the light keyframes
+in simulation time (us; < 0 unknown), st (L, K) light state per keyframe (1 red, 0 not red, -1 unknown). Per decision (rf_recov.py's must-stop
+rule, the one on_envelope trains): the first eligible line whose station is ahead of the front bumper and within LINE_D m must be stopped at when
+it is a stop sign the human stopped at, or a light red at the keyframe nearest t0 (<= 0.3 s) that the human stopped at or that stays red over
+[t0, t0 + 4 s] (unknown states allowed, one red required). The stop is the line - LINE_M m at the front bumper; the profile is 0 from there and
+the A_DEC braking envelope backwards (the yield stop's path). A stop the expert cannot make even at A_MAX is skipped (it drives on, as on amber).
+info `line` = [front-bumper distance to the line, type] when the rule stops the plan.
 
 Environment: JEV_EXPERT (pack directory; unset = off), JEV_EXPERT_LA (lookahead time, s, default 1.2), JEV_EXPERT_EV (turn entry speed, m/s,
 default 4.6), JEV_EXPERT_FROM (sh30_driver.py only; unset = the expert serves every decision): the decision index k (the session's drive call
@@ -58,6 +69,8 @@ def _from_table(v: str):
 
 FROM_ALL, FROM, FROM_ON = _from_table(os.environ.get("JEV_EXPERT_FROM", "") or "")
 SUFFIX += "-from" if ON and FROM_ON else ""
+STOPS = os.environ.get("JEV_EXPERT_STOP", "") or ""             # stop-rule line files (unset = off)
+SUFFIX += "-st" if ON and STOPS else ""
 
 
 def active(scene_id: str, k: int) -> bool:
@@ -75,6 +88,7 @@ A_ACC, A_DEC, A_MAX, ALAT = 1.5, 3.0, 6.0, 4.0
 YIELD_T, STOP_M, SIDE = 3.0, 1.5, 0.25
 DT, NSTEP, OUT = 0.1, 40, np.arange(5, 41, 5)  # sim steps; output steps = 0.5 .. 4.0 s
 HORIZON = 140.0                              # m of path the speed envelope looks at
+LINE_D, LINE_M, KF_TOL, RED_T = 60.0, 1.0, 3e5, 4e6   # stop rule: m ahead of the front bumper; m before the line; us; us
 
 _lock = threading.Lock()
 _scenes: dict = {}
@@ -86,7 +100,8 @@ def wrap(a):
 
 
 class Scene:
-    def __init__(self, f: Path):
+    def __init__(self, f: Path, stops: Path | None = None):
+        self.lines = dict(np.load(stops)) if stops is not None and Path(stops).exists() else None
         z = np.load(f)
         self.P, self.S = z["path"].astype(float), z["s"].astype(float)
         self.turns = z["turns"].astype(float).reshape(-1, 3)
@@ -170,8 +185,40 @@ def scene(name: str):
     with _lock:
         if name not in _scenes:
             f = Path(PACK) / f"{name}.npz"
-            _scenes[name] = Scene(f) if f.exists() else None
+            _scenes[name] = Scene(f, Path(STOPS) / f"{name}.npz" if STOPS else None) if f.exists() else None
         return _scenes[name]
+
+
+def line_stop(sc: Scene, s0: float, v: float, t0: int):
+    """The stop rule (module docstring) -> (rear-axle stop station, front-bumper distance to the line, type) or None."""
+    L = sc.lines
+    if L is None or not len(L["st_s"]):
+        return None
+    front = float(sc.dims[1])
+    d = L["st_s"] - (s0 + front)
+    cand = np.flatnonzero(L["elig"] & (L["typ"] > 0) & np.isfinite(d) & (d >= 0))
+    if not len(cand):
+        return None
+    q = int(cand[np.argmin(d[cand])])
+    if d[q] > LINE_D:
+        return None
+    if L["typ"][q] == 1:
+        must = bool(L["hs"][q])
+    else:
+        kt = L["kf_t"].astype(float)
+        dt = np.where(kt >= 0, np.abs(kt - t0), np.inf)
+        j = int(np.argmin(dt)) if len(dt) else -1
+        now = int(L["st"][q, j]) if j >= 0 and dt[j] <= KF_TOL else -1
+        w = (kt >= 0) & (kt >= t0 - KF_TOL) & (kt <= t0 + RED_T)
+        sw = L["st"][q, w]
+        red4 = bool(len(sw) and ((sw == 1) | (sw < 0)).all() and (sw == 1).any())
+        must = now == 1 and (bool(L["hs"][q]) or red4)
+    if not must:
+        return None
+    stop = float(L["st_s"][q]) - LINE_M - front
+    if v * v > 2 * A_MAX * max(stop - s0, 0.0):                       # cannot be made even at A_MAX: drive on
+        return None
+    return stop, float(d[q]), int(L["typ"][q])
 
 
 def corners(x, y, h, front, rear, hw):
@@ -254,8 +301,9 @@ def contact(sc: Scene, st, t0):
     return int(j) + 1, ids[int(n)]
 
 
-def plan(session: str, scene_id: str, t0: int, pose, v: float):
-    """-> (poses (8, 3) in the anchor frame, info dict). A scene without a pack, or any failure, raises (the driver aborts the call)."""
+def plan(session: str, scene_id: str, t0: int, pose, v: float, dense: bool = False):
+    """-> (poses (8, 3) in the anchor frame, info dict) [+ the simulated states (NSTEP + 1, 5) x, y, h, v, s in the scene frame with
+    dense]. A scene without a pack, or any failure, raises (the driver aborts the call)."""
     sc = scene(scene_id)
     if sc is None:
         raise FileNotFoundError(f"no expert pack for scene {scene_id} in {PACK}")
@@ -264,6 +312,9 @@ def plan(session: str, scene_id: str, t0: int, pose, v: float):
     s0, lat = sc.project(np.array([x, y]), *((hint - 10.0, hint + 40.0) if hint is not None else (None, None)))
     _sess[session] = s0
     stop, hits = None, []
+    ls = line_stop(sc, s0, v, t0) if sc.lines is not None else None
+    if ls is not None:
+        stop = ls[0]
     for _ in range(3):
         st = simulate(sc, x, y, h, v, s0, envelope(sc, s0, stop))
         c = contact(sc, st, t0)
@@ -282,7 +333,9 @@ def plan(session: str, scene_id: str, t0: int, pose, v: float):
     info = dict(s=round(s0, 2), lat=round(lat, 3), v=round(v, 3), vt=round(float(np.interp(s0, sc.S, sc.vbase)), 3),
                 v_plan=np.round(q[:, 3], 3).tolist(), stop=None if stop is None else round(stop - s0, 2), hits=hits,
                 turn=None if not nxt else [round(nxt[0][0] - s0, 1), round(nxt[0][1] - s0, 1), round(float(nxt[0][2]), 1)])
-    return poses, info
+    if ls is not None:
+        info["line"] = [round(ls[1], 2), ls[2]]
+    return (poses, info, st) if dense else (poses, info)
 
 
 def close(session: str):

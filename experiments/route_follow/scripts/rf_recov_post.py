@@ -126,7 +126,8 @@ def lines(a):
     if pl and same_path:
         n, r = pl["new"], pl["ref_counts"]
         L["PAI_zeros"] = dict(v=[n["zeros"], r["zeros"]], line="<= ref + 3", ok=n["zeros"] <= r["zeros"] + 3)
-        L["PAI_cor_route_end"] = dict(v=[n["cor_route_end"], r["cor_route_end"]], line="<= ref - 3", ok=n["cor_route_end"] <= r["cor_route_end"] - 3)
+        m3 = 0 if kind == "J" else 3                                     # JOINT-DAGGER registers cor_route_end <= reference
+        L["PAI_cor_route_end"] = dict(v=[n["cor_route_end"], r["cor_route_end"]], line=f"<= ref{' - 3' if m3 else ''}", ok=n["cor_route_end"] <= r["cor_route_end"] - m3)
         L["PAI_rear_ended"] = dict(v=[n["rear_ended"], r["rear_ended"]], line="<= ref + 3", ok=n["rear_ended"] <= r["rear_ended"] + 3)
     if ps and same_path:
         L["PAI_strict36"] = dict(v=[ps["arm"]["completed"], ps["ref"]["completed"]], line=">= 10 (registered reference 4)", ok=ps["arm"]["completed"] >= 10)
@@ -137,7 +138,8 @@ def lines(a):
 
     H1, G = all_ok(["H1_zeros", "H1_at_fault", "H1_gt"]), all_ok(["guard_score", "guard_zeros"])
     own_keys = dict(R=["H2_held_turns", "PAI_strict36", "PAI_zeros"], L=["PAI_cor_route_end", "PAI_rear_ended", "PAI_zeros"],
-                    RL=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end", "PAI_rear_ended"])[kind]
+                    RL=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end", "PAI_rear_ended"],
+                    J=["H2_held_turns", "PAI_strict36", "PAI_zeros", "PAI_cor_route_end"])[kind]
     OWN = all_ok(own_keys)
     if not two:                                                        # the registered lines are 2-seed means: no verdict on seed 0 alone
         verdict = "PENDING (seed 1 not read)" if (H1 is not False and G is not False and OWN is not False) else "NOT ADOPTED (seed 0 already fails)"
@@ -147,7 +149,7 @@ def lines(a):
         verdict = "ADOPT" if H1 and G and OWN else "NOT ADOPTED"
     ok = lambda x: {None: "pending", True: "PASS", False: "FAIL"}[x]  # noqa: E731
     f = lambda v, p=1: f"{v[0]:+.{p}f} [{v[1]:+.{p}f}, {v[2]:+.{p}f}]"  # noqa: E731
-    md = [f"# RECOVERY-ENVELOPE {arm} ({kind}): registered lines vs RSG-L18", "",
+    md = [f"# {'JOINT-DAGGER' if kind == 'J' else 'RECOVERY-ENVELOPE'} {arm} ({kind}): registered lines vs RSG-L18", "",
           f"Tags {', '.join(tags)}{'' if two else ' (seed 1 pending: seed-0 numbers against the RSG-L18 2-seed mean)'}; reference RSG-L18-s0 / -s1 "
           f"(stored reads). Held: {nh} paired scenes / {lh} logs; public: {ng} scenes / {lg} logs; log-clustered 95 % CI, {B} draws, seed {SEED}.", "",
           f"**Verdict: {verdict}** (H1 {ok(H1)}, guard {ok(G)}, own lines {ok(OWN)}: {', '.join(own_keys)})", "",
@@ -189,6 +191,10 @@ def lines(a):
            "RL = all five. PAI reference = RSG-L18-s0 read on the box (box and Tokyo PAI reads are deterministic per host but not equal, "
            "results/p4_self/box_det.md); the strict-36 threshold stays the registered absolute 10.",
            f"Sources: {d}/held18, confirm, follow, pai_londiag.json, pai_turns.json." + (f" {a.note}" if a.note else "")]
+    if kind == "J":                                                    # JOINT-DAGGER's own registration (plans/2026-10-16-joint-dagger-prereg.md)
+        md[-2] = ("Lines (JOINT-DAGGER prereg, verbatim): H1 zeros <= +3, at-fault <= +3, GT <= +0.03 m; H2 held 24 turns seed mean >= +3; PAI strict 36 "
+                  ">= 10 (reference 4), PAI zeros <= reference + 3, cor_route_end <= reference; guard score CI low > -0.01, zeros <= +5. Reads staged: "
+                  "public guard and PAI only after H1 passes on held. Own lines = H2 held turns + PAI strict 36 + PAI zeros + cor_route_end.")
     res = dict(arm=arm, kind=kind, tags=tags, two_seeds=two, verdict=verdict, H1=H1, guard=G, own=OWN, own_keys=own_keys, lines=L,
                held_scenes=nh, public_scenes=ng, h2=h2, pai_londiag=pl, pai_strict=ps, pai_track=tr, tokyo_ref=TOKYO_REF)
     (d / "lines.md").write_text("\n".join(md) + "\n")
@@ -217,7 +223,7 @@ def main():
     m.add_argument("--tsv", default="")
     q = sp.add_parser("lines")
     q.add_argument("--arm", required=True)
-    q.add_argument("--kind", required=True, choices=("R", "L", "RL"))
+    q.add_argument("--kind", required=True, choices=("R", "L", "RL", "J"))
     q.add_argument("--tags", nargs="+", required=True)
     q.add_argument("--dir", required=True)
     q.add_argument("--strict", required=True)
