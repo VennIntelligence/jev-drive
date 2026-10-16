@@ -216,8 +216,9 @@ class Serve:
     """One per session. __call__(plan output, ego speed, ego acceleration, decision time) -> the poses to return and a log record."""
 
     def __init__(self, vcont: float = 0.0, lead: bool = False, cam_to_front: float = 2.26, base: int = 0, acc: bool = False,
-                 acc_t_hand: float = ACC_T_HAND):
-        self.vcont, self.lead, self.base = float(vcont), LeadPlanner(cam_to_front) if lead else None, int(base)
+                 acc_t_hand: float = ACC_T_HAND, gap=None):
+        self.vcont, self.base = float(vcont), int(base)
+        self.lead = (LeadPlanner(cam_to_front) if gap is None else LeadPlanner(cam_to_front, *gap)) if lead else None   # gap: JEV_GAP
         self.gate = LeadPlanner(cam_to_front) if base == 2 else None      # its probability filter only
         self.acc = Acc(acc_t_hand) if acc else None
 
@@ -256,13 +257,16 @@ class Serve:
 VCONT, LEAD = float(os.environ.get("JEV_VCONT", "0") or 0), os.environ.get("JEV_LEAD", "0") == "1"
 BASE = int(os.environ.get("JEV_BASE", "0") or 0)
 ACC = os.environ.get("JEV_ACC", "0") == "1"
+_G = (os.environ.get("JEV_GAP", "") or "").strip()
+GAP = None if _G in ("", "0") else tuple(float(x) for x in (_G.split(",") + [str(STOP_DISTANCE)])[:2])   # (t_follow s, stop distance m)
+assert GAP is None or (LEAD and 0.3 <= GAP[0] <= 3.0 and 0.0 <= GAP[1] <= 10.0), f"JEV_GAP={_G!r}: <t_follow>[,<stop m>], needs JEV_LEAD=1"
 NEED_LEAD = LEAD or BASE == 2
 ON = VCONT > 0 or LEAD or BASE > 0 or ACC
 if LEAD:
     import scipy.optimize  # noqa: F401  (paid at start-up, not inside the first decision)
 
 
-SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "") + (f"-base{BASE}" if BASE else "") + ("-acc" if ACC else "")
+SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "") + (f"-base{BASE}" if BASE else "") + ("-acc" if ACC else "") + (f"-gap{GAP[0]:g}_{GAP[1]:g}" if GAP else "")
 
 
 def cam_to_front(vehicle, cam_x: float) -> float:
@@ -273,7 +277,7 @@ def cam_to_front(vehicle, cam_x: float) -> float:
 def new(vehicle, cam_x: float, acc_t_hand: float = ACC_T_HAND):
     """The session's Serve, or None when every switch is off (the driver then returns the plan as before, bit for bit).
     acc_t_hand: JEV_ACC's handoff time (s since the session's first call), per track."""
-    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x), BASE, ACC, acc_t_hand) if ON else None
+    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x), BASE, ACC, acc_t_hand, GAP) if ON else None
 
 
 def apply(fix, o: dict, v0: float, a0: float, t_us: int, **acc):

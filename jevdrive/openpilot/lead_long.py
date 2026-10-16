@@ -48,9 +48,10 @@ _SQ_A = np.sqrt(H * A_CHANGE_COST * np.interp(T_MPC[:-1], [0.0, 1.0, 2.0], [1.0,
 _C = np.concatenate([GV[1:-1], GA[1:-1], -GA[1:-1]])     # v >= 0, a >= ACCEL_MIN, a <= ACCEL_MAX at the stages after the fixed first one
 
 
-def safe_distance(v):
-    """VERBATIM long_mpc.get_safe_obstacle_distance at T_FOLLOW (standard personality)."""
-    return v * v / (2 * COMFORT_BRAKE) + T_FOLLOW * v + STOP_DISTANCE
+def safe_distance(v, t_follow=T_FOLLOW, stop_distance=STOP_DISTANCE):
+    """VERBATIM long_mpc.get_safe_obstacle_distance; defaults T_FOLLOW (standard personality) and STOP_DISTANCE. Other values only through
+    serve_fix's JEV_GAP (the AlpaSim following-gap calibration); the defaults are the arithmetic as before, bit for bit."""
+    return v * v / (2 * COMFORT_BRAKE) + t_follow * v + stop_distance
 
 
 def extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau):
@@ -75,9 +76,10 @@ class LongMpc:
     converged closed-loop gap to a few 0.1 m on the toy cases at 0.4-1 ms per tick; when the limits cannot all hold from the current state
     (standing with a braking command) the solve is repeated with v >= 0 as the slack penalty."""
 
-    def __init__(self, dt: float = DT_MDL, iters: int = 8):
+    def __init__(self, dt: float = DT_MDL, iters: int = 8, t_follow: float = T_FOLLOW, stop_distance: float = STOP_DISTANCE):
         from scipy.optimize import minimize
         self.dt, self.iters, self.ftol, self._min = dt, iters, 1e-6, minimize
+        self.tf, self.sd = float(t_follow), float(stop_distance)
         self.reset()
 
     def reset(self):
@@ -92,7 +94,7 @@ class LongMpc:
         """-> 0.5 |r|^2 and its gradient."""
         x, v, a = self.states(j, v0, a0)
         den = np.maximum(v + 10.0, 1.0)
-        dd, d, gap = v / COMFORT_BRAKE + T_FOLLOW, safe_distance(v), xo - x
+        dd, d, gap = v / COMFORT_BRAKE + self.tf, safe_distance(v, self.tf, self.sd), xo - x
         e, ez = (gap - d) / den, (gap[:-1] - LEAD_DANGER_FACTOR * d[:-1]) / den[:-1]
         act = ez < 0
         de_v = (-dd * den - (gap - d)) / den ** 2
@@ -147,8 +149,8 @@ def get_accel_from_plan(speeds, accels, t_idxs, action_t=DT_MDL):
 class LeadPlanner:
     """radard's vision lead + LongitudinalPlanner.update, one instance per session."""
 
-    def __init__(self, cam_to_front: float):
-        self.front, self.mpc = float(cam_to_front), LongMpc()
+    def __init__(self, cam_to_front: float, t_follow: float = T_FOLLOW, stop_distance: float = STOP_DISTANCE):
+        self.front, self.mpc = float(cam_to_front), LongMpc(t_follow=t_follow, stop_distance=stop_distance)
         self.prob, self.t_us = [0.0, 0.0], None
         self.v_des = self.a_out = 0.0
 
@@ -158,7 +160,7 @@ class LeadPlanner:
         alpha = DT_MDL / (LEAD_PROB_RC + DT_MDL)
         self.prob0 = p if p > getattr(self, "prob0", 0.0) else (1 - alpha) * self.prob0 + alpha * p
         vl = max(v_ego + mu[0, 0, 2] - model_v_ego, 0.0)
-        return bool(self.prob0 > LEAD_PRESENT and mu[0, 0, 0] - self.front + vl * vl / (2 * COMFORT_BRAKE) < safe_distance(v_ego))
+        return bool(self.prob0 > LEAD_PRESENT and mu[0, 0, 0] - self.front + vl * vl / (2 * COMFORT_BRAKE) < safe_distance(v_ego, self.mpc.tf, self.mpc.sd))
 
     def update(self, t_us: int, v_ego: float, a_ego: float, lead, lead_prob, model_v_ego: float, a_e2e: float):
         """lead (144,) raw lead output (mean 3 x 6 x 4 then log std), lead_prob (3,) logits, model_v_ego the plan's own speed at t = 0

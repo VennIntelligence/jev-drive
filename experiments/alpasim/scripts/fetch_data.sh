@@ -57,7 +57,7 @@ fetch() {  # <path in the dataset repo> [retry]
   # The tree API sometimes answers with an empty or non-JSON body (the 2026-10-09 exit): retry until it parses.
   want_sha=
   for i in $(seq 1 20); do
-    want_sha=$(curl -sf --max-time 60 "$API/$(dirname "$rel")" | python3 -c "import json,sys; print(next(f['lfs']['oid'] for f in json.load(sys.stdin) if f['path']==sys.argv[1]))" "$rel" 2>/dev/null) && [[ -n $want_sha ]] && break
+    want_sha=$(curl -sfL --max-time 60 "$API/$(dirname "$rel")" | python3 -c "import json,sys; print(next(f['lfs']['oid'] for f in json.load(sys.stdin) if f['path']==sys.argv[1]))" "$rel" 2>/dev/null) && [[ -n $want_sha ]] && break
     want_sha=; sleep $((i * 5))
   done
   [[ -n $want_sha ]] || { echo "tree API gave no sha256 for $rel after 20 tries (chunks kept in $DL)" | tee "$S/ERROR"; return 1; }
