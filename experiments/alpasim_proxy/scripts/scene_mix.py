@@ -25,6 +25,7 @@ DATA = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 RAW = DATA / "datasets/nuplan_raw/test"
 CFG = DATA / "datasets/alpasim_nuplan/navtest/configs"
 WIN = 5.5
+OFFSET = -1.5   # a public scene starts 1.5 s before its central (navtest) token: amendment 1, fitted to AUD1 gt_dist_traveled / v0
 PRIVATE = {"APY10m10-AB-s0": 0.640, "YR10m10-F-s0": 0.800, "LTF-sample": 0.738, "DD-sample": 0.772, "G0014": 0.848, "GS": 0.799}
 
 
@@ -56,7 +57,7 @@ def windows(job):
 
     out = [one(int(np.searchsorted(t, s)), "uniform", "") for s in np.arange(0, t[-1], step)]
     for sid in ids:
-        out.append(one(idx[sid.rsplit("-", 1)[1]], "public", sid) if sid.rsplit("-", 1)[1] in idx else dict(log=log, kind="public", scene=sid))
+        out.append(one(int(np.searchsorted(t, t[idx[sid.rsplit("-", 1)[1]]] + OFFSET)), "public", sid) if sid.rsplit("-", 1)[1] in idx else dict(log=log, kind="public", scene=sid))
     return [r for r in out if r]
 
 

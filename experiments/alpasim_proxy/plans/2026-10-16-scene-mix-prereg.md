@@ -95,3 +95,14 @@ scenes under each mix, not as a read.
 N1: 5 pool jobs, ~1.3 card-hours expected (the LTF / DD / garage anchors took ~4 card-hours for three drivers). N2: CPU only, minutes. No
 submission, no login, no Tokyo card used (assets absent there). Results: `experiments/alpasim_proxy/results/scene_mix/`, then one decision
 entry. No polling loops: one blocking background wait per phase.
+
+## Amendment 1 (2026-10-16 16:50 JST, before N1 has any result; N2 alignment fix)
+
+The N2 alignment check failed on the first extract: with the public window starting at the central token, |path - gt_dist_traveled| < 1 m
+and |v0 - v0_aud1| < 0.5 m/s held on 13.9 % of scenes (line 95 %). Deviation from the plan, stated plainly: `report` printed the class
+shares in the same output as the failed check, so the shares on the misaligned public windows were seen (uniform N share 0.33, public
+misaligned 0.007). The uniform windows do not depend on the offset. Fix as pre-registered, from the AUD1 table only: a grid over start
+offset (-3..+3 s, 0.5 s) and length (4.5 / 5 / 5.5 / 8 s) on 308 public scenes of 40 logs gives offset **-1.5 s**, length 5.5 s (median
+|dpath| 0.06 m, 97.7 % within 1 m, median |dv0| 0.006 m/s; every other cell <= 36 %): an AlpaSim nuPlan scene starts at the beginning of
+the navtest token's 1.5 s history. Public windows now start at token - 1.5 s (`OFFSET` in `scene_mix.py`); the check is rerun on all
+scenes and must pass before the shares are used. No line, class or verdict rule changes.
