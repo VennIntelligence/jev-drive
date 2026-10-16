@@ -104,3 +104,10 @@
   只管 K 课，S 行不用，不进闸（L18Ag0 的 kcorr 在日志未来上活跃 2.4 % > 2 %）。
 - poolgate 的 G-route（首个路线点对 served route0 ≤ 0.05 m 的份额 ≥ 0.99）把 route0_d 为 NaN 的行（没有 served route0 可比，ACC 下开过路线尽头更多）算作不过：
   L18Ag0 0.9896，183 行全是 NaN、有限的行 0 个超 0.05 m；旧 L18RSG 同样有 97 行 NaN。改为只在有限的行上算（≥ 0.99），NaN 份额照报。其余线不变。
+
+## 补记 3（用户决定，2026-10-17 01:00 CST；任何 pilot 训练与读数之前）
+
+停在建行：pilot（a / b / c、p0k13 / p0k26）、pilot 前向与 gate、全量、held / 公开 / PAI 读数全部取消（8 个 pool 作业，box `rsgacc/STOPPED_AT_ROWS`）。
+nuPlan 与 PAI 的 rollout、行管线、每池闸与 `ra-merge` 保留，合池 `on1_RSGACC` 作为数据留给下一轮的联合臂（课与剂量在那个臂里判，不单独读）。
+理由：配方与 RSG-L18 相同、只换 serve 状态，近似「第二轮」（d286 补记 5 无增益）；S hinge 不针对 ACC 新增零分的主因（进弯快、高速漂移、开过停车点）；
+ACC 只服务 PAI（d329）；与当晚 WAIT + desire 合成臂是同一底座上的平行分支，赢了也要再并进联合臂、再跑一条读链，并与之争卡。
