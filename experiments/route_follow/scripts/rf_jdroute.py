@@ -9,7 +9,7 @@ clean joint target; train + dev logs, the full label set and Amendment 1's junct
   (d) the human log path (meta gpath: logged path s0 - 15 .. s0 + 70 m, 1 m, already in the row frame).
 Reads: lateral distance (a)-(b) at +10 / 20 / 40 m, exit disagreement (heading at +40 m differs > 30 deg), rows with no valid slot, plan / label
 distance to (a), (b), (d); by segment (DAGGER-CHECK seg; failure window apart). Join: pool tab / feat / labels / meta row by row, the fed memory
-against the driver's served memory (meta rmem) and the route-hinge polyline (route.npz), the pack frame against gpath, and for 20 random rows
+against the driver's served memory (meta rmem) and the route-hinge polyline (route.npz), the pack's log against the row's logged poses (meta logfut, same times), and for 20 random rows
 the rule expert re-run at the meta anchor against the stored label.
   rf_jdroute.py read [--workers N]   CPU -> $JD/route_check/{rows.npz, route_check.json, join20.txt}, copies in results/joint_dagger/
 Box, repo .venv (numpy only).
@@ -73,11 +73,12 @@ def wrapd(a):
 def scene_job(job):
     """One scene: every row in k order (rule_expert's session) -> per wanted row the metrics."""
     import rule_expert as XP
-    sc, pf, idx, anc, want, F, gp, T, S = job
+    sc, pf, idx, anc, want, F, gp, T, S, t0, lf = job
     Z = XP.Scene(Path(pf))
     P, St = Z.P, Z.S
     hx = np.degrees(np.unwrap(np.arctan2(*np.gradient(P, axis=0)[:, ::-1].T)))
-    lxy = np.load(pf)["log_xy"].astype(float)
+    zp = np.load(pf)
+    lxy, lt = zp["log_xy"].astype(float), zp["log_t"].astype(float)
     hint, out = None, {}
     for j, i in enumerate(idx):
         a = anc[j]
@@ -123,9 +124,13 @@ def scene_job(job):
         r["a0_lon"] = float(axy[i0, 0] - p0[0]) if v[i0] else np.nan                              # memory anchor vs pack anchor (x of the +0 points)
         r["a0_d"] = float(np.hypot(*(axy[i0] - p0))) if v[i0] else np.nan
         r["b0_lat"] = float(np.hypot(*p0))                                                       # ego off the pack path
-        # pack frame vs gpath: gpath points to the pack's log path in the row frame
-        Lg = RM.in_ego(a, lxy[np.hypot(*(lxy - a[:2]).T) < 120])
-        r["frame_gpath"] = float(np.nanmax(pdist(Lg, G[::5]))) if len(Lg) >= 2 else np.nan
+        # pack frame / time vs the row: the pack's log at t0 + 0 .. 4 s in the row frame against meta logfut (the log's own poses, row frame)
+        tt = t0[j] + 5e5 * np.arange(9)
+        ok = (tt >= lt[0]) & (tt <= lt[-1]) & np.isfinite(lf[j][:, 0])
+        X = np.c_[np.interp(tt[ok], lt, lxy[:, 0]), np.interp(tt[ok], lt, lxy[:, 1])]
+        r["frame_logfut"] = float(np.hypot(*(RM.in_ego(a, X) - lf[j][ok, :2]).T).max()) if ok.any() else np.nan
+        Lg = RM.in_ego(a, lxy)
+        r["log40"] = float(pdist(Lg, G0[55:56])[0] < 1.0) if np.isfinite(G0[55]).all() else 0.0     # gpath is the human log at +40 m
         for nm, X in (("lab", T[j]), ("srv", S[j])):
             xy = X[:, :2].astype(float)
             da, db, dg = pdist(Am, xy) if len(Am) >= 2 else np.full(8, np.nan), pdist(B, xy), pdist(G, xy)
@@ -164,6 +169,14 @@ def summ(R, m, logs):
                           n_rows=int((ex[both] > 0).sum()),
                           of_which_a_matches_d=int(((dab > EXIT_DEG) & (dad <= EXIT_DEG) & both).sum()),
                           of_which_b_matches_d=int(((dab > EXIT_DEG) & (dbd <= EXIT_DEG) & both).sum()))
+    geo = (dab > EXIT_DEG) & both & (R["ab40"] > 2.0)                      # a heading split that is also a > 2 m geometric split at +40 m
+    lg = R["log40"] > 0.5
+    out["exit_geo"] = dict(n_rows=int(geo.sum()), share=float(geo.sum() / max(both.sum(), 1)), with_log40=int((geo & lg).sum()),
+                           b_matches_d=int((geo & lg & (dbd <= EXIT_DEG)).sum()), a_matches_d=int((geo & lg & (dad <= EXIT_DEG)).sum()))
+    out["log40_share"] = float(lg[m].mean())
+    fa = R["firstA"][m]
+    out["first_gt18"] = float(np.mean(fa > 18))
+    out["firstA_iqr"] = [float(np.nanpercentile(fa, 25)), float(np.nanpercentile(fa, 75))]
     out["exit_ad"] = float(((dad > EXIT_DEG) & both).sum() / max(both.sum(), 1))
     out["exit_bd"] = float(((dbd > EXIT_DEG) & m).sum() / n)
     for nm in ("lab", "srv"):
@@ -176,7 +189,7 @@ def summ(R, m, logs):
         ok = np.isfinite(dl) & np.isfinite(ds)
         out[f"lab_minus_srv_{q_}"] = dict(n=int(ok.sum()), mean=float((dl - ds)[ok].mean()) if ok.any() else None,
                                           lab_closer=float((dl < ds)[ok].mean()) if ok.any() else None)
-    out["frame_gpath_p95"] = float(np.nanpercentile(R["frame_gpath"][m], 95))
+    out["frame_logfut_max"] = float(np.nanmax(R["frame_logfut"][m]))
     return out
 
 
@@ -250,7 +263,8 @@ def cmd_read(a):
             i = i[np.argsort(k[i])]
             if not valid[i].any():
                 continue
-            jobs.append((sc, pack[sc], i, M["anchor"][i].astype(float), valid[i], F[i], M["gpath"][i], Lz["target"][i], M["poses"][i]))
+            jobs.append((sc, pack[sc], i, M["anchor"][i].astype(float), valid[i], F[i], M["gpath"][i], Lz["target"][i], M["poses"][i],
+                         M["t_us"][i].astype(float), M["logfut"][i].astype(float)))
         res = {}
         with ProcessPoolExecutor(a.workers) as ex:
             for r in run.tqdm(ex.map(scene_job, jobs, chunksize=4), total=len(jobs), desc="scenes"):
@@ -266,7 +280,14 @@ def cmd_read(a):
         segm = dict(junction=seg == "junction", approach=seg == "turn_appr", window=win, straight=seg == "straight",
                     other=~np.isin(seg, ["junction", "turn_appr", "straight"]))
         sets = dict(full_train=valid & ~dev, full_dev=valid & dev, A1_train=sub & ~dev, A1_dev=sub & dev)
-        out = dict(join=join, rows_done=int(done.sum()), rows_valid=int(valid.sum()), xs=XS, exit_deg=EXIT_DEG, sets={})
+        cov = {}                                                      # the memory's near field on the other row sets the trainer feeds
+        for nm in ("navtrain_full.s0of12", "on1_L18RB0"):
+            z = np.load(FEAT / f"{nm}.npz")
+            Q = RM.pts(z["f"][z["ok"]].astype(np.float32))
+            vq = Q[..., 0] > 0.5
+            fa = np.where(vq.any(-1), RM.OFFS[np.argmax(vq, -1)], np.nan)
+            cov[nm] = dict(rows=int(len(fa)), no_slot=float(np.isnan(fa).mean()), first_med=float(np.nanmedian(fa)), first_gt18=float(np.mean(fa > 18)))
+        out = dict(memory_cover_other=cov, join=join, rows_done=int(done.sum()), rows_valid=int(valid.sum()), xs=XS, exit_deg=EXIT_DEG, sets={})
         for s_, m in sets.items():
             out["sets"][s_] = dict(all=summ(R, m & done, logs), seg={g: summ(R, m & done & segm[g], logs) for g in SEGS})
         # ---- 20 random rows: the rule expert re-run at the meta anchor vs the stored label; ids side by side
