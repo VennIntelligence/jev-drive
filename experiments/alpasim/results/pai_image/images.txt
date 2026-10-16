@@ -1,0 +1,4 @@
+rsg jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead sha256:4f3bd3f46b04eeb20f4e765ebfc18776336b68e664c3e40390c8e4ff7531abe4
+rsghl jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-vhholdlead sha256:a5a93c3c54eb9f738c18aa4f6aa6a0fc830732ca052806948fdfb5d9abc7fc18
+rsgacc jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc sha256:67f002e949850def63bea7b9a4d1e835929c3c626470ea41e8a606103b8dd4d0
+rbsg2 jev-alpasim:rbsg2-l18-s0-382164ae-pai-vc1.0-lead sha256:bd48b58d7a573d9ca65f107c4c5cfffa275675c442c19e309a2f20329f022cce

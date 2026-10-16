@@ -1,0 +1,93 @@
+{
+ "label": "six_acc",
+ "image": "jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc",
+ "base": "alpasim-base:0.89.0",
+ "wall_s": "425",
+ "driver_gpu_peak_mib": "1466",
+ "tmp_peak_bytes": "5566464",
+ "serve": "serve: driver pai, tag RSG-L18-s0, replica 0 of 1; switches JEV_VCONT=1.0 JEV_LEAD=1 JEV_VHIST= JEV_ACC=1",
+ "wiz": "controller.gains.rel_front_steering_angle_weight=10",
+ "run": {
+  "n": 6,
+  "mean": 0.4179,
+  "zeros": 3,
+  "ones": 2
+ },
+ "driver": {
+  "drives": 1191,
+  "sessions": 6,
+  "inference_errors": 0,
+  "input_errors": 0,
+  "total_ms": {
+   "p50": 55.5,
+   "p90": 73.0,
+   "p99": 136.9,
+   "max": 170.9
+  },
+  "wait_ms": {
+   "p50": 0.0,
+   "p90": 7.1,
+   "p99": 52.2,
+   "max": 84.7
+  },
+  "frames_ms": {
+   "p50": null,
+   "p90": null,
+   "p99": null,
+   "max": null
+  },
+  "encode_ms": {
+   "p50": 32.7,
+   "p90": 38.4,
+   "p99": 41.2,
+   "max": 45.8
+  },
+  "policy_ms": {
+   "p50": 12.0,
+   "p90": 15.2,
+   "p99": 20.4,
+   "max": 27.7
+  }
+ },
+ "ref": {
+  "n": 6,
+  "mean": 0.4179,
+  "zeros": 3,
+  "ones": 2
+ },
+ "common": 6,
+ "differ": 0,
+ "max_abs_diff": 0.0,
+ "mean_diff": 0.0,
+ "within_001": 6,
+ "within_005": 6,
+ "zeros_agree": 6,
+ "missing_in_run": [],
+ "missing_in_ref": [],
+ "scenes": {
+  "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02": [
+   0.0,
+   0.0
+  ],
+  "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226": [
+   0.0,
+   0.0
+  ],
+  "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66": [
+   1.0,
+   1.0
+  ],
+  "clipgt-90ab8c24-2d85-4e52-8a57-3554c418cef2": [
+   1.0,
+   1.0
+  ],
+  "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9": [
+   0.5071713377322248,
+   0.5071713377322248
+  ],
+  "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034": [
+   0.0,
+   0.0
+  ]
+ }
+}

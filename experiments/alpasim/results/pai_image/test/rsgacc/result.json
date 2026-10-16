@@ -1,0 +1,84 @@
+{
+ "image": "jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc",
+ "tag": "default",
+ "image_bytes": 8033223295,
+ "gpu": "NVIDIA GeForce RTX 3090",
+ "cold_start_s": 17.9,
+ "gpu_mib": {
+  "before": 18,
+  "idle": 1489,
+  "peak": 1489,
+  "driver_peak": 1471
+ },
+ "tmp_peak_bytes": 2863104,
+ "run_peak_bytes": 0,
+ "docker_diff_lines": 0,
+ "changed_outside_tmp": [],
+ "read_only_errors": 0,
+ "tracebacks": 0,
+ "stop_s": 0.6,
+ "exit_code": 0,
+ "probe": {
+  "track": "pai",
+  "version": "jev-pai-RSG-L18-s0-backwarp-vc1-lead-acc-trackgate",
+  "git": "382164ae",
+  "api": [
+   0,
+   54,
+   0
+  ],
+  "ready_wait_s": 0.01,
+  "sessions": 2,
+  "drives": 800,
+  "jpeg_kb": 736,
+  "drive_ms": {
+   "p50": 46.8,
+   "p90": 54.4,
+   "p99": 114.6,
+   "max": 190.2,
+   "mean": 50.3
+  }
+ },
+ "server_ms": {
+  "total": {
+   "p50": 46.3,
+   "p90": 54.0,
+   "p99": 121.6,
+   "max": 189.4
+  },
+  "wait": {
+   "p50": 7.9,
+   "p90": 10.8,
+   "p99": 12.5,
+   "max": 27.8
+  },
+  "encode": {
+   "p50": 20.8,
+   "p90": 22.2,
+   "p99": 29.8,
+   "max": 48.5
+  },
+  "policy": {
+   "p50": 7.4,
+   "p90": 8.8,
+   "p99": 12.8,
+   "max": 14.8
+  },
+  "prep": {
+   "p50": 4.2,
+   "p90": 6.7,
+   "p99": 7.6,
+   "max": 8.8
+  },
+  "slots": {
+   "p50": 0.2,
+   "p90": 0.7,
+   "p99": 83.5,
+   "max": 123.8
+  }
+ },
+ "drives": 800,
+ "closed": 4,
+ "inference_errors": 0,
+ "pass": true
+}

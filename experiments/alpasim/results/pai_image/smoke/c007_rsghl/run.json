@@ -1,0 +1,1 @@
+{"scenes": 29, "conc": 4, "wall_s": 1525, "gpu": 1, "image": "jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-vhholdlead", "base": "alpasim-base:0.89.0", "wiz": "controller.gains.rel_front_steering_angle_weight=10", "drv_env": ""}

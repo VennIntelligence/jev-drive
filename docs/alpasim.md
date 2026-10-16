@@ -298,6 +298,52 @@ submitted to `nuplan-warmup` at 08:25 UTC: `SUCCEEDED`, 32 / 32 rollouts scored,
 270.6 s against a 2700 s limit (`margin_s` 2429); evaluation itself took 9 min after 1 h 39 min in the queue. Submission id
 `2065ba22-8525-41a6-b445-a6c09611d9a4`. The official `nuplan` submission of the same URI is the user's next action.
 
+## PAI submission image (2026-10-16)
+
+Read this when you build, test or hand over a PAI-track image. Results, smoke tables and the audit:
+[experiments/alpasim/results/pai_image.md](../experiments/alpasim/results/pai_image.md).
+
+The same `docker/` path with `TRACK=pai`: `serve.py` gets `JEV_DRIVER=pai` (`pai_driver.py`, `SH30_TAG` = `JEV_TAG`; never chosen by `auto`),
+the stable checkpoint layer is `RSG-L18-s0` + `RBSG2-L18-s0` with their `route_mem.json`, the closure adds the PAI modules and
+`route_mem/lib/rmem.py`, `verify.py` loads every ROUTE-MEM checkpoint through pai_driver's loader on the CPU. Baked defaults = the box reads'
+served configuration: `JEV_VCONT=1.0 JEV_LEAD=1`, `JEV_TRACK` never set (v8 `gate`), `VHIST` (`JEV_VHIST`, e.g. `holdlead`) and `ACC`
+(`JEV_ACC=1`) optional. One build command per tag; a new combination costs one `ENV` layer:
+
+```bash
+# Tokyo, repo root (checkpoints at /data/runs/op_parity/runs/<tag>: tokyo_pull.sh ckpt <tag>)
+env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 experiments/alpasim/docker/build.sh                    # -> jev-alpasim:rsg-l18-s0-<hash>-pai-vc1.0-lead
+env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 VHIST=holdlead experiments/alpasim/docker/build.sh     # ...-vhholdlead
+env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 ACC=1 experiments/alpasim/docker/build.sh              # ...-acc
+env DATA_DIR=/data TRACK=pai TAG=RBSG2-L18-s0 experiments/alpasim/docker/build.sh
+# whole chain (build -> test.sh -> replicas.sh -> pai_smoke.sh on a scene list against its native run, gains 10, card 1):
+env DATA_DIR=/data TRACK=pai SCENES=<list> [VHIST=..] [ACC=1] experiments/alpasim/docker/new_tag.sh <tag> <native results-summary.json>
+```
+
+`test.sh` probes a PAI image as the PAI track (`probe.py --track pai`: 200 decisions at 10 Hz, the 6 f-theta cameras of `pai_spec.json`),
+`replicas.sh <img> <out> 4 1` runs 4 replicas on one card as ec2 places them, `pai_smoke.sh <img> <out> <scenes> [ref]` runs the image's own
+`CMD` in the official PAI stack (no mounts), `scripts/pai_image_cmp.py` compares two runs scene by scene and decision by decision.
+
+**Steering weight.** Every PAI read since 2026-10-16 runs `controller.gains.rel_front_steering_angle_weight=10`; 10 is the CLI's cap
+(`CONTROLLER_GAIN_BOUNDS`, [0, 10]; 20, used by the reads of 10-13 to 10-15, is refused). It is not in the image: the submission passes it,
+`--controller-gains` with a JSON file `{"rel_front_steering_angle_weight": 10}`, every other gain at its default.
+
+**What the user runs** (none of it by an agent; quota 3 official per UTC month shared with nuPlan, 3 `pai-warmup` per 30 days):
+
+```bash
+# Tokyo; CLI = the branch-head copy (it has pai-warmup), token valid 12 h
+C="python3 /data/third_party/alpasim-cli/e2e_challenge/competitor_cli/alpasim_challenge.py"
+$C auth-url; $C configure-token; $C me; $C limits       # re-auth only if the token expired; terms already accepted
+$C ecr-login
+IMG=jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc   # e.g. the ACC image; whichever configuration the box reads chose, ids in results/pai_image.md
+URI=696254625193.dkr.ecr.us-east-1.amazonaws.com/teams/lao-siji:rsg-l18-s0-acc-v1    # public tag, not `latest`
+docker image inspect "$IMG" --format '{{.Id}}'           # must print the id in results/pai_image.md
+docker tag "$IMG" "$URI"; until docker push "$URI"; do sleep 10; done
+echo '{"rel_front_steering_angle_weight": 10}' > /data/runs/alpasim/pai_image/gains10.json
+$C submit --track pai-warmup --controller-gains /data/runs/alpasim/pai_image/gains10.json "$URI"   # status only
+$C status <submission_id>
+$C submit --track pai --controller-gains /data/runs/alpasim/pai_image/gains10.json "$URI"          # official
+```
+
 ## Serving switches: the speed profile of the returned trajectory (2026-10-10, decision 226)
 
 Read this before you change what the drivers return, or build an image with a switch on. Code: `experiments/alpasim/lib/serve_fix.py`
@@ -330,7 +376,7 @@ plan's acceleration, metres removed in the first 2 s, serving ms) and `poses_mod
 - nuPlan runs: `env JEV_VCONT=1.0 JEV_LEAD=1 bash experiments/alpasim/scripts/run.sh ...` (the environment reaches the driver), or
   `ENV=VALUE` in an `ot2_loop.py` job spec. PAI: `DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1" pai_run.sh ...` (it mounts `serve_fix.py`).
 - Image: `VCONT=1.0 LEAD=1 experiments/alpasim/docker/new_tag.sh <tag>` bakes them in as the image's defaults (tag suffix `-vc1.0-lead`; tested through
-  `test.sh` with the nuPlan driver). `JEV_BASE` has no build argument yet, and there is no PAI image: what it needs is listed in the results doc.
+  `test.sh` with the nuPlan driver). `JEV_BASE` has no build argument yet. PAI images: `TRACK=pai` (section "PAI submission image" above).
   The image runs the interpreted model passes (`SH30_COMPILE=0` in the Dockerfile: torch.compile needs a C compiler the image does not have).
 - PAI on the box: `env JEV_VCONT=1.0 JEV_LEAD=1 ... bash experiments/alpasim/scripts/pai_native.sh ...`; the 84-stack grid: `scripts/fix1_pai_box.sh`.
 - AlpaSim-only: the switches act on the trajectory handed to AlpaSim's tracker. `jevdrive.bench` (navtest, navhard, HUGSIM) never
