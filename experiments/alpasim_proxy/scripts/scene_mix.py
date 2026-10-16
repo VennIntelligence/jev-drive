@@ -4,6 +4,7 @@ the 1491 public AlpaSim scenes (pre-registration: experiments/alpasim_proxy/plan
 
   scene_mix.py extract [--step 0.5]                                   (box, CPU; one pmap unit per log, about a minute)
   scene_mix.py report <windows.csv> --out DIR [--gs <go-straight per_scene.csv>]   (Mac)
+  scene_mix.py n1 <go-straight per_scene.csv> --out DIR                          (Mac, after report)
 
 extract writes $DATA_DIR/runs/alpasim_proxy/scene_mix/n2/<ts>/windows.csv: one row per window (kind uniform | public), ego at the
 lidar_pc instants (20 Hz): v0 / v_end (|vx, vy|), path (10 Hz polyline), maxdisp (max distance from the start), dyaw (heading change),
@@ -160,9 +161,47 @@ def report(a):
     print("\n".join(lines))
 
 
+def n1(a):
+    """N1: go-straight's public metrics (as the anchors: 1491 in the score, failed scenes 0) against its private 0.799 / 0.258 / 1.15."""
+    out = Path(a.out)
+    P = pd.read_csv(out / "public_windows.csv")
+    S = pd.concat([pd.read_csv(a.gs).assign(driver="GS"), pd.read_csv(REPO / "tmp/aud1_drift/per_scene.csv")]
+                  + [pd.read_csv(REPO / f"experiments/alpasim_proxy/results/anchors/{f}.csv") for f in ("ltf", "dd", "g0014")], ignore_index=True)
+    S = S.drop_duplicates(["driver", "scene"]).merge(P[["scene", "S", "N", "E"]], on="scene", how="left")
+    rows = []
+    for d, x in S.groupby("driver", sort=False):
+        ok, sc = x.dist_traveled_m.notna(), x.score.fillna(0)
+        z = x[sc == 0]
+        fold, coll = z.dist_traveled_m.isna(), z.collision_at_fault.fillna(0) > 0
+        off = ~fold & ~coll & (z.offroad.fillna(0) > 0)
+        cor = ~fold & ~coll & ~off & (z.left_corridor_laterally.fillna(0) > 0)
+        r = dict(driver=d, n=len(x), score=sc.sum() / 1491, km=x.dist_traveled_m.sum() / x.offroad_or_collision_at_fault.sum() / 1000,
+                 gt=x.dist_to_gt_trajectory[ok].mean(), zeros=len(z), z_fold=int(fold.sum()), z_coll=int(coll.sum()), z_off=int(off.sum()),
+                 z_corr=int(cor.sum()), z_other=int(len(z) - fold.sum() - coll.sum() - off.sum() - cor.sum()))
+        for c in ("N", "S", "E"):
+            m = x[c].fillna(False).astype(bool)
+            r[f"{c}_n"], r[f"{c}_score"], r[f"{c}_zeros"] = int(m.sum()), sc[m].mean(), int((sc[m] == 0).sum())
+        rows.append(r)
+    T = pd.DataFrame(rows)
+    T.to_csv(out / "n1_table.csv", index=False)
+    g = T.set_index("driver").loc["GS"]
+    v = "supported" if g["score"] <= 0.70 else "refuted" if g["score"] >= 0.78 else "undetermined"
+    md = [f"# SCENE-MIX N1: go-straight (starter kit, unmodified) on the 1491 public scenes\n\nPublic {g['score']:.3f} / {g['km']:.3f} km / {g['gt']:.2f} m "
+          f"against private 0.799 / 0.258 km / 1.15 m. Lines <= 0.70 supported, >= 0.78 refuted: **{v}**.\n",
+          "| driver | score | at-fault km | GT m | zeros | route fold | collision at fault | offroad | corridor | other | N n / score / zeros | S n / score / zeros | E n / score / zeros |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    md += [f"| {x.driver} | {x.score:.3f} | {x.km:.3f} | {x.gt:.2f} | {x.zeros} | {x.z_fold} | {x.z_coll} | {x.z_off} | {x.z_corr} | {x.z_other} | "
+           + " | ".join(f"{getattr(x, c + '_n')} / {getattr(x, c + '_score'):.3f} / {getattr(x, c + '_zeros')}" for c in "NSE") + " |" for x in T.itertuples()]
+    (out / "n1.md").write_text("\n".join(md) + "\n\nZero types exclusive in this order: route fold (no metrics), collision at fault, offroad, corridor.\n")
+    print("\n".join(md))
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    o = sp.add_parser("n1")
+    o.add_argument("gs")
+    o.add_argument("--out", required=True)
     e = sp.add_parser("extract")
     e.add_argument("--step", type=float, default=0.5)
     r = sp.add_parser("report")
@@ -170,7 +209,7 @@ def main():
     r.add_argument("--out", required=True)
     r.add_argument("--gs")
     a = ap.parse_args()
-    extract(a) if a.cmd == "extract" else report(a)
+    {"extract": extract, "report": report, "n1": n1}[a.cmd](a)
 
 
 if __name__ == "__main__":
