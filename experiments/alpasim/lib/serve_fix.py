@@ -47,8 +47,9 @@ model's plan is never changed; only where along it the returned poses sit. Three
                  route and the session clock). The path stays the model's (geometry unchanged); the speed profile is re-timed to
                    v_target = min(v_set, v_curve(s)) [, model]  then (b)'s lead limit as before (min), then placed on the path
                  - v_set: the ego speed at the simulator handoff (first call with t_s >= ACC_T_HAND; the force-GT speed is the human's), held as
-                   cruise set speed; raised (never lowered) to the running maximum of the model plan's own 2 .. 4 s speed after the handoff, so a
-                   standstill handoff gets the model's own launch target instead of 0
+                   cruise set speed; at each decision max(v_hand, the current model plan's own 2 .. 4 s speed), so a standstill handoff gets the
+                   model's own launch target instead of 0. (A running maximum of the model's speed, the smoke's first version, ratcheted up: the
+                   model follows its own faster history; a174faed 2.3 -> 19.1 m/s. The current value has no ratchet: decision 315's g < 1)
                  - v_curve(s): the route the driver receives (AlpaSim route messages, 10 points 42 .. 80 m ahead, carried as memory by
                    rmem.Tracker.polyline as decision 287 did, so a curve stays covered once it has come within 80 m), resampled at 1 m,
                    curvature = heading change of +-ACC_HW m chords over 2 ACC_HW m; v^2 |k| <= ACC_ALAT, a backward pass decelerating at
@@ -169,17 +170,15 @@ class Acc:
     """(d): the session's set speed and the model's previous plan (guard)."""
 
     def __init__(self):
-        self.v_hand, self.v_set, self.arc, self.dec = None, 0.0, np.inf, 0.0
+        self.v_hand, self.arc, self.dec = None, np.inf, 0.0
 
     def profile(self, poses, v0: float, vm, M, t_s):
         """-> (v on TG, log record). vm = the model's own profile as (a) serves it (on TG)."""
         p = np.r_[np.zeros((1, 2)), np.asarray(poses, np.float64)[:, :2]]
         seg = np.hypot(*np.diff(p, axis=0).T) / 0.5
         if self.v_hand is None and (t_s is None or t_s >= ACC_T_HAND):
-            self.v_hand = self.v_set = v0
-        if self.v_hand is not None:
-            self.v_set = max(self.v_set, float(seg[4:].mean()))
-        vset = self.v_set if self.v_hand is not None else v0
+            self.v_hand = v0
+        vset = max(self.v_hand, float(seg[4:].mean())) if self.v_hand is not None else v0
         guard = "stop" if self.arc < ACC_REL_ARC else "brake" if self.dec >= ACC_DEC_REL else ""
         self.arc, self.dec = float(seg[:4].sum() * 0.5), float((seg[0] - seg[3]) / 1.5)   # read by the next decision
         lim, cover = route_limit(M, vset)

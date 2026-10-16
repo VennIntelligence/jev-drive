@@ -108,7 +108,7 @@ def behaviour():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ref", default="HEAD")
+    ap.add_argument("--ref", default="fc245afc~1")       # the parent of the commit that added JEV_ACC
     ap.add_argument("--n", type=int, default=3000)
     a = ap.parse_args()
     identity(a.ref, a.n)
