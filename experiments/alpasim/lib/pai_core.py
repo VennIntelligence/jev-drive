@@ -149,7 +149,8 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
     at 0.5 .. 4 s, stage times. route: rmem features (core.rm_dim,) appended to the ego row when the core serves the ROUTE-MEM branch
     (core.rm, set by pai_driver; None = an empty memory; ignored otherwise) -> also "rmem", the fed features. ego_fn: the measured ego row
     -> the row fed to the adapter (vhist.py, JEV_VHIST; None = unchanged) -> also "ego_fed"; "ego" stays the measured row. selfstate: the
-    reflex module's self-state appended last when the core serves the module (core.rx; sh30_core.Core.plan's rule) -> also "rx"."""
+    reflex module's self-state appended last when the core serves the module (core.rx; sh30_core.Core.plan's rule) -> also "rx".
+    "tokens" / "valid": the fed slots' tokens and the slot mask, as sh30_core.Core.plan returns them (lib/tts.py, JEV_TTS)."""
     torch, A = core.torch, core.A
     t0 = time.perf_counter()
     gpu = not isinstance(cur, np.ndarray)
@@ -180,5 +181,5 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
             ld["poses_base"] = I.to_rear(mb[:, 0:3], mb[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t2 = time.perf_counter()
     poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
-    return {"poses": poses, "mu": mu, "ego": ego, **ld, **({"rmem": rf} if rf is not None else {}), **({"rx": sf} if sf is not None else {}),
+    return {"poses": poses, "mu": mu, "ego": ego, "tokens": H[0], "valid": valid, **ld, **({"rmem": rf} if rf is not None else {}), **({"rx": sf} if sf is not None else {}),
             **({"ego_fed": fed} if ego_fn is not None else {}), "ms": {"encode": 1e3 * (t1 - t0), "policy": 1e3 * (t2 - t1), "export": 1e3 * (time.perf_counter() - t2)}}

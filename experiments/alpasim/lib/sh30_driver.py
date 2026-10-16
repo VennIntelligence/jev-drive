@@ -35,7 +35,9 @@ replaces the model's, rule_expert.py; the model still runs and its plan is logge
 JEV_EXPERT_FROM hands over from a per-scene decision k, the model's plan served before it: the recovery rewind), JEV_PERTURB (a file of
 `<scene> <k> <g> <s> <n>` rows: for decisions k .. k + n - 1 the served plan is the model's transformed by curvature gain g and arc scale s,
 perturb.py; the self-rewind frontier read; logged as `perturb` with `poses_model`; off by default; with JEV_EXPERT only as JEV_EXPERT_FROM, the
-perturbation then acts only on decisions the expert does not serve: the perturbed recovery passes), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+perturbation then acts only on decisions the expert does not serve: the perturbed recovery passes), JEV_TTS (1: the served plan is the best of K
+structured candidates of the model's own plan under the STACK consequence head + route + deviation score, lib/tts.py, before serve_fix; logged as
+`tts`, and `poses_own` when it switched; off by default: the module is not imported), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -82,6 +84,10 @@ import rule_expert as XP  # noqa: E402
 import perturb as PT  # noqa: E402
 import vhist as VH  # noqa: E402
 import sh30_core as C  # noqa: E402
+
+TS = None                                            # JEV_TTS (lib/tts.py, on sh30_core's path): not imported unless set
+if os.environ.get("JEV_TTS", "") not in ("", "0"):
+    import tts as TS  # noqa: E402
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
 RXM = None                                           # lib/reflex_mem.py (the reflex module's efference memory), set in main() for a checkpoint with it
@@ -318,6 +324,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s.count["inference"] += 1
         if s.vh is not None:
             VH.observe(s.vh, o)                              # the model's plan, before any serving change
+        ti = None
+        if TS is not None:                                   # JEV_TTS (lib/tts.py): the best candidate of the model's own plan
+            with self.gpu:
+                o["poses_own"] = o["poses"]
+                o["poses"], ti = TS.SEL.select(o, o.get("rmem"))
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         ri = rp = None
@@ -378,6 +389,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             rec.update(th_k=np.asarray(o["poses_k"], np.float64).round(4).tolist())
         if bd is not None:
             rec.update(body=bd)
+        if ti is not None:
+            rec.update(tts=ti, **({"poses_own": np.asarray(o["poses_own"]).round(4).tolist()} if ti["k"] else {}))
         if s.vh is not None:
             rec.update(vhist={**vi, "ego_fed": np.asarray(o["ego_fed"], np.float64).round(5).tolist()})
         if TR.ON:
@@ -389,7 +402,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{RP.SUFFIX}{VH.SUFFIX}{XP.SUFFIX}{PT.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{RP.SUFFIX}{VH.SUFFIX}{XP.SUFFIX}{PT.SUFFIX}{BD.SUFFIX if BD else ''}{TS.SUFFIX if TS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 
@@ -459,6 +472,10 @@ def main() -> None:
     assert not (XP.ON and (FX.ON or TR.ON or RP.ON or BD)), "JEV_EXPERT replaces the plan: the other serving switches must be off"
     assert not (PT.ON and ((XP.ON and not XP.FROM_ON) or TR.ON or RP.ON or BD)), \
         "JEV_PERTURB transforms the model's own plan: with JEV_EXPERT only as JEV_EXPERT_FROM; exclusive with TRACK / ROUTE / STOP"
+    assert not (TS and (XP.ON or PT.ON or RP.ON or BD)), "JEV_TTS selects among the model's own candidates: EXPERT / PERTURB / ROUTE / STOP off"
+    if TS:
+        TS.load(core.dev)
+        LOG.info("serving JEV_TTS: K %d candidates, weights %s (%s), head %s", TS.K, TS.SEL.w, TS.SEL.wfile, os.environ.get("JEV_TTS_HEAD") or "default")
     if PT.ON:
         LOG.info("serving JEV_PERTURB %s: %d scenes", PT.FILE, len(PT.TAB))
     if XP.ON:
@@ -474,7 +491,8 @@ def main() -> None:
     if BD:
         BD.load(core.dev)
         LOG.info("serving: JEV_STOP %g, JEV_REPLAN %d (contact head; stop threshold logit %.3f, re-plan thresholds %s)", BD.M, BD.RP, BD.THR, BD.THR_RP)
-    server = grpc.server(warm_workers((lambda: BD.warm(one())) if BD else one))
+    fn = (lambda: BD.warm(one())) if BD else one
+    server = grpc.server(warm_workers((lambda: TS.SEL.warm(fn())) if TS else fn))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:
         raise RuntimeError(f"failed to bind {host}:{port}")

@@ -39,7 +39,8 @@ turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses`
 the rule expert's plan replaces the model's, rule_expert.py, mounted by pai_run.sh; `poses` = the expert's plan, `poses_model` the model's,
 `expert` its state; off by default), JEV_INTENT_HOLD / JEV_IH_A (1 / <a>: the served path held to the policy's own earlier intent while the
 route memory or the command shows a turn, intent_hold.py, a diagnostic, imported only when set; logged as `ih`, and `poses_ih` while it holds,
-`poses` stays the plan; off by default).
+`poses` stays the plan; off by default), JEV_TTS (1: the best of K structured candidates of the model's own plan, lib/tts.py, after VH.observe and before
+serve_fix, so every later switch acts on the chosen plan; logged as `tts`, and `poses_own` when it switched; off by default: not imported).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -72,6 +73,8 @@ import turn_gain as TG
 import rule_expert as XP
 import vhist as VH
 from pai_core import C, I
+
+TS = S.TS                                            # JEV_TTS (lib/tts.py), imported by sh30_driver only when set
 
 IH = None                                            # JEV_INTENT_HOLD (intent_hold.py): imported only when set, so other mounts need not carry it
 if os.environ.get("JEV_INTENT_HOLD", "") not in ("", "0"):
@@ -313,6 +316,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.count["cold"] += int(not real.all())
             if s.vh is not None:
                 VH.observe(s.vh, o)                          # the model's plan, before any serving change
+            ti = None
+            if TS is not None:                               # JEV_TTS (lib/tts.py): the best candidate of the model's own plan
+                with self.gpu:
+                    o["poses_own"] = o["poses"]
+                    o["poses"], ti = TS.SEL.select(o, o.get("rmem"))
             fx = FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
             near = s.poses[min(s.poses, key=lambda t: abs(t - t0))]      # the anchor: the interpolated pose of t0 as a PoseAtTime
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
@@ -365,6 +373,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(tg=tgr, **({"poses_branch": np.round(served, 4).tolist()} if tgr["on"] else {}))
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+            if ti is not None:
+                rec.update(tts=ti, **({"poses_own": np.asarray(o["poses_own"]).round(4).tolist()} if ti["k"] else {}))
             if "rx" in o:
                 rec.update(rx=np.asarray(o["rx"], np.float64).round(5).tolist(), rx_dt=(sfi or {}).get("dt"))
             if s.vh is not None:
@@ -383,7 +393,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}{TS.SUFFIX if TS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -444,6 +454,10 @@ def main() -> None:
         LOG.info("serving INTENT HOLD (a %g, turn %g deg within %g m, far %g m, clip %g m, v_min %g m/s)", IH.A, IH.TURN_DEG, IH.AHEAD_M, IH.FAR_M, IH.CLIP_M, IH.V_MIN)
     if XP.ON:
         LOG.info("serving the RULE EXPERT (packs %s, lookahead %g s, entry speed %g m/s)", XP.PACK, XP.LA_T, XP.V_E)
+    assert not (TS and (XP.ON or TG.ON or IH is not None)), "JEV_TTS selects among the model's own candidates: EXPERT / TURN_GAIN / INTENT_HOLD off"
+    if TS:
+        TS.load(core.dev)
+        LOG.info("serving JEV_TTS: K %d candidates, weights %s (%s)", TS.K, TS.SEL.w, TS.SEL.wfile)
     LOG.info("JEV_RM_SC %s", RM_SC or "unset")
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.NAME,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
@@ -459,7 +473,7 @@ def main() -> None:
     drv = Driver(core, log_dir, os.environ.get("PAI_COLD", "backwarp"), int(os.environ.get("PAI_EVERY", "1")),
                  int(os.environ.get("PAI_DUMP", "0")), os.environ.get("PAI_LHT", "0") == "1", kw)
     LOG.info("slots: %s", "keyframes at 2 Hz + sh30_core.lattice_gpu warps (PAI_KEYWARP)" if kw else "rendered 10 Hz frames")
-    server = grpc.server(S.warm_workers(warm))
+    server = grpc.server(S.warm_workers((lambda: TS.SEL.warm(warm())) if TS else warm))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:
         raise RuntimeError(f"failed to bind {host}:{port}")
