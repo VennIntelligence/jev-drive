@@ -241,7 +241,8 @@ class Core:
         if self.rx:
             import reflex
             self.RX = reflex
-        assert self.model.arm in ("P2", "P2L") and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
+        assert tag == "P0" or (self.model.arm in ("P2", "P2L") and self.model.adapter is not None), \
+            f"{tag}: expected an ego-only parity arm or P0 (shipped Cinque, no adapter: the ego row is not read), got {self.model.arm}"
         self.th, self.th_k = None, 1
         th = T.proot("runs", tag) / "thead.pt"
         if not self.rm and tag != "P0" and not tag.endswith("-init") and th.exists():

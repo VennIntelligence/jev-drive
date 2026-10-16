@@ -165,7 +165,7 @@ submit-s)      # Amendment 3: the S-only arm on the same pool (decision 259's re
   echo "submitted for $T: $(tail -n 5 $W/jobs.txt | tr '\n' ';')" ;;
 readlist)  # one checkpoint on a scene list at 18 or 10 decisions (Amendment 5 confirmation reads); prune as read1
   TAG=$1; L=$2; LEN=$3; D=$4
-  [[ -f $CK/$TAG/ckpt-final.pt ]] || die "no checkpoint $TAG"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
+  [[ $TAG == P0 || -f $CK/$TAG/ckpt-final.pt ]] || die "no checkpoint $TAG"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
   X=(); [[ $LEN == 18 ]] && X=("${LONG[@]}")
   rm -rf "$D"; mkdir -p "$D"
   env SH30_TAG=$TAG bash experiments/alpasim/scripts/run.sh "$D" sh30 --scene-list "$L" "${BASE[@]}" "${X[@]}" || die "run.sh rc $?"

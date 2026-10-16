@@ -20,7 +20,7 @@ sub() { local name=$1 after=$2; shift 2; local id; id=$(.venv/bin/python -m jevd
           ${after:+--after $after} --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name" >> $W/jobs.txt; }
 sim() {  # = ol_fast.sh sim: one 18-decision run with the sh30 driver
   local T=$1 L=$2 D=$3 DUMP=${4:-0}
-  [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
+  [[ $T == P0 || -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
   rm -rf "$D"; mkdir -p "$D"
   env SH30_TAG=$T SH30_DUMP=$DUMP bash experiments/alpasim/scripts/run.sh "$D" sh30 --scene-list "$L" "${BASE[@]}" "${LONG[@]}" || die "run.sh rc $?"
   [[ -f $D/aggregate/results-summary.json ]] || die "no results-summary"; }

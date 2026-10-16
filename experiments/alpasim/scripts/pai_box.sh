@@ -24,7 +24,7 @@ mode=$1 O=$(mkdir -p "$2" && cd "$2" && pwd) T=$3; shift 3
 C=$DATA_DIR/runs/op_parity/runs/$T; L=${T,,}
 case $mode in
 submit)
-  [[ -f $C/ckpt-final.pt ]] || { echo "no checkpoint $C" >&2; exit 1; }
+  [[ $T == P0 || -f $C/ckpt-final.pt ]] || { echo "no checkpoint $C" >&2; exit 1; }   # P0 = shipped Cinque, no checkpoint file
   mkdir -p "$O"/{chunks,runs}
   if ! ls "$O"/chunks/*.txt >/dev/null 2>&1; then              # written once: a resubmit keeps its chunks
     if [[ -n ${CHUNKS_FROM:-} ]]; then cp "$CHUNKS_FROM"/*.txt "$O/chunks/"
