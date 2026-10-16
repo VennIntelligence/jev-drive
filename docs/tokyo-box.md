@@ -40,6 +40,10 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 - The name says Tokyo, the machine is in **Shanghai** (China Mobile). Its clock runs **JST
   (+0900)**, so every timestamp in a log there is one hour ahead of this Mac.
 - It has a physical monitor and a real desktop session, which is the whole point of it.
+- XRDP (XFCE on `:10`) shares the user systemd manager with the monitor session. Its Xsession step pushes `DISPLAY=:10.0`
+  into the shared activation env, after which Files, Settings and other D-Bus-activated apps open on the invisible RDP display
+  and seem not to start (found 2026-10-16). `~/.xsession` now resets it to `:0`. To fix by hand:
+  `dbus-update-activation-environment --systemd DISPLAY=:0 XAUTHORITY=/run/user/1001/gdm/Xauthority; pkill -x nautilus`.
 
 | | |
 |---|---|
