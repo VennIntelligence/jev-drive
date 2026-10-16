@@ -188,7 +188,7 @@ def metrics(x):
     fold, coll = z.dist_traveled_m.isna(), z.collision_at_fault.fillna(0) > 0
     off = ~fold & ~coll & (z.offroad.fillna(0) > 0)
     cor = ~fold & ~coll & ~off & (z.left_corridor_laterally.fillna(0) > 0)
-    return dict(n=len(x), score=sc.mean(), km=x.dist_traveled_m.sum() / max(x.offroad_or_collision_at_fault.sum(), 1e-9) / 1000,
+    return dict(n=len(x), score=sc.mean(), km=x.dist_traveled_m.sum() / x.offroad_or_collision_at_fault.sum() / 1000 if x.offroad_or_collision_at_fault.sum() else np.inf,
                 gt=x.dist_to_gt_trajectory[ok].mean(), zeros=len(z), z_fold=int(fold.sum()), z_coll=int(coll.sum()), z_off=int(off.sum()),
                 z_corr=int(cor.sum()), driven_m=x.dist_traveled_m.mean())
 

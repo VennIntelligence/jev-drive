@@ -1,8 +1,8 @@
 # alpasim_proxy: a local selection set that orders like private
 
 status: live
-decisions: 262
-index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6)
+decisions: 262, 325
+index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -25,6 +25,23 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 
 [results/](results/) 22 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 5 entry points
 <!-- files:end -->
+
+## SCENE-MIX: the private suite is rich in scenes where the human waits (decision 325)
+
+Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plans/2026-10-16-scene-mix-prereg.md); results
+[results/scene_mix/](results/scene_mix/) (`n1.md`, `n2.md`); script `scripts/scene_mix.py` (`extract` on the box, `report` / `sample` / `n1` on the Mac).
+
+- **N1.** The host's go-straight is the AlpaSim starter kit (straight along the heading at the current speed, stays at standstill), run
+  unmodified on a 300-scene log-stratified public sample (seed 20261016) plus the 25 near-stationary scenes, one pool job (1824 s): public
+  **0.522 [0.465, 0.583]** against private 0.799 (line <= 0.70: supported). Its zeros are geometry (offroad 49, corridor 30, collision 18 of
+  99). On the 25 near-stationary scenes it scores 1.000 (no progress penalty within 5.5 s), YR 0.920, APY 0.760 (collisions).
+- **N2.** 70 052 uniform 5.5 s windows on the 136 raw test logs against the 1491 public windows (a public scene starts 1.5 s before its
+  central token): near-stationary start 0.328 vs 0.016 (x20), human static the whole window 0.301 vs one scene, ends stopped 0.354 vs
+  0.017, cruise 0.153 vs 0.111. On the one public static scene every openpilot-family driver (and LTF, DD) scores 0 with a rear-end
+  collision; garage, WA-JEPA and go-straight pass.
+- **Reading.** Drivers that hold at standstill gain on private (go-straight +0.28, garage +0.11), drivers that launch lose (DD -0.03, LTF
+  -0.09, YR -0.125, APY -0.295). Size is not measurable from public (the static stratum has one scene); LTF / DD losing only a little bounds
+  how static-rich private can be. This narrows decision 262's "driver-specific, not scene mix" to an interaction of mix and launch behaviour.
 
 ## Anchors: five policies whose private numbers are known
 
