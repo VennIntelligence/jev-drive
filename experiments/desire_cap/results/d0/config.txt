@@ -1,0 +1,4 @@
+code=c7921366
+v_min=8.9
+serve=JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_DESIRE=1 JEV_DESIRE_VMIN=8.9
+wiz=controller.gains.rel_front_steering_angle_weight=10

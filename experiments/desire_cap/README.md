@@ -1,7 +1,7 @@
 # desire_cap: did adapter training kill openpilot's desire pathway
 
-status: live
-decisions: 332
+status: closed
+decisions: 332, 334
 index: P0 laneChange 1.04 m at 4 s (partial); P2-F cuts 69 %, left 97 %
 
 **Question.** Does the shipped Cinque (P0) move its plan a lane / into a turn when fed openpilot's desire pulse (laneChangeLeft / Right,
@@ -12,8 +12,12 @@ RBSG2-L18) keeps, weakens or kills that response?
 100 %); the first adapter stage P2-F cuts it 69 % and the left lane change 97 % (P2H10-F 0.28 crosses the kill line), YR10m10-F onward recover
 55-66 % on the right only; turn desire is no turn pathway at junctions (decision 332).
 
-**Next.** Design for the user, not launched: [plans/2026-10-16-desire-route-design.md](plans/2026-10-16-desire-route-design.md) (route-derived
-lane-change desire in the driver, desire-delta distillation in training; first step = driver-only desire on PAI, no training).
+**D0 (decision 334).** The route-derived laneChange desire fed only on the driver side (lib/route_desire.py, `JEV_DESIRE=1`; RSG-L18-s0,
+PAI submission config) does not carry lane changes (map lane-change sites 7 vs 6 of 31, right 1 / 12 on both arms) and costs safety (PAI 281
+at-fault collision zeros 12 vs 9, side contacts 7 vs 4; train160 rule scenes -0.111 [-0.212, -0.021]); it does push the car back to the
+route's lane (+0.22 rule-level done share, both sides). Open loop below 8.9 m/s RSG-L18 has no pathway in the registered sense (right 0.72 m,
+direction 0.8; left 0.15 m); P0 keeps its left one. Line stopped; training (D1 / D2) is the remaining route, gate 8.9 m/s, D2 on both sides.
+Prereg [plans/2026-10-17-desire-d0-prereg.md](plans/2026-10-17-desire-d0-prereg.md), results [results/d0/](results/d0/d0.md), scripts `dd.py`, `dd_chain.sh`.
 
 **Read more.** [plans/2026-10-16-desire-cap-prereg.md](plans/2026-10-16-desire-cap-prereg.md) (Chinese, pushed before any read); results/desire_cap.md (every table).
 Rows: CAP-LEDGER's NAVSIM test-log cells (`navsim/capledger_test`: C cruise, T turns, LC lane changes) and PAI on-policy rows (`on1_PAIonp`);
