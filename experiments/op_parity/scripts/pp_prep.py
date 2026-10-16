@@ -72,17 +72,19 @@ def _bounded(ex, fn, items, depth):
 
 
 def full_meta(data: str):
-    """'navtrain_full.s<i>of<n>' -> (op_lb-style meta of shard i of the navtrain tokens with a logged future, the full index list, entries)."""
+    """'navtrain_full.s<i>of<n>' -> (op_lb-style meta of shard i of the navtrain tokens with a logged future, the full index list, entries).
+    'idx_<split>' (wait_cap, 2026-10-16): every token with a logged future of the custom index runs/navsim_zs/index/<split>.pkl (same
+    entry format, navsim_zs_index.entry; split registered as navsim/<split>), one shard."""
     import op_lb as OL
     from jevdrive import navsim_zs as Z
     from jevdrive import par
-    i, n = map(int, data.split(".s", 1)[1].split("of"))
-    idx = Z.load_index("navtrain")
-    fut = set(np.load(Z.root("index") / "navtrain_future.npz")["tokens"].tolist())
+    split, (i, n) = ("navtrain", map(int, data.split(".s", 1)[1].split("of"))) if not data.startswith("idx_") else (data[4:], (0, 1))
+    idx = Z.load_index(split)
+    fut = set(np.load(Z.root("index") / f"{split}_future.npz")["tokens"].tolist())
     by = {e["token"]: e for e in idx}
     names = par.shards(sorted(t for t in by if t in fut), n, i)
     ents = [by[t] for t in names]
-    mt = {"split": "navtrain", "names": names, "cam": [np.asarray(e["cams"][-1]["CAM_F0"]["t"], float).tolist() for e in ents],
+    mt = {"split": split, "names": names, "cam": [np.asarray(e["cams"][-1]["CAM_F0"]["t"], float).tolist() for e in ents],
           "pose": [np.asarray(e["pose"], float) for e in ents], "vel": [np.asarray(e["vel"], float) for e in ents],
           "speed": [float(np.linalg.norm(e["vel"][-1])) for e in ents], "lht": [e["map"] in OL.LHT_MAPS for e in ents],
           "syn_t": OL.SYN_T.tolist()}
@@ -239,7 +241,7 @@ def main(a):
     from jevdrive import op_adapt as A
     from jevdrive.data import splits
     full_idx, ents = None, None
-    if a.data.startswith("navtrain_full"):                         # full navtrain shard "navtrain_full.s<i>of<n>": no op_lb dir, keys rendered here
+    if a.data.startswith(("navtrain_full", "idx_")):               # full navtrain shard "navtrain_full.s<i>of<n>" / custom index: no op_lb dir, keys rendered here
         assert a.frames == "warp", "full navtrain: protocol W only (Stage B decision)"
         mt, full_idx, ents = full_meta(a.data)
     else:
