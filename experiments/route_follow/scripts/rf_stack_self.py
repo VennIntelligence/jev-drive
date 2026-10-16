@@ -329,7 +329,8 @@ def cmd_smoke(a):
         if any("rx" in r for sc in X for r in X[sc]):              # logged rx against reflex_mem replayed over the same drive.jsonl
             dm, vk, nf, dts = 0.0, collections.defaultdict(list), collections.Counter(), set()
             for sc in X:
-                A = replay(X[sc], lambda r: np.asarray(r["poses"], np.float64), lambda r: float(np.hypot(*np.asarray(r["ego"][4:6], np.float64))) * 10.0)
+                A = replay(X[sc], lambda r: np.asarray(r.get("poses_track", r["poses"]), np.float64),           # served: the JEV_TRACK reference when on
+                           lambda r: float(np.hypot(*np.asarray(r["ego"][4:6], np.float64))) * 10.0)
                 for r in X[sc]:
                     lg = np.asarray(r["rx"])
                     vk[min(r["k"], 1)].append(float(lg[0]))
