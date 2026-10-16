@@ -90,6 +90,63 @@ identical, about 2 % zero flips.
 
 - **Tokyo:** `pai_eval.sh` / `pai_run.sh` take the same switch and default.
 - **Videos:** Tokyo reads that are watched (`pai_videos.py`) need `ALPASIM_VIDEO=1`.
-- **nuPlan reads:** `run.sh` → `run_native.py` take it with `ALPASIM_FAST=1`. The default there stays 0 because it is unmeasured.
-  nuPlan uses MTGS with `render_bundling: RENDER_AGGREGATED` (all cameras in one pass) and synthesised first-frame times, so whether
-  dropping 7 of 8 cameras saves time, and whether it is identical, needs its own check against a scored nuPlan read.
+- **nuPlan reads:** measured 2026-10-16, see the next section. Identical, but no faster, so the nuPlan default stays `0`.
+
+## nuPlan (2026-10-16): identical, no faster
+
+On nuPlan presets `ALPASIM_FAST=1` means `solo`: only CAM_F0 is requested (`sim_fast.py`). Two facts make this safe and also make it
+useless for speed:
+
+- **Clock.** Trajdata/MTGS scenes have no camera timestamps. The runtime synthesises each camera's first frame as scene start +
+  shutter (`unbound_rollout.py`, `_synthetic_first_camera_frame_ranges_us`). All 8 cameras share the 17 ms default shutter, so dropping
+  7 of them keeps every decision time. The one-frame-at-64-px trick of PAI is not needed.
+- **Renderer.** The MTGS server builds the render state from the scene's asset pickle, not from the request. It rasterises all 8 asset
+  cameras at native 1920x1080, then undistorts and colour-converts all 8 on the CPU, whatever cameras are asked for
+  (`plugins/mtgs/server/servicer.py` `_render_aggregated_batch`, `engine/mtgs.py` `render`). The request only decides which images
+  get JPEG-encoded and sent. So a tiny request would come back full size, and dropping cameras saves only 7 JPEG encodes, their
+  transport and their logging per frame.
+- **Eval video.** The nuPlan `full` preset already runs with `render_video: false`. That was two thirds of the PAI gain, and here it
+  does not exist.
+
+**Runs.** GPU box, RSG-L18-s0, `ro_chain.sh run off` (the plain driver), current c0b_chain overrides (CONC 4, cache 5). The box was
+otherwise empty, one job per card. Each official run (`0`) and its fast twin ran at the same time on a neighbouring card. Output:
+`$DATA_DIR/runs/alpasim_fast/nuplan/{ref,fast}/c<i>` and `{pref,pfast}/b0`. Compared with `pai_fast_cmp.py`, which now also takes lane
+chunk dirs.
+
+| Chunk | Mode | Wall s | Wall s / scene | Core s / scene | Renderer / runtime CPU s | Peak VRAM GB | Peak RSS GiB |
+|:--|:--|--:|--:|--:|:--|--:|--:|
+| held_n6 c0 (77, 18 dec) | `0` | 556 | 7.2 | 25 | 1285 / 258 | 12.2 | 19.1 |
+| | `1` | 564 | 7.3 | 25 | 1318 / 208 | 12.4 | 19.0 |
+| held_n6 c1 (77, 18 dec) | `0` | 563 | 7.3 | 25 | 1310 / 262 | 12.6 | 18.9 |
+| | `1` | 567 | 7.4 | 25 | 1319 / 217 | 12.9 | 18.6 |
+| all_n10 c0 (150, 10 dec) | `0` | 782 | 5.2 | 18 | 1893 / 401 | 14.1 | 24.5 |
+| | `1` | 758 | 5.1 | 17 | 1823 / 334 | 13.4 | 24.2 |
+
+- **Speed: 1.00x** (0.99x, 0.99x, 1.03x). Only the runtime's CPU drops (by 17-19 %), because it handles 1 image per frame instead
+  of 8. The renderer's CPU, the bottleneck, does not move.
+- **Where a held job's 556 s goes:**
+  - The driver is ready at 39 s; the other services at 15 s.
+  - The rollouts take about 450 s. Each takes 21.6 s of event loop (render, driver, controller), 0.8 s load and 1.2 s eval, at CONC 4.
+  - The tail is 51 s: aggregation and the telemetry plot.
+  - Renderer CPU is 67 % of the job's core seconds. The rest is runtime 13 %, controller 13 % and driver 7 %.
+
+**Scores.**
+
+| Comparison | Scenes | Identical scores | Diff (95 % CI) | Zero flips | Identical controller traces |
+|:--|--:|--:|:--|--:|--:|
+| `1` vs the stored read (route_mem/read/RSG-L18-s0, c0 + c1, run 10-13 at CONC 8) | 154 | 154 | +0.0000 | 0 | 151 / 152 |
+| `1` vs the stored public read (route_follow/guard/read10/RSG-L18-s0/b0) | 150 | 150 | +0.0000 | 0 | 149 / 150 |
+| `1` vs today's `0` on public b0 | 150 | 150 | +0.0000 | 0 | 148 / 150 |
+| `1` vs today's `0` on held c0 + c1 | 154 | 141 | -0.0001 [-0.0003, +0.0001] | 0 | 101 / 152 |
+| today's `0` vs the stored read, held c0 + c1 (same-host noise) | 154 | 141 | +0.0001 [-0.0001, +0.0003] | 0 | 101 / 152 |
+
+- The only mismatches are on held c1, and there it is today's official run that differs. Its scores are 64 / 77 equal to the stored
+  read (moves of at most 0.011), with 25 equal traces. The fast run matches the stored read at 77 / 77 and 75 / 76. So the official
+  camera set is itself not bitwise reproducible on this host, and the fast run's deviation stays inside that noise.
+
+**Decision.** `run.sh` / `run_native.py` keep `ALPASIM_FAST=0` for nuPlan. The fast mode passes the score gate, but it buys no wall
+time. It also drops 7 cameras from `rollout.asl`, which tools that replay camera frames may want. The pool booking is unchanged at
+`--vram 20` (history key `alpasim-read4`).
+
+The one lever left is rendering only the requested cameras inside MTGS. That would cut rasterisation, undistortion and the
+GPU-to-host copy by about 8x per frame. But it means editing the third-party plugin, which the repo rule forbids, so it is not done.

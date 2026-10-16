@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PAI_FAST check (results/pai_fast.md): cost and scores of pai_box.sh reads, plain python3 + numpy.
+"""ALPASIM_FAST check (results/pai_fast.md): cost and scores of AlpaSim reads (pai_box.sh roots or nuPlan lane chunks), plain python3 + numpy.
   pai_fast_cmp.py --ref <read root> <read root>...   per chunk run: scenes, wall (native_summary total_s), wall s / scene, core s / scene
                                                      (sum of the services' cpu_s), peak VRAM and RSS of the stack (max over usage.jsonl samples of
                                                      the sum over services); per read vs --ref on the scenes both scored: mean difference
@@ -17,7 +17,16 @@ import numpy as np
 
 
 def runs(root):
-    return sorted(glob.glob(os.path.join(root, "runs", "*", "sim")))
+    """The run dirs of a read: pai_box.sh's <root>/runs/*/sim, lane chunks <root>/c*/run or <root>/c*, or <root> itself (one run)."""
+    for pat in (("runs", "*", "sim"), ("*", "run"), ("*",), ()):
+        found = sorted(d for d in glob.glob(os.path.join(root, *pat)) if os.path.exists(os.path.join(d, "aggregate")))
+        if found:
+            return found
+    return []
+
+
+def chunk(sim):
+    return os.path.basename(os.path.dirname(sim) if os.path.basename(sim) in ("sim", "run") else sim)
 
 
 def cost(sim):
@@ -83,14 +92,14 @@ def main():
         for sim in runs(root):
             if os.path.exists(os.path.join(sim, "native_summary.json")):
                 c = cost(sim)
-                print(f"| {os.path.basename(root)} | {os.path.basename(os.path.dirname(sim))} | {c['n']} | {c['wall']:.0f} | {c['wall'] / c['n']:.1f} "
+                print(f"| {os.path.basename(root)} | {chunk(sim)} | {c['n']} | {c['wall']:.0f} | {c['wall'] / c['n']:.1f} "
                       f"| {c['cpu'] / c['n']:.0f} | {c['vram']:.1f} | {c['rss']:.1f} |")
     print("\n| read | chunk | CONC | rollouts | start-up s | load s | roll s | eval s | idle slot-s / scene | tail s | wall s / scene |\n|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for root in [a.ref] + a.roots:
         for sim in runs(root):
             if os.path.exists(os.path.join(sim, "native_summary.json")):
                 p = phases(sim)
-                print(f"| {os.path.basename(root)} | {os.path.basename(os.path.dirname(sim))} | {p['conc']} | {p['n']} | {p['startup']:.0f} | {p['load']:.1f} "
+                print(f"| {os.path.basename(root)} | {chunk(sim)} | {p['conc']} | {p['n']} | {p['startup']:.0f} | {p['load']:.1f} "
                       f"| {p['roll']:.1f} | {p['eval']:.1f} | {p['idle']:.1f} | {p['tail']:.0f} | {p['wall']:.1f} |")
     ref = scores(a.ref)
     print("\n| read | scenes | ref mean | mean | diff (95 % CI) | identical score | within 0.05 | zeros ref / read | zero flips | identical trace |"

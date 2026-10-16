@@ -492,7 +492,9 @@ Read this before timing or comparing local AlpaSim reads.
   - `ALPASIM_FAST=0` is the official camera set and video.
   - `solo` is the driver's camera alone. It moves decision times by 6 us to 30 ms and passes a paired check, but it is not faster.
   - `ALPASIM_VIDEO=1` keeps the eval video under either mode (`pai_box.sh` sets it from `KEEP_VIDEO=1`); use it for reads that are watched.
-- **Scope:** official submissions do not use these scripts. nuPlan reads stay at `0` until measured.
+- **Scope:** official submissions do not use these scripts. nuPlan reads stay at `0`. There `1` means CAM_F0 alone (the clock is
+  synthetic, scene start + shutter). That is bit-identical but no faster: MTGS renders all 8 asset cameras whatever is requested, and
+  the nuPlan `full` preset already has the eval video off.
 - **Results:** tables, phase split, packing and verification in
   [experiments/alpasim/results/pai_fast.md](../experiments/alpasim/results/pai_fast.md).
 
