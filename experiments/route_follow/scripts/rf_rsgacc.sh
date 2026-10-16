@@ -154,7 +154,7 @@ rows-pai)  # rows-pai <K> <T> <N> rows|cache|pool|r1|clean: onp_rows -> onp_cach
   cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $N --rows $ROWS/$N --out $O/cache ;;
   pool)  $TR $S/rf_pai_pool.py --name $N --rows $ROWS/$N --cache $O/cache/$N --runs "$RR/runs/*" --split $T160 ;;
   r1)
-    C=$( [[ $T == *-s0 ]] && echo ${T%-s0}-s1 || echo ${T%-s1}-s0 ); [[ -f $DATA_DIR/runs/op_parity/runs/$C/ckpt-final.pt ]] || C=RB0-F-s1
+    C=$( [[ $T == RB0-F-s1 ]] && echo RB0-F-s0 || echo RB0-F-s1 )     # wrong model = the other base (RSG s0 / s1 share one init: too close)
     for rs in train-rec dev-rec; do $TR $S/rf_recov.py fwd --pool $N --rows $rs --tags $T,$C --out $O/fwd || exit 1; done
     $TR $PY r1 --pool $N --tag $T --control $C; rc=$?; [[ $K == smoke ]] && exit 0; exit $rc ;;
   clean)

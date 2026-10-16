@@ -3,7 +3,8 @@
 envs/op-train (ol_confirm runs in AlpaSim's venv as a subprocess). Chain: rf_rsgacc.sh.
 
   r1 --pool N --tag T --control C   PAI pool R1: the checkpoint's plans recomputed on the pool's inputs (rf_recov fwd, train-rec + dev-rec) against
-        the rollout cache's `poses_model`, 8 poses (<= 4 s), tolerance max(0.03 m, 4 fp16 ulp); share over <= 0.01, wrong seed >= 0.9
+        the rollout cache's `poses_model`, 8 poses (<= 4 s), tolerance max(0.03 m, 4 fp16 ulp); Amendment 1: median row max-diff <= 0.02 m and
+        share over <= 0.10, wrong model (the other RB0 base) share over >= 0.9
         -> $O/gates/r1_<N>.json (exit 2 on fail)
   merge --tags T..   new pools whose gates passed (nuPlan: rows gates.json + poolgate; PAI: rows G-in >= 0.99 + R1) get the tab tag `dev`
         (rf_recov.is_dev(log): '1' / '0'), then rf_pait merge on1_L18RB0 (prefix s, first) + every new pool (prefix n<x> / p<x>, mode self)
@@ -76,7 +77,7 @@ def cmd_r1(a):
         res[t] = dict(share_over=float((d > tol).reshape(len(d), -1).any(1).mean()), median_m=float(np.median(d.reshape(len(d), -1).max(1))),
                       p99_m=float(np.percentile(d.reshape(len(d), -1).max(1), 99)), rows=int(len(d)))
     r = dict(pool=a.pool, tag=a.tag, control=a.control, model=res[a.tag], wrong_seed=res[a.control],
-             pass_=bool(res[a.tag]["share_over"] <= 0.01 and res[a.control]["share_over"] >= 0.9))
+             pass_=bool(res[a.tag]["median_m"] <= 0.02 and res[a.tag]["share_over"] <= 0.10 and res[a.control]["share_over"] >= 0.9))   # Amendment 1
     (O / "gates").mkdir(parents=True, exist_ok=True)
     (O / "gates" / f"r1_{a.pool}.json").write_text(json.dumps(r, indent=1))
     print(json.dumps(r, indent=1))

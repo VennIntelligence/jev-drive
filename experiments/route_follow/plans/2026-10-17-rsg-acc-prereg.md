@@ -85,3 +85,14 @@
   按 init 族（RB0 / RSG）分的行数照报。
 - nuPlan 上 ACC 本身变差（d329），这些 rollout 里会有 ACC 造成的失败状态；S hinge 只在车 / 道路接触上起作用，不看 GT。
 - G4 的 dev 行所在 log 在旧池里有默认 serve 下的行（旧池不动），G4 只是方向闸。
+
+## 补记 1（冒烟之后、任何真实池与任何读数之前，2026-10-16 21:20 box 时间）
+
+- 冒烟（RSG-L18-s0，nuPlan 4 个 scene / PAI 4 个 scene）两条行管线都跑通。nuPlan：R1 1.0、错 seed 0.0、R2 过，ACC+GAP 生效（drive.jsonl 的 `fix` 有 lead MPC；
+  served poses 与 `poses_model` 不同，dump 存的是模型原 plan）；池闸只因 K0（4 个 scene 无活跃项，S 用不到）与行数 < 10 000 不过，属冒烟规模。
+- PAI：box 上只有 train160 的 75 个 scene（其余 85 个正从 hf-mirror 与 Tokyo 拷贝，约 157 GB）；PAI rollout 等全部 160 个到齐后一次滚，不用部分集。
+  行重放不带 serve 开关（ACC / VCONT 只作用在模型之后；pai_driver 只在 main() 里建 ACC 的路线 tracker，重放会崩）。
+- **PAI R1 改线**：登记的「超容差份额 ≤ 0.01、错 seed ≥ 0.9」在冒烟上不合用：模型对 cache `poses_model` 逐行最大差中位 4 mm、p99 8.8 cm、超 max(0.03 m, 4 ulp) 份额 0.057，
+  差随时距增长（第 1 点 p99 1 cm，第 8 点 7 cm），是 fp16 舍入（served 是 batch 1，重算是 batch 256），与 PAIONP 补记 1 同类；错 seed 的 RSG-L18-s1 与 s0 同 init，
+  中位差只 6 cm、份额 0.51，不能当错模型。新线（docs/long-runs.md 的等值闸规则）：模型中位 ≤ 0.02 m 且份额 ≤ 0.10，错模型 = 另一个 RB0 底座（RB0-F-s1，RB0-F-s1 自己的池用 RB0-F-s0），
+  份额 ≥ 0.9。nuPlan 的 R1 不变。
