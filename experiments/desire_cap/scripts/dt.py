@@ -100,11 +100,11 @@ def cmd_teacher(a):
 
 # ---------------------------------------------------------------- D1 row table (CPU)
 def rule_side(F, v):
-    """lib/route_desire.py's rule on route-memory blocks F (n, 40, 5) (the layout route_desire expects) and speeds v (n,) -> side (n,) int
-    (+1 left, -1 right, 0 none). The rule and the speed gate are the D0 line's; nothing is decided here."""
+    """lib/route_desire.py's rule on route-memory features F (n, 200 | 203 | (n, 40, 5)) and speeds v (n,) -> side (n,) int (+1 left, -1 right,
+    0 none): intent()'s side, gated at its V_MIN (the D0 line's served value). Nothing is decided here."""
     import route_desire as RD
-    side = np.array([RD.lc_intent(m)[0] for m in F], np.int64)
-    return np.where(v >= RD.LC_MIN_V, side, 0)
+    side = RD.intent(np.asarray(F, np.float32).reshape(len(F), -1))["side"]
+    return np.where(np.asarray(v) >= RD.V_MIN, side, 0).astype(np.int64)
 
 
 def _rule_rev():
@@ -114,10 +114,12 @@ def _rule_rev():
 
 def cmd_rows(a):
     cr, ft = DATA / "runs/op_parity/cache", DATA / "runs/route_mem/feat"
+    POOL, OUT_ = a.pool, Path(a.out)
     sys.path[:0] = [str(REPO / "experiments/onpol_nuplan/scripts")]
     import joint_train as JT
     N, S_, SRC = [], [], []
-    rec = dict(rule=_rule_rev(), nav={}, pool={})
+    import route_desire as RD
+    rec = dict(rule=_rule_rev(), v_min=RD.V_MIN, pool_name=POOL, nav={}, pool={})
     for d in JT.FULL:
         z = np.load(DATA / "runs/route_follow/cf/rows" / f"{d}.npz")
         t = np.load(cr / d / "tab.npz")
@@ -126,7 +128,7 @@ def cmd_rows(a):
         m = z["cls"] == "lc"
         r = z["row"][m].astype(np.int64)
         assert (t["names"][r] == z["token"][m]).all()
-        F = fz["f"][r].astype(np.float32).reshape(-1, 40, 5)
+        F = fz["f"][r].astype(np.float32)
         F[~fz["ok"][r]] = 0
         sr = rule_side(F, t["speed"][r])
         fy = t["fut"][r, 7, 1]                                        # the human's rear-axle y at 4 s (left +)
@@ -142,19 +144,20 @@ def cmd_rows(a):
     t = np.load(cr / POOL / "tab.npz")
     fz = np.load(ft / f"{POOL}.npz")
     assert np.array_equal(fz["names"], t["names"])
-    F = fz["f"].astype(np.float32).reshape(-1, 40, 5)
+    F = fz["f"].astype(np.float32)
     F[~fz["ok"]] = 0
+    assert "speed" in t.files, f"{POOL}: no speed in tab"
     sp = rule_side(F, t["speed"])
     k = sp != 0
     pool = t["pool"].astype(str) if "pool" in t.files else np.full(len(k), POOL)
     rec["pool"] = dict(rows=int(len(k)), fired=int(k.sum()), by_prefix={p: int((k & (pool == p)).sum()) for p in sorted(set(pool.tolist()))},
                        left=int((sp > 0).sum()), right=int((sp < 0).sum()))
     N.append(t["names"][k]), S_.append(sp[k]), SRC.append(np.full(int(k.sum()), "pool"))
-    OUT.mkdir(parents=True, exist_ok=True)
-    np.savez(OUT / "d1_rows.npz", names=np.concatenate(N), side=np.concatenate(S_).astype(np.int8), src=np.concatenate(SRC), rule=rec["rule"])
+    OUT_.mkdir(parents=True, exist_ok=True)
+    np.savez(OUT_ / "d1_rows.npz", names=np.concatenate(N), side=np.concatenate(S_).astype(np.int8), src=np.concatenate(SRC), rule=rec["rule"])
     rec["nav_total"] = dict(lc=sum(v["lc"] for v in rec["nav"].values()), fired=sum(v["fired"] for v in rec["nav"].values()),
                             agree=sum(v["agree"] for v in rec["nav"].values()))
-    (OUT / "d1_rows.json").write_text(json.dumps(rec, indent=1))
+    (OUT_ / "d1_rows.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec, indent=1))
 
 
@@ -190,7 +193,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("teacher").add_argument("--data", required=True)
-    sp.add_parser("rows")
+    p = sp.add_parser("rows")
+    p.add_argument("--pool", default=POOL), p.add_argument("--out", default=str(OUT))
     sp.add_parser("read").add_argument("--tag", required=True)
     a = ap.parse_args()
     dict(teacher=cmd_teacher, rows=cmd_rows, read=cmd_read)[a.cmd](a)
