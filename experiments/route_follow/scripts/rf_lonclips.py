@@ -2,8 +2,12 @@
 """LON-CLIPS: longitudinal loss classes of one stored PAI read (rf_tax.py extract pkl + report csv) and the clip picks that show them.
 
   rf_lonclips.py pick --pkl g10.pkl --csv g10.csv --out picks.json     class table (stdout, markdown) + <=5 clips per class
-  rf_lonclips.py page --picks picks.json --csv g10.csv --out DIR --title T [--videos REL_DIR]   index.html (Chinese); clips link to
-                                                                       <REL_DIR>/<class>/<nn>_<scene8>_<score>.mp4
+      [--labels acc.json --new-ids id8 id8 ...]   also the scenes that were non-zero under label g10 and are zero under label acc ("newzero" picks)
+  rf_lonclips.py page --picks picks.json --out DIR --title T [--ref ref_picks.json] [--videos REL_DIR] [--novideo]
+                                                         index.html (Chinese); clips link to <REL_DIR>/<class>/<nn>_<scene8>_<score>.mp4
+                                                         (newzero: <REL_DIR>/newzero/<nn>_<scene8>_<g10>to<acc>.mp4); --ref adds a second
+                                                         count / points column group (the reference read's picks.json); video markup is
+                                                         autoplay-on-screen (no controls, IntersectionObserver script); --novideo drops the video tags
 Event time is on the rollout clock (the video clock). Human speed = logged ego speed at the same time. Only scenes that lost points are picked.
 """
 import argparse
@@ -109,24 +113,59 @@ def pick(a):
             e = event(O[r.scene], r, k)
             picks.append(dict(cls=k, scene=r.scene, rid=r.rid, score=round(float(r.score), 3), loss=round(float(r.loss), 3), loc=str(r["loc"]),
                               primary=r.primary, secondary=None if pd.isna(r.secondary) else r.secondary, **e))
+    if a.labels:
+        J = json.load(open(a.labels))
+        for _, r in d.iterrows():
+            if r.scene[7:15] in (a.new_ids or []):
+                e = event(O[r.scene], r, "route_end")
+                if pd.isna(r.t_ev_s):
+                    print("no evaluator event time for", r.scene, file=sys.stderr)
+                picks.append(dict(cls="newzero", scene=r.scene, rid=r.rid, score=round(float(r.score), 3), g10=round(float(J["g10"][r.scene]["score"] or 0), 3),
+                                  loss=round(float(r.loss), 3), loc=str(r["loc"]), primary=r.primary, secondary=None if pd.isna(r.secondary) else r.secondary,
+                                  zero_type=None if pd.isna(r.zero_type) else r.zero_type, turn=J["acc"][r.scene].get("turn"), **e))
     Path(a.out).write_text(json.dumps(dict(rows=[(k, l, c, v) for k, l, c, v in rows], total=tot, other=[len(other), float(other.loss.sum())], n=n,
                                            picks=picks), indent=1))
 
 
+SCRIPT = """<script>
+const io = new IntersectionObserver(es => { for (const e of es) { const v = e.target;
+  if (e.isIntersecting) { v.play().catch(err => console.log(err)); } else { v.pause(); } } }, {threshold: 0.3});
+document.querySelectorAll('video[data-t]').forEach(v => { io.observe(v);
+  v.addEventListener('ended', () => { v.currentTime = +v.dataset.t; v.play(); }); });
+</script>"""
+
+
 def page(a):
+    def vid(f, p):                                   # autoplay when on screen, no progress bar; starts 3 s before the event
+        t = f"{max(p['t'] - 3, 0):.1f}"
+        return "" if a.novideo else f"<video muted playsinline preload=metadata src='{f}#t={t}' data-t='{t}'></video>"
     P = json.loads(Path(a.picks).read_text())
+    Rj = json.loads(Path(a.ref).read_text()) if a.ref else None
+    ref = {r[0]: r for r in Rj["rows"]} if Rj else {}
     h = ["<!doctype html><html lang=zh><meta charset=utf-8><title>%s</title>" % html.escape(a.title),
          "<style>body{font:15px/1.5 sans-serif;max-width:1180px;margin:20px auto;padding:0 12px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:3px 9px;text-align:right}"
          "td:first-child,th:first-child{text-align:left}.c{display:inline-block;vertical-align:top;margin:6px 10px 14px 0;width:560px}video{width:560px;background:#000}"
          "h2{margin-top:30px;border-bottom:2px solid #444}.m{font-size:13px;color:#333}</style>",
-         "<h1>%s</h1>" % html.escape(a.title), "<p>%s</p>" % a.intro,
-         "<table><tr><th>类别</th><th>scene 数</th><th>丢分（点）</th><th>占总丢分 %.1f 点</th></tr>" % P["total"]]
+         "<body><h1>%s</h1>" % html.escape(a.title), "<p>%s</p>" % a.intro,
+         "<table><tr><th>类别</th><th>scene 数</th><th>丢分（点）</th><th>占总丢分 %.1f 点</th>%s</tr>" % (
+             P["total"], "<th>g10 scene 数</th><th>g10 丢分（点）</th><th>g10 占 %.1f 点</th>" % Rj["total"] if ref else "")]
     for k, l, c, v in P["rows"]:
-        h.append(f"<tr><td><a href='#{k}'>{html.escape(l)}</a></td><td>{c}</td><td>{v:.2f}</td><td>{100 * v / P['total']:.1f} %</td></tr>")
+        g = f"<td>{ref[k][2]}</td><td>{ref[k][3]:.2f}</td><td>{100 * ref[k][3] / Rj['total']:.1f} %</td>" if ref else ""
+        h.append(f"<tr><td><a href='#{k}'>{html.escape(l)}</a></td><td>{c}</td><td>{v:.2f}</td><td>{100 * v / P['total']:.1f} %</td>{g}</tr>")
     lo = sum(r[3] for r in P["rows"])
-    h.append(f"<tr><th>纵向合计</th><th>{sum(r[2] for r in P['rows'])}</th><th>{lo:.2f}</th><th>{100 * lo / P['total']:.1f} %</th></tr>")
-    h.append(f"<tr><td>非纵向（转弯 / 变道 / 碰撞 / 出路 / 其余轻微丢分）</td><td>{P['other'][0]}</td><td>{P['other'][1]:.2f}</td><td>{100 * P['other'][1] / P['total']:.1f} %</td></tr></table>")
+    gt = (f"<th>{sum(r[2] for r in Rj['rows'])}</th><th>{sum(r[3] for r in Rj['rows']):.2f}</th><th>{100 * sum(r[3] for r in Rj['rows']) / Rj['total']:.1f} %</th>") if ref else ""
+    go = (f"<td>{Rj['other'][0]}</td><td>{Rj['other'][1]:.2f}</td><td>{100 * Rj['other'][1] / Rj['total']:.1f} %</td>") if ref else ""
+    h.append(f"<tr><th>纵向合计</th><th>{sum(r[2] for r in P['rows'])}</th><th>{lo:.2f}</th><th>{100 * lo / P['total']:.1f} %</th>{gt}</tr>")
+    h.append(f"<tr><td>非纵向（转弯 / 变道 / 碰撞 / 出路 / 其余轻微丢分）</td><td>{P['other'][0]}</td><td>{P['other'][1]:.2f}</td><td>{100 * P['other'][1] / P['total']:.1f} %</td>{go}</tr></table>")
     h.append("<p class=m>丢分（点）= 该类 scene 的 (1 − 分) 之和 / 281 × 100。主类按 rf_tax.py 的规则；「慢」类里被追尾的单列。每类下面只挂丢了分的 scene，按丢分从大到小、尽量分散在不同日志地点。</p>")
+    nz = [p for p in P["picks"] if p["cls"] == "newzero"]
+    if nz:
+        h.append(f"<h2 id=newzero>ACC 新造的零分</h2><p>g10 非零、ACC 为零的 {len(nz)} 个 scene。每段标：g10 分 → ACC 分，零分类型，转弯角（acc.json turn），事件时刻本车与人的速度。</p>")
+        for i, p in enumerate(nz, 1):
+            f = f"{a.videos}/newzero/{i:02d}_{p['scene'][7:15]}_{p['g10']:.2f}to{p['score']:.2f}.mp4"
+            tn = p.get("turn")
+            h.append(f"<div class=c>{vid(f, p)}<div class=m><b>{p['scene'][7:15]}</b> g10 {p['g10']:.2f} → ACC {p['score']:.2f}；零分类型 {html.escape(str(p['zero_type']))}"
+                     f"（{p['primary']}）；转弯角 {'—' if tn is None else '%.0f' % tn}；事件 t = {p['t']:.1f} s（{p['why']}）；该时刻本车 {p['v_e']} m/s，人 {p['v_h']} m/s</div></div>")
     for k, l, w in CLASSES:
         ps = [p for p in P["picks"] if p["cls"] == k]
         h.append(f"<h2 id={k}>{html.escape(l)}</h2><p>{html.escape(w)}</p>")
@@ -134,11 +173,11 @@ def page(a):
             h.append("<p class=m>本次读数里这一类没有 scene。</p>")
         for i, p in enumerate(ps, 1):
             f = f"{a.videos}/{k}/{i:02d}_{p['scene'][7:15]}_{p['score']:.2f}.mp4"
-            h.append(f"<div class=c><video controls preload=metadata src='{f}#t={max(p['t'] - 3, 0):.1f}'></video><div class=m><b>{p['scene'][7:15]}</b> 得分 {p['score']:.2f}（丢 "
+            h.append(f"<div class=c>{vid(f, p)}<div class=m><b>{p['scene'][7:15]}</b> 得分 {p['score']:.2f}（丢 "
                      f"{p['loss']:.2f} 点）；事件 t = {p['t']:.1f} s（{p['why']}）；该时刻人 {p['v_h']} m/s，本车 {p['v_e']} m/s，本车落后日志 {p['lag']:.0f} m；"
                      f"主类 {p['primary']}{'+' + p['secondary'] if p['secondary'] else ''}</div></div>")
     Path(a.out).mkdir(parents=True, exist_ok=True)
-    (Path(a.out) / "index.html").write_text("\n".join(h) + "</html>")
+    (Path(a.out) / "index.html").write_text("\n".join(h) + ("\n" if a.novideo else "\n" + SCRIPT + "\n") + "</body></html>")
 
 
 if __name__ == "__main__":
@@ -147,8 +186,10 @@ if __name__ == "__main__":
     p = sp.add_parser("pick")
     p.add_argument("--pkl", required=True), p.add_argument("--csv", required=True), p.add_argument("--out", required=True)
     p.add_argument("--per", type=int, default=5)
+    p.add_argument("--labels"), p.add_argument("--new-ids", nargs="*")
     g = sp.add_parser("page")
     g.add_argument("--picks", required=True), g.add_argument("--out", required=True), g.add_argument("--title", required=True)
+    g.add_argument("--ref"), g.add_argument("--novideo", action="store_true")
     g.add_argument("--intro", default=""), g.add_argument("--videos", default="clips")
     a = ap.parse_args()
     {"pick": pick, "page": page}[a.cmd](a)
