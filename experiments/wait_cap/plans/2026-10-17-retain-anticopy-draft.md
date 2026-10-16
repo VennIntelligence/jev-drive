@@ -145,3 +145,32 @@
 5. **(iii-a) 是在 RSG 之后补回来的**：洗掉发生在底座阶段，RSG 的 on-policy 行又在其上；补丁能否在闭环保持，pilot 判不了。
 6. **(iv)**：只削弱数值历史一路；第 336 条显示这一路不是「等」的杠杆。
 7. 第一版设计（整条 plan 的 LwF、W / G / S 均分、`--kd-own`）的 40 步冒烟 RTSMOKE-F-s0 已跑过（代码路径通），之后按第 336 条改掉；`--kd-mode full` 保留为选项，pilot 不用。
+
+## 补记 1：用户决定把 RTB1 往下走（2026-10-17 ~08:00 CST；写在任何续训、闭环与 dev ADE 分解的输出之前）
+
+**用户决定**：(iii-b) 的 pilot 闸判 STOP（`rtb_pilot_gate.md`）：RTB1-F-s0（λ 1）除线 5 外全过（到达 0.61 m；S_L / Y_P / Y_V 回到 P0 水平；W 0.967、G 0.879；desire 0.96；
+自由路偏差 −0.02；横向 0.024；路线依赖仍在），只栽 dev ADE 0.5556 对 RB0-F-s0 0.5276（+0.028，线 +0.01）。用户推翻这个 STOP，**作探索性续跑**，同时分解 dev ADE 的上升；
+分解显示真问题就停链。第 2 节的线与判词不改：RTB1 在登记意义上仍是 STOP，下面的一切都是探索，不产生登记判词。
+
+**跑什么**（一条池链，`nx.sh rtb-cont`，两个变体并行；训练只变一个量：底座 RB0-F-s0 → RTB1-F-s0；不加等待行、不加 anti-copy 噪声、不加保留项）：
+- **(A) 快**：`RTB1O-L18-s0` = RSG-L18 原命令（= WTC-L18-s0 的命令：`--init` 底座、`--steps 2500 --warmup 1 --lr-scale 0.1`、池 `on1_L18RB0`、`--on-k 13 --on-mode self`、seed 0），
+  只把 `--init RB0-F-s0` 换成 `--init RTB1-F-s0`。池是旧底座的 on-policy 行（对新底座 off-policy），不滚新 rollout。
+- **(B) 忠实**：按 on1_L18RB0 的建法重建池：RTB1-F-s0 在 onpol-train 上 18 决策滚一次（`ol_chain.sh submit-roll` / `roll1` 原样，6 chunk）→ 行 `L18RTB1`
+  （`ol_chain.sh geo` / `tok`（interpreted control smoke10eY，同 rf_round2）/ `strip`）→ `rm_build.py pool --name L18RTB1` → 池闸（`runs/route_follow/poolgate.py`：
+  行 ≥ 10 000、route ok ≥ 0.95、route0_share_005 ≥ 0.99；tok 的 R1 / R2 闸不过则 (B) 停在那里）→ `RTB1N-L18-s0` = 同一命令，`--on on1_L18RTB1`。
+- **每臂读数**：held 460 @18（`rm_chain.sh read`，6 chunk）、公开静止 scene @10（readlist，SH30_DUMP）、PAI stop17（PAI 提交配置，`pai_box.sh`，与第 335 / 336 条同一仪器）、
+  rf_follow（两臂 + RSG-L18-s0 + WTC-L18-s0 的 held 读数，24 个 held 转弯）；顺带（描述）：到达重放（`nx.py arrival`）与 DONE 的 dev ADE。
+- **成本（估）**：(A) 训练 ~0.15 + 读数 ~1.3 卡时，墙钟 ~45 min；(B) rollout ~1–1.5 + 行 / tokens / 池 ~0.3 + 训练 ~0.15 + 读数 ~1.3，合计 ~3–3.5 卡时，墙钟 ~2.5–3 h。
+
+**dev ADE 分解**（与链并行；CPU；第 335 条探索 1 / explore_d 的同一读法 `wt_devdecomp.py`，对照换成 RB0-F-s0）：行 = 闸 4 的 1 789 个 dev 行（32 log），
+plan 取 `nx.py hist` 已存的 s = 1 plan（读数时已对 DONE 的 dev ADE 复现到 1e−3），P0 取 explore_d 的 devall（同一行序）。读：沿轨迹 / 横向分解；
+4 s 带符号弧长偏差按 v0 区间、行为类、上下文（自由路 / 前车近 / 低 TTC / 行人）及 v0 × 上下文；top 5 % 行。
+
+**停链规则**（看分解之前定）：**停** = 上升主要是自由路或低速的变慢，同第 335 条：自由路行承担 ≥ 50 % 的上升，**且** v0 3–8 m/s 的自由路行 4 s 弧长偏差 J − C ≤ −0.10 m
+（第 335 条 J2：自由路 0.64、整体 −0.49 m）。停时按 job id `cl cancel` 掉链上所有未完成作业并报告。**不停** = 上升落在接近 / 类等待行（前车近、低 TTC、行人），
+或主要是横向且小，或沿轨迹但不是变慢（自由路 v0 3–8 m/s 偏差 > −0.10 m）。
+
+**闭环描述线**（单 seed，只是方向；与第 335 条补记 D 同一套）：held 零分 J ≤ C + 3、24 个 held 转弯完成 J ≥ C − 2、均分配对 CI（会话聚类），C 分别取 RSG-L18-s0 与
+2 500 步对照 WTC-L18-s0（与 RSG-L18-s0 训练逐位相同，闭环各自一次读数）；另报 progress_rel、出路、at-fault。**静止 scene**：P0 停在 0.48 m（人 0.50），之后每一段都开 2.3–2.7 m 撞上；
+**PAI stop17**：P0 零分 14 / 17，之后各段 16 / 17。「闭环看得到到达时停」= 静止 scene 不接触且距离 ≤ 1.0 m，或 stop17 零分 ≤ 15。
+之后是否做 2 seed 正式由用户定。
