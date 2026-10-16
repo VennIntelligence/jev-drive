@@ -10,7 +10,7 @@ learn the per-time contact of ANY candidate plan? No policy training. Box; envs/
 
 Rows. own = pool on1_L18RSG (RSG-L18-s0's own states); dev = rf_recov.dev_of (crc32(log) % 100 < 15), train = the rest. human = the 12
 navtrain_full shards; train / dev = pp_train.split_rows(tab, navsim/op-parity-full); rows with a finite log future, agent boxes
-(navtrain_all-k32) and the road raster joint_train.ROAD; a seeded subsample of 34 000 train + 6 000 dev rows.
+(navtrain_all-k32) and the road raster joint_train.ROAD; a seeded subsample of 38 000 train rows + all 1 789 dev rows.
 Candidates (lib/stack_cand.py, cands_t): own: 0 = RSG-L18-s0's forward plan on the row's own input (rf_recov.py fwd -> $D/runs/route_follow/
 stack/fwd; --smoke without it falls back to the stored served plan), 1 .. 8 = CANDS; human: 0 = the shipped teacher plan (cache teacher.npz
 `plan`, pp_train.rear with the Losses' W), 1 .. 8 = CANDS, 9 = the log future.
@@ -53,7 +53,7 @@ SPLIT = "navsim/op-parity-full"
 BASE = "RSG-L18-s0"
 FWD = D / "runs/route_follow/stack/fwd"
 O_FULL = D / "runs/route_follow/stack/cons"
-N_HUM = (34000, 6000)
+N_HUM = (38000, 6000)                      # the dev split has 1 789 rows: all of them
 EXTRA, BS, STEPS, LR, WD, WARM, SEED = 2, 128, 8000, 3e-4, 0.05, 200, 0
 STEPS_RMS = (0.05, 0.10, 0.20)
 
@@ -401,8 +401,8 @@ def cmd_train(a, run):
         opt.step()
         sched.step()
         if s % 100 == 0 or s == steps - 1:
-            run.scalar("loss/own", float(lo[0]), s)
-            run.scalar("loss/hum", float(lo[1]), s)
+            run.scalar("loss/own", float(lo[0].detach()), s)
+            run.scalar("loss/hum", float(lo[1].detach()), s)
         if (s + 1) % 1000 == 0 or s == steps - 1:
             head.eval()
             v = inner_auc()
@@ -411,7 +411,7 @@ def cmd_train(a, run):
             run.info(f"step {s + 1}/{steps} loss own {float(lo[0]):.4f} hum {float(lo[1]):.4f} inner-val own AUC {v:.4f} ({time.time() - t0:.0f} s)")
     head.eval()
     meta = dict(steps=steps, bs=BS, extra=EXTRA, lr=LR, wd=WD, warm=WARM, seed=SEED, train_own=int(len(tr_o)), train_hum=int(len(tr_h)),
-                inner_val_own_auc=inner_auc(), wall_s=round(time.time() - t0, 1), slots=list(__import__("conshead").SLOTS))
+                inner_val_own_auc=inner_auc(), train_s=round(time.time() - t0, 1), slots=list(__import__("conshead").SLOTS))
     torch.save(dict(cfg=head.cfg, state=head.state_dict(), meta=meta), O / "head.pt")
     (O / "train.json").write_text(json.dumps(meta, indent=1))
     run.summary.update(meta)
