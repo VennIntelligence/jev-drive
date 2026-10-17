@@ -390,12 +390,11 @@ def route_bias(D):
         sg = np.sign(X[f"rc{d}"] - X[f"c{d}"])
         for nm, col in (("route_mem", f"ry{d}"), ("route_rebuilt", f"gy{d}"), ("plan", f"py{d}")):
             X[f"{nm}_b{d}"] = (X[col] - X[f"c{d}"]) * sg
-        X[f"ego_b{d}"] = X.ego_off * sg
     X["log"] = X.scene.str.rsplit("-", n=1).str[0]
     for (st, lab), Y in X.groupby(["set", "label"]):
         r = {}
         for d in (10, 20, 30):
-            for nm in ("route_mem", "route_rebuilt", "plan", "ego"):
+            for nm in ("route_mem", "route_rebuilt", "plan"):
                 v = Y[f"{nm}_b{d}"]
                 r[f"{nm}_{d}"] = dict(n=int(v.notna().sum()), med=med(v), mean=ci(v, Y.log), gt0p5=float((v > 0.5).mean()))
         out[f"{st}/{SHORT[lab]}"] = r
@@ -516,8 +515,8 @@ def main(a):
             Fp = F[pr]
             ax[2].scatter(Fp.out10C.clip(-2, 2), Fp.out10J.clip(-2, 2), s=3, color=cc, alpha=0.5, lw=0, label=pr)
     ax[2].plot([-2, 2], [-2, 2], color="k", lw=0.5)
-    ax[2].set_xlabel("RSG plan, outside at 10 m (m)")
-    ax[2].set_ylabel("J plan, outside at 10 m (m)")
+    ax[2].set_xlabel("RSG: outside at 10 m (m)")
+    ax[2].set_ylabel("J: outside at 10 m (m)")
     ax[2].set_title("(c) same inputs (replay)", fontsize=7.5)
     ax[2].legend(fontsize=5.5, markerscale=3)
     if DV is not None:
@@ -529,7 +528,7 @@ def main(a):
                 ax[3].plot(v, np.linspace(0, 1, len(v)), color=col[SHORT[l_]], label=SHORT[l_])
         ax[3].axvline(0, color="k", lw=0.5)
         ax[3].set_xlim(-2, 2)
-        ax[3].set_xlabel("plan outside the human path at 10 m (m)")
+        ax[3].set_xlabel("outside the human path, 10 m (m)")
         ax[3].set_ylabel("cumulative share")
         ax[3].set_title(f"(d) dev rows, {int(t.sum())} turning", fontsize=7.5)
         ax[3].legend(fontsize=6)
@@ -591,7 +590,10 @@ def main(a):
             ax[i].set_xticks(xx, ["10 m", "20 m", "30 m"])
             ax[i].set_title(f"{seg} (n {r['decisions']}, both lines p>0.5: {r['present']:.2f})", fontsize=7)
             PS.bars(ax[i])
-        ax[0].set_ylabel("|lane-centre error| (m), median, p90 bar")
+        ax[0].set_ylabel("abs. lane-centre error (m): median, p90")
+        for x in ax:
+            x.set_yscale("log")
+            x.set_ylim(0.05, 60)
         ax[0].legend(fontsize=6.5)
         fig.tight_layout()
         fig.savefig(fd / "lane_err.png", dpi=200)
