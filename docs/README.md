@@ -13,7 +13,9 @@ with "Last verified: <date>"; one topic per file, keep it short.
 | [lib.md](lib.md) | you start a new experiment (Run, splits, cache, par, stats) |
 | [bench.md](bench.md) | you run any model on navtest / navhard / HUGSIM / Bench2Drive, report one, or [migrate existing evaluation scripts](bench.md#existing-script-migration-audit-2026-10-07): `jevdrive.bench`, never a new runner |
 | [long-runs.md](long-runs.md) | you start a job over a minute: tmux, logs, curves, the pre-run checklist |
+| [speed.md](speed.md) | a job is slow or you change a speed default: every throughput recipe (data prep, training, closed-loop reads, downloads) with its gain and identity, and the measured headroom |
 | [web-reader.md](web-reader.md) | you show docs to someone without pushing |
+| [html-reports.md](html-reports.md) | you write a human-readable report (Chinese HTML in `research/<topic>/`) |
 | [closed-loop-runbook.md](closed-loop-runbook.md) | any GPU job (the GPU pool: submit / queue / top) and any CARLA / Bench2Drive run: profile default, capacity |
 | [closed-loop-acceptance.md](closed-loop-acceptance.md) | before scoring a model in closed loop: what is accepted |
 | [carla.md](carla.md) | you need a CARLA server on the box |

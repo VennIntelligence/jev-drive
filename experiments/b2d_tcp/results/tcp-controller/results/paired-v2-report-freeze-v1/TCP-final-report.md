@@ -6,7 +6,7 @@
 
 使用真实TCP checkpoint，三路线24211/1711/1773，seed0，20Hz，only_traj四点/.5s时域，PI Kp=.5、Ki=.25；横向沿用原生仲裁/PID。两臂相同throttle[0,.75]、brake[0,1]与互斥，均移除原官方低速限油门和尾部二值化，因此比较的是公共执行限幅下B/C，不是未经修改的官方最终策略。相对旧官方更快不能归为PI或harness收益。
 
-初版paired-v1已发现微负静止速度误guard，四完整+第五中断全保留；本报告只用修复后[protocol-v2](protocol-v2.md)重新完整执行的六例，绝不拼接。finite |raw speed|<.01归零只用于公共有效速度/反向判断，原生模型/PID仍读raw。主运行源码commit `c09c9688d491859a0d8d9e97c5409a65670add12`；checkpoint SHA256 `e6573ff1f8ea910b9a53eddfb68f69cac469bf5bfa253a516578f6126110b4fe`。
+初版paired-v1已发现微负静止速度误guard，四完整+第五中断全保留；本报告只用修复后[protocol-v2](../../protocol-v2.md)重新完整执行的六例，绝不拼接。finite |raw speed|<.01归零只用于公共有效速度/反向判断，原生模型/PID仍读raw。主运行源码commit `c09c9688d491859a0d8d9e97c5409a65670add12`；checkpoint SHA256 `e6573ff1f8ea910b9a53eddfb68f69cac469bf5bfa253a516578f6126110b4fe`。
 
 ## 全程主结果
 
@@ -29,7 +29,7 @@
 | 纵向abs(accel)p95 (m/s²) | 6.055712 | 3.650913 | -2.404799 | -39.71% |
 | 纵向abs(jerk)p95 (m/s³) | 84.469272 | 45.054934 | -39.414338 | -46.66% |
 
-每条路线速度RMS与纵向jerk p95均下降，但24211纵向加速度p95上升0.056445m/s²（5.611118→5.667564），作为明确tradeoff保留。均值下降及安全事件/未完成计数未增加，符合冻结的有限继续条件；未完成本身没有变通过。核对结果见[acceptance.json](results/paired-v2-final-audit/acceptance.json)。只有三条近直导航路线、一个seed、每臂一次，不能推出更广泛的转弯效果。
+每条路线速度RMS与纵向jerk p95均下降，但24211纵向加速度p95上升0.056445m/s²（5.611118→5.667564），作为明确tradeoff保留。均值下降及安全事件/未完成计数未增加，符合冻结的有限继续条件；未完成本身没有变通过。核对结果见[acceptance.json](../paired-v2-final-audit/acceptance.json)。只有三条近直导航路线、一个seed、每臂一次，不能推出更广泛的转弯效果。
 
 ## 1773：相同规则分段后才看得见的限制
 
@@ -54,7 +54,7 @@ B在碰撞前另有7.75s低速段，其中84/156帧desired<.4，体现模型停/
 
 原生导航target仲裁B3854/3999、C3939/3999可用帧；按归档vendor规则重算与angle_final全部一致。平均绝对角减少13.67°/17.84°，说明网络轨迹方向可能被导航目标替代，但尚不能证明该仲裁导致碰撞。模型物理原点未确认，图中actor/−1.4m GNSS两个原点仅作可视化假设。后续横向阶段必须分别定位预测轨迹、仲裁和物理执行，采用预定义turn windows及完整路线回归，不用本报告挑有利片段。
 
-分段采用全部固定5s箱、严格首次碰撞前/后、全部|truth speed|<.5且实际跨度>=5s低速区间；无挑段。见[8000逐帧及89分段](results/paired-v2-stall-final/README.md)。
+分段采用全部固定5s箱、严格首次碰撞前/后、全部|truth speed|<.5且实际跨度>=5s低速区间；无挑段。见[8000逐帧及89分段](../paired-v2-stall-final/README.md)。
 
 ## 覆盖、成本与复核
 
@@ -62,12 +62,12 @@ B在碰撞前另有7.75s低速段，其中84/156帧desired<.4，体现模型停/
 
 raw负速度1225帧，其中(-.01,0)为1105帧，reverse guard120帧；原始符号、原因与命令完整保留。两臂normal tick都计算原生和PI分支。selected与native steer最大差<3e-8，selected与选中分支差均<=1e-7；这是CARLA float32存储容差，不是横向算法变化。selected与official tail的油门/刹车差另列，是公共envelope可能造成的有意变化，不混同舍入。
 
-6个attempt均保留，0基础设施失败/重试；两个TickRuntime是驾驶失败。attempt墙钟合计1267.6s，runner分组合计1273.145s；这是实际运行成本，不以提前失败或停滞较轻计算harness加速。17项接入测试由根代理预运行归档；本分析9项测试通过并保存[当次源码与日志](results/analysis-tests-v4/manifest.json)。分段覆盖、来源/输出hash与六例条数另有[最终验证](results/paired-v2-final-audit/verification.json)。
+6个attempt均保留，0基础设施失败/重试；两个TickRuntime是驾驶失败。attempt墙钟合计1267.6s，runner分组合计1273.145s；这是实际运行成本，不以提前失败或停滞较轻计算harness加速。17项接入测试由根代理预运行归档；本分析9项测试通过并保存[当次源码与日志](../analysis-tests-v4/manifest.json)。分段覆盖、来源/输出hash与六例条数另有[最终验证](../paired-v2-final-audit/verification.json)。
 
 ## 可复查交付
 
-- [六例comparison JSON](results/paired-v2-final/comparison.json)、[每例汇总CSV](results/paired-v2-final/cases.csv)，同目录六份完整逐帧CSV与当次分析脚本。
-- [最终PNG/PDF与抽样预测CSV](results/paired-v2-figures-final/README.md)：同route行为指标共享纵轴；world等比例共享tight limits，轴交换有标签；首次碰撞红线；无平滑。原始全帧预测不抽样删除。
-- [1773双臂分段](results/paired-v2-stall-final/README.md)及vendor源字节。
-- [报告/分析/图表/原始来源索引](results/paired-v2-final-audit/manifest.json)，包括固定协议、运行源commit、权重hash和原始attempt路径；raw根`/data/runs/b2d/tcp-controller/paired-v2`。
-- [v1发现过程](results/v1-discovery.md)及所有先前analysis/figure editions原样保留。本报告不合并另一个正在进行的转弯阶段结果。
+- [六例comparison JSON](../paired-v2-final/comparison.json)、[每例汇总CSV](../paired-v2-final/cases.csv)，同目录六份完整逐帧CSV与当次分析脚本。
+- [最终PNG/PDF与抽样预测CSV](../paired-v2-figures-final/README.md)：同route行为指标共享纵轴；world等比例共享tight limits，轴交换有标签；首次碰撞红线；无平滑。原始全帧预测不抽样删除。
+- [1773双臂分段](../paired-v2-stall-final/README.md)及vendor源字节。
+- [报告/分析/图表/原始来源索引](../paired-v2-final-audit/manifest.json)，包括固定协议、运行源commit、权重hash和原始attempt路径；raw根`/data/runs/b2d/tcp-controller/paired-v2`。
+- [v1发现过程](../v1-discovery.md)及所有先前analysis/figure editions原样保留。本报告不合并另一个正在进行的转弯阶段结果。

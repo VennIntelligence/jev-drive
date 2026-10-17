@@ -198,4 +198,4 @@ warp on the card (ap2 3.5 -> 27 tokens/s, same cache bytes), the interpreter fre
 batch 64: 13.8 -> 0.6 GB, same outputs and gradients), trainers prefetch and keep dev tokens on the card (bit-identical runs), and a
 compiled training step is opt-in (2x per step; dev within 1/3 of the seed spread, navtest and closed loop not run). Evidence: one box,
 one checkpoint each for the SH30 and AP2 cores (AP2 round 2 not run), latency under shared load, the submission image untested.
-[results](../experiments/alpasim/results/lat1_frame_synthesis.md)
+[results](lat1_frame_synthesis.md)

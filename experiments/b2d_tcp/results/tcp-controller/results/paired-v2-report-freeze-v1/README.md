@@ -2,7 +2,7 @@
 
 2026-09-23。用户已批准阶段一六例：24211、1711、1773各执行`native_common`与`pi_common`。这是同一个真实TCP模型、相同公共执行限幅下的纵向对照，横向暂时保留原生实现。第一轮 paired-v1 的接入故障和全部结果保留；修复后的 paired-v2 已独立完成六例。PI满足预先冻结的有限继续信号，但两臂都在1773碰撞并停滞至TickRuntime，仅2/3路线完成，不能宣称安全提升、新默认或榜单增益。详见[真实TCP最终报告](TCP-final-report.md)。
 
-初版[实验协议](protocol.md)保持原哈希；修复重跑采用[protocol-v2](protocol-v2.md)。先固定协议，再由根代理执行模型/传感器契约验证及闭环。历史依据为[真实TCP集成审计](../2026-09-22-b2d-controller/agents/tcp-controller-integration-plan.md)。该旧审计的“未授权运行”是当时状态，本目录记录现在已批准的范围。
+初版[实验协议](../../protocol.md)保持原哈希；修复重跑采用[protocol-v2](../../protocol-v2.md)。先固定协议，再由根代理执行模型/传感器契约验证及闭环。历史依据为[真实TCP集成审计](../../../../../b2d_controller/results/b2d-controller/agents/tcp-controller-integration-plan.md)。该旧审计的“未授权运行”是当时状态，本目录记录现在已批准的范围。
 
 | 配对路线 | 官方场景 | 本阶段可以观察 |
 |---|---|---|
@@ -10,7 +10,7 @@
 | 1711 / Town12 | ParkingCutIn | 停车车辆切入中的规划与执行 |
 | 1773 / Town12 | ParkedObstacle | 静态障碍交互与实际绕行动作 |
 
-三条XML路径均近共线，不能宣称有道路转弯覆盖。若模型绕障产生转向，要以实际预测与真值轨迹说明。[几何检查与原始XML哈希](results/protocol-route-inspection.json)可复核。
+三条XML路径均近共线，不能宣称有道路转弯覆盖。若模型绕障产生转向，要以实际预测与真值轨迹说明。[几何检查与原始XML哈希](../protocol-route-inspection.json)可复核。
 
 - `native_common`：真实网络+原生导航/目标点仲裁/横向，原生纵向PID，公共执行限幅。
 - `pi_common`：同上，仅纵向改为固定PI Kp=.5、Ki=.25；相同公共执行限幅。
@@ -23,8 +23,8 @@
 
 目录分工：`protocol.md`为冻结前协议；`results/`保存路线检查、分析契约、离线分析辅助脚本和后续各版结果。原始大日志由根代理放在新的运行目录，源文件/权重/环境/结果建立哈希索引；失败、重试和图表旧版全部保留。旧oracle与真实TCP历史结果均不覆盖。
 
-分析入口与测试：[analysis-contract](results/analysis-contract.md)。阶段二独立几何规则：[turn-window-appendix](turn-window-appendix.md)。
+分析入口与测试：[analysis-contract](../analysis-contract.md)。阶段二独立几何规则：[turn-window-appendix](../../turn-window-appendix.md)。
 
-发现过程：[v1 接入故障与证据索引](results/v1-discovery.md)。旧图表与第一对数值均保留，不再作为 PI 效果结论。
+发现过程：[v1 接入故障与证据索引](../v1-discovery.md)。旧图表与第一对数值均保留，不再作为 PI 效果结论。
 
-最终交付：[六例主表](results/paired-v2-final/cases.csv)、[1773双臂分段](results/paired-v2-stall-final/README.md)、[PNG/PDF与原预测抽样](results/paired-v2-figures-final/README.md)、[验收条件](results/paired-v2-final-audit/acceptance.json)。所有旧版保留；阶段二横向结果单独报告。
+最终交付：[六例主表](../paired-v2-final/cases.csv)、[1773双臂分段](../paired-v2-stall-final/README.md)、[PNG/PDF与原预测抽样](../paired-v2-figures-final/README.md)、[验收条件](../paired-v2-final-audit/acceptance.json)。所有旧版保留；阶段二横向结果单独报告。

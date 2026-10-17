@@ -94,7 +94,7 @@ At lambda 10 the remaining zeros are on turns, not on straights (decision 205's 
 
 400 scenes of parts 004 / 006 / 010 / 011 (17 logs, 12 of them not among the 27 of the 700), landed after the 700; one list, the same for every
 driver. They took part in no choice of this lane. 18 of them score zero for every driver (10 fail AlpaSim's route check before any decision,
-see [c0c_public1000.md](c0c_public1000.md)).
+see [c0c_public1491.md](c0c_public1491.md)).
 
 | recipe | mean scene score | zeros (collision / offroad / corridor) | slow | at-fault events | difference to P2H10 | CI, scenes | CI, logs |
 |:--|--:|:--|--:|--:|--:|:--|:--|
