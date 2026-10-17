@@ -387,6 +387,7 @@ def nav_unit(u):
     logging.disable(logging.WARNING)
     split_dir, log, items, fstore = u[:4]
     fastore = u[4] if len(u) > 4 else None                            # rm_build anchor's stored rows (feat/<data>.a.npz), when built
+    want = set(u[5]) if len(u) > 5 else set()                         # navdump: rows whose messages are returned too
     fr, pos = AR.load_log(split_dir, log)
     vm, org = AR.city_map(fr.loc)
     out = []
@@ -434,7 +435,31 @@ def nav_unit(u):
         out.append(dict(row=int(r), token=tok, k=int(k), s_e=float(s_e[0]), lat_e=float(lat_e[0]), turn_d=turn_d(route, float(s_e[0])),
                         g_store=float(np.abs(f[vv, 1:3] - fst[vv, 1:3]).max() * 20.0) if vv.any() else 0.0, fold=fold_m(route, RM.merge(B)),
                         a_fold=fold_m(route, RM.merge_a(B)), fut_dyaw4=fut, **ls, **{f"a_{q}": v for q, v in la.items()}, **ga))
+        if r in want:
+            out[-1]["msgs"] = dict(BA=BA, PA=PA, a=a, R=route.R, log=log)
     return out
+
+
+def cmd_navdump(a):
+    """The messages of chosen NAVSIM rows (DATA:ROW ..), rebuilt as `nav` builds them -> one pickle {DATA:ROW: dict(BA, PA, a, R, log) + the
+    row's nav columns} for a look offline (the anchored layout's outliers)."""
+    from jevdrive.common import data_dir
+    by = {}
+    for spec in a.rows:
+        d, r = spec.rsplit(":", 1)
+        by.setdefault(d, []).append(int(r))
+    out = {}
+    for d, rows in by.items():
+        tab, z = np.load(data_dir() / "runs/op_parity/cache" / d / "tab.npz"), np.load(data_dir() / "runs/route_mem/feat" / f"{d}.npz")
+        names, logs = tab["names"], tab["log"]
+        split_dir = "test" if (data_dir() / "datasets/navsim/navsim_logs/test" / f"{logs[0]}.pkl").exists() else "trainval"
+        fz = z["f"].astype(np.float32).reshape(-1, RM.N_PT, RM.NF)
+        for lg in sorted({logs[r] for r in rows}):
+            it = [(r, names[r]) for r in rows if logs[r] == lg]
+            for x in nav_unit((split_dir, lg, it, fz[[r for r, _ in it]], None, [r for r, _ in it])):
+                out[f"{d}:{x['row']}"] = x
+    pickle.dump(out, open(a.out, "wb"), protocol=4)
+    print(f"{len(out)} rows -> {a.out}")
 
 
 def fold_m(route, M):
@@ -1101,6 +1126,9 @@ def main():
     rp = sp.add_parser("replay")
     rp.add_argument("--out", required=True)
     rp.add_argument("--ckpts", nargs="+", default=["RSG-L18-s0", "RTB1ARO-L18-s0", "RTB1O-L18-s0"])
+    nd = sp.add_parser("navdump")
+    nd.add_argument("--rows", nargs="+", required=True)
+    nd.add_argument("--out", required=True)
     an = sp.add_parser("anchor")
     an.add_argument("--dir", required=True)
     an.add_argument("--res", required=True)
@@ -1111,7 +1139,7 @@ def main():
     r.add_argument("--fig", default="")
     r.add_argument("--example", default="v2_pub:42c7526f")
     a = p.parse_args()
-    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report, anchor=cmd_anchor)[a.cmd](a)
+    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report, anchor=cmd_anchor, navdump=cmd_navdump)[a.cmd](a)
 
 
 if __name__ == "__main__":
