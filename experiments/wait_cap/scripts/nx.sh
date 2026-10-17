@@ -30,7 +30,8 @@
 #                           -> cont-reads v1|v2 + rtb-wide (public only); base wc / led F / hist -> devdecomp (vs RB0-F-s0, with RTB1-F-s0)
 #   nx.sh rtb-v2s1          prereg 补记 3: V2's second base seed RTB1AR-F-s1 (the rtb1ar command, seed 1, 10 000 steps) -> arrival replay -> nx.py vgate (the same
 #                           stop rule) -> RTB1AROB1-L18-s1 (rtbo1's command from it: --init RTB1AR-F-s1, seed 1, old pool on1_L18RB0) -> cont-reads v2s1 + rtb-wide
-#                           with PAI 281 (submission config); then rtb-wide RTB1ARO-L18-s0 (its public read exists: submits PAI 281 and the summary); results: nx.py v2seeds
+#                           with PAI 281 (submission config); then rtb-wide RTB1ARO-L18-s0 (its public read exists: submits PAI 281 and the summary). The user cancelled
+#                           the s1 chain (cl cancel by id) right after the base finished training, before any read; only the RTB1ARO-L18-s0 PAI 281 part was kept: nx.py v2pai
 # Env: PRIO (pool priority, default 9); WIDE_PAI=0: rtb-wide reads public 1491 only
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 X=$DATA_DIR/runs/wait_cap/next; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/nx.sh; PY=experiments/wait_cap/scripts/nx.py
@@ -243,5 +244,5 @@ train)   # train <arm> <seed> <steps> <tag>
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,34p $0; exit 2 ;;
+*) sed -n 2,35p $0; exit 2 ;;
 esac

@@ -32,9 +32,9 @@ Prereg 补记 2 (two targeted variants of the retain base, exploratory):
                 the DONE dev ADE > max-dev (RTB1-F-s0's); the continuation and its reads hang on it with --after -> results/next/rtb_v_gate_BASE
   vsum --arms V=BASE:CONT,.. --out NAME   (CPU)  every arm (and a = RTB1O-L18-s0) vs a and RSG-L18-s0: held 460 @18, the 7 shared new zeros, static,
                 stop17, arrival, public 1491 @10 with front / lateral / rear collisions, the bases' open-loop reads -> results/next/NAME.{json,md}
-Prereg 补记 3 (V2's second base seed through the read chain, PAI 281 for both V2 seeds; chain in nx.sh rtb-v2s1):
-  v2seeds --arms LABEL:SUFFIX:TAG:BASE.. --second LABEL --out NAME [--dry]   (CPU)  the V2 base seeds and RSG-L18-s0 / s1 on held 460 @18, public 1491 @10 and
-                PAI 281 (rtb_cont_<SUFFIX>.json, rtb_wide_<TAG>.json of NX), the amendment-2 lines and the decision 339 conditions R1 / R2 -> results/next/NAME.{json,md}
+Prereg 补记 3 (PAI 281 of the V2 recipe; the second base seed of nx.sh rtb-v2s1 was cancelled by the user):
+  v2pai --j TAG.. [--ctx TAG..] --out NAME [--dry]   (CPU)  PAI 281 in the submission config of the arms (rtb_wide_<TAG>.json of NX, nx.py wide) against the stored
+                RSG-L18-s0 read, the decision 339 condition R2 on the --j arms, the cl-compile lane's PAI reads of RSG-L18-s0 / s1 as references -> results/next/NAME.{json,md}
 """
 from __future__ import annotations
 
@@ -593,9 +593,8 @@ def cmd_vsum(a):
 
 # ---------------------------------------------------------------- 补记 3 (CPU)
 C0, C1 = "RSG-L18-s0", "RSG-L18-s1"
-PUB_REF = DATA / "runs/route_follow/guard/read10"      # stored public 1491 @10 reads <tag>/b0..b9
 CMP_PAI = DATA / "runs/cl_infra/compile/pai"           # the cl-compile lane's PAI 281 reads: same chunk lists and submission config, today's code
-R1_REAR, R2_ZEROS, R2_ATFAULT = 22, 5, 4               # prereg 补记 3: public rear-ended >= 22; PAI zeros >= C + 5, at-fault >= C + 4, paired CI upper bound < 0
+R2_ZEROS, R2_ATFAULT = 5, 4                            # prereg 补记 3, fixed before the read: R2 = zeros >= C + 5, or at-fault >= C + 4, or paired CI upper bound < 0
 
 
 def pair_ci(MJ, MC):
@@ -607,12 +606,11 @@ def pair_ci(MJ, MC):
 
 
 def read_vs(dirs, ref):
-    """One closed-loop read against a reference read (lists of run dirs): wt.xpair + front / lateral / rear collisions of both + the paired CI as numbers."""
-    MJ, MC = wt.metrics(dirs), wt.metrics(ref)
-    r = wt.xpair(MJ, MC)
+    """One closed-loop read against a reference read (lists of run dirs): wt.xpair + front / lateral / rear collisions of both."""
+    r = wt.xpair(wt.metrics(dirs), wt.metrics(ref))
     r.pop("zero_flips")
     r["J"]["collisions"], r["C"]["collisions"] = coll_counts(dirs), coll_counts(ref)
-    return r | dict(ci=pair_ci(MJ, MC))
+    return r
 
 
 def pai_complete(root):
@@ -622,152 +620,59 @@ def pai_complete(root):
     return n > 0 and sum((d / "DONE").exists() for d in (root / "runs").glob("*_c*")) == n
 
 
-def v2seeds_collect(arms):
-    """Every number of the amendment-3 table: per arm (label, cont-file suffix, tag, base) the held / public / PAI reads written by nx.py cont and wide,
-    the references RSG-L18-s0 (their C sides) and RSG-L18-s1, and the flags of the decision 339 conditions. A missing file leaves the entry out."""
-    ld = lambda f: json.loads(Path(f).read_text()) if Path(f).exists() else None  # noqa: E731
-    res = dict(arms={}, refs={C0: {}, C1: {}}, notes=[])
-    pub0, pai0 = glob.glob(f"{PUB_REF}/{C0}/b*"), glob.glob(f"{wt.PAI_REF}/runs/*/sim")
-    for lab, suf, t, b in arms:
-        cont, wide, gate = ld(NX / f"rtb_cont_{suf}.json"), ld(NX / f"rtb_wide_{t}.json"), ld(NX / f"rtb_v_gate_{b}.json")
-        r = res["arms"][lab] = dict(tag=t, base=b, gate=gate)
-        if cont:
-            h0, h1 = cont["held"][C0], cont["held"].get(C1)                                    # (cont files from before the s1 references have no C1)
-            tc = lambda h, k: None if not h.get("turns") else (h["turns"]["completed"][k], h["turns"]["turns"][k])  # noqa: E731
-            r["held"] = dict(scenes=h0["scenes"], J=h0["J"], paired_s0=h0["paired"], paired_s1=h1 and h1["paired"], turns=tc(h0, t), static=cont["cl"][t]["static"],
-                             stop17=cont["cl"][t]["stop17"], stop_seen=cont["stop_seen"], arrival=cont["arrival"].get(t), dev_ade=cont["dev_ade"].get(t))
-            for c, h, extra in ((C0, h0, dict(static=cont["cl"][C0]["static"], stop17=cont["cl"][C0]["stop17"])), (C1, h1, {})):
-                if h is None:
-                    continue
-                ref = dict(J=h["C"], turns=tc(h, c), **extra)
-                if res["refs"][c].setdefault("held", ref) != ref:
-                    res["notes"].append(f"the {c} held numbers of {lab} differ from the first arm's (different scene overlap)")
-        if wide and wide.get("pub"):
-            r["pub"] = wide["pub"] | dict(ci=pair_ci(wt.metrics(glob.glob(f"{NX}/cont/wide/pub/{t}/b*")), wt.metrics(pub0)))
-            res["refs"][C0].setdefault("pub", dict(J=wide["pub"]["C"], scenes=wide["pub"]["scenes"]))
-        if wide and wide.get("pai"):
-            r["pai"] = wide["pai"] | dict(ci=pair_ci(wt.metrics(glob.glob(f"{NX}/cont/wide/pai/{t}/runs/*/sim")), wt.metrics(pai0)), stop17=wide["stop17"]["J"])
-            res["refs"][C0].setdefault("pai", dict(J=wide["pai"]["C"], scenes=wide["pai"]["scenes"], stop17=wide["stop17"]["C"]))
-    held = {t: wt.metrics(glob.glob(wt.xdirs("held", t))) for t in (C0, C1)}               # RSG-L18-s1 against RSG-L18-s0: the seed-to-seed spread of the references
-    res["refs"][C1].setdefault("held", {})["vs_s0"] = wt.xpair(held[C1], held[C0])["paired"]
-    q = read_vs(glob.glob(f"{PUB_REF}/{C1}/b*"), pub0)
-    res["refs"][C1]["pub"] = dict(J=q["J"], scenes=q["scenes"], vs_s0=q["paired"])
-    for lab, root in ((C1, CMP_PAI / C1), (f"{C0} re-read", CMP_PAI / C0)):                # PAI 281 of the cl-compile lane (RSG-L18-s1; RSG-L18-s0 again), if complete
+def cmd_v2pai(a):
+    """Prereg 补记 3 (the user cancelled the second base seed; this read is what is left): PAI 281 in the submission config of the --j arms (the decision 339 condition R2
+    is read on them) and the --ctx arms (context), against the stored RSG-L18-s0 read, from NX/rtb_wide_<tag>.json (nx.py wide); the cl-compile lane's complete PAI reads
+    of RSG-L18-s0 (the same checkpoint read again) and RSG-L18-s1 are the references -> results/next/<out>.{json,md}"""
+    pai0 = glob.glob(f"{wt.PAI_REF}/runs/*/sim")
+    res = dict(arms={}, refs={}, notes=[])
+    for t in a.j + a.ctx:
+        w = json.loads((NX / f"rtb_wide_{t}.json").read_text())
+        r = res["arms"][t] = dict(w["pai"], ci=pair_ci(wt.metrics(glob.glob(f"{NX}/cont/wide/pai/{t}/runs/*/sim")), wt.metrics(pai0)), stop17=w["stop17"]["J"], r2=t in a.j)
+        res["refs"].setdefault(f"{C0} (stored)", dict(J=w["pai"]["C"], scenes=w["pai"]["scenes"], stop17=w["stop17"]["C"]))
+        if r["r2"]:
+            d = dict(d_zeros=r["J"]["zeros"] - r["C"]["zeros"], d_at_fault=r["J"]["at_fault"] - r["C"]["at_fault"], ci_hi=r["ci"]["hi"])
+            r["R2"] = d | dict(flag_zeros=bool(d["d_zeros"] >= R2_ZEROS), flag_at_fault=bool(d["d_at_fault"] >= R2_ATFAULT), flag_ci=bool(d["ci_hi"] < 0))
+            r["R2"]["met"] = bool(r["R2"]["flag_zeros"] or r["R2"]["flag_at_fault"] or r["R2"]["flag_ci"])
+    for lab, root in ((f"{C0} re-read", CMP_PAI / C0), (C1, CMP_PAI / C1)):
         if pai_complete(root):
             q = read_vs(glob.glob(f"{root}/runs/*/sim"), pai0)
-            res["refs"].setdefault(lab, {})["pai"] = dict(J=q["J"], scenes=q["scenes"], vs_s0=q["paired"], stop17=stop17_of(root))
+            res["refs"][lab] = dict(J=q["J"], scenes=q["scenes"], paired=q["paired"], stop17=stop17_of(root))
         else:
             res["notes"].append(f"the cl-compile lane's PAI 281 read of {lab} ({root}) was not complete at write time and is left out")
-    for lab, r in res["arms"].items():                                                      # decision 339 conditions and the amendment-2 lines
-        fl = r["flags"] = {}
-        if r.get("pub"):
-            rear, ref = r["pub"]["J"]["collisions"]["rear"], r["pub"]["C"]["collisions"]["rear"]
-            fl["R1"] = dict(rear=rear, ref_rear=ref, met=bool(rear >= R1_REAR))
-            fl["pub_line"] = dict(ci_contains_0=bool(r["pub"]["ci"]["lo"] <= 0 <= r["pub"]["ci"]["hi"]), rear_le_ref_plus_2=bool(rear <= ref + 2))
-            fl["pub_line"]["met"] = all(fl["pub_line"].values())
-        if r.get("pai"):
-            J, C = r["pai"]["J"], r["pai"]["C"]
-            fl["R2"] = dict(d_zeros=J["zeros"] - C["zeros"], d_at_fault=J["at_fault"] - C["at_fault"], ci_hi=r["pai"]["ci"]["hi"], flag_zeros=bool(J["zeros"] >= C["zeros"] + R2_ZEROS),
-                            flag_at_fault=bool(J["at_fault"] >= C["at_fault"] + R2_ATFAULT), flag_ci=bool(r["pai"]["ci"]["hi"] < 0))
-            fl["R2"]["met"] = bool(fl["R2"]["flag_zeros"] or fl["R2"]["flag_at_fault"] or fl["R2"]["flag_ci"])
-        if r.get("held"):
-            h = r["held"]
-            fl["held_line"] = dict(zeros_le_37=bool(h["J"]["zeros"] <= 37), at_fault_le_6=bool(h["J"]["at_fault"] <= 6), stop_seen=bool(h["stop_seen"]))
-            fl["held_line"]["met"] = all(fl["held_line"].values())
-    return res
-
-
-def v2seeds_md(res, second):
-    f2 = lambda x, q=".2f": "-" if x is None else format(x, q)  # noqa: E731
-    stc = lambda s: "-" if s is None else f"{s['dist']:.2f} m, {'contact' if s['collision'] else 'no contact'}"  # noqa: E731
-    s17 = lambda p: "-" if p is None else f"{p['zeros']} / {p['n']}"  # noqa: E731
     col = lambda c: f"{c['front']} / {c['lateral']} / {c['rear']}"  # noqa: E731
-    tcs = lambda t: "-" if t is None else f"{t[0]} / {t[1]}"  # noqa: E731
-    A, R = res["arms"], res["refs"]
-    n_held = next((r["held"]["scenes"] for r in A.values() if r.get("held")), "-")
-    L = ["# V2 (RTB1AR) recipe, two base seeds: held 460, public 1491, PAI 281 (prereg 2026-10-17 amendment 3, exploratory, one read each)", "",
-         "Decision 339 made V2 (retain weight 1, pool rows from the rolling-arrival group only) the retain-line recipe but not a submission candidate until its second base seed "
-         "had gone through the read chain and its PAI 281 had been read in the submission config. V2-s0 = RTB1ARO-L18-s0 (base RTB1AR-F-s0, continuation seed 0); "
-         "V2-s1 = RTB1AROB1-L18-s1 (base RTB1AR-F-s1, continuation seed 1; arm d's command with only `--init` changed). Both bases continue with the RSG-L18 recipe "
-         "(2 500 steps, old pool on1_L18RB0). References are the stored RSG-L18-s0 / RSG-L18-s1 reads. Paired means carry session-clustered CIs; one read per arm. "
-         "Prereg: [plans/2026-10-17-retain-anticopy-draft.md](../../plans/2026-10-17-retain-anticopy-draft.md) amendment 3 (lines and verdict rules of amendment 2 unchanged). "
-         "Code: `scripts/nx.sh rtb-v2s1`, `scripts/nx.py v2seeds`.", "",
-         "## Bases and continuations, open loop (amendment-2 stop rule: arrival 4 s arc at k = 1 <= 2.0 m and dev ADE <= 0.5556)", "",
-         "| arm | base | base arrival @k=1 (m) | base dev ADE | stop rule | continuation arrival @k=1 (m) | continuation dev ADE |", "|---|---|--:|--:|:-:|--:|--:|"]
-    for lab, r in A.items():
-        g, h = r["gate"], r.get("held") or {}
-        L.append(f"| {lab} | {r['base']} | {f2(g and g['arrival_k1'])} | {f2(g and g['dev_ade'], '.4f')} | {'-' if g is None else g['verdict']} | {f2(h.get('arrival'))} | {f2(h.get('dev_ade'), '.4f')} |")
-    L += ["", f"## Held 460 @18 ({n_held} scenes)", "",
-          "| arm | zeros | mean | paired vs RSG-L18-s0 [CI] | paired vs RSG-L18-s1 [CI] | at-fault | offroad | turns /24 | static scene | stop17 zeros |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for lab, r in A.items():
-        h = r.get("held")
-        L.append(f"| {lab} ({r['tag']}) | {h['J']['zeros']} | {h['J']['mean']:.3f} | {h['paired_s0']} | {h['paired_s1'] or '-'} | {h['J']['at_fault']} | {h['J']['offroad']} | {tcs(h['turns'])} | "
-                 f"{stc(h['static'])} | {s17(h['stop17'])} |" if h else f"| {lab} ({r['tag']}) | - | - | - | - | - | - | - | - | - |")
-    for c in (C0, C1):
-        h = R[c].get("held")
-        if h and "J" in h:
-            L.append(f"| {c} | {h['J']['zeros']} | {h['J']['mean']:.3f} | {R[c]['held'].get('vs_s0', '-')} | - | {h['J']['at_fault']} | {h['J']['offroad']} | {tcs(h['turns'])} | "
-                     f"{stc(h.get('static'))} | {s17(h.get('stop17'))} |")
-    L += ["", "## Public nuPlan 1491 @10 (paired against the stored RSG-L18-s0 read)", "",
-          "| arm | scenes | zeros | mean | paired vs RSG-L18-s0 [CI] | at-fault | offroad | front / side / rear collisions |", "|---|--:|--:|--:|--:|--:|--:|--:|"]
-    for lab, r in A.items():
-        p = r.get("pub")
-        L.append(f"| {lab} ({r['tag']}) | {p['scenes']} | {p['J']['zeros']} | {p['J']['mean']:.4f} | {p['paired']} | {p['J']['at_fault']} | {p['J']['offroad']} | {col(p['J']['collisions'])} |"
-                 if p else f"| {lab} ({r['tag']}) | - | - | - | - | - | - | - |")
-    for c in (C0, C1):
-        p = R[c].get("pub")
-        if p:
-            L.append(f"| {c} | {p['scenes']} | {p['J']['zeros']} | {p['J']['mean']:.4f} | {p.get('vs_s0', '-')} | {p['J']['at_fault']} | {p['J']['offroad']} | {col(p['J']['collisions'])} |")
-    L += ["", "## PAI 281, submission config (g10 + VCONT + LEAD + ACC, ALPASIM_FAST=1; paired against the stored RSG-L18-s0 read `route_follow/pai_g10/acc`)", "",
-          "| arm | scenes | zeros | mean | paired vs RSG-L18-s0 [CI] | at-fault | offroad | front / side / rear collisions | stop17 zeros |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for lab, r in A.items():
-        p = r.get("pai")
-        L.append(f"| {lab} ({r['tag']}) | {p['scenes']} | {p['J']['zeros']} | {p['J']['mean']:.4f} | {p['paired']} | {p['J']['at_fault']} | {p['J']['offroad']} | "
-                 f"{col(p['J']['collisions'])} | {s17(p['stop17'])} |" if p else f"| {lab} ({r['tag']}) | - | - | - | - | - | - | - | - |")
-    for lab, tag in ((C0, f"{C0} (stored)"), (C1, f"{C1} (cl-compile lane)"), (f"{C0} re-read", f"{C0} re-read (cl-compile lane, same checkpoint again)")):
-        p = R.get(lab, {}).get("pai")
-        if p:
-            L.append(f"| {tag} | {p['scenes']} | {p['J']['zeros']} | {p['J']['mean']:.4f} | {p.get('vs_s0', '-')} | {p['J']['at_fault']} | {p['J']['offroad']} | {col(p['J']['collisions'])} | {s17(p['stop17'])} |")
+    s17 = lambda p: f"{p['zeros']} / {p['n']}"  # noqa: E731
+    L = ["# V2 (RTB1AR) PAI 281 in the submission config (prereg 2026-10-17 amendment 3, exploratory, one read)", "",
+         "Decision 339 left V2's PAI 281 unread. Amendment 3 asked for it, and for a second base seed, which the user cancelled before any read (seeds behave alike); "
+         "this file holds the one read that was kept: RTB1ARO-L18-s0 (base RTB1AR-F-s0, RSG-L18 continuation, 2 500 steps, seed 0) on the 281 PAI scenes in the submission config "
+         "(`JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1`, `controller.gains.rel_front_steering_angle_weight=10`, ALPASIM_FAST=1), paired against the stored RSG-L18-s0 read "
+         "`route_follow/pai_g10/acc` (session-clustered CI). The public and held reads of the same arm are in [rtb_v.md](rtb_v.md). "
+         "Prereg: [plans/2026-10-17-retain-anticopy-draft.md](../../plans/2026-10-17-retain-anticopy-draft.md) amendment 3. Code: `scripts/nx.sh rtb-wide`, `scripts/nx.py v2pai`.", "",
+         "| arm | scenes | zeros | mean | paired vs RSG-L18-s0 [CI] | at-fault | offroad | front / side / rear collisions | stop17 zeros |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for t, r in res["arms"].items():
+        L.append(f"| {t} | {r['scenes']} | {r['J']['zeros']} | {r['J']['mean']:.4f} | {r['paired']} | {r['J']['at_fault']} | {r['J']['offroad']} | {col(r['J']['collisions'])} | {s17(r['stop17'])} |")
+    for lab, q in res["refs"].items():
+        L.append(f"| {lab}{'' if lab.endswith('(stored)') else ' (cl-compile lane)'} | {q['scenes']} | {q['J']['zeros']} | {q['J']['mean']:.4f} | {q.get('paired', '-')} | {q['J']['at_fault']} | "
+                 f"{q['J']['offroad']} | {col(q['J']['collisions'])} | {s17(q['stop17'])} |")
     L += [""] + [f"Note: {n}." for n in res["notes"]]
-    L += ["", "## Amendment-2 lines on each arm (descriptive, numbers of RSG-L18-s0)", "",
-          "| arm | held: zeros <= 37 | held: at-fault <= 6 | held: arrival stop seen | held cost fixed | public: CI contains 0 | public: rear <= 20 | public line |", "|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|"]
-    yn = lambda x: "-" if x is None else ("yes" if x else "no")  # noqa: E731
-    for lab, r in A.items():
-        h, p = r["flags"].get("held_line", {}), r["flags"].get("pub_line", {})
-        L.append(f"| {lab} | {yn(h.get('zeros_le_37'))} | {yn(h.get('at_fault_le_6'))} | {yn(h.get('stop_seen'))} | {yn(h.get('met'))} | {yn(p.get('ci_contains_0'))} | "
-                 f"{yn(p.get('rear_le_ref_plus_2'))} | {yn(p.get('met'))} |")
-    s = A.get(second, {})
-    r1, firsts = s.get("flags", {}).get("R1"), [r for k, r in A.items() if k != second]
     L += ["", "## Check against the decision 339 refutation conditions", ""]
-    t = []
-    if r1:
-        o = [f"{k} {r['flags']['R1']['rear']}" for k, r in A.items() if k != second and "R1" in r["flags"]]
-        t.append(f"R1 (the second base seed has public rear-ended >= {R1_REAR}): {second} has {r1['rear']} rear-collision scenes on the 1491 public scenes (RSG-L18-s0 {r1['ref_rear']}; "
-                 f"{', '.join(o)}; RTB1O-L18-s0 24 in decision 339), so R1 is {'MET' if r1['met'] else 'not met'}.")
-    else:
-        t.append(f"R1: no public read of {second} yet.")
-    fl2 = [(k, r["flags"]["R2"]) for k, r in A.items() if "R2" in r["flags"]]
-    if fl2:
-        part = []
-        for k, f in fl2:
-            p = A[k]["pai"]
-            hit = [n for n, on in (("zeros", f["flag_zeros"]), ("at-fault", f["flag_at_fault"]), ("paired CI upper bound below 0", f["flag_ci"])) if on]
-            part.append(f"{k} has {p['J']['zeros']} zeros ({f['d_zeros']:+d} against RSG-L18-s0's {p['C']['zeros']}), {p['J']['at_fault']} at-fault ({f['d_at_fault']:+d} against {p['C']['at_fault']}) and a "
-                        f"paired mean of {p['paired']}, " + (f"crossing the pre-read flag on {', '.join(hit)}" if hit else "crossing none of the three pre-read flags"))
-        t.append(f"R2 (PAI 281 at-fault / zeros clearly above RSG-L18-s0; flags fixed before the reads: zeros >= C + {R2_ZEROS}, at-fault >= C + {R2_ATFAULT}, paired CI upper bound < 0): "
-                 + "; ".join(part) + f", so R2 is {'MET' if any(f['met'] for _, f in fl2) else 'not met'}"
-                 + ("" if len(fl2) == len(A) else f" (PAI read missing for {', '.join(k for k in A if 'R2' not in A[k]['flags'])})") + ".")
-    else:
-        t.append("R2: no PAI 281 read yet.")
+    t = ["R1 (the second base seed has public rear-ended >= 22) cannot be read: the second base seed was cancelled by the user before any read."]
+    for k, r in res["arms"].items():
+        if r["r2"]:
+            f, J, C = r["R2"], r["J"], r["C"]
+            hit = [n for n, on in (("zeros", f["flag_zeros"]), ("at-fault", f["flag_at_fault"]), ("the paired CI upper bound below 0", f["flag_ci"])) if on]
+            t.append(f"R2 (PAI 281 at-fault / zeros clearly above RSG-L18-s0; flags fixed in amendment 3 before the read: zeros >= C + {R2_ZEROS}, at-fault >= C + {R2_ATFAULT}, "
+                     f"paired CI upper bound < 0): {k} has {J['zeros']} zeros ({f['d_zeros']:+d} against RSG-L18-s0's {C['zeros']}), {J['at_fault']} at-fault ({f['d_at_fault']:+d} against "
+                     f"{C['at_fault']}) and a paired mean of {r['paired']}, so " + (f"it crosses the flag on {', '.join(hit)} and R2 is MET" if hit else f"none of the three flags is crossed (zeros {f['d_zeros']:+d} against the +{R2_ZEROS} that flags, "
+                                                                                        f"at-fault {f['d_at_fault']:+d} against +{R2_ATFAULT}) and R2 is not met")
+                     + f"; stop17 is {s17(r['stop17'])} against {s17(res['refs'][f'{C0} (stored)']['stop17'])}.")
+    rr, r1 = res["refs"].get(f"{C0} re-read"), res["refs"].get(C1)
+    if rr and r1:
+        same = all(rr["J"][x] == res["refs"][f"{C0} (stored)"]["J"][x] for x in ("zeros", "at_fault", "offroad"))
+        t.append(f"For scale: the cl-compile lane's read of RSG-L18-s0 in the same config {'reproduces' if same else 'differs from'} the stored read ({rr['J']['zeros']} zeros, {rr['J']['at_fault']} at-fault, "
+                 f"paired {rr['paired']}), so a PAI 281 read of one checkpoint repeated exactly in this comparison; RSG-L18-s1 reads {r1['J']['zeros']} zeros, {r1['J']['at_fault']} at-fault, {r1['paired']}, which is the spread between the two RSG seeds.")
     L += [" ".join(t)]
-    return L
-
-
-def cmd_v2seeds(a):
-    """Prereg 补记 3: the V2 recipe's base seeds (--arms label:cont-suffix:tag:base) and RSG-L18-s0 / s1 on held 460 @18, public 1491 @10 and PAI 281 (submission
-    config), plus the decision 339 refutation conditions R1 / R2 (read from NX/rtb_cont_<suffix>.json and NX/rtb_wide_<tag>.json) -> results/next/<out>.{json,md}"""
-    res = v2seeds_collect([x.split(":") for x in a.arms])
-    write(a.out, res, v2seeds_md(res, a.second), a.dry)
+    write(a.out, res, L, a.dry)
 
 
 if __name__ == "__main__":
@@ -801,9 +706,8 @@ if __name__ == "__main__":
     p.add_argument("--arms", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("cont")
     p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
-    p = sp.add_parser("v2seeds")
-    p.add_argument("--arms", nargs="+", required=True, help="label:cont-file-suffix:tag:base, e.g. V2-s0:v2:RTB1ARO-L18-s0:RTB1AR-F-s0")
-    p.add_argument("--second", default="V2-s1", help="label of the second base seed (the arm R1 is read on)")
+    p = sp.add_parser("v2pai")
+    p.add_argument("--j", nargs="+", required=True, help="arms the condition R2 is read on"), p.add_argument("--ctx", nargs="*", default=[], help="context arms")
     p.add_argument("--out", required=True), p.add_argument("--dry", action="store_true", help="print only")
     a = ap.parse_args()
-    dict(vgate=cmd_vgate, vsum=cmd_vsum, devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld, v2seeds=cmd_v2seeds)[a.cmd](a)
+    dict(vgate=cmd_vgate, vsum=cmd_vsum, devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld, v2pai=cmd_v2pai)[a.cmd](a)
