@@ -128,6 +128,12 @@ STACK (2026-10-16, experiments/route_follow/plans/2026-10-16-stack-prereg.md); e
             loads it; an init without it starts the module at its zero-output init.
   --dual / --dual-tau / --dual-level / --dual-eta, --cons PATH, --imit-drop, --pref W   lib/stack_train.py (its docstring).
 
+AWR-ONPOL (2026-10-17, experiments/awr_onpol/plans/2026-10-17-awr-onpol-prereg.md; lib/awr_train.py); off (default) = no operation added:
+  --awr-pack FILE [--awr-k 16 --awr-lam 1 --awr-mode filt --awr-keep 0.1 | --awr-mode awr --awr-beta B --awr-wmax 20] [--awr-kinds 1]
+            consequence-weighted cloning: every step K rows of the --on pool, drawn from the outcome pack (aw_score.py: advantage A of the
+            decision against near-identical peers) on its own rng stream [seed, 0, 167], get a second forward; loss = the imitation distance
+            to the plan their own policy output there, summed / normal rows x lam (filt: rows with A > keep, uniform; awr: p ~ exp(A / B)).
+
 DESIRE D1 / D2 (2026-10-17, WAIT-TRAIN prereg Amendment C; lib/desire_train.py); every flag off = the recipe above operation for operation:
   --desire-rows F   D1 row table (dt.py rows: names, side +1 left / -1 right, src nav | pool; the rule is lib/route_desire.py's): every non-anchor
             row of the table in a batch is fed the lane-change desire of its side (PModel.forward desire=, dc.py's queue), pulse age drawn per
@@ -151,6 +157,13 @@ RETAIN / ANTI-COPY (2026-10-17, experiments/wait_cap/plans/2026-10-17-retain-ant
             rescaled by s ~ U[1 - M, 1 + M]: vx, vy x s, ax, ay x s^2, the history poses' x, y x s (the same path at s x the speed; yaws, the
             command and the route memory unchanged); the imitation target stays the log, so the plan's speed must come from the scene, not the
             history's scale. Own rng stream [seed, 0, 149]; training only. 0 = off: no operation is added.
+
+SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) = the recipe above operation for operation:
+  --si-scan FILE [--si-mode top --si-top 0.1 --si-mult 3 | --si-mode rank --si-gamma G] [--si-key ade] [--si-k-s 13]   hard-example draw from a
+            policy's per-row error scan (si.py scan): the nN normal rows are drawn with numpy's weighted choice on rm_train's own stream (weights
+            ranked inside the navtrain train rows); with a merged pool holding new trainval imitation rows (`pool` t, mode both) the pool draw's p
+            gives the S rows (`pool` s) the mass --si-k-s / --on-k and the new rows the rest (ranked inside them; `hold` 1 rows weight 0), and
+            --rm-drop treats the new rows as normal rows. --si-mult 1: the uniform draw over the same rows.
 
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
@@ -707,6 +720,12 @@ def cmd_train(a):
         if (pw[:m0] > 0).all() and (pw[:m0] == pw[0]).all():
             upre = m0
     OPEN, orec = open_rows(a, ns, dev) if a.ego_drop_open else (None, {})
+    nw, si_free, sirec = None, None, {}
+    if a.si_scan:                                                     # SELF-ITER (docstring); off: no operation below is added
+        import self_iter as SI
+        nw, pw_si, si_free, sirec = SI.draws(a, ns, S, tr_o)
+        if pw_si is not None:
+            pw, upre = pw_si, 0
 
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
     des_on, d2_on = bool(a.desire_rows), a.d2_lam > 0                # DESIRE D1 / D2 (docstring); both off: no operation below is added
@@ -749,9 +768,15 @@ def cmd_train(a):
     if a.ego_scale_speed > 0:                                         # ANTI-COPY history-speed noise (docstring)
         srng = np.random.default_rng([cfg.seed, 0, 149])
         spow = torch.as_tensor(EGO_SCALE_POW, device=dev, dtype=torch.float32)
+    awr_on = bool(a.awr_pack)                                         # AWR-ONPOL (docstring); off: no operation below is added
+    if awr_on:
+        import awr_train as AWR
+        assert k_on and not (lc_on or ns.rx or ST is not None), "--awr-pack: needs --on; not with --lc-cf / --rx / STACK terms"
+        AW = AWR.AwrSet(a, S, ns.on0, dev)
+        wrng = np.random.default_rng([cfg.seed, 0, AWR.STREAM])
 
     def draw():
-        r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
+        r = rng.choice(tr_o, nN, replace=len(tr_o) < nN) if nw is None else rng.choice(tr_o, nN, replace=True, p=nw)
         if k_yr:
             r = np.concatenate([r, rng.choice(tr_t, k_yr, replace=False)])
         an = rng.random(nB - k_ho - k_on) < cfg.d_frac
@@ -824,6 +849,9 @@ def cmd_train(a):
             screc = dict(share=a.ego_scale_speed, max=a.ego_scale_max, cols=EGO_SPEED, pow=EGO_SCALE_POW, rows="non-anchor, non-pool")
             run.info(f"ANTI-COPY history-speed noise: {json.dumps(screc)}, rng [seed, 0, 149]")
             run.summary.update(ego_scale=screc)
+        if awr_on:
+            run.info(f"AWR-ONPOL: {json.dumps(AW.rec)}, rng [seed, 0, {AWR.STREAM}]")
+            run.summary.update(awr=AW.rec)
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -831,6 +859,13 @@ def cmd_train(a):
         run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
         is_pool = torch.zeros(S.n, dtype=torch.bool, device=dev)
         is_pool[ns.on0:] = bool(k_on)                                 # --rm-drop never applies to pool rows
+        if a.si_scan:                                                 # SELF-ITER: the new trainval rows are imitation rows (memory dropped as normal rows)
+            is_pool[torch.as_tensor(si_free, device=dev)] = False
+            run.info(f"SELF-ITER draw: {json.dumps(sirec)}")
+            run.summary.update(self_iter=sirec)
+            if len(si_free):
+                from jevdrive.data import splits as _sp
+                run.use_split(_sp.load(a.si_split))
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist, hsh = time.time(), [], ""
         for step in range(cfg.steps):
@@ -914,6 +949,12 @@ def cmd_train(a):
                 Ls["kd"] = lk.mean()
                 Ls |= lg_
                 total = total + a.kd_lam * Ls["kd"]
+            if awr_on:                                                # AWR-ONPOL: the drawn rows' own plans, second forward
+                wr_, wt_ = AW.batch(wrng, a.awr_k)
+                lw, lgw = AW.loss(model, S, wr_, wt_, LS, ns.nv)
+                Ls["awr"] = lw.sum() / nN
+                Ls |= lgw
+                total = total + a.awr_lam * Ls["awr"]
             if d2_on:                                                 # D2: desire increment of the plan against shipped Cinque's
                 u2, s2, a2 = d2rng.random(nN), d2rng.choice(np.array([1, -1]), nN), d2rng.integers(0, len(DT.AGES), nN)
                 an_ = an[:nN]
@@ -1163,6 +1204,14 @@ if __name__ == "__main__":
         p.add_argument("--kd-nav-k", type=int, default=0, help="RETAIN: navtrain approach rows per step, fed the constant-velocity history")
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
+        p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
+        p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
+        p.add_argument("--si-top", type=float, default=0.1, help="SELF-ITER: top share of each set oversampled (--si-mode top)")
+        p.add_argument("--si-mult", type=float, default=3.0, help="SELF-ITER: weight of the top share (1 = uniform over the same rows)")
+        p.add_argument("--si-gamma", type=float, default=1.0, help="SELF-ITER: rank exponent (--si-mode rank)")
+        p.add_argument("--si-key", default="ade", help="SELF-ITER: scan error that ranks the rows")
+        p.add_argument("--si-k-s", type=int, default=13, help="SELF-ITER: expected S (pool `s`) rows per batch in the merged pool")
+        p.add_argument("--si-split", default="navsim/selfiter_tv", help="SELF-ITER: registered split of the new trainval rows (recorded)")
         p.add_argument("--rx", action="store_true", help="STACK: the reflex module (lib/reflex.py)")
         p.add_argument("--rx-drop", type=float, default=0.25)
         p.add_argument("--rx-lr", type=float, default=3e-4)
