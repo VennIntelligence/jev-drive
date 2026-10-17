@@ -562,7 +562,34 @@ def model(L, line, i0, f, info, scene, W, MS):
                  score_untruncated=0.0 if later else min(ps(p_end), 1.0),
                  score_nohit=0.0 if {"offroad", "left_corridor_laterally"} & set(later) else min(ps(p_end), 1.0))
         r["rear"] = o
+    tl_, tf_ = onset(M, "collision_lateral"), onset(M, "collision_front")
+    if (m.get("collision_at_fault") or 0) > 0 and tl_ is not None and (tf_ is None or tl_ < tf_):
+        r["lat"] = struck(L, i0, E, wx, wy, tl_)       # the first at-fault contact is lateral: who touched the flank, from where
     return r
+
+
+def struck(L, i0, E, wx, wy, t0):
+    """The logged vehicle box that first overlaps the ego in the 0.5 s up to a contact onset t0: kind, position in the ego frame,
+    heading difference, speeds along the ego heading."""
+    k = i0 + int(round(t0 * HZ))
+    yw = np.unwrap(E["yaw"])
+    pose = lambda tt: tuple(float(np.interp(tt, E["t"], q)) for q in (wx, wy, yw))  # noqa: E731
+    for kk in range(k - 10, k + 3):
+        c = contact(L.boxes(kk), ego_poly(*pose((kk - i0) / HZ)))
+        if c is not None:
+            break
+    if c is None:
+        return dict(t=t0)
+    x, y, h = pose((kk - i0) / HZ)
+    B, ve = c[1], float(np.interp((kk - i0) / HZ, E["t"], E["v"]))
+    q0, q1 = [L.boxes(j) for j in (kk - 4, kk + 4)]
+    a0, a1 = q0[q0[:, 7] == B[7]], q1[q1[:, 7] == B[7]]
+    vel = (a1[0, :2] - a0[0, :2]) / 0.4 if len(a0) and len(a1) else B[5:7]
+    ch, sh = np.cos(h), np.sin(h)
+    vo = float(vel[0] * ch + vel[1] * sh)
+    return dict(t=t0, t_first=(kk - i0) / HZ, kind=c[0], other_x=float(ch * (B[0] - x) + sh * (B[1] - y)),
+                other_y=float(-sh * (B[0] - x) + ch * (B[1] - y)), dpsi=float(np.degrees(np.angle(np.exp(1j * (B[2] - h))))),
+                v_other_long=vo, v_ego=ve, dv=vo - ve)
 
 
 # ---------------------------------------------------------------- commands
@@ -694,8 +721,8 @@ def cmd_report(a):
                 m = f.get(key)
                 if not m:
                     continue
-                rr = m.get("rear") or {}
-                rows.append(base | dict(
+                rr, la = m.get("rear") or {}, m.get("lat") or {}
+                rows.append(base | dict(lat=bool(la), lat_x=la.get("other_x"), lat_dpsi=la.get("dpsi"), lat_dv=la.get("dv"), lat_t=la.get("t"),
                     model=key, score=m["score"], fail=m.get("fail"), launch_t=m.get("launch_t"), pass_t=m.get("pass_t"),
                     pass_st=m.get("pass_st"), m_v_str=m.get("v_str"), dist=m.get("dist_traveled_m"), gt_m=m.get("gt_dist_traveled_m"),
                     rear=bool(rr), rear_t=rr.get("t"), rear_dv=rr.get("dv"), rear_v_ego=rr.get("v_ego"), rear_v_other=rr.get("v_other_long"),
@@ -826,6 +853,15 @@ def cmd_report(a):
             x = E[(E.read == rd) & (E.scene == sc) & (E.model == key)]
             cells.append("-" if m is None else f"{m.score:.2f}" + (f" / {m.rear_t:.1f} / {f1(m.rear_dv)} / {x.iloc[0]['sub']}" if m.rear else ""))
         md.append(f"| {rd} | {sc[-16:-8]} | " + " | ".join(cells) + f" | {g.iloc[0].v_str} |")
+
+    A = T[T.lat].copy()
+    A["behind"] = (A.lat_x < CEN) & (A.lat_dpsi.abs() < 45) & (A.lat_dv > 0.5)
+    md += ["", "## E2 at-fault zeros whose first contact is lateral", "",
+           "| read | model | lateral-first at-fault zeros | actor found | side-swiped from behind (centre behind the ego's, same direction, closing > 0.5 m/s) |",
+           "|---|---|--:|--:|--:|"]
+    for (rd, key), g in A.groupby(["read", "model"], sort=False):
+        md.append(f"| {rd} | {key} | {len(g)} | {int(g.lat_x.notna().sum())} | {int(g.behind.sum())} "
+                  f"({', '.join(s_[-16:-8] for s_ in g[g.behind].scene)}) |")
 
     # D2b: launches from a standstill, at a red light against elsewhere; D2c: the human waits at red the whole window
     L0 = T[(T.v0 < V_STOP) & T.h_launch_t.notna()].copy()
