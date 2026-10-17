@@ -83,12 +83,23 @@ Under-declared VRAM (the dispatcher samples every job's VRAM each round, nvidia-
                  (oom_retries) and waits for a card with room for what it measured.
   kill           a job whose root dies of SIGKILL without a pool stop (rc 137: the platform kills the largest process
                  when memory.current - inactive_file reaches 98 % of memory.max, docs/remote-box.md) is requeued
-                 kill_retries times (default 3) beyond `tries`; the event carries the memory picture. Starts are held
+                 kill_retries times (default 3) beyond `tries`; the event carries the memory picture. So is a job that
+                 fails with any rc when its log shows a child killed by SIGKILL (KILL_RE: "Worker 0 died with exit
+                 code -9") within KILL_NEAR_S of the box being near the line (event `kill` with child = true).
+                 Starts are held
                  while the working set + young jobs' RAM + the job's RAM (ram_gb, else history, else
                  ram_default_gb) + ws_reserve_gb would cross that line, and the dispatcher drops page cache
                  (jevdrive.cl.cache, event `trim`) to keep ws_keep_gb of margin plus what waiting jobs need. A job
                  held by this rule for ws_wait_s (10 min: the cache could not be dropped) starts anyway, one per
-                 round (event `ws_override`).
+                 round (event `ws_override`), but only when it would fit with all page cache dropped (memory.current
+                 - file + young + its RAM + reserve below the line).
+  ram_over       a running job whose tree's private memory is above 1.1 x its declared RAM + 2 GB (undeclared:
+                 ram_default_gb): logged once per 8 GB of growth, written to STATUS, its peak goes to history (any end
+                 state; the next job of the key is booked at it, ram_raised).
+  ram_stop       while the margin below the kill line is under ram_stop_gb (48 GB; 0 = never), the job furthest above
+                 its declaration is stopped at once, so the platform does not pick the largest process by RSS (a
+                 training's mmapped tokens) instead; requeued ram_retries (1) times beyond `tries` with ram_gb raised to
+                 its measured peak + 1 GB. Rounds come every fast_poll_s (5 s) while the margin is under 2 x ram_stop_gb.
   oom            a job that exits non-zero with a CUDA out-of-memory error in this try's part of log.txt is requeued
                  oom_retries times (default 1) beyond `tries`, whoever caused it; the event lists the card's jobs with
                  declared and measured VRAM. Exhausted: failed with "CUDA OOM" in the reason.
@@ -152,6 +163,12 @@ OVER_STEP_GB = 2.0                    # a job's vram_over event repeats when its
 OOM_RE = re.compile(rb"CUDA out of memory|OutOfMemoryError|CUDA error: out of memory|CUDA_ERROR_OUT_OF_MEMORY|"
                     rb"CUBLAS_STATUS_ALLOC_FAILED|CUDNN_STATUS_ALLOC_FAILED")
 OOM_SCAN_BYTES = 1 << 20              # how much of a failed try's log is searched for OOM_RE (its tail)
+# A child of the job died of SIGKILL (AlpaSim: "Worker 0 died with exit code -9"; bash: "123 Killed  python ..."): when
+# the box was at the kill line, the platform killed it and the job failed with its own rc (1), not 137.
+KILL_RE = re.compile(rb"exit code -9\b|exit status -9\b|Signals\.SIGKILL|killed by signal: Killed|\d Killed\s")
+KILL_NEAR_S = 600.0                   # ... counts as the platform's when the box was near the line this recently
+RAM_OVER_MARGIN, RAM_OVER_PAD_GB = 1.1, 2.0   # private memory above margin x declared RAM + pad: the declaration was too low
+RAM_OVER_STEP_GB = 8.0                # a job's ram_over event repeats when its memory grew by this much
 BOXWATCH_EVERY_S = 600.0              # how often the dispatcher makes sure scripts/boxwatch.sh is running
 USAGE_EVERY_S = 60.0                  # one usage.jsonl line per this many seconds
 SERIAL_HINT_S = 1800.0                # `top` flags a GPU job older than this while another card has been idle
@@ -175,6 +192,10 @@ DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, 
                 # without ram_gb counts as ram_default_gb, a SIGKILLed job is retried kill_retries times beyond tries
                 ws_kill_frac=0.98, ws_reserve_gb=16.0, ws_keep_gb=80.0, ram_default_gb=8.0, kill_retries=3, trim=True,
                 trim_roots=None, ws_wait_s=600.0,
+                # under ram_stop_gb of margin the job furthest above its RAM declaration is stopped (0 = never) and
+                # requeued ram_retries times with its RAM raised to what it measured; rounds every fast_poll_s while
+                # the margin is under 2 x ram_stop_gb
+                ram_stop_gb=48.0, ram_retries=1, fast_poll_s=5.0,
                 disk=True)                     # job temp + compile caches on the data disk, system disk pruned (disk.py)
 FINAL = ("done", "failed", "cancelled")
 
@@ -293,9 +314,25 @@ def vram_charge(j: dict, now: float, known: dict = None, trust: bool = True, see
     return min(declared, own)
 
 
-def ram_reserve(j: dict, now: float, known: float = None, default: float = 0.0) -> float:
+def ram_declared(spec: dict, default: float) -> float:
+    """GB of host RAM a job declared (ram_gb), or what an undeclared one counts as (ram_default_gb)."""
+    return float(spec.get("ram_gb") or 0) or float(default)
+
+
+def ram_over(spec: dict, rss: float, default: float) -> bool:
+    """Did `rss` GB of private memory break the job's RAM declaration (by more than RAM_OVER_MARGIN and RAM_OVER_PAD_GB)?"""
+    return rss > RAM_OVER_MARGIN * ram_declared(spec, default) + RAM_OVER_PAD_GB
+
+
+def ram_raised(spec: dict, seen: float, default: float) -> float:
+    """GB of RAM to book for a job whose history key's recorded peak `seen` (hist_max, one run is enough) broke its
+    declaration: seen + 1; 0 when it did not. History otherwise only ever lowers a RAM booking (known_caps)."""
+    return round(seen + 1.0, 1) if ram_over(spec, seen, default) else 0.0
+
+
+def ram_reserve(j: dict, now: float, known: float = None, default: float = 0.0, floor: float = 0.0) -> float:
     """GB of host RAM still to come from a young job: what it is expected to need (declared, at most `known` from
-    history) minus what its tree already holds (that part is in the cgroup's measured memory; adding the whole
+    history, at least `floor` = ram_raised) minus what its tree already holds (that part is in the cgroup's measured memory; adding the whole
     declaration on top counted young jobs twice), tapering linearly to 0 at YOUNG_S (the old rule held the full
     declaration until YOUNG_S and nothing after). `default`: what a job without ram_gb and without history counts as
     (the working-set rule; the 85 % rule keeps 0)."""
@@ -307,6 +344,7 @@ def ram_reserve(j: dict, now: float, known: float = None, default: float = 0.0) 
         need = need if known is None else min(need, known)
     elif default:
         need = known if known is not None else default
+    need = max(need, floor)
     return max(0.0, need - float(j.get("rss_now") or 0)) * (1.0 - max(age, 0.0) / YOUNG_S)
 
 
@@ -795,6 +833,9 @@ class Dispatcher:
         self.conc, self.conc_t = {}, 0.0                      # conc_shares of usage.jsonl, re-read every CONC_EVERY_S
         self.usage_t = 0.0
         self.ws_want = self.young_ws = self.trim_t = self.list_t = 0.0
+        self.rss_fn = rss_gb                                  # private memory of a tree (tests replace it)
+        self.margin = float("inf")                            # GB below the platform's kill line, last round
+        self.near_t = 0.0                                     # last time the box was near the line or a root was SIGKILLed
 
     # -------------------------------------------------------------- helpers
     def cfg(self) -> dict:
@@ -887,22 +928,36 @@ class Dispatcher:
                             float(j.get("rss_peak") or 0))
             except OSError:
                 pass
-        elif over_declared(j["spec"], float(j.get("vram_peak") or 0)):
-            self.note_over(j)                              # failed / cancelled / short: the measured peak still counts
+        else:
+            if over_declared(j["spec"], float(j.get("vram_peak") or 0)):
+                self.note_over(j)                          # failed / cancelled / short: the measured peak still counts
+            self.note_ram(j)
         self.status_line(j, "%s%s" % (state, ": " + why if why else ""))
         j.pop("card_jobs", None)
         self.log("end", id=j["id"], state=state, rc=rc, why=why, gpu=j.get("gpu"), wall_s=info["wall_s"],
                  vram_peak=j.get("vram_peak"), cores_max=j.get("cores_max"), rss_peak=j.get("rss_peak"))
 
-    def oom_in_log(self, j: dict) -> bool:
-        """Does this try's part of the job's log.txt (from the offset recorded at launch) hold a CUDA OOM error?"""
+    def oom_in_log(self, j: dict, pattern=OOM_RE) -> bool:
+        """Does this try's part of the job's log.txt (from the offset recorded at launch) hold a CUDA OOM error
+        (or another `pattern`: KILL_RE)?"""
         try:
             with (self.logdir(j) / "log.txt").open("rb") as f:
                 size = f.seek(0, 2)
                 f.seek(max(min(int(j.get("log_off") or 0), size), size - OOM_SCAN_BYTES))
-                return bool(OOM_RE.search(f.read()))
+                return bool(pattern.search(f.read()))
         except OSError:
             return False
+
+    def note_ram(self, j: dict) -> None:
+        """Put the private-memory peak of a job that broke its RAM declaration into history (any end state), so the
+        next job under its history key is booked at it (ram_raised)."""
+        peak = float(j.get("rss_peak") or 0)
+        if ram_over(j["spec"], peak, self.cfg()["ram_default_gb"]) and j.get("ram_rec") != peak:
+            try:
+                hist_record(self.pool, j["spec"], 0.0, 0.0, peak)
+                j["ram_rec"] = peak
+            except OSError:
+                pass
 
     def note_over(self, j: dict) -> None:
         """Put the VRAM peak of a job that broke its declaration into history (any end state, any wall time), so
@@ -963,29 +1018,46 @@ class Dispatcher:
                          declared=spec.get("vram_gb"), peak=j.get("vram_peak"), stopped=vstop,
                          retry=int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]), card_jobs=j.get("card_jobs"))
             killed = rc in KILL_RCS and not j.get("stop") and not oom
-            if killed:                                 # SIGKILL from outside: the platform's working-set kill
+            if killed:
+                self.near_t = time.time()              # a root died of SIGKILL: the box reached the line
+            # A child SIGKILLed while the box was near the line (the platform's kill picks the largest process: an
+            # AlpaSim runtime worker, a dataloader) fails the job with its own rc: retried like a root kill.
+            child = (rc not in (0, None) and not killed and not oom and not j.get("stop")
+                     and time.time() - self.near_t < KILL_NEAR_S and self.oom_in_log(j, KILL_RE))
+            rstop = str(j.get("stop") or "").startswith("RAM ")
+            if killed or child:                        # SIGKILL from outside: the platform's working-set kill
                 again = int(j.get("kill_tries") or 0) < int(cfg["kill_retries"])
                 self.log("kill", id=jid, name=spec["name"], owner=spec.get("owner"), gpu=j.get("gpu"), rc=rc,
                          age_s=round(time.time() - j.get("t0", time.time())), rss_peak=j.get("rss_peak"),
-                         ram_gb=spec.get("ram_gb"), retry=again, mem=self.mem_line(peek=True))
+                         ram_gb=spec.get("ram_gb"), retry=again, mem=self.mem_line(peek=True),
+                         **({"child": True} if child else {}))
             if oom and int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]):
                 j["oom_tries"] = int(j.get("oom_tries") or 0) + 1
                 why = j.pop("stop", None) or "CUDA OOM (rc %s)" % rc
                 j.update(state="queued", why="retry after " + why)
                 self.status_line(j, "queued: retry after " + why)
-            elif killed and again:
+            elif (killed or child) and again:
                 j["kill_tries"] = int(j.get("kill_tries") or 0) + 1
-                j.update(state="queued", why="retry after SIGKILL (rc %s), not counted" % rc)
+                j.update(state="queued", why="retry after %s (rc %s), not counted" % (
+                    "a child's SIGKILL" if child else "SIGKILL", rc))
                 self.status_line(j, "queued: " + j["why"])
+            elif rstop and int(j.get("ram_tries") or 0) < int(cfg["ram_retries"]):
+                self.note_ram(j)                       # requeued, and booked by what it measured from now on
+                j["ram_tries"] = int(j.get("ram_tries") or 0) + 1
+                spec["ram_gb"] = round(max(float(spec.get("ram_gb") or 0), float(j.get("rss_peak") or 0) + 1.0), 1)
+                why = j.pop("stop")
+                j.update(state="queued", why="retry after " + why)
+                self.status_line(j, "queued: retry after %s; RAM declaration raised to %.1f GB" % (why, spec["ram_gb"]))
             elif j.get("stop"):
                 self.finish(j, "cancelled" if j["stop"] == "cancelled" else "failed", rc, j.pop("stop"))
             elif rc == 0:
                 self.finish(j, "done", rc, "")
-            elif j["tries"] - int(j.get("oom_tries") or 0) - int(j.get("kill_tries") or 0) < int(spec.get("tries") or 1):
+            elif j["tries"] - sum(int(j.get(k) or 0) for k in ("oom_tries", "kill_tries", "ram_tries")) < int(spec.get("tries") or 1):
                 j.update(state="queued", why="retry after rc %s" % rc)
-                self.log("retry", id=jid, rc=rc, tries=j["tries"], **({"sigkill": True} if killed else {}))
+                self.log("retry", id=jid, rc=rc, tries=j["tries"], **({"sigkill": True} if killed or child else {}))
             else:
-                self.finish(j, "failed", rc, "rc %s%s" % (rc, " (CUDA OOM)" if oom else " (SIGKILL)" if killed else ""))
+                self.finish(j, "failed", rc, "rc %s%s" % (rc, " (CUDA OOM)" if oom else " (SIGKILL)" if killed else
+                                                         " (child SIGKILL)" if child else ""))
         return live
 
     # -------------------------------------------------------------- accounting
@@ -1095,6 +1167,49 @@ class Dispatcher:
             self.log("vram_stop", id=j["id"], name=j["spec"]["name"], owner=j["spec"].get("owner"), gpu=a.index,
                      why=j["stop"], card_jobs=j["card_jobs"])
 
+    def watch_ram(self, box, cfg: dict) -> None:
+        """Jobs whose private memory broke their RAM declaration (max of declared and booked; undeclared:
+        ram_default_gb): said once per RAM_OVER_STEP_GB of growth (event ram_over, STATUS). While the margin below
+        the platform's kill line is under ram_stop_gb, the one furthest above its declaration is stopped at once
+        (event ram_stop; reap requeues it ram_retries times with its RAM raised to what it measured). The platform
+        SIGKILLs the largest process by RSS instead: a training (its mmapped tokens are 30-50 GB of RSS) or an AlpaSim
+        runtime worker, not the many-worker job that grew (2026-10-17: two CPU jobs declared at 48 / 160 GB grew to
+        240 / 344 GB, the platform killed three trainings twice and failed three reads)."""
+        line = cfg["ws_kill_frac"] * box.mem_max_gb if box.mem_max_gb and box.mem_ws_gb else 0.0
+        self.margin = line - box.mem_ws_gb if line else float("inf")
+        if self.margin < 2 * cfg["ws_reserve_gb"]:
+            self.near_t = time.time()
+        over = []
+        for j in self.jobs("running"):
+            s, rss = j["spec"], float(j.get("rss_now") or 0)
+            dec = max(ram_declared(s, cfg["ram_default_gb"]), float(j.get("ram_booked") or 0))
+            if not ram_over(dict(s, ram_gb=dec), rss, cfg["ram_default_gb"]):
+                continue
+            over.append((rss - dec, dec, rss, j))
+            if rss >= float(j.get("ram_over") or 0) + RAM_OVER_STEP_GB:
+                j["ram_over"] = rss
+                self.log("ram_over", id=j["id"], name=s["name"], owner=s.get("owner"), declared=dec, rss=rss,
+                         margin=round(self.margin, 1))
+                self.status_line(j, "running: RAM %.1f GB private memory > %.1f GB declared; stopped first when the "
+                                    "box nears the kill line. Declare what it uses (--ram)." % (rss, dec))
+        over = [x for x in over if not x[3].get("stop")]
+        if not over or not cfg.get("ram_stop_gb") or self.margin >= cfg["ram_stop_gb"]:
+            return
+        _, dec, rss, j = max(over, key=lambda x: x[0])
+        j["stop"] = "RAM %.1f GB private > %.1f GB declared with %.1f GB below the kill line" % (rss, dec, max(self.margin, 0.0))
+        self.log("ram_stop", id=j["id"], name=j["spec"]["name"], owner=j["spec"].get("owner"), why=j["stop"],
+                 mem=self.mem_line(peek=True))
+        try:                                           # now, not next round: such a job grows ~2 GB/s
+            procs.stop(self.jdir(j["id"]) / "owned.json", grace=3.0)
+        except (RuntimeError, OSError, ValueError) as e:
+            self.log("stop_failed", id=j["id"], err=str(e))
+
+    def poll_s(self, cfg: dict = None) -> float:
+        """Seconds to the next round: fast_poll_s while the margin below the kill line is under 2 x ram_stop_gb."""
+        cfg = cfg or self.cfg()
+        thin = self.margin < 2 * float(cfg.get("ram_stop_gb") or 0)
+        return min(cfg["poll_s"], cfg["fast_poll_s"]) if thin else cfg["poll_s"]
+
     # -------------------------------------------------------------- measured CPU, idle cards
     def measure_cpu(self, live: dict, now: float) -> None:
         """Cores each running job used since the last round (utime + stime over its live tree); keeps the peak over the
@@ -1165,8 +1280,9 @@ class Dispatcher:
             cpu_used += cpu_charge(j, now, known.get("cpu"))
             if now - j.get("t0", 0) < YOUNG_S:
                 young_threads += Spec(**j["spec"]).est_threads(box.host_cpus)
-                young_ram += ram_reserve(j, now, known.get("ram_gb")) if trust else float(j["spec"].get("ram_gb") or 0)
-                young_ws += ram_reserve(j, now, known.get("ram_gb"), cfg["ram_default_gb"])
+                r_up = ram_raised(j["spec"], hist_max(self.hist, j["spec"], "ram"), cfg["ram_default_gb"])
+                young_ram += ram_reserve(j, now, known.get("ram_gb"), floor=r_up) if trust else float(j["spec"].get("ram_gb") or 0)
+                young_ws += ram_reserve(j, now, known.get("ram_gb"), cfg["ram_default_gb"], floor=r_up)
         budget = box.cores * cfg["cpu_overcommit"] if not cfg.get("cpu_budget") else cfg["cpu_budget"]
         self.cpu_info = dict(charged=round(cpu_used, 1), budget=round(budget, 1))
         adm = capacity.Admission.from_box(box)
@@ -1195,6 +1311,9 @@ class Dispatcher:
             n_cpu = max(1, math.ceil(min(max(s.cpu, 1), known.get("cpu", max(s.cpu, 1)))))
             ram_need = min(s.ram_gb, known.get("ram_gb", s.ram_gb))
             ws_need = ram_need or known.get("ram_gb", cfg["ram_default_gb"])      # undeclared: history, else the default
+            r_up = ram_raised(j["spec"], hist_max(self.hist, j["spec"], "ram"), cfg["ram_default_gb"])
+            if r_up:                                   # the key's recorded peak broke the declaration: book that
+                ram_need, ws_need = max(ram_need, r_up), max(ws_need, r_up)
             seen = hist_max(self.hist, j["spec"])
             v_need = vram_need(j["spec"], known, trust, seen)
             eff = dataclasses.replace(s, vram_gb=v_need)
@@ -1209,10 +1328,17 @@ class Dispatcher:
             if box.mem_max_gb and box.mem_used_gb + young_ram + ram_need > 0.85 * box.mem_max_gb:
                 hard = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, ram_need, box.mem_max_gb)
             elif ws_line and box.mem_ws_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line and not (
-                    not starts and now - j.setdefault("t_ws", now) >= cfg["ws_wait_s"]):
-                hard = "memory working set %.0f + %.0f young + %.0f GB + %.0f reserve > kill line %.0f (page cache; trimming)" % (
-                    box.mem_ws_gb, young_ws, ws_need, cfg["ws_reserve_gb"], ws_line)
-                self.ws_want = max(self.ws_want, young_ws + ws_need + cfg["ws_reserve_gb"])
+                    not starts and now - j.setdefault("t_ws", now) >= cfg["ws_wait_s"]
+                    and box.mem_nocache_gb + young_ws + ws_need + cfg["ws_reserve_gb"] <= ws_line):
+                # The override is for page cache the trimmer could not drop: a job that does not fit even without
+                # any cache (anon of running jobs) waits for jobs to end (2026-10-17: an override started a CPU job
+                # declared at 48 GB that grew to 240 GB, and the platform killed three trainings).
+                nocache = box.mem_nocache_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line
+                hard = "memory working set %.0f + %.0f young + %.0f GB + %.0f reserve > kill line %.0f (%s)" % (
+                    box.mem_ws_gb, young_ws, ws_need, cfg["ws_reserve_gb"], ws_line,
+                    "%.0f GB without page cache: waits for jobs to end" % box.mem_nocache_gb if nocache else "page cache; trimming")
+                if not nocache:                        # trimming cannot make room for it otherwise
+                    self.ws_want = max(self.ws_want, young_ws + ws_need + cfg["ws_reserve_gb"])
             if hard or (soft and s.vram_gb <= 1):
                 self.set_why(j, hard or soft)
                 continue
@@ -1497,12 +1623,13 @@ class Dispatcher:
         for jid, mem in live.items():
             j = self.st["jobs"].get(jid)
             if j is not None:
-                j["rss_now"] = round(rss_gb(mem), 1)
+                j["rss_now"] = round(self.rss_fn(mem), 1)
                 j["rss_peak"] = max(float(j.get("rss_peak") or 0), j["rss_now"])
         holds = live_holds(load_holds(self.pool), rows)
         if len(holds) < len(load_holds(self.pool)):
             self.prune_holds(rows)
         box = self.probe_fn(rows) if self.probe_fn else probe(rows=rows, query=lambda q: smi(q, cfg["smi_age_s"]))
+        self.watch_ram(box, cfg)
         if not self.halt:
             self.admit(box, rows, live, holds, cfg)
             self.keep_margin(box, cfg)
@@ -1555,7 +1682,7 @@ class Dispatcher:
                         return 1
                 if once:
                     break
-                time.sleep(self.cfg()["poll_s"])
+                time.sleep(self.poll_s())
             self.log("dispatcher_stop", running=[j["id"] for j in self.jobs("running")])
         return 0
 

@@ -245,6 +245,21 @@ class BookedByMeasurement(unittest.TestCase):
         self.assertEqual(P.cpu_charge(dict(j, cores_peak=5.0), now, known=2.4), 6.0)
         self.assertEqual(P.cpu_charge(j, now, known=40.0), 14)
 
+    def test_ram_over_raised_and_child_kill_pattern(self):
+        s = dict(ram_gb=48)
+        self.assertFalse(P.ram_over(s, 54.0, 8.0))                     # 1.1 x 48 + 2 = 54.8
+        self.assertTrue(P.ram_over(s, 240.0, 8.0))
+        self.assertTrue(P.ram_over({}, 11.0, 8.0))                     # undeclared counts as 8: above 10.8
+        self.assertEqual((P.ram_raised(s, 240.0, 8.0), P.ram_raised(s, 20.0, 8.0)), (241.0, 0.0))
+        now = time.time()
+        self.assertAlmostEqual(P.ram_reserve(dict(spec=dict(ram_gb=10), t0=now, rss_now=2.0), now, floor=50.0), 48.0)
+        for ln in (b"[native] ERROR runtime worker crashed and the runtime does not recover: Worker 0 died with exit code -9",
+                   b"bash: line 1: 123456 Killed                  python x.py\n", b"died with <Signals.SIGKILL: 9>.",
+                   b"DataLoader worker (pid 9) is killed by signal: Killed."):
+            self.assertTrue(P.KILL_RE.search(ln), ln)
+        for ln in (b"exit code -90", b"Killed 3 stale servers", b"rc 1", b"sh: 1: Killed\n"):
+            self.assertFalse(P.KILL_RE.search(ln), ln)
+
     def test_wait_cause_and_gpu_flag(self):
         for why, c in [("after 1008-1 (running)", "after"), ("waiting for /x", "gate"), ("start limit this round", "start_limit"),
                        ("CPU 70 + 14 cores > budget 75", "cpu"), ("memory 200 + 44 GB > 85% of 276", "ram"),
@@ -500,6 +515,57 @@ class Dispatch(unittest.TestCase):
         d.cfg_over["ws_wait_s"] = 0.0                         # the cache could not be dropped: start anyway, and say so
         self.until(d, lambda: d.st["jobs"][c]["state"] == "done")
         self.assertEqual([e["id"] for e in self.events("ws_override")], [c])
+        self.box = dataclasses.replace(self.box, mem_nocache_gb=500.0)      # it is anon, not cache: no override
+        e = P.submit("true", name="wod", pool=self.tmp, vram_gb=1, ram_gb=40)
+        for _ in range(3):
+            d.round()
+        self.assertEqual(d.st["jobs"][e]["state"], "queued")
+        self.assertIn("500 GB without page cache: waits for jobs to end", d.st["jobs"][e]["why"])
+        self.assertEqual(len(self.events("ws_override")), 1)
+
+    def test_job_over_its_ram_declaration_is_stopped_near_the_kill_line_and_requeued(self):
+        import dataclasses
+        self.box = dataclasses.replace(fake_box(), mem_max_gb=460.0, mem_used_gb=100.0, mem_ws_gb=200.0)   # line 450.8
+        d = self.disp()
+        big = P.submit("sleep 60", name="lat-build", pool=self.tmp, vram_gb=0.1, ram_gb=48)
+        ok = P.submit("sleep 60", name="read", pool=self.tmp, vram_gb=1, ram_gb=30)
+        d.rss_fn = lambda pids: 240.0 if d.st["jobs"][big].get("pid") in pids else 20.0
+        d.round()
+        d.round()                                             # measured: 240 GB against 48 declared, margin 251
+        jb, jo = d.st["jobs"][big], d.st["jobs"][ok]
+        self.assertEqual((jb["state"], jo["state"], jb["ram_over"]), ("running", "running", 240.0))
+        self.assertEqual([(e["id"], e["declared"]) for e in self.events("ram_over")], [(big, 48.0)])
+        self.assertIn("240.0 GB private memory > 48.0 GB declared", (self.tmp / "jobs" / big / "STATUS").read_text())
+        self.assertEqual(d.poll_s(dict(d.cfg(), poll_s=20.0)), 20.0)
+        self.box = dataclasses.replace(self.box, mem_ws_gb=420.0)          # 30.8 GB below the line
+        self.until(d, lambda: jb["state"] == "queued")       # stopped at once, requeued with what it measured
+        self.assertEqual((len(self.events("ram_stop")), jb["ram_tries"], jb["spec"]["ram_gb"]), (1, 1, 241.0))
+        self.assertEqual(jo["state"], "running")             # the job within its declaration keeps running
+        self.assertEqual(d.poll_s(dict(d.cfg(), poll_s=20.0)), 5.0)
+        self.assertEqual(json.loads((self.tmp / "history.json").read_text())["lat-build"]["ram"], [240.0])
+        d.round()
+        self.assertEqual(P.wait_cause(jb["why"]), "ram")     # 420 + 241 + 16 > 450.8: waits for room
+        self.box = dataclasses.replace(self.box, mem_ws_gb=150.0, mem_used_gb=50.0)
+        self.until(d, lambda: jb["state"] == "running")
+        self.assertEqual(jb["ram_booked"], 241.0)
+        d.round()
+        self.assertEqual(len(self.events("ram_stop")), 1)    # within its new declaration: left alone
+        self.cancel_all(d)
+
+    def test_child_sigkill_near_the_line_is_retried_like_a_root_kill(self):
+        mark = self.tmp / "second"
+        msg = "echo '[native] ERROR runtime worker crashed: Worker 0 died with exit code -9'"
+        a = P.submit("if [ -e %s ]; then exit 0; fi; touch %s; %s; exit 1" % (mark, mark, msg), name="read", pool=self.tmp, vram_gb=1)
+        d = self.disp()
+        d.near_t = time.time()                                # the box was at the kill line a moment ago
+        self.until(d, lambda: d.st["jobs"][a]["state"] in P.FINAL)
+        j = d.st["jobs"][a]
+        self.assertEqual((j["state"], j["tries"], j["kill_tries"]), ("done", 2, 1))
+        self.assertEqual([e.get("child") for e in self.events("kill")], [True])
+        b = P.submit("%s; exit 1" % msg, name="far", pool=self.tmp, vram_gb=1)
+        d.near_t = 0.0                                        # far from the line: an ordinary failure
+        self.until(d, lambda: d.st["jobs"][b]["state"] in P.FINAL)
+        self.assertEqual((d.st["jobs"][b]["state"], d.st["jobs"][b]["tries"], d.st["jobs"][b]["why"]), ("failed", 1, "rc 1"))
 
     def test_cuda_oom_is_retried_once_beyond_tries(self):
         mark = self.tmp / "second"

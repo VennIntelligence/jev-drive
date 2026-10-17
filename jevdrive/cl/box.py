@@ -55,6 +55,16 @@ def mem_ws(root: Path) -> int:
     return int(v) - int(stat["inactive_file"])
 
 
+def mem_nocache(root: Path) -> int:
+    """Bytes of memory.current - file: the working set with every page-cache page dropped (anon + kernel). A job that
+    does not fit below the kill line on top of this cannot be made room for by trimming. 0 when it cannot be read."""
+    stat = dict(l.split() for l in (_read(root, "sys/fs/cgroup/memory.stat", "") or "").splitlines() if l.count(" ") == 1)
+    v = _read(root, "sys/fs/cgroup/memory.current")
+    if "file" not in stat or not v or v == "max":
+        return 0
+    return int(v) - int(stat["file"])
+
+
 def mem_used(root: Path) -> int:
     """Bytes the cgroup cannot reclaim: anon + shmem + kernel from memory.stat. memory.current also counts page cache,
     which the kernel drops under pressure; gating on it queues jobs behind a warm file cache."""
@@ -115,6 +125,7 @@ class Box:
     time: float = 0.0
     mem_used_gb: float = 0.0      # non-reclaimable cgroup memory (anon + shmem + kernel); memory.current minus page cache
     mem_ws_gb: float = 0.0        # working set = memory.current - inactive_file: what the platform's kill line is on
+    mem_nocache_gb: float = 0.0   # memory.current - file: the working set if all page cache were dropped
 
     @property
     def cores(self) -> float:
@@ -212,4 +223,5 @@ def probe(root: Path = Path("/"), rows: dict = None, query=smi) -> Box:
                mem_max_gb=num("sys/fs/cgroup/memory.max") / 2 ** 30, mem_current_gb=num("sys/fs/cgroup/memory.current") / 2 ** 30,
                ephemeral=(int(eph[0]), int(eph[1])), cards=sorted(cards, key=lambda c: c.index),
                load=(_read(root, "proc/loadavg", "") or "").split()[:3], time=time.time(),
-               mem_used_gb=mem_used(root) / 2 ** 30, mem_ws_gb=mem_ws(root) / 2 ** 30)
+               mem_used_gb=mem_used(root) / 2 ** 30, mem_ws_gb=mem_ws(root) / 2 ** 30,
+               mem_nocache_gb=mem_nocache(root) / 2 ** 30)
