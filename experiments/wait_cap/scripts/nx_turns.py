@@ -44,7 +44,9 @@ Definitions (fixed before any output was read):
 
 Added 2026-10-17 after the first read (exploratory; the first replay fed an empty route memory, see replay):
   lane class   zeros_mech's Lanes.cls on the car centre and heading (the evaluator's own lane polygons and centre-line yaw): same = a containing
-               lane within 60 deg, else opposite = one beyond 120 deg, else cross; none = no lane
+               lane within 60 deg, else opposite = one beyond 120 deg, else cross; none = no lane. An opposite sample counts only where the
+               route point at the same station (the human's lane centre, route heading) is itself in a same-direction lane (else ambiguous map:
+               opp_amb; in a first read 38 of 56 RSG / RTB1 opposite bends were shared, mostly scored 1.0)
   outcome      (bends only) the first in time of: the zero step while the car's station is in [entry - 20, exit + 10] (offroad | contact = front /
                lateral collision | diverged = dist_to_gt >= 4 m only) and the first opposite-lane sample (controller trace every 0.2 s in the same
                window, before the zero step) -> offroad | contact | opposite | diverged; else zero_before (zero step before the window),
@@ -404,8 +406,8 @@ def one(job):
     M = LaneMap(ds, (allp.min(0) - 60, allp.max(0) + 60))
     LN = ZM.Lanes(ds.map)
 
-    def lcls(x, y, yaw):                                                                    # zeros_mech lane class of the car centre
-        c = np.array([x, y]) + CAR_C * np.array([np.cos(yaw), np.sin(yaw)])
+    def lcls(x, y, yaw, off=CAR_C):                                                         # zeros_mech lane class of the car centre
+        c = np.array([x, y]) + off * np.array([np.cos(yaw), np.sin(yaw)])
         z = float(P3[int(np.argmin(np.hypot(*(Pg - c).T))), 2])
         return int(LN.cls(c[0], c[1], z, yaw)[0])
     if np.isfinite(B["entry"]):
@@ -459,12 +461,16 @@ def one(job):
             row[nm + "_h"] = vh_at(q_) if np.isfinite(q_) else np.nan
         if np.isfinite(B["entry"]):
             win = before & (tst >= B["entry"] - 20.0) & (tst <= B["exit"] + 10.0)
-            n_opp = 0
+            n_opp = n_amb = 0
             for i in np.flatnonzero(win)[::2]:                                              # every 0.2 s
                 if lcls(P[i, 1], P[i, 2], P[i, 3]) == 2:
-                    n_opp += 1
-                    opp_t = min(opp_t, P[i, 0])
-            row.update(opp_n=n_opp, opp_share=n_opp / max(len(np.flatnonzero(win)[::2]), 1))
+                    q_ = r_at(tst[i])                                                       # the human's lane centre at the same station
+                    if lcls(q_[0], q_[1], h_at(tst[i]), 0.0) == 1:                          # is in a same-direction lane: a real entry
+                        n_opp += 1
+                        opp_t = min(opp_t, P[i, 0])
+                    else:                                                                   # the map is ambiguous there (the human too)
+                        n_amb += 1
+            row.update(opp_n=n_opp, opp_amb=n_amb, opp_share=n_opp / max(len(np.flatnonzero(win)[::2]), 1))
             for i in np.flatnonzero((tst >= B["entry"] - 30.0) & (tst <= B["exit"] + 20.0)):
                 trace.append(dict(set=st_, label=label, scene=scene, t=(P[i, 0] - T0) * 1e-6, st=tst[i], lat=tlat[i], v=P[i, 4],
                                   herr=float(wrap(P[i, 3] - h_at(tst[i]))), before=bool(P[i, 0] < tz)))
