@@ -20,6 +20,13 @@ differs from decisions 127-134 / 189 / 204). Memory = every route message of the
 with a validity mask (`lib/rmem.py`, the same code offline and in the served driver); the served driver uses it only for a checkpoint with a
 `route_mem.json` sidecar, `SH30_RMEM=0` feeds an empty memory. Box: `$DATA_DIR/runs/route_mem/` (feat/, rely/, served/, gates.json). Gate table: [results/gates.json](results/gates.json).
 
+**Alignment audit (2026-10-17, diagnosis only).** [results/align_audit.md](results/align_audit.md). The served memory (projected layout
+of RSG-L18 / RTB1ARO-L18) runs ahead of the car only where the route turns inside the 42 m gap (p90 16.5-18.7 m) or loops back (U-turns:
+p90 32-46 m, max 85 m). It is consistent with at most 1-3 zeros per read. An open-loop replay shows that re-anchoring moves plans by a
+median of at most 0.1 m. Training rows are anchored exactly like serving. The d302 ordered layout fixes the labels but inherits a
+`merge` fold-back at loops. The fix is an input definition plus a base retrain. Tables in [results/align/](results/align/), figure
+[figs/align_42c7526f.png](figs/align_42c7526f.png), code `scripts/rm_align.py`; box `$DATA_DIR/runs/route_mem/align/`.
+
 <!-- files:begin -->
 ## Files
 
@@ -32,5 +39,5 @@ with a validity mask (`lib/rmem.py`, the same code offline and in the served dri
 - `sh30_core.py` (experiments/alpasim/lib): SH30 as a causal 2 Hz planner
 - `README.md` (experiments/local_map): carried probe and route at the zeros
 
-[results/](results/) 1 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 4 entry points
+[results/](results/) 4 result files · [figs/](figs/) 1 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 5 entry points
 <!-- files:end -->

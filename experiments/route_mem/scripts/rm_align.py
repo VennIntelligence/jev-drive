@@ -691,17 +691,19 @@ def cmd_report(a):
     # gates
     L += ["## Gates", "", "served = offline: the logged `rmem` against the rebuild from the regenerated messages (max point distance, mask agreement); "
           "msg lead: AlpaSim's own route anchor against the tracked ego arc; fold: rmem.merge's polyline doubles back by > 1 m (decisions, rollouts).", "",
-          "| set | rollouts (errors) | decisions | served = offline max m | mask agree | msg lead > 1 m | fold decisions (rollouts) |", "|:--|--:|--:|--:|--:|--:|--:|"]
+          "| set | rollouts (errors) | decisions | served = offline max m | mask agree | msg lead > 1 m | fold decisions (rollouts) | served empty, ordered not |",
+          "|:--|--:|--:|--:|--:|--:|--:|--:|"]
     for s, D in dec.items():
         R = rol[s]
         ne = int(R.err.notna().sum()) if "err" in R else 0
         g = dict(rollouts=int(len(R) - ne), errors=ne, decisions=int(len(D)), g_serve_max=float(D.g_serve.max()),
                  m_serve=float(D.m_serve.dropna().astype(float).mean()) if D.m_serve.notna().any() else None,
                  msg_gt1=float((D.msg_lead.abs() > 1.0).mean()), msg_gt1_n=int((D.msg_lead.abs() > 1.0).sum()),
-                 fold_dec=int((D.fold > 1.0).sum()), fold_roll=int((R.fold_max > 1.0).sum()) if "fold_max" in R else 0)
+                 fold_dec=int((D.fold > 1.0).sum()), fold_roll=int((R.fold_max > 1.0).sum()) if "fold_max" in R else 0,
+                 empty=int(((D.n_valid == 0) & (D.o_n_valid > 0)).sum()))
         res.setdefault(s, {})["gate"] = g
         L.append(f"| {lab[s][0]}, {lab[s][1]} | {g['rollouts']} ({ne}) | {g['decisions']} | {g['g_serve_max']:.1e} | "
-                 f"{'-' if g['m_serve'] is None else round(g['m_serve'], 4)} | {g['msg_gt1']:.4f} ({g['msg_gt1_n']}) | {g['fold_dec']} ({g['fold_roll']}) |")
+                 f"{'-' if g['m_serve'] is None else round(g['m_serve'], 4)} | {g['msg_gt1']:.4f} ({g['msg_gt1_n']}) | {g['fold_dec']} ({g['fold_roll']}) | {g['empty']} |")
 
     # T1: how far ahead, by decision geometry
     L += ["", "## T1 Lead of the served memory (projected layout) against the car's route arc", "",
@@ -747,20 +749,33 @@ def cmd_report(a):
     L += ["", "## T3 Zeros against early-turned memory", "",
           "with early = an early-turn decision before the failure (any decision for a rollout without one); early-before = within 3 s before the "
           "failure; pulled = plan and failure on the memory's side (module docstring).", "",
-          "| set | geometry | rollouts | zeros | rollouts with early | zeros with early-before | pulled | zero rate with / without early | RR [CI] |",
-          "|:--|:--|--:|--:|--:|--:|--:|--:|:--|"]
+          "ahead-before (looser) = a decision with a near slot >= 10 m ahead within 3 s before the failure; side = that decision's pull, the plan and "
+          "the failure on one side. RR = zero rate with early / without, scene-bootstrap CI; '-' where a cell has no zero.", "",
+          "| set | geometry | rollouts | zeros | rollouts with early | zeros with early-before | pulled | zeros with ahead-before | side | zero rate with / without early | RR [CI] |",
+          "|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|:--|"]
     for s, R in rol.items():
         R = R[R.n_dec.notna()] if "err" in R else R
+        D = dec[s]
+        loose = {}
+        for _, x in R[R.zero].iterrows():
+            dd = D[(D.rid == x.rid) & D.before & D.ahead]
+            if len(dd):
+                l_ = dd.iloc[-1]
+                loose[x.rid] = bool(np.isfinite(x.lat_f) and np.sign(l_.pull) == np.sign(l_.plan10) == np.sign(x.lat_f))
+        R = R.assign(ahead_b=R.rid.isin(list(loose)), side=R.rid.map(loose).fillna(False).astype(bool))
+        res[s]["loose"] = {R.loc[R.rid == k, "scene"].iloc[0]: v for k, v in loose.items()}
         for nm, g in [("all", R)] + [(k, g) for k, g in R.groupby("geo")]:
             e = g.n_early_pre > 0
             zr1 = float(g.zero[e].mean()) if e.any() else float("nan")
             zr0 = float(g.zero[~e].mean()) if (~e).any() else float("nan")
-            rr = boot_rr(g.zero.values, e.values, g.scene.values) if e.any() and (~e).any() and g.zero.any() else (np.nan, np.nan, np.nan)
+            ok = bool((g.zero & e).any() and (g.zero & ~e).any())
+            rr = boot_rr(g.zero.values, e.values, g.scene.values) if ok else (np.nan, np.nan, np.nan)
             r = dict(n=int(len(g)), zeros=int(g.zero.sum()), with_early=int(e.sum()), zero_early_before=int((g.zero & (g.n_early_before > 0)).sum()),
-                     pulled=int((g.zero & g.pulled).sum()), zr1=zr1, zr0=zr0, rr=rr)
+                     pulled=int((g.zero & g.pulled).sum()), ahead_before=int(g.ahead_b.sum()), side=int(g.side.sum()), zr1=zr1, zr0=zr0, rr=rr)
             res[s].setdefault("t3", {})[nm] = r
+            rrs = f"{rr[0]:.2f} [{rr[1]:.2f}, {min(rr[2], 99):.2f}]" if ok else "-"
             L.append(f"| {lab[s][0]}, {lab[s][1]} | {nm} | {r['n']} | {r['zeros']} | {r['with_early']} | {r['zero_early_before']} | {r['pulled']} | "
-                     f"{zr1:.3f} / {zr0:.3f} | {rr[0]:.2f} [{rr[1]:.2f}, {rr[2]:.2f}] |")
+                     f"{r['ahead_before']} | {r['side']} | {zr1:.3f} / {zr0:.3f} | {rrs} |")
 
     # T4: the scenes (U-turns, early-before zeros, pulled zeros)
     L += ["", "## T4 Scenes: U-turn rollouts and every zero with early memory before the failure", "",
