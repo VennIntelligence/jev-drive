@@ -22,7 +22,8 @@ K1=${K1:-0.1}; K2=${K2:-0.5}; AWK=${AWK:-16}; tagk() { echo "AWRF$(echo $1 | tr 
 mkdir -p $X/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner awr-onpol --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $X/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $X/jobs.txt; echo "$id"; }
-FW=(--train --vram 28 --cpu 6 --ram 120); FR=(--train --vram 24 --cpu 6 --ram 70)          # FR: the RSG recipe on on1_L18RB0 (identity)
+FW=(--train --vram 28 --cpu 6 --ram 120 --env CL_HIST_KEY=rm-train); FR=(--train --vram 24 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)   # FR: the RSG recipe on on1_L18RB0 (identity);
+# one pool history key for every rm_train arm (booked at the measured RAM, not the declaration)
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $X/jobs.txt 2>/dev/null; }
 fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }; done; }

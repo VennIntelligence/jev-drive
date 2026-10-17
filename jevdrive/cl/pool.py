@@ -30,6 +30,13 @@ card when (all measured live, nvidia-smi cached <= 15 s):
             runs + 1 GB) once history has >= 3 of them; without history a job books its declaration for 10 min, then
             min(declared, 1.2 x own peak + 1 GB). CARLA and exclusive jobs always book the declaration, and
             config trust_measured = false restores that for every job.
+            Jobs of one history key that share a card are booked together by measurement (since 2026-10-17): every
+            CONC_EVERY_S the dispatcher reads usage.jsonl (last CONC_HOURS) for card-minutes whose pool GPU jobs were
+            n >= 2 jobs of one key; per key, share = the largest p99 over those counts n (>= CONC_MIN card-minutes
+            each) of the card's VRAM used / n. m such jobs on a card then book max(their measured sum, min(the sum
+            of their own bookings, max(m x conc_margin (1.1) x share, the largest own booking))), for m up to
+            n_max + 1 (the largest measured count, plus one); further jobs book their own. A job booked above its
+            declaration (vram_raised) and CARLA / exclusive jobs never join a group; config conc = false turns it off.
             A declaration that proved too low stops being a cap: a job whose own peak, or whose name prefix's
             recorded peak (one run is enough, failed and cancelled runs count), is above 1.1 x declared + 1 GB
             books 1.2 x its own peak + 1 GB, or the recorded peak + 1 GB, queued or running. See "Under-declared VRAM" below.
@@ -91,7 +98,9 @@ last line]; the dispatcher keeps scripts/boxwatch.sh (5 s box sampler, SIGKILL f
 
 History: when a job ends done (>= 60 s), its peak VRAM (measured) and peak cores are appended to history.json under
 its history key (env CL_HIST_KEY if the submitter set one, else its name; then hist_prefix: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / trailing digits stripped repeatedly,
-so `op-eval-s3-pf` and `op-eval-k2` are `op-eval`), last 20 kept. `submit` without --vram / --cpu defaults to p95 x 1.2
+so `op-eval-s3-pf` and `op-eval-k2` are `op-eval`), last 20 kept. `submit` sets CL_HIST_KEY for a --train job of a
+known trainer class (TRAINER_KEYS: rm_train.py -> rm-train), named in the command or run by a lane script called as
+`<script>.sh train ...` / `... body-train ...`, so per-arm job names share one history. `submit` without --vram / --cpu defaults to p95 x 1.2
 of that history and says so on stderr; explicit values win.
 
 A job's process tree is recorded by (pid, start time) plus a CL_TOKEN env entry (procs.py). When its root exits, any
@@ -152,9 +161,15 @@ KILL_RCS = (137, -9)                  # a root that died of SIGKILL (bash report
 TRIM_EVERY_S = 30.0                   # at most one page-cache trim per this many seconds
 DISK_LOW_EVERY_S = 600.0              # a low system disk is pruned at most this often (disk.py)
 LIST_EVERY_S = 3600.0                 # how often the dispatcher has the trimmer's file list re-walked ahead of need
+CONC_EVERY_S = 1800.0                 # how often the dispatcher re-reads concurrent card use from usage.jsonl
+CONC_HOURS = 72.0                     # over this window
+CONC_MIN = 30                         # card-minutes at one job count before that count is trusted
+CONC_Q = 0.99
+TRAINER_KEYS = (("rm_train.py", "rm-train"),)   # trainer script -> history key `submit` gives its --train jobs
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
                 max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0,
                 trust_measured=True, over_stop_free_gb=1.0, oom_retries=1, boxwatch=True,
+                conc=True, conc_margin=1.1,    # book same-key jobs on a card by their measured concurrent p99 (conc_shares)
                 # the platform's kill line (working set = memory.current - inactive_file >= ws_kill_frac x memory.max):
                 # a start needs its RAM + ws_reserve_gb of margin below it, the trimmer keeps ws_keep_gb free, a job
                 # without ram_gb counts as ram_default_gb, a SIGKILLed job is retried kill_retries times beyond tries
@@ -352,6 +367,118 @@ def history_defaults(name: str, pool: Path = None) -> dict:
     return out
 
 
+def trainer_key(cmd, cwd: str = "") -> str:
+    """History key of a training command's trainer class (TRAINER_KEYS), '' for none: the trainer script named in the
+    command, or a lane script called as `<script>.sh train ...` (or `... body-train ...`) whose text runs it (nx.sh,
+    si.sh, aw.sh, wt.sh, rf_*.sh)."""
+    try:
+        words = shlex.split(cmd) if isinstance(cmd, str) else [str(w) for w in cmd]
+    except ValueError:
+        words = str(cmd).split()
+    for script, key in TRAINER_KEYS:
+        if any(w.endswith(script) for w in words):
+            return key
+    for w, nxt in zip(words, words[1:]):
+        if w.endswith(".sh") and (nxt == "train" or nxt.endswith("-train")):
+            p = Path(w) if Path(w).is_absolute() else Path(cwd or REPO) / w
+            try:
+                text = p.read_text(errors="replace")
+            except OSError:
+                continue
+            for script, key in TRAINER_KEYS:
+                if script in text:
+                    return key
+    return ""
+
+
+def _quantile(xs: list, q: float) -> float:
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, max(0, math.ceil(q * len(xs)) - 1))]
+
+
+def conc_shares(lines: list, jobs, now: float = None, min_n: int = CONC_MIN, q: float = CONC_Q) -> dict:
+    """Measured concurrent VRAM per history key. `lines`: usage.jsonl records (t, cards {g: [util, GB used, GB booked,
+    GPU jobs, hold]}), `jobs`: state.json job records. A sample is a card-minute whose GPU jobs (as usage counted them)
+    were n >= 2 pool jobs of one key, all running from 30 s before to 30 s after it, no whole hold: the card's VRAM
+    used / n (used includes processes outside the pool, so a sample errs high). Per key, for every n with >= min_n
+    samples: {n: [samples, q-quantile of used / n]}; share = the largest of those quantiles (larger n spreads the peaks,
+    so this is the conservative one), n_max = the largest such n."""
+    now = now or time.time()
+    if not lines:
+        return {}
+    t_lo = min(ln["t"] for ln in lines) - 60
+    per = {}
+    for j in jobs:
+        s, g, t0 = j["spec"], j.get("gpu"), j.get("t0")
+        if g is None or not t0 or j["state"] not in FINAL + ("running",) or not is_gpu(s) or s.get("carla") or s.get("exclusive"):
+            continue
+        t1 = now if j["state"] == "running" else j.get("t1") or t0
+        if t1 >= t_lo:
+            per.setdefault(str(g), []).append((t0, t1, hist_key(s)))
+    by = {}
+    for g, iv in per.items():
+        iv.sort()
+        i, on = 0, []
+        for ln in sorted((x for x in lines if g in (x.get("cards") or {})), key=lambda x: x["t"]):
+            t, c = ln["t"], ln["cards"][g]
+            while i < len(iv) and iv[i][0] <= t - 30:
+                on.append(iv[i])
+                i += 1
+            on = [x for x in on if x[1] >= t + 30]
+            if len(c) < 4 or c[3] < 2 or (len(c) > 4 and c[4]) or len(on) != c[3] or len({x[2] for x in on}) != 1:
+                continue
+            by.setdefault(on[0][2], {}).setdefault(len(on), []).append(float(c[1]) / len(on))
+    out = {}
+    for k, ns in by.items():
+        ok = {n: [len(xs), round(_quantile(xs, q), 2)] for n, xs in sorted(ns.items()) if len(xs) >= min_n}
+        if ok:
+            out[k] = dict(share=max(v[1] for v in ok.values()), n_max=max(ok), by_n=ok)
+    return out
+
+
+def read_usage(pool: Path, hours: float, now: float = None, max_bytes: int = 16 << 20) -> list:
+    """usage.jsonl records of the last `hours` (the file's tail, at most max_bytes)."""
+    now, p = now or time.time(), Path(pool) / "usage.jsonl"
+    try:
+        with p.open("rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - max_bytes))
+            raw = f.read().decode(errors="replace").splitlines()
+    except OSError:
+        return []
+    out = []
+    for ln in raw[1:] if len(raw) > 1 else raw:              # the first line of a tail read may be cut
+        try:
+            x = json.loads(ln)
+        except ValueError:
+            continue
+        if x.get("t", 0) >= now - hours * 3600:
+            out.append(x)
+    return out
+
+
+def conc_eligible(spec: dict, conc: dict, seen: float = 0.0, peak: float = 0.0) -> bool:
+    """May this job be booked in its key's concurrent group (conc: conc_shares output)?"""
+    return (hist_key(spec) in (conc or {}) and is_gpu(spec) and not spec.get("carla") and not spec.get("exclusive")
+            and not vram_raised(spec, peak, seen))
+
+
+def conc_group(m: int, act: float, own_sum: float, own_max: float, share: float, margin: float) -> float:
+    """GB that m same-key jobs on one card book together: at least what they use now, never more than the sum of their
+    own bookings, else m x margin x the key's measured concurrent share, at least one job's own booking."""
+    return round(max(act, min(own_sum, max(m * margin * share, own_max))), 1)
+
+
+def conc_add(a: "CardAcct", key: str, info: dict, v: float, margin: float) -> float:
+    """GB a queued job of `key` (its own booking `v`) adds on card `a`: the growth of the key's group there, or `v` when
+    the card already holds n_max + 1 of them (beyond what was measured)."""
+    g = a.conc.get(key) or dict(m=0, act=0.0, own_sum=0.0, own_max=0.0, booked=0.0)
+    if g["m"] >= info["n_max"] + 1:
+        return v
+    new = conc_group(g["m"] + 1, g["act"], g["own_sum"] + v, max(g["own_max"], v), info["share"], margin)
+    return max(0.0, round(new - g["booked"], 1))
+
+
 # ---------------------------------------------------------------------------------------------------- job spec
 @dataclass
 class Spec:
@@ -408,6 +535,10 @@ def submit(cmd, name: str = "job", pool: Path = None, **kw) -> str:
     """Queue a job; returns its id. kw: any Spec field."""
     kw.setdefault("owner", os.environ.get("CL_OWNER") or os.environ.get("CL_POOL_JOB", "") or os.environ.get("USER", ""))
     spec = Spec(cmd=cmd, name=name, **kw).check()
+    if spec.train and not (spec.env or {}).get("CL_HIST_KEY"):
+        k = trainer_key(spec.cmd, spec.cwd)
+        if k:
+            spec.env = dict(spec.env or {}, CL_HIST_KEY=k)
     pool = Path(pool or pool_dir())
     jid = new_id(name)
     procs.atomic_json(pool / "inbox" / ("%s.json" % jid), dict(id=jid, t_submit=time.time(), spec=spec.__dict__))
@@ -577,14 +708,16 @@ class CardAcct:
     started_carla: bool = False
     reserved_for: str = ""
     util: int = 0
+    conc: dict = field(default_factory=dict)   # history key -> {m, act, own_sum, own_max, booked}: its jobs booked together
 
     def avail_gb(self, headroom: float) -> float:
         return self.total_gb - headroom - self.foreign_gb - self.pool_gb
 
 
 # ---------------------------------------------------------------------------------------------------- placement
-def fits(spec: Spec, a: CardAcct, cfg: dict) -> str:
-    """'' when the job fits card `a` this round, else why not."""
+def fits(spec: Spec, a: CardAcct, cfg: dict, need: float = None) -> str:
+    """'' when the job fits card `a` this round, else why not. `need`: VRAM it adds on this card (default spec.vram_gb;
+    less when it joins a concurrent group there)."""
     if spec.gpus and a.index not in spec.gpus:
         return "card not allowed"
     if a.whole_hold:
@@ -593,7 +726,7 @@ def fits(spec: Spec, a: CardAcct, cfg: dict) -> str:
         return "exclusive job on card"
     if spec.exclusive and (a.jobs or a.carla_foreign or a.foreign_gb > 2):
         return "exclusive: card not empty"
-    need = spec.vram_gb if not spec.exclusive else a.total_gb - cfg["headroom_gb"]
+    need = (spec.vram_gb if need is None else need) if not spec.exclusive else a.total_gb - cfg["headroom_gb"]
     av = a.avail_gb(cfg["headroom_gb"])
     if av < need:
         return "VRAM %.1f GB free of the pool's view < %.1f" % (max(av, 0), need)
@@ -606,21 +739,22 @@ def fits(spec: Spec, a: CardAcct, cfg: dict) -> str:
     return ""
 
 
-def choose(spec: Spec, cards: list, cfg: dict, jid: str):
-    """(card, {card: why}) for the best card that fits, or (None, reasons)."""
+def choose(spec: Spec, cards: list, cfg: dict, jid: str, need_of=None):
+    """(card, {card: why}) for the best card that fits, or (None, reasons). need_of(card): the VRAM the job adds there."""
+    need_of = need_of or (lambda a: spec.vram_gb)
     why, ok = {}, []
     for a in cards:
         if a.reserved_for and a.reserved_for != jid:
             why[a.index] = "reserved for blocked job " + a.reserved_for
             continue
-        w = fits(spec, a, cfg)
+        w = fits(spec, a, cfg, need_of(a))
         if w:
             why[a.index] = w
         else:
             ok.append(a)
     if not ok:
         return None, why
-    best = min(ok, key=lambda a: (a.jobs + a.foreign_procs, a.avail_gb(cfg["headroom_gb"]) - spec.vram_gb))
+    best = min(ok, key=lambda a: (a.jobs + a.foreign_procs, a.avail_gb(cfg["headroom_gb"]) - need_of(a)))
     return best, why
 
 
@@ -658,6 +792,7 @@ class Dispatcher:
         self.idle_since = {}                                  # card -> t since which it has been idle
         self.cpu_info = {}
         self.hist = {}                                        # history.json, re-read every round
+        self.conc, self.conc_t = {}, 0.0                      # conc_shares of usage.jsonl, re-read every CONC_EVERY_S
         self.usage_t = 0.0
         self.ws_want = self.young_ws = self.trim_t = self.list_t = 0.0
 
@@ -864,7 +999,8 @@ class Dispatcher:
             f = [x.strip() for x in ln.split(",")]
             if len(f) == 3 and f[0] in uuid and f[1].isdigit():
                 per_pid[(uuid[f[0]], int(f[1]))] = float(f[2]) / 1024 if f[2].replace(".", "").isdigit() else 0.0
-        pool_pids, pool_carla, on_card = set(), {}, {}
+        pool_pids, pool_carla, on_card, groups = set(), {}, {}, {}
+        conc = self.conc if cfg["trust_measured"] and cfg.get("conc") else {}
         for j in self.jobs("running"):
             g, mem = j.get("gpu"), set(live.get(j["id"], []))
             pool_pids |= mem
@@ -877,9 +1013,14 @@ class Dispatcher:
             act = sum(v for (cg, p), v in per_pid.items() if cg == g and p in mem)
             j["vram_now"] = round(act, 1)
             j["vram_peak"] = max(float(j.get("vram_peak") or 0), round(act, 1))
-            j["vram_booked"] = round(max(act, vram_charge(j, now, known_caps(self.hist, s), cfg["trust_measured"],
-                                                          hist_max(self.hist, s))), 1)
-            a.pool_gb += j["vram_booked"]
+            seen = hist_max(self.hist, s)
+            own = vram_charge(j, now, known_caps(self.hist, s), cfg["trust_measured"], seen)
+            j["vram_booked"] = round(max(act, own), 1)
+            j.pop("vram_conc", None)
+            if conc and conc_eligible(s, conc, seen, j["vram_peak"]):
+                groups.setdefault((g, hist_key(s)), []).append((j.get("t0", 0), j, act, own))
+            else:
+                a.pool_gb += j["vram_booked"]
             on_card.setdefault(g, []).append(j)
             a.foreign_gb -= act                                # foreign = used - pool actual (used added below)
             a.exclusive = a.exclusive or bool(s.get("exclusive"))
@@ -887,6 +1028,19 @@ class Dispatcher:
             a.train += bool(s.get("train"))
             a.jobs += is_gpu(s)
             a.cpu_jobs += not is_gpu(s)
+        for (g, k), js in groups.items():                 # same-key jobs on a card: booked together (conc_group)
+            a, info = cards[g], conc[k]
+            js.sort(key=lambda x: x[0])
+            inside, rest = js[:info["n_max"] + 1], js[info["n_max"] + 1:]
+            for x in rest:                                 # more than measured + 1: each books its own
+                a.pool_gb += x[1]["vram_booked"]
+            act, own_sum, own_max = sum(x[2] for x in inside), sum(x[1]["vram_booked"] for x in inside), max(x[3] for x in inside)
+            booked = conc_group(len(inside), act, own_sum, own_max, info["share"], cfg["conc_margin"])
+            a.pool_gb += booked
+            a.conc[k] = dict(m=len(inside), act=round(act, 1), own_sum=round(own_sum, 1), own_max=round(own_max, 1),
+                             booked=booked)
+            for x in inside:
+                x[1]["vram_booked"], x[1]["vram_conc"] = round(booked / len(inside), 1), k
         for g, a in cards.items():
             a.foreign_gb += a.used_gb
             a.foreign_procs = len({p for (cg, p) in per_pid if cg == g and p not in pool_pids})
@@ -997,6 +1151,7 @@ class Dispatcher:
             pin_load.update(parse_cpus(h.get("cpus") or ""))
         cpu_used = float(sum(int(h.get("cpu") or 0) for h in holds))
         now, trust = time.time(), cfg["trust_measured"]
+        conc = self.conc if trust and cfg.get("conc") else {}
         self.track_idle(cards, now, cfg)
         young_threads = young_ram = young_ws = 0
         ws_line = cfg["ws_kill_frac"] * box.mem_max_gb if box.mem_max_gb and box.mem_ws_gb else 0.0
@@ -1040,8 +1195,11 @@ class Dispatcher:
             n_cpu = max(1, math.ceil(min(max(s.cpu, 1), known.get("cpu", max(s.cpu, 1)))))
             ram_need = min(s.ram_gb, known.get("ram_gb", s.ram_gb))
             ws_need = ram_need or known.get("ram_gb", cfg["ram_default_gb"])      # undeclared: history, else the default
-            v_need = vram_need(j["spec"], known, trust, hist_max(self.hist, j["spec"]))
+            seen = hist_max(self.hist, j["spec"])
+            v_need = vram_need(j["spec"], known, trust, seen)
             eff = dataclasses.replace(s, vram_gb=v_need)
+            kc = hist_key(j["spec"]) if conc and conc_eligible(j["spec"], conc, seen) else None
+            need_of = (lambda c, kc=kc, v=v_need: conc_add(c, kc, conc[kc], v, cfg["conc_margin"])) if kc else None
             pid_need = s.est_threads(box.host_cpus)
             soft = hard = ""                           # soft: CPU / PID plan cap, relaxed on an idle card
             if cpu_used + n_cpu > budget:
@@ -1060,11 +1218,11 @@ class Dispatcher:
                 continue
             every = list(cards.values())
             idle = self.idle_cards(every, now, cfg) if soft else None
-            a, reasons = choose(eff, idle if soft else every, cfg, j["id"])
+            a, reasons = choose(eff, idle if soft else every, cfg, j["id"], need_of)
             widened = None
             if a is None and s.gpus and not s.pin_strict:      # pinning watchdog: an idle card outside gpus would fit
                 extra = [c for c in (idle if soft else self.idle_cards(every, now, cfg)) if c.index not in s.gpus]
-                a, _ = choose(dataclasses.replace(eff, gpus=[]), extra, cfg, j["id"])
+                a, _ = choose(dataclasses.replace(eff, gpus=[]), extra, cfg, j["id"], need_of)
                 widened = a
             if soft and a is None:
                 self.set_why(j, soft)
@@ -1105,12 +1263,19 @@ class Dispatcher:
             if ws_line and j.pop("t_ws", None) and box.mem_ws_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line:
                 self.log("ws_override", id=j["id"], name=s.name, ws=round(box.mem_ws_gb, 1), young=round(young_ws, 1),
                          need=round(ws_need, 1), line=round(ws_line, 1))     # the trimmer could not make room in ws_wait_s
-            j["vram_booked"] = round(v_need, 1)
+            add = need_of(a) if need_of else v_need
+            if kc:
+                gr = a.conc.get(kc) or dict(m=0, act=0.0, own_sum=0.0, own_max=0.0, booked=0.0)
+                if gr["m"] < conc[kc]["n_max"] + 1:
+                    a.conc[kc] = dict(gr, m=gr["m"] + 1, own_sum=round(gr["own_sum"] + v_need, 1),
+                                      own_max=max(gr["own_max"], v_need), booked=round(gr["booked"] + add, 1))
+                j["vram_conc"] = kc
+            j["vram_booked"], j["ram_booked"] = round(add, 1), round(ram_need or ws_need, 1)
             self.launch(j, s, a.index, i0, span if i0 is not None else 0, cpus, box, adm)
             starts[is_gpu(j["spec"])] += 1
             a.jobs += is_gpu(j["spec"])
             a.cpu_jobs += not is_gpu(j["spec"])
-            a.pool_gb += v_need
+            a.pool_gb += add
             a.carla_pool += s.carla
             a.train += s.train
             a.exclusive = a.exclusive or s.exclusive
@@ -1328,6 +1493,7 @@ class Dispatcher:
         rows = processes()
         self.measure_cpu(live, time.time())
         self.hist = _read_json(self.pool / "history.json", {}) or {}
+        self.refresh_conc(cfg)
         for jid, mem in live.items():
             j = self.st["jobs"].get(jid)
             if j is not None:
@@ -1346,12 +1512,25 @@ class Dispatcher:
         self.save()
         procs.atomic_json(self.pool / "status.json", dict(
             t=time.time(), pid=os.getpid(), cfg=cfg, holds=holds,
-            cards={g: a.__dict__ for g, a in self.last.items()}, cpu=self.cpu_info,
+            cards={g: a.__dict__ for g, a in self.last.items()}, cpu=self.cpu_info, conc=self.conc,
             idle={g: round(time.time() - t) for g, t in self.idle_since.items()},
             counts={s: len(self.jobs(s)) for s in ("queued", "running", "done", "failed", "cancelled")},
             box=dict(cores=box.cores, pids=box.pids_current, pids_max=box.pids_max, mem_gb=round(box.mem_used_gb, 1),
                      mem_max_gb=round(box.mem_max_gb, 1), load=box.load, ws_gb=round(box.mem_ws_gb, 1),
                      ws_line_gb=round(cfg["ws_kill_frac"] * box.mem_max_gb, 1))))
+
+    def refresh_conc(self, cfg: dict) -> None:
+        """Re-read the measured concurrent VRAM per history key (conc_shares) every CONC_EVERY_S; event `conc`."""
+        now = time.time()
+        if not cfg.get("conc") or now - self.conc_t < CONC_EVERY_S:
+            return
+        self.conc_t = now
+        try:
+            self.conc = conc_shares(read_usage(self.pool, CONC_HOURS, now), list(self.st["jobs"].values()), now)
+        except Exception:                                   # noqa: BLE001 - a bad read keeps the last shares
+            self.log("conc_error", tb=traceback.format_exc()[-1500:])
+            return
+        self.log("conc", shares={k: [v["share"], v["n_max"]] for k, v in sorted(self.conc.items())})
 
     def run(self, once: bool = False) -> int:
         self.pool.mkdir(parents=True, exist_ok=True)
@@ -1495,7 +1674,8 @@ def trim_cache(need_gb: float, pool: Path = None, dry: bool = False, log: bool =
 def vram_report(hours: float = 48.0, pool: Path = None, now: float = None) -> list:
     """Declared against measured VRAM per history key, for jobs started in the last `hours`: rows of dict(key, runs,
     declared (lowest), peak (highest measured), over (runs above OVER_MARGIN x declared + OVER_PAD_GB), oom (runs
-    that ended or were retried on a CUDA OOM or a vram_stop), books (what the pool books the next such job at)),
+    that ended or were retried on a CUDA OOM or a vram_stop), books (what the pool books the next such job at),
+    ram_declared (highest), ram_books (the RAM the next one is charged: min(declared, history's max x 1.2 + 1))),
     under-declared keys first."""
     pool, now = Path(pool or pool_dir()), now or time.time()
     st = _read_json(pool / "state.json", {"jobs": {}}) or {"jobs": {}}
@@ -1506,8 +1686,9 @@ def vram_report(hours: float = 48.0, pool: Path = None, now: float = None) -> li
             continue
         peak = float(j.get("vram_peak") or j.get("over_rec") or 0)
         r = rows.setdefault(hist_key(s), dict(key=hist_key(s), runs=0, declared=float("inf"), peak=0.0, over=0, oom=0,
-                                              spec=s))
+                                              spec=s, ram_declared=0.0))
         r["runs"] += 1
+        r["ram_declared"] = max(r["ram_declared"], float(s.get("ram_gb") or 0))
         if float(s.get("vram_gb") or 0) <= r["declared"]:
             r["declared"], r["spec"] = float(s.get("vram_gb") or 0), s
         r["peak"] = max(r["peak"], peak)
@@ -1515,7 +1696,9 @@ def vram_report(hours: float = 48.0, pool: Path = None, now: float = None) -> li
         r["oom"] += bool(j.get("oom_tries")) or "CUDA OOM" in str(j.get("why")) or str(j.get("why")).startswith("VRAM ")
     for r in rows.values():
         s = r.pop("spec")
-        r["books"] = vram_need(s, known_caps(hist, s), True, hist_max(hist, s))
+        known = known_caps(hist, s)
+        r["books"] = vram_need(s, known, True, hist_max(hist, s))
+        r["ram_books"] = min(r["ram_declared"], known.get("ram_gb", r["ram_declared"])) if r["ram_declared"] else known.get("ram_gb", 0.0)
     return sorted(rows.values(), key=lambda r: (-(r["over"] > 0 or r["oom"] > 0), r["declared"] - r["peak"]))
 
 

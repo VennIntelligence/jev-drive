@@ -311,6 +311,62 @@ class BookedByMeasurement(unittest.TestCase):
         self.assertEqual(P.usage_report(1.0, tmp, now=t + 10 * 3600)["samples"], 0)
 
 
+class TrainerKeyAndConcurrency(unittest.TestCase):
+    """One history key per trainer class; same-key jobs on a card booked by their measured concurrent use."""
+
+    def test_trainer_key_and_submit_default(self):
+        tmp = Path(tempfile.mkdtemp())
+        lane = tmp / "lane.sh"
+        lane.write_text("RT=experiments/route_mem/scripts/rm_train.py\ntrain) exec python $RT train --tag $5 ;;\n")
+        self.assertEqual(P.trainer_key(["python", "experiments/route_mem/scripts/rm_train.py", "train", "--tag", "X"]), "rm-train")
+        self.assertEqual(P.trainer_key("cd x && python /a/rm_train.py train --tag 'Y Z'"), "rm-train")
+        self.assertEqual(P.trainer_key(["bash", str(lane), "train", "rsg", "0", "60", "T"]), "rm-train")
+        self.assertEqual(P.trainer_key(["bash", "lane.sh", "train", "rsg"], str(tmp)), "rm-train")     # relative to cwd
+        self.assertEqual(P.trainer_key(["bash", str(lane), "hist", "T"]), "")                          # not its train stage
+        self.assertEqual(P.trainer_key(["bash", str(lane), "body-train", "T"]), "rm-train")
+        self.assertEqual(P.trainer_key(["python", "pp_train.py", "--steps", "9"]), "")
+        ids = dict(t=P.submit(["bash", str(lane), "train", "a"], name="nx-train-A-s0", pool=tmp, vram_gb=24, train=True),
+                   own=P.submit(["bash", str(lane), "train", "a"], name="b", pool=tmp, vram_gb=24, train=True,
+                                env=dict(CL_HIST_KEY="mine")),
+                   read=P.submit(["bash", str(lane), "train", "a"], name="c", pool=tmp, vram_gb=24))
+        env = {k: json.loads((tmp / "inbox" / ("%s.json" % i)).read_text())["spec"]["env"] for k, i in ids.items()}
+        self.assertEqual(env, dict(t=dict(CL_HIST_KEY="rm-train"), own=dict(CL_HIST_KEY="mine"), read={}))
+        self.assertEqual(P.hist_key(dict(name="nx-train-A-s0", env=env["t"])), "rm-train")
+
+    def test_conc_shares_from_usage(self):
+        t = 1_000_000.0
+        rd = dict(vram_gb=20.0, env=dict(CL_HIST_KEY="rd4"))
+        jobs = [dict(spec=dict(rd, name="r%d" % i), state="done", gpu=0, t0=t - 100, t1=t + 7200) for i in range(4)]
+        jobs += [dict(spec=dict(name="tr", vram_gb=24.0), state="running", gpu=1, t0=t - 100),
+                 dict(spec=dict(rd, name="r9"), state="done", gpu=1, t0=t - 100, t1=t + 7200),
+                 dict(spec=dict(name="carla", vram_gb=50.0, carla=6), state="done", gpu=2, t0=t - 100, t1=t + 7200)]
+        lines = [dict(t=t + 60 * i, cards={"0": [50, 40.0 + (i % 10), 72, 4, 0], "1": [50, 30.0, 40, 2, 0],
+                                           "2": [50, 48.0, 50, 1, 0]}) for i in range(100)]
+        lines[5]["cards"]["0"][3] = 3                         # usage counted another job: not a clean sample
+        c = P.conc_shares(lines, jobs, now=t + 7200, min_n=30)
+        self.assertEqual(set(c), {"rd"})                      # mixed card 1 and the CARLA card 2 give no sample
+        self.assertEqual((c["rd"]["n_max"], c["rd"]["by_n"][4][0]), (4, 99))
+        self.assertAlmostEqual(c["rd"]["share"], 49.0 / 4)
+        self.assertEqual(P.conc_shares(lines, jobs, now=t + 7200, min_n=200), {})
+
+    def test_group_booking_and_add(self):
+        # four reads with own bookings 18.1 and a measured share of 13: 4 x 1.1 x 13 = 57.2 instead of 72.4
+        self.assertEqual(P.conc_group(4, 40.0, 72.4, 18.1, 13.0, 1.1), 57.2)
+        self.assertEqual(P.conc_group(4, 60.0, 72.4, 18.1, 13.0, 1.1), 60.0)          # never below what they use
+        self.assertEqual(P.conc_group(1, 2.0, 18.1, 18.1, 13.0, 1.1), 18.1)           # alone: its own booking
+        self.assertEqual(P.conc_group(2, 2.0, 40.0, 20.0, 30.0, 1.1), 40.0)           # never above their own sum
+        info = dict(share=13.0, n_max=5)
+        a = acct(0)
+        self.assertEqual(P.conc_add(a, "rd", info, 18.1, 1.1), 18.1)                  # first on the card
+        a.conc["rd"] = dict(m=4, act=40.0, own_sum=72.4, own_max=18.1, booked=57.2)
+        self.assertAlmostEqual(P.conc_add(a, "rd", info, 18.1, 1.1), 14.3)
+        a.conc["rd"] = dict(m=6, act=40.0, own_sum=108.6, own_max=18.1, booked=85.8)
+        self.assertEqual(P.conc_add(a, "rd", info, 18.1, 1.1), 18.1)                  # beyond n_max + 1: its own
+        self.assertTrue(P.conc_eligible(dict(name="x", vram_gb=20.0, env=dict(CL_HIST_KEY="rd")), {"rd": info}))
+        self.assertFalse(P.conc_eligible(dict(name="x", vram_gb=20.0, carla=2, env=dict(CL_HIST_KEY="rd")), {"rd": info}))
+        self.assertFalse(P.conc_eligible(dict(name="x", vram_gb=10.0, env=dict(CL_HIST_KEY="rd")), {"rd": info}, seen=20.0))
+
+
 def fake_box(cards=(0, 1, 2), used_mib=0, pids=700):
     cs = [Card(g, "GPU-%d" % g, "0000:%02x:00.0" % g, used_mib, 85651, 0, 0 if g == 0 else 1) for g in cards]
     return Box(208, 75, list(range(208)), {0: list(range(52)), 1: list(range(52, 104))},
@@ -640,6 +696,30 @@ class Dispatch(unittest.TestCase):
         d.round()
         self.assertAlmostEqual(d.last[0].pool_gb, 3 * 14.2, places=1)
         self.assertIn('"booked_gb": 14.2', (self.tmp / "events.jsonl").read_text())
+        self.cancel_all(d)
+
+    def test_same_key_jobs_pack_by_measured_concurrent_use(self):
+        self.box = fake_box(cards=(0,))
+        for v in (15, 16, 16.5):
+            P.hist_record(self.tmp, "rd4", v, 1.0, 2.0)                           # own booking 1.1 x 16.5 + 1 = 19.2
+        ids = [P.submit("sleep 30", name="rd-%d" % i, pool=self.tmp, vram_gb=20, env=dict(CL_HIST_KEY="rd4"))
+               for i in range(7)]
+        d = self.disp(max_starts=10)
+        d.conc, d.conc_t = {"rd": dict(share=12.0, n_max=5, by_n={5: [60, 12.0]})}, time.time() + 1e6
+        d.round()
+        run = [i for i in ids if d.st["jobs"][i]["state"] == "running"]
+        self.assertEqual(len(run), 6)                     # 6 x 1.1 x 12 = 79.2 <= 83.6 - 4; by own bookings only 4 fit
+        self.assertAlmostEqual(d.last[0].pool_gb, 6 * 13.2, places=1)
+        self.assertEqual(d.st["jobs"][run[1]]["vram_conc"], "rd")
+        d.round()                                         # re-accounted from the running jobs: same booking
+        self.assertAlmostEqual(d.last[0].pool_gb, 6 * 13.2, places=1)
+        self.assertEqual(d.last[0].conc["rd"]["m"], 6)
+        self.cancel_all(d)
+        ids = [P.submit("sleep 30", name="rd-%d" % i, pool=self.tmp, vram_gb=20, env=dict(CL_HIST_KEY="rd4"))
+               for i in range(7)]
+        d = self.disp(max_starts=10, conc=False)
+        d.round()
+        self.assertEqual(sum(d.st["jobs"][i]["state"] == "running" for i in ids), 4)
         self.cancel_all(d)
 
     def test_cpu_only_job_leaves_its_card_idle(self):

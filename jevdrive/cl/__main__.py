@@ -206,10 +206,21 @@ def cmd_vram(a):
           "a CUDA OOM.\nover = runs measured above %.1f x declared + %.0f GB; books = what the pool books the next job of "
           "the prefix at (a declaration that proved too low no longer caps it)." % (
               a.hours, len(rows), len(bad), P.OVER_MARGIN, P.OVER_PAD_GB))
-    print("\n| name prefix | runs | declared GB | measured peak GB | over | OOM | pool books GB |\n|:--|--:|--:|--:|--:|--:|--:|")
+    print("\n| name prefix | runs | declared GB | measured peak GB | over | OOM | pool books GB | RAM declared / books GB |\n"
+          "|:--|--:|--:|--:|--:|--:|--:|--:|")
     for r in (rows if a.all else bad):
-        print("| %s | %d | %g | %.1f | %d | %d | %g |" % (r["key"], r["runs"], r["declared"], r["peak"], r["over"],
-                                                     r["oom"], r["books"]))
+        print("| %s | %d | %g | %.1f | %d | %d | %g | %g / %g |" % (r["key"], r["runs"], r["declared"], r["peak"], r["over"],
+                                                               r["oom"], r["books"], r["ram_declared"], r["ram_books"]))
+    conc = (P.snapshot()[1].get("conc") or {})
+    if conc:
+        m = (P.snapshot()[1].get("cfg") or {}).get("conc_margin", P.DEFAULTS["conc_margin"])
+        print("\nConcurrent booking (last %g h of usage.jsonl, re-read every %d min): same-key jobs on a card book together "
+              "m x %g x share (at least one job's own booking, at most the sum of their own), up to n_max + 1 per card.\n"
+              "share = largest p99 over job counts n of card VRAM used / n.\n\n| key | share GB | n_max | card-minutes "
+              "(p99 GB per job) by n |\n|:--|--:|--:|:--|" % (P.CONC_HOURS, P.CONC_EVERY_S / 60, m))
+        for k, v in sorted(conc.items(), key=lambda kv: -sum(x[0] for x in kv[1]["by_n"].values())):
+            print("| %s | %.1f | %d | %s |" % (k, v["share"], v["n_max"], ", ".join(
+                "%s: %d (%.1f)" % (n, x[0], x[1]) for n, x in sorted(v["by_n"].items(), key=lambda t: int(t[0])))))
     return 0
 
 

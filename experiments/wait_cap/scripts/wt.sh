@@ -42,7 +42,7 @@ TEA=$DATA_DIR/runs/desire_cap/train/teacher; D1R=$DATA_DIR/runs/desire_cap/train
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-train --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
-FW=(--train --vram 24 --cpu 6 --ram 70)
+FW=(--train --vram 24 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)      # one pool history key for every rm_train arm
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $O/jobs.txt; }       # last pool id of a job name
 reads() {  # <after ids> <tags..>: waitcap / dev / ledger-F plans -> echo the three ids
