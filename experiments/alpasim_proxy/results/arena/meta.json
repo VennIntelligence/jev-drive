@@ -1,0 +1,129 @@
+{
+ "step_s": 3.0,
+ "windows": 7741,
+ "held": 2246,
+ "logs": 136,
+ "shards": [
+  {
+   "shard": 0,
+   "windows": 1136,
+   "chunks": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 1,
+   "windows": 1116,
+   "chunks": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 2,
+   "windows": 1076,
+   "chunks": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 3,
+   "windows": 1169,
+   "chunks": [
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 4,
+   "windows": 1103,
+   "chunks": [
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 5,
+   "windows": 1192,
+   "chunks": [
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+   ],
+   "controls": 2
+  },
+  {
+   "shard": 6,
+   "windows": 949,
+   "chunks": [
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54
+   ],
+   "controls": 2
+  }
+ ],
+ "chunks": 55,
+ "strata": {
+  "static": 3143,
+  "other": 1610,
+  "braking": 1205,
+  "launch": 783,
+  "turn": 570,
+  "cruise": 430
+ },
+ "strata_held": {
+  "static": 879,
+  "other": 456,
+  "braking": 378,
+  "turn": 213,
+  "launch": 204,
+  "cruise": 116
+ }
+}

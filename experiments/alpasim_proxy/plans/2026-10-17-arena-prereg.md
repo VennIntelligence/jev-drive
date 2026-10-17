@@ -1,0 +1,73 @@
+# ARENA 预登记：在全部公开重建上均匀取窗的大闭环竞技场（2026-10-17，任何模型读数之前）
+
+写于任何 arena 模型读数出现之前（select 与 pick 只看窗口与人的状态，不看任何分数；smoke 只验管线）。第一次提交后只追加修正，不改上文。
+代码：`scripts/arena.py`（定义写在文件头）、`scripts/arena.sh`；集合 `results/arena/{set.csv.gz, meta.json}`；box `$DATA_DIR/runs/alpasim_proxy/arena/`。
+
+## 1. 问题
+
+1. **主要目的（用户定）：这个竞技场能否把 private 分数已知的 anchor 排对。** 六个：garage G0014（private 0.848）、YR10m10-F-s0（0.800）、
+   go-straight starter（0.799）、DD-sample（0.772）、LTF-sample（0.738）、APY10m10-AB-s0（0.640）。公开 1491 对这五个非平凡 anchor 的 Kendall tau 是 −0.6
+   （decision 262），YR / APY 排反（0.925 / 0.935），等待集合也没排对（wait_set.md）。
+2. 我们的两个模型 RSG-L18-s0 与 NR1F-L18-s0 在一个比 held 460 大一个量级、静止 / 等待窗口按自然比例出现的集合上：零分率、失败类型分布、
+   分数分布与对人速度（defect_fix/results/zero_overlap.md 在已有读数上的问题放大版）。NR1FB10、V2、P0 不读（用户定：不重复读，只读这两个 + anchor）。
+3. held 与 non-held 分开：L18 的 on-policy 池在 non-held 公开场景上滚过，non-held 窗口对 RSG / NR1F 是训练污染的（同一重建、同一段时间附近）；
+   anchor 都不受污染。**RSG 对 NR1F 的判读以 held 部分为主；anchor 排序看全部窗口，held / non-held 分开也报。**
+
+## 2. 集合（定义见 arena.py 文件头，在此固定）
+
+- 来源：1491 个公开场景各自的重建资产（MTGS asset，一个场景一个），窗口 5.5 s = 111 帧（10 个决策），trajdata 窗口移进重建内，
+  资产、评分器、serving 与公开读数相同（wait_set.py 的 build 做法，只改 central_tokens_config）。
+- 取窗：每个 log 从第一帧起的全局时间网格，步长 step（由第 5 节定）；窗口必须**在重建的相机视频内**：首尾帧都在相机时间戳范围内（±0.1 s），
+  且人的 20 Hz 位姿离最近相机帧 ≤ 1.0 m（ego_cov）。同一 log 的两个重建在时间上重叠时同一窗口只取一次（id 相同），split 取保守的 train。
+- 排除（与等待集合相同）：本车道前方走廊里或作为前车的、渲染里画不出来的车（inv_path > 0 或前车无模型）；窗口出 log。
+  另加读后排除（4.1）：任何一个读数在开车之前就失败的窗口（route-fail：地图路线生成失败，与策略无关，公开集上 12 个场景的同一类）。
+  不读人类回放（省一个读数；与策略无关的失败从任一读数的 failure_reason 就能认出）。
+- 层（人在窗口内的状态，第一个满足的）：static（最大位移 < 1 m）、launch（v0 < 1 m/s）、braking（v_end < v0 − 2）、turn（航向变化 ≥ 30°）、
+  cruise（v0 ≥ 5、|Δv| < 1、航向变化 < 5°）、other。与 defect_fix/df_zero.py 同一规则。
+
+## 3. 读什么
+
+8 个读数，每个窗口每个 tag 一次（读数是确定性的：RSG held 460 读三次 0/460 翻转，zero_overlap.md），按这个顺序提交（池里同优先级按提交顺序起）：
+RSG-L18-s0 → NR1F-L18-s0 → YR10m10-F-s0 → APY10m10-AB-s0（ap2 driver）→ DD-sample → LTF-sample → starter（go-straight）→ G0014（garage，最后，夜里来不及就不完整）。
+驱动路径同等待集合（RSG / NR1F / YR：sh30 + c0b_chain.OVERRIDES，即公开 10 决策读数路径 + 本集合 cache；APY：ap2；LTF / DD / garage：与它们公开读数相同的原生驱动
+run.sh ltf / dd / garage；go-straight：AlpaSim starter kit 原样）。
+每块 ≤ 150 个窗口一个池作业（我们的驱动 --vram 20 --cpu 6 --ram 30，CL_HIST_KEY=alpasim-read4，与 df.sh 相同；第三方驱动 --vram 24 --cpu 8 --ram 40，与 wait_set.sh 相同）；每个 shard（按 log 分组、约 1200 窗口）一个 cache 构建作业，
+构建后用 2 个公开窗口对照已发布 cache（build_cache.py compare 必须逐位相同）并检查每个窗口的 cache 轨迹（56 步、资产、起始帧）。
+
+## 4. 怎么读（读出脚本 arena.py report，写进 results/arena/）
+
+1. 有效窗口 = 集合 − replay 失败 / 0 分的窗口。某 tag 读完 ≥ 98 % 有效窗口才算完整读数；不完整的标出，不进配对比较以外的结论。
+2. 每个模型 × {全部, held, non-held}：均分（按 log 聚类 bootstrap 95 % CI）、零分率、零分类型（AF-front / AF-side / offroad / corridor / 其他）、
+   非零低分类型（被追尾、其他接触、不起步、爬行 < 30 %、慢）、分数分布（= 1、(0, 0.5)、[0.5, 0.9)、[0.9, 1)）与 CDF 图。
+3. 对 RSG 配对（共同窗口，模型 − RSG）：分数差、零分率差（log 聚类 CI）；任一方 < 1.0 的窗口上的速度差 dv。
+4. 分层：每层每模型均分 / 零分率，及对 RSG 的配对分数差 [CI]。
+5. 对人速度（用户追加）：每个模型在自己 < 1.0 的窗口上 dv =（自车弧长 − 人弧长）/ 5.5 s 与弧长比（人弧长 > 5 m）的分位数，按零分 / 部分分、按层；直方图。
+   注意选择效应：没有接触时分数只因进度不足而 < 1，所以部分分窗口按构造偏慢；配对比较才是比较。
+6. anchor（主读数）：竞技场均分对 private 分数的 Kendall tau-b（读完整的 anchor，≥ 3 个才算；全部 / held / non-held 各一个），并列公开 1491 的 tau；
+   YR − APY 共同窗口配对差：CI 下界 > 0 = 这对排得像 private；CI 含 0 = 分不开；上界 < 0 = 排反。go-straight 的公开数（0.522）来自 N1 的 300 场景样本。
+
+预设的判读（写在读数之前）：
+- 竞技场「排得像 private」= 六个 anchor（或读完整的全部，至少 5 个）的 tau ≥ +0.6 且 YR − APY CI 下界 > 0；tau ≤ 0 = 不像；其间 = 部分。
+  这条线在读数之前定；即使排对，anchor 只有 6 个、两个是我们一族，不据此单独选提交。
+- NR1F 对 RSG 的 held 配对分数差 CI 下界 > 0 才说「在竞技场上更好」；上界 < 0 说「更差」；其他「分不开」。
+  non-held 的同样数字只作描述（污染）。零分类型里哪类增长，以 held 的计数差和配对零分率差为准。
+- 没有过 / 不过的 bar：这是测量，结果进 decisions 作为证据，不单独触发训练或提交。
+
+## 5. 规模与预算（读数之前定）
+
+select（1.0 s 网格，box 20261017-192605）：34 209 个候选窗口，排除后 23 188 个（held 6 723）；丢掉的：不可见车 3 054，重叠重建的重复 id 7 945，
+自车出相机范围 22。人的状态：static 9 404（41 %），other 4 840，braking 3 615，launch 2 324，turn 1 723，cruise 1 282。静止窗口这么多，
+是因为长的重建（最长 136 s）多是人停着的场景；这就是「在重建时间内均匀」的自然比例（N2 在原始 log 上均匀取窗是 30 % 静止）。
+
+吞吐（等待集合同一驱动的实测）：每个窗口每个读数 5.5-6.9 s 运行时（每卡 4 个并发读，渲染为瓶颈；APY 的 ap2 最慢），加每块约 45 s 启动。
+今晚约 20 个读槽（我们的驱动每卡 4 个，第三方每卡 3 个），NR1HV 训练占两张卡的一部分。step = 3 s → **7 741 个窗口（held 2 246，136 个 log），55 块，
+8 个 tag = 440 个读作业，约 6.2 万窗口读，约 108 卡槽小时**：满槽约 6 h，连同争用预计 02:00-04:00 CST 结束。step = 2 s（11 600 窗口）要约 9-10 h，
+赶不上早上且留不出失败重跑的余量，不取。相邻窗口重叠 2.5 s，有效样本小于窗口数；CI 按 log 聚类。
+shard：按 log 打包约 1 200 个窗口一个 cache（7 个），每个 16 核构建；每个 shard 用 2 个公开窗口对照已发布 cache。
+可行性：smoke（12 个窗口，各层都有；starter、RSG、APY（ap2）、DD 各一个读）只验管线，不看分数做任何选择；通过后一次提交整条链，优先级 9，
+两个汇总作业（core = RSG / NR1F / YR / APY 读完时；all = 全部）。
+
+## 6. 不做的
+
+不做重加权（每个重建等权等等只作事后描述）；不读 seed 1；不做长时程；不改任何模型或 serving；不读 NR1FB10 / V2 / P0 / 回放；
+窗口与公开场景窗口重叠的部分不单独拆（pub_off_s 记在集合里，可以事后描述）。
