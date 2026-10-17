@@ -43,6 +43,19 @@ Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plan
   -0.09, YR -0.125, APY -0.295). Size is not measurable from public (the static stratum has one scene); LTF / DD losing only a little bounds
   how static-rich private can be. This narrows decision 262's "driver-specific, not scene mix" to an interaction of mix and launch behaviour.
 
+## WAIT-SET: a closed-loop set where the human waits at standstill
+
+[results/wait_set.md](results/wait_set.md); code `scripts/wait_set.py` (definitions in the docstring), `scripts/wait_set.sh`; the set
+`results/wait_set/set.json` (split `alpasim_nuplan/waitset@v1`), cache `$DATA_DIR/datasets/alpasim_nuplan_wait/v1` on the box.
+
+- **Set.** The 199 public scenes whose human starts from a standstill, with the trajdata window moved into the human's wait (same asset,
+  same scorer and serving): variant **a** = 147 windows where the human never moves (window ends 0.5 s before the movement onset), variant
+  **b** = 169 windows where the human starts moving at 3.0 s. Classes: red light first in line / queued, other with a lead / free (75-84
+  each); 95 windows come from held-split scenes. Every window lies inside its reconstruction's camera video; 34 windows were dropped for an
+  undrawn vehicle in the ego's lane, 48 for a standstill too short.
+- **Read a tag:** `bash experiments/alpasim_proxy/scripts/wait_set.sh read <tag>` (one pool job, public 10-decision driver path + the cache),
+  then `wait_set.sh report`.
+
 ## Anchors: five policies whose private numbers are known
 
 Private numbers from the leaderboard JSON pulled 2026-10-12 ([results/leaderboard_nuplan_20261012.json](results/leaderboard_nuplan_20261012.json)).
