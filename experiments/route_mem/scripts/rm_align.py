@@ -14,7 +14,8 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
           anchors, decision times and route R of every rollout (the input of `anchor`, which needs no AlpaSim)
   nav     (box, AlpaSim venv)  rm_align.py nav --out DIR [--data navtrain_full.s0of12 ..] [--limit N]
           the NAVSIM training rows rebuilt exactly as rm_build nav builds them (decision k of a log-following 18-decision rollout; checked
-          against the stored feature rows of runs/route_mem/feat), the same lead / early / fold per row against the generator's polyline
+          against the stored feature rows of runs/route_mem/feat), the same lead / early / fold per row against the generator's polyline,
+          and a_* = the same for the row's anchored layout (rm_build anchor's row, rmem.memory_a; a_fold = merge_a's fold)
           -> DIR/nav_<data>.parquet. The on-policy pool rows (on1_L18RB0, rm_build pool = the served Tracker) are `extract` on RB0-F-s0's
           rollouts.
   msgs    (box, AlpaSim venv)  rm_align.py msgs --out DIR      the driver messages (rollout.asl) of every zero rollout with an `ahead` decision
@@ -24,6 +25,11 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
           empty -> DIR/replay/*.pkl, identity.json (own checkpoint, served memory, against the stored plans)
   report  (Mac, .venv)  rm_align.py report --dir DIR --res RESULTS_DIR --fig PNG
           RESULTS_DIR/align.json + align.md (the tables of align_audit.md) and the BEV figure of the worked example
+  anchor  (any machine, numpy / pandas)  rm_align.py anchor --dir DIR --res RESULTS_DIR [--workers N]
+          the anchored layout (lib/rmem.py "Anchored layout", rm_train --rm-anchor) on the dumped messages of every set (extract --dump):
+          rm_build.feats_of_a (= rmem.memory_a = the served Tracker(anchor=True)) and two ablations of its per-message anchor (plain C_k on
+          the merge_a polyline; the cap first proposed), each slot block through lead_block; the NAVSIM rows' a_ columns from `nav`
+          -> RESULTS_DIR/anchor.json + anchor.md (results/anchor_check.md), DIR/<set>.anchor.parquet
 
 Definitions (fixed before any output was read):
   route    R = the generator's whole local polyline after the rollout's last decision (every extension it triggered), stations S; heading h(s) =
@@ -379,11 +385,12 @@ def nav_unit(u):
     import rm_build as RB
     from alpasim_runtime.route_generator import RouteGeneratorMap
     logging.disable(logging.WARNING)
-    split_dir, log, items, fstore = u
+    split_dir, log, items, fstore = u[:4]
+    fastore = u[4] if len(u) > 4 else None                            # rm_build anchor's stored rows (feat/<data>.a.npz), when built
     fr, pos = AR.load_log(split_dir, log)
     vm, org = AR.city_map(fr.loc)
     out = []
-    for (r, tok), fst in zip(items, fstore):
+    for m_, ((r, tok), fst) in enumerate(zip(items, fstore)):
         i = pos.get(tok)
         if i is None:
             continue
@@ -394,13 +401,16 @@ def nav_unit(u):
         off = np.r_[org, P[0, 2]]
         try:
             g = RouteGeneratorMap((P - off).astype(np.float32), vm, route_start_offset_m=AR.OFFSET_M)
-            B = []
+            B, BA, PA = [], [], []
             for jj in range(k + 1):
                 f_ = i - k + jj
                 wp = AR.route_at(g, fr.p[f_] - off, fr.yaw[f_])
                 wp = wp[np.isfinite(wp).all(1)]
+                pj = np.r_[fr.p[f_, :2] - org, fr.yaw[f_]]
                 if len(wp):
-                    B.append(RM.to_local(np.r_[fr.p[f_, :2] - org, fr.yaw[f_]], wp))
+                    B.append(RM.to_local(pj, wp))
+                BA.append(RM.to_local(pj, wp) if len(wp) else np.zeros((0, 2)))         # the anchored layout: every message and its pose
+                PA.append(pj)
         except Exception:  # noqa: BLE001  (off-map / fold-back scenes fail in AlpaSim as well; rm_build skips them too)
             continue
         a = np.r_[fr.p[i, :2] - org, fr.yaw[i]]
@@ -408,11 +418,19 @@ def nav_unit(u):
         route = Route(np.asarray(g.route_polyline_in_local.points, float)[:, :2])
         s_e, lat_e, _ = route.proj(a[:2][None])
         ls, _ = lead_block(route, a, float(s_e[0]), f)
+        fa = RM.pts(RM.memory_a(BA, PA, a))                                        # rm_build anchor's row (rmem.memory_a)
+        la, _ = lead_block(route, a, float(s_e[0]), fa)
+        ga = {}
+        if fastore is not None:                                                    # the built row = this row (f16)
+            fs_ = RM.pts(fastore[m_])
+            va = (fa[:, 0] > 0.5) | (fs_[:, 0] > 0.5)
+            ga = dict(a_g_store=float(np.abs(fa[va, 1:3] - fs_[va, 1:3]).max() * 20.0) if va.any() else 0.0,
+                      a_m_store=bool(((fa[:, 0] > 0.5) == (fs_[:, 0] > 0.5)).all()))
         vv = (f[:, 0] > 0.5) | (fst[:, 0] > 0.5)
         fut = float(np.degrees(wrap(fr.yaw[i + 8] - fr.yaw[i]))) if i + 8 < len(fr.yaw) else np.nan
         out.append(dict(row=int(r), token=tok, k=int(k), s_e=float(s_e[0]), lat_e=float(lat_e[0]), turn_d=turn_d(route, float(s_e[0])),
                         g_store=float(np.abs(f[vv, 1:3] - fst[vv, 1:3]).max() * 20.0) if vv.any() else 0.0, fold=fold_m(route, RM.merge(B)),
-                        fut_dyaw4=fut, **ls))
+                        a_fold=fold_m(route, RM.merge_a(B)), fut_dyaw4=fut, **ls, **{f"a_{q}": v for q, v in la.items()}, **ga))
     return out
 
 
@@ -441,18 +459,22 @@ def cmd_nav(a):
             names, logs = tab["names"], tab["log"]
             assert (z["names"] == names).all(), data
             fz = z["f"].astype(np.float32).reshape(-1, RM.N_PT, RM.NF)
+            za = np.load(F / f"{data}.a.npz")["f"].astype(np.float32) if (F / f"{data}.a.npz").exists() else None
             split_dir = "test" if (data_dir() / "datasets/navsim/navsim_logs/test" / f"{logs[0]}.pkl").exists() else "trainval"
             by = {}
             for r, (t, lg) in enumerate(zip(names.tolist(), logs.tolist())):
                 if z["ok"][r]:
                     by.setdefault(lg, []).append((r, t))
-            jobs = [(split_dir, lg, it, fz[[r for r, _ in it]]) for lg, it in sorted(by.items(), key=lambda x: -len(x[1]))][: a.limit or None]
+            jobs = [(split_dir, lg, it, fz[[r for r, _ in it]], None if za is None else za[[r for r, _ in it]])
+                    for lg, it in sorted(by.items(), key=lambda x: -len(x[1]))][: a.limit or None]
             res = par.pmap(nav_unit, jobs, run=run, workers=a.workers or n_cpus(), desc=data)
             df = pd.DataFrame([x for v in res.values if v for x in v])
             df["dev"] = z["dev"][df.row.values] if "dev" in z.files else False
             df.to_parquet(out / f"nav_{data}.parquet")
             rec = dict(rows=len(df), errors=len(res.errors), g_store_ok=float((df.g_store <= 0.05).mean()), ahead=float(df.ahead.mean()), early=float(df.early.mean()),
-                       fold=float((df.fold > 1.0).mean()), lead_first_p90=float(df.lead_first.quantile(0.9)))
+                       fold=float((df.fold > 1.0).mean()), lead_first_p90=float(df.lead_first.quantile(0.9)), a_lead_first_p90=float(df.a_lead_first.quantile(0.9)),
+                       a_store_ok=float((df.a_g_store <= 0.05).mean()) if "a_g_store" in df else None,
+                       a_store_mask=float(df.a_m_store.mean()) if "a_m_store" in df else None)
             run.info(f"{data}: {json.dumps(rec)}")
             run.summary[f"rows_{data}"] = rec
 
@@ -598,6 +620,156 @@ def cmd_replay(a):
             torch.cuda.empty_cache()
         (od / "identity.json").write_text(json.dumps(ident, indent=1))
         run.summary.update(targets=len(T), identity=ident)
+
+
+# ---------------------------------------------------------------- anchor (any machine with numpy / pandas: the extract --dump outputs)
+def _ablate(B, P, a, rule):
+    """Ablations of rmem.memory_a's per-message anchor, analysis only (results/anchor_check.md): 'plain' = C_k on the merge_a polyline (no trim
+    tracking), 'cap' = min(C_k, s_prev + chord + 1 m per message) (the cap first proposed: the anchor advanced only by the driven chord + 1 m
+    per 0.5 s). -> the ordered point block (N_PT, NF)."""
+    Bc = [RM._clean(b) for b in B]
+    Q = [np.asarray(p, float)[:2] for p in P]
+    sizes = []
+    M = RM.merge_a(Bc, sizes)
+    if M is None or len(M) < 2:
+        return np.zeros((RM.N_PT, RM.NF), np.float32)
+    path = np.r_[0.0, np.cumsum(np.hypot(*np.diff(np.array(Q), axis=0).T))]
+    s = pk = None
+    for k, b in enumerate(Bc):
+        if len(b) and sizes[k] >= 2:
+            c = RM._on(M[:sizes[k]], b[0], b[1] - b[0] if len(b) > 1 else None)[0] - RM.L0
+            s, pk = (c if s is None or rule == "plain" else min(c, s + path[k] - pk + 1.0)), path[k]
+    trav = RM.travelled(Q, a)
+    return RM.window(RM.in_ego(np.asarray(a, float), M), s_fix=s + trav - pk)
+
+
+def anchor_unit(u):
+    """(set, {rid: message dump}, decision rows of those rollouts) -> per decision: the anchored layout as served and built (rm_build.feats_of_a
+    = rmem.memory_a = Tracker(anchor=True)) and its two ablations, each through lead_block against the route; merge_a's fold."""
+    import rm_build as RB
+    name, Mg, dec = u
+    out = []
+    for rid, m in Mg.items():
+        route = Route(m["R"])
+        K = len(m["A"])
+        W, A = {k: m["W"][k] for k in range(K)}, {k: np.asarray(m["A"][k], float) for k in range(K)}
+        Fa = RB.feats_of_a(W, A)
+        B = []
+        for k in range(K):
+            wp = W[k][np.isfinite(W[k]).all(1)]
+            B.append(RM.to_local(A[k], wp) if len(wp) else np.zeros((0, 2)))
+            s_e = dec[(rid, k)]
+            info = {}
+            assert np.array_equal(RM.memory_a(B, [A[j] for j in range(k + 1)], A[k], info), Fa[k]), "feats_of_a != memory_a"
+            row = dict(set=name, rid=rid, k=k, a_fold=fold_m(route, RM.merge_a(B)), a_m=info["s_msg"][-1][2] if info.get("s_msg") else 0)
+            for pre, blk in (("a_", RM.pts(Fa[k])), ("p_", _ablate(B, [A[j] for j in range(k + 1)], A[k], "plain")),
+                             ("c_", _ablate(B, [A[j] for j in range(k + 1)], A[k], "cap"))):
+                lb, _ = lead_block(route, A[k], s_e, blk)
+                row.update({f"{pre}{q}": lb[q] for q in ("n_valid", "first", "lead_first", "lead_near", "ahead", "early")})
+            out.append(row)
+    return out
+
+
+def cmd_anchor(a):
+    """The anchored layout on the dumped messages of every set (extract --dump) and on the NAVSIM rows (`nav` with a_ columns) -> RES/anchor.json,
+    RES/anchor.md (the tables of results/anchor_check.md) and DIR/<set>.anchor.parquet."""
+    import pandas as pd
+    from jevdrive import par
+    d, L, res = Path(a.dir), [], {}
+    for s, lab, bench in SETS:
+        if not (d / f"{s}.msg.pkl").exists():
+            continue
+        Mg = pickle.load(open(d / f"{s}.msg.pkl", "rb"))
+        D = pd.read_parquet(d / f"{s}.dec.parquet")
+        sd = {}
+        for r_, k_, v_ in zip(D.rid, D.k, D.s_e):
+            sd.setdefault(r_, {})[(r_, int(k_))] = float(v_)
+        rids = sorted(Mg)
+        units = [(s, {r_: Mg[r_] for r_ in rids[i::a.workers]}, {kv: v for r_ in rids[i::a.workers] for kv, v in sd[r_].items()}) for i in range(a.workers)]
+        rr = par.pmap(anchor_unit, units, workers=a.workers, desc=s)
+        rr.raise_if_failed()
+        X = pd.DataFrame([x for v in rr.values for x in v])
+        X = D.merge(X, on=["set", "rid", "k"], how="inner")
+        R = pd.read_parquet(d / f"{s}.roll.parquet").set_index("rid")
+        X["geo"] = R.loc[X.rid, "geo"].values
+        X.to_parquet(d / f"{s}.anchor.parquet")
+        res[s] = anchor_tables(X)
+    nv = sorted(d.glob("nav_navtrain_full.s*of12.parquet"))
+    if nv:
+        N = pd.concat([pd.read_parquet(f) for f in nv])
+        if "a_lead_first" in N:
+            res["nav"] = anchor_tables(N, nav=True)
+    L += anchor_md(res)
+    Path(a.res).mkdir(parents=True, exist_ok=True)
+    (Path(a.res) / "anchor.json").write_text(json.dumps(res, indent=1, default=float))
+    (Path(a.res) / "anchor.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
+def anchor_tables(X, nav=False):
+    """Decision (or NAVSIM row) table -> the lead statistics of the projected (served), ordered and anchored layouts (+ ablations)."""
+    def st(x):
+        x = x[np.isfinite(x)]
+        return dict(n=int(len(x)), med=q(x, 0.5), p90=q(x, 0.9), p99=q(x, 0.99), p1=q(x, 0.01), gt1=int((x > 1).sum()), lt1=int((x < -1).sum()),
+                    abs1=int((np.abs(x) > 1).sum()), max=float(x.max()) if len(x) else np.nan, min=float(x.min()) if len(x) else np.nan)
+    r = dict(rows=int(len(X)), proj=st(X.lead_first.values), anch=st(X.a_lead_first.values), ahead_proj=int(X.ahead.sum()), ahead_anch=int(X.a_ahead.sum()),
+             early_proj=int(X.early.sum()), early_anch=int(X.a_early.sum()), fold_old=int((X.fold > 1).sum()), fold_anch=int((X.a_fold > 1).sum()),
+             fold_old_anch_bad=int(((X.fold > 1) & (X.a_lead_first.abs() > 1)).sum()))
+    tw = X.turn_d.le(42)
+    r["turn42_proj"], r["turn42_anch"] = st(X.lead_first[tw].values), st(X.a_lead_first[tw].values)
+    if nav and "a_g_store" in X:                                     # rm_build anchor's stored rows against this rebuild (where built)
+        h = X.a_g_store.notna()
+        r |= dict(store_rows=int(h.sum()), store_ok=float((X.a_g_store[h] <= 0.05).mean()) if h.any() else None,
+                  store_mask=float(X.a_m_store[h].astype(float).mean()) if h.any() else None)
+    if not nav:
+        off = X.msg_lead > 1
+        r |= dict(ord=st(X.o_lead_first.values), plain=st(X.p_lead_first.values), cap=st(X.c_lead_first.values), ahead_ord=int(X.o_ahead.sum()),
+                  fold_old_ord_bad=int(((X.fold > 1) & (X.o_lead_first.abs() > 1)).sum()), offset=int(off.sum()),
+                  offset_ord_bad=int((off & (X.o_lead_first.abs() > 1)).sum()), offset_anch_bad=int((off & (X.a_lead_first.abs() > 1)).sum()),
+                  offset_tracked=int((off & (X.a_m > 0)).sum()), trim_false=int((~off & (X.a_m > 0)).sum()))
+        ut = X.geo == "uturn"
+        r["uturn_proj"], r["uturn_anch"] = st(X.lead_first[ut].values), st(X.a_lead_first[ut].values)
+    return r
+
+
+def anchor_md(res):
+    lab = {s: f"{t}, {b}" for s, t, b in SETS} | {"nav": "NAVSIM navtrain rows (rm_build anchor's rows)"}
+    f = lambda r: f"{r['med']:.2f} / {r['p90']:.2f} / {r['p99']:.2f}"  # noqa: E731
+    L = ["## A1 First-slot lead (m): the served projected layout, the ordered layout (d302) and the anchored layout", "",
+         "lead = the true route arc of the first valid slot's point minus its label, against the car's tracked arc on AlpaSim's route (the audit's "
+         "definition); median / p90 / p99; |lead| > 1 m counts (anchored: ahead + / behind -).", "",
+         "| set | decisions | projected | ordered | anchored | projected > 1 m | ordered > 1 m | anchored > 1 m (+ / -) | anchored min / max |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for s, r in res.items():
+        o = r.get("ord")
+        L.append(f"| {lab[s]} | {r['rows']} | {f(r['proj'])} | {f(o) if o else '-'} | {f(r['anch'])} | {r['proj']['abs1']} | {o['abs1'] if o else '-'} | "
+                 f"{r['anch']['abs1']} ({r['anch']['gt1']} / {r['anch']['lt1']}) | {r['anch']['min']:.1f} / {r['anch']['max']:.1f} |")
+    L += ["", "## A2 Turns: decisions with a route turn within 42 m, and U-turn rollouts (first-slot lead median / p90 / p99, m)", "",
+          "| set | turn within 42 m: projected | anchored | U-turn rollouts: projected | anchored | near slot >= 10 m ahead: projected / ordered / anchored |",
+          "|:--|--:|--:|--:|--:|--:|"]
+    for s, r in res.items():
+        L.append(f"| {lab[s]} | {f(r['turn42_proj'])} | {f(r['turn42_anch'])} | {f(r['uturn_proj']) if 'uturn_proj' in r else '-'} | "
+                 f"{f(r['uturn_anch']) if 'uturn_anch' in r else '-'} | {r['ahead_proj']} / {r.get('ahead_ord', '-')} / {r['ahead_anch']} |")
+    L += ["", "## A3 The two defects of the ordered layout", "",
+          "fold = rmem.merge's polyline doubles back by > 1 m (merge_a: the anchored merge); offset = AlpaSim's first waypoint one or two spacings "
+          "further out than L0 (msg lead > 1 m); tracked = the anchored rule took m > 0 extra spacings there; false trims = m > 0 without an offset.", "",
+          "| set | fold decisions (old merge) | merge_a folds | ordered |lead| > 1 at a fold | anchored | offset decisions | ordered |lead| > 1 there | "
+          "anchored | tracked | false trims |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for s, r in res.items():
+        L.append(f"| {lab[s]} | {r['fold_old']} | {r['fold_anch']} | {r.get('fold_old_ord_bad', '-')} | {r['fold_old_anch_bad']} | {r.get('offset', '-')} | "
+                 f"{r.get('offset_ord_bad', '-')} | {r.get('offset_anch_bad', '-')} | {r.get('offset_tracked', '-')} | {r.get('trim_false', '-')} |")
+    if res.get("nav", {}).get("store_rows"):
+        n = res["nav"]
+        L += ["", f"NAVSIM rows built by rm_build anchor (feat/<data>.a.npz, float16) against this rebuild: {n['store_rows']} rows, "
+              f"{n['store_ok']:.4f} within 0.05 m, masks equal on {n['store_mask']:.4f}."]
+    L += ["", "## A4 Ablations of the per-message anchor (|lead| > 1 m: ahead + / behind -; min / max)", "",
+          "plain = merge_a + C_k (no trim tracking); cap = min(C_k, s_prev + chord + 1 m per message), the cap first proposed; anchored = the rule "
+          "(rmem.memory_a).", "", "| set | plain | cap | anchored |", "|:--|--:|--:|--:|"]
+    for s, r in res.items():
+        if "plain" in r:
+            g = lambda x: f"{x['abs1']} ({x['gt1']} / {x['lt1']}); {x['min']:.1f} / {x['max']:.1f}"  # noqa: E731
+            L.append(f"| {lab[s]} | {g(r['plain'])} | {g(r['cap'])} | {g(r['anch'])} |")
+    return L
 
 
 # ---------------------------------------------------------------- report (Mac)
@@ -901,13 +1073,17 @@ def main():
     rp = sp.add_parser("replay")
     rp.add_argument("--out", required=True)
     rp.add_argument("--ckpts", nargs="+", default=["RSG-L18-s0", "RTB1ARO-L18-s0", "RTB1O-L18-s0"])
+    an = sp.add_parser("anchor")
+    an.add_argument("--dir", required=True)
+    an.add_argument("--res", required=True)
+    an.add_argument("--workers", type=int, default=8)
     r = sp.add_parser("report")
     r.add_argument("--dir", required=True)
     r.add_argument("--res", required=True)
     r.add_argument("--fig", default="")
     r.add_argument("--example", default="v2_pub:42c7526f")
     a = p.parse_args()
-    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report)[a.cmd](a)
+    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report, anchor=cmd_anchor)[a.cmd](a)
 
 
 if __name__ == "__main__":

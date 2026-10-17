@@ -28,6 +28,20 @@ with AlpaSim's own RouteGenerator, as the served driver would have held it. Alpa
                                           newest at the row; pool rows: rm_build regen at the decision anchors; yr1_<data>: the source row's
                                           block moved into the perturbed frame and re-scored; --cf: rf_cfpool build --order's rows/<data>.o.npz)
                                           -> feat/<name>.o.npz (names, f (n, DIM_O) f16, ok, trav)
+  anchor --data D .. [--pool P ..] [--cat NAME=SRC,..] [--merge NAME=POOL:prefix,..] [--limit N]
+                                          the anchored layout (rmem.memory_a, rm_train --rm-anchor; results/anchor_check.md): the same
+                                          messages as `nav` (frames i - k .. i at the logged poses, empty messages kept) and `pool` (regen
+                                          at the decision anchors); yr1_<data> as in `order`; --cat: a pool whose rows (on:<token>) are rows
+                                          of the sources (wt.py / df.py pack: every pool row's old-layout row must equal its source row);
+                                          --merge: an rf_pait.py merge of pools (names and old-layout rows checked) -> feat/<name>.a.npz
+                                          (names, f (n, DIM_O) f16, ok, trav); --limit: runs/route_mem/anchor_sample/ (a check only).
+                                          Every file a base retrain on the anchored layout reads (box, AlpaSim venv, one CPU pool job):
+      $AP rm_build.py anchor --workers 64 --data navtrain_full.s{0..11}of12 idx_waitcap_trA idx_waitcap_trB idx_waitcap_trC \
+          idx_selfiter_trA idx_selfiter_trB idx_selfiter_trC --pool L18RB0 L18RTB1 \
+          --cat on1_WAIT=idx_waitcap_trA,idx_waitcap_trB,idx_waitcap_trC on1_NR1TV=idx_selfiter_trA,idx_selfiter_trB,idx_selfiter_trC \
+          --merge on1_L18NR1=on1_L18RB0:rb0,on1_L18RTB1:rtb1
+                                          (navtrain shards + their yr1_ rows, the KD pool on1_WAIT, the trainval pool on1_NR1TV, the L18
+                                          pools on1_L18RB0 / on1_L18RTB1 / on1_L18NR1)
 """
 from __future__ import annotations
 
@@ -86,6 +100,7 @@ def nav_one(u):
     logging.disable(logging.WARNING)
     split_dir, log, items, dev = u[:4]
     order = len(u) > 4 and u[4]
+    anc = len(u) > 5 and u[5]                               # the anchored layout (rmem.memory_a): every message and its pose, empty ones kept
     fr, pos = AR.load_log(split_dir, log)
     vm, org = AR.city_map(fr.loc)
     n = len(items)
@@ -108,6 +123,7 @@ def nav_one(u):
         except Exception:                                   # noqa: BLE001  (off-map / fold-back scenes fail in AlpaSim as well)
             continue
         B, last = [], None
+        BA, PA = [], []
         try:
             for j in range(k + 1):
                 f = i - k + j
@@ -117,6 +133,9 @@ def nav_one(u):
                 if len(wp):
                     B.append(RM.to_local(a, wp))
                     last = a
+                if anc:
+                    BA.append(RM.to_local(a, wp) if len(wp) else np.zeros((0, 2)))
+                    PA.append(a)
         except Exception:                                   # noqa: BLE001
             continue
         a = np.r_[fr.p[i, :2] - org, fr.yaw[i]]
@@ -124,6 +143,9 @@ def nav_one(u):
         if order:                                           # route v2: the ordered memory (rmem.memory_o), the messages' poses = frames i - k .. i
             TV[m] = RM.travelled(fr.p[i - k:i + 1, :2])
             FO[m] = RM.memory_o(B, a, last if last is not None else a, TV[m])
+        if anc:                                             # the anchored memory: messages at frames i - k .. i at their logged poses
+            TV[m] = RM.travelled([p[:2] for p in PA], a)
+            FO[m] = RM.memory_a(BA, PA, a)
         Mm = RM.merge(B)
         if Mm is not None and len(Mm) >= 2:
             Me = RM.in_ego(a, Mm)
@@ -153,7 +175,7 @@ def nav_one(u):
                 if geo.junction(p[0], p[1]):
                     JD[m] = s
                     break
-    if order:
+    if order or anc:
         return np.array([r for r, _ in items]), FO, OK, TV
     return np.array([r for r, _ in items]), F, K, OK, NM, FD, JD, TU
 
@@ -286,12 +308,27 @@ def feats_of_o(W, A):
     return out
 
 
+def feats_of_a(W, A):
+    """feats_of for the anchored layout: {k: (DIM_O,)} (rmem.memory_a; messages at the decision anchors, empty ones kept), the served
+    Tracker(anchor=True) on the same inputs."""
+    out, B, P = {}, [], []
+    for k in sorted(W):
+        wp = W[k][np.isfinite(W[k]).all(1)]
+        B.append(RM.to_local(A[k], wp) if len(wp) else np.zeros((0, 2)))
+        P.append(A[k])
+        out[k] = RM.memory_a(B, P, A[k])
+    return out
+
+
 def pool_one(job):
     run, scene, ks, cfg = job[:4]
     from ao_e1 import drive_records
     recs = drive_records(run)[scene]
     Fu = {}
     W, A = regen(scene, recs, cfg, Fu)
+    if len(job) > 5 and job[5]:                             # the anchored layout only
+        F = feats_of_a(W, A)
+        return {k: F[k] for k in ks}
     if len(job) > 4 and job[4]:                             # route v2 ordered layout only
         F = feats_of_o(W, A)
         return {k: F[k] for k in ks}
@@ -387,17 +424,18 @@ def cmd_served(a):
         run.info(json.dumps(g))
 
 
-def write_order(name, names, f, ok, trav, run):
+def write_order(name, names, f, ok, trav, run, suffix=".o", root=None):
     f = np.asarray(f, np.float32).copy()
     f[~np.asarray(ok, bool)] = 0
-    np.savez(OUT / "feat" / f"{name}.o.npz", names=names, f=f.astype(np.float16), ok=np.asarray(ok, bool), trav=np.asarray(trav, np.float32))
+    (root or OUT / "feat").mkdir(parents=True, exist_ok=True)
+    np.savez((root or OUT / "feat") / f"{name}{suffix}.npz", names=names, f=f.astype(np.float16), ok=np.asarray(ok, bool), trav=np.asarray(trav, np.float32))
     sc, P = f[ok, -3:], RM.pts(f[ok])
     rec = dict(rows=len(names), ok=float(np.mean(ok)), dturn_known=float(sc[:, 1].mean()) if len(sc) else None,
                dturn_lt60=float((sc[:, 1].astype(bool) & (sc[:, 0] < 1)).mean()) if len(sc) else None,
                trav_med=float(np.median(np.asarray(trav)[ok])) if np.any(ok) else None,
                near20_empty=float((~(P[:, RM.I0:RM.I20 + 1, 0] > 0.5).any(1)).mean()) if np.any(ok) else None)
-    run.info(f"{name}.o: {json.dumps(rec)}")
-    run.summary[name] = rec
+    run.info(f"{name}{suffix}: {json.dumps(rec)}")
+    run.summary[name if suffix == ".o" else name + suffix] = rec
     return rec
 
 
@@ -459,6 +497,81 @@ def cmd_order(a):
                 write_order(name, z["names"], np.stack([Zo[k][0] for k in key]).astype(np.float32), z["ok"], np.array([Zo[k][1] for k in key], np.float32), run)
 
 
+def cmd_anchor(a):
+    """The anchored memory (rmem.memory_a) of every row (module docstring `anchor`), from the route messages `nav` / `pool` build them from;
+    --limit N: the first N logs / rollouts only, written to runs/route_mem/anchor_sample/ (a check; never a training file)."""
+    from jevdrive import par
+    from jevdrive.common import n_cpus
+    from jevdrive.run import Run
+    import ev as EV
+    root = OUT / ("anchor_sample" if a.limit else "feat")
+    with Run("route_mem", "build-anchor", config=vars(a)) as run:
+        for data in a.data:
+            if (root / f"{data}.a.npz").exists() and not a.force:
+                run.info(f"{data}.a: exists")
+                continue
+            z, tab = np.load(OUT / "feat" / f"{data}.npz"), np.load(CR / data / "tab.npz")
+            names, logs = tab["names"], tab["log"]
+            assert np.array_equal(z["names"], names)
+            split_dir = "test" if (data_dir() / "datasets/navsim/navsim_logs/test" / f"{logs[0]}.pkl").exists() else "trainval"
+            by = {}
+            for r, (t, lg) in enumerate(zip(names.tolist(), logs.tolist())):
+                by.setdefault(lg, []).append((r, t))
+            jobs = [(split_dir, lg, it, set(), False, True) for lg, it in sorted(by.items(), key=lambda x: -len(x[1]))][: a.limit or None]
+            res = par.pmap(nav_one, jobs, run=run, workers=a.workers or n_cpus(), desc=f"anchor {data}")
+            res.raise_if_failed()
+            FA, OK, TV = np.zeros((len(names), RM.DIM_O), np.float32), np.zeros(len(names), bool), np.zeros(len(names), np.float32)
+            for rows, fa, ok, tv in res.values:
+                FA[rows], OK[rows], TV[rows] = fa, ok, tv
+            assert a.limit or np.array_equal(OK, z["ok"]), f"{data}: ok differs from the nav build"
+            write_order(data, names, FA, OK, TV, run, ".a", root)
+            yz = OUT / "feat" / f"yr1_{data}.npz"
+            if yz.exists():                                 # yaw-rate rows: the source row's block moved into the perturbed frame, re-scored
+                y, yt = np.load(yz), np.load(CR / f"yr1_{data}" / "tab.npz")
+                assert np.array_equal(y["names"], yt["names"])
+                blk = RM.transform_rows(FA[yt["src_row"], :RM.DIM], yt["off"])
+                write_order(f"yr1_{data}", y["names"], RM.to_order(blk, TV[yt["src_row"]]), OK[yt["src_row"]], TV[yt["src_row"]], run, ".a", root)
+        for name in a.pool:                                 # rm_build pool rows (the messages regenerated at the decision anchors)
+            z = np.load(OUT / "feat" / f"on1_{name}.npz")
+            m = np.load(data_dir() / "runs/onpol_nuplan/rows" / name / "meta.npz", allow_pickle=True)
+            assert np.array_equal(m["names"], z["names"])
+            by = {}
+            for i, (rn, sc, k) in enumerate(zip(m["run"].tolist(), m["scene"].tolist(), m["k"].tolist())):
+                by.setdefault((rn, sc), []).append((i, int(k)))
+            keys = sorted(by)[: a.limit or None]
+            res = par.pmap(pool_one, [(rn, sc, [k for _, k in by[rn, sc]], EV.CFG, False, True) for rn, sc in keys], run=run,
+                           workers=a.workers or n_cpus(), desc=f"anchor on1_{name}")
+            res.raise_if_failed()
+            FA, ok = np.zeros((len(z["names"]), RM.DIM_O), np.float32), np.zeros(len(z["names"]), bool)
+            for key, v in zip(keys, res.values):
+                for i, k in by[key]:
+                    FA[i], ok[i] = v[k], z["ok"][i]
+            write_order(f"on1_{name}", z["names"], FA, ok, FA[:, -1] * 100.0, run, ".a", root)
+        for spec in a.cat:                                  # NAME=SRC,..: a pool whose rows ("on:<token>") are rows of the sources (wt.py / df.py pack)
+            name, srcs = spec.split("=", 1)
+            z = np.load(OUT / "feat" / f"{name}.npz")
+            at, F, TR = {}, {}, {}
+            for src in srcs.split(","):
+                za, zp = np.load(root / f"{src}.a.npz"), np.load(OUT / "feat" / f"{src}.npz")
+                assert np.array_equal(za["names"], zp["names"]), src
+                at.update({t: (src, i) for i, t in enumerate(zp["names"].astype(str).tolist())})
+                F[src], TR[src] = (za["f"], za["ok"], zp["f"]), za["trav"]
+            ix = [at.get(t.split(":")[-1]) for t in z["names"].astype(str).tolist()]
+            assert all(x is not None for x in ix), f"{name}: {sum(x is None for x in ix)} rows without a source row"
+            assert all(np.array_equal(F[s_][2][i], z["f"][r]) for r, (s_, i) in enumerate(ix)), f"{name}: a pool row != its source row (old layout)"
+            write_order(name, z["names"], np.stack([F[s_][0][i] for s_, i in ix]), np.array([F[s_][1][i] for s_, i in ix]) & z["ok"],
+                        np.array([TR[s_][i] for s_, i in ix]), run, ".a", root)
+        for spec in a.merge:                                # NAME=POOL:prefix,..: an rf_pait.py merge (rows renamed on:<prefix>:<token>, in order)
+            name, parts = spec.split("=", 1)
+            P = [x.split(":") for x in parts.split(",")]
+            z = np.load(OUT / "feat" / f"{name}.npz")
+            Za, Zp = [np.load(root / f"{p}.a.npz") for p, _ in P], [np.load(OUT / "feat" / f"{p}.npz") for p, _ in P]
+            ren = np.concatenate([[f"on:{pre}:{t[3:]}" for t in zp["names"].astype(str).tolist()] for zp, (_, pre) in zip(Zp, P)])
+            assert np.array_equal(ren, z["names"].astype(str)) and np.array_equal(np.concatenate([zp["f"] for zp in Zp]), z["f"]), f"{name}: not the merge of {parts}"
+            write_order(name, z["names"], np.concatenate([x["f"] for x in Za]), np.concatenate([x["ok"] for x in Za]),
+                        np.concatenate([x["trav"] for x in Za]), run, ".a", root)
+
+
 def cmd_cover(a):
     import pandas as pd
     from ao_e1 import drive_records
@@ -514,5 +627,9 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("same")
     p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--label", required=True)
+    p = sub.add_parser("anchor")
+    p.add_argument("--data", nargs="*", default=[]), p.add_argument("--pool", nargs="*", default=[]), p.add_argument("--cat", nargs="*", default=[])
+    p.add_argument("--merge", nargs="*", default=[]), p.add_argument("--workers", type=int, default=0), p.add_argument("--force", action="store_true")
+    p.add_argument("--limit", type=int, default=0, help="first N logs / rollouts, written to runs/route_mem/anchor_sample (a check)")
     a = ap.parse_args()
-    dict(same=cmd_same, order=cmd_order, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover)[a.cmd](a)
+    dict(same=cmd_same, order=cmd_order, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover, anchor=cmd_anchor)[a.cmd](a)

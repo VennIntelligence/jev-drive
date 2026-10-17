@@ -483,8 +483,9 @@ def main() -> None:
     if core.rm or RP.ON:
         import rmem as RMEM
         RMEM.SERVE_ORDER = bool(getattr(core, "rm_order", False))   # route v2: the ordered layout (sidecar head `order`)
+        RMEM.SERVE_ANCHOR = bool(getattr(core, "rm_anchor", False))   # the anchored layout (sidecar head `anchor`, rmem.memory_a)
         LOG.info("serving the ROUTE-MEM branch, memory %s, layout %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)",
-                 "ordered" if RMEM.SERVE_ORDER else "-6..+72")
+                 "anchored" if RMEM.SERVE_ANCHOR else "ordered" if RMEM.SERVE_ORDER else "-6..+72")
     if FX.ACC:                                               # JEV_ACC (serve_fix.py (d)): the route polyline from rmem's merge
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "route_mem" / "lib"))
         import rmem as ACCR

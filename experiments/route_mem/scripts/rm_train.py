@@ -183,6 +183,14 @@ Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-
             noise, 1.7x wall). Lanes started before keep eager through JEV_RM_EAGER=1 in their pool --env (nx / wt / si / aw / rm_chain),
             so no lane switches mid-way. --no-compile (or JEV_RM_EAGER=1): eager, no operation added, bit-identical to the old default.
 
+ANCHOR (2026-10-17, experiments/route_mem/results/anchor_check.md; lib/rmem.py "Anchored layout"); off (default) = every file, head and term
+as before:
+  --rm-anchor       the anchored memory layout (rmem.memory_a: merge_a's fold-back fix, AlpaSim's trim tracked by the waypoint count, the
+            car's driven chord) in the ordered slot format (DIM_O = 203, so the head is RouteHead(order=True)) from feat/<data>.a.npz
+            (rm_build.py anchor) for every data dir of the store and, with --kd-lam, the retention pool's feat/<pool>.a.npz; sidecar head
+            `order: true, anchor: true` (the drivers serve the layout from it, rmem.head_anchor); an --init with the old layout is converted
+            as for --rm-order (rmem.order_state), an ordered init is taken as it is; refused with --lc-cf (no anchored lane-change rows).
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -208,7 +216,7 @@ EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_featur
 EGO_SCALE_POW = [1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]                  # --ego-scale-speed: power of s per EGO_SPEED column (velocity, acceleration, pose)
 
 
-def feats(cfg_data, S, dev, order=False, old=False):
+def feats(cfg_data, S, dev, order=False, old=False, anchor=False):
     """Route features (S.n, DIM | DIM_O with order) float32 on dev, and per Store row: junction distance / route turn (dev rows of the NAVSIM
     dirs, else nan), the source dir index. Asserts every file's names equal the Store tab's names of its dir. old: also the input layout's point
     block (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; with order both come from the .o files)."""
@@ -224,7 +232,7 @@ def feats(cfg_data, S, dev, order=False, old=False):
         f = z["f"].astype(np.float32)
         f[~z["ok"]] = 0
         if order:
-            zo = np.load(root / f"{d}.o.npz")
+            zo = np.load(root / f"{d}{'.a' if anchor else '.o'}.npz")           # ANCHOR: the anchored layout's file (rm_build.py anchor)
             assert np.array_equal(zo["names"], z["names"]) and np.array_equal(zo["ok"], z["ok"]), f"{d}.o: rows differ"
             TR.append(zo["trav"].astype(np.float32))
             f = zo["f"].astype(np.float32)
@@ -298,6 +306,10 @@ def head_of(a) -> dict:
     if a.rm_from and RM.has_branch(a.rm_from):
         a.rm_latfeat = bool(json.loads((__import__("pp_train").proot("runs", a.rm_from) / RM.SIDECAR).read_text()).get("head", {}).get("latfeat", False))
     h = dict(HEAD, order=True) if getattr(a, "rm_order", False) else dict(HEAD)
+    if a.rm_from and RM.has_branch(a.rm_from):                        # ANCHOR: the layout comes with the checkpoint (sidecar head `anchor`)
+        a.rm_anchor = RM.head_anchor(a.rm_from)
+    if getattr(a, "rm_anchor", False):                                # ANCHOR: the ordered slot format, anchored at the car (rmem.memory_a)
+        h = dict(HEAD, order=True, anchor=True)
     if getattr(a, "rm_latfeat", False):
         assert h.get("order"), "--rm-latfeat needs --rm-order"
         h["latfeat"] = True
@@ -327,8 +339,9 @@ def build(a, dev):
         ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
         sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
         sh = sd.get("head", HEAD)
-        assert {k: v for k, v in sh.items() if k not in ("order", "latfeat")} == HEAD, f"{src}: branch {sh} != {HEAD}"
+        assert {k: v for k, v in sh.items() if k not in ("order", "latfeat", "anchor")} == HEAD, f"{src}: branch {sh} != {HEAD}"
         assert sh.get("order", False) <= head.get("order", False), f"{src}: an ordered-layout branch needs --rm-order"
+        assert sh.get("anchor", False) <= head.get("anchor", False), f"{src}: an anchored-layout branch needs --rm-anchor"   # ANCHOR
         if (head.get("order") and not sh.get("order")) or (head.get("latfeat") and not sh.get("latfeat")):   # route v2: converted init
             ck["model"]["parity"] = RM.order_state(ck["model"]["parity"], head.get("latfeat", False))
             ns.converted = True
@@ -344,7 +357,7 @@ def build(a, dev):
             ns.init = dict(init=src, with_branch=True, net_loaded=len(ck["model"]["net"]), adapter_loaded=len(st), max_abs_diff_after_load=0.0,
                            init_dev_ade=sd.get("dev_ade"), **({"converted_to_order": True} if ns.converted else {}))
     lane = getattr(a, "lane_lam", 0) > 0 or getattr(a, "lc_cf", False)
-    F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane)
+    F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane, anchor=head.get("anchor", False))
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
     rp = list(ns.model.adapter.route.parameters())
     ns.rxp = list(ns.model.adapter.rx.parameters()) if ns.rx else []
@@ -788,9 +801,10 @@ def cmd_train(a):
     if kd_on:
         import retain_train as RTN
         from jevdrive.common import data_dir as _dd
-        assert not (lc_on or ns.rx or ST is not None or ns.head.get("order")), "--kd-lam: not with --lc-cf / --rx / STACK terms / --rm-order"
+        assert not (lc_on or ns.rx or ST is not None or (ns.head.get("order") and not ns.head.get("anchor"))), \
+            "--kd-lam: not with --lc-cf / --rx / STACK terms / --rm-order (--rm-anchor: the pool's .a features)"
         nb_ = sum(len(np.load(_dd() / "runs/op_parity/cache" / d / "tab.npz")["names"]) for d in a.data)
-        RS = RTN.RetainSet(a.kd_pool if a.kd_k else "", dev, a.kd_groups, S, a.kd_nav, nb_, tr_o)
+        RS = RTN.RetainSet(a.kd_pool if a.kd_k else "", dev, a.kd_groups, S, a.kd_nav, nb_, tr_o, layout="a" if ns.head.get("anchor") else "")
         assert not RS.n or RS.ego.shape[1] == S.ego.shape[1], f"--kd-pool {a.kd_pool}: fed row {RS.ego.shape[1]} != the store's {S.ego.shape[1]}"
         assert RS.n or len(RS.nav), "--kd-lam: no retention row (--kd-k 0 and no --kd-nav)"
         krng = np.random.default_rng([cfg.seed, 0, 151])
@@ -1218,6 +1232,7 @@ if __name__ == "__main__":
         p.add_argument("--lc-dz", type=float, default=0.5)
         p.add_argument("--lc-adapter-only", action="store_true", help="the stay-lane rows' gradient reaches the adapter + route branch only")
         p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
+        p.add_argument("--rm-anchor", action="store_true", help="ANCHOR: the anchored memory layout (feat/<data>.a.npz, rmem.memory_a)")
         p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--app-v2", action="store_true", help="approach course v2 terms (on_approach.configure; needs --app-lam)")
         p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
@@ -1320,4 +1335,5 @@ if __name__ == "__main__":
         print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file)}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
+    assert not (getattr(a, "rm_anchor", False) and a.lc_cf), "--rm-anchor: no anchored --lc-cf rows (rf_cfpool builds the ordered layout)"   # ANCHOR
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

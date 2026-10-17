@@ -70,7 +70,8 @@ def flat_history(ego):
 class RetainSet:
     """The pool rows (on the device: ego ++ route memory, cam_x, tc, P0's plan; tokens from the host memmap) and the navtrain approach rows."""
 
-    def __init__(self, pool, dev, spec, S=None, nav_file="", n_base=0, train_rows=None):
+    def __init__(self, pool, dev, spec, S=None, nav_file="", n_base=0, train_rows=None, layout=""):
+        """layout: the pool's route features, "" = feat/<pool>.npz (the projected layout), "a" = feat/<pool>.a.npz (rm_train --rm-anchor)."""
         import torch
         import pp_train as T
         from jevdrive.common import data_dir
@@ -80,7 +81,7 @@ class RetainSet:
             cr = data_dir() / "runs/op_parity/cache"
             tb = np.load(cr / pool / "tab.npz")
             tz = np.load(cr / f"{pool}@warp" / "teacher.npz")
-            fz = np.load(data_dir() / "runs/route_mem/feat" / f"{pool}.npz")
+            fz = np.load(data_dir() / "runs/route_mem/feat" / (f"{pool}.{layout}.npz" if layout else f"{pool}.npz"))
             names, cells = tb["names"].astype(str), tb["cell"].astype(str)
             n = len(names)
             assert np.array_equal(fz["names"].astype(str), names), f"{pool}: route feature rows differ from the pool's"

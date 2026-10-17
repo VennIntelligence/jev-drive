@@ -31,6 +31,28 @@ Ordered layout (route v2, experiments/route_follow/plans/2026-10-15-route-v2-pre
             to_order / to_order_t give the scalars of any point block (the trainer's fakes are built on the ordered block, then re-scored).
   branch    RouteHead(order=True): the 40 point tokens as before + a zero-initialised linear map of the scalars added to the ego token
             (order_state() converts an old head: the scalar map at 0, every other tensor kept).
+
+Anchored layout (2026-10-17, results/align_audit.md "Minimal fix" C + D, check results/anchor_check.md; rm_train --rm-anchor, sidecar head
+`order: true, anchor: true`; the ordered slot format, so RouteHead(order=True) reads it; the projected and ordered layouts never use this):
+  merge_a   the fold-back fix: a newer batch extends the memory from the ARC of the memory's end on that batch (its nearest point on the batch's
+            segments that run within 90 deg of the memory's last segment, if within A_ON m): the batch's points more than TOL further along are
+            appended. A batch that starts beyond the memory's end (a gap) is appended whole; one the memory's end lies beyond adds nothing. merge
+            decides "beyond the end" by the direction of the last segment, which at loops points at the newer batch's first points and appends
+            the whole batch (the polyline folds back 33-37 m).
+  anchor    the car's arc from AlpaSim's own progress, corrected for its trim, carried by the car's driven chord. Per message k with waypoints:
+            C_k = arc of its first waypoint on the merged polyline (as merged up to k) - L0 (memory_o's progress anchor). AlpaSim resamples 20
+            points every SPC = 80 / 19 m from the car's projection and drops those whose CHORD sum is under 40 m (_trim_route_start): on a
+            sharp corner close ahead m more points go, the first waypoint lies m x SPC further out and the message holds N_FULL - m points
+            (N_FULL = 10; a message is also short when the route ends or a segment leaves 3.5-4.5 m, which cuts its far end instead). So the
+            car's arc is one of c_k(m) = C_k - m x SPC, m = 0 .. N_FULL - n_k: the first such message takes m = 0 (a far end cut by a route
+            end leaves the same short message as a trim, e.g. 9 of RSG's 13 one-short first messages on public 1491, and nothing in it tells
+            them apart: the ordered layout's assumption), every later one the hypothesis nearest the previous anchor + the chord the car drove
+            since (ties: the smaller m); a full message is C_k itself. At the decision: s_K + the chord driven since message K (chords along every message pose with a known pose, then to the
+            decision pose). Route arc legitimately outruns the driven chord at the inside of a turn by up to 7 m per 0.5 s, so the anchor is
+            never capped by the chord (anchor_check.md: the cap min(C_k, s_{k-1} + chord + 1 m) lags there).
+  scalars   memory_o's (d_turn / 60, known, min(trav, 200) / 100; to_order of the point block); DIM_O = 203.
+  one rule  memory_a (offline rows: rm_build nav / pool / anchor, rm_align anchor) and Tracker(anchor=True) (served: sh30_driver and pai_driver
+            set SERVE_ANCHOR from the checkpoint's sidecar, head_anchor) are the same function of the messages and their poses.
 """
 from __future__ import annotations
 
@@ -66,6 +88,9 @@ def lat_feats(P):
     v = (P[:, LAT_I, 0] > 0.5).float()
     return torch.cat([(P[:, LAT_I, 2] * 2.0).clamp(-4, 4) * v, v], 1)
 SERVE_ORDER = False                              # Tracker() default in a driver: set from the served checkpoint's sidecar (head_order)
+SERVE_ANCHOR = False                             # anchored layout: Tracker() default in a driver, set from the sidecar (head_anchor)
+A_ON = 2.0                                       # merge_a: the memory's end lies on a newer batch when within A_ON m of its segments
+SPC, N_FULL = 80.0 / 19.0, 10                    # memory_a: AlpaSim's waypoint spacing; waypoints of a message nothing extra was trimmed from
 
 
 def to_local(a, X):
@@ -104,11 +129,12 @@ def merge(batches):
     return M
 
 
-def window(M, prog=None, info=None):
+def window(M, prog=None, info=None, s_fix=None):
     """Merged polyline (M, 2) in the current rear-axle frame -> (N_PT, NF) features (module docstring). prog = (p, c): the ordered layout's
     progress anchor instead of the ego's projection: p = the newest route message's first waypoint (rear-axle frame), which AlpaSim places
     L0 m of route arc ahead of the ego's projection at that message, c = the chord the ego has driven since -> s_e = arc(p) - L0 + c.
-    info (dict, optional) receives s_geo (the projection's arc), s_e (the arc used) and M0 (the merged polyline's first point)."""
+    s_fix: the anchored layout's arc (memory_a) used as s_e. info (dict, optional) receives s_geo (the projection's arc), s_e (the arc used)
+    and M0 (the merged polyline's first point)."""
     F = np.zeros((N_PT, NF), np.float32)
     if M is None or len(M) < 2:
         return F
@@ -140,6 +166,10 @@ def window(M, prog=None, info=None):
             info["s_geo"] = float(-(M[0] * u[0]).sum()) if i == 0 and t[0] <= 0.0 else cum[-1] + float(-((M[-1]) * u[-1]).sum())
         if prog is None:
             info["s_geo"] = float(s_e)
+    if s_fix is not None:                                                     # anchored layout (memory_a): the arc it tracked
+        s_e = float(s_fix)
+        if info is not None:
+            info["s_e"] = s_e
     s = s_e + OFFS
     ok = (s >= 0.0) & (s <= cum[-1])
     if not ok.any():
@@ -176,6 +206,85 @@ def memory_o(batches_local, anchor, last_pose, trav, info=None):
     a = np.asarray(anchor, np.float64)
     prog = (in_ego(a, B[-1][:1])[0], float(np.hypot(*(a[:2] - np.asarray(last_pose, np.float64)[:2]))))
     return to_order(window(in_ego(a, M), prog, info).reshape(-1), trav)
+
+
+# ---------------------------------------------------------------- anchored layout (module docstring "Anchored layout")
+def _clean(B):
+    """Points (m, 2) -> float64, NaN rows and repeated points (zero-length segments) dropped."""
+    B = np.asarray(B, np.float64).reshape(-1, 2)
+    B = B[np.isfinite(B).all(1)]
+    return B[np.r_[True, np.hypot(*np.diff(B, axis=0).T) > 1e-6]] if len(B) > 1 else B
+
+
+def _on(P, q, u=None):
+    """Polyline P (m >= 2, 2; no zero-length segment), point q (2,), direction u (2,) or None -> (arc of q's nearest point on P, its distance,
+    side): among the segments within 90 deg of u (all when u is None or none is); side -1 = q lies before P's start, +1 beyond its end."""
+    d = np.diff(P, axis=0)
+    L = np.hypot(d[:, 0], d[:, 1])
+    v = d / L[:, None]
+    tr = ((np.asarray(q, np.float64) - P[:-1]) * v).sum(1)
+    t = np.clip(tr, 0.0, L)
+    D = np.hypot(*(P[:-1] + t[:, None] * v - q).T)
+    if u is not None and (v @ u > 0).any():
+        D = np.where(v @ u > 0, D, np.inf)
+    i = int(np.argmin(D))
+    side = -1 if i == 0 and tr[0] < 0 else 1 if i == len(L) - 1 and tr[i] > L[i] else 0
+    return float(L[:i].sum() + t[i]), float(D[i]), side
+
+
+def merge_a(batches, sizes=None):
+    """merge with the fold-back fix (module docstring "Anchored layout"): batches (oldest first, one frame) -> merged (M, 2) polyline or None.
+    sizes (list, optional) receives the merged polyline's length after each batch (0 while there is none)."""
+    M = None
+    for B in batches:
+        B = _clean(B)
+        if len(B) and (M is None or len(M) < 2):                         # a first (or one-point) memory, as in merge
+            M = B.copy() if M is None or len(B) > 1 else M
+        elif len(B):
+            u = (M[-1] - M[-2]) / np.hypot(*(M[-1] - M[-2]))
+            if len(B) == 1:                                               # one point: appended when it lies beyond the memory's end
+                if _on(M, B[0])[2] == 1 and (B[0] - M[-1]) @ u > TOL:
+                    M = np.vstack([M, B])
+            else:
+                s, dist, side = _on(B, M[-1], u)
+                if side == 0 and dist <= A_ON:                            # the memory's end lies on the batch: append what lies beyond it
+                    cum = np.r_[0.0, np.cumsum(np.hypot(*np.diff(B, axis=0).T))]
+                    j = np.flatnonzero(cum > s + TOL)
+                    if len(j):
+                        M = np.vstack([M, B[j[0]:]])
+                elif side == -1 or (side == 0 and _on(M, B[0], B[1] - B[0])[2] == 1):   # the batch starts beyond the memory's end: a gap
+                    M = np.vstack([M, B])
+        if sizes is not None:
+            sizes.append(0 if M is None else len(M))
+    return M
+
+
+def memory_a(batches_local, poses, anchor, info=None):
+    """Anchored layout (DIM_O,) (module docstring): every route message up to the decision, oldest first, as the waypoints in the local frame
+    (a (0, 2) array for a message without any) and its local pose (x, y, yaw); anchor = the current rear-axle pose. info (dict, optional)
+    receives window's s_geo / s_e / M0 and s_msg: per message with waypoints (index, C_k, extra spacings m, s_k)."""
+    B = [_clean(b) for b in batches_local]
+    Q = [np.asarray(p, np.float64)[:2] for p in poses]
+    a = np.asarray(anchor, np.float64)
+    trav = travelled(Q, a) if Q else 0.0
+    sizes = []
+    M = merge_a(B, sizes)
+    if M is None or len(M) < 2:
+        return to_order(np.zeros(DIM, np.float32), trav)
+    path = np.r_[0.0, np.cumsum(np.hypot(*np.diff(np.array(Q), axis=0).T))]       # chord driven from the first message's pose
+    s = pk = None
+    hist = []
+    for k, b in enumerate(B):
+        if not len(b) or sizes[k] < 2:
+            continue
+        c = _on(M[:sizes[k]], b[0], b[1] - b[0] if len(b) > 1 else None)[0] - L0
+        hyp = c - SPC * np.arange(max(0, N_FULL - len(b)) + 1)                    # m more points trimmed (a short message)
+        m = 0 if s is None else int(np.argmin(np.abs(hyp - (s + path[k] - pk))))
+        s, pk = float(hyp[m]), path[k]
+        hist.append((k, c, m, s))
+    if info is not None:
+        info["s_msg"] = hist
+    return to_order(window(in_ego(a, M), info=info, s_fix=s + trav - pk).reshape(-1), trav)
 
 
 def summary(f):
@@ -257,9 +366,10 @@ def transform_rows(f, off):
 class Tracker:
     """Served memory of one driver session: route messages (rig-frame waypoints at their time) and the ego poses -> features at a decision."""
 
-    def __init__(self, order=None):
+    def __init__(self, order=None, anchor=None):
         self.routes = {}
         self.order = SERVE_ORDER if order is None else bool(order)
+        self.anchor = SERVE_ANCHOR if anchor is None else bool(anchor)        # anchored layout (memory_a; sidecar head `anchor`)
 
     def add(self, ts: int, wp):
         self.routes[int(ts)] = np.asarray(wp, np.float64).reshape(-1, 2)
@@ -267,6 +377,7 @@ class Tracker:
     def features(self, t0: int, pose_of, anchor):
         """pose_of(ts) -> (x, y, yaw) local rig pose or None; anchor = the pose at t0. Messages after t0 or without a pose are skipped."""
         B, Q, last = [], [], None
+        BA, PA = [], []                                                        # anchored layout: every message with a pose
         for ts in sorted(self.routes):
             if ts > t0:
                 continue
@@ -278,6 +389,11 @@ class Tracker:
             if p is not None and len(wp):
                 B.append(to_local(p, wp))
                 last = p
+            if self.anchor and p is not None:
+                BA.append(to_local(p, wp) if len(wp) else np.zeros((0, 2)))
+                PA.append(p)
+        if self.anchor:
+            return memory_a(BA, PA, anchor)
         if not self.order:
             return memory(B, anchor).astype(np.float32)
         return memory_o(B, anchor, last if last is not None else anchor, travelled(Q, anchor) if Q else 0.0)
@@ -291,7 +407,7 @@ class Tracker:
             wp = wp[np.isfinite(wp).all(1)]
             if p is not None and len(wp):
                 B.append(to_local(p, wp))
-        M = merge(B)
+        M = merge_a(B) if self.anchor else merge(B)                            # an anchored tracker serves the fold-back fix here too
         return None if M is None else in_ego(anchor, M)
 
 
@@ -302,8 +418,10 @@ def _torch():
     import parity_adapter as PA
 
     class RouteHead(nn.Module):
-        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False, latfeat=False):
+        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False, latfeat=False, anchor=False):
             super().__init__()
+            assert order or not anchor, "anchor: the ordered slot format (order=True)"
+            self.anchor = bool(anchor)                       # the anchored layout feeds the ordered format: no tensor of its own
             self.n_pt = N_PT_O if order else N_PT
             self.dim = DIM_O if order else DIM
             self.pt = nn.Sequential(nn.Linear(NF, d), nn.GELU(), nn.Linear(d, d))
@@ -401,6 +519,13 @@ def head_order(tag: str) -> bool:
     return bool(p.exists() and json.loads(p.read_text()).get("head", {}).get("order", False))
 
 
+def head_anchor(tag: str) -> bool:
+    """The checkpoint's sidecar head has `anchor` (the anchored layout, memory_a): the drivers set SERVE_ANCHOR from it."""
+    import pp_train as T
+    p = T.proot("runs", tag) / SIDECAR
+    return bool(p.exists() and json.loads(p.read_text()).get("head", {}).get("anchor", False))
+
+
 def dim_of(tag: str) -> int:
     return DIM_O if head_order(tag) else DIM
 
@@ -487,6 +612,42 @@ if __name__ == "__main__":                                   # self-test: straig
     Bl = [to_local(ps[0], B0), to_local(ps[1], B0)]
     assert np.array_equal(o, memory_o(Bl, np.array([3.0, 4.0, 0.0]), ps[1], 5.0))
     assert abs(travelled([(0, 0), (3, 4)], (6, 8)) - 10.0) < 1e-9
+    # anchored layout. Straight route along x (car arc = x): messages at 2 Hz from the car's arc, i0 points trimmed as AlpaSim does
+    msg = lambda s, i0=10: np.c_[s + 80 / 19 * np.arange(i0, 20), np.zeros(20 - i0)]   # noqa: E731
+    pz = [np.array([s, 0.0, 0.0]) for s in (0.0, 3.0, 6.0)]
+    mz = [msg(0.0), msg(3.0), msg(6.0)]
+    for bb in ([B0], [B0, B1], [B0, B0], mz):                                     # no fold: merge_a = merge
+        assert np.array_equal(merge(bb), merge_a(bb)), "merge_a = merge without a fold"
+    fa = memory_a(mz, pz, pz[-1])
+    assert fa.shape == (DIM_O,) and np.allclose(fa, memory_o(mz, pz[-1], pz[-1], 6.0), atol=1e-5), "memory_a = memory_o without an offset"
+    lead = lambda f: OFFS[np.argmax(pts(f)[:, 0] > 0.5)] - pts(f)[np.argmax(pts(f)[:, 0] > 0.5), 1] * 20.0   # noqa: E731  (label - true x)
+    fx = memory_o([mz[0], mz[1], msg(6.0, 11)], pz[-1], pz[-1], 6.0)               # the newest message trimmed one spacing late
+    fy = memory_a([mz[0], mz[1], msg(6.0, 11)], pz, pz[-1])
+    assert abs(lead(fx) + SPC) < 0.05 and abs(lead(fy)) < 0.05, (lead(fx), lead(fy))   # ordered 4.2 m off, anchored at the car
+    for bb, m_ in (([msg(0.0, 11)], 0), ([mz[0], mz[1][:8]], 0), ([mz[0], msg(3.0, 12)], 2)):   # a short first message (m = 0: a trim reads
+        inf = {}                                                                 # SPC ahead), a later far end cut by two points, a later two-spacing trim
+        f_ = memory_a(bb, pz[:len(bb)], pz[len(bb) - 1], inf)
+        assert inf["s_msg"][-1][2] == m_ and abs(lead(f_) + (SPC if len(bb) == 1 else 0.0)) < 0.05, (inf["s_msg"], lead(f_))
+    tr = Tracker(anchor=True)
+    for t_, p_, b in zip((0, 500_000, 1_000_000), pz, mz):
+        tr.add(t_, in_ego(p_, b))
+    ps = dict(zip((0, 500_000, 1_000_000), pz))
+    assert np.array_equal(tr.features(1_000_000, ps.get, pz[-1]), memory_a([to_local(p_, in_ego(p_, b)) for p_, b in zip(pz, mz)], pz, pz[-1]))
+    # U-turn (r 6 m at route arc 60 .. 78.8): message 1 ends 5 m into the return leg, message 2 (5 m later) starts on the approach
+    th = np.linspace(0, np.pi, 300)
+    U = np.r_[np.c_[np.linspace(-60, 0, 601), np.zeros(601)], np.c_[6 * np.sin(th[1:]), 6 - 6 * np.cos(th[1:])], np.c_[-np.linspace(0, 60, 601)[1:], np.full(600, 12.0)]]
+    sU = np.r_[0, np.cumsum(np.hypot(*np.diff(U, axis=0).T))]
+    at = lambda s: np.c_[np.interp(s, sU, U[:, 0]), np.interp(s, sU, U[:, 1])]   # noqa: E731
+    st = lambda P: np.array([sU[np.argmin(np.hypot(*(U - p).T))] for p in np.atleast_2d(P)])   # noqa: E731
+    pu = [np.r_[at(s)[0], 0.0] for s in (3.85, 8.85)]
+    mu = [at(s + 80 / 19 * np.arange(10, 20)) for s in (3.85, 8.85)]
+    assert np.diff(st(merge(mu))).min() < -20 and np.diff(st(merge_a(mu))).min() > -0.5, "merge folds back at the U-turn, merge_a does not"
+    P_ = pts(memory_a(mu, pu, pu[1]))
+    v = P_[:, 0] > 0.5
+    err = np.abs(st(to_local(pu[1], P_[v, 1:3] * 20.0)) - 8.85 - OFFS[v]).max()          # slot point's route arc - (car arc + label)
+    assert v.sum() >= 15 and err < 1.0, (v.sum(), err)
+    print(f"anchored layout: merge_a = merge without a fold, no fold-back at a U-turn (slots within {err:.2f} m of their arc); a one-spacing "
+          f"trim {lead(fx):+.2f} m (ordered) -> {lead(fy):+.2f} m (anchored)")
     try:
         import torch
         F = np.stack([memory([C], np.array([0.0, 0.0, 0.0])), memory([B0], a0), memory([B0, B1], np.array([50.0, 0.0, 0.0])), np.zeros(DIM, np.float32)])

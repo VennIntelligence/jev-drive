@@ -235,6 +235,7 @@ class Core:
             sys.path.insert(0, str(_R / "experiments/route_mem/lib"))
             import rmem as RM
             self.model, self.rm_dim, self.rm_order = RM.load_pmodel(tag, self.dev), RM.dim_of(tag), RM.head_order(tag)   # rm_order: route v2 layout
+            self.rm_anchor = RM.head_anchor(tag)          # the anchored layout (sidecar head `anchor`, rmem.memory_a)
         else:
             self.model = T.load_pmodel(tag, self.dev)
         self.rx = bool(getattr(self.model, "reflex", False))  # STACK reflex module (lib/reflex.py; sidecar `reflex`): the fed row ends with the self-state

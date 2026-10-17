@@ -454,6 +454,7 @@ def main() -> None:
     if RMEM:
         core.rm, core.rm_dim = True, RMEM.dim_of(tag)
         RMEM.SERVE_ORDER = RMEM.head_order(tag)          # route v2: the ordered layout (sidecar head `order`)
+        RMEM.SERVE_ANCHOR = RMEM.head_anchor(tag)        # the anchored layout (sidecar head `anchor`, rmem.memory_a)
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     global RXM, ACCR
     if FX.ACC:                                               # JEV_ACC (serve_fix.py (d)): the route polyline from rmem's merge
