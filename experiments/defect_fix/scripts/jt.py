@@ -15,7 +15,7 @@ at a dose) in the same batches. Box, repo root; chain in jt.sh.
   diag --tag T [--lo 500] [--hi 1000]   (any python) a training run's events.jsonl: per-term trunk gradient norms and shares, activity, loss
       terms, dev ADE, pool slices and the wait / launch probe over steps lo..hi, plus the arc weight rule of supplement 9 amendment A
   gate --tag JTSM-L18-s0 --w 0.0025 --wjson results/jt/w_JT10.json --out FILE   the smoke gates of supplement 9 (no NaN; every pool term
-      active; tv imitation logged; dev ADE at the end <= step 0 + 0.03; probe stand_r stay1m above step 0) -> FILE (json: pass, arc W by the
+      active; tv imitation logged; dev ADE at the end <= step 0 + 0.06 (amendment C; + 0.03 reported); probe stand_r stay1m above step 0) -> FILE (json: pass, arc W by the
       amendment-A rule, steps = floor(4.6 x S trainable rows / 32 / 500) x 500); exit 2 when a gate fails (the arms after it do not start)
   defer --after ID,ID [--dry]   (repo .venv) the main session's rule (10-18): the still-QUEUED third-party anchor reads
       ar-read-{DD-sample,LTF-sample,starter,G0014}-c* are cancelled and resubmitted with their exact recorded spec (cmd, env, resources,
@@ -188,10 +188,10 @@ def cmd_gate(a):
     acts = {k: v for k, v in d["act"].items() if k.startswith("pool_")}
     g = dict(no_nan=not d["nan"], acts_positive=bool(acts) and all(v > 0 for v in acts.values()) and len(acts) >= 6,
              tv_imit_logged=np.isfinite(d["loss"].get("loss/on/imit", float("nan"))),
-             dev_ade=dv[s1] <= dv[s0] + 0.03, probe_stay_rising=bool(pr) and pr[max(pr)] > pr[min(pr)])
+             dev_ade=dv[s1] <= dv[s0] + 0.06, probe_stay_rising=bool(pr) and pr[max(pr)] > pr[min(pr)])   # amendment C: + 0.06 (0.03 reported)
     w = json.loads(Path(a.wjson).read_text())
     ntr = w["s_rows"] - w["held_rows"]
-    res = dict(tag=a.tag, gates=g, passed=all(g.values()), acts=acts, dev_ade={str(s0): dv[s0], str(s1): dv[s1]},
+    res = dict(tag=a.tag, gates=g, passed=all(g.values()), dev_ade_strict=dv[s1] <= dv[s0] + 0.03, acts=acts, dev_ade={str(s0): dv[s0], str(s1): dv[s1]},
                probe_stay1m={str(k): v for k, v in pr.items()}, grad=d["grad"], grad_share=d["grad_share_of_sum"], nan=d["nan"],
                arc=d.get("arc_rule"), w_final=(d.get("arc_rule") or {}).get("w_final"), s_train_rows=ntr, steps=int(4.6 * ntr / 32 // 500 * 500))
     Path(a.out).write_text(json.dumps(res, indent=1, default=str))
