@@ -132,3 +132,22 @@ When more than one agent (or person) runs jobs on the box at the same time:
   (e.g. inside `bash -c "... pgrep -f name ..."`): they match themselves and wait forever. Put the check in a
   script file, or match on a sentinel file instead. (2026-09-25: a HUGSIM waiter matched itself and stalled
   the WOD test download for ~7.5 h.)
+
+## Lane-script pattern: keep the queue fed
+
+Half the box's card-hours on 2026-10-16/17 had no GPU job at all, mostly with an empty queue or only `--after`-chained
+work waiting ([speed.md](speed.md#headroom-2026-10-17)). A lane script (`nx.sh`, `si.sh`, `aw.sh`, `wt.sh` are the
+models) keeps cards busy by the shape of its submits, not by an agent checking in:
+- **Every independent arm's training goes in at the start of the lane**, one job each, in the same call. An arm's
+  training waits (`--after`) only on what it consumes (an identity bitcmp, a pack, a scan, a pool gate), never on
+  another arm's reads: arm B trains while arm A reads.
+- **Backfill with the next base training at a lower priority** (`PRIO` below the lane's reads, e.g. the next seed or
+  the continuation the plan names next). It takes cards nothing else wants and never delays the lane's own reads;
+  cancel it when a gate stops the line.
+- **Gates are in-queue jobs**: a CPU-only job (`--vram 0.1`) `--after` the reads that decides and submits the next
+  stage itself (`nx.py acgate --submit`, `nx.py vgate`, `si.sh after`, `aw.sh gate-pilot`). Nobody has to be awake for
+  the chain to continue.
+- Trainings carry `--train`; `rm_train.py` trainings get the pool history key `rm-train` by themselves (also set in
+  the lane scripts' `FW` / `FK`), so they are booked at their measured RAM, not at `--ram 70`.
+- Check with `python -m jevdrive.cl usage --hours 24`: while a lane is live, "no work queued" and "serial" should be
+  near zero.
