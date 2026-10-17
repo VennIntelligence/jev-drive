@@ -27,6 +27,7 @@ TL = threading.local()
 
 def install(log_dir: Path) -> None:
     assert not D.TR.ON, "JEV_HOLD: JEV_TRACK must be off (the feasible reference bypasses make_cached_plan)"
+    Path(log_dir).mkdir(parents=True, exist_ok=True)              # the Driver makes it later; install runs first
     out = open(Path(log_dir) / "hold.jsonl", "a", buffering=1)
     states, lock = {}, threading.Lock()
     drive0, plan0, make0 = D.Driver.drive, D.C.Core.plan, D.make_cached_plan
