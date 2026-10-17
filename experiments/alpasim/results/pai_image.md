@@ -136,7 +136,37 @@ images, scores 1.0 on both hosts under ACC-GAP. Nothing pushed, tagged to ECR or
 
 ## Audit
 
-AUDIT_PENDING
+**rsgaccgap (`sha256:328433cb...`), independent pre-submission audit, 2026-10-18: GO.** Checked on the image on Tokyo (inspect, `docker run
+--network none` with entrypoint overrides, one own `test.sh` run on card 1), not only on the records above.
+
+1. Identity and config: pass. Id `sha256:328433cbab61...2679`, 8 033 245 840 bytes. ENV = rsgacc's block plus `JEV_GAP=0.7,2.7`, with
+   `SH30_GIT_HASH` 382164ae -> ea61e9df; `JEV_TAG=RSG-L18-s0 JEV_DRIVER=pai JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1`, `JEV_VHIST=` (empty = off),
+   no `JEV_TRACK` (driver logs `JEV_TRACK gate`), no other `JEV_*` / `SH30_*` switch. CMD `python /app/serve.py`, no entrypoint, user
+   10001:10001, port 6789, SIGTERM: all as rsgacc. The steering weight is not baked in.
+2. Layers and code: pass. RootFS layers 1-12 identical to rsgacc; 13-18 (code, serve files, user, ckpt, ckpt-extra, verify) differ. File
+   sha256 of the whole of /app (except models, unchanged layer): only the 9 known closure files differ from rsgacc; serve.py / probe.py /
+   verify.py / pai_spec.json / checkpoints / sidecars / tags.json are equal. All 29 baked code files equal `git show ea61e9df`. Against the
+   d330 stage-2 read's 94711ca9, serve_fix.py and lead_long.py are equal; 7 differ (ap2_driver, pai_core, pai_driver, sh30_core, sh30_driver,
+   pp_train, rmem). Read: JEV_DESIRE (unset: module not imported, `desire=None`, the old call taken), the rmem anchored layout (`SERVE_ANCHOR`
+   from the sidecar's `head.anchor`; RSG-L18-s0's route_mem.json has neither `order` nor `anchor` -> False -> old `merge` / `memory` path),
+   P0 allowed in sh30_core's assert, an ap2-only t_first fix. None touches the served path of this image. The d330 read's version string
+   is the image's, `jev-pai-RSG-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate`.
+3. Checkpoints: pass. In image RSG `fbe7ac9f` / route_mem `672ef154`, RBSG2 `5572c7e8` / `b667704a`, equal to both Tokyo `/data/runs` and the
+   AutoDL box originals.
+4. Start and serving: pass. `verify.py` under `--read-only --network none`, no GPU: both ROUTE-MEM branches load on the CPU (dim 200, order
+   False, reflex False); only the build-time tags.json write fails, as it should on a read-only root. Own `test.sh` (organisers' hardening
+   flags, read-only, `--network none`, card 1): listening after 17.9 s, 800 `drive` calls p50 46.7 ms, 0 inference errors, 0 tracebacks,
+   0 changed files, /tmp 2.7 MiB, GPU 1.47 GiB, version as above, git ea61e9df (`/data/runs/alpasim/pai_image/audit_rsgaccgap/test`).
+5. Secrets: pass. `docker history --no-trunc`: no token, proxy, credential URL or build-host address (only the Python base's public
+   `GPG_KEY` id). Filesystem: no .env, .netrc, .git-credentials, ~/.alpasim, ssh key, .git; the only *.pem are public CA bundles; no
+   hf_ / AKIA / ghp_ / sk- / nvapi- / private-key / user:pass@ URL / proxy port / box address in /app, /etc, /root, /home, /tmp.
+6. Smoke evidence: pass. Recomputed from smoke.json: paired diff +0.0017, bootstrap 95 % [-0.0014, +0.0066], zero set identical (12, with the
+   same reasons per scene in cmp_box.md, incl. both at-fault collisions 1a69f757 / 3ce13eed), 4 differing scenes all non-zero on both sides;
+   0 inference / input errors over 5 752 calls; no driver env injected (`drv_env ""`); the smoke rollouts carry the `-gap0.7_2.7` version, so
+   GAP was live.
+
+Concerns (none blocking): serve.py's start line and pai_driver's `serving:` line do not print `JEV_GAP`; the version string is the only log
+evidence that GAP is on. Check that string on the submission's first rollout.
 
 ## Deviations of the local checks from the official run
 
