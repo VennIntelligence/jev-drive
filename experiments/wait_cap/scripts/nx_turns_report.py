@@ -124,6 +124,28 @@ def bins_table(S):
     return res
 
 
+def discordance(S):
+    """Paired flips per pair: J-only vs C-only for a hard outcome in a bend, an offroad / zero rollout anywhere; exact two-sided sign test."""
+    from math import comb
+    sign_p = lambda a, b: float(min(1.0, 2 * sum(comb(a + b, i) for i in range(min(a, b) + 1)) / 2 ** (a + b))) if a + b else 1.0  # noqa: E731
+    out = {}
+    for st, pairs in PAIRS.items():
+        for j, c in pairs:
+            P = pair_frame(S, st, j, c)
+            B_ = P[P.bend_deg_J.abs() >= 15]
+            r = {}
+            for nm, fj, fc in (("hard in a bend", B_.outcome_J.isin(HARD), B_.outcome_C.isin(HARD)),
+                               ("offroad in a bend", B_.outcome_J == "offroad", B_.outcome_C == "offroad"),
+                               ("opposite in a bend", B_.outcome_J == "opposite", B_.outcome_C == "opposite"),
+                               ("contact in a bend", B_.outcome_J == "contact", B_.outcome_C == "contact"),
+                               ("completed (testable)", B_.completed_J & B_.testable_J, B_.completed_C & B_.testable_C),
+                               ("offroad rollout", P.offroad_J, P.offroad_C), ("zero rollout", P.score_J == 0, P.score_C == 0)):
+                a, b = int((fj & ~fc).sum()), int((fc & ~fj).sum())
+                r[nm] = dict(J=int(fj.sum()), C=int(fc.sum()), J_only=a, C_only=b, both=int((fj & fc).sum()), sign_p=sign_p(a, b))
+            out[f"{st}: {pname(j, c)}"] = r
+    return out
+
+
 def outcome_counts(S):
     X = S[S.bend_deg.abs() >= 15]
     return {f"{st}/{SHORT[lab]}": {o: int((g.outcome == o).sum()) for o in OUTC} | dict(bends=int(len(g)), zeros=int((g.score == 0).sum()))
@@ -420,6 +442,7 @@ def main(a):
                bends={f"{s}/{SHORT[l]}": dict(bends=int((g.bend_deg.abs() >= 15).sum()), testable=int(g.testable.sum())) for (s, l), g in S.groupby(["set", "label"])},
                geo_errors=len(json.loads((d / "geo_errors.json").read_text())) if (d / "geo_errors.json").exists() else None)
     out["outcomes"] = outcome_counts(S)
+    out["discordance"] = discordance(S)
     out["bins"] = bins_table(S)
     X = decs(D)
     out["gain"] = gain_reg(X)
