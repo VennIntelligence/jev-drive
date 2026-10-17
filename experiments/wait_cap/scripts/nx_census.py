@@ -516,10 +516,21 @@ def model(L, line, i0, f, info, scene, W, MS):
     tr = onset(M, "collision_rear")
     if (m.get("collision_rear") or 0) > 0 and tr is not None:
         k = i0 + int(round(tr * HZ))
-        x, y, h = (float(np.interp(tr, E["t"], q)) for q in (wx, wy, np.unwrap(E["yaw"])))
-        ve = float(np.interp(tr, E["t"], E["v"]))
-        c = contact(L.boxes(k), ego_poly(x, y, h))
-        o = dict(t=tr, v_ego=ve, v_human=float(L.v[min(k, len(L.v) - 1)]))
+        yw = np.unwrap(E["yaw"])
+        pose = lambda tt: tuple(float(np.interp(tt, E["t"], q)) for q in (wx, wy, yw))  # noqa: E731
+        c, kc = None, k
+        for kk in range(k - 10, k + 3):                 # the metric step is 0.5 s: the first overlap in the 0.5 s up to the onset
+            c = contact(L.boxes(kk), ego_poly(*pose((kk - i0) / HZ)))
+            if c is not None:
+                kc = kk
+                break
+        if c is None:                                   # replayed tracks are resampled / smoothed: allow 0.5 m at the onset frame
+            P_ = ego_poly(*pose(tr))
+            c = contact(L.boxes(k), tuple(g_.buffer(0.5) for g_ in P_))
+        x, y, h = pose((kc - i0) / HZ)
+        ve = float(np.interp((kc - i0) / HZ, E["t"], E["v"]))
+        o = dict(t=tr, t_first=(kc - i0) / HZ, v_ego=ve, v_human=float(L.v[min(kc, len(L.v) - 1)]))
+        k = kc
         if c is not None:
             B = c[1]
             tid = B[7]
@@ -547,7 +558,9 @@ def model(L, line, i0, f, info, scene, W, MS):
         p_at = float(pr[pr[:, 0] <= tr + 1e-6][-1, 1]) if pr is not None else np.nan
         p_end = float(pr[-1, 1]) if pr is not None else np.nan
         ps = lambda p_: 1.0 if gtd < 5.0 else min(max(p_, 0.0), 1.0) / 0.8  # noqa: E731
-        o.update(later=later, score_at_contact=min(ps(p_at), 1.0), score_untruncated=0.0 if later else min(ps(p_end), 1.0))
+        o.update(later=later, p_at=p_at, p_end=p_end, gt_short=bool(gtd < 5.0), score_at_contact=min(ps(p_at), 1.0),
+                 score_untruncated=0.0 if later else min(ps(p_end), 1.0),
+                 score_nohit=0.0 if {"offroad", "left_corridor_laterally"} & set(later) else min(ps(p_end), 1.0))
         r["rear"] = o
     return r
 
@@ -671,7 +684,7 @@ def cmd_report(a):
     for r in S:
         for rd in ("pub", "held"):
             f = r.get(rd)
-            if not f:
+            if not isinstance(f, dict):                     # r["held"] is the split flag (bool) when the scene has no held read
                 continue
             base = dict(read=rd, scene=r["scene"], log=r["log"], hcls=human_class(f), path=f.get("path"),
                         **{k: f.get(k) for k in ("v0", "static", "tl", "tl_d_front", "st0", "st_str", "red_start", "red_stop", "red_cls",
@@ -688,7 +701,8 @@ def cmd_report(a):
                     rear=bool(rr), rear_t=rr.get("t"), rear_dv=rr.get("dv"), rear_v_ego=rr.get("v_ego"), rear_v_other=rr.get("v_other_long"),
                     rear_v_human=rr.get("v_human"), rear_kind=rr.get("kind"), rear_class=rr.get("class"), rear_why=rr.get("why"),
                     rear_later=",".join(rr.get("later") or []) if rr else None, score_at_contact=rr.get("score_at_contact"),
-                    score_untrunc=rr.get("score_untruncated")))
+                    score_untrunc=rr.get("score_untruncated"), score_nohit=rr.get("score_nohit"), rear_dpsi=rr.get("dpsi"),
+                    rear_t_first=rr.get("t_first"), dist_end=m.get("dist_end")))
     T = pd.DataFrame(rows)
     T.to_csv(out / "per_scene_model.csv.gz", index=False)
     md = []
@@ -784,16 +798,24 @@ def cmd_report(a):
                           f"{g.hum_contact.notna().mean():.3f} |")
 
     # E: rear contacts
-    E = T[T.rear]
-    md += ["", "## E rear contacts", "", "| read | model | scenes | rear contacts | slow launch / no-reason brake / log stop / other | dv median [max] m/s | "
-           "ego v at contact median | score of rear-ended scenes (mean) | points the truncation cost (sum untruncated - actual) | later failures masked | "
-           "max abs(score at contact - summary) |", "|---|---|--:|--:|---|--:|--:|--:|--:|--:|--:|"]
+    E = T[T.rear].copy()
+    E["sub"] = np.where(E.rear_class == "other", np.where(E.rear_why.fillna("").str.startswith("slower"), "slower than the log", "at log speed"),
+                        E.rear_class)
+    E["same"] = E.rear_dpsi.abs() < 45
+    E["masked"] = E.rear_later.fillna("").str.contains("collision")
+    subs = ("slow launch", "no-reason brake", "log stop", "slower than the log", "at log speed")
+    md += ["", "## E rear contacts", "", "| read | model | scenes | rear contacts | actor found: same direction / crossing or oncoming | "
+           "slow launch / no-reason brake / log stop / slower than the log / at log speed | dv median [max] m/s (same direction) | "
+           "ego v at contact median | contact time median (s) | score of rear-ended scenes (mean) | progress the truncation cost | "
+           "later pass-through collisions masked | max abs(score at contact - summary) |", "|---|---|--:|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|"]
     for (rd, key), g in T.groupby(["read", "model"], sort=False):
-        e = g[g.rear]
-        cc = " / ".join(str((e.rear_class == c).sum()) for c in ("slow launch", "no-reason brake", "log stop", "other"))
-        md.append(f"| {rd} | {key} | {len(g)} | {len(e)} | {cc} | {f1(e.rear_dv.median())} [{f1(e.rear_dv.max())}] | {f1(e.rear_v_ego.median())} | "
-                  f"{f3(e.score.mean())} | {(e.score_untrunc - e.score).sum():.2f} | {(e.rear_later.fillna('') != '').sum()} | "
-                  f"{(e.score_at_contact - e.score).abs().max():.4f} |")
+        e = E[(E.read == rd) & (E.model == key)]
+        cc = " / ".join(str((e["sub"] == c).sum()) for c in subs)
+        sd = e[e.same]
+        cost = (e.score_nohit - e.score)[~e.masked].sum()
+        md.append(f"| {rd} | {key} | {len(g)} | {len(e)} | {int(e.same.sum())} / {int((e.rear_dpsi.notna() & ~e.same).sum())} | {cc} | "
+                  f"{f1(sd.rear_dv.median())} [{f1(sd.rear_dv.max())}] | {f1(e.rear_v_ego.median())} | {f1(e.rear_t.median())} | {f3(e.score.mean())} | "
+                  f"{cost:.2f} | {int(e.masked.sum())} | {(e.score_at_contact - e.score).abs().max():.4f} |")
     E.to_csv(out / "rear_contacts.csv", index=False)
     md += ["", "| read | scene | " + " | ".join(f"{k}: score / t / dv / class" for k in TAGS) + " | human v (0.5 s) |", "|---|---|" + "---|" * len(TAGS) + "---|"]
     for (rd, sc), g in E.groupby(["read", "scene"]):
@@ -801,8 +823,30 @@ def cmd_report(a):
         for key in TAGS:
             m = T[(T.read == rd) & (T.scene == sc) & (T.model == key)]
             m = m.iloc[0] if len(m) else None
-            cells.append("-" if m is None else f"{m.score:.2f}" + (f" / {m.rear_t:.1f} / {f1(m.rear_dv)} / {m.rear_class}" if m.rear else ""))
+            x = E[(E.read == rd) & (E.scene == sc) & (E.model == key)]
+            cells.append("-" if m is None else f"{m.score:.2f}" + (f" / {m.rear_t:.1f} / {f1(m.rear_dv)} / {x.iloc[0]['sub']}" if m.rear else ""))
         md.append(f"| {rd} | {sc[-16:-8]} | " + " | ".join(cells) + f" | {g.iloc[0].v_str} |")
+
+    # D2b: launches from a standstill, at a red light against elsewhere; D2c: the human waits at red the whole window
+    L0 = T[(T.v0 < V_STOP) & T.h_launch_t.notna()].copy()
+    L0["at_red"] = L0.red_stop.fillna(False).astype(bool)
+    L0["never"] = L0.launch_t.isna()
+    L0["delay"] = L0.launch_t - L0.h_launch_t
+    md += ["", "## D2b launches from a standstill (human starts < 0.3 m/s, launches > 1 m/s in the window)", "",
+           "| read | model | where | scenes | model never launches | launch delay median (s) | launch delay > 1 s | mean score | points lost |",
+           "|---|---|---|--:|--:|--:|--:|--:|--:|"]
+    for (rd, key), g in L0.groupby(["read", "model"], sort=False):
+        for name, x in (("red light", g[g.at_red]), ("elsewhere", g[~g.at_red])):
+            if len(x):
+                md.append(f"| {rd} | {key} | {name} | {len(x)} | {int(x.never.sum())} | {f1(x.delay.median())} | {int(((x.delay > 1) | x.never).sum())} | "
+                          f"{x.score.mean():.3f} | {(1 - x.score).sum():.2f} |")
+    C0 = T[T.hcls == "C"]
+    md += ["", "## D2c the human stops at red and does not launch in the window", "",
+           "| read | model | scenes | mean score | zeros (reasons) | model drives > 3 m | median distance (m) |", "|---|---|--:|--:|---|--:|--:|"]
+    for (rd, key), g in C0.groupby(["read", "model"], sort=False):
+        z = g[g.score == 0]
+        md.append(f"| {rd} | {key} | {len(g)} | {g.score.mean():.3f} | {len(z)} ({', '.join(z.fail.fillna('-'))}) | {int((g.dist_end > 3).sum())} | "
+                  f"{f1(g.dist_end.median())} |")
     (out / "tables.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 
