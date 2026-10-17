@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""EXPLORE-G (diagnosis after decision 337, exploratory, no training): (Q1) why RTB1 lost RSG-L18's turn tracking on large-angle narrow turns,
-lateral pathway vs entry speed; (Q2) can Cinque's own lane lines drive an in-lane keeping aid on straight roads; the route-point bias.
-Stored reads only, except one small pool replay (the logged driver messages of the zero rollouts through both checkpoints).
+"""EXPLORE-G (diagnosis after decisions 337 / 339, exploratory, no training): (Q1) does the retain line (RTB1O-L18-s0, V2 = RTB1ARO-L18-s0,
+RTB1OB1-L18-s1) track turns worse than RSG-L18 because its lateral pathway is lost (a) or because of its speed into the turn (b);
+(Q2) how accurate are the shipped model's lane lines on continuous straight roads, at junctions and on irregular roads; the route-point bias.
+Stored reads, plus pool replays of the zero rollouts (their logged driver messages through every checkpoint of the same seed).
 
   geo     (box, AlpaSim venv, CPU)  nx_turns.py geo --out DIR [--limit N]
-          every rollout of the held 460 @18 reads of RTB1O-L18-s0 / RTB1OB1-L18-s1 / RSG-L18-s0 / RSG-L18-s1 and the public 1491 @10 reads of
-          RTB1O-L18-s0 / RSG-L18-s0 -> DIR/scenes.parquet (bend geometry + outcome per rollout), DIR/dec.parquet (per decision: speed, route
-          station / lateral / heading error, plan and executed heading change against the route's, lane-centre / road-centre / route-memory /
-          plan offsets at 10 / 20 / 30 m), DIR/trace.parquet (controller samples in the bend), DIR/bev.pkl (the seven shared zeros)
+          every rollout of the held 460 @18 reads of HELD and the public 1491 @10 reads of PUB -> DIR/scenes.parquet (bend geometry + outcome
+          per rollout), DIR/dec.parquet (per decision: speed, route station / lateral / heading error, plan and executed heading change
+          against the route's, lane class, lane-centre / road-centre / route-memory / plan offsets at 10 / 20 / 30 m), DIR/trace.parquet
+          (controller samples in the bend), DIR/bev.pkl (HELD7 and the user's EXAMPLES)
   msgs    (box, AlpaSim venv, CPU)  nx_turns.py msgs --out DIR       driver-side messages of every zero rollout with its rollout.asl kept
-  replay  (box, envs/op-train, one GPU: a pool job)  nx_turns.py replay --out DIR
-          each msgs group through the real driver class with its own checkpoint (identity against the stored plans) and with the partner
-          checkpoint (RTB1O-L18-s0 <-> RSG-L18-s0, RTB1OB1-L18-s1 <-> RSG-L18-s1): served plan, fed route memory, and the raw lane-line /
-          road-edge heads of the served checkpoint (FT) and of the shipped policy on the same vision tokens (P0) -> DIR/replay/<group>__<ckpt>.pkl
+  replay  (box, envs/op-train, one GPU: one pool job per checkpoint)  nx_turns.py replay --out DIR [--ckpts T ..]
+          each msgs group through the real driver class with every checkpoint of its seed set (CKSET; the group's own checkpoint gives the
+          identity against the stored plans): served plan, fed route memory, and the raw lane-line / road-edge / lead heads of the served
+          checkpoint (FT) and of the shipped policy on the same vision tokens (P0) -> DIR/replay/<group>__<ckpt>.pkl,
+          DIR/replay_identity_<ckpt>.json
+  olg     (box, AlpaSim venv, CPU)  nx_turns.py olg --out DIR
+          every replayed plan (and the stored one) against the rebuilt route of its decision -> DIR/replay.parquet
   lanes   (box, AlpaSim venv, CPU)  nx_turns.py lanes --out DIR      the replayed decisions (own checkpoint) and eyes_vs_head's ctrl group
           (200 public scenes, P2H10-F-s0) against the map -> DIR/lanes.parquet
-  report  (Mac, .venv)  nx_turns.py report --out DIR --res RESULTS_DIR   tables and figures -> RESULTS_DIR/explore_g.json, figs
+  report  (Mac, .venv)  nx_turns.py report --out DIR --res RESULTS_DIR [--dev DIR]   tables and figures -> RESULTS_DIR/explore_g.json, figs;
+          --dev: nx.py hist's dev-row plans (<tag>.npz) of the same checkpoints (the open-loop read on logged frames)
 
 Definitions (fixed before any output was read):
   route        AlpaSim's MAP route rebuilt at every logged anchor (rf_follow.regen_full): the human's lane centres; heading h(s) = chord heading over
@@ -24,7 +29,7 @@ Definitions (fixed before any output was read):
   bend         the 40 m window of the stretch with the largest |net heading change| (bend_deg, signed, left +); entry / exit = 10 % / 90 % of the
                change over [a - 10, a + 50] m (only when |bend_deg| >= 15; else no bend); r_min = smallest radius on the stretch. Testable: exit + 10 m <= s_end
   outcome      completed = the controller trace (10 Hz) crosses exit + 10 m before the zero step (the first 2 Hz step with offroad, a front / lateral
-               contact, or dist_to_gt >= 4 m; long_read.one) within 2.5 m of the route; max_lat = largest |lateral| from the route over
+               contact, or dist_to_gt >= 4 m; long_read.one's rule) within 2.5 m of the route; max_lat = largest |lateral| from the route over
                [entry - 10, exit + 10] before the zero step; out = lateral signed to the outside of the bend
   plan turn    plan heading change at 1 / 2 s (pose yaw) against req = route heading change over the plan's own arc minus the current heading
                error (the turn the plan must make to be aligned with the route there); executed = the controller's heading change over the next
@@ -36,6 +41,20 @@ Definitions (fixed before any output was read):
                own-lane and route heading change over 40 m both < 10 deg) | curved (the rest) | none (no own lane)
   heads        ego lane centre from the lane lines = (y_1 + y_2) / 2 at x = cam + d (lines 1 / 2 = left / right ego lines; ev.heads); scaled =
                the same about the camera with decision 104's lateral scale undone (/ 0.689); present = both line probs > 0.5
+
+Added 2026-10-17 after the first read (exploratory; the first replay fed an empty route memory, see replay):
+  lane class   zeros_mech's Lanes.cls on the car centre and heading (the evaluator's own lane polygons and centre-line yaw): same = a containing
+               lane within 60 deg, else opposite = one beyond 120 deg, else cross; none = no lane
+  outcome      (bends only) the first in time of: the zero step while the car's station is in [entry - 20, exit + 10] (offroad | contact = front /
+               lateral collision | diverged = dist_to_gt >= 4 m only) and the first opposite-lane sample (controller trace every 0.2 s in the same
+               window, before the zero step) -> offroad | contact | opposite | diverged; else zero_before (zero step before the window),
+               completed, incomplete (testable, not completed), untestable
+  lane width   at route points every 2 m over [entry, exit]: the containing lane within 60 deg of the route heading, distance to its left edge +
+               right edge; w_mid at the bend's mid station, w_min the smallest; r_bend = smallest radius over [entry, exit]
+  seg3         junction (as seg) | straight = continuous straight (seg straight, the own lane reaches 30 m and its width changes < 0.5 m from 10 to
+               30 m) | irregular (curved, merging / splitting / tapering, or the own lane ends before 30 m) | none
+  replay       the driver's route tracker as sh30_driver.main() sets it (RMEM = rmem, SERVE_ORDER from the checkpoint); identity = the group's own
+               checkpoint against the stored plan (pose distance at 1 / 2 / 4 s) and the stored fed memory (max |difference|)
 """
 from __future__ import annotations
 
@@ -47,7 +66,7 @@ import pickle
 import sys
 from pathlib import Path
 
-if len(sys.argv) > 1 and sys.argv[1] in ("geo", "msgs", "lanes"):
+if len(sys.argv) > 1 and sys.argv[1] in ("geo", "msgs", "lanes", "olg"):
     for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "POLARS_MAX_THREADS", "RAYON_NUM_THREADS"):
         os.environ[_v] = "1"
 import numpy as np  # noqa: E402
@@ -57,19 +76,28 @@ REPO = HERE.parents[2]
 sys.path[:0] = [str(p) for p in (REPO, REPO / "lib", REPO / "experiments/route_mem/lib", REPO / "experiments/route_mem/scripts",
                                  REPO / "experiments/alpasim/scripts", REPO / "experiments/alpasim/lib", REPO / "experiments/anchor_offset/scripts",
                                  REPO / "experiments/eyes_vs_head/scripts", REPO / "experiments/alpasim_long/scripts",
-                                 REPO / "experiments/route_follow/scripts", REPO / "experiments/op_parity/scripts", HERE)]
+                                 REPO / "experiments/route_follow/scripts", REPO / "experiments/op_parity/scripts",
+                                 REPO / "experiments/zeros_mech/scripts", HERE)]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 READ = DATA / "runs/route_mem/read"
 NX = DATA / "runs/wait_cap/next"
-HELD = ("RTB1O-L18-s0", "RTB1OB1-L18-s1", "RSG-L18-s0", "RSG-L18-s1")
-PARTNER = {"RTB1O-L18-s0": "RSG-L18-s0", "RSG-L18-s0": "RTB1O-L18-s0", "RTB1OB1-L18-s1": "RSG-L18-s1", "RSG-L18-s1": "RTB1OB1-L18-s1"}
-PUB = {"RTB1O-L18-s0": NX / "cont/wide/pub/RTB1O-L18-s0", "RSG-L18-s0": DATA / "runs/route_follow/guard/read10/RSG-L18-s0"}
+HELD = ("RTB1O-L18-s0", "RTB1ARO-L18-s0", "RTB1OB1-L18-s1", "RSG-L18-s0", "RSG-L18-s1")
+PUB = {"RTB1O-L18-s0": NX / "cont/wide/pub/RTB1O-L18-s0", "RTB1ARO-L18-s0": NX / "cont/wide/pub/RTB1ARO-L18-s0",
+       "RSG-L18-s0": DATA / "runs/route_follow/guard/read10/RSG-L18-s0"}
+CKSET = {"s0": ("RSG-L18-s0", "RTB1O-L18-s0", "RTB1ARO-L18-s0"), "s1": ("RSG-L18-s1", "RTB1OB1-L18-s1")}
 KEND = dict(held=17, pub=9)
 T0, DT = 17_000, 500_000
 DS = (10.0, 20.0, 30.0)
 WIN, LAT_OK, CAR_C, SCALE, BEND_MIN = 40.0, 2.5, 1.4, 0.689, 15.0
+SER = ("dist_to_gt_trajectory", "offroad", "collision_front", "collision_lateral", "collision_rear", "wrong_lane")
 HELD7 = ("53d3787367c75240", "de4ace24443b5b2d", "6d2b59f78d995d9c", "9d1d720d0e2e511e", "9a675656c3c85f4c", "ddc1271ea57154bc",
          "1f54430427975391")
+EXAMPLES = ("9a675656", "53d37873", "ddc1271e", "1f544304", "9d1d720d",          # the user's video judgements (handoff 3 B): wide / outside,
+            "81a72614", "365c0937", "a7fa8bcc", "d33c6db3", "a9609780")          # cuts inside, opposite lane
+
+
+def ckset(label):
+    return CKSET[label[-2:]]
 
 
 def wrap(a):
@@ -135,6 +163,20 @@ def ctrl_path(run, scene):
     return P
 
 
+def steps(D, scene):
+    """The evaluator's 2 Hz series of one rollout on the decision grid (long_read.one's file) -> {k: dict(gt, off, front, side, rear, wrong)}."""
+    import polars as pl
+    f = sorted(glob.glob(f"{D}/rollouts/{scene}/*/metrics.parquet"))
+    if not f:
+        return {}
+    m = pl.read_parquet(f[0]).filter(pl.col("name").is_in(SER)).select("name", pl.col("timestamps_us").cast(pl.Int64), "values")
+    ser = {n: dict(zip(x["timestamps_us"].to_list(), x["values"].to_list())) for (n,), x in m.group_by("name")}
+    g = lambda n, t: (ser.get(n, {}).get(t) or 0.0) > 0                                     # noqa: E731
+    return {int((t - T0) // DT): dict(gt=float(ser["dist_to_gt_trajectory"][t] or 0.0), off=g("offroad", t), front=g("collision_front", t),
+                                      side=g("collision_lateral", t), rear=g("collision_rear", t), wrong=g("wrong_lane", t))
+            for t in sorted(ser.get("dist_to_gt_trajectory", {})) if t >= T0 and (t - T0) % DT == 0}
+
+
 # ---------------------------------------------------------------- map: own lane, junction, road boundary
 class LaneMap:
     def __init__(self, ds, bbox):
@@ -194,6 +236,14 @@ class LaneMap:
                 best = (d, lid, i)
         return best
 
+    def width(self, p, yaw):
+        """Width of the lane containing p within 60 deg of yaw: distance to its left edge + right edge (nan without one)."""
+        o = self.own(p, yaw)
+        if o is None:
+            return np.nan
+        ln, pt = self.L[o[1]], self.sh.Point(*p)
+        return float(self.sh.LineString(ln["Le"]).distance(pt) + self.sh.LineString(ln["Re"]).distance(pt))
+
     def chain(self, p, yaw, route=None, length=70.0):
         """-> (centre, left edge, right edge) local polylines of the own lane from the car centre forward, or None."""
         o = self.own(p, yaw)
@@ -229,10 +279,10 @@ class LaneMap:
 
 def lane_refs(M, a, route_l, x0=0.0, Hr=None):
     """Lane references of one decision at x = x0 + d (ego frame of pose a): c_map, lane width, road centre, the ego's offset from the own-lane
-    centre at the rear axle, segment type."""
+    centre at the rear axle, segment type (seg, seg3)."""
     p = np.asarray(a[:2], float) + CAR_C * np.array([np.cos(a[2]), np.sin(a[2])])
     ch = M.chain(p, a[2], route_l)
-    o = dict(seg="none")
+    o = dict(seg="none", seg3="none")
     if ch is None:
         return o
     C, Le, Re = ch
@@ -249,7 +299,7 @@ def lane_refs(M, a, route_l, x0=0.0, Hr=None):
         J = J or M.junction(q)
     j40 = int(np.searchsorted(S, s_p + 40.0))
     lane_dh = float(np.degrees(abs(hC[min(j40, len(hC) - 1)] - hC[min(k0, len(hC) - 1)]))) if len(hC) else np.nan
-    o.update(junction=bool(J), lane_dh40=lane_dh)
+    o.update(junction=bool(J), lane_dh40=lane_dh, lane_len=float(S[-1] - s_p))
     for d in DS:
         x = x0 + d
         c = y_at(Ce, x)
@@ -264,7 +314,10 @@ def lane_refs(M, a, route_l, x0=0.0, Hr=None):
             if len(L_) and len(R_):
                 rc = float((L_.min() + R_.max()) / 2)
         o[f"c{int(d)}"], o[f"w{int(d)}"], o[f"rc{int(d)}"] = c, w, rc
-    o["seg"] = "junction" if J else ("straight" if lane_dh < 10 and (Hr is None or Hr < 10) else "curved")
+    straight = lane_dh < 10 and (Hr is None or Hr < 10)
+    o["seg"] = "junction" if J else ("straight" if straight else "curved")
+    cont = bool(np.isfinite(o["c30"]) and np.isfinite(o["w10"]) and np.isfinite(o["w30"]) and abs(o["w30"] - o["w10"]) < 0.5)
+    o["seg3"] = "junction" if J else ("straight" if straight and cont else "irregular")
     return o
 
 
@@ -300,19 +353,27 @@ def bend_of(s, h, kap, s0, s_end):
         if len(k10) and len(k90):
             ent, ext = float(s[j0 + k10[0]]), float(s[j0 + k90[0]])
     seg = np.abs(kap[i0:i1 + 1])
-    return dict(bend_deg=float(np.degrees(th)), entry=ent, exit=ext, r_min=float(1.0 / max(seg.max(), 1e-3)),
+    r_bend = np.nan
+    if np.isfinite(ent):
+        kb = np.abs(kap[(s >= ent) & (s <= ext)])
+        r_bend = float(1.0 / max(kb.max(), 1e-3)) if len(kb) else np.nan
+    return dict(bend_deg=float(np.degrees(th)), entry=ent, exit=ext, r_min=float(1.0 / max(seg.max(), 1e-3)), r_bend=r_bend,
                 abs_deg=float(np.degrees(np.abs(np.diff(h[i0:i1 + 1])).sum())), net_deg=float(np.degrees(h[i1] - h[i0])))
 
 
 def one(job):
     st_, label, D, scene, recs, summ = job
-    import long_read as LR
     import rf_follow as RF
     import ev as EV
+    import zm_read as ZM
     from ao_e1 import loader, project, stations
-    ev = {r["k"]: r for r in LR.one((label, D, scene))}
-    kz = min([k for k, r in ev.items() if r["atf"] or (r["dist_gt"] or 0) >= 4.0], default=10 ** 6)
+    ev = steps(D, scene)
+    kz = min([k for k, r in ev.items() if r["off"] or r["front"] or r["side"] or r["gt"] >= 4.0], default=10 ** 6)
     tz = T0 + DT * kz if kz < 10 ** 6 else np.inf
+    zc = ""
+    if kz < 10 ** 6:
+        e = ev[kz]
+        zc = "offroad" if e["off"] else ("contact" if e["front"] or e["side"] else "diverged")
     W, A, G0, Rl, _ = RF.regen_full(scene, recs, EV.CFG)
     Rl = Rl[np.r_[True, np.hypot(*np.diff(Rl, axis=0).T) > 1e-6]]
     S = stations(Rl)
@@ -320,11 +381,13 @@ def one(job):
     kap = np.gradient(h, s)
     ds = loader(str(EV.CFG)).get_data_source(scene)
     tr = ds.rig.trajectory
-    Tt, Pg = np.asarray(tr.timestamps_us, float), np.asarray(tr.positions, float)[:, :2]
+    Tt, P3 = np.asarray(tr.timestamps_us, float), np.asarray(tr.positions, float)
+    Pg = P3[:, :2]
     kend = KEND[st_]
     t_end = T0 + DT * kend
     log_end = np.array([np.interp(t_end, Tt, Pg[:, 0]), np.interp(t_end, Tt, Pg[:, 1])])
     h_at = lambda q: float(np.interp(q, s, h))                                              # noqa: E731
+    r_at = lambda q: np.array([np.interp(q, S, Rl[:, 0]), np.interp(q, S, Rl[:, 1])])       # noqa: E731
     # decisions: stations along the route
     dec, hint = [], None
     for r in recs:
@@ -337,6 +400,18 @@ def one(job):
     s_end = project(Rl, S, log_end, s0 - 10.0, s0 + 150.0)[0]
     B = bend_of(s, h, kap, s0, s_end)
     sg = np.sign(B["bend_deg"]) or 1.0
+    allp = np.vstack([Pg, np.array([d[1][:2] for d in dec])])
+    M = LaneMap(ds, (allp.min(0) - 60, allp.max(0) + 60))
+    LN = ZM.Lanes(ds.map)
+
+    def lcls(x, y, yaw):                                                                    # zeros_mech lane class of the car centre
+        c = np.array([x, y]) + CAR_C * np.array([np.cos(yaw), np.sin(yaw)])
+        z = float(P3[int(np.argmin(np.hypot(*(Pg - c).T))), 2])
+        return int(LN.cls(c[0], c[1], z, yaw)[0])
+    if np.isfinite(B["entry"]):
+        ws = [M.width(r_at(q), h_at(q)) for q in np.arange(B["entry"], B["exit"] + 1e-6, 2.0)]
+        mid = (B["entry"] + B["exit"]) / 2
+        B.update(w_mid=M.width(r_at(mid), h_at(mid)), w_min=float(np.nanmin(ws)) if np.isfinite(ws).any() else np.nan)
     # the human on the route (speed at station)
     hs, hint = [], None
     for p in Pg[::2]:
@@ -361,13 +436,19 @@ def one(job):
         tst, tlat = q[:, 0], q[:, 1]
     row = dict(set=st_, label=label, scene=scene, log=scene.rsplit("-", 1)[0], score=summ["score"], kz=kz if kz < 10 ** 6 else -1,
                offroad=float(summ.get("offroad") or 0) > 0, at_fault=float(summ.get("collision_at_fault") or 0) > 0,
-               corridor=float(summ.get("left_corridor_laterally") or 0) > 0, s0=s0, s_end=s_end, **B)
+               corridor=float(summ.get("left_corridor_laterally") or 0) > 0, z_cause=zc, s0=s0, s_end=s_end, sg=sg, **B,
+               rear=any(r["rear"] for k, r in ev.items() if k <= min(kz, KEND[st_])),
+               wrong_eval=any(r["wrong"] for k, r in ev.items() if k <= min(kz, KEND[st_])))
     row["testable"] = bool(np.isfinite(B["exit"]) and B["exit"] + 10.0 <= s_end)
+    z_st = opp_t = np.inf
     if len(tst):
         before = P[:, 0] < tz
+        iz = np.flatnonzero(P[:, 0] >= tz)
+        z_st = float(tst[iz[0]]) if len(iz) else (float(tst[-1]) if kz < 10 ** 6 else np.inf)
         inb = before & (tst >= B["entry"] - 10.0) & (tst <= B["exit"] + 10.0) if np.isfinite(B["entry"]) else np.zeros(len(P), bool)
         row["max_lat"] = float(np.abs(tlat[inb]).max()) if inb.any() else np.nan
         row["max_out"] = float((-sg * tlat[inb]).max()) if inb.any() else np.nan
+        row["max_in"] = float((sg * tlat[inb]).max()) if inb.any() else np.nan
         row["max_lat_all"] = float(np.abs(tlat[before & (tst <= s_end)]).max()) if (before & (tst <= s_end)).any() else np.nan
         if np.isfinite(B["exit"]):
             ix = np.flatnonzero(tst >= B["exit"] + 10.0)
@@ -377,12 +458,32 @@ def one(job):
             row[nm] = float(P[j[0], 4]) if len(j) and P[j[0], 0] < tz else np.nan
             row[nm + "_h"] = vh_at(q_) if np.isfinite(q_) else np.nan
         if np.isfinite(B["entry"]):
+            win = before & (tst >= B["entry"] - 20.0) & (tst <= B["exit"] + 10.0)
+            n_opp = 0
+            for i in np.flatnonzero(win)[::2]:                                              # every 0.2 s
+                if lcls(P[i, 1], P[i, 2], P[i, 3]) == 2:
+                    n_opp += 1
+                    opp_t = min(opp_t, P[i, 0])
+            row.update(opp_n=n_opp, opp_share=n_opp / max(len(np.flatnonzero(win)[::2]), 1))
             for i in np.flatnonzero((tst >= B["entry"] - 30.0) & (tst <= B["exit"] + 20.0)):
                 trace.append(dict(set=st_, label=label, scene=scene, t=(P[i, 0] - T0) * 1e-6, st=tst[i], lat=tlat[i], v=P[i, 4],
                                   herr=float(wrap(P[i, 3] - h_at(tst[i]))), before=bool(P[i, 0] < tz)))
-    # map refs per decision
-    allp = np.vstack([Pg, np.array([d[1][:2] for d in dec])])
-    M = LaneMap(ds, (allp.min(0) - 60, allp.max(0) + 60))
+    row["opp"] = bool(np.isfinite(opp_t))
+    row["z_st"] = z_st if np.isfinite(z_st) else np.nan
+    out = "nobend"
+    if np.isfinite(B["entry"]):
+        lo, hi = B["entry"] - 20.0, B["exit"] + 10.0
+        evs = ([(tz, zc)] if kz < 10 ** 6 and lo <= z_st <= hi else []) + ([(opp_t, "opposite")] if np.isfinite(opp_t) else [])
+        if evs:
+            out = min(evs)[1]
+        elif kz < 10 ** 6 and z_st < lo:
+            out = "zero_before"
+        elif row.get("completed"):
+            out = "completed"
+        else:
+            out = "incomplete" if row["testable"] else "untestable"
+    row["outcome"] = out
+    # per decision
     rows = []
     for r, a, stn, lat in dec:
         k = int((r["t0"] - T0) // DT)
@@ -394,7 +495,8 @@ def one(job):
         herr = float(wrap(a[2] - hr))
         d = dict(set=st_, label=label, scene=scene, k=k, st=stn, lat=lat, v=v, herr=herr, before=k < kz,
                  inbend=bool(np.isfinite(B["entry"]) and B["entry"] - 20.0 <= stn <= B["exit"] + 10.0), sg=sg,
-                 v_h=vh_at(stn), arc1=ar[1], arc2=ar[3], arc4=ar[7], deficit=ar[3] - 2.0 * v, kap_route=float(np.interp(stn, s, kap)))
+                 v_h=vh_at(stn), arc1=ar[1], arc2=ar[3], arc4=ar[7], deficit=ar[3] - 2.0 * v, kap_route=float(np.interp(stn, s, kap)),
+                 lcls=lcls(a[0], a[1], a[2]))
         for n, i in (("1", 1), ("2", 3), ("4", 7)):
             d["yaw" + n] = float(Pp[i, 2])
             d["dhr" + n] = h_at(stn + ar[i]) - hr
@@ -410,8 +512,7 @@ def one(job):
                 d["exec_dhr1"] = h_at(tst[i_[-1]]) - h_at(tst[i_[0]]) if len(tst) else np.nan
         # lane refs, route memory, plan offsets at 10 / 20 / 30 m from the rear axle
         Hr = float(np.degrees(abs(h_at(stn + 40.0) - hr)))
-        L_ = lane_refs(M, a, Rl, 0.0, Hr)
-        d.update(L_)
+        d.update(lane_refs(M, a, Rl, 0.0, Hr))
         d["route_dh40"] = Hr
         rm = r.get("rmem")
         for x in DS:
@@ -420,12 +521,13 @@ def one(job):
             d[f"gy{int(x)}"] = y_at(in_ego(a, Rl), x)                    # the rebuilt route (the human's lane centres) at x
         rows.append(d)
     bev = None
-    if any(scene.endswith(z) for z in HELD7) and st_ == "held":
+    hsh = scene.rsplit("-", 1)[1]
+    if hsh in HELD7 or hsh[:8] in EXAMPLES:
         bb = (allp.min(0) - 25, allp.max(0) + 25)
         ins = lambda X: bool(((X[:, 0] >= bb[0][0]) & (X[:, 0] <= bb[1][0]) & (X[:, 1] >= bb[0][1]) & (X[:, 1] <= bb[1][1])).any())  # noqa: E731
         bev = dict(edges=[x for ln in M.L.values() for x in (ln["Le"], ln["Re"]) if ins(x)], road=[x for x in M.road if ins(x)], route=Rl,
                    human=Pg, ego=None if P is None else P[:, :3], tz=tz, plans=[to_local(a, np.asarray(r["poses"], float)[:, :2]) for r, a, _, _ in dec],
-                   anchors=np.array([a for _, a, _, _ in dec]))
+                   anchors=np.array([a for _, a, _, _ in dec]), bend=B)
     return row, rows, trace, bev
 
 
@@ -464,14 +566,14 @@ def geo(a):
         pd.DataFrame([v[0] for v in V]).to_parquet(out / "scenes.parquet", index=False)
         pd.DataFrame([d for v in V for d in v[1]]).to_parquet(out / "dec.parquet", index=False)
         pd.DataFrame([d for v in V for d in v[2]]).to_parquet(out / "trace.parquet", index=False)
-        pickle.dump({(v[0]["label"], v[0]["scene"]): v[3] for v in V if v[3] is not None}, open(out / "bev.pkl", "wb"), protocol=4)
+        pickle.dump({(v[0]["set"], v[0]["label"], v[0]["scene"]): v[3] for v in V if v[3] is not None}, open(out / "bev.pkl", "wb"), protocol=4)
         (out / "geo_errors.json").write_text(json.dumps(err, indent=1))
         run.summary.update(rollouts=len(jobs), errors=len(err))
 
 
-# ---------------------------------------------------------------- msgs (CPU) / replay (GPU) / lanes (CPU)
+# ---------------------------------------------------------------- msgs (CPU) / replay (GPU) / olg, lanes (CPU)
 def zero_runs():
-    """-> [(group, run dir, scene)] of every zero rollout whose rollout.asl was kept (held: the four tags; pub: both tags)."""
+    """-> [(group, run dir, scene)] of every zero rollout whose rollout.asl was kept (held: every HELD label; pub: every PUB label)."""
     o = []
     for st_, labels in (("held", HELD), ("pub", tuple(PUB))):
         for lab in labels:
@@ -513,20 +615,26 @@ def replay(a):
     import tempfile
     import torch
     import pp_train as T
+    import rmem as RM
     import sh30_driver as D
     from ao_e1 import drive_records
     from jevdrive.run import Run
-    I, Z = D.C.I, D.C.Z
-    HEADS = ("lane_lines", "lane_lines_prob", "road_edges")
+    HEADS = ("lane_lines", "lane_lines_prob", "road_edges", "lead", "lead_prob")
     od = Path(a.out) / "replay"
     od.mkdir(parents=True, exist_ok=True)
     groups = sorted(p.name for p in (Path(a.out) / "msgs").iterdir() if p.is_dir())
+    D.RMEM = RM                                  # what sh30_driver.main() sets: without it a Session has no route tracker and feeds zeros
     with Run("wait_cap", "explore_g_replay", config=vars(a)) as run:
         p0 = T.load_pmodel("P0", torch.device("cuda"))
         pb, ctx = D.egodriver_pb2, Ctx()
-        ident = {}
-        for ck in HELD:
+        for ck in a.ckpts or HELD:
+            todo = [g for g in groups if ck in ckset(g.split("_", 1)[1]) and (a.force or not (od / f"{g}__{ck}.pkl").exists())]
+            if not todo:
+                continue
             core = D.C.Core(ck, "cuda", "backwarp", 1.0, "gpu")
+            assert core.rm, f"{ck}: not a ROUTE-MEM checkpoint"
+            RM.SERVE_ORDER = bool(getattr(core, "rm_order", False))
+            run.info(f"{ck}: route memory layout {'ordered' if RM.SERVE_ORDER else '-6..+72'}, groups {todo}")
             sl, cap, last = core.model.net.slices, {}, {}
             core.model.register_forward_hook(lambda m, args, out: cap.update(H=args[0], ego=args[1], tc=args[2], out=out))
             orig = core.plan
@@ -535,13 +643,10 @@ def replay(a):
                 last["o"] = _o(*x, **k)
                 return last["o"]
             core.plan = plan
-            for g in groups:
+            fi = Path(a.out) / f"replay_identity_{ck}.json"
+            ident = json.loads(fi.read_text()) if fi.exists() else {}
+            for g in todo:
                 st_, lab = g.split("_", 1)
-                if ck not in (lab, PARTNER[lab]):
-                    continue
-                f = od / f"{g}__{ck}.pkl"
-                if f.exists() and not a.force:
-                    continue
                 logd = Path(tempfile.mkdtemp())
                 drv = D.Driver(core, logd, 0, False)
                 md = Path(a.out) / "msgs" / g
@@ -550,7 +655,7 @@ def replay(a):
                     for Dd in runs_of(st_, lab):
                         stored.update(drive_records(Dd))
                 out = {}
-                for scene in sorted(p.stem for p in md.glob("*.pkl")):
+                for scene in sorted(p.stem for p in md.glob("*.pkl"))[: a.limit or None]:
                     rec, uuid = [], None
                     for kind, raw in pickle.load(open(md / f"{scene}.pkl", "rb")):
                         if kind == "driver_session_request":
@@ -589,20 +694,93 @@ def replay(a):
                 for r, d in zip(flat, drives):
                     r.update(anchor=np.asarray(d["anchor"], float), k=int(d["k"]), t0=int(d["t0"]))
                 if stored:
-                    dd = []
+                    dd, dm = [], []
                     for sc, rr in out.items():
                         by_k = {int(x["k"]): x for x in stored.get(sc, [])}
-                        dd += [float(np.hypot(*(np.asarray(by_k[r["k"]]["poses"], float)[7, :2] - r["poses"][7, :2]))) for r in rr if r["k"] in by_k]
-                    dd = np.array(dd)
-                    ident[f"{g}__{ck}"] = dict(n=int(len(dd)), share_10cm=float((dd <= 0.10).mean()) if len(dd) else None,
-                                               median=float(np.median(dd)) if len(dd) else None)
-                    run.info(f"identity {g} {ck}: {ident[f'{g}__{ck}']}")
-                pickle.dump(out, open(f, "wb"), protocol=4)
+                        for r in rr:
+                            x = by_k.get(r["k"])
+                            if x is None:
+                                continue
+                            dd.append(np.hypot(*(np.asarray(x["poses"], float)[[1, 3, 7], :2] - r["poses"][[1, 3, 7], :2]).T))
+                            if x.get("rmem") is not None and r["rmem"] is not None:
+                                dm.append(float(np.abs(np.asarray(x["rmem"], float) - r["rmem"]).max()))
+                    dd, dm = np.array(dd).reshape(-1, 3), np.array(dm)
+                    ident[g] = dict(n=int(len(dd)), median_m={h: float(np.median(dd[:, i])) for i, h in enumerate(("1s", "2s", "4s"))} if len(dd) else None,
+                                    p95_4s=float(np.percentile(dd[:, 2], 95)) if len(dd) else None,
+                                    share_4s_lt_5cm=float((dd[:, 2] < 0.05).mean()) if len(dd) else None,
+                                    rmem_maxdiff_p99=float(np.percentile(dm, 99)) if len(dm) else None, rmem_n=int(len(dm)))
+                    run.info(f"identity {g} {ck}: {ident[g]}")
+                pickle.dump(out, open(od / f"{g}__{ck}.pkl", "wb"), protocol=4)
                 run.info(f"replay {g} with {ck}: {len(out)} scenes, {len(flat)} decisions")
+            fi.write_text(json.dumps(ident, indent=1))
             del core
             torch.cuda.empty_cache()
-        (Path(a.out) / "replay_identity.json").write_text(json.dumps(ident, indent=1))
-        run.summary.update(identity=ident)
+        run.summary.update(ckpts=list(a.ckpts or HELD))
+
+
+def olg_unit(job):
+    """One replayed scene: every checkpoint's plan (and the stored one) against the rebuilt route of each decision (geo's rules)."""
+    g, scene, recs, R, bend = job
+    import rf_follow as RF
+    import ev as EV
+    from ao_e1 import project, stations
+    W, A, G0, Rl, _ = RF.regen_full(scene, recs, EV.CFG)
+    Rl = Rl[np.r_[True, np.hypot(*np.diff(Rl, axis=0).T) > 1e-6]]
+    S = stations(Rl)
+    s, h = RF.heading(Rl, S)
+    h_at = lambda q: float(np.interp(q, s, h))                                              # noqa: E731
+    plans = dict(stored={int(x["k"]): np.asarray(x["poses"], float) for x in recs}, **R)
+    rows, hint = [], None
+    for r in recs:
+        k, a = int(r["k"]), np.asarray(r["anchor"], float)
+        lo, hi = (-np.inf, np.inf) if hint is None else (hint - 30.0, hint + 60.0)
+        stn, lat = project(Rl, S, a[:2], lo, hi)
+        hint = stn
+        e = np.asarray(r["ego"], float)
+        base = dict(group=g, scene=scene, k=k, st=stn, lat=lat, v=float(np.hypot(e[4], e[5]) * 10.0), herr=float(wrap(a[2] - h_at(stn))), **bend)
+        for ck, Pk in plans.items():
+            if k not in Pk:
+                continue
+            P = Pk[k]
+            ar = arcs(P)
+            d = dict(base, ckpt=ck)
+            for n, i in (("1", 1), ("2", 3), ("4", 7)):
+                d["yaw" + n], d["arc" + n], d["dhr" + n] = float(P[i, 2]), float(ar[i]), h_at(stn + ar[i]) - h_at(stn)
+                d["plat" + n] = project(Rl, S, to_local(a, P[i, :2])[0], stn - 5.0, stn + 90.0)[1]
+            rows.append(d)
+    return rows
+
+
+def olg(a):
+    import pandas as pd
+    from ao_e1 import drive_records
+    from jevdrive import par
+    from jevdrive.common import n_cpus
+    from jevdrive.run import Run
+    out = Path(a.out)
+    Sc = pd.read_parquet(out / "scenes.parquet").set_index(["set", "label", "scene"])
+    with Run("wait_cap", "explore_g_olg", config=vars(a)) as run:
+        jobs = []
+        for g in sorted(p.name for p in (out / "msgs").iterdir() if p.is_dir()):
+            st_, lab = g.split("_", 1)
+            stored = {}
+            for Dd in runs_of(st_, lab):
+                stored.update(drive_records(Dd))
+            R = {ck: pickle.load(open(out / "replay" / f"{g}__{ck}.pkl", "rb")) for ck in ckset(lab)}
+            for sc in sorted(R[lab]):
+                if (st_, lab, sc) not in Sc.index or sc not in stored:
+                    continue
+                b = Sc.loc[(st_, lab, sc)]
+                bend = dict(set=st_, inputs=lab, sg=float(b.sg), entry=float(b.entry), exit=float(b.exit), kz=int(b.kz), bend_deg=float(b.bend_deg),
+                            r_bend=float(b.r_bend), outcome=str(b.outcome))
+                rr = [dict(x) for x in stored[sc]]
+                for x in rr:
+                    x.pop("ms", None), x.pop("hist", None)
+                jobs.append((g, sc, rr, {ck: {int(x["k"]): np.asarray(x["poses"], float) for x in R[ck].get(sc, [])} for ck in R}, bend))
+        res = par.pmap(olg_unit, jobs, run=run, workers=min(a.workers or n_cpus(), len(jobs)), desc="scenes")
+        run.info(f"{len(jobs)} scenes, {len(res.errors)} errors: {[str(e)[-200:] for e in list(res.errors.values())[:3]]}")
+        pd.DataFrame([x for v in res.values if v for x in v]).to_parquet(out / "replay.parquet", index=False)
+        run.summary.update(scenes=len(jobs), errors=len(res.errors))
 
 
 def lanes_unit(job):
@@ -669,10 +847,11 @@ def lanes(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
-    for n in ("geo", "msgs", "replay", "lanes", "report"):
+    for n in ("geo", "msgs", "replay", "olg", "lanes", "report"):
         p = sp.add_parser(n)
         p.add_argument("--out", default=str(NX / "explore_g")), p.add_argument("--limit", type=int, default=0)
         p.add_argument("--workers", type=int, default=0), p.add_argument("--force", action="store_true"), p.add_argument("--res", default="")
+        p.add_argument("--ckpts", nargs="*", default=None), p.add_argument("--dev", default="")
     a = ap.parse_args()
     if a.cmd == "report":
         import nx_turns_report as RP
