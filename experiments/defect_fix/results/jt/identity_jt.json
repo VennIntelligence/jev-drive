@@ -1,0 +1,21 @@
+{
+ "a": "JTGG-old",
+ "b": "JTGG-new",
+ "note": "NR1HVR command (on-arc, on-hold-res, diag) 60 steps eager: code 15d4816e vs fcd38da2 with every JT flag off",
+ "scalars": 230,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.55266273021698,
+  0.55266273021698
+ ],
+ "on_hash_60": [
+  "351f90794a10b90b",
+  "351f90794a10b90b"
+ ],
+ "want_hash": null,
+ "identical": true
+}
