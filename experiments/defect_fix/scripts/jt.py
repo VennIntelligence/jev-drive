@@ -14,6 +14,10 @@ at a dose) in the same batches. Box, repo root; chain in jt.sh.
   held --tags T ..   (op-train) held 460 @18 against RSG-L18-s0 (df.py cl_read) -> stdout
   diag --tag T [--lo 500] [--hi 1000]   (any python) a training run's events.jsonl: per-term trunk gradient norms and shares, activity, loss
       terms, dev ADE, pool slices and the wait / launch probe over steps lo..hi, plus the arc weight rule of supplement 9 amendment A
+  defer --after ID,ID [--dry]   (repo .venv) the main session's rule (10-18): the still-QUEUED third-party anchor reads
+      ar-read-{DD-sample,LTF-sample,starter,G0014}-c* are cancelled and resubmitted with their exact recorded spec (cmd, env, resources,
+      priority, tries, log dir) plus --after the JT trainings; ar-sum-all2 is resubmitted identically after the new ids and the anchor reads
+      still running; ids and a reason appended to runs/alpasim_proxy/arena/{jobs.txt,stages.txt}. Running jobs are never touched.
 """
 from __future__ import annotations
 
@@ -168,6 +172,46 @@ def cmd_diag(a):
     print(json.dumps(out, indent=1, default=str))
 
 
+def cmd_defer(a):
+    import re
+    import subprocess
+    import time
+    cl = [str(REPO / ".venv/bin/python"), "-m", "jevdrive.cl"]
+    q = subprocess.run(cl + ["queue"], capture_output=True, text=True, check=True).stdout.splitlines()
+    pat = re.compile(r"^ar-read-(DD-sample|LTF-sample|starter|G0014)-c\d+$")
+    rows = [x.split() for x in q if len(x.split()) > 2]
+    queued = [r[0] for r in rows if r[1] == "queued" and pat.match(r[2])]
+    running = [r[0] for r in rows if r[1] == "running" and pat.match(r[2])]
+    sm = [r[0] for r in rows if r[2] == "ar-sum-all2" and r[1] == "queued"]
+    print(json.dumps(dict(queued=len(queued), running=running, summary=sm)))
+    if a.dry:
+        return
+
+    def spec(i):
+        return json.loads(subprocess.run(cl + ["show", i], capture_output=True, text=True, check=True).stdout)["spec"]
+
+    def resubmit(sp, after):
+        f = ["submit", "--owner", sp["owner"], "--name", sp["name"], "--priority", f"{sp['priority']:g}", "--tries", str(sp["tries"]), "--no-check",
+             "--log-dir", sp["log_dir"], "--vram", f"{sp['vram_gb']:g}", "--cpu", str(sp["cpu"]), "--ram", f"{sp['ram_gb']:g}",
+             "--timeout-h", f"{sp['timeout_h']:g}", "--after", ",".join(after)]
+        f += [x for k, v in sp["env"].items() for x in ("--env", f"{k}={v}")]
+        out = subprocess.run(cl + f + ["--"] + sp["cmd"], capture_output=True, text=True, check=True, cwd=sp["cwd"]).stdout
+        return out.split()[-1]
+    specs = {i: spec(i) for i in queued + sm}
+    subprocess.run(cl + ["cancel"] + queued + sm, check=True)
+    time.sleep(20)                                                     # the dispatcher acts within one round
+    new = [(resubmit(specs[i], a.after.split(",")), specs[i]["name"]) for i in queued]
+    ns = [(resubmit(specs[i], [x for x, _ in new] + running), "ar-sum-all2") for i in sm]
+    A = DATA / "runs/alpasim_proxy/arena"
+    with open(A / "jobs.txt", "a") as fh:
+        fh.writelines(f"{i} {n}\n" for i, n in new + ns)
+    with open(A / "stages.txt", "a") as fh:
+        fh.write(f"{time.strftime('%F %T')} deferred by defect_fix JT (main session's rule: JT jobs memory-blocked > 20 min while anchor reads were admitted): "
+                 f"{len(new)} queued anchor reads cancelled and resubmitted with their exact specs --after the JT trainings {a.after}; "
+                 f"ar-sum-all2 resubmitted as {ns[0][0] if ns else '-'} after them + {len(running)} running; ids in jobs.txt\n")
+    print(json.dumps(dict(resubmitted=len(new), summary=ns)))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -185,5 +229,7 @@ if __name__ == "__main__":
     p = sub.add_parser("diag")
     p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
     p.add_argument("--w", type=float, default=0.0025, help="the arc weight of the run")
+    p = sub.add_parser("defer")
+    p.add_argument("--after", required=True), p.add_argument("--dry", action="store_true")
     a = ap.parse_args()
-    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held, diag=cmd_diag)[a.cmd](a)
+    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held, diag=cmd_diag, defer=cmd_defer)[a.cmd](a)
