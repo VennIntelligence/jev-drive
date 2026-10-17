@@ -16,7 +16,7 @@
 #   wait_set.sh gate                   job body: go-straight scores >= 0.99 on variant a and the replay >= 0.98 on a and b, else rc 1
 #                                      (a failed gate fails every read chained after it)
 #   wait_set.sh report [tag ...]       job body / by hand: tables of every read (or the tags) -> $W/report/{tables.md, all.csv}
-#   wait_set.sh smoke <tag> [n]        the first n windows of each variant (default 2) -> $W/smoke/<tag> (pool job; plumbing check)
+#   wait_set.sh smoke <tag> [n] [after] the first n windows of each variant (default 2) -> $W/smoke/<tag> (pool job; plumbing check)
 #   wait_set.sh run <tag> <dir>        job body (WS_LIST overrides the scene list)
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
@@ -49,9 +49,9 @@ read)
   [[ $T == P0 || $T == starter || $T == replay || -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"
   mkdir -p $D; sub ws-read-$T ${A:+--after $A} "${RD[@]}" -- bash $E/scripts/wait_set.sh run $T $D/run ;;
 smoke)
-  T=${1:?tag}; n=${2:-2}; D=$W/smoke/$T; rm -rf $D; mkdir -p $D
+  T=${1:?tag}; n=${2:-2}; A=${3:-}; D=$W/smoke/$T; rm -rf $D; mkdir -p $D
   python3 -c "import json, sys; w = json.load(open('$S/set.json'))['windows']; print('\n'.join([x['id'] for x in w if x['variant'] == 'a'][:$n] + [x['id'] for x in w if x['variant'] == 'b'][:$n]))" > $D/list.txt
-  sub ws-smoke-$T "${RD[@]}" --env WS_LIST=$D/list.txt -- bash $E/scripts/wait_set.sh run $T $D/run ;;
+  sub ws-smoke-$T ${A:+--after $A} "${RD[@]}" --env WS_LIST=$D/list.txt -- bash $E/scripts/wait_set.sh run $T $D/run ;;
 run)
   T=$1; D=$2; [[ -f $C/check.json ]] || die "no cache check $C/check.json"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
   rm -rf "$D"; mkdir -p "$D"; L=${WS_LIST:-$S/set.txt}      # WS_LIST: a sub-list (smoke)
