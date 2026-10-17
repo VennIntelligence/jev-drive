@@ -203,13 +203,9 @@ def cmd_gate(a):
     cr = DATA / "runs/op_parity/cache" / a.pool
     dev = torch.device("cpu")
     pack = NL.load(cr, M["names"], dev, file=a.lat)
-    anc = M["anchor"].astype(np.float64)
-    lf = M["logfut"].astype(np.float64)
-    okh = np.isfinite(lf).all((1, 2))
-    lf = np.nan_to_num(lf)
-    c, s = np.cos(anc[:, 2])[:, None], np.sin(anc[:, 2])[:, None]
-    dx, dy = lf[..., 0] - anc[:, None, 0], lf[..., 1] - anc[:, None, 1]
-    H = np.stack([c * dx + s * dy, -s * dx + c * dy, wrap(lf[..., 2] - anc[:, None, 2])], -1)       # human 0 .. 4 s in the row frame
+    lf = M["logfut"].astype(np.float64)                               # the human's 0 .. 4 s poses, already in the row's rear-axle frame (ol_zmonc /
+    okh = np.isfinite(lf).all((1, 2))                                 # ol_onclab2 read them so: to_local(anchor, logfut), heading anchor + yaw)
+    H = np.nan_to_num(lf)
     H[..., 2] = np.unwrap(H[..., 2], axis=1)
     near = okh & (np.hypot(H[:, 0, 0], H[:, 0, 1]) <= NEAR_M)
     turn = np.degrees(np.abs(H[:, -1, 2] - H[:, 0, 2])) >= TURN_DEG
