@@ -175,6 +175,24 @@ NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every f
             lanes off the ego's own chain, the agent hinge's side buffer; its docstring): any > 0 sets --on-lon nr1_lat and --on-lon-lam 1 (the
             weights carry the scale: each term enters as 10 W x ho_w x sum over the pool rows / n_imit); refused with another --on-lon module.
 
+NR1HVR (2026-10-18, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md supplement 8, draft); every flag off = the recipe above
+operation for operation (identity: experiments/defect_fix/results/identity_nr1hvr*.json):
+  --on-arc W        the two-sided longitudinal arc-length term of experiments/defect_fix/lib/nr1_lon.py on the pool rows (target: the arc of the
+            row's own `fut`, the human's speed blended from the ego's over 2 s; rows where the logged human stands or stops in the horizon are
+            excluded; gradient only along each pose's own heading), through nr1_lat as the --on-lon module: 10 W x ho_w x sum / n_imit.
+  --on-hold-res R [--on-hold-n 2048]   the pool logs with sha1(log) % 10 == R are never drawn (this changes the training rows); at step 0 and
+            every dev eval, N rows of them and N rows of the drawn logs (fixed, rng [seed, 0, 167], its own stream) are scored in eval mode on
+            the pool terms (agent, road, the --on-lon terms; per-row mean and active share) and, with --on-arc, the 4 s arc bias against the
+            target and the shares slower than 0.8x / faster than 1.2x it -> scalars pool_held/* and pool_fit/*.
+  --diag [--diag-every 100]   monitoring only, no effect on the update: act/* (share of rows with a nonzero term, pool rows and navtrain rows
+            apart), grad/global (norm before the clip) and grad/clip (share of steps where the 1.0 clip fired) every step; every K steps the
+            trunk-gradient norm (parameter groups base + adapter; the route branch is left out) of each weighted term: imit, nav_hinge (P2H10's
+            drivable hinge on navtrain rows), pool_hinge (agent + road on pool rows), lat (the three lateral terms), lon (--on-arc), pool (the
+            three pool groups together) and cos(imit, pool), through torch.autograd.grad(retain_graph=True) on the scaled terms before the
+            step's backward (.grad untouched). Works with --compile (checked by the smoke runs in results/identity_nr1hvr_smoke.json).
+  --lr-floor F      the cosine decays to F x base lr instead of 0 (lr = base x warm-up x (F + (1 - F) cos)); 0 (default) = the plain cosine.
+            The warm-up length is the existing --warmup.
+
 Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-17-compile-prereg.md):
   --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
             pattern): ~2x the steps per second on the RSG-L18 recipe. Not bit-identical to eager (fused fp16 kernels round differently;
@@ -769,6 +787,25 @@ def cmd_train(a):
         nw, pw_si, si_free, sirec = SI.draws(a, ns, S, tr_o)
         if pw_si is not None:
             pw, upre = pw_si, 0
+    onx, hrec = None, {}
+    if a.on_hold_res >= 0:                                            # NR1HVR: held-out pool logs (docstring); off: no operation is added
+        from jevdrive.common import data_dir as _dd
+        lg_ = np.load(_dd() / "runs/op_parity/cache" / a.on / "tab.npz")["log"].astype(str)
+        assert len(lg_) == ns.n_on, "--on-hold-res: pool rows"
+        ul_ = sorted(set(lg_))
+        held_l = [g for g in ul_ if int(hashlib.sha1(g.encode()).hexdigest(), 16) % 10 == a.on_hold_res]
+        held_m = np.isin(lg_, held_l)
+        assert held_m.any() and not held_m.all(), "--on-hold-res: the residue holds no log or every log"
+        if pw is None:
+            onx = np.flatnonzero(~held_m)
+        else:
+            pw = np.where(held_m, 0.0, pw)
+            pw, upre = pw / pw.sum(), 0
+        hg_ = np.random.default_rng([cfg.seed, 0, 167])
+        HR = np.sort(hg_.choice(np.flatnonzero(held_m), min(a.on_hold_n, int(held_m.sum())), replace=False))
+        FR = np.sort(hg_.choice(np.flatnonzero(~held_m), min(a.on_hold_n, int((~held_m).sum())), replace=False))
+        hrec = dict(res=a.on_hold_res, logs=len(ul_), held_logs=held_l, held_rows=int(held_m.sum()), drawn_rows=int((~held_m).sum()),
+                    scored_held=len(HR), scored_fit=len(FR))
 
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
     des_on, d2_on = bool(a.desire_rows), a.d2_lam > 0                # DESIRE D1 / D2 (docstring); both off: no operation below is added
@@ -826,8 +863,9 @@ def cmd_train(a):
         an = rng.random(nB - k_ho - k_on) < cfg.d_frac
         an[nN:] = False
         if k_on:
-            i = (orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None else orng.choice(upre, k_on, replace=upre < k_on) if upre
-                 else orng.choice(ns.n_on, k_on, replace=True, p=pw))
+            i = (orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None and onx is None
+                 else onx[orng.choice(len(onx), k_on, replace=len(onx) < k_on)] if pw is None
+                 else orng.choice(upre, k_on, replace=upre < k_on) if upre else orng.choice(ns.n_on, k_on, replace=True, p=pw))
             sha.update(i.astype("<i8").tobytes())
             r, an = np.concatenate([r, ns.on0 + i]), np.concatenate([an, np.zeros(k_on, bool)])
         if k_ho:
@@ -857,6 +895,82 @@ def cmd_train(a):
         ev["ade_nomem"] = float(rows_ade(model, Sd, dv_o[has], LS.W, True).mean())
         model.train()
         return ev
+
+    def pool_ev():
+        """--on-hold-res: the pool terms on the held / fitted slices, eval mode (docstring)."""
+        from loss43 import shape_only
+        pi_ = torch.as_tensor(S.pi, device=dev)
+        arcp = LS.pack.get("arc") if isinstance(LS.pack, dict) else None
+        model.eval()
+        res = {}
+        with torch.no_grad():
+            for nm, rr in (("held", HR), ("fit", FR)):
+                acc, n_, d4 = {}, 0, []
+                for j in range(0, len(rr), 128):
+                    g = ns.on0 + rr[j:j + 128]
+                    rt = torch.as_tensor(g, device=dev)
+                    o = model(S.front[g], S.ego[rt], S.tc[rt], None, None, nv=None if ns.nv is None else ns.nv[rt]).float()
+                    x, y, psi = T.rear(o[:, pi_].view(-1, 33, 15), S.cam_x[rt], LS.W)
+                    xs, ys = shape_only(x, y, psi) if LS.shape else (x, y)
+                    tv = {}
+                    if LS.agent2 is not None:
+                        ok, av = LS.on_aok[rt], torch.zeros(len(g), device=dev)
+                        if ok.any():
+                            av[ok] = LS.agent2.per_step(xs[ok], ys[ok], psi[ok], rt[ok]).mean(1)
+                        tv["agent"] = av
+                    if LS.road is not None:
+                        ko, rv = LS.road.ok[rt], torch.zeros(len(g), device=dev)
+                        if ko.any():
+                            rv[ko] = torch.relu(LS.road.margin - LS.road.margins(xs[ko], ys[ko], psi[ko], rt[ko])).mean(1)
+                        tv["road"] = rv
+                    if LS.lon is not None:
+                        tv |= LS.lon.loss(torch.stack([x, y, psi], -1), rt - LS.on0, LS.pack)
+                    for q, v in tv.items():
+                        acc[q + "_mean"] = acc.get(q + "_mean", 0.0) + float(v.sum())
+                        acc[q + "_pos"] = acc.get(q + "_pos", 0.0) + float((v > 0).sum())
+                    if arcp is not None:
+                        import nr1_lon
+                        lab = arcp["ok"][rt - LS.on0]
+                        sp = nr1_lon.arc(x, y)[:, -1]
+                        d4.append(torch.stack([sp - arcp["s_h"][rt - LS.on0][:, -1], arcp["s_h"][rt - LS.on0][:, -1]], 1)[lab])
+                    n_ += len(g)
+                res |= {f"pool_{nm}/{q}": v / n_ for q, v in acc.items()}
+                if d4:
+                    D_ = torch.cat(d4)
+                    sh = D_[:, 1].clamp_min(1e-3)
+                    res |= {f"pool_{nm}/arc4_bias": float(D_[:, 0].mean()), f"pool_{nm}/slow08": float(((D_[:, 0] + sh) < 0.8 * sh).float().mean()),
+                            f"pool_{nm}/fast12": float(((D_[:, 0] + sh) > 1.2 * sh).float().mean())}
+        model.train()
+        return res
+    if a.diag:
+        tp_ = [p_ for p_ in base + new if p_.requires_grad]
+        ACT = {"agent_ho_pos": "act/pool_agent", "road_ho_pos": "act/pool_road", "on/lat_onc_pos": "act/pool_lat_onc", "on/lat_soft_pos": "act/pool_lat_soft",
+               "on/lat_side_pos": "act/pool_lat_side", "on/lon_arc_pos": "act/pool_lon_arc", "imit/hinge_pos": "act/nav_drivable",
+               "imit/agent_pos": "act/nav_agent", "imit/route_pos": "act/nav_route"}
+
+        def diag_grads(Ls):
+            """Per-term trunk-gradient norms on the scaled terms (the optimizer's .grad untouched)."""
+            hw, ll = LS.ho_w, getattr(LS, "lon_lam", 1.0)
+            g0 = lambda q: Ls[q] if q in Ls and torch.is_tensor(Ls[q]) and Ls[q].requires_grad else None  # noqa: E731
+            parts = dict(imit=[(1.0, g0("imit"))], nav_hinge=[(cfg.hinge_lam, g0("hinge"))],
+                         pool_hinge=[(hw * cfg.agent_lam, g0("agent_ho")), (hw * LS.road_lam, g0("road_ho"))],
+                         lat=[(hw * ll, g0(f"on/lat_{q}_ho")) for q in ("onc", "soft", "side")], lon=[(hw * ll, g0("on/lon_arc_ho"))])
+            sc, out, G = float(scaler.get_scale()), {}, {}
+            for k, lst in parts.items():
+                v = [w * t for w, t in lst if t is not None]
+                if not v:
+                    continue
+                gr = torch.autograd.grad(scaler.scale(sum(v)), tp_, retain_graph=True, allow_unused=True)
+                G[k] = [None if q is None else q.float() / sc for q in gr]
+                out[f"grad/{k}"] = float(torch.sqrt(sum((q * q).sum() for q in G[k] if q is not None)))
+            pk = [k for k in ("pool_hinge", "lat", "lon") if k in G]
+            if pk:
+                P = [sum(G[k][i] for k in pk if G[k][i] is not None) if any(G[k][i] is not None for k in pk) else None for i in range(len(tp_))]
+                out["grad/pool"] = float(torch.sqrt(sum((q * q).sum() for q in P if q is not None)))
+                if "imit" in G:
+                    dot = sum((u * w).sum() for u, w in zip(G["imit"], P) if u is not None and w is not None)
+                    out["grad/cos_imit_pool"] = float(dot / max(out["grad/imit"] * out["grad/pool"], 1e-30))
+            return out
     with Run("route_mem", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"onpol": vars(a), "route_mem": dict(head=ns.head, feat_ok=okc)}) as run:
         for x in ns.sp + ((ns.trl,) if k_ho or ns.agent2 is not None else ()) + ((splits.load(a.on_split),) if a.on and a.on_split else ()):
             run.use_split(x)
@@ -896,6 +1010,14 @@ def cmd_train(a):
         if awr_on:
             run.info(f"AWR-ONPOL: {json.dumps(AW.rec)}, rng [seed, 0, {AWR.STREAM}]")
             run.summary.update(awr=AW.rec)
+        if hrec:
+            run.info(f"NR1HVR held-out pool logs (never drawn): {json.dumps(hrec)}")
+            run.summary.update(on_hold=hrec)
+            pe = pool_ev()
+            run.scalars(pe, 0)
+            run.info("pool slices @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
+        if a.lr_floor or a.diag:
+            run.info(f"lr floor {a.lr_floor}; diag {a.diag} (per-term gradients every {a.diag_every} steps)")
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -922,6 +1044,8 @@ def cmd_train(a):
                 jl = torch.as_tensor(dr[3], device=dev)
                 anchor = torch.cat([anchor, torch.zeros(k_lc, dtype=torch.bool, device=dev)])
             cosf = 0.5 * (1 + np.cos(np.pi * (step / cfg.steps))) if pp_lr else 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
+            if a.lr_floor:
+                cosf = a.lr_floor + (1.0 - a.lr_floor) * cosf
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / g["wu"]) * cosf
             ego = S.ego[rows] * (~anchor)[:, None].float()
@@ -1059,6 +1183,8 @@ def cmd_train(a):
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
+            if a.diag and (step + 1) % a.diag_every == 0:            # monitoring only: before the step's backward, .grad untouched
+                Ls |= diag_grads(Ls)
             if ns.rx:                                                 # the module learns from the constraint side only
                 g_rx = (torch.autograd.grad(scaler.scale(total_C), rxp, retain_graph=True, allow_unused=True) if total_C.requires_grad
                         else [None] * len(rxp))
@@ -1071,9 +1197,13 @@ def cmd_train(a):
                     if g_ is not None:
                         p_.grad = g_ if p_.grad is None else p_.grad + g_
             scaler.unscale_(opt)
-            torch.nn.utils.clip_grad_norm_(base + new + rp + rxp, 1.0)
+            gn_ = torch.nn.utils.clip_grad_norm_(base + new + rp + rxp, 1.0)
             scaler.step(opt)
             scaler.update()
+            if a.diag:                                                # monitoring only (values read after the step)
+                if torch.isfinite(gn_):
+                    Ls["grad/global"], Ls["grad/clip"] = gn_.detach(), (gn_ > 1.0).float()
+                Ls |= {ACT[q]: Ls[q] for q in ACT if q in Ls}
             if ST is not None:
                 ST.update(Ls, step)
             hist.append({q: float(v) for q, v in Ls.items()})
@@ -1099,6 +1229,11 @@ def cmd_train(a):
                 run.scalars({f"dev/{q}": v for q, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items()))
                 run.summary.update({f"dev_{q}": v for q, v in ev.items()})
+                if hrec:
+                    pe = pool_ev()
+                    run.scalars(pe, step + 1)
+                    run.info(f"pool slices @ {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
+                    run.summary.update({f"pool_{q.replace('/', '_')}": v for q, v in pe.items()})
         torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": ns.head}, d / "ckpt-final.pt")
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
         v2 = dict(lane_lam=a.lane_lam, lane_dz=a.lane_dz, lane_neg=a.lane_neg, lc_cf=a.lc_cf) if (lane_on or lc_on or ns.head.get("order")) else {}
@@ -1261,6 +1396,12 @@ if __name__ == "__main__":
         p.add_argument("--lat-depth", type=float, default=0.0, help="NR1: allowed depth (m) into the opposite-lane region")
         p.add_argument("--lat-soft-depth", type=float, default=0.0, help="NR1: allowed depth (m) into the soft region")
         p.add_argument("--lat-buf", type=float, default=0.4, help="NR1: side buffer (m) of the side term")
+        p.add_argument("--on-arc", type=float, default=0.0, help="NR1HVR: weight of the two-sided longitudinal arc term on the pool rows (0 = off)")
+        p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
+        p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
+        p.add_argument("--diag", action="store_true", help="monitoring only: activity rates, grad norm / clip rate, per-term trunk gradients")
+        p.add_argument("--diag-every", type=int, default=100, help="--diag: steps between per-term gradient norms")
+        p.add_argument("--lr-floor", type=float, default=0.0, help="cosine floor as a share of each group's base lr (0 = the plain cosine)")
         p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
         p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
         p.add_argument("--si-top", type=float, default=0.1, help="SELF-ITER: top share of each set oversampled (--si-mode top)")
@@ -1326,14 +1467,16 @@ if __name__ == "__main__":
         if a.env_lo_scale != 1.0:
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
-    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
+    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file)}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc)}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
+    assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"
+    assert 0 <= getattr(a, "lr_floor", 0.0) < 1 and getattr(a, "diag_every", 100) > 0, "--lr-floor in [0, 1), --diag-every > 0"
     assert not (getattr(a, "rm_anchor", False) and a.lc_cf), "--rm-anchor: no anchored --lc-cf rows (rf_cfpool builds the ordered layout)"   # ANCHOR
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

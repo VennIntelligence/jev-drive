@@ -17,6 +17,11 @@
 #                           Env: TAGP tag prefix (NR1F), SEEDS ("0 1"), NOPUB=1 no public chunks, NOPAI=1 no PAI submitter (stop17 + PAI 281);
 #                           STEPS (2500), ONK on-policy rows per batch (13); supplement 6: TAGP=NR1HV STEPS=5000 ONK=32 NOPUB=1 NOPAI=1 df.sh full RTB1AR-F-s0 0.5v2
 #                           prereg supplement 3: SEEDS=0 NOPUB=1 NOPAI=1 TAGP=NR1FB10 df.sh full NR1B10-F-s0 0.15v2
+#                           XF: an extra flag preset of the training (below; empty = none). Supplement 8 (draft, not launched):
+#                           TAGP=NR1HVR STEPS=5000 ONK=32 XF=hvr NOPUB=1 NOPAI=1 PRIO=12 df.sh full RTB1AR-F-s0 0.5v2
+#   df.sh hvrcheck <rev>    NR1HVR identity (supplement 8): NR1HV's command 60 steps eager, code <rev> vs this code (flags off) -> identity_nr1hvr;
+#                           this code with --diag (every 20 steps) -> identity_nr1hvr_diag (superset of scalars, every shared one equal); compiled
+#                           smoke 300 steps with the NR1HVR flags, with and without --diag -> identity_nr1hvr_smoke + the it/s of each (overhead)
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
 #   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress (TAGP=X: full_chain_X.*)
 #   df.sh train <arm> <seed> <steps> <tag>   job body; arms below
@@ -46,6 +51,8 @@ fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists
 FT=(--train --vram 32 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)                       # compiled (no JEV_RM_EAGER); kd / d2 second forwards
 FL=(--train --vram 44 --cpu 6 --ram 90 --env CL_HIST_KEY=rm-train)                       # + the lateral rasters on the card (~12 GB)
 FE=(--train --vram 28 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)  # identity runs only
+FEL=(--train --vram 44 --cpu 6 --ram 90 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1) # identity runs with the lateral rasters
+declare -A XFP=([hvr]="--on-arc 0.0005 --on-hold-res 2 --diag" [hvrnd]="--on-arc 0.0005 --on-hold-res 2" [diag20]="--diag --diag-every 20")   # XF presets
 lat_flags() {  # lat_flags <w> [v2]: the lateral terms at weight w with the gate's pick ($O/lat_pick.env; v2: amendment 1's $O/lat_pick_v2.env and raster)
   [[ $1 == 0 ]] && return 0; local env=$O/lat_pick.env lf=$LAT; [[ ${2:-} == v2 ]] && { env=$O/lat_pick_v2.env; lf=$LAT2; }; source $env
   local f=""; [[ $ONC == 1 ]] && f="$f --lat-onc $1"; [[ $SOFT == 1 ]] && f="$f --lat-soft $(python3 -c "print($1 / 5)")"; [[ $SIDE == 1 ]] && f="$f --lat-side $1"
@@ -88,6 +95,22 @@ codecheck)
   f=$(sub df-bitcmp-rsg --after $c,$d --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1GG-R-old --b NR1GG-R-new --out identity_rsg \
       --hash $RSG_HASH60 --note "RSG-L18 command 60 steps, eager: code $rev vs this code ($(git rev-parse --short HEAD)) with every NR1 flag off; on_hash_60 = RSG-L18-s0's") || exit 1
   echo "codecheck $rev: base $a $b bitcmp $e; rsg $c $d bitcmp $f" | tee -a $O/stages.txt ;;
+hvrcheck)   # supplement 8: identity of the NR1HVR code with every new flag off, --diag's numerical neutrality, the compiled smoke
+  rev=${2:?rev}; W=$DATA_DIR/tmp/df_old_$rev; [[ -d $W ]] || git worktree add --detach $W $rev > /dev/null || exit 1
+  A=full=$V2B:0.5v2::32; fresh NR1HVRGG-old NR1HVRGG-new NR1HVRGG-diag NR1HVRSM-diag NR1HVRSM-nodiag
+  a=$(sub df-hvr-old "${FEL[@]}" --timeout-h 1 -- bash $W/$ME train $A 0 60 NR1HVRGG-old) || exit 1
+  b=$(sub df-hvr-new "${FEL[@]}" --timeout-h 1 -- bash $ME train $A 0 60 NR1HVRGG-new) || exit 1
+  c=$(sub df-hvr-diag "${FEL[@]}" --timeout-h 1 -- bash $ME train $A:diag20 0 60 NR1HVRGG-diag) || exit 1
+  d=$(sub df-hvr-smd "${FL[@]}" --timeout-h 1 -- bash $ME train $A:hvr 0 300 NR1HVRSM-diag) || exit 1
+  e=$(sub df-hvr-smn "${FL[@]}" --timeout-h 1 -- bash $ME train $A:hvrnd 0 300 NR1HVRSM-nodiag) || exit 1
+  h=$(git rev-parse --short HEAD)
+  f=$(sub df-bitcmp-hvr --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1HVRGG-old --b NR1HVRGG-new --out identity_nr1hvr \
+      --note "NR1HV's command (RTB1AR-F-s0, on-k 32, 0.5v2) 60 steps, eager: code $rev vs this code ($h) with every NR1HVR flag off") || exit 1
+  g=$(sub df-bitcmp-hvrdiag --after $b,$c --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1HVRGG-new --b NR1HVRGG-diag --extra-ok \
+      --out identity_nr1hvr_diag --note "the same command, eager, this code ($h): --diag --diag-every 20 off vs on (b logs extra keys)") || exit 1
+  k=$(sub df-bitcmp-hvrsm --after $d,$e --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1HVRSM-nodiag --b NR1HVRSM-diag --extra-ok \
+      --out identity_nr1hvr_smoke --note "NR1HVR flags (--on-arc 0.0005 --on-hold-res 2) 300 steps compiled, this code ($h): --diag off vs on") || exit 1
+  echo "hvrcheck $rev: old $a new $b diag $c smoke $d / $e bitcmp $f $g $k" | tee -a $O/stages.txt ;;
 lat)
   [[ ! -e $LAT/meta.npz ]] || { echo "$LAT exists" >&2; exit 1; }
   b=$(sub df-lat-build --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 POLARS_MAX_THREADS=1 \
@@ -157,7 +180,7 @@ l18pilot)   # job body after the label gate
 full)
   B=${2:?base}; Wt=${3:?lateral weight}; NOAC=${4:-}; all=(); TT=()
   for s in ${SEEDS:-0 1}; do T=${TAGP:-NR1F}-L18-s$s; fresh $T; TT+=($T)                         # TAGP: a second chain's tag prefix; SEEDS: fewer seeds
-    t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC:${ONK:-} $s ${STEPS:-2500} $T) || exit 1
+    t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC:${ONK:-}${XF:+:$XF} $s ${STEPS:-2500} $T) || exit 1
     ids=$(reads $T $t $([[ -n ${NOPAI:-} ]] || { [[ $s == 0 ]] && echo pai || echo stop17; })) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
   echo "full: ${TT[*]} after $(csv ${all[@]})" | tee -a $O/stages.txt ;;
 paisub)   # job body: paisub <tag> <pai|stop17>: PAI stop17 (+ PAI 281 with pai), submission config, of an L18 checkpoint
@@ -187,10 +210,11 @@ train)   # train <arm> <seed> <steps> <tag>
     cont=*) F="--init ${2#cont=} --allow-init $RSG --on on1_L18RB0" ;;                           # V2's L18 command from any base
     h=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h=})" ;;            # L18 pilots
     h2=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h2=} v2)" ;;       # amendment 1's extra arm
-    full=*) IFS=: read -r FB FW FN FK <<< "${2#full=}"                                         # FK: on-policy rows per batch (ONK; RSG's 13 when empty)
-            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags ${FW%v2} $([[ $FW == *v2 ]] && echo v2)) ${FK:+--on-k $FK}" ;;   # w = 0.15v2: amendment 1's terms
+    full=*) IFS=: read -r FB FW FN FK FX <<< "${2#full=}"                                      # FK: on-policy rows per batch (ONK; RSG's 13 when empty)
+            [[ -z $FX || -n ${XFP[$FX]:-} ]] || { echo "train: preset $FX?" >&2; exit 2; }        # FX: an XF preset (XFP)
+            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags ${FW%v2} $([[ $FW == *v2 ]] && echo v2)) ${FK:+--on-k $FK}${FX:+ ${XFP[$FX]}}" ;;   # w = 0.15v2: amendment 1's terms
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,23p $0; exit 2 ;;
+*) sed -n 2,28p $0; exit 2 ;;
 esac

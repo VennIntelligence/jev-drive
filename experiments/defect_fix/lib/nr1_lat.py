@@ -20,6 +20,8 @@ recipe's existing road hinge and vehicle contact its existing agent hinge; both 
         object half length) from the ego box centre), every class lib/agent_hinge.AgentHinge keeps, plain ego box: relu(buf - distance), max over
         objects, mean over the 40 dense steps. The existing agent hinge (margin 0.3 ahead in the corridor, contact only beside) is unchanged.
 Every term moves the plan's poses only across their own heading (loss43's shape_only; the recipe runs --shape).
+  arc   (NR1HVR, rm_train --on-arc W; prereg supplement 8) the two-sided longitudinal term of nr1_lon.py, carried here because the pool has one
+        --on-lon module: logged as lon_arc, 10 x W x nr1_lon.term; it moves the poses only along their own heading. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -27,11 +29,12 @@ import numpy as np
 
 BC = (4.049 - 1.127) / 2                       # box centre ahead of the rear axle (nuPlan Pacifica), = the scorer's centroid offset
 BIN_DEG = 30.0
-CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="")
+CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0)
 
 
-def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file=""):
-    CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file))
+def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0):
+    CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
+               arc=float(arc))
     return dict(CFG)
 
 
@@ -70,6 +73,10 @@ def load(pool_dir, names, dev, file=None):
     if CFG["side"] > 0 or file:
         from agent_hinge import AgentHinge
         pack["ah"] = AgentHinge(Path(pool_dir) / "agent.npz", names, dev, 0.0, None)
+    if CFG["arc"] > 0:                                                         # NR1HVR: the longitudinal labels from the pool's tab
+        import nr1_lon
+        pack["arc"] = nr1_lon.load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_arc labels {pack['arc']['rec']}", flush=True)
     return pack
 
 
@@ -148,4 +155,8 @@ def terms(poses, rows, pack, cfg=None):
 
 def loss(poses, rows, pack):
     t = terms(poses, rows, pack)
-    return {f"lat_{k}": 10.0 * CFG[k] * v for k, v in t.items() if CFG[k] > 0}
+    out = {f"lat_{k}": 10.0 * CFG[k] * v for k, v in t.items() if CFG[k] > 0}
+    if CFG["arc"] > 0:
+        import nr1_lon
+        out["lon_arc"] = 10.0 * CFG["arc"] * nr1_lon.term(poses, rows, pack["arc"])
+    return out

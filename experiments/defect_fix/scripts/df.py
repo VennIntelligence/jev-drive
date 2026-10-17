@@ -276,13 +276,16 @@ CONT_PUB_LO, CONT_HELD_ZEROS = -0.01, 3                     # a base dose's plai
 
 
 def cmd_bitcmp(a):
-    """nx.py bitcmp's comparison (every scalar, every weight, dev ADE, on_hash_60 [= --hash]) -> results/<out>.json; exit 2 unless identical."""
+    """nx.py bitcmp's comparison (every scalar, every weight, dev ADE, on_hash_60 [= --hash]) -> results/<out>.json; exit 2 unless identical.
+    --extra-ok: run b may log scalar keys a does not (monitoring-only logging, rm_train --diag); every key of a is compared."""
     (sa, da, ma), (sb, db, mb) = wt.run_of(a.a), wt.run_of(a.b)
     keys = [k for k in sorted(set(sa) & set(sb), key=str) if not k[0].startswith("throughput/")]
     dl = max(abs(sa[k] - sb[k]) for k in keys)
     same = all(set(ma[g] or {}) == set(mb[g] or {}) for g in ("net", "parity"))
     dw = max(float((ma[g][k].float() - mb[g][k].float()).abs().max()) for g in ("net", "parity") for k in ma[g]) if same else float("inf")
-    r = dict(a=a.a, b=a.b, note=a.note, scalars=len(keys), scalar_keys_equal=set(k[0] for k in sa) == set(k[0] for k in sb), scalar_max_abs_diff=dl,
+    ka, kb = set(k[0] for k in sa), set(k[0] for k in sb)
+    r = dict(a=a.a, b=a.b, note=a.note, scalars=len(keys), scalar_keys_equal=ka <= kb if a.extra_ok else ka == kb, scalar_max_abs_diff=dl,
+             extra_keys_b=sorted(kb - ka) if a.extra_ok else None,
              weight_max_abs_diff=dw, weight_keys_equal=same, dev_ade=[da.get("dev_ade"), db.get("dev_ade")], on_hash_60=[da.get("on_hash_60"), db.get("on_hash_60")],
              want_hash=a.hash or None)
     r["identical"] = bool(dl == 0 and dw == 0 and same and r["scalar_keys_equal"] and r["dev_ade"][0] == r["dev_ade"][1]
@@ -644,7 +647,7 @@ if __name__ == "__main__":
     p.add_argument("--tag", default="RTB1ARO-L18-s0"), p.add_argument("--pool", default="on1_L18NR1")
     p = sp.add_parser("bitcmp")
     p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--out", required=True)
-    p.add_argument("--hash", default=""), p.add_argument("--note", default="")
+    p.add_argument("--hash", default=""), p.add_argument("--note", default=""), p.add_argument("--extra-ok", action="store_true")
     sp.add_parser("candgate").add_argument("--j", required=True)
     sp.add_parser("basesum").add_argument("--bases", nargs="+", required=True, help="dose:base:continuation")
     p = sp.add_parser("pilotsum")
