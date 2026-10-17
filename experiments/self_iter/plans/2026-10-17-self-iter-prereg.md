@@ -16,7 +16,7 @@
   不是任何评估 log（wt.leak：held 460、公开 1491、PAI 281、waitcap_test；navsim_logs/test 的 log 一个都不要）；**每帧都要（2 Hz），不做稀疏**。
   crc32(log) % 10 == 0 的 log 整个留出（tv_hold），永不训练，做闸的未见行。行数由 select 记录（`results/select.json`），写进第 6 节补记。
 - 新行进合并池 on1_L18RBSI = on1_L18RB0（`s`，S 行，mode self，原样）++ on1_SITV（`t`，mode both：只有日志模仿，agent / road / route 标签 ok 全 False，
-  所以没有任何 hinge），`--on-mode mixed`。新行在 128 行 batch 里的期望槽位 k_tv = round(102 × n_tv / (101 499 + n_tv))，从 102 个正常槽里让出
+  所以没有任何 hinge），`--on-mode mixed`。新行在 128 行 batch 里的期望槽位 k_tv = min(round(102 × n_tv / (101 499 + n_tv)), 51)（按行数比例，上限一半：全量时 navtrain 行不至于只剩个位数），从 102 个正常槽里让出
   （`--on-k 13 + k_tv`），S 行期望仍是 13；新行的 route memory 和正常行一样按 --rm-drop 丢（不按池行的不丢规则）。
 
 ## 2. 扫描与抽样

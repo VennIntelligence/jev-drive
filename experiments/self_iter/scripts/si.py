@@ -14,7 +14,7 @@ rm_build.py nav, rf_pait.py merge); the loss is the RSG-L18 recipe's, the draw i
   pack --batches A,B.. [--name SITV --merged L18RBSI]   pool on1_<name> (mode both: imitation of the log only, agent / road / route labels ok
                      False; tab `hold`, `cls`, `cell`) -> merged on1_<merged> = on1_L18RB0 (s, self) ++ on1_<name> (t, both) (rf_pait merge);
                      the pool's own front copy is removed after the merge; splits navsim/selfiter_tv<suffix> / selfiter_tvhold<suffix>; pack.json
-                     with the per-batch slot count k_tv (new rows in a 128 batch = 102 x n_tv / (n_nav + n_tv)) -> runs/self_iter/flags_<pool>.txt
+                     with the per-batch slot count k_tv (new rows in a 128 batch = 102 x n_tv / (n_nav + n_tv), at most 51) -> runs/self_iter/flags_<pool>.txt
   scan --policy T [--pool on1_..] [--sets all|dev] [--name N]   (GPU) T's plan on every row of the sets (all: navtrain train + dev, trainval
                      train + hold; dev: navtrain dev + trainval hold) -> runs/self_iter/scan/<N or T>[.dev].npz (Store names, set, log, v0,
                      class, lib/self_iter.errors); the navtrain dev ADE is checked against T's DONE dev_ade
@@ -243,7 +243,7 @@ def cmd_pack(a):
                       origin=f"SELF-ITER pack {a.name} (experiments/self_iter/scripts/si.py): trainval rows of batches {a.batches}" + (" (held-out logs)" if nm_.startswith("selfiter_tvhold") else ""),
                       status="frozen", used_by=["experiments/self_iter"], notes="held-out gate rows, never trained" if "hold" in nm_ else "training rows (imitation of the log)")
     n_tv = int((~hold).sum())
-    k_tv = int(round(NN0 * n_tv / (NAV_TRAIN + n_tv)))
+    k_tv = min(int(round(NN0 * n_tv / (NAV_TRAIN + n_tv))), NN0 // 2)   # proportional, capped: navtrain keeps >= half the normal slots
     flags = f"--on {merged} --on-k {13 + k_tv} --on-mode mixed --si-k-s 13 --si-split navsim/selfiter_tv{sfx}"
     (OUT / f"flags_{a.merged}.txt").write_text(flags + "\n")
     (OUT / f"flags_{a.merged}_w0.txt").write_text(f"--on {merged} --on-k 13 --on-mode mixed --on-weight pool=t:0\n")
