@@ -1,0 +1,21 @@
+{
+ "a": "NR1HVRGG-old",
+ "b": "NR1HVRGG-new",
+ "note": "NR1HV's command (RTB1AR-F-s0, on-k 32, 0.5v2) 60 steps, eager: code b085b359 vs this code (5ae8ebdc) with every NR1HVR flag off",
+ "scalars": 131,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5533940196037292,
+  0.5533940196037292
+ ],
+ "on_hash_60": [
+  "fa6006ef58cb9eb9",
+  "fa6006ef58cb9eb9"
+ ],
+ "want_hash": null,
+ "identical": true
+}

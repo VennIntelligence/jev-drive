@@ -1,0 +1,36 @@
+{
+ "a": "NR1HVRGG-new",
+ "b": "NR1HVRGG-diag",
+ "note": "the same command, eager, this code (5ae8ebdc): --diag --diag-every 20 off vs on (b logs extra keys)",
+ "scalars": 131,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": [
+  "loss/act/nav_drivable",
+  "loss/act/pool_agent",
+  "loss/act/pool_lat_onc",
+  "loss/act/pool_lat_side",
+  "loss/act/pool_lat_soft",
+  "loss/act/pool_road",
+  "loss/grad/clip",
+  "loss/grad/cos_imit_pool",
+  "loss/grad/global",
+  "loss/grad/imit",
+  "loss/grad/lat",
+  "loss/grad/nav_hinge",
+  "loss/grad/pool",
+  "loss/grad/pool_hinge"
+ ],
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5533940196037292,
+  0.5533940196037292
+ ],
+ "on_hash_60": [
+  "fa6006ef58cb9eb9",
+  "fa6006ef58cb9eb9"
+ ],
+ "want_hash": null,
+ "identical": true
+}

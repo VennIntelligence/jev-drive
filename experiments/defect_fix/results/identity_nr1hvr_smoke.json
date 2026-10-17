@@ -1,0 +1,38 @@
+{
+ "a": "NR1HVRSM2-nodiag",
+ "b": "NR1HVRSM2-diag",
+ "note": "NR1HVR flags (--on-arc 0.0005 --on-hold-res 2) 300 steps compiled, this code (ad1cac73): --diag off vs on",
+ "scalars": 590,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": [
+  "loss/act/nav_drivable",
+  "loss/act/pool_agent",
+  "loss/act/pool_lat_onc",
+  "loss/act/pool_lat_side",
+  "loss/act/pool_lat_soft",
+  "loss/act/pool_lon_arc",
+  "loss/act/pool_road",
+  "loss/grad/clip",
+  "loss/grad/cos_imit_pool",
+  "loss/grad/global",
+  "loss/grad/imit",
+  "loss/grad/lat",
+  "loss/grad/lon",
+  "loss/grad/nav_hinge",
+  "loss/grad/pool",
+  "loss/grad/pool_hinge"
+ ],
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5559298992156982,
+  0.5559298992156982
+ ],
+ "on_hash_60": [
+  "351f90794a10b90b",
+  "351f90794a10b90b"
+ ],
+ "want_hash": null,
+ "identical": true
+}
