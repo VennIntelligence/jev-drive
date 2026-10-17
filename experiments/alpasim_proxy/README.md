@@ -128,6 +128,9 @@ the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_pro
   `experiments/alpasim/lib/static_hold.py`, served by `lib/sh30_hold.py` around an unchanged `sh30_driver.py`; checks
   `experiments/alpasim/scripts/hold_check.py`) on the 2 246 held arena windows, paired against the stored RSG arena read.
   Readout: `$DATA_DIR/runs/alpasim_proxy/arena/hold/report/hold.md`.
+  Supplement 2 ([results/arena_hold/hold2.md](results/arena_hold/hold2.md), diagnosis [diag.md](results/arena_hold/diag.md)): `stop3` = leash3 +
+  a stop leash at the human's constant-deceleration stop point + 3 m; +0.0095 [+0.0048, +0.0146] against leash3, 0 new / 26 fixed zeros;
+  recommended for the submission image.
 
 ## Anchors: five policies whose private numbers are known
 
