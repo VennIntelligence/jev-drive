@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "selfiter_tvhold",
+ "version": 1,
+ "unit": "token",
+ "n": 7236,
+ "sha256": "bd32b859811f70e3fbafd49d6e41d816990bb80aa2e7cd33ece8fa0d96f39238",
+ "origin": "SELF-ITER pack SITV (experiments/self_iter/scripts/si.py): trainval rows of batches A,B,C (held-out logs)",
+ "status": "frozen",
+ "used_by": [
+  "experiments/self_iter"
+ ],
+ "notes": "held-out gate rows, never trained",
+ "members_file": "selfiter_tvhold.v1.txt.gz"
+}

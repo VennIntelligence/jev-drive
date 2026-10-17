@@ -1,0 +1,32 @@
+{
+ "logs_total": 1310,
+ "logs_failed": [],
+ "frames": 658206,
+ "cam_frames": 194306,
+ "frames_on_disk": 235613,
+ "navtrain_tokens_labelled": 102373,
+ "new_rows": 89830,
+ "new_logs": 937,
+ "new_hold_rows": 7236,
+ "new_hold_logs": 90,
+ "logs_already_batched": 0,
+ "dev_logs_excluded": 32,
+ "batches": {
+  "A": {
+   "logs": 454,
+   "rows": 44047,
+   "hold": 4545
+  },
+  "B": {
+   "logs": 471,
+   "rows": 44950,
+   "hold": 2691
+  },
+  "C": {
+   "logs": 12,
+   "rows": 833,
+   "hold": 0
+  }
+ },
+ "leak_clean": true
+}

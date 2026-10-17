@@ -1,0 +1,39 @@
+{
+ "batches": [
+  "A",
+  "B",
+  "C"
+ ],
+ "pool": "on1_SITV",
+ "merged": "on1_L18RBSI",
+ "rows": 89830,
+ "train_rows": 82594,
+ "hold_rows": 7236,
+ "logs": 937,
+ "route_feat_ok": 0.9838806634754537,
+ "classes": {
+  "braking": 8614,
+  "cruising": 31156,
+  "starting": 3883,
+  "stopped": 34053,
+  "turning": 4888
+ },
+ "k_tv": 46,
+ "normal_slots": 56,
+ "flags": "--on on1_L18RBSI --on-k 59 --on-mode mixed --si-k-s 13 --si-split navsim/selfiter_tv",
+ "check": {
+  "base_rows": 17429,
+  "new_rows": 89830,
+  "merged": 107259,
+  "base_first": true,
+  "modes": {
+   "both": 89830,
+   "self": 17429
+  },
+  "base_ego_equal": true,
+  "base_fut_equal": true,
+  "hold_rows": 7236,
+  "base_front_equal_64": true,
+  "new_front_equal_64": true
+ }
+}

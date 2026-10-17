@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "selfiter_trB",
+ "version": 1,
+ "unit": "token",
+ "n": 44950,
+ "sha256": "d4854df117e9026eb9993337d43c6fc1334d828053da13a398acf5321ef21fbc",
+ "origin": "SELF-ITER select batch B (experiments/self_iter/scripts/si.py): every frame of NAVSIM trainval logs with the 4 history CAM_F0 on disk, not a navtrain token, not a navtrain dev log, no evaluation log; rows $DATA_DIR/runs/self_iter/batches/B/rows.npz",
+ "status": "frozen",
+ "used_by": [
+  "experiments/self_iter"
+ ],
+ "notes": "training row candidates (hold = crc32(log) % 10 == 0 rows are never trained)",
+ "members_file": "selfiter_trB.v1.txt.gz"
+}

@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "selfiter_tv",
+ "version": 1,
+ "unit": "token",
+ "n": 82594,
+ "sha256": "d4587bf23cb865e574575dc8b7b701ef6c23d5b867fe9a228bbc05dd9e2bbdaa",
+ "origin": "SELF-ITER pack SITV (experiments/self_iter/scripts/si.py): trainval rows of batches A,B,C",
+ "status": "frozen",
+ "used_by": [
+  "experiments/self_iter"
+ ],
+ "notes": "training rows (imitation of the log)",
+ "members_file": "selfiter_tv.v1.txt.gz"
+}

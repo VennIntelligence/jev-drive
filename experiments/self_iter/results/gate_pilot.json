@@ -1,0 +1,81 @@
+{
+ "control": "WTCP-L18-s0",
+ "policy": "RSG-L18-s0",
+ "rows": {
+  "dev": 1789,
+  "tv_hold": 7236,
+  "top": 724,
+  "free": 277,
+  "start": 319
+ },
+ "arms": {
+  "SIU1P-L18-s0": {
+   "dev_ade": 0.5462806820869446,
+   "top_tv": 1.0798516273498535,
+   "free_arc4": -0.3064074218273163,
+   "lat2_med": 0.03128799796104431,
+   "start_arc4": -1.0268548727035522,
+   "top_drop_rel": 0.4594745158650754,
+   "top_diff_ci": [
+    -1.1805961039575743,
+    -0.5278452665650465
+   ],
+   "lines": {
+    "dev_ade": false,
+    "top_decile": true,
+    "free_arc4": true,
+    "lateral": true,
+    "start_arc4": false
+   },
+   "pass": false
+  },
+  "SIM3P-L18-s0": {
+   "dev_ade": 0.5616167783737183,
+   "top_tv": 0.9885199666023254,
+   "free_arc4": -0.29582056403160095,
+   "lat2_med": 0.031043555587530136,
+   "start_arc4": -1.4301255941390991,
+   "top_drop_rel": 0.5051910651502396,
+   "top_diff_ci": [
+    -1.255808248528792,
+    -0.6439774514700675
+   ],
+   "lines": {
+    "dev_ade": false,
+    "top_decile": true,
+    "free_arc4": true,
+    "lateral": true,
+    "start_arc4": false
+   },
+   "pass": false
+  },
+  "SIM6P-L18-s0": {
+   "dev_ade": 0.5730614066123962,
+   "top_tv": 0.9320130944252014,
+   "free_arc4": -0.2371499240398407,
+   "lat2_med": 0.030852800235152245,
+   "start_arc4": -1.6604222059249878,
+   "top_drop_rel": 0.5334758810146645,
+   "top_diff_ci": [
+    -1.3115847831862966,
+    -0.6932540782233688
+   ],
+   "lines": {
+    "dev_ade": false,
+    "top_decile": true,
+    "free_arc4": false,
+    "lateral": true,
+    "start_arc4": false
+   },
+   "pass": false
+  }
+ },
+ "C": {
+  "dev_ade": 0.529085636138916,
+  "top_tv": 1.9977811574935913,
+  "free_arc4": -0.3537781238555908,
+  "lat2_med": 0.03607450798153877,
+  "start_arc4": 0.6272329688072205
+ },
+ "passing": []
+}
