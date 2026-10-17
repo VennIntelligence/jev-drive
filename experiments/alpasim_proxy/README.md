@@ -2,7 +2,7 @@
 
 status: live
 decisions: 262, 325
-index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich
+index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 316 windows where the human waits, any tag in one pool job
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -22,8 +22,12 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 - `proxy_fit.py` (scripts): can a reweighting of the 1491 public …
 - `proxy_transfer.py` (scripts): which PUBLIC statistic orders the …
 - `proxy_collect.py` (scripts): per-scene and per-decision tables of …
+- `scene_mix.py` (scripts): human-state statistics of 5.5 s windows …
+- `wait_set.md` (results): a local closed-loop set where the …
+- `wait_set.py` (scripts): a local closed-loop set where the …
+- `wait_set.sh` (scripts): the local closed-loop set where the …
 
-[results/](results/) 22 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 5 entry points
+[results/](results/) 40 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 8 entry points
 <!-- files:end -->
 
 ## SCENE-MIX: the private suite is rich in scenes where the human waits (decision 325)
@@ -55,6 +59,31 @@ Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plan
   undrawn vehicle in the ego's lane, 48 for a standstill too short.
 - **Read a tag:** `bash experiments/alpasim_proxy/scripts/wait_set.sh read <tag>` (one pool job, public 10-decision driver path + the cache),
   then `wait_set.sh report`.
+- **Validated before any model read:** the rebuilt cache equals the shipped one on all 171 source scenes' public windows; all 316 windows
+  pass the cached-track check; smoke (4 windows): go-straight and human replay 1.0, the replay launches 0.02-0.07 s after the human.
+
+**Handoff (2026-10-17 15:48 CST; the agent ended before the reads, the main session collects).** One chain in the pool
+(`bash experiments/alpasim_proxy/scripts/wait_set.sh chain anchors`; ids in `$DATA_DIR/runs/alpasim_proxy/wait_set/{jobs.txt, stages.txt}`,
+logs `pool/<name>/`):
+- validation: `ws-read-starter` 1017-154757-5c1c, `ws-read-replay` 1017-154757-bf74 -> `ws-gate` 1017-154758-2d2f (go-straight >= 0.99 on
+  variant a, replay >= 0.98 on a and b; verdict in `wait_set/gate.txt`; a failed gate fails every read below);
+- reads after the gate: `ws-read-P0` 1017-154759-a61f, `ws-read-RSG-L18-s0` 1017-154759-83e1, `ws-read-RTB1ARO-L18-s0` 1017-154800-a9a6;
+  private anchors `ws-read-APY10m10-AB-s0` 1017-154800-3689 (ap2 driver), `ws-read-YR10m10-F-s0` 1017-154801-3e4e, `ws-read-LTF-sample`
+  1017-154801-8c82, `ws-read-DD-sample` 1017-154802-c808, `ws-read-G0014` 1017-154802-c336 (third-party drivers native, as their public
+  reads) -> `ws-report` 1017-154803-8789 over every read.
+- The first chain (15:23) died at 15:41: the platform SIGKILLed the runtime workers of both validation reads (and of the defect-fix read)
+  at the box's memory line; a 316-window runtime outgrew its 30 GB booking. A read now runs variant a and variant b as two runtimes of
+  about a public chunk each inside its one job, and a killed worker exits 137 so the pool retries it (logs of the dead jobs:
+  `pool/failed-1541/`).
+
+Collect (box, repo root): `bash experiments/alpasim_proxy/scripts/wait_set.sh report` -> `wait_set/report/{tables.md, all.csv}` (per tag and
+variant: score, zeros by type, roll while the human waits, wait success, b: early / never / launch delay; by class; held-only; paired
+differences). Anchor check: `$DATA_DIR/third_party/alpasim/.venv/bin/python experiments/alpasim_proxy/scripts/wait_set.py anchors --csv
+$DATA_DIR/runs/alpasim_proxy/wait_set/report/all.csv --out $DATA_DIR/runs/alpasim_proxy/wait_set/report/anchors.md`: per anchor the variant-a
+zero rate z_a and score s_a = 1 - z_a next to public and private, the fits private = public - k z_a and private = (1 - p) public + p s_a
+(p = share of waiting windows a private-like mix would need), in-sample and leave-one-anchor-out predictions, and Kendall tau-b of each
+against private (public alone ranks the five non-trivial anchors at tau -0.6, decision 262). Six anchors: the five plus go-straight
+(`starter`, private 0.799; its public is N1's 300-scene sample, 0.522). One read per anchor; results go to `results/wait_set.md`.
 
 ## Anchors: five policies whose private numbers are known
 
