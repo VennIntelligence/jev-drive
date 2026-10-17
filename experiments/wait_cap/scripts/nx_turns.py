@@ -747,6 +747,14 @@ def olg_unit(job):
             for n, i in (("1", 1), ("2", 3), ("4", 7)):
                 d["yaw" + n], d["arc" + n], d["dhr" + n] = float(P[i, 2]), float(ar[i]), h_at(stn + ar[i]) - h_at(stn)
                 d["plat" + n] = project(Rl, S, to_local(a, P[i, :2])[0], stn - 5.0, stn + 90.0)[1]
+            X = np.r_[[[0.0, 0.0, 0.0]], P[:, :3]]                                       # the path through the poses, by arc length
+            ax = np.r_[0.0, np.cumsum(np.hypot(*np.diff(X[:, :2], axis=0).T))]
+            for q in (5, 10, 15, 20):                                                     # path geometry at a fixed arc (speed-free)
+                d[f"pa{q}"] = d[f"ha{q}"] = np.nan
+                if q <= ax[-1]:
+                    p = np.array([np.interp(q, ax, X[:, j]) for j in range(3)])
+                    sq, d[f"pa{q}"] = project(Rl, S, to_local(a, p[:2])[0], stn - 5.0, stn + 60.0)
+                    d[f"ha{q}"] = float(wrap(a[2] + p[2] - h_at(sq)))
             rows.append(d)
     return rows
 
