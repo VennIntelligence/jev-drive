@@ -35,6 +35,8 @@ stops in the static scene without contact (0.53-0.63 m, RSG hits the lead) but p
 ([results/next/rtb_cont.md](results/next/rtb_cont.md), d337). Variant round ([results/next/rtb_v.md](results/next/rtb_v.md), d339): dropping the standing-wait rows (V2)
 keeps the stop (static 0.86 m, stop17 15 / 17), brings public 1491 to -0.002 [-0.011, 0.007] vs RSG with rear contacts 17, and held to +0.007 [-0.005, 0.025];
 halving lambda (V1) does not help. What is left is lateral (public offroad 36 vs 31). Start-delay diagnosis: [results/next/explore_f.md](results/next/explore_f.md).
+V2 PAI 281 in the submission config (one seed; the second base seed was cancelled by the user): 79 zeros / 12 at-fault, -0.007 [-0.038, 0.023] vs RSG, stop17 15 / 17,
+none of the flags fixed before the read (prereg amendment 3) crossed ([results/next/rtb_v2_pai.md](results/next/rtb_v2_pai.md)).
 
 **Explore G (turn tracking and lane lines, exploratory, no training).** The retain line (RTB1 / V2) does not track turns measurably worse than RSG-L18. On identical
 inputs it plans the same turns: logged dev rows +0.01 m at 10 m; replayed closed-loop states a 1.4–1.7 % under-turn, 2–3 % in large narrow bends, none in the seed-1 pair.
