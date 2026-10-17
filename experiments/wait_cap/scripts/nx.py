@@ -33,7 +33,7 @@ Prereg 补记 2 (two targeted variants of the retain base, exploratory):
   vsum --arms V=BASE:CONT,.. --out NAME   (CPU)  every arm (and a = RTB1O-L18-s0) vs a and RSG-L18-s0: held 460 @18, the 7 shared new zeros, static,
                 stop17, arrival, public 1491 @10 with front / lateral / rear collisions, the bases' open-loop reads -> results/next/NAME.{json,md}
 Prereg 补记 3 (PAI 281 of the V2 recipe; the second base seed of nx.sh rtb-v2s1 was cancelled by the user):
-  v2pai --j TAG.. [--ctx TAG..] --out NAME [--dry]   (CPU)  PAI 281 in the submission config of the arms (rtb_wide_<TAG>.json of NX, nx.py wide) against the stored
+  v2pai --j TAG.. [--ctx TAG..] [--bases TAG..] [--note TEXT] --out NAME [--dry]   (CPU)  PAI 281 in the submission config of the arms (rtb_wide_<TAG>.json of NX, nx.py wide) against the stored
                 RSG-L18-s0 read, the decision 339 condition R2 on the --j arms, the cl-compile lane's PAI reads of RSG-L18-s0 / s1 as references -> results/next/NAME.{json,md}
 """
 from __future__ import annotations
@@ -655,7 +655,11 @@ def cmd_v2pai(a):
         L.append(f"| {lab}{'' if lab.endswith('(stored)') else ' (cl-compile lane)'} | {q['scenes']} | {q['J']['zeros']} | {q['J']['mean']:.4f} | {q.get('paired', '-')} | {q['J']['at_fault']} | "
                  f"{q['J']['offroad']} | {col(q['J']['collisions'])} | {s17(q['stop17'])} |")
     L += [""] + [f"Note: {n}." for n in res["notes"]]
-    L += ["", "## Check against the decision 339 refutation conditions", ""]
+    if a.bases:
+        res["base_dev_ade"] = {b: wt.dev_ade(b) for b in a.bases}
+        L += ["", "Base dev ADE, the DONE value of each training (the amendment-2 stop rule is <= the RTB1-F-s0 value): " + ", ".join(f"{b} {v:.4f}" for b, v in res["base_dev_ade"].items()) + "."]
+    L += [""] + ([a.note, ""] if a.note else [])
+    L += ["## Check against the decision 339 refutation conditions", ""]
     t = ["R1 (the second base seed has public rear-ended >= 22) cannot be read: the second base seed was cancelled by the user before any read."]
     for k, r in res["arms"].items():
         if r["r2"]:
@@ -708,6 +712,7 @@ if __name__ == "__main__":
     p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("v2pai")
     p.add_argument("--j", nargs="+", required=True, help="arms the condition R2 is read on"), p.add_argument("--ctx", nargs="*", default=[], help="context arms")
+    p.add_argument("--bases", nargs="*", default=[], help="base tags whose DONE dev ADE is listed"), p.add_argument("--note", default="", help="one free-text line")
     p.add_argument("--out", required=True), p.add_argument("--dry", action="store_true", help="print only")
     a = ap.parse_args()
     dict(vgate=cmd_vgate, vsum=cmd_vsum, devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld, v2pai=cmd_v2pai)[a.cmd](a)
