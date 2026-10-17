@@ -379,7 +379,7 @@ def cmd_acheld(a):
 
 # ---------------------------------------------------------------- prereg 补记 1: RTB1 continuation (exploratory)
 XD, XE = wt.OUT / "explore", wt.OUT / "explore_e"
-REFS = ("RSG-L18-s0", "WTC-L18-s0")
+REFS = ("RSG-L18-s0", "WTC-L18-s0", "RSG-L18-s1", "WTC-L18-s1")         # s1: the seed-matched references of the 补记 1 addition
 CL_REF = {"P0": (XE / "static/P0/run", XE / "paisub/P0"), "RSG-L18-s0": (XE / "static/RSG-L18-s0/run", XE / "paisub/RSG-L18-s0"),
           "WTCP-L18-s0": (XD / "sub/WTCP-L18-s0/run", XD / "paisub/WTCP-L18-s0")}
 
