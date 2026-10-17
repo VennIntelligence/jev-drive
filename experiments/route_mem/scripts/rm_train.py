@@ -165,6 +165,12 @@ SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) =
             gives the S rows (`pool` s) the mass --si-k-s / --on-k and the new rows the rest (ranked inside them; `hold` 1 rows weight 0), and
             --rm-drop treats the new rows as normal rows. --si-mult 1: the uniform draw over the same rows.
 
+Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-17-compile-prereg.md):
+  --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
+            pattern): ~2x the steps per second on the RSG-L18 recipe. Not bit-identical to eager (fused fp16 kernels round differently;
+            pp_train: compiled runs repeat each other). The second forwards (--kd-lam, --awr-lam, --d2-lam), dev eval and the reliance read stay eager.
+            Off (default): no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -866,6 +872,7 @@ def cmd_train(a):
             if len(si_free):
                 from jevdrive.data import splits as _sp
                 run.use_split(_sp.load(a.si_split))
+        fwd = torch.compile(model, dynamic=False) if a.compile else model    # the main training forward only; everything else eager
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist, hsh = time.time(), [], ""
         for step in range(cfg.steps):
@@ -935,7 +942,7 @@ def cmd_train(a):
                 ag_ = torch.as_tensor(arng.integers(0, len(DT.AGES), len(r)), device=dev)
                 if (sd_ != 0).any():
                     dq = DT.queue(sd_, ag_, dev)
-            out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows], desire=dq)
+            out = fwd(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows], desire=dq)
             if lc_on:
                 total, Ls = LS(out[:n_main], S, rows[:n_main], anchor[:n_main])
             else:
@@ -1168,6 +1175,7 @@ if __name__ == "__main__":
             p.add_argument(f"--lon-{t}", type=float, default=0.0, help=f"weight of on_lonsafe's {t} term on the pool rows (0 = off)")
         p.add_argument("--prefetch", type=int, default=4)
         p.add_argument("--fetch-workers", type=int, default=2)
+        p.add_argument("--compile", action="store_true", help="torch.compile of the main training forward: ~2x faster, not bit-identical to eager")
         p.add_argument("--dev-card-gb", type=float, default=4.0)
         p.add_argument("--rm-lr", type=float, default=3e-4)
         p.add_argument("--rm-warmup", type=int, default=100)
