@@ -131,6 +131,9 @@ the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_pro
   Supplement 2 ([results/arena_hold/hold2.md](results/arena_hold/hold2.md), diagnosis [diag.md](results/arena_hold/diag.md)): `stop3` = leash3 +
   a stop leash at the human's constant-deceleration stop point + 3 m; +0.0095 [+0.0048, +0.0146] against leash3, 0 new / 26 fixed zeros;
   recommended for the submission image.
+- **ARENA-RESID** ([results/arena_hold/residual.md](results/arena_hold/residual.md), `scripts/arena_resid.py`, CPU on stored reads): stop3's
+  125-point gap to 1.0 on held = launch hold cost 40, human track itself offroad 26 (no policy can score; ceiling 0.988), policy offroad 17,
+  free slow 15, AF 13, corridor 8, stop-latch 6. No serve-side lever reaches +0.005 (best: leash 3.7 m +0.0017), so no read.
 
 ## Anchors: five policies whose private numbers are known
 
