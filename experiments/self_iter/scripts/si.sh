@@ -24,12 +24,12 @@ PAICH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks; PAISERVE="JEV_VCONT=
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner self-iter --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
-FW=(--train --vram 32 --cpu 6 --ram 100)
+FW=(--train --vram 28 --cpu 6 --ram 24)            # measured: RSG recipe 19 GB VRAM, 3 GB RSS
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $O/jobs.txt; }
 fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }; done; }
 dscan() {  # dscan <after> <tag>: the dev-set scan of a tag -> id
-  sub si-dscan-$2 --after $1 --vram 24 --cpu 6 --ram 100 --timeout-h 1 -- $TR $PY scan --policy $2 --pool on1_$POOL --sets dev --name $2$SFX; }
+  sub si-dscan-$2 --after $1 --vram 22 --cpu 6 --ram 16 --timeout-h 1 -- $TR $PY scan --policy $2 --pool on1_$POOL --sets dev --name $2$SFX; }
 case ${1:-} in
 launch|launch-full)
   if [[ $1 == launch ]]; then
@@ -39,26 +39,26 @@ launch|launch-full)
     c=$(sub si-bitcmp-code --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a SIGG-old --b SIGG-new --out identity_code \
         --note "RSG-L18 recipe 60 steps: code $rev vs this code ($(git rev-parse --short HEAD)) with --si-scan off") || exit 1
   fi
-  s=$(sub si-select$SFX --vram 0.1 --cpu 40 --ram 180 --timeout-h 3 -- $NS $PY select --workers 40) || exit 1
+  s=$(sub si-select$SFX --vram 0.1 --cpu 40 --ram 16 --timeout-h 3 -- $NS $PY select --workers 40) || exit 1
   r=$(sub si-rows$SFX --after $s --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env SFX=$SFX --env PRIO=${PRIO:-9} -- bash $ME rows) || exit 1
   echo "$1: identity ${a:-} ${b:-} ${c:-}; select $s rows-driver $r" | tee -a $O/stages.txt ;;
 rows)   # job body
   BB=$(ls $O/batches | sort | paste -sd,); af=()
   for B in ${BB//,/ }; do D=idx_selfiter_tr$B
     if [[ -f $CR/$D@warp/teacher.npz && -f $DATA_DIR/runs/route_mem/feat/$D.npz ]]; then continue; fi       # an earlier round's batch
-    i=$(sub si-index-$B --vram 0.1 --cpu 4 --ram 64 --timeout-h 2 -- $NS $PY index --batch $B) || exit 1
-    p=$(sub si-prep-$B --after $i --vram 10 --cpu 16 --ram 64 --timeout-h 4 -- $TR experiments/op_parity/scripts/pp_prep.py --data $D --frames warp --no-side --synth cpu --workers 16) || exit 1
-    m=$(sub si-rmnav-$B --after $p --vram 0.1 --cpu 16 --ram 40 --timeout-h 2 -- $AP experiments/route_mem/scripts/rm_build.py nav --data $D --workers 16) || exit 1
-    t=$(sub si-teacher-$B --after $p --vram 10 --cpu 4 --ram 48 --timeout-h 2 -- $TR $PY teacher --batch $B) || exit 1
+    i=$(sub si-index-$B --vram 0.1 --cpu 4 --ram 24 --timeout-h 2 -- $NS $PY index --batch $B) || exit 1
+    p=$(sub si-prep-$B --after $i --vram 6 --cpu 16 --ram 40 --timeout-h 4 -- $TR experiments/op_parity/scripts/pp_prep.py --data $D --frames warp --no-side --synth cpu --workers 16) || exit 1
+    m=$(sub si-rmnav-$B --after $p --vram 0.1 --cpu 16 --ram 16 --timeout-h 2 -- $AP experiments/route_mem/scripts/rm_build.py nav --data $D --workers 16) || exit 1
+    t=$(sub si-teacher-$B --after $p --vram 10 --cpu 4 --ram 12 --timeout-h 2 -- $TR $PY teacher --batch $B) || exit 1
     af+=($m $t); echo "batch $B: index $i prep $p rmnav $m teacher $t" | tee -a $O/stages.txt
   done
-  k=$(sub si-pack-$POOL ${af:+--after $(csv ${af[@]})} --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- $TR $PY pack --batches $BB --name SITV$SFX --merged $POOL) || exit 1
+  k=$(sub si-pack-$POOL ${af:+--after $(csv ${af[@]})} --vram 0.1 --cpu 4 --ram 48 --timeout-h 3 -- $TR $PY pack --batches $BB --name SITV$SFX --merged $POOL) || exit 1
   gn=$(jid si-gg-new) || { echo "no SIGG-new job" >&2; exit 1; }; gc=$(jid si-bitcmp-code)
   w=$(sub si-gg-w0$SFX "${FW[@]}" --after $k --timeout-h 1 -- bash $ME train w0 0 60 SIGG-w0$SFX) || exit 1
   wb=$(sub si-bitcmp-w0$SFX --after $w,$gn --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a SIGG-new --b SIGG-w0$SFX --out identity_w0$SFX \
        --note "RSG-L18 recipe vs merged pool on1_$POOL with the new rows at weight 0, --on-mode mixed, --si-scan off") || exit 1
-  sc=$(sub si-scan-RSG$SFX --after $k --vram 30 --cpu 8 --ram 120 --timeout-h 3 -- $TR $PY scan --policy RSG-L18-s0 --pool on1_$POOL --name RSG-L18-s0$SFX) || exit 1
-  rp=$(sub si-report-RSG$SFX --after $sc --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY report --scan RSG-L18-s0$SFX) || exit 1
+  sc=$(sub si-scan-RSG$SFX --after $k --vram 24 --cpu 8 --ram 24 --timeout-h 3 -- $TR $PY scan --policy RSG-L18-s0 --pool on1_$POOL --name RSG-L18-s0$SFX) || exit 1
+  rp=$(sub si-report-RSG$SFX --after $sc --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY report --scan RSG-L18-s0$SFX) || exit 1
   d1=$(dscan $k RSG-L18-s0) || exit 1; d2=$(dscan $k WTCP-L18-s0) || exit 1
   fresh SISMOKE$SFX-L18-s0 ${PILOT[@]}
   sm=$(sub si-smoke$SFX "${FW[@]}" --after $sc,$gc --timeout-h 1 -- bash $ME train 3 0 40 SISMOKE$SFX-L18-s0) || exit 1
@@ -66,7 +66,7 @@ rows)   # job body
   for j in 0 1 2; do T=${PILOT[$j]}
     tt+=($(sub si-train-$T "${FW[@]}" --after $sm,$wb,$gc --timeout-h 2 -- bash $ME train ${MULT[$j]} 0 1000 $T)) || exit 1
     dd+=($(dscan ${tt[-1]} $T)) || exit 1; done
-  g=$(sub si-gate-pilot$SFX --after "$(csv ${dd[@]}),$d1,$d2,$sc" --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- \
+  g=$(sub si-gate-pilot$SFX --after "$(csv ${dd[@]}),$d1,$d2,$sc" --vram 0.1 --cpu 4 --ram 12 --timeout-h 1 -- \
       $TR $PY gate --j ${PILOT[@]} --c WTCP-L18-s0 --pol RSG-L18-s0$SFX --sfx "$SFX" --name pilot$SFX) || exit 1
   n=$(sub si-after-pilot$SFX --after $g --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env SFX=$SFX --env PRIO=${PRIO:-9} -- bash $ME after pilot) || exit 1
   echo "rows: pack $k w0 $w bitcmp $wb scan $sc report $rp dscan $d1 $d2 smoke $sm pilot ${tt[*]} dscans ${dd[*]} gate $g after $n" | tee -a $O/stages.txt ;;
@@ -76,7 +76,7 @@ after)   # job body: after <pilot|long>
   if [[ $S == pilot && ${#PP[@]} -gt 0 ]]; then LL=(); dd=(); tt=()
     for T in "${PP[@]:0:2}"; do m=$(echo $T | sed -E 's/^SI[UM]([0-9]+)P.*/\1/'); L=${T/P$SFX-L18/L$SFX-L18}; fresh $L; LL+=($L)
       tt+=($(sub si-train-$L "${FW[@]}" --timeout-h 5 -- bash $ME train $m 0 $LSTEPS $L)) || exit 1; dd+=($(dscan ${tt[-1]} $L)) || exit 1; done
-    g=$(sub si-gate-long$SFX --after "$(csv ${dd[@]})" --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY gate --j ${LL[@]} --c RSG-L18-s0 --pol RSG-L18-s0$SFX --sfx "$SFX" --name long$SFX) || exit 1
+    g=$(sub si-gate-long$SFX --after "$(csv ${dd[@]})" --vram 0.1 --cpu 4 --ram 12 --timeout-h 1 -- $TR $PY gate --j ${LL[@]} --c RSG-L18-s0 --pol RSG-L18-s0$SFX --sfx "$SFX" --name long$SFX) || exit 1
     n=$(sub si-after-long$SFX --after $g --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env SFX=$SFX --env PRIO=${PRIO:-9} -- bash $ME after long) || exit 1
     echo "after pilot: long ${LL[*]} trainings ${tt[*]} dscans ${dd[*]} gate $g after $n" | tee -a $O/stages.txt
   fi ;;
@@ -91,7 +91,7 @@ cl)   # cl <tag>: closed-loop reads against RSG-L18-s0 (nx.sh cont-reads' instru
   ar=$(jid si-arr-$T || sub si-arr-$T --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $NXP arrival --tags $T) || exit 1
   for i in $(seq 0 9); do pp+=($(jid si-pub-$T-$i || sub si-pub-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
       -- bash $OL readlist $T $DATA_DIR/runs/onpol_long/lists/all_n10/c$i.txt 10 $D/pub/$T/b$i)) || exit 1; done
-  f=$(sub si-follow-$T --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash experiments/wait_cap/scripts/wt.sh follow $T RSG-L18-s0,WTC-L18-s0,RSG-L18-s1,WTC-L18-s1 $D) || exit 1
+  f=$(sub si-follow-$T --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 32 --timeout-h 2 -- bash experiments/wait_cap/scripts/wt.sh follow $T RSG-L18-s0,WTC-L18-s0,RSG-L18-s1,WTC-L18-s1 $D) || exit 1
   c=$(sub si-clsum-$T --after "$f,$st,$ps,$ar,$(csv ${pp[@]})" --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY clsum --j $T) || exit 1
   echo "cl $T: held $(csv ${hh[@]}) static $st stop17 $ps arrival $ar public $(csv ${pp[@]}) follow $f summary $c" | tee -a $O/stages.txt ;;
 train)   # train <mult|off|w0> <seed> <steps> <tag>
