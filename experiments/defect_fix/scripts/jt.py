@@ -14,7 +14,7 @@ at a dose) in the same batches. Box, repo root; chain in jt.sh.
   held --tags T ..   (op-train) held 460 @18 against RSG-L18-s0 (df.py cl_read) -> stdout
   diag --tag T [--lo 500] [--hi 1000]   (any python) a training run's events.jsonl: per-term trunk gradient norms and shares, activity, loss
       terms, dev ADE, pool slices and the wait / launch probe over steps lo..hi, plus the arc weight rule of supplement 9 amendment A
-  gate --tag JTSM-L18-s0 --w 0.0025 --wjson results/jt/w_JT10.json --out FILE   the smoke gates of supplement 9 (no NaN; every pool term
+  gate --tag JTSM-L18-s0 --w 0.0025 --wjson results/jt/w_JT10.json --out FILE [--ratio R] [--no-probe-gate]   the smoke gates of supplement 9 (no NaN; every pool term
       active; tv imitation logged; dev ADE at the end <= step 0 + 0.06 (amendment C; + 0.03 reported); probe stand_r stay1m above step 0) -> FILE (json: pass, arc W by the
       amendment-A rule, steps = floor(4.6 x S trainable rows / 32 / 500) x 500); exit 2 when a gate fails (the arms after it do not start)
   defer --after ID,ID [--dry]   (repo .venv) the main session's rule (10-18): the still-QUEUED third-party anchor reads
@@ -97,14 +97,18 @@ def cmd_arena(a):
     ref = {"off": pd.read_csv(a.ref_off), "leash3": pd.read_csv(a.ref_leash3)}
     ref["off"] = ref["off"][ref["off"].tag == "RSG-L18-s0"]
     ref["leash3"] = ref["leash3"][ref["leash3"].tag == "leash3"]
+    if a.ref_stop3:                                                    # JTB / JTN (supplement 10): ARENA-HOLD 2's stored RSG + stop3 read
+        r3 = pd.read_csv(a.ref_stop3)
+        ref["stop3"] = r3[r3.tag == "stop3"]
     ref = {k: v[v.id.isin(Hs.index)].drop_duplicates("id").set_index("id") for k, v in ref.items()}
     L = [f"# JT arena held-split readout ({len(Hs)} windows)", "",
-         "Paired = tag minus RSG-L18-s0 under the same serve (off: the arena's stored RSG read; leash3: ARENA-HOLD's stored RSG + leash3 read) "
+         "Paired = tag minus RSG-L18-s0 under the same serve (off: the arena's stored RSG read; leash3 / stop3: ARENA-HOLD's stored RSG + leash3 / "
+         "ARENA-HOLD 2's RSG + stop3 read) "
          "on the common windows without a route-fail in either; 95 % CIs, bootstrap clustered by log (jevdrive.stats). "
          "Contribution = the stratum's summed paired difference / all common windows.", "",
          "| tag @ serve | windows | mean | RSG same serve | paired diff [CI] | zero rate | RSG zero rate | zero-rate diff [CI] |",
          "|---|--:|--:|--:|--:|--:|--:|--:|"]
-    per, typ = [], []
+    per, typ, typb = [], [], []
     for tv in a.tags:
         tag, v = tv.split("@")
         X = R[(R.tag == tv) & R.id.isin(Hs.index)].drop_duplicates("id").set_index("id")
@@ -131,10 +135,17 @@ def cmd_arena(a):
             zc = Q[Q.score == 0].type.map(A.zclass).value_counts()
             pc = Q[Q.score > 0].type.value_counts()
             typ.append(f"| {nm} | " + " | ".join(str(int(zc.get(k, 0))) for k in A.ZC) + " | " + " | ".join(str(int(pc.get(k, 0))) for k in A.PC) + " |")
+        cb = c[Hs.loc[c, "stratum"].values == "braking"]                 # supplement 10: zero / partial types in the braking windows
+        for nm, Q in ((f"RSG @ {v} [braking]", B.loc[cb]), (f"{tv} [braking]", X.loc[cb])):
+            zc = Q[Q.score == 0].type.map(A.zclass).value_counts()
+            pc = Q[Q.score > 0].type.value_counts()
+            typb.append(f"| {nm} | " + " | ".join(str(int(zc.get(k, 0))) for k in A.ZC) + " | " + " | ".join(str(int(pc.get(k, 0))) for k in A.PC) + " |")
     L += ["", "By stratum (RSG and tag: mean / zero rate; new / fixed zeros against RSG under the same serve):", "",
           "| tag @ serve | stratum | windows | RSG | tag | paired diff [CI] | contribution | new / fixed zeros |", "|---|---|--:|--:|--:|--:|--:|--:|", *per,
           "", "Zero types and partial-score types on the common windows:", "",
-          "| read | " + " | ".join(A.ZC) + " | " + " | ".join(A.PC) + " |", "|---|" + "--:|" * (len(A.ZC) + len(A.PC)), *typ, ""]
+          "| read | " + " | ".join(A.ZC) + " | " + " | ".join(A.PC) + " |", "|---|" + "--:|" * (len(A.ZC) + len(A.PC)), *typ, "",
+          "The same in the braking-stratum windows only:", "",
+          "| read | " + " | ".join(A.ZC) + " | " + " | ".join(A.PC) + " |", "|---|" + "--:|" * (len(A.ZC) + len(A.PC)), *typb, ""]
     (out / "arena.md").write_text("\n".join(L))
     print("\n".join(L))
 
@@ -172,7 +183,8 @@ def cmd_diag(a):
     out["nan"] = [k for k, v in S.items() if any(not np.isfinite(x) for x in v.values())]
     gi, gl = out["grad"].get("imit"), out["grad"].get("lon")
     if gi and gl and np.isfinite(gi) and np.isfinite(gl) and gl > 0:
-        out["arc_rule"] = dict(g_imit=gi, g_lon=gl, ratio_target=0.2, w_smoke=a.w, w_final=float(f"{a.w * min(max(0.2 * gi / gl, 0.5), 2.0):.2g}"))
+        out["arc_rule"] = dict(g_imit=gi, g_lon=gl, ratio_target=a.ratio, ratio_smoke=gl / gi,
+                               w_final=float(f"{a.w * min(max(a.ratio * gi / gl, 0.5), 2.0):.2g}"), w_smoke=a.w)
     print(json.dumps(out, indent=1, default=str))
     return out
 
@@ -189,6 +201,8 @@ def cmd_gate(a):
     g = dict(no_nan=not d["nan"], acts_positive=bool(acts) and all(v > 0 for v in acts.values()) and len(acts) >= 6,
              tv_imit_logged=np.isfinite(d["loss"].get("loss/on/imit", float("nan"))),
              dev_ade=dv[s1] <= dv[s0] + 0.06, probe_stay_rising=bool(pr) and pr[max(pr)] > pr[min(pr)])   # amendment C: + 0.06 (0.03 reported)
+    if a.no_probe_gate:                                                # supplement 10 (JTB: no wait rows drawn): the probe is reported, not gated
+        g.pop("probe_stay_rising")
     w = json.loads(Path(a.wjson).read_text())
     ntr = w["s_rows"] - w["held_rows"]
     res = dict(tag=a.tag, gates=g, passed=all(g.values()), dev_ade_strict=dv[s1] <= dv[s0] + 0.03, acts=acts, dev_ade={str(s0): dv[s0], str(s1): dv[s1]},
@@ -253,14 +267,17 @@ if __name__ == "__main__":
     p.add_argument("--reads", default=str(OUT / "jt/arena"))
     p.add_argument("--ref-off", default=str(ARENA / "hold/report/ref_rows.csv.gz"), help="the arena's stored reads (RSG-L18-s0 rows)")
     p.add_argument("--ref-leash3", default=str(ARENA / "hold/report/rows.csv.gz"), help="ARENA-HOLD's reads (tag leash3 = RSG + leash3)")
+    p.add_argument("--ref-stop3", default=str(ARENA / "hold/report2/rows.csv.gz"), help="ARENA-HOLD 2's reads (tag stop3 = RSG + stop3)")
     p = sub.add_parser("held")
     p.add_argument("--tags", nargs="+", required=True)
     p = sub.add_parser("diag")
     p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
     p.add_argument("--w", type=float, default=0.0025, help="the arc weight of the run")
+    p.add_argument("--ratio", type=float, default=0.2, help="target arc / imit trunk-gradient ratio (JT 0.2; JTB 0.1)")
     p = sub.add_parser("gate")
     p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
     p.add_argument("--w", type=float, default=0.0025), p.add_argument("--wjson", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--ratio", type=float, default=0.2), p.add_argument("--no-probe-gate", action="store_true")
     p = sub.add_parser("defer")
     p.add_argument("--after", required=True), p.add_argument("--dry", action="store_true")
     a = ap.parse_args()

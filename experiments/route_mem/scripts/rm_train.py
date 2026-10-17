@@ -184,6 +184,10 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             every dev eval, N rows of them and N rows of the drawn logs (fixed, rng [seed, 0, 167], its own stream) are scored in eval mode on
             the pool terms (agent, road, the --on-lon terms; per-row mean and active share) and, with --on-arc, the 4 s arc bias against the
             target and the shares slower than 0.8x / faster than 1.2x it -> scalars pool_held/* and pool_fit/*.
+  --on-arc-rows brake   (JTB / JTN, NR1 prereg supplement 10) the arc term's rows: also the rows where the human stops in the horizon; only
+            the rows where he stays below 0.5 m/s all 4 s are excluded (nr1_lon.labels). Loads the labels even at --on-arc 0 (monitoring) and adds
+            to the held / fitted slices the 4 s arc bias per row kind (cruise / brake / stop / launch / still) -> pool_*/arc4_bias_<kind>,
+            pool_*/n_<kind>. Default "move" = the old rule, no operation added.
   --diag [--diag-every 100]   monitoring only, no effect on the update: act/* (share of rows with a nonzero term, pool rows and navtrain rows
             apart), grad/global (norm before the clip) and grad/clip (share of steps where the 1.0 clip fired) every step; every K steps the
             trunk-gradient norm (parameter groups base + adapter; the route branch is left out) of each weighted term: imit, nav_hinge (P2H10's
@@ -918,7 +922,7 @@ def cmd_train(a):
         res = {}
         with torch.no_grad():
             for nm, rr in (("held", HR), ("fit", FR)) if hrec else ():
-                acc, n_, d4 = {}, 0, []
+                acc, n_, d4, dk = {}, 0, [], []
                 for j in range(0, len(rr), 128):
                     g = ns.on0 + rr[j:j + 128]
                     rt = torch.as_tensor(g, device=dev)
@@ -946,6 +950,8 @@ def cmd_train(a):
                         lab = arcp["ok"][rt - LS.on0]
                         sp = nr1_lon.arc(x, y)[:, -1]
                         d4.append(torch.stack([sp - arcp["s_h"][rt - LS.on0][:, -1], arcp["s_h"][rt - LS.on0][:, -1]], 1)[lab])
+                        if a.on_arc_rows != "move":                   # JTB / JTN: the bias per row kind (labelled or not)
+                            dk.append(torch.stack([sp - arcp["s_h"][rt - LS.on0][:, -1], arcp["kind"][rt - LS.on0].float()], 1))
                     n_ += len(g)
                 res |= {f"pool_{nm}/{q}": v / n_ for q, v in acc.items()}
                 if d4 and nm in ("held", "fit"):
@@ -953,6 +959,12 @@ def cmd_train(a):
                     sh = D_[:, 1].clamp_min(1e-3)
                     res |= {f"pool_{nm}/arc4_bias": float(D_[:, 0].mean()), f"pool_{nm}/slow08": float(((D_[:, 0] + sh) < 0.8 * sh).float().mean()),
                             f"pool_{nm}/fast12": float(((D_[:, 0] + sh) > 1.2 * sh).float().mean())}
+                if dk:
+                    import nr1_lon
+                    K_ = torch.cat(dk)
+                    for ki, kn in enumerate(nr1_lon.KINDS):
+                        m_ = K_[:, 1] == ki
+                        res |= {f"pool_{nm}/n_{kn}": float(m_.sum())} | ({f"pool_{nm}/arc4_bias_{kn}": float(K_[m_, 0].mean())} if m_.any() else {})
             for nm, rr in PRB.items():                                # JT probe: plan 4 s arc on the trainval standing / launch rows
                 import nr1_lon
                 a4, h4, ad = [], [], []
@@ -1435,6 +1447,8 @@ if __name__ == "__main__":
         p.add_argument("--lat-soft-depth", type=float, default=0.0, help="NR1: allowed depth (m) into the soft region")
         p.add_argument("--lat-buf", type=float, default=0.4, help="NR1: side buffer (m) of the side term")
         p.add_argument("--on-arc", type=float, default=0.0, help="NR1HVR: weight of the two-sided longitudinal arc term on the pool rows (0 = off)")
+        p.add_argument("--on-arc-rows", default="move", choices=("move", "brake"), help="JTB: the arc term's rows (move = old rule; brake = "
+                       "every row but the still-all-horizon ones) and the per-kind arc bias monitoring")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
         p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
@@ -1509,13 +1523,14 @@ if __name__ == "__main__":
         if a.env_lo_scale != 1.0:
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
+    assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc) > 0, "--on-arc-rows: needs nr1_lat"
     if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

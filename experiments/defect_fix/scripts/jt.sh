@@ -12,7 +12,11 @@
 #                                @18 (6) -> summary (results/jt/<tag>/)
 #   jt.sh train <tag> <pool> <lat dir> <wfile> <steps> <arc>    job body (rm_train)
 #   jt.sh aread <tag> <off|leash3> <chunk>                    job body: one arena held chunk (ARENA-HOLD's lists and shard caches, read-only)
-#   jt.sh merge | weights | sum <tag>                        job bodies
+#   jt.sh merge | weights | sum <tag> [holds] [results dir]   job bodies
+#   jt.sh jtb <old rev>          supplement 10 (JTB / JTN, after the failed JT round): identity (JT00's command 60 steps eager, <old rev> vs this
+#                                code, new flags off) -> JTB smoke (1 000 steps, arc rows "brake", W 0.002, JT00 draw) -> gate (W by the 0.1 rule,
+#                                no probe gate) -> JTB-L18-s0 (9 500 steps, W from gate_jtb.json); JTN-L18-s0 (no arc term) after the identity.
+#                                Reads per arm: arena held with stop3 and without the hold + held 460 (results/jtb/<tag>/)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; J=$O/jt; ME=experiments/defect_fix/scripts/jt.sh; PY=experiments/defect_fix/scripts/jt.py
 TR=$DATA_DIR/envs/op-train/bin/python; NS=$DATA_DIR/envs/navsim2/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python
@@ -59,23 +63,26 @@ gatejob)   # gatejob <smoke id>: the smoke gates -> $J/gate.json (arc W, steps);
 arm)
   T=${2:?tag}; WF=${3:?wfile}; N=${4:?steps}; W=${5:?arc}; A=${6:-}
   [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"   # steps / arc may be `auto` (from $J/gate.json)
-  t=$(sub jt-train-$T ${A:+--after $A} "${FT[@]}" --timeout-h 3 -- bash $ME train $T on1_JT $LAT $WF $N $W) || exit 1
+  t=$(sub jt-train-$T ${A:+--after $A} "${FT[@]}" ${ARCROWS:+--env ARCROWS=$ARCROWS} ${GATE:+--env GATE=$GATE} --timeout-h 3 \
+      -- bash $ME train $T on1_JT $LAT $WF $N $W) || exit 1
   ids=(); nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))")
-  for V in leash3 off; do for c in $(seq 0 $((nch - 1))); do
+  HL=${HOLDS:-leash3 off}
+  for V in $HL; do for c in $(seq 0 $((nch - 1))); do
     ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-ar-$T-$V-c$c --after $t "${RD[@]}" -- bash $ME aread $T $V $c)) || exit 1; done; done
   for i in 0 1 2 3 4 5; do
     ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
         -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
-  s=$(sub jt-sum-$T --after $(csv ${ids[@]}) --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME sum $T) || exit 1
+  s=$(sub jt-sum-$T --after $(csv ${ids[@]}) --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME sum $T "$HL" ${RES:-jt}) || exit 1
   echo "$(date '+%F %T') arm $T ($WF, $N steps, arc $W): train $t reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) summary $s" | tee -a $J/stages.txt ;;
 train)
   T=$2; P=$3; LD=$4; WF=$5; N=$6; W=$7
-  [[ $N == auto ]] && N=$(python3 -c "import json; print(json.load(open('$J/gate.json'))['steps'])")      # the smoke gate's file
-  [[ $W == auto ]] && W=$(python3 -c "import json; print(json.load(open('$J/gate.json'))['w_final'])")
-  echo "$(date '+%F %T') train $T: steps $N, arc $W" | tee -a $J/stages.txt
+  G=${GATE:-$J/gate.json}                                                                       # the smoke gate's file
+  [[ $N == auto ]] && N=$(python3 -c "import json; print(json.load(open('$G'))['steps'])")
+  [[ $W == auto ]] && W=$(python3 -c "import json; print(json.load(open('$G'))['w_final'])")
+  echo "$(date '+%F %T') train $T: steps $N, arc $W, arc rows ${ARCROWS:-move}" | tee -a $J/stages.txt
   exec $TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
     --on-wfile runs/defect_fix/w/$WF.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LD) --on-arc $W --diag --warmup 500 --lr-floor 0.1 \
-    --steps $N --seed 0 ;;
+    ${ARCROWS:+--on-arc-rows $ARCROWS} --steps $N --seed 0 ;;
 aread)   # aread <tag> <off|leash3> <chunk>: = arena_hold.sh one_run with SH30_TAG=<tag> (sh30hold driver; off = JEV_HOLD unset, = sh30)
   T=$2; V=$3; c=$4; D=$J/arena/$T@$V/c$c/run
   [[ -f $D/aggregate/results-summary.json ]] && { echo "$D already read"; exit 0; }
@@ -102,9 +109,23 @@ merge)
 weights)
   $TR $PY weights --pool on1_JT --k-s $KS --k-tv $KTV --hold-pct 15 --tv D10 --out JT10 && \
   $TR $PY weights --pool on1_JT --k-s $KS --k-tv $KTV --hold-pct 15 --tv D10 --no-wait --out JT00 ;;
+jtb)
+  rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
+  for T in JTBGG-old JTBGG-new JTBSM-L18-s0 JTB-L18-s0 JTN-L18-s0; do [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"; done
+  FE=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1); h=$(git rev-parse --short HEAD)
+  a=$(sub jt-gg-old "${FE[@]}" --timeout-h 1 -- bash $WT/$ME train JTBGG-old on1_JT $LAT JT00 60 0.0039) || exit 1
+  b=$(sub jt-gg-new "${FE[@]}" --timeout-h 1 -- bash $ME train JTBGG-new on1_JT $LAT JT00 60 0.0039) || exit 1
+  e=$(sub jt-bitcmp-jtb --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a JTBGG-old \
+      --b JTBGG-new --out identity_jtb --note "JT00's command (arc 0.0039) 60 steps eager: code $rev vs $h with --on-arc-rows off") || exit 1
+  sm=$(sub jt-train-JTBSM --after $e "${FT[@]}" --env ARCROWS=brake --timeout-h 1 -- bash $ME train JTBSM-L18-s0 on1_JT $LAT JT00 1000 0.002) || exit 1
+  g=$(sub jt-gate-jtb --after $sm --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $TR $PY gate --tag JTBSM-L18-s0 --w 0.002 --ratio 0.1 --no-probe-gate \
+      --wjson experiments/defect_fix/results/jt/w_JT00.json --out $J/gate_jtb.json) || exit 1
+  echo "$(date '+%F %T') jtb: identity $a $b bitcmp $e smoke $sm gate $g" | tee -a $J/stages.txt
+  ARCROWS=brake GATE=$J/gate_jtb.json HOLDS="stop3 off" RES=jtb bash $ME arm JTB-L18-s0 JT00 9500 auto $g || exit 1
+  ARCROWS=brake HOLDS="stop3 off" RES=jtb bash $ME arm JTN-L18-s0 JT00 9500 0 $e ;;
 sum)
-  T=$2; R=experiments/defect_fix/results/jt/$T; mkdir -p $R
-  $AP $PY arena --tags $T@leash3 $T@off --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
+  T=$2; HL=(${3:-leash3 off}); R=experiments/defect_fix/results/${4:-jt}/$T; mkdir -p $R
+  $AP $PY arena --tags ${HL[@]/#/$T@} --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
   $TR $PY held --tags $T > $R/held.txt 2>&1; cat $R/held.txt ;;
 *) sed -n 2,16p $0; exit 2 ;;
 esac

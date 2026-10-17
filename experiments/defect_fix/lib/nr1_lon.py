@@ -10,6 +10,10 @@ cumulative polyline length from the origin through the 8 poses (0.5 .. 4 s), pla
 Exclusions (label `ok` False, term exactly 0): the human (the log's own travel, tab `fut_reg`) slower than 0.5 m/s on any 0.5 s segment of
 the horizon: standing still or coming to a stop for a reason the row may not show (d335 / d338: standing rows teach "stay stopped"); a row
 with a non-finite target. Rows where the human launches or keeps moving stay in.
+JTB (rm_train --on-arc-rows brake; NR1 prereg supplement 10): the stopping rows come in too. Excluded only: the human below 0.5 m/s on every
+0.5 s segment of the horizon (standing at t0 and staying still: the serve hold's case) and non-finite targets. So the term also says "brake
+with him" where the human decelerates or stops. Row kinds for the monitoring (`kind`, fut_reg segment speeds v_1..v_8): stop (v_1 >= 0.5,
+min < 0.5), launch (v_1 < 0.5, max >= 0.5), brake (neither, v_8 < 0.7 v_1), cruise (the rest), still (max < 0.5, excluded).
 
 Term: d = s_plan - s_target per pose, smooth L1 (beta 0.5) of d summed over the 8 poses: too fast and too slow cost the same.
 Longitudinal only: each plan pose is moved only along its own heading (lon_only, the complement of nr1_lat.shape_only), so the term's gradient
@@ -28,25 +32,37 @@ def human_arc(fut):
     return np.cumsum(np.hypot(*np.diff(P, axis=1).transpose(2, 0, 1)), 1)
 
 
-def labels(tab):
-    """tab (npz-like with fut, fut_reg) -> s_h (N, 8) f4, ok (N,) bool, rec (counts)."""
+KINDS = ("cruise", "brake", "stop", "launch", "still")
+
+
+def labels(tab, rows="move"):
+    """tab (npz-like with fut, fut_reg) -> s_h (N, 8) f4, ok (N,) bool, rec (counts), kind (N,) int8 (index into KINDS, -1 non-finite).
+    rows: "move" (NR1HVR / JT: any segment below 0.5 m/s excluded) or "brake" (JTB: only the still-all-horizon rows excluded)."""
     s_h, s_r = human_arc(tab["fut"]), human_arc(tab["fut_reg"])
     seg = np.diff(np.concatenate([np.zeros((len(s_r), 1)), s_r], 1), axis=1) / DT
     fin = np.isfinite(s_h).all(1) & np.isfinite(s_r).all(1)
     stop = seg.min(1) < V_MIN
-    ok = fin & ~stop
+    with np.errstate(invalid="ignore"):
+        still = seg.max(1) < V_MIN
+        kind = np.select([still, seg[:, 0] < V_MIN, stop, seg[:, -1] < 0.7 * seg[:, 0]], [4, 3, 2, 1], 0).astype(np.int8)
+    kind[~fin] = -1
+    assert rows in ("move", "brake"), rows
+    ok = fin & (~stop if rows == "move" else ~still)
     rec = dict(rows=int(len(ok)), labelled=int(ok.sum()), nonfinite=int((~fin).sum()), human_stand_or_stop=int((fin & stop).sum()),
                human_standing_4s=int((fin & (s_r[:, -1] < 1.0)).sum()), v_min=V_MIN)
-    return np.nan_to_num(s_h).astype(np.float32), ok, rec
+    if rows != "move":
+        rec |= dict(rule=rows, kinds={k: int((kind == i).sum()) for i, k in enumerate(KINDS)},
+                    labelled_kinds={k: int(((kind == i) & ok).sum()) for i, k in enumerate(KINDS)})
+    return np.nan_to_num(s_h).astype(np.float32), ok, rec, kind
 
 
-def load(pool_dir, names, dev):
+def load(pool_dir, names, dev, rows="move"):
     import torch
     from pathlib import Path
     z = np.load(Path(pool_dir) / "tab.npz")
     assert np.array_equal(z["names"].astype(str), np.asarray(names).astype(str)), "nr1_lon: tab rows != the pool's"
-    s_h, ok, rec = labels(z)
-    return dict(s_h=torch.as_tensor(s_h, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+    s_h, ok, rec, kind = labels(z, rows)
+    return dict(s_h=torch.as_tensor(s_h, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec, kind=torch.as_tensor(kind, device=dev))
 
 
 def lon_only(x, y, psi):
@@ -100,6 +116,8 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     assert across.abs().max() < 1e-6 and g[:, :2].abs().max() > 0, (across, g)
     z = dict(fut=np.stack([np.c_[2.0 * t.numpy(), np.zeros(8), np.zeros(8)]] * 3), fut_reg=np.stack([np.c_[2.0 * t.numpy(), np.zeros(8), np.zeros(8)],
              np.zeros((8, 3)), np.c_[np.minimum(2.0 * t.numpy(), 3.0), np.zeros(8), np.zeros(8)]]))
-    s, okl, rec = labels(z)                                                  # moving / standing / stopping within the horizon
+    s, okl, rec, kd = labels(z)                                              # moving / standing / stopping within the horizon
     assert okl.tolist() == [True, False, False] and rec["human_standing_4s"] == 1, (okl, rec)
+    s, okl, rec, kd = labels(z, "brake")                                     # JTB: the stopping row comes in, the standing one stays out
+    assert okl.tolist() == [True, False, True] and kd.tolist() == [0, 4, 2], (okl, kd)
     print("nr1_lon known-answer ok", float(slow), float(fast), rec)

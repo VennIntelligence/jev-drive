@@ -29,14 +29,14 @@ import numpy as np
 
 BC = (4.049 - 1.127) / 2                       # box centre ahead of the rear axle (nuPlan Pacifica), = the scorer's centroid offset
 BIN_DEG = 30.0
-CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False)
+CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move")
 
 
-def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False):
+def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move"):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
-               arc=float(arc), host=bool(host))
+               arc=float(arc), host=bool(host), arc_rows=str(arc_rows))
     return dict(CFG)
 
 
@@ -78,9 +78,9 @@ def load(pool_dir, names, dev, file=None):
     if CFG["side"] > 0 or file:
         from agent_hinge import AgentHinge
         pack["ah"] = AgentHinge(Path(pool_dir) / "agent.npz", names, dev, 0.0, None)
-    if CFG["arc"] > 0:                                                         # NR1HVR: the longitudinal labels from the pool's tab
-        import nr1_lon
-        pack["arc"] = nr1_lon.load(pool_dir, names, dev)
+    if CFG["arc"] > 0 or CFG["arc_rows"] != "move":                            # NR1HVR: the longitudinal labels from the pool's tab (JTB / JTN:
+        import nr1_lon                                                         # --on-arc-rows loads them for the monitoring even at W 0)
+        pack["arc"] = nr1_lon.load(pool_dir, names, dev, CFG["arc_rows"])
         print(f"nr1_lat: lon_arc labels {pack['arc']['rec']}", flush=True)
     return pack
 
