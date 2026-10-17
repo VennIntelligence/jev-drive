@@ -10,6 +10,12 @@ measured speed and the evaluator's obstacle gap only). Class per contact, rule f
   no braking   not launch; the struck actor ahead and slow (< 1.0 m/s) but the ego does not decelerate;
   other        anything else (the actor moves into the ego's path, lateral, cut-in, struck while turning).
   nx_atfault.py --j RTB1O-L18-s0 --c RSG-L18-s0 --out DIR   -> DIR/atfault.{json,md}, DIR/atfault_traces.png
+  nx_atfault.py --geo --j .. --c .. --out DIR   (after the above) per contact, from the scene map (c1_extract map's loader) and the controller
+                CSVs (ego pose every 0.1 s, never pruned): the struck actor's heading against the ego (head-on |dpsi| > 135 deg, crossing 45-135,
+                same direction < 45) and velocity; the ego box's lanes at contact and over the 2 s before (a corner in a lane whose direction is
+                > 90 deg off the ego heading = opposite lane; no corner in any lane = off the lanes); the ego's lateral offset from the human path
+                and the other tag's offset at the same station along the human path (and its lane state there); the struck actor's lane
+                direction against the ego heading -> DIR/atfault_geo.json, DIR/atfault.md (columns added)
 """
 from __future__ import annotations
 
@@ -201,7 +207,179 @@ def figs(res, a, out):
     fig.savefig(out / "atfault_traces.png", dpi=150)
 
 
+# ---------------------------------------------------------------- geometry against the scene map
+L_FRONT, L_REAR, HALF_W = 3.9, 1.1, 1.15        # ego box from the rear axle (nuPlan Pacifica: 5.18 x 2.30 m, rear overhang ~1.1 m)
+
+
+def wrap(a):
+    return (a + np.pi) % (2 * np.pi) - np.pi
+
+
+def scene_map(run, scene, center, radius=150.0):
+    from alpasim_runtime.config import UserSimulatorConfig
+    from alpasim_runtime.scene_loader import build_scene_loader
+    from omegaconf import OmegaConf
+    user = OmegaConf.merge(OmegaConf.structured(UserSimulatorConfig), OmegaConf.load(f"{run}/generated-user-config-0.yaml"))
+    vm = build_scene_loader(user).get_data_source(scene).map
+    from matplotlib.path import Path as MP
+    lanes = []
+    for ln in vm.get_lanes_within(np.r_[center, 0.0], radius):
+        c = np.asarray(ln.center.points[:, :2], float)
+        if ln.left_edge is None or ln.right_edge is None or len(c) < 2:
+            continue
+        poly = np.r_[np.asarray(ln.left_edge.points[:, :2], float), np.asarray(ln.right_edge.points[:, :2], float)[::-1]]
+        lanes.append(dict(id=str(ln.id), c=c, path=MP(poly)))
+    return lanes
+
+
+def lane_dir(ln, xy):
+    c = ln["c"]
+    i = int(np.argmin(np.hypot(*(c - xy).T)))
+    j = min(i + 1, len(c) - 1)
+    i = j - 1
+    return float(np.arctan2(*(c[j] - c[i])[::-1]))
+
+
+def box(x, y, yaw):
+    c, s = np.cos(yaw), np.sin(yaw)
+    return np.array([[x + c * dx - s * dy, y + s * dx + c * dy] for dx in (L_FRONT, -L_REAR) for dy in (HALF_W, -HALF_W)])
+
+
+def lane_state(lanes, x, y, yaw):
+    """'own' (every corner in a lane within 90 deg of the heading), 'opposite' (a corner only in lanes > 90 deg off), 'off lanes' (a corner in
+    no lane), worst first; plus the largest heading gap of the lanes under the box."""
+    worst, gap = "own", 0.0
+    for q in box(x, y, yaw):
+        d = [abs(wrap(lane_dir(ln, q) - yaw)) for ln in lanes if ln["path"].contains_point(q)]
+        if not d:
+            worst = "off lanes" if worst == "own" else worst
+        else:
+            gap = max(gap, min(d))
+            if min(d) > np.pi / 2:
+                worst = "opposite"
+    return worst, float(np.degrees(gap))
+
+
+def ctrl_path(run, scene):
+    """Ego (t_us, x, y, yaw) every 0.1 s from the controller CSV of the scene's session."""
+    import csv
+    for line in open(f"{run}/driver-logs/drive.jsonl"):
+        if '"kind": "start"' in line and f'"{scene}"' in line:
+            ses = json.loads(line)["session"]
+            break
+    else:
+        return None
+    f = Path(run) / f"controller/alpasim_controller_{ses}.csv"
+    if not f.exists():
+        return None
+    R = list(csv.DictReader(open(f)))
+    return np.array([[float(r["timestamp_us"]), float(r["x"]), float(r["y"]), 2 * np.arctan2(float(r["qz"]), float(r["qw"]))] for r in R])
+
+
+def station(G, xy):
+    """Human path G (n, >=3: t, x, y) -> (station, signed lateral offset, left +) of a point."""
+    P = G[:, 1:3]
+    seg = np.diff(P, axis=0)
+    L = np.hypot(*seg.T)
+    keep = L > 1e-3
+    P0, seg, L = P[:-1][keep], seg[keep], L[keep]
+    s0 = np.r_[0, np.cumsum(L)][:-1]
+    u = np.clip(((xy - P0) * seg).sum(1) / L ** 2, 0, 1)
+    q = P0 + u[:, None] * seg
+    d = np.hypot(*(xy - q).T)
+    k = int(np.argmin(d))
+    sign = np.sign(seg[k, 0] * (xy[1] - P0[k, 1]) - seg[k, 1] * (xy[0] - P0[k, 0]))
+    return float(s0[k] + u[k] * L[k]), float(sign * d[k])
+
+
+def geo(a):
+    import c1_extract as X
+    out = Path(a.out)
+    res = json.loads((out / "atfault.json").read_text())
+    J, C = summary(a.j), summary(a.c)
+    G = []
+    for r in res:
+        s = r["scene"]
+        runs = {a.j: J[s][0], a.c: C[s][0]}
+        asl = {t: bool(glob.glob(f"{d}/rollouts/{s}/*/rollout.asl")) for t, d in runs.items()}
+        src = next(t for t in (a.j, a.c) if asl[t])
+        _, o = X.one_log((runs[src], s))
+        human = np.asarray(o["logged"][0]["traj"])
+        lanes = scene_map(runs[src], s, human[len(human) // 2, 1:3])
+        paths = {t: ctrl_path(d, s) for t, d in runs.items()}
+        for t, P in paths.items():                                      # frame check: the controller pose against the log at its first sample
+            if P is not None:
+                i = int(np.argmin(np.abs(human[:, 0] - P[0, 0])))
+                print(f"  frame check {t}: ctrl vs log at t {P[0, 0] / 1e6:.1f} s: {np.hypot(*(P[0, 1:3] - human[i, 1:3])):.2f} m", flush=True)
+        g = dict(scene=s, lanes=len(lanes), map_from=src, tags={})
+        for t, other in ((a.j, a.c), (a.c, a.j)):
+            x = r["J"] if t == a.j else r["C"]
+            P = paths[t]
+            if x["t_contact"] is None or P is None:
+                continue
+            rec = drive_rec(runs[t], s)
+            tc = rec[0]["t0"] + 1e6 * x["t_contact"]
+            k = int(np.argmin(np.abs(P[:, 0] - tc)))
+            ex, ey, eyaw = P[k, 1:]
+            st_c = lane_state(lanes, ex, ey, eyaw)
+            win = P[(P[:, 0] >= tc - 2e6) & (P[:, 0] <= tc)]
+            states = [lane_state(lanes, *q[1:]) for q in win]
+            sta, off = station(human, np.array([ex, ey]))
+            e = dict(t_contact=x["t_contact"], lane_at_contact=st_c[0], lane_gap_deg=st_c[1],
+                     opposite_share_2s=float(np.mean([q[0] == "opposite" for q in states])) if states else None,
+                     off_share_2s=float(np.mean([q[0] == "off lanes" for q in states])) if states else None,
+                     max_lane_gap_2s=max([q[1] for q in states], default=None), station=sta, offset_human=off)
+            Q = paths[other]
+            if Q is not None:
+                so = np.array([station(human, q[1:3]) for q in Q])
+                near = np.argsort(np.abs(so[:, 0] - sta))[:1]
+                if len(near) and abs(so[near[0], 0] - sta) < 1.0:
+                    qo = Q[near[0]]
+                    e["other_offset_human"] = float(so[near[0], 1])
+                    e["other_lane_state"] = lane_state(lanes, *qo[1:])[0]
+                    e["other_passes_station"] = True
+                else:
+                    e["other_passes_station"] = False
+            if asl[t]:                                                                    # struck actor heading / velocity / lane
+                _, ot = (None, o) if t == src else X.one_log((runs[t], s))
+                st = x.get("struck") or {}
+                A = ot["actors"].get(st.get("id")) if st else None
+                if A is not None:
+                    i = int(np.argmin(np.abs(A[:, 0] - tc)))
+                    v = np.gradient(A[:, 1:3], A[:, 0] / 1e6, axis=0)[i]
+                    dpsi = float(np.degrees(wrap(A[i, 3] - eyaw)))
+                    sp = float(np.hypot(*v))
+                    vdir = float(np.degrees(wrap(np.arctan2(v[1], v[0]) - eyaw))) if sp > 0.5 else None
+                    kind = "head-on" if abs(dpsi) > 135 else ("crossing" if abs(dpsi) > 45 else "same direction")
+                    ad = [abs(wrap(lane_dir(ln, A[i, 1:3]) - eyaw)) for ln in lanes if ln["path"].contains_point(A[i, 1:3])]
+                    e["struck"] = dict(dpsi_deg=dpsi, kind=kind, speed=sp, vel_dir_deg=vdir,
+                                       lane_vs_ego_deg=float(np.degrees(min(ad))) if ad else None,
+                                       lane_faces_ego=bool(ad and min(ad) > np.pi * 3 / 4))
+            g["tags"][t] = e
+        G.append(g)
+        print(s, json.dumps(g["tags"], default=float)[:600], flush=True)
+    (out / "atfault_geo.json").write_text(json.dumps(G, indent=1, default=float))
+    md = (out / "atfault.md").read_text().split("\n")
+    md = [m for m in md if not m.startswith("## Geometry")]
+    f = lambda v, q=".1f": "-" if v is None else format(v, q)  # noqa: E731
+    L = ["", "## Geometry against the scene map (per contact)", "",
+         "| scene | tag | struck: dpsi (deg) / kind / speed (m/s) | struck's lane vs ego heading (deg; faces ego) | ego lane at contact (max lane gap deg) | "
+         "2 s before: opposite / off-lane share | ego offset from human (m) | other tag at same station: offset / lane |", "|---|---|---|---|---|--:|--:|---|"]
+    for g in G:
+        for t, e in g["tags"].items():
+            st = e.get("struck")
+            sd = f"{st['dpsi_deg']:.0f} / {st['kind']} / {st['speed']:.1f}" if st else "- (asl pruned)"
+            sl = (f"{f(st['lane_vs_ego_deg'], '.0f')} ({'yes' if st['lane_faces_ego'] else 'no'})") if st else "-"
+            ot = (f"{e['other_offset_human']:+.2f} / {e['other_lane_state']}" if e.get("other_passes_station") else "not reached")
+            L.append(f"| {g['scene'][-16:]} | {t} | {sd} | {sl} | {e['lane_at_contact']} ({e['lane_gap_deg']:.0f}) | "
+                     f"{f(e['opposite_share_2s'], '.2f')} / {f(e['off_share_2s'], '.2f')} | {e['offset_human']:+.2f} | {ot} |")
+    (out / "atfault.md").write_text("\n".join(md).rstrip("\n") + "\n" + "\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--j", required=True), ap.add_argument("--c", required=True), ap.add_argument("--out", required=True)
-    main(ap.parse_args())
+    ap.add_argument("--geo", action="store_true")
+    a = ap.parse_args()
+    geo(a) if a.geo else main(a)
