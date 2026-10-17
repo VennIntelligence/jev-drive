@@ -58,8 +58,8 @@ reads() {  # reads <tag> <after> [pai]: held 460 @18 (6) + public 1491 @10 (10) 
       -- bash $OL readlist $T $STATIC 10 $O/static/$T/run)) || return 1
   ids+=($(sub df-wc-$T --after $A --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags $T)) || return 1
   ids+=($(wsread $T $A)) || return 1
-  if [[ ${3:-} == pai ]]; then
-    ids+=($(sub df-paisub-$T --after $A --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME paisub $T)) || return 1; fi
+  if [[ -n ${3:-} ]]; then                                            # pai: stop17 + PAI 281; stop17: stop17 only (job body after the training)
+    ids+=($(sub df-paisub-$T --after $A --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME paisub $T $3)) || return 1; fi
   echo "${ids[*]}"; }
 case ${1:-} in
 data)
@@ -123,9 +123,10 @@ full)
     t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC $s 2500 $T) || exit 1
     ids=$(reads $T $t $([[ $s == 0 ]] && echo pai || echo stop17)) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
   echo "full: ${TT[*]} after $(csv ${all[@]})" | tee -a $O/stages.txt ;;
-paisub)   # job body: PAI stop17 + PAI 281 (submission config) of an L18 checkpoint
+paisub)   # job body: paisub <tag> <pai|stop17>: PAI stop17 (+ PAI 281 with pai), submission config, of an L18 checkpoint
   T=$2
   CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $O/paisub/$T $T $STOP17 > $O/paisub_$T.submit.txt || exit 1
+  [[ ${3:-pai} == pai ]] || exit 0
   CHUNKS_FROM=$PAICH SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $O/pai/$T $T > $O/pai_$T.submit.txt || exit 1 ;;
 train)   # train <arm> <seed> <steps> <tag>
   case $2 in
