@@ -108,6 +108,23 @@ device); `adapter.pt` is not read. `jevdrive/op_adapt.py` looks for the model at
 `SH30-F-s0` and `OT30-F-s0/s1` were not copied; `experiments/alpasim/scripts/tokyo_pull.sh ckpt <tag>` pulls one on demand
 (run on Tokyo with the Mac's key forwarded: `ssh-add ~/.ssh/id_ed25519; ssh -A ujs@100.108.238.8 'bash ~/mycode/jev-drive/experiments/alpasim/scripts/tokyo_pull.sh ckpt <tag>'`, with `BOX_HOST`, `BOX_PORT`, `BOX_USER` exported).
 
+### Full public nuPlan data on Tokyo (2026-10-17)
+
+All 1 491 public scenes' MTGS assets (555 GB, `navtest/assets/<scene>/`), the 1 491 configs and the trajdata cache (`nuplan_test`, 4.1 GB)
+now sit under `/data/datasets/alpasim_nuplan/`, the box's layout, so nuPlan reads can run here (`ALPASIM_NUPLAN_ROOT` / `NUPLAN_ROOT` default).
+Fetched with `experiments/alpasim/scripts/tokyo_nuplan_full.sh hf` (= `fetch_data.sh all`, `PAR=4`, 4 ranges per shard, `hf-mirror.com`), 2026-10-16 16:52 to
+2026-10-17 10:27 JST (17.5 h, including a 5 h stall). Checks: every tarball sha256 against the tree API; file lists (name, size) of assets, configs and
+`nuplan_test` equal the box's (`LC_ALL=C sort`); `rsync -anrc` checksum dry run of the 444 scenes in `experiments/alpasim_proxy/results/scene_mix/tokyo_priority.txt`
+(44 near-stationary / ends-stopped / static public scenes + 400 log-stratified, seed 20261016): 0 differences; smoke of `smoke.sh` on 3 new scenes
+(`/data/runs/alpasim/tokyo_full/smoke`): 3 / 3 score 1.0.
+
+- Route: `huggingface.co` is unreachable from Tokyo with or without the proxy; `hf-mirror.com` works, direct and through port 7890 alike. Total throughput caps at
+  about 10-11 MB/s (1 stream 10.5, 4 / 8 / 16 streams the same); 8 or more connections in a burst get HTTP 429. Over the whole fetch it averaged 9 MB/s.
+- The box route (rsync from `autodl`) added nothing while the mirror ran (it moved 3 files in 2 h) and is not worth using for bulk data.
+- Traps: `rsync --files-from` turns off the `-r` that `-a` implies (a first priority copy had no `background/*.ckpt`, the smoke scored 0 with `NOT_FOUND`);
+  the mirror's tree API now answers 308 (`fetch_data.sh` follows redirects since this fetch). On 2026-10-17 03:54-09:00 JST every Clash node timed out (even
+  baidu.com); the selector was set to `DIRECT`, which reached the mirror at 10 MB/s, and was left there.
+
 ### Network facts measured today
 
 - The box's ssh port is closed by most Clash nodes (`Connection closed by 198.18.x.x`); DIRECT passes. `tokyo_pull.sh` rotates to a node that passes
