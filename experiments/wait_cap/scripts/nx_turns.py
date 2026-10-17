@@ -22,7 +22,7 @@ Definitions (fixed before any output was read):
                +-5 m at a 1 m step (rf_follow.heading), curvature = dh/ds, radius = 1 / |curvature|
   stretch      the route between the first anchor's station s0 and the log's own station at the last decision of the read (s_end; k 17 held, 9 public)
   bend         the 40 m window of the stretch with the largest |net heading change| (bend_deg, signed, left +); entry / exit = 10 % / 90 % of the
-               change over [a - 10, a + 50] m; r_min = smallest radius on the stretch. Testable: exit + 10 m <= s_end
+               change over [a - 10, a + 50] m (only when |bend_deg| >= 15; else no bend); r_min = smallest radius on the stretch. Testable: exit + 10 m <= s_end
   outcome      completed = the controller trace (10 Hz) crosses exit + 10 m before the zero step (the first 2 Hz step with offroad, a front / lateral
                contact, or dist_to_gt >= 4 m; long_read.one) within 2.5 m of the route; max_lat = largest |lateral| from the route over
                [entry - 10, exit + 10] before the zero step; out = lateral signed to the outside of the bend
@@ -67,7 +67,7 @@ PUB = {"RTB1O-L18-s0": NX / "cont/wide/pub/RTB1O-L18-s0", "RSG-L18-s0": DATA / "
 KEND = dict(held=17, pub=9)
 T0, DT = 17_000, 500_000
 DS = (10.0, 20.0, 30.0)
-WIN, LAT_OK, CAR_C, SCALE = 40.0, 2.5, 1.4, 0.689
+WIN, LAT_OK, CAR_C, SCALE, BEND_MIN = 40.0, 2.5, 1.4, 0.689, 15.0
 HELD7 = ("53d3787367c75240", "de4ace24443b5b2d", "6d2b59f78d995d9c", "9d1d720d0e2e511e", "9a675656c3c85f4c", "ddc1271ea57154bc",
          "1f54430427975391")
 
@@ -294,7 +294,7 @@ def bend_of(s, h, kap, s0, s_end):
     j0, j1 = max(0, a - 10), min(len(s) - 1, b + 10)
     tot = float(h[j1] - h[j0])
     ent = ext = np.nan
-    if abs(tot) > 1e-6:
+    if abs(np.degrees(th)) >= BEND_MIN:                                  # a bend of >= 15 deg in 40 m; straighter stretches have none
         f = (h[j0:j1 + 1] - h[j0]) / tot
         k10, k90 = np.flatnonzero(f >= 0.1), np.flatnonzero(f >= 0.9)
         if len(k10) and len(k90):
