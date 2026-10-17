@@ -1,0 +1,71 @@
+{
+ "arm": "RTB1O-L18-s0",
+ "pub": {
+  "scenes": 1491,
+  "J": {
+   "zeros": 63,
+   "mean": 0.928215421008366,
+   "progress_rel": 0.8498567919452814,
+   "at_fault": 7,
+   "offroad": 36,
+   "collisions": {
+    "front": 5,
+    "lateral": 2,
+    "rear": 24
+   }
+  },
+  "C": {
+   "zeros": 58,
+   "mean": 0.939714647079603,
+   "progress_rel": 0.8496561745904841,
+   "at_fault": 8,
+   "offroad": 31,
+   "collisions": {
+    "front": 6,
+    "lateral": 2,
+    "rear": 18
+   }
+  },
+  "paired": "-0.011 [-0.023, -0.001]",
+  "paired_lo": -0.02268721631723485
+ },
+ "pai": {
+  "scenes": 281,
+  "J": {
+   "zeros": 76,
+   "mean": 0.6764545459126258,
+   "progress_rel": 0.8613924520993048,
+   "at_fault": 12,
+   "offroad": 17,
+   "collisions": {
+    "front": 6,
+    "lateral": 6,
+    "rear": 37
+   }
+  },
+  "C": {
+   "zeros": 76,
+   "mean": 0.6736305309541848,
+   "progress_rel": 0.8634816530522269,
+   "at_fault": 9,
+   "offroad": 16,
+   "collisions": {
+    "front": 5,
+    "lateral": 4,
+    "rear": 40
+   }
+  },
+  "paired": "0.003 [-0.034, 0.038]",
+  "paired_lo": -0.03377315690699469
+ },
+ "stop17": {
+  "J": {
+   "zeros": 15,
+   "n": 17
+  },
+  "C": {
+   "zeros": 16,
+   "n": 17
+  }
+ }
+}

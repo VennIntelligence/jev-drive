@@ -1,0 +1,20 @@
+{
+ "a": "NXGG2-RB0-old",
+ "b": "NXGG2-RB0-new",
+ "note": "RB0-F recipe 60 steps from the shipped weights: code 936ac891 vs this code (8a19229e) with --kd-lam / --d2-lam / --ego-scale-speed off",
+ "scalars": 29,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  1.4697740077972412,
+  1.4697740077972412
+ ],
+ "on_hash_60": [
+  null,
+  null
+ ],
+ "want_hash": null,
+ "identical": true
+}

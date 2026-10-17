@@ -1,0 +1,371 @@
+[
+ {
+  "scene": "2021.06.03.12.02.06_veh-35_01100_01227-7bbb6cfc4f135e50",
+  "lanes": 215,
+  "map_from": "RSG-L18-s0",
+  "tags": {
+   "RSG-L18-s0": {
+    "t_contact": 9.0,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 1.6019312416236644,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 1.6019312416236644,
+    "station": 37.89570183762498,
+    "offset_human": 0.10225392153172957,
+    "other_offset_human": -0.0001977774826047143,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -7.614686283425426,
+     "kind": "same direction",
+     "speed": 1.2621234179209992,
+     "vel_dir_deg": -11.844184705319176,
+     "lane_vs_ego_deg": 1.6408858751651034,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.06.28.16.57.59_veh-26_00016_00484-0722adecc3d45ac4",
+  "lanes": 229,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 5.0,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 0.5094982268308177,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 0.6780457014229279,
+    "station": 38.478878279288026,
+    "offset_human": -0.08229367432871681,
+    "other_offset_human": -0.13690931936195194,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -5.575293363708664,
+     "kind": "same direction",
+     "speed": 7.080949902306852,
+     "vel_dir_deg": -5.490897038791851,
+     "lane_vs_ego_deg": 0.39983946825950395,
+     "lane_faces_ego": false
+    }
+   },
+   "RSG-L18-s0": {
+    "t_contact": 5.0,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 0.458623936876194,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 0.5874245223865715,
+    "station": 38.708377575863636,
+    "offset_human": -0.13798429289128963,
+    "other_offset_human": -0.08974862313403419,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -6.5434155032302295,
+     "kind": "same direction",
+     "speed": 7.080949902306852,
+     "vel_dir_deg": -6.459019178313416,
+     "lane_vs_ego_deg": 0.5682826712620611,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.06.28.16.57.59_veh-26_00016_00484-de4ace24443b5b2d",
+  "lanes": 155,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 6.5,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 0.09579761476228026,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 0.7002018971451281,
+    "station": 13.104552594556285,
+    "offset_human": 0.15399740442189747,
+    "other_offset_human": 0.06556050363092017,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -15.117024961459864,
+     "kind": "same direction",
+     "speed": 2.577317733032495,
+     "vel_dir_deg": -19.964776996171747,
+     "lane_vs_ego_deg": 0.47101095395867104,
+     "lane_faces_ego": false
+    }
+   },
+   "RSG-L18-s0": {
+    "t_contact": 6.5,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 6.698875958282113,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 6.698875958282113,
+    "station": 17.467500668178776,
+    "offset_human": 0.2534898846172666,
+    "other_offset_human": 0.1128383438024859,
+    "other_lane_state": "own",
+    "other_passes_station": true
+   }
+  }
+ },
+ {
+  "scene": "2021.09.09.18.04.06_veh-40_00555_00731-daf38cecd5045cf6",
+  "lanes": 104,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 5.5,
+    "lane_at_contact": "opposite",
+    "lane_gap_deg": 91.70373018550474,
+    "opposite_share_2s": 1.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 179.80462506544742,
+    "station": 14.515593761777572,
+    "offset_human": -2.1481819189192937,
+    "other_offset_human": -2.6422446731379954,
+    "other_lane_state": "opposite",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": 50.03169942847691,
+     "kind": "crossing",
+     "speed": 3.7928411801423003,
+     "vel_dir_deg": 45.11057874269518,
+     "lane_vs_ego_deg": 39.839799921941086,
+     "lane_faces_ego": false
+    }
+   },
+   "RSG-L18-s0": {
+    "t_contact": 5.5,
+    "lane_at_contact": "opposite",
+    "lane_gap_deg": 95.62492616811903,
+    "opposite_share_2s": 0.9523809523809523,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 178.18400921605559,
+    "station": 14.037639621099487,
+    "offset_human": -2.520287767693528,
+    "other_offset_human": -2.055413736056754,
+    "other_lane_state": "opposite",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": 54.05205600552779,
+     "kind": "crossing",
+     "speed": 3.7928411801423003,
+     "vel_dir_deg": 49.13093531974605,
+     "lane_vs_ego_deg": 43.860156498991955,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.09.09.18.04.06_veh-40_00743_01071-6d2b59f78d995d9c",
+  "lanes": 99,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 6.0,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 4.0482953681977305,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 30.913758952208543,
+    "station": 17.38123416806944,
+    "offset_human": -0.7741314352116262,
+    "other_offset_human": -0.9968081672154258,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": 4.661038240884955,
+     "kind": "same direction",
+     "speed": 9.157773892189683,
+     "vel_dir_deg": 4.5430508324841545,
+     "lane_vs_ego_deg": 4.0495432974869,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.09.16.14.39.34_veh-42_01111_01448-a3c4e4bf10d65ddb",
+  "lanes": 135,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 6.5,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 17.674312892621497,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 23.892477894353924,
+    "station": 17.221434001522066,
+    "offset_human": 1.3202011389473003,
+    "other_offset_human": -1.0487143233486245,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -16.09610188430872,
+     "kind": "same direction",
+     "speed": 0.0362250411940757,
+     "vel_dir_deg": null,
+     "lane_vs_ego_deg": 17.623843681358377,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.09.16.15.47.30_veh-45_01199_01391-365c0937de9d5885",
+  "lanes": 135,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 5.5,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 5.693672088637039,
+    "opposite_share_2s": 0.5714285714285714,
+    "off_share_2s": 0.047619047619047616,
+    "max_lane_gap_2s": 130.70030489176676,
+    "station": 18.689398644285145,
+    "offset_human": 1.7716522955510317,
+    "other_offset_human": 0.2257628864229118,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": 7.543583539201912,
+     "kind": "same direction",
+     "speed": 0.13018537026481655,
+     "vel_dir_deg": null,
+     "lane_vs_ego_deg": 5.693672088637039,
+     "lane_faces_ego": false
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.09.16.17.40.09_veh-45_02539_02745-47e0ff3bc36a5f69",
+  "lanes": 142,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 7.5,
+    "lane_at_contact": "opposite",
+    "lane_gap_deg": 175.49696171570156,
+    "opposite_share_2s": 1.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 175.49696171570156,
+    "station": 21.83734907153581,
+    "offset_human": 5.899556920096233,
+    "other_offset_human": 6.736245733035367,
+    "other_lane_state": "opposite",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -176.65402086842798,
+     "kind": "head-on",
+     "speed": 0.1280229668676986,
+     "vel_dir_deg": null,
+     "lane_vs_ego_deg": 175.39041800393738,
+     "lane_faces_ego": true
+    }
+   },
+   "RSG-L18-s0": {
+    "t_contact": 8.0,
+    "lane_at_contact": "opposite",
+    "lane_gap_deg": 175.72737403525363,
+    "opposite_share_2s": 1.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 176.4550091582023,
+    "station": 21.83734907153581,
+    "offset_human": 6.2638078468803275,
+    "other_offset_human": 8.547219966358687,
+    "other_lane_state": "opposite",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -176.63187498653147,
+     "kind": "head-on",
+     "speed": 5.53045689543052,
+     "vel_dir_deg": -176.2434066164024,
+     "lane_vs_ego_deg": 175.67664189624682,
+     "lane_faces_ego": true
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.09.16.19.49.00_veh-42_00990_01609-9a675656c3c85f4c",
+  "lanes": 167,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 6.0,
+    "lane_at_contact": "opposite",
+    "lane_gap_deg": 147.74129508914623,
+    "opposite_share_2s": 0.38095238095238093,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 147.74129508914623,
+    "station": 13.325258504440473,
+    "offset_human": 3.012280131380925,
+    "other_offset_human": 0.7084425501272702,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": 146.61745286369054,
+     "kind": "head-on",
+     "speed": 1.15914039512473,
+     "vel_dir_deg": 142.6370758044578,
+     "lane_vs_ego_deg": 147.72680147574474,
+     "lane_faces_ego": true
+    }
+   }
+  }
+ },
+ {
+  "scene": "2021.10.06.08.16.17_veh-52_00032_00170-84b38cdaa93e5dcd",
+  "lanes": 144,
+  "map_from": "RTB1O-L18-s0",
+  "tags": {
+   "RTB1O-L18-s0": {
+    "t_contact": 7.0,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 1.7421570974514815,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 20.19656360127726,
+    "station": 30.60958034628201,
+    "offset_human": -0.2560885085686436,
+    "other_offset_human": -0.04521867403435974,
+    "other_lane_state": "own",
+    "other_passes_station": true,
+    "struck": {
+     "dpsi_deg": -98.35709779522945,
+     "kind": "crossing",
+     "speed": 5.255962571173399,
+     "vel_dir_deg": -105.56015297502164,
+     "lane_vs_ego_deg": 1.0826517695712936,
+     "lane_faces_ego": false
+    }
+   },
+   "RSG-L18-s0": {
+    "t_contact": 6.5,
+    "lane_at_contact": "own",
+    "lane_gap_deg": 1.3726084677327512,
+    "opposite_share_2s": 0.0,
+    "off_share_2s": 0.0,
+    "max_lane_gap_2s": 1.3726084677327512,
+    "station": 35.61860107498802,
+    "offset_human": -0.02636697910232063,
+    "other_offset_human": -0.3626390337477651,
+    "other_lane_state": "own",
+    "other_passes_station": true
+   }
+  }
+ }
+]
