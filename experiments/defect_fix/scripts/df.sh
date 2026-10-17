@@ -137,6 +137,9 @@ repub)   # repub <tag> <chunk ..>: resubmit public 1491 chunks of a tag (partial
   T=$2; for i in "${@:3}"; do rm -rf $O/pub/$T/b$i
     id=$(sub df-pub-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $O/pub/$T/b$i) || exit 1
     echo "repub $T b$i: $id" | tee -a $O/stages.txt; done ;;
+wscollect)   # wscollect <tag ..>: the waiting-set tables of finished reads whose collect step stopped (df_wscollect.py; CPU pool job)
+  id=$(sub df-wscollect --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $AP experiments/defect_fix/scripts/df_wscollect.py "${@:2}") || exit 1
+  echo "wscollect ${*:2}: $id" | tee -a $O/stages.txt ;;
 rews)   # rews <tag>: resubmit a waiting-set read
   id=$(wsread $2) || exit 1; echo "rews $2: $id" | tee -a $O/stages.txt ;;
 l18pilot)   # job body after the label gate

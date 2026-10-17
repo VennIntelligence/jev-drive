@@ -373,7 +373,8 @@ def ws_read(tag, ref=None):
     def summ(rows):
         a = [x for x in rows if x["variant"] == "a"]
         b = [x for x in rows if x["variant"] == "b"]
-        d = [(f(x, "delay_s") if f(x, "delay_s") is not None else (f(x, "t_end") or 0.0) - (f(x, "h_launch_s") or 0.0)) for x in b]
+        d = [(f(x, "delay_s") if f(x, "delay_s") is not None else (f(x, "t_end") or 0.0) - (f(x, "h_launch_s") or float("nan"))) for x in b]
+        d = [v for v in d if v is not None and np.isfinite(v)]                # windows without a logged human launch carry NaN (df_wscollect.py)
         return dict(a_n=len(a), a_zeros=sum(x["zero"] not in ("", "None") for x in a), a_wait_ok=float(np.mean([x["wait_ok"] == "True" for x in a])) if a else None,
                     a_score=float(np.mean([float(x["score"]) for x in a])) if a else None, b_n=len(b),
                     b_never=sum(f(x, "launch_s") is None for x in b), b_delay_med=float(np.median(d)) if d else None,
