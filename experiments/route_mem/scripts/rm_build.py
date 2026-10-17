@@ -36,12 +36,14 @@ with AlpaSim's own RouteGenerator, as the served driver would have held it. Alpa
                                           --merge: an rf_pait.py merge of pools (names and old-layout rows checked) -> feat/<name>.a.npz
                                           (names, f (n, DIM_O) f16, ok, trav); --limit: runs/route_mem/anchor_sample/ (a check only).
                                           Every file a base retrain on the anchored layout reads (box, AlpaSim venv, one CPU pool job):
-      $AP rm_build.py anchor --workers 64 --data navtrain_full.s{0..11}of12 idx_waitcap_trA idx_waitcap_trB idx_waitcap_trC \
-          idx_selfiter_trA idx_selfiter_trB idx_selfiter_trC --pool L18RB0 L18RTB1 \
+      PYTHONHASHSEED=0 $AP rm_build.py anchor --force --workers 64 --data navtrain_full.s{0..11}of12 idx_waitcap_trA idx_waitcap_trB \
+          idx_waitcap_trC idx_selfiter_trA idx_selfiter_trB idx_selfiter_trC --pool L18RB0 L18RTB1 \
           --cat on1_WAIT=idx_waitcap_trA,idx_waitcap_trB,idx_waitcap_trC on1_NR1TV=idx_selfiter_trA,idx_selfiter_trB,idx_selfiter_trC \
           --merge on1_L18NR1=on1_L18RB0:rb0,on1_L18RTB1:rtb1
                                           (navtrain shards + their yr1_ rows, the KD pool on1_WAIT, the trainval pool on1_NR1TV, the L18
-                                          pools on1_L18RB0 / on1_L18RTB1 / on1_L18NR1)
+                                          pools on1_L18RB0 / on1_L18RTB1 / on1_L18NR1). PYTHONHASHSEED: AlpaSim's map route search (the NAVSIM
+                                          rows' generator) depends on Python's hash seed; 6 of 277 sampled rows change with it (results/
+                                          anchor_check.md), so a fixed seed makes the build repeatable (pmap's forked workers share it)
 """
 from __future__ import annotations
 

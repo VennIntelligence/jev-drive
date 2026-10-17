@@ -91,6 +91,7 @@ SERVE_ORDER = False                              # Tracker() default in a driver
 SERVE_ANCHOR = False                             # anchored layout: Tracker() default in a driver, set from the sidecar (head_anchor)
 A_ON = 2.0                                       # merge_a: the memory's end lies on a newer batch when within A_ON m of its segments
 SPC, N_FULL = 80.0 / 19.0, 10                    # memory_a: AlpaSim's waypoint spacing; waypoints of a message nothing extra was trimmed from
+A_TRIM = 1.5                                     # memory_a: a short message changes the trim count only if a hypothesis explains the step within this
 
 
 def to_local(a, X):
@@ -216,9 +217,10 @@ def _clean(B):
     return B[np.r_[True, np.hypot(*np.diff(B, axis=0).T) > 1e-6]] if len(B) > 1 else B
 
 
-def _on(P, q, u=None):
+def _on(P, q, u=None, strict=False):
     """Polyline P (m >= 2, 2; no zero-length segment), point q (2,), direction u (2,) or None -> (arc of q's nearest point on P, its distance,
-    side): among the segments within 90 deg of u (all when u is None or none is); side -1 = q lies before P's start, +1 beyond its end."""
+    side): among the segments within 90 deg of u (all when u is None or none is; strict: None when none is); side -1 = q lies before P's
+    start, +1 beyond its end."""
     d = np.diff(P, axis=0)
     L = np.hypot(d[:, 0], d[:, 1])
     v = d / L[:, None]
@@ -227,6 +229,8 @@ def _on(P, q, u=None):
     D = np.hypot(*(P[:-1] + t[:, None] * v - q).T)
     if u is not None and (v @ u > 0).any():
         D = np.where(v @ u > 0, D, np.inf)
+    elif u is not None and strict:
+        return None
     i = int(np.argmin(D))
     side = -1 if i == 0 and tr[0] < 0 else 1 if i == len(L) - 1 and tr[i] > L[i] else 0
     return float(L[:i].sum() + t[i]), float(D[i]), side
@@ -246,14 +250,14 @@ def merge_a(batches, sizes=None):
                 if _on(M, B[0])[2] == 1 and (B[0] - M[-1]) @ u > TOL:
                     M = np.vstack([M, B])
             else:
-                s, dist, side = _on(B, M[-1], u)
-                if side == 0 and dist <= A_ON:                            # the memory's end lies on the batch: append what lies beyond it
+                r = _on(B, M[-1], u, strict=True)                         # None: no segment of the batch runs with the memory's end
+                if r is not None and r[2] == 0 and r[1] <= A_ON:          # the memory's end lies on the batch: append what lies beyond it
                     cum = np.r_[0.0, np.cumsum(np.hypot(*np.diff(B, axis=0).T))]
-                    j = np.flatnonzero(cum > s + TOL)
+                    j = np.flatnonzero(cum > r[0] + TOL)
                     if len(j):
                         M = np.vstack([M, B[j[0]:]])
-                elif side == -1 or (side == 0 and _on(M, B[0], B[1] - B[0])[2] == 1):   # the batch starts beyond the memory's end: a gap
-                    M = np.vstack([M, B])
+                elif r is not None and (r[2] == -1 or (r[2] == 0 and (_on(M, B[0], B[1] - B[0], strict=True) or (0, 0, 0))[2] == 1)):
+                    M = np.vstack([M, B])                                 # the batch starts beyond the memory's end: a gap
         if sizes is not None:
             sizes.append(0 if M is None else len(M))
     return M
@@ -273,13 +277,18 @@ def memory_a(batches_local, poses, anchor, info=None):
         return to_order(np.zeros(DIM, np.float32), trav)
     path = np.r_[0.0, np.cumsum(np.hypot(*np.diff(np.array(Q), axis=0).T))]       # chord driven from the first message's pose
     s = pk = None
+    m = 0
     hist = []
     for k, b in enumerate(B):
         if not len(b) or sizes[k] < 2:
             continue
         c = _on(M[:sizes[k]], b[0], b[1] - b[0] if len(b) > 1 else None)[0] - L0
         hyp = c - SPC * np.arange(max(0, N_FULL - len(b)) + 1)                    # m more points trimmed (a short message)
-        m = 0 if s is None else int(np.argmin(np.abs(hyp - (s + path[k] - pk))))
+        if s is None:
+            m = 0
+        else:                                                                     # a new count only when it explains the step within A_TRIM
+            e = np.abs(hyp - (s + path[k] - pk))
+            m = int(np.argmin(e)) if e.min() <= A_TRIM else min(m, len(hyp) - 1)
         s, pk = float(hyp[m]), path[k]
         hist.append((k, c, m, s))
     if info is not None:

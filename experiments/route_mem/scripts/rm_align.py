@@ -29,7 +29,8 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
           the anchored layout (lib/rmem.py "Anchored layout", rm_train --rm-anchor) on the dumped messages of every set (extract --dump):
           rm_build.feats_of_a (= rmem.memory_a = the served Tracker(anchor=True)) and two ablations of its per-message anchor (plain C_k on
           the merge_a polyline; the cap first proposed), each slot block through lead_block; the NAVSIM rows' a_ columns from `nav`
-          -> RESULTS_DIR/anchor.json + anchor.md (results/anchor_check.md), DIR/<set>.anchor.parquet
+          -> RESULTS_DIR/anchor.json + anchor.md (results/anchor_check.md), RESULTS_DIR/<set>.anchor.parquet; --a-trim X: rmem.A_TRIM = X
+          for the comparison of the trim band (analysis only; nav takes it too)
 
 Definitions (fixed before any output was read):
   route    R = the generator's whole local polyline after the rollout's last decision (every extension it triggered), stations S; heading h(s) =
@@ -484,6 +485,8 @@ def route_loop(route, ds=15.0, dd=2.5):
 
 def cmd_nav(a):
     import pandas as pd
+    if a.a_trim is not None:                                         # analysis only: memory_a's trim band (the forked workers inherit it)
+        RM.A_TRIM = a.a_trim
     from jevdrive import par
     from jevdrive.common import data_dir, n_cpus
     from jevdrive.data import splits
@@ -714,7 +717,10 @@ def cmd_anchor(a):
     RES/anchor.md (the tables of results/anchor_check.md) and DIR/<set>.anchor.parquet."""
     import pandas as pd
     from jevdrive import par
+    if a.a_trim is not None:                                         # analysis only: memory_a's trim band (the forked workers inherit it)
+        RM.A_TRIM = a.a_trim
     d, L, res = Path(a.dir), [], {}
+    Path(a.res).mkdir(parents=True, exist_ok=True)
     for s, lab, bench in SETS:
         if not (d / f"{s}.msg.pkl").exists():
             continue
@@ -731,9 +737,9 @@ def cmd_anchor(a):
         X = D.merge(X, on=["set", "rid", "k"], how="inner")
         R = pd.read_parquet(d / f"{s}.roll.parquet").set_index("rid")
         X["geo"] = R.loc[X.rid, "geo"].values
-        X.to_parquet(d / f"{s}.anchor.parquet")
+        X.to_parquet(Path(a.res) / f"{s}.anchor.parquet")
         res[s] = anchor_tables(X)
-    nv = sorted(d.glob("nav_navtrain_full.s*of12.parquet"))
+    nv = sorted(Path(a.nav_dir or d).glob("nav_navtrain_full.s*of12.parquet"))
     if nv:
         N = pd.concat([pd.read_parquet(f) for f in nv])
         if "a_lead_first" in N:
@@ -1121,6 +1127,7 @@ def main():
     t.add_argument("--out", required=True)
     t.add_argument("--limit", type=int, default=0, help="logs per shard (a check)")
     t.add_argument("--workers", type=int, default=0)
+    t.add_argument("--a-trim", type=float, default=None, help="analysis only: rmem.A_TRIM for the anchored columns")
     m = sp.add_parser("msgs")
     m.add_argument("--out", required=True)
     rp = sp.add_parser("replay")
@@ -1133,6 +1140,8 @@ def main():
     an.add_argument("--dir", required=True)
     an.add_argument("--res", required=True)
     an.add_argument("--workers", type=int, default=8)
+    an.add_argument("--nav-dir", default="", help="where nav's parquets are (default --dir)")
+    an.add_argument("--a-trim", type=float, default=None, help="analysis only: rmem.A_TRIM")
     r = sp.add_parser("report")
     r.add_argument("--dir", required=True)
     r.add_argument("--res", required=True)
