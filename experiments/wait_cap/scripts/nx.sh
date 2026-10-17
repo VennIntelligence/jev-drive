@@ -143,6 +143,16 @@ rtb-cont-a)   # 补记 1 (A) again after its first training stopped on rm_train'
   ta=$(sub nx-train-RTB1O-L18-s0 "${FW[@]}" --timeout-h 2 -- bash $ME train rtbo 0 2500 RTB1O-L18-s0) || exit 1
   pa=$(sub nx-cont-a --after $ta --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads a RTB1O-L18-s0) || exit 1
   echo "rtb-cont-a: train $ta reads-submitter $pa" | tee -a $X/stages.txt ;;
+rtb-cont-b2)  # (B) from tok again: gate R1 clause (c) (wrong-seed control) needs RTB1-F-s1, absent at the first tok (nan -> FAIL); after its
+              # training, tok reruns on the cached tokens / teacher (no --force) and recomputes R1, then strip / pool / poolgate / train / reads
+  fresh RTB1N-L18-s0; b1=$(jid nx-train-RTB1-F-s1) || { echo "no RTB1-F-s1 training job" >&2; exit 1; }
+  k=$(sub nx-tok-$NP --after $b1 --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $OL tok $NP smoke10eY) || exit 1
+  s=$(sub nx-strip-$NP --after $k --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $OL strip $B0 $NP) || exit 1
+  p=$(sub nx-pool-$NP --after $k --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py pool --name $NP --workers 32) || exit 1
+  q=$(sub nx-poolgate-$NP --after $p --vram 0.5 --cpu 1 --ram 16 --timeout-h 1 -- $AP $DATA_DIR/runs/route_follow/poolgate.py $NP) || exit 1
+  tb=$(sub nx-train-RTB1N-L18-s0 "${FW[@]}" --after $q --timeout-h 2 -- bash $ME train rtbn 0 2500 RTB1N-L18-s0) || exit 1
+  pb=$(sub nx-cont-b --after $tb --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads b RTB1N-L18-s0) || exit 1
+  echo "rtb-cont-b2: tok $k strip $s pool $p poolgate $q train $tb reads-submitter $pb" | tee -a $X/stages.txt ;;
 rtb-seeds)   # 补记 1 addition: (1) RTB1O-L18-s1 (A's command, continuation seed 1, from RTB1-F-s0); (2) RTB1-F-s1 (the base retain recipe,
              # lambda 1, seed 1) -> RTB1OB1-L18-s1 (A's command from it, seed 1); each -> cont-reads (c, d)
   fresh RTB1O-L18-s1 RTB1-F-s1 RTB1OB1-L18-s1
