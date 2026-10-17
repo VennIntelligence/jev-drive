@@ -50,6 +50,11 @@ The MTGS renders keep the lamps red; RSG / V2 launch with the human at red light
 (public 0.4 %); a log replay of an "ignore red" car scores 0.03 there, so the switch would cost about 0.11 per scene on a private-like mix. Rear
 contacts (public 18 / 17 / 24 for RSG / V2 / a) are mostly the ego slower than the log while moving.
 
+**V2AC: history-speed noise on V2 (exploratory, one seed).** [results/next/v2ac.md](results/next/v2ac.md), prereg [plans/2026-10-17-v2ac-prereg.md](plans/2026-10-17-v2ac-prereg.md) (Chinese).
+V2's recipe plus `--ego-scale-speed 0.5 --ego-scale-max 0.2` (V2AC-L18-s0, trained eager) meets all five lines against V2 (held zeros 39 / 39, held progress_rel 0.830 / 0.817, public paired
++0.001 [-0.004, 0.006], rear-ended 15 / 17, static scene 0.84 m without contact), but the hard creep does not change (scenes under 30 % of the log's distance: 8 held / 17 public, as V2) and the lateral
+zeros stay. Regression set of 34 scenes (51 scene-reads) against V2: 5 fixed, 26 still wrong, 0 newly wrong. The set, its status rule and the aggregate tables are `scripts/nx_regress.py`.
+
 **Prepared, not launched (2026-10-17 night).** Follow-up pilots for the morning choice between decision 335's options (iii) and (iv), re-aimed
 by decision 336; draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:
 - (iii) RETAIN, favoured: distil shipped Cinque's speed profile only (arc length, the lateral path untouched) on rolling-arrival / standing-wait
