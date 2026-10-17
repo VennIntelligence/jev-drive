@@ -156,14 +156,14 @@ rtb-decomp)   # 补记 1: the dev-ADE decomposition of RTB1 / RTB3 against RB0-F
   d=$(sub nx-rtb-decomp --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY devdecomp --j RTB1-F-s0 RTB3-F-s0 --c $RTC --out rtb_devdecomp) || exit 1
   echo "rtb-decomp: $d" | tee -a $X/stages.txt ;;
 cont-reads)   # cont-reads <a|b> <tag> (job body, after the training): the reads, rf_follow, the summary
-  V=$2; T=$3; Y=$X/cont; [[ -f $CK/$T/ckpt-final.pt ]] || { echo "no $T" >&2; exit 1; }; hh=()
-  for i in 0 1 2 3 4 5; do hh+=($(sub nx-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+  V=$2; T=$3; Y=$X/cont; [[ -f $CK/$T/ckpt-final.pt ]] || { echo "no $T" >&2; exit 1; }; hh=(); mkdir -p $Y/$V    # a rerun reuses submitted reads
+  for i in 0 1 2 3 4 5; do hh+=($(jid nx-held-$T-$i || sub nx-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
       -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
-  st=$(sub nx-static-$T --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 --env SH30_DUMP=1 \
+  st=$(jid nx-static-$T || sub nx-static-$T --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 --env SH30_DUMP=1 \
       -- bash $OL readlist $T $Y/static.txt 10 $Y/$V/static/$T/run) || exit 1
   CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $Y/$V/paisub/$T $T $Y/stop17.txt > $Y/$V/paisub.submit.txt || exit 1
   pp=$(awk '{print $1}' $Y/$V/paisub.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || { echo "no PAI stop17 job" >&2; exit 1; }
-  ar=$(sub nx-arr-$T --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags $T) || exit 1
+  ar=$(jid nx-arr-$T || sub nx-arr-$T --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags $T) || exit 1
   f=$(sub nx-follow-$T --after "$(csv ${hh[@]})" --vram 0.1 --cpu 16 --ram 100 --timeout-h 2 -- bash experiments/wait_cap/scripts/wt.sh follow $T RSG-L18-s0,WTC-L18-s0,RSG-L18-s1,WTC-L18-s1 $Y/$V) || exit 1
   c=$(sub nx-cont-sum-$V --after "$f,$st,$pp,$ar" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY cont --j $T --dir $Y/$V --out rtb_cont_$V) || exit 1
   echo "cont-reads $V $T: held $(csv ${hh[@]}) static $st stop17 $pp arrival $ar follow $f summary $c" | tee -a $X/stages.txt ;;
