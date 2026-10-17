@@ -156,7 +156,8 @@ def cmd_diag(a):
     for line in open(f):
         e = json.loads(line)
         if e.get("kind") == "scalar":
-            S.setdefault(e["tag"], {})[e["step"]] = e["value"]
+            t_ = e["tag"][5:] if e["tag"].startswith(("loss/grad/", "loss/act/")) else e["tag"]      # rm_train logs --diag under loss/
+            S.setdefault(t_, {})[e["step"]] = e["value"]
     win = lambda k: [v for s_, v in S.get(k, {}).items() if a.lo <= s_ <= a.hi]  # noqa: E731
     m = lambda k: float(np.mean(win(k))) if win(k) else float("nan")  # noqa: E731
     out = dict(events=f, last_step=max(max(v) for v in S.values()))
