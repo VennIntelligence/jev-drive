@@ -1,6 +1,6 @@
 # nuPlan submission image: RSG-L18-s0 + serve-side static hold `JEV_HOLD=leash3` (2026-10-18)
 
-Status: built and tested, **independent audit pending, nothing pushed or submitted**. The candidate of
+**Superseded (2026-10-18) by the stop3 image, [image_rsg_stop3.md](image_rsg_stop3.md) (decision 351); kept as the audited fallback (audit GO: [image_rsg_leash3_audit.md](image_rsg_leash3_audit.md)).** Original status: built and tested, independent audit pending, nothing pushed or submitted. The candidate of
 [decision 350](../../../research/decisions/350.md) (arena held windows: RSG-L18-s0 0.786 -> 0.934 with leash3). Built on the Tokyo box with
 `docker/build.sh` from a frozen clone at `e7db399e` (`/data/runs/alpasim/tokyo_image/code-rsg-leash3/`, clean, no `-dirty`). No job was paused
 or cancelled on either box.

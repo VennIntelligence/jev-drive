@@ -1,6 +1,6 @@
 """JEV_HOLD image parity: the served plans and latch events of a submission image (the containerised smoke on a scene list) against a box
 read of the same windows with the same hold (experiments/alpasim/results/image_rsg_leash3.md). Per window: the latch at the handoff call
-(state, call time, measured speed), the per-decision hold state and cut flag, the served poses (hold.jsonl's `poses` when cut, else
+(state, call time, measured speed; for a stop<m> latch also its deceleration and leash), the per-decision hold state and cut flag, the served poses (hold.jsonl's `poses` when cut, else
 drive.jsonl's model plan) as the max xy distance over the 8 poses, the distance from the latch point, and the scene score.
   python hold_parity.py --box <dir with hold.jsonl drive.jsonl results-summary*.json (any depth)> --image <smoke out dir>
                         --scenes <list> [--strata <s1,s2,...> in list order] [--out <md>]
@@ -41,8 +41,8 @@ def side(root: Path, scenes: set) -> dict:
 
 
 def latch(H):
-    r = next((r for r in H if r["state"] != "pre"), None)
-    return (r["state"], r["t_s"], r["v"]) if r else ("-", None, None)
+    r = next((r for r in H if r["state"] != "pre"), None)          # stop<m>: a stop latch also shows its deceleration and leash
+    return (r["state"] + (f" stop a {r['stop_a']} cap {r['cap']}" if "cap" in r else ""), r["t_s"], r["v"]) if r else ("-", None, None)
 
 
 def main() -> None:
@@ -76,7 +76,7 @@ def main() -> None:
         tot["d0"].append(dif[0]); tot["dall"] += dif
     sb = [B[s]["score"] for s in ids if B[s]["score"] is not None and I[s]["score"] is not None]
     si = [I[s]["score"] for s in ids if B[s]["score"] is not None and I[s]["score"] is not None]
-    held = sum(latch(B[s]["hold"])[0] == "held" for s in ids)
+    held = sum(latch(B[s]["hold"])[0].startswith("held") for s in ids)
     L += ["", f"Windows {tot['win']}; latch state equal {tot['latch']} / {tot['win']} (box held {held}); decisions compared {tot['dec']}: hold state equal "
           f"{tot['state']}, cut flag equal {tot['cut']}; served plan diff at decision 0 median {np.median(tot['d0']):.4f} m / max {max(tot['d0']):.4f} m, "
           f"all decisions median {np.median(tot['dall']):.4f} m / p90 {np.percentile(tot['dall'], 90):.4f} m / max {max(tot['dall']):.4f} m; "
