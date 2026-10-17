@@ -3,7 +3,7 @@
 # model in the pool. Box, repo root. The body is one function called on the last line, so editing this file never changes a running job.
 #   arena.sh select                 pool CPU job: arena.py select (all candidate windows on the 1.0 s grid) -> $W/select/<ts>/cands.csv.gz
 #   arena.sh pick <step>            by hand: the set on the <step> s grid -> $W/set/ (set.csv.gz, meta.json, lists/shard<k>.json, lists/c<n>.txt);
-#                                   copies set.csv.gz / meta.json to results/arena/
+#                                   set.csv.gz / meta.json are committed under results/arena/ from the Mac
 #   arena.sh smoke [n]              feasibility: n windows (default 12, spread over strata) -> mini cache -> starter, RSG-L18-s0, APY10m10-AB-s0
 #                                   (ap2) and DD-sample reads (one per driver kind) -> $W/smoke/report.txt (pool jobs; prints the ids)
 #   arena.sh chain                  the whole read: one build job per shard -> one read job per (tag, chunk), tags in $TAGS order (the pool
@@ -81,7 +81,7 @@ pick)
   S=${1:?step}; [[ ! -e $ST/meta.json ]] || die "$ST exists (move it away to re-pick)"
   f=$(ls -d $W/select/2*/cands.csv.gz | tail -1); [[ -f $f ]] || die "no cands"
   $PY pick --cands $f --step $S --out $ST || die "pick rc $?"
-  mkdir -p $E/results/arena && cp $ST/set.csv.gz $ST/meta.json $E/results/arena/ && echo "set from $f -> $ST, copied to $E/results/arena" ;;
+  echo "set from $f -> $ST; copy set.csv.gz / meta.json to results/arena/ on the Mac and commit (the box checkout only pulls)" ;;
 smoke)
   n=${1:-12}; D=$W/smoke; [[ -f $ST/set.csv.gz ]] || die "pick first"; mkdir -p $D
   $P - $ST/set.csv.gz $D $n <<'PY' || die "smoke list"
