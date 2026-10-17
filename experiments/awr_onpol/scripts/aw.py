@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""AWR-ONPOL gates (plans/2026-10-17-awr-onpol-prereg.md, section 4). Box, envs/op-train, CPU. Chain: aw.sh.
+"""AWR-ONPOL gates: identity, the PREF outcome proxy, pilot and held lines (plans/2026-10-17-awr-onpol-prereg.md, section 4). Box,
+envs/op-train, CPU. Chain: aw.sh.
 
   bitcmp --a TAG --b TAG [--hash H] --out NAME   two logged trainings identical: every scalar, every trained tensor, dev ADE, on_hash_60 (= H)
   pref --tags T,..                               the outcome proxy PREF on the dev logs (never drawn): per near-identical dev pair (same scene and
@@ -98,7 +99,7 @@ def pref_of(tag, z, W, L):
 
 
 def cmd_pref(a):
-    z = np.load(PACK)
+    z = dict(np.load(PACK))
     W, L, lg = dev_pairs(z)
     (O / "pref").mkdir(parents=True, exist_ok=True)
     for t in a.tags.split(","):
@@ -112,7 +113,7 @@ def gate_pilot(J, C):
     import rf_rsgacc as RA
     from jevdrive import stats
     cg, _ = RC.trainer_gates(C)
-    z = np.load(PACK)
+    z = dict(np.load(PACK))                                          # in memory: NpzFile re-reads an array on every access
     W, L, lg = dev_pairs(z)
     mc = pref_of(C, z, W, L)
     rows, md = {}, ["# AWR-ONPOL pilot offline gates (1 000 steps, seed 0), each arm vs the same-command control " + C, "",

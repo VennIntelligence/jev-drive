@@ -1,0 +1,20 @@
+{
+ "a": "AWGG-RSG-old",
+ "b": "AWGG-RSG-new",
+ "note": "RSG-L18 recipe 60 steps: code d7675c5a vs this code (747e2cff) with every --awr flag off; on_hash_60 = RSG-L18-s0's",
+ "scalars": 89,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.529079020023346,
+  0.529079020023346
+ ],
+ "on_hash_60": [
+  "ea8cacc3e451c577",
+  "ea8cacc3e451c577"
+ ],
+ "want_hash": "ea8cacc3e451c577",
+ "identical": true
+}
