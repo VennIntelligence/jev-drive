@@ -24,7 +24,7 @@
 #   nx.sh cont-reads <a|b> <tag>   job body (after the training): held 460 @18 (6 chunks), static public scene @10 (SH30_DUMP), PAI stop17 (PAI
 #                           config), arrival replay -> rf_follow (tag + RSG-L18-s0 + WTC-L18-s0) -> nx.py cont -> results/next/rtb_cont_<a|b>, cont/<a|b>/FINISHED
 #   nx.sh train <arm> <seed> <steps> <tag>   job body; arm: rb0 | rsg (the recipes, flags off) | rta0.3 | rta1 | rtb1 | rtb3 | rtsmoke | rtsmokea |
-#                           rtsmokeb | acs2 | acs4 | acsmoke | rtbo | rtbn
+#                           rtsmokeb | acs2 | acs4 | acsmoke | rtbo | rtbn | v2ac
 #   nx.sh rtb-v             prereg 补记 2: V1 RTB05-F-s0 (--kd-lam 0.5) and V2 RTB1AR-F-s0 (--kd-groups AR:1), each 10 000 steps -> base arrival
 #                           replay -> nx.py vgate (stop rule; STOP fails everything after it) -> (A)-style continuation on the old pool (RTB05O / RTB1ARO-L18-s0)
 #                           -> cont-reads v1|v2 + rtb-wide (public only); base wc / led F / hist -> devdecomp (vs RB0-F-s0, with RTB1-F-s0)
@@ -32,12 +32,16 @@
 #                           stop rule) -> RTB1AROB1-L18-s1 (rtbo1's command from it: --init RTB1AR-F-s1, seed 1, old pool on1_L18RB0) -> cont-reads v2s1 + rtb-wide
 #                           with PAI 281 (submission config); then rtb-wide RTB1ARO-L18-s0 (its public read exists: submits PAI 281 and the summary). The user cancelled
 #                           the s1 chain (cl cancel by id) right after the base finished training, before any read; only the RTB1ARO-L18-s0 PAI 281 part was kept: nx.py v2pai
+#   nx.sh v2ac              prereg plans/2026-10-17-v2ac-prereg.md: V2AC-L18-s0 = V2's command (rtbo from RTB1AR-F-s0: RSG-L18 recipe, 2 500 steps, old pool, seed 0) +
+#                           --ego-scale-speed 0.5 --ego-scale-max 0.2, trained eager (FW pins JEV_RM_EAGER=1, as V2) -> cont-reads v2ac + rtb-wide (public 1491 only) ->
+#                           nx_regress.py agg + table against V2 = RTB1ARO-L18-s0 and RSG-L18-s0 -> results/next/v2ac_agg, v2ac_regress, cont/v2ac/REGRESS_FINISHED
+#   nx.sh v2ac-fin <tag>    job body of the last submitter: the nx_regress.py job, after the two read summaries
 # Env: PRIO (pool priority, default 9); WIDE_PAI=0: rtb-wide reads public 1491 only
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 X=$DATA_DIR/runs/wait_cap/next; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/nx.sh; PY=experiments/wait_cap/scripts/nx.py
 WT=experiments/wait_cap/scripts/wt.py; WC=experiments/wait_cap/scripts/wc.py; DC=experiments/desire_cap/scripts/dc.py
 TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python
-RT=experiments/route_mem/scripts/rm_train.py
+RT=experiments/route_mem/scripts/rm_train.py; RG=experiments/wait_cap/scripts/nx_regress.py
 RB0="--yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4"            # RB0-F-s0's command (route-night.md $REC)
 RSG="--init RB0-F-s0 --warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on on1_L18RB0 --on-k 13 --on-mode self"                # wt.sh `train off` = RSG-L18 / WTCP
@@ -200,6 +204,19 @@ rtb-v2s1)   # 补记 3 (see the header): V2's second base seed through the whole
   q=$(sub nx-widesub-$T --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env WIDE_PAI=1 -- bash $ME rtb-wide $T ${PRIO:-9}) || exit 1
   echo "rtb-v2s1: base $t arrival $r vgate $g; cont $c reads-submitter $p wide-submitter $q (public + PAI 281)" | tee -a $X/stages.txt
   WIDE_PAI=1 bash $ME rtb-wide RTB1ARO-L18-s0 ${PRIO:-9} || exit 1 ;;     # the public read of RTB1ARO-L18-s0 exists (jid finds it): PAI 281 + the summary are new
+v2ac)   # plans/2026-10-17-v2ac-prereg.md (see the header): training -> held / static / stop17 / arrival reads and the public reads in parallel -> the regression summary
+  T=V2AC-L18-s0; [[ -f $CK/RTB1AR-F-s0/ckpt-final.pt && -f $X/cont/static.txt && -f $X/cont/stop17.txt && -f $X/cont/v2/FINISHED ]] || { echo "no RTB1AR-F-s0 / static.txt / stop17.txt / V2 reads" >&2; exit 1; }
+  fresh $T
+  c=$(sub nx-train-$T "${FW[@]}" --timeout-h 2 -- bash $ME train v2ac 0 2500 $T) || exit 1                          # FW: eager, as V2's training
+  p=$(sub nx-cont-v2ac --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads v2ac $T) || exit 1
+  q=$(sub nx-widesub-$T --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env WIDE_PAI=0 -- bash $ME rtb-wide $T ${PRIO:-9}) || exit 1
+  f=$(sub nx-fin-v2ac --after $p,$q --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME v2ac-fin $T) || exit 1
+  echo "v2ac: train $c reads-submitter $p public-submitter $q summary-submitter $f" | tee -a $X/stages.txt ;;
+v2ac-fin)   # v2ac-fin <tag> (job body, after the two read submitters): the regression job after the held and the public read summaries
+  T=${2:?tag}; a=$(jid nx-cont-sum-v2ac) && b=$(jid nx-wide-sum-$T) || { echo "no read summary job" >&2; exit 1; }
+  g=$(sub nx-regress-$T --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $RG agg --j V2AC=$T --refs V2=RTB1ARO-L18-s0 RSG=RSG-L18-s0 --out v2ac_agg && \
+      $TR $RG table --tags RSG=RSG-L18-s0 V2=RTB1ARO-L18-s0 V2AC=$T --ref V2 --out v2ac_regress && touch $X/cont/v2ac/REGRESS_FINISHED") || exit 1
+  echo "v2ac-fin $T: regression job $g (after $a, $b)" | tee -a $X/stages.txt ;;
 rtb-seeds)   # 补记 1 addition: (1) RTB1O-L18-s1 (A's command, continuation seed 1, from RTB1-F-s0); (2) RTB1-F-s1 (the base retain recipe,
              # lambda 1, seed 1) -> RTB1OB1-L18-s1 (A's command from it, seed 1); each -> cont-reads (c, d)
   fresh RTB1O-L18-s1 RTB1-F-s1 RTB1OB1-L18-s1
@@ -240,9 +257,10 @@ train)   # train <arm> <seed> <steps> <tag>
     rtb05) F="$RB0 --kd-lam 0.5 --d2-lam 1 $KD" ;;                                              # 补记 2 V1: rtb1 with the retention weight halved (D2 stays 1)
     rtb1ar) F="$RB0 --kd-lam 1 --d2-lam 1 --kd-groups AR:1 $KD" ;;                               # 补记 2 V2: rtb1 with pool rows from rolling arrival only
     rtbo=*) F="${RSG/--init RB0-F-s0/--init ${2#rtbo=} --allow-init}" ;;                        # 补记 2: (A)'s command from any base
+    v2ac) F="${RSG/--init RB0-F-s0/--init RTB1AR-F-s0 --allow-init} --ego-scale-speed 0.5 --ego-scale-max 0.2" ;;   # V2AC prereg: V2's command (rtbo=RTB1AR-F-s0) + history-speed noise
     rtbn) F="${RSG/--init RB0-F-s0/--init $B0 --allow-init}"; F="${F/--on on1_L18RB0/--on on1_$NP}" ;;   # 补记 1 (B): RTB1's own L18 pool
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,35p $0; exit 2 ;;
+*) sed -n 2,39p $0; exit 2 ;;
 esac
