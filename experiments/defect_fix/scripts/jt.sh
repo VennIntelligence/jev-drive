@@ -52,9 +52,13 @@ smoke)
   A=${2:?after}; W=${3:?arc}
   t=$(sub jt-train-JTSM --after $A "${FT[@]}" --timeout-h 1 -- bash $ME train JTSM-L18-s0 on1_JT $LAT JT10 1000 $W) || exit 1
   echo "$(date '+%F %T') smoke: $t (arc $W, after $A)" | tee -a $J/stages.txt ;;
+gatejob)   # gatejob <smoke id>: the smoke gates -> $J/gate.json (arc W, steps); the arms run `train ... auto auto` after it
+  g=$(sub jt-gate --after ${2:?smoke id} --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $TR $PY gate --tag JTSM-L18-s0 --w 0.0025 \
+      --wjson experiments/defect_fix/results/jt/w_JT10.json --out $J/gate.json) || exit 1
+  echo "$(date '+%F %T') gate: $g" | tee -a $J/stages.txt ;;
 arm)
   T=${2:?tag}; WF=${3:?wfile}; N=${4:?steps}; W=${5:?arc}; A=${6:-}
-  [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"
+  [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"   # steps / arc may be `auto` (from $J/gate.json)
   t=$(sub jt-train-$T ${A:+--after $A} "${FT[@]}" --timeout-h 3 -- bash $ME train $T on1_JT $LAT $WF $N $W) || exit 1
   ids=(); nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))")
   for V in leash3 off; do for c in $(seq 0 $((nch - 1))); do
@@ -66,6 +70,9 @@ arm)
   echo "$(date '+%F %T') arm $T ($WF, $N steps, arc $W): train $t reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) summary $s" | tee -a $J/stages.txt ;;
 train)
   T=$2; P=$3; LD=$4; WF=$5; N=$6; W=$7
+  [[ $N == auto ]] && N=$(python3 -c "import json; print(json.load(open('$J/gate.json'))['steps'])")      # the smoke gate's file
+  [[ $W == auto ]] && W=$(python3 -c "import json; print(json.load(open('$J/gate.json'))['w_final'])")
+  echo "$(date '+%F %T') train $T: steps $N, arc $W" | tee -a $J/stages.txt
   exec $TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
     --on-wfile runs/defect_fix/w/$WF.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LD) --on-arc $W --diag --warmup 500 --lr-floor 0.1 \
     --steps $N --seed 0 ;;

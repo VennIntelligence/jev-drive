@@ -14,6 +14,9 @@ at a dose) in the same batches. Box, repo root; chain in jt.sh.
   held --tags T ..   (op-train) held 460 @18 against RSG-L18-s0 (df.py cl_read) -> stdout
   diag --tag T [--lo 500] [--hi 1000]   (any python) a training run's events.jsonl: per-term trunk gradient norms and shares, activity, loss
       terms, dev ADE, pool slices and the wait / launch probe over steps lo..hi, plus the arc weight rule of supplement 9 amendment A
+  gate --tag JTSM-L18-s0 --w 0.0025 --wjson results/jt/w_JT10.json --out FILE   the smoke gates of supplement 9 (no NaN; every pool term
+      active; tv imitation logged; dev ADE at the end <= step 0 + 0.03; probe stand_r stay1m above step 0) -> FILE (json: pass, arc W by the
+      amendment-A rule, steps = floor(4.6 x S trainable rows / 32 / 500) x 500); exit 2 when a gate fails (the arms after it do not start)
   defer --after ID,ID [--dry]   (repo .venv) the main session's rule (10-18): the still-QUEUED third-party anchor reads
       ar-read-{DD-sample,LTF-sample,starter,G0014}-c* are cancelled and resubmitted with their exact recorded spec (cmd, env, resources,
       priority, tries, log dir) plus --after the JT trainings; ar-sum-all2 is resubmitted identically after the new ids and the anchor reads
@@ -170,6 +173,30 @@ def cmd_diag(a):
     if gi and gl and np.isfinite(gi) and np.isfinite(gl) and gl > 0:
         out["arc_rule"] = dict(g_imit=gi, g_lon=gl, ratio_target=0.2, w_smoke=a.w, w_final=float(f"{a.w * min(max(0.2 * gi / gl, 0.5), 2.0):.2g}"))
     print(json.dumps(out, indent=1, default=str))
+    return out
+
+
+def cmd_gate(a):
+    import contextlib
+    import io
+    with contextlib.redirect_stdout(io.StringIO()):
+        d = cmd_diag(a)
+    dv = d["dev"].get("dev/ade", {})
+    s0, s1 = min(dv), max(dv)
+    pr = d["pool"].get("probe_stand_r/stay1m", {})
+    acts = {k: v for k, v in d["act"].items() if k.startswith("pool_")}
+    g = dict(no_nan=not d["nan"], acts_positive=bool(acts) and all(v > 0 for v in acts.values()) and len(acts) >= 6,
+             tv_imit_logged=np.isfinite(d["loss"].get("loss/on/imit", float("nan"))),
+             dev_ade=dv[s1] <= dv[s0] + 0.03, probe_stay_rising=bool(pr) and pr[max(pr)] > pr[min(pr)])
+    w = json.loads(Path(a.wjson).read_text())
+    ntr = w["s_rows"] - w["held_rows"]
+    res = dict(tag=a.tag, gates=g, passed=all(g.values()), acts=acts, dev_ade={str(s0): dv[s0], str(s1): dv[s1]},
+               probe_stay1m={str(k): v for k, v in pr.items()}, grad=d["grad"], grad_share=d["grad_share_of_sum"], nan=d["nan"],
+               arc=d.get("arc_rule"), w_final=(d.get("arc_rule") or {}).get("w_final"), s_train_rows=ntr, steps=int(4.6 * ntr / 32 // 500 * 500))
+    Path(a.out).write_text(json.dumps(res, indent=1, default=str))
+    print(json.dumps(res, indent=1, default=str))
+    if not res["passed"] or not res["w_final"]:
+        raise SystemExit(2)
 
 
 def cmd_defer(a):
@@ -230,7 +257,10 @@ if __name__ == "__main__":
     p = sub.add_parser("diag")
     p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
     p.add_argument("--w", type=float, default=0.0025, help="the arc weight of the run")
+    p = sub.add_parser("gate")
+    p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
+    p.add_argument("--w", type=float, default=0.0025), p.add_argument("--wjson", required=True), p.add_argument("--out", required=True)
     p = sub.add_parser("defer")
     p.add_argument("--after", required=True), p.add_argument("--dry", action="store_true")
     a = ap.parse_args()
-    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held, diag=cmd_diag, defer=cmd_defer)[a.cmd](a)
+    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held, diag=cmd_diag, gate=cmd_gate, defer=cmd_defer)[a.cmd](a)
