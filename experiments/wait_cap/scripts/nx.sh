@@ -28,6 +28,9 @@
 #   nx.sh rtb-v             prereg 补记 2: V1 RTB05-F-s0 (--kd-lam 0.5) and V2 RTB1AR-F-s0 (--kd-groups AR:1), each 10 000 steps -> base arrival
 #                           replay -> nx.py vgate (stop rule; STOP fails everything after it) -> (A)-style continuation on the old pool (RTB05O / RTB1ARO-L18-s0)
 #                           -> cont-reads v1|v2 + rtb-wide (public only); base wc / led F / hist -> devdecomp (vs RB0-F-s0, with RTB1-F-s0)
+#   nx.sh rtb-v2s1          prereg 补记 3: V2's second base seed RTB1AR-F-s1 (the rtb1ar command, seed 1, 10 000 steps) -> arrival replay -> nx.py vgate (the same
+#                           stop rule) -> RTB1AROB1-L18-s1 (rtbo1's command from it: --init RTB1AR-F-s1, seed 1, old pool on1_L18RB0) -> cont-reads v2s1 + rtb-wide
+#                           with PAI 281 (submission config); then rtb-wide RTB1ARO-L18-s0 (its public read exists: submits PAI 281 and the summary); results: nx.py v2seeds
 # Env: PRIO (pool priority, default 9); WIDE_PAI=0: rtb-wide reads public 1491 only
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 X=$DATA_DIR/runs/wait_cap/next; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/nx.sh; PY=experiments/wait_cap/scripts/nx.py
@@ -185,6 +188,17 @@ rtb-v)   # 补记 2 (see the header); the bases' training command differs from r
   done
   d=$(sub nx-v-decomp --after "$(csv ${hs[@]})" --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY devdecomp --j RTB05-F-s0 RTB1AR-F-s0 $B0 --c $RTC --out rtb_v_devdecomp) || exit 1
   echo "rtb-v: devdecomp $d" | tee -a $X/stages.txt ;;
+rtb-v2s1)   # 补记 3 (see the header): V2's second base seed through the whole read chain, one submission; then PAI 281 for RTB1ARO-L18-s0
+  [[ -f $DATA_DIR/$NAV && -f $X/arrival/$B0.json && -f $X/cont/static.txt && -f $X/cont/stop17.txt ]] || { echo "no approach rows / $B0 arrival / static.txt / stop17.txt" >&2; exit 1; }
+  B=RTB1AR-F-s1; T=RTB1AROB1-L18-s1; V=v2s1; fresh $B $T; mkdir -p $X/cont/$V
+  t=$(sub nx-train-$B "${FK[@]}" --timeout-h 2 -- bash $ME train rtb1ar 1 10000 $B) || exit 1
+  r=$(sub nx-arr-$B --after $t --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags $B) || exit 1
+  g=$(sub nx-vgate-$B --after $t,$r --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $TR $PY vgate --j $B) || exit 1
+  c=$(sub nx-train-$T "${FW[@]}" --after $g --timeout-h 2 -- bash $ME train rtbo=$B 1 2500 $T) || exit 1
+  p=$(sub nx-cont-$V --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads $V $T) || exit 1
+  q=$(sub nx-widesub-$T --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env WIDE_PAI=1 -- bash $ME rtb-wide $T ${PRIO:-9}) || exit 1
+  echo "rtb-v2s1: base $t arrival $r vgate $g; cont $c reads-submitter $p wide-submitter $q (public + PAI 281)" | tee -a $X/stages.txt
+  WIDE_PAI=1 bash $ME rtb-wide RTB1ARO-L18-s0 ${PRIO:-9} || exit 1 ;;     # the public read of RTB1ARO-L18-s0 exists (jid finds it): PAI 281 + the summary are new
 rtb-seeds)   # 补记 1 addition: (1) RTB1O-L18-s1 (A's command, continuation seed 1, from RTB1-F-s0); (2) RTB1-F-s1 (the base retain recipe,
              # lambda 1, seed 1) -> RTB1OB1-L18-s1 (A's command from it, seed 1); each -> cont-reads (c, d)
   fresh RTB1O-L18-s1 RTB1-F-s1 RTB1OB1-L18-s1
@@ -229,5 +243,5 @@ train)   # train <arm> <seed> <steps> <tag>
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,31p $0; exit 2 ;;
+*) sed -n 2,34p $0; exit 2 ;;
 esac
