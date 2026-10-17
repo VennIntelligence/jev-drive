@@ -165,6 +165,16 @@ SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) =
             gives the S rows (`pool` s) the mass --si-k-s / --on-k and the new rows the rest (ranked inside them; `hold` 1 rows weight 0), and
             --rm-drop treats the new rows as normal rows. --si-mult 1: the uniform draw over the same rows.
 
+NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every flag off = the recipe above operation for operation:
+  --on-wfile FILE   per-row draw weights of the --on pool rows from FILE (npz: `names` = the pool's tab names in order, `w`; defect_fix df.py
+            weights): numpy's weighted choice on the pool stream [seed, 0, 53], as --on-weight; refused with --on-weight / --on-cap-scene / --si-scan.
+  --on-normal       the pool rows are imitation rows like the normal rows for --rm-drop (their memory dropped at the same share, the drop stream
+            unchanged) and --ego-scale-speed (SELF-ITER's rule for its trainval rows): the base stage's trainval imitation pool (--on-mode imit).
+  --lat-onc W --lat-soft W --lat-side W [--lat-file F --lat-depth 0 --lat-soft-depth 0 --lat-buf 0.4]   the hard / soft lateral terms of
+            experiments/defect_fix/lib/nr1_lat.py on the pool rows (opposite-direction lanes by point at the plan's own heading, same-direction
+            lanes off the ego's own chain, the agent hinge's side buffer; its docstring): any > 0 sets --on-lon nr1_lat and --on-lon-lam 1 (the
+            weights carry the scale: each term enters as 10 W x ho_w x sum over the pool rows / n_imit); refused with another --on-lon module.
+
 Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-17-compile-prereg.md):
   --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
             pattern): ~2x the steps per second on the RSG-L18 recipe. Not bit-identical to eager (fused fp16 kernels round differently;
@@ -722,6 +732,18 @@ def cmd_train(a):
         assert len(tb["names"]) == ns.n_on, "--on-weight: pool rows"
         w, caprec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
         pw = w / w.sum()
+    if a.on_wfile:                                                    # NR1: per-row draw weights from a file (docstring)
+        from jevdrive.common import data_dir
+        assert k_on and not (a.on_weight or a.on_cap_scene or a.si_scan), "--on-wfile: needs --on; not with --on-weight / --on-cap-scene / --si-scan"
+        tb = np.load(data_dir() / "runs/op_parity/cache" / a.on / "tab.npz")
+        wz = np.load(a.on_wfile if a.on_wfile.startswith("/") else data_dir() / a.on_wfile)
+        assert np.array_equal(wz["names"].astype(str), tb["names"].astype(str)), "--on-wfile: rows != the pool's"
+        w = wz["w"].astype(np.float64)
+        assert (w >= 0).all() and w.sum() > 0, "--on-wfile: weights"
+        pw = w / w.sum()
+        caprec = dict(on_wfile=str(a.on_wfile), rows_w0=int((w == 0).sum()))
+        if "grp" in wz.files:
+            caprec["group_share"] = group_shares(pw, wz["grp"])
     upre = 0                                                          # weight-0 rows at the end, equal weights elsewhere: the plain uniform draw
     if pw is not None and (pw == 0).any():
         m0 = int((pw > 0).sum())
@@ -866,7 +888,7 @@ def cmd_train(a):
                  + (f"; init's recorded dev ade {ns.init['init_dev_ade']:.4f}" if ns.init and ns.init.get("init_dev_ade") is not None else ""))
         run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
         is_pool = torch.zeros(S.n, dtype=torch.bool, device=dev)
-        is_pool[ns.on0:] = bool(k_on)                                 # --rm-drop never applies to pool rows
+        is_pool[ns.on0:] = bool(k_on) and not a.on_normal             # --rm-drop never applies to pool rows (NR1 --on-normal: imitation rows)
         if a.si_scan:                                                 # SELF-ITER: the new trainval rows are imitation rows (memory dropped as normal rows)
             is_pool[torch.as_tensor(si_free, device=dev)] = False
             run.info(f"SELF-ITER draw: {json.dumps(sirec)}")
@@ -1215,6 +1237,15 @@ if __name__ == "__main__":
         p.add_argument("--kd-nav-k", type=int, default=0, help="RETAIN: navtrain approach rows per step, fed the constant-velocity history")
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
+        p.add_argument("--on-wfile", default="", help="NR1: per-row draw weights of the pool rows (npz names, w; '' = off)")
+        p.add_argument("--on-normal", action="store_true", help="NR1: pool rows are imitation rows for --rm-drop / --ego-scale-speed")
+        p.add_argument("--lat-onc", type=float, default=0.0, help="NR1: weight of the opposite-lane point term (nr1_lat; 0 = off)")
+        p.add_argument("--lat-soft", type=float, default=0.0, help="NR1: weight of the same-direction other-lane point term (0 = off)")
+        p.add_argument("--lat-side", type=float, default=0.0, help="NR1: weight of the agent hinge's side buffer term (0 = off)")
+        p.add_argument("--lat-file", default="", help="NR1: lateral raster file of the pool (df_lat.py build)")
+        p.add_argument("--lat-depth", type=float, default=0.0, help="NR1: allowed depth (m) into the opposite-lane region")
+        p.add_argument("--lat-soft-depth", type=float, default=0.0, help="NR1: allowed depth (m) into the soft region")
+        p.add_argument("--lat-buf", type=float, default=0.4, help="NR1: side buffer (m) of the side term")
         p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
         p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
         p.add_argument("--si-top", type=float, default=0.1, help="SELF-ITER: top share of each set oversampled (--si-mode top)")
@@ -1280,6 +1311,13 @@ if __name__ == "__main__":
         if a.env_lo_scale != 1.0:
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
+    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
+        assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
+        assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
+        _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
+        import nr1_lat
+        a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file)}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

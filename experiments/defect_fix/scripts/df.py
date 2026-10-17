@@ -269,9 +269,372 @@ def cmd_weights(a):
     write(f"w_{a.out}", rec)
 
 
+# ---------------------------------------------------------------- identity, gates and summaries (CPU)
+V2B, V2, RSG = "RTB1AR-F-s0", "RTB1ARO-L18-s0", "RSG-L18-s0"
+ADE_TOL, G_MIN, W_LINE, ARR_MAX, LAUNCH_TOL = 0.01, 0.9, 0.6, 2.0, 0.10
+CONT_PUB_LO, CONT_HELD_ZEROS = -0.01, 3                     # a base dose's plain continuation against V2's (prereg 4.1)
+
+
+def cmd_bitcmp(a):
+    """nx.py bitcmp's comparison (every scalar, every weight, dev ADE, on_hash_60 [= --hash]) -> results/<out>.json; exit 2 unless identical."""
+    (sa, da, ma), (sb, db, mb) = wt.run_of(a.a), wt.run_of(a.b)
+    keys = [k for k in sorted(set(sa) & set(sb), key=str) if not k[0].startswith("throughput/")]
+    dl = max(abs(sa[k] - sb[k]) for k in keys)
+    same = all(set(ma[g] or {}) == set(mb[g] or {}) for g in ("net", "parity"))
+    dw = max(float((ma[g][k].float() - mb[g][k].float()).abs().max()) for g in ("net", "parity") for k in ma[g]) if same else float("inf")
+    r = dict(a=a.a, b=a.b, note=a.note, scalars=len(keys), scalar_keys_equal=set(k[0] for k in sa) == set(k[0] for k in sb), scalar_max_abs_diff=dl,
+             weight_max_abs_diff=dw, weight_keys_equal=same, dev_ade=[da.get("dev_ade"), db.get("dev_ade")], on_hash_60=[da.get("on_hash_60"), db.get("on_hash_60")],
+             want_hash=a.hash or None)
+    r["identical"] = bool(dl == 0 and dw == 0 and same and r["scalar_keys_equal"] and r["dev_ade"][0] == r["dev_ade"][1]
+                          and r["on_hash_60"][0] == r["on_hash_60"][1] and (not a.hash or r["on_hash_60"][0] == a.hash))
+    write(a.out, r)
+    raise SystemExit(0 if r["identical"] else 2)
+
+
+def launch_bias(tag):
+    """4 s arc bias (plan - human, m) on the gate-4 dev rows of the v0 0-0.5 / free-road cell (wt_devdecomp's context rule; nx.py hist s = 1)."""
+    NX = DATA / "runs/wait_cap/next"
+    z, h = np.load(NX / "devdecomp/devall.npz"), np.load(NX / "hist" / f"{tag}.npz")
+    assert np.array_equal(h["rows"], z["rows"]), f"{tag}: hist rows != devall rows"
+    arc = lambda P: np.cumsum(np.hypot(*np.diff(np.concatenate([np.zeros_like(P[:, :1, :2]), P[..., :2]], 1), axis=1).transpose(2, 0, 1)), 1)  # noqa: E731
+    v0 = z["speed"].astype(np.float64)
+    near = z["lead_gap"] < 20
+    closing = v0 + z["lead_close"]
+    lowttc = near & (closing > 0.1) & (z["lead_gap"] / np.maximum(closing, 1e-3) < 4)
+    free = z["ctx_ok"] & ~lowttc & ~near & ~z["ped"].astype(bool)
+    m = (v0 >= 0) & (v0 < 0.5) & free
+    b = arc(h["plan_1.0"].astype(np.float64))[:, 7] - arc(z["fut"].astype(np.float64))[:, 7]
+    return dict(rows=int(m.sum()), bias=float(b[m].mean()))
+
+
+def base_reads(tag):
+    """Open-loop reads of one base: dev ADE (DONE), W / G (d326 instrument, wc.py plans), arrival replay 4 s arc at k = 1, launch-cell bias."""
+    import nx
+    cap, _ = wt.cap_read(tag)
+    return dict(dev_ade=wt.dev_ade(tag), wait_W=cap["wait_W"], go_G=cap["go_G"], D=cap["D"], into_WL=cap["into_WL"], stop_SL=cap["stop_SL"],
+                arrival_k1=nx.arrival_of(tag)[1]["arc4"], launch=launch_bias(tag))
+
+
+def cand_lines(r, ref_ade):
+    return dict(dev_ade=r["dev_ade"] <= ref_ade + ADE_TOL, go_G=r["go_G"] >= G_MIN, arrival=r["arrival_k1"] <= ARR_MAX)
+
+
+def cmd_candgate(a):
+    """One base: the open-loop candidate lines (prereg 4.1); exit 3 if it is not a candidate (its continuation hangs on this job)."""
+    r = base_reads(a.j)
+    ref = wt.dev_ade(V2B)
+    g = cand_lines(r, ref)
+    r |= dict(lines=g, candidate=bool(all(g.values())), ref_dev_ade=ref, W_line=r["wait_W"] >= W_LINE, launch_line=abs(r["launch"]["bias"]) <= LAUNCH_TOL)
+    write(f"candgate_{a.j}", r)
+    raise SystemExit(0 if r["candidate"] else 3)
+
+
+def read_dirs(tag):
+    import glob
+    import nx_regress as NR
+    pub = glob.glob(str(OUT / "pub" / tag / "b*")) or NR.read_dirs(tag)["pub"]
+    return dict(held=glob.glob(wt.xdirs("held", tag)), pub=pub)
+
+
+def lat_zeros(dirs):
+    """Zero scenes whose failure is lateral (offroad, corridor or an at-fault side contact), nx_regress.failure_type."""
+    import nx_regress as NR
+    return int(sum(1 for r in NR.rollouts(dirs).values() if float(r.get("score") or 0) == 0
+                   and any(k in NR.failure_type(r) for k in ("offroad", "corridor", "AF-side"))))
+
+
+WS = DATA / "runs/alpasim_proxy/wait_set/reads"
+
+
+def ws_rows(tag):
+    import csv
+    f = WS / tag / "table" / f"{tag}.csv"
+    return list(csv.DictReader(open(f))) if f.exists() else None
+
+
+def ws_read(tag, ref=None):
+    """The closed-loop waiting set (alpasim_nuplan/waitset@v1; experiments/alpasim_proxy wait_set.py collect): variant a (the human never
+    moves) zeros / wait success, variant b (waits, launches at 3.0 s) launch delay (never = censored at the run's end), on all windows and on
+    the held-split subset; against `ref` the paired a-zero difference (session-clustered CI) and the median-delay difference (prereg 5)."""
+    from jevdrive import stats
+    R = ws_rows(tag)
+    if R is None:
+        return None
+    f = lambda x, k: float(x[k]) if x.get(k) not in (None, "", "None") else None  # noqa: E731
+
+    def summ(rows):
+        a = [x for x in rows if x["variant"] == "a"]
+        b = [x for x in rows if x["variant"] == "b"]
+        d = [(f(x, "delay_s") if f(x, "delay_s") is not None else (f(x, "t_end") or 0.0) - (f(x, "h_launch_s") or 0.0)) for x in b]
+        return dict(a_n=len(a), a_zeros=sum(x["zero"] not in ("", "None") for x in a), a_wait_ok=float(np.mean([x["wait_ok"] == "True" for x in a])) if a else None,
+                    a_score=float(np.mean([float(x["score"]) for x in a])) if a else None, b_n=len(b),
+                    b_never=sum(f(x, "launch_s") is None for x in b), b_delay_med=float(np.median(d)) if d else None,
+                    b_score=float(np.mean([float(x["score"]) for x in b])) if b else None)
+    out = dict(all=summ(R), held=summ([x for x in R if x["split"] == "held"]))
+    if ref is not None and ws_rows(ref) is not None:
+        Q = {x["id"]: x for x in ws_rows(ref)}
+        for part, keep in (("all", lambda x: True), ("held", lambda x: x["split"] == "held")):
+            a = [(x, Q[x["id"]]) for x in R if x["variant"] == "a" and x["id"] in Q and keep(x)]
+            if a:
+                zj = np.array([x["zero"] not in ("", "None") for x, _ in a], float)
+                zr = np.array([y["zero"] not in ("", "None") for _, y in a], float)
+                p = stats.paired(zj, zr, groups=np.array(["_".join(x["src"].split("_")[:2]) for x, _ in a]))
+                out[part]["vs_ref"] = dict(ref=ref, a_zero_diff=float(zj.sum() - zr.sum()), a_zero_diff_lo=float(p["lo"] * len(a)), a_zero_diff_hi=float(p["hi"] * len(a)),
+                                           b_delay_med_diff=None if out[part]["b_delay_med"] is None else out[part]["b_delay_med"] - summ([y for y in Q.values()
+                                                                                                                                     if keep(y)])["b_delay_med"])
+    return out
+
+
+def fmt_ws(tag, w):
+    if w is None:
+        return [f"| {tag} | - | - | - | - | - |"]
+    s = lambda p: (f"{w[p]['a_zeros']} / {w[p]['a_n']} (wait ok {w[p]['a_wait_ok']:.2f}) | {w[p]['b_delay_med']:+.2f} s, never {w[p]['b_never']} / {w[p]['b_n']}"  # noqa: E731
+                   if w[p]["a_n"] and w[p]["b_n"] else "-")
+    v = lambda p: ("" if "vs_ref" not in w[p] else f"{w[p]['vs_ref']['a_zero_diff']:+.0f} [{w[p]['vs_ref']['a_zero_diff_lo']:+.1f}, {w[p]['vs_ref']['a_zero_diff_hi']:+.1f}]"  # noqa: E731
+                   f", delay {w[p]['vs_ref']['b_delay_med_diff']:+.2f} s")
+    return [f"| {tag} | {s('all')} | {s('held')} | {v('all')} | {v('held')} |"]
+
+
+WS_HEAD = ["| tag | a zeros, b median delay (all 316) | the same, held-split | vs RSG: a-zero diff [CI], delay diff (all) | (held-split) |", "|---|---|---|---|---|"]
+
+
+def cl_read(tag, refs):
+    """Closed-loop summary of one tag on held 460 @18 and public 1491 @10 against reference tags (paired, session-clustered)."""
+    import nx
+    import nx_regress as NR
+    D = read_dirs(tag)
+    out = {}
+    for rd in ("held", "pub"):
+        if not D[rd]:
+            out[rd] = None
+            continue
+        M = wt.metrics(D[rd])
+        r = dict(**NR.own(M), coll=nx.coll_counts(D[rd]), **NR.creep(NR.rollouts(D[rd])), lat_zeros=lat_zeros(D[rd]), pair={})
+        for c in refs:
+            Dc = read_dirs(c)[rd]
+            if Dc:
+                Mc = wt.metrics(Dc)
+                x = wt.xpair(M, Mc)
+                r["pair"][c] = dict(**nx.pair_ci(M, Mc), zeros=x["J"]["zeros"], zeros_ref=x["C"]["zeros"], scenes=x["scenes"])
+        out[rd] = r
+    st = OUT / "static" / tag / "run"
+    out["static"] = nx.static_of(st) if st.exists() else None
+    sp = OUT / "paisub" / tag
+    out["stop17"] = nx.stop17_of(sp) if sp.exists() else None
+    try:
+        cap, _ = wt.cap_read(tag)
+        out["W"], out["G"] = cap["wait_W"], cap["go_G"]
+    except FileNotFoundError:
+        out["W"] = out["G"] = None
+    return out
+
+
+def fmt_cl(tag, r, refs):
+    L = []
+    for rd in ("held", "pub"):
+        x = r[rd]
+        if x is None:
+            continue
+        pr = "; ".join(f"vs {c} {p['mean']:+.4f} [{p['lo']:+.4f}, {p['hi']:+.4f}] (zeros {p['zeros']} / {p['zeros_ref']})" for c, p in x["pair"].items())
+        L.append(f"| {tag} | {rd} | {x['scenes']} | {x['zeros']} | {x['mean']:.4f} | {x['at_fault']} | {x['offroad']} | {x['lat_zeros']} | "
+                 f"{x['coll']['front']} / {x['coll']['lateral']} / {x['coll']['rear']} | {x['progress_rel']:.3f} | {x['creep']} / {x['no_launch']} | {pr} |")
+    return L
+
+
+CL_HEAD = ["| tag | read | scenes | zeros | mean | at-fault | offroad | lateral zeros | front / side / rear | progress_rel | creep / no-launch | paired |",
+           "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
+
+
+def cmd_basesum(a):
+    """The three bases: open-loop lines, their plain continuations' closed loop against V2, the selection rule (prereg 4.1)."""
+    import nx_regress as NR  # noqa: F401
+    ref = wt.dev_ade(V2B)
+    res = dict(ref=V2B, ref_dev_ade=ref, bases={}, conts={})
+    rb = base_reads(V2B) | dict(lines=None)
+    L = ["# NR1 base pilots: open-loop lines (C = %s, dev ADE %.4f) and the plain L18 continuations against %s" % (V2B, ref, V2), "",
+         "| base | dose | dev ADE (<= %.4f) | W (pilot line >= %.1f) | G (>= %.1f) | D | into W_L | S_L stop | arrival 4 s arc k=1 (<= %.1f) | launch-cell 4 s bias (+-%.2f) | candidate |"
+         % (ref + ADE_TOL, W_LINE, G_MIN, ARR_MAX, LAUNCH_TOL), "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|:-:|",
+         f"| {V2B} (C) | - | {rb['dev_ade']:.4f} | {rb['wait_W']:.3f} | {rb['go_G']:.3f} | {rb['D']:.3f} | {rb['into_WL']:.3f} | {rb['stop_SL']:.3f} | "
+         f"{rb['arrival_k1']:.2f} | {rb['launch']['bias']:+.2f} | - |"]
+    for spec in a.bases:
+        dose, b, c = spec.split(":")
+        try:
+            r = base_reads(b)
+        except (FileNotFoundError, IndexError) as e:
+            res["bases"][b] = dict(error=str(e))
+            continue
+        g = cand_lines(r, ref)
+        r |= dict(dose=dose, lines=g, candidate=bool(all(g.values())), cont=c)
+        res["bases"][b] = r
+        f = lambda k: "" if g.get(k, True) else " x"  # noqa: E731
+        L.append(f"| {b} | {dose} | {r['dev_ade']:.4f}{f('dev_ade')} | {r['wait_W']:.3f} | {r['go_G']:.3f}{f('go_G')} | {r['D']:.3f} | {r['into_WL']:.3f} | "
+                 f"{r['stop_SL']:.3f} | {r['arrival_k1']:.2f}{f('arrival')} | {r['launch']['bias']:+.2f} | {'yes' if r['candidate'] else 'no'} |")
+    L += ["", "## Plain continuations (V2's L18 command from each candidate base), closed loop", ""] + CL_HEAD
+    rv = cl_read(V2, [RSG])
+    L += fmt_cl(V2 + " (V2)", rv, [RSG])
+    adm = []
+    for b, r in res["bases"].items():
+        if not r.get("candidate"):
+            continue
+        c = r["cont"]
+        x = cl_read(c, [V2, RSG])
+        res["conts"][c] = x
+        L += fmt_cl(c, x, [V2, RSG])
+        ok = bool(x["held"] and x["pub"] and V2 in x["pub"]["pair"] and x["pub"]["pair"][V2]["lo"] >= CONT_PUB_LO
+                  and x["held"]["zeros"] <= rv["held"]["zeros"] + CONT_HELD_ZEROS)
+        r["closed_loop_admissible"] = ok
+        if ok:
+            adm.append(b)
+    L += ["", "## Waiting set (closed loop, alpasim_nuplan/waitset@v1; base checkpoints and their continuations)", ""] + WS_HEAD
+    W = {t: ws_read(t, RSG) for t in [V2B, V2, RSG] + list(res["bases"]) + [r["cont"] for r in res["bases"].values() if r.get("cont")]}
+    for t, w in W.items():
+        L += fmt_ws(t, w)
+    res["waitset"] = W
+    wv = W.get(V2)
+    sel = []
+    for b in adm:                                                     # prereg 4.1: b-delay within 0.5 s of V2's continuation; fewest a zeros
+        w = W.get(res["bases"][b]["cont"])
+        if w is not None and wv is not None and w["all"]["b_delay_med"] <= wv["all"]["b_delay_med"] + 0.5:
+            sel.append(b)
+    if sel:
+        pick = min(sel, key=lambda b: (W[res["bases"][b]["cont"]]["all"]["a_zeros"], -res["bases"][b]["wait_W"]))
+        rule = "fewest variant-a zeros of the continuation on the waiting set among the admissible bases with variant-b median delay <= V2's + 0.5 s"
+    else:
+        pick = max(adm, key=lambda b: (res["bases"][b]["wait_W"], -res["bases"][b]["dev_ade"])) if adm else None
+        rule = "no waiting-set read usable: highest W among the closed-loop-admissible candidates"
+    res |= dict(admissible=adm, waitset_eligible=sel, pick=pick, rule=rule)
+    L += ["", f"closed-loop admissible (public paired vs V2 CI lower bound >= {CONT_PUB_LO}, held zeros <= V2 + {CONT_HELD_ZEROS}): {adm or 'none'}",
+          f"waiting-set eligible (b median delay <= V2 + 0.5 s): {sel or 'none'}", f"rule: {rule}",
+          f"pick: {pick or 'none -> the full chain starts from ' + V2B}"]
+    write("base_pilot", res, L)
+
+
+def cmd_pilotsum(a):
+    """The L18 joint-term pilots against their 1 000-step control: held / public, lateral zeros, the hinge rule (prereg 4.2), W / G."""
+    import nx
+    import nx_regress as NR
+    C = a.control
+    res = dict(control=C, arms={})
+    tags = [C] + a.j
+    R = {t: cl_read(t, [C, V2, RSG] if t != C else [V2, RSG]) for t in tags}
+    L = [f"# NR1 L18 pilots (1 000 steps from {V2B}, merged pool on1_L18NR1, history-speed noise on) against the control {C}", ""] + CL_HEAD
+    for t in tags:
+        L += fmt_cl(t, R[t], [C, V2, RSG] if t != C else [V2, RSG])
+    L += ["", "| tag | W | G | static scene | lateral zeros held + public |", "|---|--:|--:|---|--:|"]
+    for t in tags:
+        s = R[t]["static"]
+        L.append(f"| {t} | {R[t]['W'] if R[t]['W'] is None else round(R[t]['W'], 3)} | {R[t]['G'] if R[t]['G'] is None else round(R[t]['G'], 3)} | "
+                 f"{'-' if s is None else '%.2f m, %s' % (s['dist'], 'contact' if s['collision'] else 'no contact')} | {R[t]['held']['lat_zeros'] + R[t]['pub']['lat_zeros']} |")
+    L += ["", "## Waiting set", ""] + WS_HEAD
+    W = {t: ws_read(t, RSG) for t in [RSG, V2] + tags}
+    for t, w in W.items():
+        L += fmt_ws(t, w)
+    res["waitset"] = W
+    passing = []
+    for t in a.j:
+        r, c = R[t], R[C]
+        g = dict(pub_noninf=r["pub"]["pair"][C]["lo"] >= -0.005, held_zeros=r["held"]["zeros"] <= c["held"]["zeros"],
+                 lateral=r["held"]["lat_zeros"] + r["pub"]["lat_zeros"] < c["held"]["lat_zeros"] + c["pub"]["lat_zeros"])
+        res["arms"][t] = dict(read=r, lines=g, passed=bool(all(g.values())))
+        if all(g.values()):
+            passing.append(t)
+    pick = max(passing, key=lambda t: (R[t]["pub"]["pair"][C]["mean"], -(R[t]["held"]["lat_zeros"] + R[t]["pub"]["lat_zeros"]))) if passing else None
+    res |= dict(control_read=R[C], passing=passing, pick=pick)
+    L += ["", "hinge rule (vs the control): public paired CI lower bound >= -0.005, held zeros <= control, lateral zeros (held + public) < control",
+          "; ".join(f"{t}: {res['arms'][t]['lines']}" for t in a.j), f"pick: {pick or 'none -> the full chain runs without the lateral terms'}"]
+    nx.RES, nx.NX = RES, OUT                                          # nx_regress writes through nx.write: into this topic
+    NR.read_dirs = read_dirs                                          # and reads this topic's public runs
+    write("l18_pilot", res, L)
+    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"{t.split('-')[0]}={t}" for t in tags], ref=C.split("-")[0], out="l18_pilot_regress", dry=False))
+
+
+def cmd_fullsum(a):
+    """The full chain against the registered bar (prereg 5): both seeds held / public / static / stop17 / W / G, seed 0 PAI 281."""
+    import nx
+    import nx_regress as NR
+    res, L = dict(tags=a.j, lines={}), [f"# NR1 full chain: {', '.join(a.j)} against {RSG}", ""] + CL_HEAD
+    R = {t: cl_read(t, [RSG, V2]) for t in a.j}
+    for t in a.j:
+        L += fmt_cl(t, R[t], [RSG, V2])
+    ok = {}
+    for t in a.j:
+        h, p, s = R[t]["held"]["pair"][RSG], R[t]["pub"], R[t]["static"]
+        rsg_rear = cl_read(RSG, [])["pub"]["coll"]["rear"]
+        ok[t] = dict(held_zeros=h["zeros"] <= h["zeros_ref"] - 5, held_ci=h["lo"] > 0, pub_ci=p["pair"][RSG]["lo"] >= -0.005, pub_rear=p["coll"]["rear"] <= rsg_rear,
+                     static=bool(s is not None and not s["collision"] and s["dist"] <= 1.0), W=bool(R[t]["W"] is not None and R[t]["W"] >= W_LINE),
+                     G=bool(R[t]["G"] is not None and R[t]["G"] >= G_MIN))
+    L += ["", "## Waiting set", ""] + WS_HEAD
+    W = {t: ws_read(t, RSG) for t in [RSG, V2] + a.j}
+    for t, w in W.items():
+        L += fmt_ws(t, w)
+    res["waitset"] = W
+    for t in a.j:                                                     # the proposed line: a zeros clearly below RSG on all and held-split, b delay
+        w = W.get(t)
+        ok[t]["waitset (proposed)"] = bool(w is not None and all("vs_ref" in w[p] and w[p]["vs_ref"]["a_zero_diff_hi"] < 0 for p in ("all", "held"))
+                                           and w["all"]["vs_ref"]["b_delay_med_diff"] <= 0.5)
+    if a.pai:
+        import glob
+        mine, ref = wt.metrics(glob.glob(str(OUT / "pai" / a.pai / "runs/*/sim"))), wt.metrics(glob.glob(str(wt.PAI_REF / "runs/*/sim")))
+        x = wt.xpair(mine, ref)
+        pc = nx.pair_ci(mine, ref)
+        res["pai"] = dict(tag=a.pai, pair=pc, zeros=x["J"]["zeros"], zeros_ref=x["C"]["zeros"], at_fault=x["J"]["at_fault"], at_fault_ref=x["C"]["at_fault"])
+        ok["PAI " + a.pai] = dict(paired=pc["mean"] >= 0, zeros=x["J"]["zeros"] <= x["C"]["zeros"] + 2)
+    res |= dict(reads=R, lines=ok, bar_met=bool(all(all(v.values()) for v in ok.values())))
+    L += ["", "| tag | line | met |", "|---|---|:-:|"] + [f"| {t} | {k} | {'yes' if v else 'no'} |" for t, d in ok.items() for k, v in d.items()]
+    if "pai" in res:
+        p = res["pai"]
+        L.append(f"\nPAI 281 ({p['tag']}, submission config) vs RSG-L18-s0: {p['pair']['mean']:+.4f} [{p['pair']['lo']:+.4f}, {p['pair']['hi']:+.4f}], zeros {p['zeros']} / {p['zeros_ref']}, at-fault {p['at_fault']} / {p['at_fault_ref']}")
+    L.append(f"\nbar 'clearly better than RSG-L18-s0' met: {'yes' if res['bar_met'] else 'no'}")
+    nx.RES, nx.NX = RES, OUT
+    NR.read_dirs = read_dirs
+    write("full_chain", res, L)
+    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"N{i}={t}" for i, t in enumerate(a.j)], ref="V2", out="full_chain_regress", dry=False))
+
+
+# ---------------------------------------------------------------- V2's plans on the L18 pool rows (GPU), for the label gate
+def cmd_v2plans(a):
+    """A checkpoint's plans on every row of a pool (route memory fed from feat/<pool>.npz, as served) -> runs/defect_fix/v2plans/<tag>_<pool>.npz."""
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    import torch
+    from types import SimpleNamespace
+    sys.path[:0] = [str(REPO / "experiments/route_mem/scripts"), str(REPO / "experiments/route_follow/scripts")]
+    import rm_train as RT
+    import pp_train as T
+    from rf_lonread import REC
+    dev = torch.device("cuda")
+    ns, _, _, _, _ = RT.build(SimpleNamespace(**(REC | dict(on=a.pool, on_mode="self")), road_labels=RT.OT.JT.ROAD, init="", rm_from=a.tag, tag=a.tag,
+                                              exp="defect_fix", lr_scale=1.0, prefetch=1, dev_card_gb=4.0), dev)
+    S, model, W = ns.S, ns.model, ns.losses(ns.mode).W
+    model.eval()
+    pi = torch.as_tensor(S.pi, device=dev)
+    rows = np.arange(ns.on0, S.n)
+    P = np.zeros((len(rows), 8, 3), np.float32)
+    with torch.no_grad():
+        for i in range(0, len(rows), 512):
+            r = rows[i:i + 512]
+            rt = torch.as_tensor(r, device=dev)
+            p = model(S.front[r], S.ego[rt], S.tc[rt], None, None, nv=None if ns.nv is None else ns.nv[rt]).float()[:, pi].view(-1, 33, 15)
+            P[i:i + len(r)] = torch.stack(T.rear(p, S.cam_x[rt], W), -1).cpu().numpy()
+    (OUT / "v2plans").mkdir(parents=True, exist_ok=True)
+    f = OUT / "v2plans" / f"{a.tag}_{a.pool}.npz"
+    np.savez(f, names=S.tab["names"][rows], poses=P, tag=np.array(a.tag), route_fed=np.array(True))
+    print(f, len(rows), "rows; memory columns fed:", int((S.ego[torch.as_tensor(rows[:4096], device=dev), 20:].abs().sum(1) > 0).sum()), "/ 4096 nonzero")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
+    p = sp.add_parser("v2plans")
+    p.add_argument("--tag", default="RTB1ARO-L18-s0"), p.add_argument("--pool", default="on1_L18NR1")
+    p = sp.add_parser("bitcmp")
+    p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--hash", default=""), p.add_argument("--note", default="")
+    sp.add_parser("candgate").add_argument("--j", required=True)
+    sp.add_parser("basesum").add_argument("--bases", nargs="+", required=True, help="dose:base:continuation")
+    p = sp.add_parser("pilotsum")
+    p.add_argument("--j", nargs="+", required=True), p.add_argument("--control", required=True)
+    p = sp.add_parser("fullsum")
+    p.add_argument("--j", nargs="+", required=True), p.add_argument("--pai", default="")
     sp.add_parser("reasons").add_argument("--workers", type=int, default=48)
     sp.add_parser("pack")
     p = sp.add_parser("weights")
@@ -279,4 +642,5 @@ if __name__ == "__main__":
     p.add_argument("--rule", default="reasoned", choices=("reasoned", "all")), p.add_argument("--line-max", type=float, default=10.0)
     p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(reasons=cmd_reasons, pack=cmd_pack, weights=cmd_weights)[a.cmd](a)
+    dict(reasons=cmd_reasons, pack=cmd_pack, weights=cmd_weights, v2plans=cmd_v2plans, bitcmp=cmd_bitcmp, candgate=cmd_candgate, basesum=cmd_basesum,
+         pilotsum=cmd_pilotsum, fullsum=cmd_fullsum)[a.cmd](a)
