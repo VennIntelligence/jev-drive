@@ -35,9 +35,10 @@ Definitions (fixed before any model read):
               <type>_<token>); inv20 / inv_path = distinct undrawn vehicles whose centre comes within 20 m of the ego / into the ego's
               forward corridor (0-25 m ahead of the front bumper, |lateral| < 2.5 m) at any 0.25 s step; also computed on the public
               window of the same scene as the reference.
-  drop        (1) ego_cov > 1.0 m (the ego outside the reconstructed views); (2) inv_path above the public window's (a vehicle the ego
-              could hit in its lane that the public read draws and this window does not); (3) window outside the log; (4) a window id
-              that is already taken (another public scene or window). One window per source scene and variant.
+  drop        (1) ego_cov > 1.0 m (the ego outside the reconstructed views); (2) inv_path > 0 or an undrawn lead (a vehicle the ego could
+              hit in its lane that the render does not show; amended before any read from "inv_path above the public window's", which
+              dropped nothing while 19 windows had an invisible standing lead); (3) window outside the log; (4) a window id that is
+              already taken (another public scene or window). One window per source scene and variant.
   outcome     (collect) score, the scorer's zero type (collision at fault / offroad / corridor, in the scorer's precedence), rear
               contacts; from the controller trace (10 Hz, scene frame): roll = max distance from the start position while the human
               waits (a: the whole run; b: up to the onset, 3.0 s); wait success = roll <= 1.0 m and no zero; launch (b) = first time the
@@ -263,8 +264,8 @@ def cmd_select(a):
             pr = ref[r["src"]]
             if r["ego_cov"] > COV_EGO:
                 r["drop"] = "ego outside the reconstruction's camera frames"
-            elif r["inv_path"] > pr["inv_path"]:
-                r["drop"] = "undrawn vehicle in the forward corridor"
+            elif r["inv_path"] > 0 or r["lead_drawn"] is False:
+                r["drop"] = "undrawn vehicle in the forward corridor or as the lead"
             elif r["id"] in seen:
                 r["drop"] = "window id taken"
             else:
