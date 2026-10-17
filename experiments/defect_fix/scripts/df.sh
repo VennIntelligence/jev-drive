@@ -22,6 +22,7 @@
 #   df.sh hvrcheck <rev>    NR1HVR identity (supplement 8): NR1HV's command 60 steps eager, code <rev> vs this code (flags off) -> identity_nr1hvr;
 #                           this code with --diag (every 20 steps) -> identity_nr1hvr_diag (superset of scalars, every shared one equal); compiled
 #                           smoke 300 steps with the NR1HVR flags, with and without --diag -> identity_nr1hvr_smoke + the it/s of each (overhead)
+#   df.sh hvrsmoke <n>      the compiled smoke pair alone under fresh tags (NR1HVRSM<n>-*)
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
 #   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress (TAGP=X: full_chain_X.*)
 #   df.sh train <arm> <seed> <steps> <tag>   job body; arms below
@@ -111,6 +112,13 @@ hvrcheck)   # supplement 8: identity of the NR1HVR code with every new flag off,
   k=$(sub df-bitcmp-hvrsm --after $d,$e --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1HVRSM-nodiag --b NR1HVRSM-diag --extra-ok \
       --out identity_nr1hvr_smoke --note "NR1HVR flags (--on-arc 0.0005 --on-hold-res 2) 300 steps compiled, this code ($h): --diag off vs on") || exit 1
   echo "hvrcheck $rev: old $a new $b diag $c smoke $d / $e bitcmp $f $g $k" | tee -a $O/stages.txt ;;
+hvrsmoke)   # hvrsmoke <n>: the compiled smoke pair of hvrcheck again under fresh tags NR1HVRSM<n>-{diag,nodiag} (after the donated-buffer fix)
+  n=${2:?n}; A=full=$V2B:0.5v2::32; fresh NR1HVRSM$n-diag NR1HVRSM$n-nodiag; h=$(git rev-parse --short HEAD)
+  d=$(sub df-hvr-smd$n "${FL[@]}" --timeout-h 1 -- bash $ME train $A:hvr 0 300 NR1HVRSM$n-diag) || exit 1
+  e=$(sub df-hvr-smn$n "${FL[@]}" --timeout-h 1 -- bash $ME train $A:hvrnd 0 300 NR1HVRSM$n-nodiag) || exit 1
+  k=$(sub df-bitcmp-hvrsm$n --after $d,$e --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a NR1HVRSM$n-nodiag --b NR1HVRSM$n-diag --extra-ok \
+      --out identity_nr1hvr_smoke --note "NR1HVR flags (--on-arc 0.0005 --on-hold-res 2) 300 steps compiled, this code ($h): --diag off vs on") || exit 1
+  echo "hvrsmoke $n: $d / $e bitcmp $k" | tee -a $O/stages.txt ;;
 lat)
   [[ ! -e $LAT/meta.npz ]] || { echo "$LAT exists" >&2; exit 1; }
   b=$(sub df-lat-build --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 POLARS_MAX_THREADS=1 \

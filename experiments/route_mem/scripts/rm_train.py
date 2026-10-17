@@ -189,7 +189,8 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             trunk-gradient norm (parameter groups base + adapter; the route branch is left out) of each weighted term: imit, nav_hinge (P2H10's
             drivable hinge on navtrain rows), pool_hinge (agent + road on pool rows), lat (the three lateral terms), lon (--on-arc), pool (the
             three pool groups together) and cos(imit, pool), through torch.autograd.grad(retain_graph=True) on the scaled terms before the
-            step's backward (.grad untouched). Works with --compile (checked by the smoke runs in results/identity_nr1hvr_smoke.json).
+            step's backward (.grad untouched). With --compile it sets torch._functorch.config.donated_buffer = False (donated buffers refuse
+            retain_graph; memory reuse only); the compiled smoke pair in results/identity_nr1hvr_smoke.json checks the update is unchanged.
   --lr-floor F      the cosine decays to F x base lr instead of 0 (lr = base x warm-up x (F + (1 - F) cos)); 0 (default) = the plain cosine.
             The warm-up length is the existing --warmup.
 
@@ -1032,6 +1033,9 @@ def cmd_train(a):
             if len(si_free):
                 from jevdrive.data import splits as _sp
                 run.use_split(_sp.load(a.si_split))
+        if a.compile and a.diag:                                      # --diag's retain_graph backward: compiled backwards must not donate buffers
+            import torch._functorch.config as _fc
+            _fc.donated_buffer = False
         fwd = torch.compile(model, dynamic=False) if a.compile else model    # the main training forward only; everything else eager
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist, hsh = time.time(), [], ""
