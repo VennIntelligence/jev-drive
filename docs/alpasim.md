@@ -247,7 +247,9 @@ scripts/tmux_run.sh img-<tag> env DATA_DIR=/data WHEELS=/data/cache/jev_wheels \
 `new_tag.sh` = `build.sh` (stages a 0.9 GB context, tags `jev-alpasim:<tag>-<git hash>`) -> `test.sh` (the limits above
 plus `--network none`, 2 concurrent synthetic rollouts) -> `smoke.sh` (the 48 scenes in the official containerised stack,
 compared with a native run) -> `report.md`. One step alone: `TAG=AP2-AB-s0 build.sh` switches the default without a new
-layer above the checkpoints. After a change of `requirements.in`: `wheels.py` (its docstring) and `uv pip compile`.
+layer above the checkpoints. The serve-side static hold (decision 350): `DRIVER=sh30 HOLD=leash3 new_tag.sh RSG-L18-s0 <native
+leash3 results-summary.json>` bakes `JEV_HOLD=leash3` in its own ENV layer (tag suffix `-holdleash3`; `serve.py` then runs
+`lib/sh30_hold.py`); record and parity check in [experiments/alpasim/results/image_rsg_leash3.md](../experiments/alpasim/results/image_rsg_leash3.md). After a change of `requirements.in`: `wheels.py` (its docstring) and `uv pip compile`.
 The trusted image once per host: `docker build -t alpasim-base:0.89.0 /data/third_party/alpasim` (81 min on Tokyo, almost
 all download), then copy the generated `*_pb2*.py` out of it into the checkout's `src/grpc/alpasim_grpc/v0/` (the
 compose file mounts the checkout's `src/` over the image's).

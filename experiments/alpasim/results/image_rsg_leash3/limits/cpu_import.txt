@@ -1,0 +1,1 @@
+cpu import ok: JEV_HOLD mode leash 3.0 latch 0.3 t_hand 0.5 cuda False
