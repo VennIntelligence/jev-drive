@@ -16,9 +16,10 @@ zeros against 47); the amended opposite-lane region (amendment 1) does: NR1H15O 
 Update 17:45: the user accepted the dev-ADE cost of the trainval-wait base for its waiting gain, so NR1FB10 (NR1B10-F-s0 -> the same L18 recipe, seeds 0 / 1)
 is the candidate chain, judged by the same bar, with NR1F as the no-waiting comparison (prereg supplement 4).
 
-**Next.** Read both full chains, NR1FB10 (candidate) and NR1F (comparison), against the bar (handoff below). For the user: the opposite-lane region's
-label definition (amendment 1) for later rounds. Exploratory, low priority (-5, idle capacity only): the closed-loop dose response of the trainval-wait
-bases, NR1FB05 / NR1FBALL next to NR1FB10 (handoff below; prereg supplement 5).
+**Result 19:00 (d346).** Neither full chain meets the bar: NR1F ~ V2 (held zeros 39 / 41 vs RSG 34, PAI -0.013); NR1FB10 is worse (held 47 / 48,
+PAI -0.028); L18 washes out the base's waiting (W 0.86 -> 0.17 / 0.19). **Next** (the user's call): keep the base's conditional pathways through L18, or
+serve a base without L18; closed-loop reads of the bases NR1B10-F-s0 / RTB1AR-F-s0 (held 460 + static, `df-baseheld-*`, `df-basestatic-*`) submitted 19:02.
+Waiting-set collect for the four chain tags re-submitted 19:00 (1017-185934-9be6). Exploratory NR1FB05 / NR1FBALL still at priority -5 (supplement 5).
 
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
