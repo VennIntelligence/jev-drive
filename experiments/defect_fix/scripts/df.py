@@ -574,6 +574,7 @@ def cmd_fullsum(a):
                                            and w["all"]["vs_ref"]["b_delay_med_diff"] <= 0.5)
     if a.pai:
         import glob
+        assert nx.pai_complete(OUT / "pai" / a.pai), f"PAI 281 read of {a.pai} incomplete (runs/defect_fix/pai/{a.pai})"
         mine, ref = wt.metrics(glob.glob(str(OUT / "pai" / a.pai / "runs/*/sim"))), wt.metrics(glob.glob(str(wt.PAI_REF / "runs/*/sim")))
         x = wt.xpair(mine, ref)
         pc = nx.pair_ci(mine, ref)

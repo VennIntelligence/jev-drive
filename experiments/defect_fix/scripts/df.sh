@@ -15,6 +15,7 @@
 #   df.sh full <base> <w> [noac]   full chain: L18 2 500 steps from <base>, lateral weight <w> (0 = none), seeds 0 / 1 -> held, public, static,
 #                           stop17, wc per seed, PAI 281 (seed 0, submission config) -> df.py fullsum; noac: without the history-speed noise
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
+#   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress
 #   df.sh train <arm> <seed> <steps> <tag>   job body; arms below
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -146,6 +147,18 @@ paisub)   # job body: paisub <tag> <pai|stop17>: PAI stop17 (+ PAI 281 with pai)
   CHUNK=17 SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $O/paisub/$T $T $STOP17 > $O/paisub_$T.submit.txt || exit 1
   [[ ${3:-pai} == pai ]] || exit 0
   CHUNKS_FROM=$PAICH SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=${PRIO:-9} bash experiments/alpasim/scripts/pai_box.sh submit $O/pai/$T $T > $O/pai_$T.submit.txt || exit 1 ;;
+wait)   # wait [submitter ...]: blocks until every NR1 pool job ($O/pool/*/STATUS) is terminal, the named submitters ended and every pai_box
+        # read root in WAIT_PAI has a DONE per chunk; cap CAP s (7000).
+        # Run it ONCE with run_in_background (no polling by hand); prints the jobs that did not end `done`.
+  t0=$(date +%s)
+  while :; do
+    open=0; for f in $O/pool/*/STATUS; do case "$(tail -1 $f)" in *queued*|*running*|*inbox*|*submitted*|*waiting*) open=$((open+1));; esac; done
+    sub=1; for n in "${@:2}"; do case "$(tail -1 $O/pool/$n/STATUS 2>/dev/null)" in *done*|*failed*|*cancel*|*skip*|*error*) ;; *) sub=0;; esac; done
+    pai=1; for r in ${WAIT_PAI:-}; do n=$(ls $r/chunks/*.txt 2>/dev/null | wc -l); d=$(ls -d $r/runs/*_c*/DONE 2>/dev/null | wc -l); (( n > 0 && d == n )) || pai=0; done
+    (( open == 0 && sub == 1 && pai == 1 )) && break; (( $(date +%s) - t0 > ${CAP:-7000} )) && { echo "cap reached: $open open, pai $pai"; break; }; sleep 60
+  done; date; for f in $O/pool/*/STATUS; do tail -1 $f; done | grep -v ": done" ;;
+fullsum)   # after the full chain ended (df.sh wait df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1, then the PAI chunks): the table against the bar
+  $TR $PY fullsum --j NR1F-L18-s0 NR1F-L18-s1 --pai NR1F-L18-s0 ;;
 train)   # train <arm> <seed> <steps> <tag>
   case $2 in
     v2base) F="$RB0 $KD" ;;                                                                       # identity only (= nx.sh rtb1ar)
@@ -161,5 +174,5 @@ train)   # train <arm> <seed> <steps> <tag>
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,19p $0; exit 2 ;;
+*) sed -n 2,23p $0; exit 2 ;;
 esac
