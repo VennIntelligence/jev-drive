@@ -2,7 +2,7 @@
 
 status: live
 decisions: 262, 325
-index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
+index: ARENA running (7 741 uniform windows over the reconstructions, RSG / NR1F + 6 anchors); no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -93,6 +93,27 @@ zero rate does not order the anchors like private: Kendall tau-b against private
 way: `wait_set.py collect` stops on the 3 variant-b windows without a human launch time once the ego launches there (RSG, V2, YR, LTF, DD and the APY re-read ended rc 1 after
 complete runs and the report job failed on the dependency; the tables came from `experiments/defect_fix/scripts/df_wscollect.py`, the report was run by hand), and the AP2 driver died at every
 drive since JEV_ACC gave sh30_driver's session `t_first = None` (the first APY read scored 0 on all 312 windows; `experiments/alpasim/lib/ap2_driver.py`, re-read 1017-172558-8b65).
+
+## ARENA: uniform windows over every public reconstruction (running, 2026-10-17)
+
+Prereg [plans/2026-10-17-arena-prereg.md](plans/2026-10-17-arena-prereg.md) (Chinese); code `scripts/arena.py` (definitions in its header), `scripts/arena.sh`;
+the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_proxy/arena/`, caches `$DATA_DIR/datasets/alpasim_nuplan_arena/v1/s0..s6`.
+
+- **Set.** 5.5 s windows on a 3 s log-time grid inside the camera video of each of the 1491 public reconstructions (time and space), the waiting
+  set's undrawn-vehicle exclusion, overlapping reconstructions sampled once: **7 741 windows (2 246 held-split) on 136 logs**, 55 read chunks,
+  7 cache shards. Human state: static 3 143 (41 %), other 1 610, braking 1 205, launch 783, turn 570, cruise 430 (select on the 1.0 s grid:
+  23 188 kept of 34 209). Windows where a read fails before driving (route-fail) are dropped at readout.
+- **Reads** (user, 2026-10-17: our two models and every anchor with a known private score; no NR1FB10 / V2 / P0, no re-reads): RSG-L18-s0,
+  NR1F-L18-s0, YR10m10-F-s0, APY10m10-AB-s0 (ap2), DD-sample, LTF-sample, go-straight starter, G0014, in that pool order, priority 9.
+  Smoke (12 windows, every stratum, starter / RSG / APY / DD) passed 19:35 CST.
+- **Handoff (submitted 19:36-19:40 CST).** Builds `ar-build-s0..s6` (1017-193624-d6f8 .. 1017-193626-46c9); 440 reads `ar-read-<tag>-c<n>`, first / last
+  ids per tag in box `runs/alpasim_proxy/arena/stages.txt`, all in `jobs.txt`; summaries `ar-sum-core` 1017-194044-0676 (RSG / NR1F / YR / APY) and
+  `ar-sum-all` 1017-194044-007b (each waits for its reads, then collects and reports whatever finished). About 108 card-slot hours; expected:
+  core about 23:00-00:00 CST, all about 02:00-04:00 CST. **Collect:** `$DATA_DIR/runs/alpasim_proxy/arena/report/{core,all}/` (`DONE`, `arena.md`,
+  `rows.csv.gz`, `rows_valid.csv.gz`, `figs/arena_scores_speed.png`, `not_done.txt`) -> copy `arena.md`, `rows_valid.csv.gz` and the figure to
+  `results/arena/` on the Mac. Rerun the readout by hand: `$P experiments/alpasim_proxy/scripts/arena.py collect --reads $DATA_DIR/runs/alpasim_proxy/arena/reads --out X.csv.gz`,
+  then `arena.py report --set $DATA_DIR/runs/alpasim_proxy/arena/set/set.csv.gz --rows X.csv.gz --out DIR --step 3`; a failed chunk is resubmitted
+  with `bash experiments/alpasim_proxy/scripts/arena.sh read <tag> <chunk>` as a pool job body (idempotent: finished chunks are skipped).
 
 ## Anchors: five policies whose private numbers are known
 
