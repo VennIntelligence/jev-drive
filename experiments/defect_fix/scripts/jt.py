@@ -12,6 +12,8 @@ at a dose) in the same batches. Box, repo root; chain in jt.sh.
       against the stored RSG-L18-s0 reads (no hold: the arena's reads; leash3: ARENA-HOLD's): per stratum, zero types, partial types, paired
       CIs clustered by log -> DIR/arena.md + rows.csv.gz
   held --tags T ..   (op-train) held 460 @18 against RSG-L18-s0 (df.py cl_read) -> stdout
+  diag --tag T [--lo 500] [--hi 1000]   (any python) a training run's events.jsonl: per-term trunk gradient norms and shares, activity, loss
+      terms, dev ADE, pool slices and the wait / launch probe over steps lo..hi, plus the arc weight rule of supplement 9 amendment A
 """
 from __future__ import annotations
 
@@ -140,6 +142,32 @@ def cmd_held(a):
         print("\n".join(df.fmt_cl(t, r, ["RSG-L18-s0"])))
 
 
+def cmd_diag(a):
+    import glob
+    f = sorted(glob.glob(str(DATA / "runs/route_mem" / f"train-{a.tag}" / "*" / "events.jsonl")))[-1]
+    S = {}
+    for line in open(f):
+        e = json.loads(line)
+        if e.get("kind") == "scalar":
+            S.setdefault(e["tag"], {})[e["step"]] = e["value"]
+    win = lambda k: [v for s_, v in S.get(k, {}).items() if a.lo <= s_ <= a.hi]  # noqa: E731
+    m = lambda k: float(np.mean(win(k))) if win(k) else float("nan")  # noqa: E731
+    out = dict(events=f, last_step=max(max(v) for v in S.values()))
+    out["grad"] = {k[5:]: m(k) for k in sorted(S) if k.startswith("grad/")}
+    gs = {k: v for k, v in out["grad"].items() if k in ("imit", "nav_hinge", "pool_hinge", "lat", "lon")}
+    tot = sum(v for v in gs.values() if np.isfinite(v))
+    out["grad_share_of_sum"] = {k: v / tot for k, v in gs.items()} if tot else {}
+    out["act"] = {k[4:]: m(k) for k in sorted(S) if k.startswith("act/")}
+    out["loss"] = {k: m(k) for k in sorted(S) if k.startswith("loss/") and not k.endswith("_n")}
+    out["dev"] = {k: S[k] for k in sorted(S) if k.startswith("dev/")}
+    out["pool"] = {k: S[k] for k in sorted(S) if k.startswith(("pool_held/", "pool_fit/", "probe_"))}
+    out["nan"] = [k for k, v in S.items() if any(not np.isfinite(x) for x in v.values())]
+    gi, gl = out["grad"].get("imit"), out["grad"].get("lon")
+    if gi and gl and np.isfinite(gi) and np.isfinite(gl) and gl > 0:
+        out["arc_rule"] = dict(g_imit=gi, g_lon=gl, ratio_target=0.2, w_smoke=a.w, w_final=float(f"{a.w * min(max(0.2 * gi / gl, 0.5), 2.0):.2g}"))
+    print(json.dumps(out, indent=1, default=str))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -154,5 +182,8 @@ if __name__ == "__main__":
     p.add_argument("--ref-leash3", default=str(ARENA / "hold/report/rows.csv.gz"), help="ARENA-HOLD's reads (tag leash3 = RSG + leash3)")
     p = sub.add_parser("held")
     p.add_argument("--tags", nargs="+", required=True)
+    p = sub.add_parser("diag")
+    p.add_argument("--tag", required=True), p.add_argument("--lo", type=int, default=500), p.add_argument("--hi", type=int, default=1000)
+    p.add_argument("--w", type=float, default=0.0025, help="the arc weight of the run")
     a = ap.parse_args()
-    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held)[a.cmd](a)
+    dict(weights=cmd_weights, arena=cmd_arena, held=cmd_held, diag=cmd_diag)[a.cmd](a)
