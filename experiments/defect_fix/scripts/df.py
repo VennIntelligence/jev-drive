@@ -544,8 +544,8 @@ def cmd_pilotsum(a):
           "; ".join(f"{t}: {res['arms'][t]['lines']}" for t in a.j), f"pick: {pick or 'none -> the full chain runs without the lateral terms'}"]
     nx.RES, nx.NX = RES, OUT                                          # nx_regress writes through nx.write: into this topic
     NR.read_dirs = read_dirs                                          # and reads this topic's public runs
-    write("l18_pilot", res, L)
-    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"{t.split('-')[0]}={t}" for t in tags], ref=C.split("-")[0], out="l18_pilot_regress", dry=False))
+    write(a.out, res, L)
+    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"{t.split('-')[0]}={t}" for t in tags], ref=C.split("-")[0], out=f"{a.out}_regress", dry=False))
 
 
 def cmd_fullsum(a):
@@ -632,7 +632,7 @@ if __name__ == "__main__":
     sp.add_parser("candgate").add_argument("--j", required=True)
     sp.add_parser("basesum").add_argument("--bases", nargs="+", required=True, help="dose:base:continuation")
     p = sp.add_parser("pilotsum")
-    p.add_argument("--j", nargs="+", required=True), p.add_argument("--control", required=True)
+    p.add_argument("--j", nargs="+", required=True), p.add_argument("--control", required=True), p.add_argument("--out", default="l18_pilot")
     p = sp.add_parser("fullsum")
     p.add_argument("--j", nargs="+", required=True), p.add_argument("--pai", default="")
     sp.add_parser("reasons").add_argument("--workers", type=int, default=48)

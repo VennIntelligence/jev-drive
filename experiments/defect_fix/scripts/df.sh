@@ -11,6 +11,7 @@
 #                           the waiting set (every base checkpoint and every read below is also read on alpasim_nuplan/waitset@v1)
 #   df.sh l18pilot          job body after the label gate: NR1H0P / NR1H15P / NR1H30P-L18-s0 (1 000 steps from RTB1AR-F-s0, merged pool, noise on;
 #                           lateral terms at 0 / 0.15 / 0.3 as the gate allows) -> held (6), public (10), static, wc each -> df.py pilotsum
+#   df.sh lat2              prereg amendment 1: the opposite-lane region rebuilt (junction mask + 6 m, rear axle only) -> gate -> NR1H15O-L18-s0
 #   df.sh full <base> <w> [noac]   full chain: L18 2 500 steps from <base>, lateral weight <w> (0 = none), seeds 0 / 1 -> held, public, static,
 #                           stop17, wc per seed, PAI 281 (seed 0, submission config) -> df.py fullsum; noac: without the history-speed noise
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
@@ -21,7 +22,7 @@ O=$DATA_DIR/runs/defect_fix; CK=$DATA_DIR/runs/op_parity/runs; CR=$DATA_DIR/runs
 PY=experiments/defect_fix/scripts/df.py; LT=experiments/defect_fix/scripts/df_lat.py; TR=$DATA_DIR/envs/op-train/bin/python; NS=$DATA_DIR/envs/navsim2/bin/python
 AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; RT=experiments/route_mem/scripts/rm_train.py
 NX=$DATA_DIR/runs/wait_cap/next; NXP=experiments/wait_cap/scripts/nx.py; WC=experiments/wait_cap/scripts/wc.py; LED=experiments/cap_ledger/scripts/led.py
-OL=experiments/onpol_long/scripts/ol_chain.sh; OLW=$DATA_DIR/runs/onpol_long; LAT=$O/lat/L18NR1; WS=experiments/alpasim_proxy/scripts/wait_set.sh
+OL=experiments/onpol_long/scripts/ol_chain.sh; OLW=$DATA_DIR/runs/onpol_long; LAT=$O/lat/L18NR1; LAT2=$O/lat/L18NR1v2; WS=experiments/alpasim_proxy/scripts/wait_set.sh
 RB0="--yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4"             # RB0-F-s0's command (nx.sh RB0)
 RB0I="--yr-mass 0.1 --label-bank --shape --ho-w 3 --rm-lr 3e-4"        # the same as it ran: no pool -> agent hinge off (rm_train's rule), so a pool can join
 KD="--kd-lam 1 --d2-lam 1 --kd-groups AR:1 --kd-nav runs/wait_cap/next/approach_nav.npz --kd-nav-k 8 --d2-teacher $DATA_DIR/runs/desire_cap/train/teacher"
@@ -41,10 +42,10 @@ fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists
 FT=(--train --vram 32 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)                       # compiled (no JEV_RM_EAGER); kd / d2 second forwards
 FL=(--train --vram 44 --cpu 6 --ram 90 --env CL_HIST_KEY=rm-train)                       # + the lateral rasters on the card (~12 GB)
 FE=(--train --vram 28 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)  # identity runs only
-lat_flags() {  # lat_flags <w>: the lateral terms at weight w with the gate's pick ($O/lat_pick.env); w = 0 -> none
-  [[ $1 == 0 ]] && return 0; source $O/lat_pick.env
+lat_flags() {  # lat_flags <w> [v2]: the lateral terms at weight w with the gate's pick ($O/lat_pick.env; v2: amendment 1's $O/lat_pick_v2.env and raster)
+  [[ $1 == 0 ]] && return 0; local env=$O/lat_pick.env lf=$LAT; [[ ${2:-} == v2 ]] && { env=$O/lat_pick_v2.env; lf=$LAT2; }; source $env
   local f=""; [[ $ONC == 1 ]] && f="$f --lat-onc $1"; [[ $SOFT == 1 ]] && f="$f --lat-soft $(python3 -c "print($1 / 5)")"; [[ $SIDE == 1 ]] && f="$f --lat-side $1"
-  [[ -n $f ]] && echo "$f --lat-file $LAT --lat-depth $DEPTH --lat-soft-depth $SDEPTH --lat-buf $BUF"; }
+  [[ -n $f ]] && echo "$f --lat-file $lf --lat-depth $DEPTH --lat-soft-depth $SDEPTH --lat-buf $BUF"; }
 wsread() {  # wsread <tag> [after]: the closed-loop waiting set alpasim_nuplan/waitset@v1 (wait_set.sh's `run` job body = its `read`, whose own
            # submit insists on an existing checkpoint) -> $DATA_DIR/runs/alpasim_proxy/wait_set/reads/<tag>/{run, table/<tag>.csv}; id on stdout
   sub df-ws-$1 ${2:+--after $2} --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $WS run $1 $DATA_DIR/runs/alpasim_proxy/wait_set/reads/$1/run; }
@@ -90,6 +91,23 @@ lat)
   v=$(sub df-v2plans --vram 24 --cpu 6 --ram 64 --timeout-h 1 -- $TR $PY v2plans --tag $V2 --pool on1_L18NR1) || exit 1
   g=$(sub df-lat-gate --after $b,$v --vram 0.1 --cpu 16 --ram 200 --timeout-h 2 -- $TR $LT gate --lat $LAT --v2 $O/v2plans/${V2}_on1_L18NR1.npz --out lat_gate) || exit 1
   echo "lat: build $b v2plans $v gate $g" | tee -a $O/stages.txt ;;
+lat2)   # prereg amendment 1: the opposite-lane region with the junction mask grown 6 m and the rear axle only -> gate (each hard term alone) ->
+        # `l18pilot2` (job body): NR1H15O-L18-s0 if the opposite-lane term passes alone
+  [[ ! -e $LAT2/meta.npz ]] || { echo "$LAT2 exists" >&2; exit 1; }
+  b=$(sub df-lat2-build --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 POLARS_MAX_THREADS=1 \
+      RAYON_NUM_THREADS=1 $AP $LT build --out $LAT2 --workers 64 --dilate 6 --points ra) || exit 1
+  g=$(sub df-lat2-gate --after $b --vram 0.1 --cpu 16 --ram 200 --timeout-h 2 -- $TR $LT gate --lat $LAT2 --v2 $O/v2plans/${V2}_on1_L18NR1.npz --out lat_gate_v2 \
+      --env-out lat_pick_v2.env --alone) || exit 1
+  q=$(sub df-l18sub2 --after $g --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME l18pilot2) || exit 1
+  echo "lat2: build $b gate $g submitter $q" | tee -a $O/stages.txt ;;
+l18pilot2)   # job body after the amendment-1 gate
+  source $O/lat_pick_v2.env; [[ $ONC == 1 ]] || { echo "amendment 1: the opposite-lane term does not pass alone; no extra arm" | tee -a $O/stages.txt; exit 0; }
+  e=$(jid df-bitcmp-rsg) || exit 1; T=NR1H15O-L18-s0; fresh $T
+  t=$(sub df-train-$T "${FL[@]}" --after $e --timeout-h 2 -- bash $ME train h2=0.15 0 1000 $T) || exit 1
+  ids=$(reads $T $t) || exit 1; s0=$(jid df-pilotsum) || exit 1
+  s=$(sub df-pilotsum2 --after "$(csv $ids),$s0" --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY pilotsum --j NR1H15P-L18-s0 NR1H30P-L18-s0 $T \
+      --control NR1H0P-L18-s0 --out l18_pilot_a1) || exit 1
+  echo "l18pilot2 $T: train $t reads $ids summary $s" | tee -a $O/stages.txt ;;
 base)
   e=$(jid df-bitcmp-base) && f=$(jid df-bitcmp-rsg) || { echo "no identity jobs (df.sh codecheck)" >&2; exit 1; }; sums=()
   [[ -d $DATA_DIR/runs/alpasim_proxy/wait_set/reads/$V2B ]] || { v=$(wsread $V2B) || exit 1; echo "base: waiting set of $V2B $v" | tee -a $O/stages.txt; }
@@ -137,8 +155,9 @@ train)   # train <arm> <seed> <steps> <tag>
     ball) F="$RB0I $KD $TV" ;;                                                                    # natural share: the uniform pool draw
     cont=*) F="--init ${2#cont=} --allow-init $RSG --on on1_L18RB0" ;;                           # V2's L18 command from any base
     h=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h=})" ;;            # L18 pilots
+    h2=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h2=} v2)" ;;       # amendment 1's extra arm
     full=*) IFS=: read -r FB FW FN <<< "${2#full=}"
-            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags $FW)" ;;
+            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags ${FW%v2} $([[ $FW == *v2 ]] && echo v2))" ;;   # w = 0.15v2: amendment 1's terms
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;

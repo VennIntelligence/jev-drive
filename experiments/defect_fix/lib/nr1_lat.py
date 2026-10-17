@@ -7,7 +7,8 @@ loss(poses, rows, pack) -> {term: (n,)}, each already x 10 x its weight (the roa
 hinge at 0.25 was --on-lon-lam 2.5); the trainer multiplies by ho_w and sums over the pool rows / n_imit, as every --on-lon term. The kerb is the
 recipe's existing road hinge and vehicle contact its existing agent hinge; both stay as they are.
 
-  onc   the rear axle and the box centre (1.461 m ahead of it) inside an opposite-direction lane, judged per plan point at the plan's own heading:
+  onc   the rear axle and the box centre (1.461 m ahead of it; the rear axle only when the raster dir's meta says points = ra, prereg amendment 1)
+        inside an opposite-direction lane, judged per plan point at the plan's own heading:
         DIR/lat.npz (df_lat.py build) holds per row and per heading bin (-90 .. +90 deg in 30 deg steps, the row's t0 heading = 0) the signed
         distance (m, + outside) to the cells that zeros_mech's Lanes.cls rule calls oncoming at that heading (the evaluator's lane polygons and
         centre-line yaw; some containing lane within 60 deg wins, else one beyond 120 deg), junction cells (two containing lanes more than 30 deg
@@ -58,6 +59,7 @@ def load(pool_dir, names, dev, file=None):
         assert np.array_equal(z["bins"], np.arange(-90.0, 91.0, BIN_DEG)), "heading bins"
         pack["bins"] = torch.as_tensor(z["bins"].astype(np.float32), device=dev)
         pack["ok"] = torch.as_tensor(z["ok"].astype(bool), device=dev)
+        pack["points"] = str(z["points"]) if "points" in z.files else "both"      # prereg amendment 1: "ra" = the rear axle only
         for k in ("onc", "soft"):
             if CFG[k] > 0 or file:
                 a = np.load(f / f"{k}.npy", mmap_mode="r")
@@ -91,7 +93,8 @@ def region_m(d, rows, pack, key):
     b = torch.round(torch.rad2deg(h).clamp(-90.0, 90.0) / BIN_DEG).long() + nb // 2
     g = torch.stack([(P[..., 1] + 24.0) / 24.0 - 1.0, (P[..., 0] + 8.0) / 32.0 - 1.0], -1)[:, :, None]           # drivable_hinge's X0 / Y0
     m = F.grid_sample(pack[key][rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[..., 0]   # (n, B, 80)
-    return m.gather(1, b[:, None]).squeeze(1)
+    m = m.gather(1, b[:, None]).squeeze(1)
+    return m[:, :m.shape[1] // 2] if pack.get("points", "both") == "ra" else m
 
 
 def region(d, rows, pack, key, depth):

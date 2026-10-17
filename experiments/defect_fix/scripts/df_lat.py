@@ -100,7 +100,10 @@ def work(job):
     import shapely
     import zm_read as Z
     from ao_e1 import loader
-    cfg, scene, idx, anchor, t_us, out = job
+    cfg, scene, idx, anchor, t_us, out, dil = job
+    if dil > 0:
+        from scipy.ndimage import binary_dilation
+        disk = np.hypot(*np.mgrid[-int(dil / RES_M):int(dil / RES_M) + 1, -int(dil / RES_M):int(dil / RES_M) + 1]) * RES_M <= dil
     onc_mm = np.load(Path(out) / "onc.npy", mmap_mode="r+")
     soft_mm = np.load(Path(out) / "soft.npy", mmap_mode="r+")
     res = []
@@ -143,6 +146,8 @@ def work(job):
                 d1[ii[fresh]] = hd[fresh]
                 if ln.id in own:
                     own_c[ii] = True
+            if dil > 0:                                               # amendment 1: the junction mask grown by `dil` m (the whole intersection)
+                junc = binary_dilation(junc.reshape(NH, NW), structure=disk).ravel()
             for b in range(len(BINS)):
                 m_onc = (onc[b] & ~same[b] & ~junc).reshape(NH, NW)
                 m_soft = (same[b] & ~own_c & ~junc).reshape(NH, NW) if found else np.zeros((NH, NW), bool)
@@ -169,7 +174,7 @@ def cmd_build(a):
     jobs = []
     for run, sc in keys:
         ii = np.flatnonzero((M["run"].astype(str) == run) & (M["scene"].astype(str) == sc))
-        jobs.append((str(Path(run) / "generated-user-config-0.yaml"), sc, ii, M["anchor"][ii], M["t_us"][ii], str(out)))
+        jobs.append((str(Path(run) / "generated-user-config-0.yaml"), sc, ii, M["anchor"][ii], M["t_us"][ii], str(out), a.dilate))
     ok, found, jun, err = np.zeros(n, bool), np.zeros(n, bool), np.zeros(n, np.float32), []
     with ProcessPoolExecutor(a.workers) as ex:
         for res in ex.map(work, jobs, chunksize=1):
@@ -177,7 +182,7 @@ def cmd_build(a):
                 ok[i], found[i], jun[i] = o, f, j
                 if e:
                     err.append((i, e))
-    np.savez(out / "meta.npz", names=M["names"], bins=BINS, ok=ok, own_found=found, junction_share=jun)
+    np.savez(out / "meta.npz", names=M["names"], bins=BINS, ok=ok, own_found=found, junction_share=jun, points=np.array(a.points), dilate=np.array(a.dilate))
     st = dict(rows=n, ok=int(ok.sum()), own_found=float(found[ok].mean()), errors=len(err), err_sample=err[:5], junction_cell_share=float(jun[ok].mean()))
     (out / "build.json").write_text(json.dumps(st, indent=1))
     print(json.dumps(st, indent=1), flush=True)
@@ -268,7 +273,9 @@ def cmd_gate(a):
         L.append(f"| {k} | " + " | ".join(f"{res['plans'][p][k]['all']:.4f} / {res['plans'][p][k]['straight']:.4f} / {res['plans'][p][k]['turn']:.4f}" for p in plans) + " |")
     L += ["", f"hard (new terms' union on human paths <= {LINE_HARD}): " + "; ".join(f"depth {t['onc_depth']} buf {t['buf']}: {t['hard_union']:.4f}" for t in tried),
           f"pick: {pick}; soft (<= {LINE_SOFT}): {soft}; alone: onc depth {alone_onc}, side buf {alone_side}", f"verdict: {res['verdict']}"]
-    if pick:                                                          # the registered pick -> the trainings' flags (df.sh lat_flags)
+    if a.alone and alone_onc is not None:                             # amendment 1 (exploratory arm): onc and side each on their own line
+        env = dict(ONC=1, SIDE=int(alone_side is not None), DEPTH=alone_onc, BUF=alone_side if alone_side is not None else VARIANTS_BUF[0])
+    elif pick:                                                        # the registered pick -> the trainings' flags (df.sh lat_flags)
         env = dict(ONC=1, SIDE=1, DEPTH=pick["onc_depth"], BUF=pick["buf"])
     elif alone_onc is not None:
         env = dict(ONC=1, SIDE=0, DEPTH=alone_onc, BUF=VARIANTS_BUF[0])
@@ -278,7 +285,7 @@ def cmd_gate(a):
         env = dict(ONC=0, SIDE=0, DEPTH=0.0, BUF=VARIANTS_BUF[0])
     env |= dict(SOFT=int(soft is not None), SDEPTH=soft["soft_depth"] if soft else 0.0)
     res["flags"] = env
-    (DATA / "runs/defect_fix/lat_pick.env").write_text("".join(f"{k}={v}\n" for k, v in env.items()))
+    (DATA / "runs/defect_fix" / a.env_out).write_text("".join(f"{k}={v}\n" for k, v in env.items()))
     L.append(f"trainings: {env}")
     RES.mkdir(parents=True, exist_ok=True)
     for p in (RES / f"{a.out}.json", Path(a.lat) / f"{a.out}.json"):
@@ -316,8 +323,12 @@ if __name__ == "__main__":
     p = sub.add_parser("build")
     p.add_argument("--pool", default="on1_L18NR1"), p.add_argument("--rows", default="L18RB0:rb0,L18RTB1:rtb1"), p.add_argument("--out", required=True)
     p.add_argument("--workers", type=int, default=64)
+    p.add_argument("--dilate", type=float, default=0.0, help="amendment 1: grow the junction mask by this many metres (0 = registered build)")
+    p.add_argument("--points", default="both", choices=("both", "ra"), help="amendment 1: points the region terms read (meta key)")
     p = sub.add_parser("gate")
     p.add_argument("--pool", default="on1_L18NR1"), p.add_argument("--rows", default="L18RB0:rb0,L18RTB1:rtb1"), p.add_argument("--lat", required=True)
     p.add_argument("--v2", default=""), p.add_argument("--out", default="lat_gate")
+    p.add_argument("--env-out", default="lat_pick.env", help="flag file of the trainings (runs/defect_fix/<name>)")
+    p.add_argument("--alone", action="store_true", help="amendment 1: each new hard term on its own line (no union line)")
     a = ap.parse_args()
     {"build": cmd_build, "gate": cmd_gate}[a.cmd](a)
