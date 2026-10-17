@@ -7,7 +7,7 @@
 # (serve.py); DRIVER=sh30|ap2|ens forces it. A tag outside build.sh's stable set goes into the thin extra layer, and the image's default
 # becomes <tag>: the image this prints is the one to push. Nothing here pushes, logs in or submits. VCONT / LEAD in the environment bake
 # the serving switches into the image (build.sh), e.g. `env DATA_DIR=/data VCONT=1.0 LEAD=1 .../new_tag.sh <tag>`.
-# PAI (TRACK=pai, build.sh's PAI defaults and switches VCONT / LEAD / VHIST / ACC): build -> test.sh (PAI probe) -> replicas.sh (4 replicas on
+# PAI (TRACK=pai, build.sh's PAI defaults and switches VCONT / LEAD / VHIST / ACC / GAP): build -> test.sh (PAI probe) -> replicas.sh (4 replicas on
 # the card, as ec2 places them) -> pai_smoke.sh on SCENES (a scene list, required) against REF (the native run of that same list) with
 # WIZ (default the submittable steering weight, controller.gains.rel_front_steering_angle_weight=10), all on card TGPU (default 1):
 #   env DATA_DIR=/data TRACK=pai SCENES=<list> [VHIST=holdlead] [ACC=1] .../new_tag.sh RSG-L18-s0 <native results-summary.json>

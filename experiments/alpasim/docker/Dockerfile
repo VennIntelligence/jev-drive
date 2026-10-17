@@ -72,6 +72,9 @@ ARG VHIST=""
 # rounding level, results/lat1_frame_synthesis.md). Set in this last layer so that the package layers above stay cached.
 ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD} JEV_ACC=${ACC} JEV_VHIST=${VHIST} \
     SH30_COMPILE=0 TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
+# GAP = JEV_GAP (lib/serve_fix.py: the lead MPC's T_FOLLOW[,STOP_DISTANCE]; "" = off, needs LEAD=1): its own metadata layer on top of the one above.
+ARG GAP=""
+ENV JEV_GAP=${GAP}
 EXPOSE 6789
 STOPSIGNAL SIGTERM
 USER 10001:10001
