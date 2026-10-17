@@ -7,7 +7,7 @@
 #   aw.sh smoke                 40 steps of arm F1 (after the score job) -> AWRSMOKE-L18-s0
 #   aw.sh pilot                 (after the identity and the score jobs) control AWR0-L18-s0 = RSG-ACC p0k13's command, arms AWRF<K1> / AWRF<K2>
 #                               (+ --awr-pack, keep K1 / K2), 1 000 steps seed 0 -> held01 + dev-rec forwards -> pref -> pilot gate; the gate job
-#                               submits `held <arm>` for every passing arm (nothing else)
+#                               submits `held <arm>` for every passing arm and then for the control (reported only)
 #   aw.sh held <tag>            job body: held 460 @18 (6 chunks) -> rf_follow (tag + RSG-L18-s0) -> held gate vs the stored RSG-L18-s0
 #   aw.sh train <arm> <seed> <steps> <tag>   job body; arm: rsg (RSG-L18 recipe, flags off) | ctl (p0k13) | f<keep> (ctl + --awr-pack, filt)
 # Env: PRIO (default 9), K1 / K2 (keep thresholds, default 0.1 / 0.5), AWK (rows per step, 16)
@@ -22,19 +22,19 @@ K1=${K1:-0.1}; K2=${K2:-0.5}; AWK=${AWK:-16}; tagk() { echo "AWRF$(echo $1 | tr 
 mkdir -p $X/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner awr-onpol --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $X/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $X/jobs.txt; echo "$id"; }
-FW=(--train --vram 28 --cpu 6 --ram 120)
+FW=(--train --vram 28 --cpu 6 --ram 120); FR=(--train --vram 24 --cpu 6 --ram 70)          # FR: the RSG recipe on on1_L18RB0 (identity)
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $X/jobs.txt 2>/dev/null; }
 fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }; done; }
 case ${1:-} in
 score)
-  s=$(sub aw-score --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- bash -c "$AP $SC check && $AP $SC build --h 3 --workers 32") || exit 1
+  s=$(sub aw-score --vram 0.1 --cpu 32 --ram 32 --timeout-h 2 -- bash -c "$AP $SC check && $AP $SC build --h 3 --workers 32") || exit 1
   echo "score: $s" | tee -a $X/stages.txt ;;
 codecheck)
   rev=${2:?rev}; P=${3:-AWGG}; W=$DATA_DIR/tmp/aw_old_$rev; [[ -d $W ]] || git worktree add --detach $W $rev > /dev/null || exit 1
   fresh $P-RSG-old $P-RSG-new
-  c=$(sub aw-gg-rsg-old "${FW[@]}" --timeout-h 1 -- $TR $W/$RT train --tag $P-RSG-old $RSG --steps 60 --seed 0) || exit 1
-  d=$(sub aw-gg-rsg-new "${FW[@]}" --timeout-h 1 -- bash $ME train rsg 0 60 $P-RSG-new) || exit 1
+  c=$(sub aw-gg-rsg-old "${FR[@]}" --timeout-h 1 -- $TR $W/$RT train --tag $P-RSG-old $RSG --steps 60 --seed 0) || exit 1
+  d=$(sub aw-gg-rsg-new "${FR[@]}" --timeout-h 1 -- bash $ME train rsg 0 60 $P-RSG-new) || exit 1
   f=$(sub aw-bitcmp --after $c,$d --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY bitcmp --a $P-RSG-old --b $P-RSG-new --out identity --hash $RSG_HASH60 \
       --note "RSG-L18 recipe 60 steps: code $rev vs this code ($(git rev-parse --short HEAD)) with every --awr flag off; on_hash_60 = RSG-L18-s0's") || exit 1
   echo "codecheck $rev ($P): $c $d bitcmp $f" | tee -a $X/stages.txt ;;
@@ -57,7 +57,7 @@ pilot)
 gate-pilot)   # job body: the pilot gate; on PASS `held <arm>` for each passing arm
   $TR $PY gate --stage pilot --j $2 --c $C0; rc=$?
   (( rc == 0 )) || { echo "pilot gate: no arm passes (rc $rc), the chain stops here"; touch $X/STOP_pilot; exit 0; }
-  for t in $(cat $X/pass.txt); do bash $ME held $t || exit 1; done ;;
+  for t in $(cat $X/pass.txt) $C0; do bash $ME held $t || exit 1; done ;;      # the control is read too (reported, not judged)
 held)
   T=${2:?tag}; Y=$X/held/$T; mkdir -p $Y; hh=()
   for i in 0 1 2 3 4 5; do hh+=($(jid aw-held-$T-$i || sub aw-held-$T-$i --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
