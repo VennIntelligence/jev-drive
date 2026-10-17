@@ -25,6 +25,11 @@ Waiting-set collect for the four chain tags re-submitted 19:00 (1017-185934-9be6
 NR1F's zeros are old ones (held 28-29 shared with RSG, 8-9 V2-lineage offroad / corridor, 1 seed-consistent new); NR1FB10 adds 5 seed-consistent new held zeros
 (AF-front, corridor, offroad). Paired on non-1.0 scenes the new chains drive faster than RSG (held +0.4-0.7 m/s), still about 1.5-2 m/s below the human.
 
+**JT and JTB / JTN (10-18; [results/jt/](results/jt/README.md), [results/jtb/](results/jtb/README.md), prereg supplements 9-10).** JT: worse than RSG.
+JTN, the same pool and schedule with no arc term, ties RSG + stop3 (-0.001) and held 460 (34 zeros), and is +0.089 natively (static windows).
+JTB (arc term with the braking / stopping rows, W 0.0012) also ties under stop3 (-0.003) but fails the crash guard (48 zeros, front collisions 4 -> 14).
+Offline it overshoots the human's stops more (+3.5 -> +5.5 m). So the arc term caused JT's loss, and labelling the braking rows did not repair it.
+
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,
