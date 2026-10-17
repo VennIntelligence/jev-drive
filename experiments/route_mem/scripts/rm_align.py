@@ -15,6 +15,11 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
           against the stored feature rows of runs/route_mem/feat), the same lead / early / fold per row against the generator's polyline
           -> DIR/nav_<data>.parquet. The on-policy pool rows (on1_L18RB0, rm_build pool = the served Tracker) are `extract` on RB0-F-s0's
           rollouts.
+  msgs    (box, AlpaSim venv)  rm_align.py msgs --out DIR      the driver messages (rollout.asl) of every zero rollout with an `ahead` decision
+          in the 3 s before its failure (+ RSG's score-1 rerun of 42c7526f as a control) -> DIR/msgs/<group>/<scene>.pkl, targets.json
+  replay  (box, envs/op-train, one GPU: a pool job)  rm_align.py replay --out DIR [--ckpts ..]
+          open loop on the logged inputs: each target through each checkpoint with the memory as served, in the ordered layout's slots, and
+          empty -> DIR/replay/*.pkl, identity.json (own checkpoint, served memory, against the stored plans)
   report  (Mac, .venv)  rm_align.py report --dir DIR --res RESULTS_DIR --fig PNG
           RESULTS_DIR/align.json + align.md (the tables of align_audit.md) and the BEV figure of the worked example
 
@@ -441,6 +446,149 @@ def cmd_nav(a):
             run.summary[f"rows_{data}"] = rec
 
 
+# ---------------------------------------------------------------- msgs (AlpaSim venv) / replay (op-train env, one GPU: a pool job)
+SETRUNS = {"rsg_held": "runs/route_mem/read/RSG-L18-s0/c*/run", "v2_held": "runs/route_mem/read/RTB1ARO-L18-s0/c*/run",
+           "rsg_pub": "runs/route_follow/guard/read10/RSG-L18-s0/b*", "v2_pub": "runs/wait_cap/next/cont/wide/pub/RTB1ARO-L18-s0/b*",
+           "a_pub": "runs/wait_cap/next/cont/wide/pub/RTB1O-L18-s0/b*"}
+OWN = {"rsg_held": "RSG-L18-s0", "v2_held": "RTB1ARO-L18-s0", "rsg_pub": "RSG-L18-s0", "v2_pub": "RTB1ARO-L18-s0", "a_pub": "RTB1O-L18-s0",
+       "ctl_pub": "RSG-L18-s0"}
+CONTROL = ("ctl_pub", "runs/wait_cap/next/zvid2/pub-RSG-L18-s0", "42c7526f")    # RSG's score-1 rerun of the worked example (its asl kept)
+MODES = ("served", "ordered", "empty")
+
+
+def replay_targets(out):
+    """-> [(group, run dir, scene, rid)]: every zero rollout of the five reads with an `ahead` decision in the 3 s before its failure and its
+    rollout.asl kept, plus CONTROL."""
+    import pandas as pd
+    from jevdrive.common import data_dir
+    T = []
+    for s, pat in SETRUNS.items():
+        d, r = pd.read_parquet(Path(out) / f"{s}.dec.parquet"), pd.read_parquet(Path(out) / f"{s}.roll.parquet")
+        hit = set(d[d.before & d.ahead].rid)
+        for _, x in r[r.zero & r.rid.isin(hit)].iterrows():
+            for D in glob.glob(str(data_dir() / pat)):
+                if glob.glob(f"{D}/rollouts/{x.scene}/{x.rid}/rollout.asl"):
+                    T.append((s, D, x.scene, x.rid))
+    g, D, key = CONTROL
+    for p in glob.glob(str(data_dir() / D / "rollouts" / f"*{key}*" / "*" / "rollout.asl")):
+        T.append((g, str(data_dir() / D), Path(p).parents[1].name, Path(p).parent.name))
+    return T
+
+
+def _msgs(job):
+    import c1_extract as X
+    return X.one_msgs(job)
+
+
+def cmd_msgs(a):
+    from jevdrive import par
+    from jevdrive.run import Run
+    with Run("route_mem", "align-msgs", config=vars(a)) as run:
+        T = replay_targets(a.out)
+        for g, D, sc, rid in T:
+            (Path(a.out) / "msgs" / g).mkdir(parents=True, exist_ok=True)
+        res = par.pmap(_msgs, [(D, sc, str(Path(a.out) / "msgs" / g)) for g, D, sc, rid in T], run=run, workers=min(16, len(T)), desc="msgs")
+        (Path(a.out) / "msgs" / "targets.json").write_text(json.dumps(T, indent=1))
+        run.info(f"{len(T)} rollouts: {[(g, sc[-16:-8]) for g, _, sc, _ in T]}; {len(res.errors)} errors")
+        run.summary.update(targets=len(T), errors=len(res.errors))
+
+
+class _Ctx:
+    def abort(self, code, msg):
+        raise RuntimeError(f"{code}: {msg}")
+
+
+def cmd_replay(a):
+    """Every target's driver messages through each checkpoint, served memory three ways (MODES): served = the Tracker as served; ordered = the
+    same messages in the ordered layout's point block (rmem.memory_o, the d302 progress anchor; the same 40 x 5 slots); empty = zeros.
+    -> DIR/replay/<group>__<scene8>__<ckpt>.pkl {mode: [per decision: now, anchor, k, t0, poses, rmem]}; identity (own checkpoint, served)
+    against the stored plans -> DIR/replay/identity.json."""
+    import tempfile
+    import torch
+    for p in (REPO / "experiments/op_parity/scripts", REPO / "experiments/route_follow/scripts"):
+        sys.path.insert(0, str(p))
+    import sh30_driver as D
+    from jevdrive.run import Run
+    od = Path(a.out) / "replay"
+    od.mkdir(parents=True, exist_ok=True)
+    T = json.loads((Path(a.out) / "msgs" / "targets.json").read_text())
+    D.RMEM = RM                                          # what sh30_driver.main() sets (nx_turns.replay): a Session gets a route tracker
+    orig = RM.Tracker.features
+
+    def feats(self, t0, pose_of, anchor):
+        if MODE["m"] == "empty":
+            return np.zeros(RM.DIM, np.float32)
+        if MODE["m"] == "ordered":
+            self.order = True
+            try:
+                return np.asarray(orig(self, t0, pose_of, anchor), np.float32)[:RM.DIM]
+            finally:
+                self.order = False
+        return orig(self, t0, pose_of, anchor)
+    MODE = {"m": "served"}
+    RM.Tracker.features = feats
+    pb, ctx = D.egodriver_pb2, _Ctx()
+    ident = {}
+    with Run("route_mem", "align-replay", config=vars(a)) as run:
+        for ck in a.ckpts:
+            core = D.C.Core(ck, "cuda", "backwarp", 1.0, "gpu")
+            assert core.rm and not getattr(core, "rm_order", False), f"{ck}: a projected-layout ROUTE-MEM checkpoint"
+            RM.SERVE_ORDER = False
+            last = {}
+            o_plan = core.plan
+
+            def plan(*x, _o=o_plan, **k):
+                last["o"] = _o(*x, **k)
+                return last["o"]
+            core.plan = plan
+            for g, run_dir, scene, rid in T:
+                msgs = pickle.load(open(Path(a.out) / "msgs" / g / f"{scene}.pkl", "rb"))
+                res = {}
+                for m in MODES:
+                    MODE["m"] = m
+                    logd = Path(tempfile.mkdtemp())
+                    drv = D.Driver(core, logd, 0, False)
+                    rec, uuid = [], None
+                    for kind, raw in msgs:
+                        if kind == "driver_session_request":
+                            req = pb.DriveSessionRequest.FromString(raw)
+                            uuid = req.session_uuid
+                            drv.start_session(req, ctx)
+                        elif kind == "driver_camera_image":
+                            drv.submit_image_observation(pb.RolloutCameraImage.FromString(raw), ctx)
+                        elif kind == "driver_ego_trajectory":
+                            drv.submit_egomotion_observation(pb.RolloutEgoTrajectory.FromString(raw), ctx)
+                        elif kind == "route_request":
+                            drv.submit_route(pb.RouteRequest.FromString(raw), ctx)
+                        elif kind == "driver_request":
+                            req = pb.DriveRequest.FromString(raw)
+                            try:
+                                drv.drive(req, ctx)
+                            except RuntimeError as e:
+                                run.info(f"{g} {scene[-16:-8]} {ck} {m} t {req.time_now_us}: {e}")
+                                continue
+                            rec.append(dict(now=int(req.time_now_us), poses=np.asarray(last["o"]["poses"], np.float32).copy(),
+                                            rmem=None if "rmem" not in last["o"] else np.asarray(last["o"]["rmem"], np.float32).copy()))
+                    drv.sessions.pop(uuid, None)
+                    drv.out.flush()
+                    drives = [json.loads(x) for x in open(logd / "drive.jsonl") if '"kind": "drive"' in x]
+                    assert len(drives) == len(rec), f"{g} {ck} {m}: {len(drives)} records for {len(rec)} decisions"
+                    for r, dd in zip(rec, drives):
+                        r.update(anchor=np.asarray(dd["anchor"], float), k=int(dd["k"]), t0=int(dd["t0"]))
+                    res[m] = rec
+                if ck == OWN[g]:                             # identity: the served replay against the stored drive records
+                    st = {int(r["t0"]): r for r in read_run(run_dir)[1].get(rid, [])}
+                    dd = [float(np.hypot(*(np.asarray(st[r["t0"]]["poses"], float)[7, :2] - r["poses"][7, :2]))) for r in res["served"] if r["t0"] in st]
+                    ident[f"{g}__{scene[-16:-8]}"] = dict(n=len(dd), share_4s_lt_10cm=float(np.mean(np.array(dd) < 0.10)) if dd else None,
+                                                          max_m=float(max(dd)) if dd else None)
+                    run.info(f"identity {g} {scene[-16:-8]} {ck}: {ident[f'{g}__{scene[-16:-8]}']}")
+                pickle.dump(res, open(od / f"{g}__{scene[-16:-8]}__{ck}.pkl", "wb"), protocol=4)
+            del core
+            torch.cuda.empty_cache()
+        (od / "identity.json").write_text(json.dumps(ident, indent=1))
+        run.summary.update(targets=len(T), identity=ident)
+
+
 # ---------------------------------------------------------------- report (Mac)
 SETS = (("rsg_held", "RSG-L18-s0", "held 460 @18"), ("v2_held", "RTB1ARO-L18-s0 (V2)", "held 460 @18"),
         ("rsg_pub", "RSG-L18-s0", "public 1491 @10"), ("v2_pub", "RTB1ARO-L18-s0 (V2)", "public 1491 @10"),
@@ -465,6 +613,71 @@ def boot_rr(y, x, groups, B=10000, seed=0):
     idx = rng.integers(0, len(u), (B, len(u)))
     bs = np.array([rr(np.bincount(i, minlength=len(u)).astype(float)) for i in idx])
     return float(pt), float(np.quantile(bs, 0.025)), float(np.quantile(bs, 0.975))
+
+
+def replay_table(d, dec, res):
+    """Replay read-out: for each target and checkpoint, at the target's decisions that were `ahead` in the 3 s before its failure (the stored
+    rollout's flags; the control: its own ahead decisions), the plan's lateral at s_e + 10 m and 2 s heading error against the route, signed
+    toward the memory's side (sign of `pull`), with the memory served / in the ordered layout / empty."""
+    import pandas as pd
+    rd = Path(d) / "replay"
+    if not (rd / "identity.json").exists():
+        return []
+    T = json.loads((Path(d) / "msgs" / "targets.json").read_text())
+    geo = {s: pickle.load(open(Path(d) / f"{s}.geo.pkl", "rb")) for s in {"rsg_pub" if g == "ctl_pub" else g for g, *_ in T}}
+    rows = []
+    for g, _, scene, rid in T:
+        s = "rsg_pub" if g == "ctl_pub" else g
+        D = dec[s]
+        if g == "ctl_pub":                                      # the rerun is not the stored rollout: its own decisions, the stored route
+            gg = next(v for v in geo[s].values() if v["scene"] == scene)
+            flags = None
+        else:
+            gg = geo[s][rid]
+            Dr = D[D.rid == rid].set_index("k")
+            flags = Dr[Dr.before & Dr.ahead]
+        route = Route(gg["route"])
+        for f in sorted(rd.glob(f"{g}__{scene[-16:-8]}__*.pkl")):
+            ck = f.stem.split("__")[-1]
+            R = pickle.load(open(f, "rb"))
+            out = {}
+            for m, recs in R.items():
+                v = []
+                for i, r in enumerate(recs):
+                    a = r["anchor"]
+                    s_e = float(route.proj(a[:2][None], *((-np.inf, np.inf) if i == 0 else (v[-1][1] - 5.0, v[-1][1] + 40.0)))[0][0])
+                    l10, dp = plan_lat10(route, a, s_e, r["poses"])
+                    fs = (np.zeros((RM.N_PT, RM.NF), np.float32) if r["rmem"] is None else np.asarray(r["rmem"], np.float32)[:RM.DIM].reshape(RM.N_PT, RM.NF))
+                    lb, _ = lead_block(route, a, s_e, fs) if m == "served" else ({}, None)
+                    v.append((i, s_e, l10, dp, lb.get("ahead", False), lb.get("pull", np.nan)))
+                out[m] = pd.DataFrame(v, columns=["k", "s_e", "plan10", "dpsi2", "ahead", "pull"]).set_index("k")
+            S0 = out["served"]
+            ks = list(flags.index) if flags is not None else list(S0.index[S0.ahead])
+            ks = [k for k in ks if k in S0.index]
+            if not ks:
+                continue
+            sg = np.sign(S0.loc[ks, "pull"].values)
+            row = dict(group=g, scene=scene[-16:-8], ckpt=ck, own=ck == OWN[g], n=len(ks))
+            for m in MODES:
+                if m in out:
+                    X = out[m].loc[ks]
+                    row[f"{m}_p10"] = float(np.nanmean(sg * X.plan10.values))
+                    row[f"{m}_dpsi"] = float(np.nanmean(sg * X.dpsi2.values))
+            rows.append(row)
+    res["replay"] = rows
+    res["replay_identity"] = json.loads((rd / "identity.json").read_text())
+    L = ["", "## T6 Open-loop replay: the same logged inputs with the memory served, re-anchored (ordered layout's slots) or empty", "",
+         "At each target's decisions that were `ahead` in the 3 s before its failure: the plan's lateral from the route at s_e + 10 m (m) and its "
+         "2 s heading error (deg), both signed toward the side of the misplaced memory (+ = toward it). Identity: own checkpoint, served memory, "
+         "4 s plan point against the stored plan.", "",
+         "| target | checkpoint | decisions | served p10 | ordered p10 | empty p10 | served dpsi | ordered dpsi | empty dpsi |", "|:--|:--|--:|--:|--:|--:|--:|--:|--:|"]
+    for r in rows:
+        L.append(f"| {r['group']} {r['scene']} | {r['ckpt']}{' (own)' if r['own'] else ''} | {r['n']} | {r.get('served_p10', np.nan):+.2f} | "
+                 f"{r.get('ordered_p10', np.nan):+.2f} | {r.get('empty_p10', np.nan):+.2f} | {r.get('served_dpsi', np.nan):+.1f} | "
+                 f"{r.get('ordered_dpsi', np.nan):+.1f} | {r.get('empty_dpsi', np.nan):+.1f} |")
+    idt = res["replay_identity"]
+    L += ["", "Identity (own checkpoint, served): " + "; ".join(f"{k} {v['share_4s_lt_10cm']:.2f} of {v['n']} within 10 cm" for k, v in idt.items() if v["n"])]
+    return L
 
 
 def cmd_report(a):
@@ -582,6 +795,7 @@ def cmd_report(a):
         L.append(f"| {nm} | {r['n']} | {r['store']:.4f} | {r['near']:.3f} | {r['med']:.1f} | {r['p90']:.1f} | {r['ge10']:.3f} | {r['ahead']:.4f} | "
                  f"{r['early']:.4f} ({r['n_early']}) | {r['fold']:.4f} | {'-' if lt < 0 else lt} |")
 
+    L += replay_table(d, dec, res)
     Path(a.res).mkdir(parents=True, exist_ok=True)
     (Path(a.res) / "align.json").write_text(json.dumps(res, indent=1, default=float))
     (Path(a.res) / "align.md").write_text("\n".join(L) + "\n")
@@ -655,13 +869,18 @@ def main():
     t.add_argument("--out", required=True)
     t.add_argument("--limit", type=int, default=0, help="logs per shard (a check)")
     t.add_argument("--workers", type=int, default=0)
+    m = sp.add_parser("msgs")
+    m.add_argument("--out", required=True)
+    rp = sp.add_parser("replay")
+    rp.add_argument("--out", required=True)
+    rp.add_argument("--ckpts", nargs="+", default=["RSG-L18-s0", "RTB1ARO-L18-s0", "RTB1O-L18-s0"])
     r = sp.add_parser("report")
     r.add_argument("--dir", required=True)
     r.add_argument("--res", required=True)
     r.add_argument("--fig", default="")
     r.add_argument("--example", default="v2_pub:42c7526f")
     a = p.parse_args()
-    dict(extract=cmd_extract, nav=cmd_nav, report=cmd_report)[a.cmd](a)
+    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report)[a.cmd](a)
 
 
 if __name__ == "__main__":
