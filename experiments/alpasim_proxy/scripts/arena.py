@@ -252,10 +252,11 @@ def cmd_collect(a):
 
 
 # ---------------------------------------------------------------- report
-LABEL = {"RSG-L18-s0": "RSG", "NR1F-L18-s0": "NR1F", "NR1FB10-L18-s0": "NR1FB10", "RTB1ARO-L18-s0": "V2", "YR10m10-F-s0": "YR",
-         "APY10m10-AB-s0": "APY", "P0": "P0", "starter": "go-straight", "replay": "replay"}
+LABEL = {"RSG-L18-s0": "RSG", "NR1F-L18-s0": "NR1F", "YR10m10-F-s0": "YR", "APY10m10-AB-s0": "APY", "DD-sample": "DD", "LTF-sample": "LTF",
+         "starter": "go-straight", "G0014": "garage", "replay": "replay"}
 ORDER = list(LABEL)
-PRIVATE = {"YR10m10-F-s0": 0.800, "APY10m10-AB-s0": 0.640, "starter": 0.799}
+PRIVATE = {"G0014": 0.848, "YR10m10-F-s0": 0.800, "starter": 0.799, "DD-sample": 0.772, "LTF-sample": 0.738, "APY10m10-AB-s0": 0.640}
+PUBLIC = {"G0014": 0.740, "YR10m10-F-s0": 0.925, "starter": 0.522, "DD-sample": 0.797, "LTF-sample": 0.824, "APY10m10-AB-s0": 0.935}
 ZC = ("AF-front", "AF-side", "offroad", "corridor", "zero-other")
 PC = ("rear-hit", "hit", "no-launch", "creep", "slow")
 
@@ -274,9 +275,12 @@ def cmd_report(a):
     R = R[R.id.isin(set(S.id))].drop_duplicates(["tag", "id"])
     tags = [t for t in ORDER if t in set(R.tag)] + sorted(set(R.tag) - set(ORDER))
     lab = lambda t: LABEL.get(t, t)  # noqa: E731
-    # valid windows (prereg 4.1): the human replay ran and scored > 0 there (route generation and the like fail before driving for every driver)
+    # valid windows (prereg 4.1, amendment 1): no read failed there before driving (route-fail: the map route generation, policy independent);
+    # with a replay read also the windows where the human replay fails or scores 0
+    bad = set(R[R.type == "route-fail"].id)
     rep = R[R.tag == "replay"].set_index("id")
-    bad = set(rep[(rep.score == 0) | (rep.fail.fillna("") != "")].index) if len(rep) else set()
+    if len(rep):
+        bad |= set(rep[(rep.score == 0) | (rep.fail.fillna("") != "")].index)
     V = S[~S.id.isin(bad)].set_index("id")
     R = R[R.id.isin(V.index)].copy()
     R["split"], R["stratum"], R["log"] = R.id.map(V.split), R.id.map(V.stratum), R.id.map(V.log)
@@ -287,7 +291,7 @@ def cmd_report(a):
     n_read = R.groupby("tag").size()
     complete = [t for t in tags if n_read.get(t, 0) >= 0.98 * len(V)]
     L = ["# ARENA readout", "", f"Set: {len(S)} windows ({int((S.split == 'held').sum())} held-split) on {S.log.nunique()} logs, step "
-         f"{a.step} s; {len(bad)} windows dropped where the human replay fails (prereg 4.1) -> {len(V)} valid. Reads complete (>= 98 % of valid windows): "
+         f"{a.step} s; {len(bad)} windows dropped where a read failed before driving (route-fail; prereg 4.1) -> {len(V)} valid. Reads complete (>= 98 % of valid windows): "
          + ", ".join(lab(t) for t in complete) + "; partial: " + (", ".join(f"{lab(t)} {n_read[t]}" for t in tags if t not in complete) or "none") + ".",
          "", "Strata of the valid windows (all / held): " + ", ".join(f"{s} {int((V.stratum == s).sum())} / {int(((V.stratum == s) & (V.split == 'held')).sum())}"
                                                                          for s in STRATA) + ". CIs: 95 %, bootstrap clustered by log.", ""]
@@ -372,7 +376,7 @@ def cmd_report(a):
         L.append("")
     # anchors
     L += ["## Private anchors", "", "| anchor | private | arena all [CI] | held | non-held | public 1491 |", "|---|--:|--:|--:|--:|--:|"]
-    pubs = {"YR10m10-F-s0": 0.925, "APY10m10-AB-s0": 0.935, "starter": 0.522}
+    pubs = PUBLIC
     for t, p in PRIVATE.items():
         cells = []
         for name, ids in parts:
@@ -385,13 +389,22 @@ def cmd_report(a):
         d = stats.paired(y.loc[c, "score"].values, ap.loc[c, "score"].values, groups=y.loc[c, "log"].values)
         verdict = "orders them like private (YR > APY, CI above 0)" if d["lo"] > 0 else "does not separate them" if d["hi"] > 0 else "orders them backwards"
         L += ["", f"YR - APY on {len(c)} common windows: {stats.fmt(d, '+.4f')} (private +0.160, public -0.010): the arena {verdict}."]
+    from scipy.stats import kendalltau
+    for name, ids in parts:
+        have = [t for t in PRIVATE if n_read.get(t, 0) >= 0.98 * len(V)]
+        if len(have) >= 3:
+            ar = [R[(R.tag == t) & R.id.isin(ids)].score.mean() for t in have]
+            tau = kendalltau(ar, [PRIVATE[t] for t in have]).statistic
+            tp = kendalltau([PUBLIC[t] for t in have], [PRIVATE[t] for t in have]).statistic
+            L.append(f"- {name}: Kendall tau-b of arena score vs private over {len(have)} anchors ({', '.join(lab(t) for t in have)}): {tau:+.2f} (public 1491: {tp:+.2f}); "
+                     f"arena order: {' > '.join(lab(t) for t in sorted(have, key=lambda t: -R[(R.tag == t) & R.id.isin(ids)].score.mean()))}")
     L.append("")
     # figures
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    col = {"RSG-L18-s0": "#1f5fa8", "NR1F-L18-s0": "#d9822b", "NR1FB10-L18-s0": "#2a9d63", "RTB1ARO-L18-s0": "#8a8a8a", "YR10m10-F-s0": "#6a3d9a",
-           "APY10m10-AB-s0": "#c0392b", "P0": "#b0457a", "starter": "#333333"}
+    col = {"RSG-L18-s0": "#1f5fa8", "NR1F-L18-s0": "#d9822b", "YR10m10-F-s0": "#6a3d9a", "APY10m10-AB-s0": "#c0392b", "DD-sample": "#2a9d63",
+           "LTF-sample": "#8a8a8a", "starter": "#333333", "G0014": "#b0457a"}
     fig, axs = plt.subplots(2, 3, figsize=(15, 7.5))
     for i, (name, ids) in enumerate(parts[1:]):
         ax = axs[i, 0]
@@ -423,9 +436,9 @@ def cmd_report(a):
     L += ["## Figure", "", "![scores and speed](figs/arena_scores_speed.png)", "",
           "`figs/arena_scores_speed.png`: rows held / non-held; left the CDF of window scores per model (the jump at 0 is the zero rate, the curve's "
           "height just below 1 is the share of imperfect windows); middle / right the ego-minus-human mean speed on zero and partial windows "
-          "(each curve normalised to its own count). What to look at: whether the held CDFs keep RSG's order from the public reads, whether "
-          "go-straight / P0 (which hold at standstill) move up against the launching models as on private, and whether the new chains shift the "
-          "partial-window speed mass toward 0 (closer to the human) or the zero mass left (stalling).", ""]
+          "(each curve normalised to its own count). What to look at: whether the anchors' CDFs stack in their private order (garage, YR, go-straight, "
+          "DD, LTF, APY), whether go-straight (holds at standstill) moves up against the launching models as on private, and whether NR1F shifts the "
+          "partial-window speed mass toward 0 (closer to the human) against RSG or the zero mass left (stalling).", ""]
     (out / "arena.md").write_text("\n".join(L) + "\n")
     R.to_csv(out / "rows_valid.csv.gz", index=False)
     print("\n".join(L))

@@ -4,8 +4,8 @@
 #   arena.sh select                 pool CPU job: arena.py select (all candidate windows on the 1.0 s grid) -> $W/select/<ts>/cands.csv.gz
 #   arena.sh pick <step>            by hand: the set on the <step> s grid -> $W/set/ (set.csv.gz, meta.json, lists/shard<k>.json, lists/c<n>.txt);
 #                                   copies set.csv.gz / meta.json to results/arena/
-#   arena.sh smoke [n]              feasibility: n windows (default 12, spread over strata) -> mini cache -> replay, starter, RSG-L18-s0 and
-#                                   APY10m10-AB-s0 (ap2) reads -> $W/smoke/report.txt (pool jobs; prints the ids)
+#   arena.sh smoke [n]              feasibility: n windows (default 12, spread over strata) -> mini cache -> starter, RSG-L18-s0, APY10m10-AB-s0
+#                                   (ap2) and DD-sample reads (one per driver kind) -> $W/smoke/report.txt (pool jobs; prints the ids)
 #   arena.sh chain                  the whole read: one build job per shard -> one read job per (tag, chunk), tags in $TAGS order (the pool
 #                                   starts equal-priority jobs in submit order) -> two summary jobs (core tags, all tags). Env PRIO (9).
 #   arena.sh build <k>              job body: the trajdata cache of shard k ($C/s<k>), the controls against the shipped cache, arena.py check
@@ -13,7 +13,8 @@
 #   arena.sh sum <name> <tag ..>    job body: waits (cap SUM_CAP s, default 54000) until every read job of the tags ended, then collect + report
 #                                   over every finished read -> $W/report/<name>/{arena.md, rows.csv.gz, rows_valid.csv.gz, figs/}
 # Drivers as wait_set.sh: checkpoints / P0 / YR10m10-F-s0 sh30 (the public 10-decision read path + the cache), APY10m10-AB-s0 ap2,
-# starter = AlpaSim's go-straight kit, replay = the starter with force-GT over the whole run (human replay).
+# LTF-sample / DD-sample / G0014 natively as their public reads (run.sh ltf / dd / garage), starter = AlpaSim's go-straight kit,
+# replay = the starter with force-GT over the whole run (human replay; not in the default TAGS).
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -21,14 +22,16 @@ E=experiments/alpasim_proxy; W=$DATA_DIR/runs/alpasim_proxy/arena; C=$DATA_DIR/d
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; PY="$P $E/scripts/arena.py"; WSPY="$P $E/scripts/wait_set.py"; CK=$DATA_DIR/runs/op_parity/runs
 KEY=runtime.scene_provider.trajdata
 REPLAY=(runtime.simulation_config.force_gt_duration_us=20000000 ++eval.aggregation_modifiers.remove_preengagement_timesteps=false)
-TAGS=${TAGS:-"replay RSG-L18-s0 NR1F-L18-s0 NR1FB10-L18-s0 RTB1ARO-L18-s0 YR10m10-F-s0 APY10m10-AB-s0 P0 starter"}
-CORE="replay RSG-L18-s0 NR1F-L18-s0 NR1FB10-L18-s0 RTB1ARO-L18-s0"
+TAGS=${TAGS:-"RSG-L18-s0 NR1F-L18-s0 YR10m10-F-s0 APY10m10-AB-s0 DD-sample LTF-sample starter G0014"}   # user 2026-10-17: our two + every private anchor
+CORE="RSG-L18-s0 NR1F-L18-s0 YR10m10-F-s0 APY10m10-AB-s0"
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
 mkdir -p $W/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner alpasim-proxy --name "$name" --priority ${PRIO:-9} \
     --no-check --log-dir $W/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id $name" >> $W/jobs.txt; echo "$id"; }
 RD=(--tries 2 --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)     # the public reads' declaration (df.sh, wait_set.sh)
+R3=(--tries 2 --vram 24 --cpu 8 --ram 40 --timeout-h 2)                                      # third-party drivers (wait_set.sh R3)
+decl() { case $1 in LTF-sample|DD-sample|G0014) echo "${R3[@]}" ;; *) echo "${RD[@]}" ;; esac; }
 
 one_run() {   # one_run <tag> <run dir> <scene list> <cache>: run.sh with the tag's driver; rc 137 when the platform killed a runtime worker
   local T=$1 R=$2 L=$3 CA=("$KEY.cache_location=$4") rc=0
@@ -36,6 +39,9 @@ one_run() {   # one_run <tag> <run dir> <scene list> <cache>: run.sh with the ta
   case $T in
     starter) bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
     replay)  bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CA[@]}" "${REPLAY[@]}" || rc=$? ;;
+    LTF-sample) bash experiments/alpasim/scripts/run.sh "$R" ltf --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
+    DD-sample)  bash experiments/alpasim/scripts/run.sh "$R" dd --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
+    G0014)      bash experiments/alpasim/scripts/run.sh "$R" garage --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
     APY10m10-AB-s0) env AP2_TAG=$T bash experiments/alpasim/scripts/run.sh "$R" ap2 --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
     *)       env SH30_TAG=$T bash experiments/alpasim/scripts/run.sh "$R" sh30 --scene-list $L "${BASE[@]}" "${CA[@]}" || rc=$? ;;
   esac
@@ -90,8 +96,8 @@ PY
   : > $D/controls.txt
   b=$(sub ar-smoke-build --tries 1 --vram 0.1 --cpu 8 --ram 24 --timeout-h 1 --env BUILD_WORKERS=8 -- bash $E/scripts/arena.sh smokebuild) || exit 1
   ids=()
-  for T in replay starter RSG-L18-s0 APY10m10-AB-s0; do
-    ids+=($(sub ar-smoke-$T --after $b "${RD[@]}" -- bash $E/scripts/arena.sh smokeread $T)) || exit 1
+  for T in starter RSG-L18-s0 APY10m10-AB-s0 DD-sample; do
+    ids+=($(sub ar-smoke-$T --after $b $(decl $T) -- bash $E/scripts/arena.sh smokeread $T)) || exit 1
   done
   q=$(sub ar-smoke-report --after $(IFS=,; echo "${ids[*]}") --tries 1 --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash -c \
       "$PY collect --reads $D/reads --out $D/rows.csv.gz && $P -c \"import pandas as pd; r = pd.read_csv('$D/rows.csv.gz'); print(r.groupby('tag').score.describe()); print(r[['tag', 'id', 'score', 'type', 'dist', 'gt']].to_string())\" > $D/report.txt") || exit 1
@@ -110,7 +116,7 @@ read)
   rm -rf $D; one_run $T $D $ST/lists/c$c.txt $C/s$k ;;
 chain)
   [[ -f $ST/meta.json ]] || die "pick first"
-  for T in $TAGS; do [[ $T == P0 || $T == starter || $T == replay || -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; done
+  for T in $TAGS; do [[ $T == P0 || $T == starter || $T == replay || $T == *-sample || $T == G0014 || -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; done
   declare -A B; ids=()
   while read -r k; do
     B[$k]=$(sub ar-build-s$k --tries 2 --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash $E/scripts/arena.sh build $k) || exit 1
@@ -119,7 +125,7 @@ chain)
   for T in $TAGS; do
     tid=()
     while read -r c k; do
-      tid+=($(sub ar-read-$T-c$c --after ${B[$k]} "${RD[@]}" -- bash $E/scripts/arena.sh read $T $c)) || exit 1
+      tid+=($(sub ar-read-$T-c$c --after ${B[$k]} $(decl $T) -- bash $E/scripts/arena.sh read $T $c)) || exit 1
     done < <(python3 -c "import json; [print(c, s['shard']) for s in json.load(open('$ST/meta.json'))['shards'] for c in s['chunks']]")
     echo "reads $T: ${tid[0]} .. ${tid[-1]} (${#tid[@]})" | tee -a $W/stages.txt; ids+=("${tid[@]}")
   done
