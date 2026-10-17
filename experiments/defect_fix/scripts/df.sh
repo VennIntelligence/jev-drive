@@ -13,7 +13,9 @@
 #                           lateral terms at 0 / 0.15 / 0.3 as the gate allows) -> held (6), public (10), static, wc each -> df.py pilotsum
 #   df.sh lat2              prereg amendment 1: the opposite-lane region rebuilt (junction mask + 6 m, rear axle only) -> gate -> NR1H15O-L18-s0
 #   df.sh full <base> <w> [noac]   full chain: L18 2 500 steps from <base>, lateral weight <w> (0 = none), seeds 0 / 1 -> held, public, static,
-#                           stop17, wc per seed, PAI 281 (seed 0, submission config) -> df.py fullsum; noac: without the history-speed noise
+#                           stop17, wc per seed, PAI 281 (seed 0, submission config) -> df.py fullsum; noac: without the history-speed noise.
+#                           Env: TAGP tag prefix (NR1F), SEEDS ("0 1"), NOPUB=1 no public chunks, NOPAI=1 no PAI submitter (stop17 + PAI 281);
+#                           prereg supplement 3: SEEDS=0 NOPUB=1 NOPAI=1 TAGP=NR1FB10 df.sh full NR1B10-F-s0 0.15v2
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
 #   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress
 #   df.sh train <arm> <seed> <steps> <tag>   job body; arms below
@@ -153,9 +155,9 @@ l18pilot)   # job body after the label gate
     echo "l18pilot: summary $s" | tee -a $O/stages.txt; } ;;
 full)
   B=${2:?base}; Wt=${3:?lateral weight}; NOAC=${4:-}; all=(); TT=()
-  for s in 0 1; do T=${TAGP:-NR1F}-L18-s$s; fresh $T; TT+=($T)                                   # TAGP: a second chain's tag prefix
+  for s in ${SEEDS:-0 1}; do T=${TAGP:-NR1F}-L18-s$s; fresh $T; TT+=($T)                         # TAGP: a second chain's tag prefix; SEEDS: fewer seeds
     t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC $s 2500 $T) || exit 1
-    ids=$(reads $T $t $([[ $s == 0 ]] && echo pai || echo stop17)) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
+    ids=$(reads $T $t $([[ -n ${NOPAI:-} ]] || { [[ $s == 0 ]] && echo pai || echo stop17; })) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
   echo "full: ${TT[*]} after $(csv ${all[@]})" | tee -a $O/stages.txt ;;
 paisub)   # job body: paisub <tag> <pai|stop17>: PAI stop17 (+ PAI 281 with pai), submission config, of an L18 checkpoint
   T=$2
@@ -167,7 +169,7 @@ wait)   # wait [submitter ...]: blocks until every NR1 pool job ($O/pool/*/STATU
         # Run it ONCE with run_in_background (no polling by hand); prints the jobs that did not end `done`.
   t0=$(date +%s)
   while :; do
-    open=0; for f in $O/pool/*/STATUS; do case "$(tail -1 $f)" in *queued*|*running*|*inbox*|*submitted*|*waiting*) open=$((open+1));; esac; done
+    open=0; for f in $O/pool/*/STATUS; do l=$(tail -1 $f); case "${l#*): }" in queued*|running*|inbox*|submitted*|waiting*) open=$((open+1));; esac; done   # the state word after "(id): " ("cancelled: cancelled while queued" is over)
     sub=1; for n in "${@:2}"; do case "$(tail -1 $O/pool/$n/STATUS 2>/dev/null)" in *done*|*failed*|*cancel*|*skip*|*error*) ;; *) sub=0;; esac; done
     pai=1; for r in ${WAIT_PAI:-}; do n=$(ls $r/chunks/*.txt 2>/dev/null | wc -l); d=$(ls -d $r/runs/*_c*/DONE 2>/dev/null | wc -l); (( n > 0 && d == n )) || pai=0; done
     (( open == 0 && sub == 1 && pai == 1 )) && break; (( $(date +%s) - t0 > ${CAP:-7000} )) && { echo "cap reached: $open open, pai $pai"; break; }; sleep 60
