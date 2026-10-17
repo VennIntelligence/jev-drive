@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Index page of the RTB1 shared new-zero scenes (held 460 @18). Usage: nx_zvid_page.py DIR  (DIR holds <scene8>_<tag>.mp4; writes manifest.json + index.html)."""
-import json, sys
+import json, subprocess, sys
 from pathlib import Path
 
 D = Path(sys.argv[1])
@@ -18,14 +18,29 @@ S = [
  ("ddc1271ea57154bc", "2021.10.06.08.16.17_veh-52", "offroad", 1.0, "非 at-fault 场景（出路），atfault.md 无此行。"),
  ("1f54430427975391", "2021.10.06.08.16.17_veh-52", "offroad（另 b 臂同时判 left_corridor_laterally）", 1.0, "非 at-fault 场景（出路），atfault.md 无此行。"),
 ]
+
+
+def slow(f):
+    """Playback slow-down from the clip's frame rate and real duration: sparse decision clips (<= 5 fps) or short scenes (< 15 s) 3x, else 2x."""
+    try:
+        r, d = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate:format=duration",
+                              "-of", "csv=p=0", str(f)], capture_output=True, text=True).stdout.split()
+        n, m = r.split("/"); fps, dur = float(n) / float(m), float(d)
+    except (ValueError, OSError):
+        return 3
+    return 3 if fps <= 5 or dur < 15 else 2
+
+
 man, secs = [], []
 for sid, log, cls, rsg, note in S:
     cells = []
     for t, lab in TAGS:
         f = D / f"{sid[:8]}_{t}.mp4"
         if f.exists():
-            man.append(dict(scene=sid, tag=t, file=f.name, mb=round(f.stat().st_size / 1e6, 1)))
-            cells.append(f'<figure><video src="{f.name}" autoplay muted loop playsinline controls preload="metadata"></video><figcaption>{lab}</figcaption></figure>')
+            k = slow(f)
+            man.append(dict(scene=sid, tag=t, file=f.name, mb=round(f.stat().st_size / 1e6, 1), slow=k))
+            cells.append(f'<figure><video src="{f.name}" data-rate="{1 / k:.4f}" autoplay muted loop playsinline controls preload="metadata"></video>'
+                         f'<figcaption>{lab}（放慢 {k}×）</figcaption></figure>')
         else:
             cells.append(f'<figure class="miss"><figcaption>{lab}：无视频</figcaption></figure>')
     secs.append(f'<section><h2>{sid[:8]} <small>{sid}</small></h2><p>日志：{log}</p>'
@@ -38,6 +53,8 @@ section{{border-top:1px solid #ccc;padding-top:.5em;margin-top:1.5em}}.miss{{col
 <h1>RTB1 四个臂共同新增的 7 个零分场景</h1>
 <p>held 460 @18 决策、单次读数（seed 0 为主）。这 7 个场景在 RTB1 的四个臂（a RTB1O-L18-s0、b RTB1N-L18-s0、c RTB1O-L18-s1、d RTB1OB1-L18-s1）里全部得零，
 而参照 RSG-L18（s0 / s1）都没有清零。每节并排放臂 a、RSG-L18-s0 和臂 d（另一基座种子）的回放（上为 BEV 与打分面板，下为前视相机，约 2 帧/秒、10 秒，每帧一个决策）；视频是用同一 sh30 路径加视频重跑得到的，不是原读数的录像。
-先看零分发生的时刻，再看 RSG 在同一位置怎么处理。数字来源：<code>rtb_cont.md</code>、<code>rtb_cont/atfault.md</code>。</p>
-{"".join(secs)}</body></html>''')
+播放速度按帧率与实际时长放慢 2–3 倍（每段标注；本页的片段 2 帧/秒、10 秒，都是 3×）。先看零分发生的时刻，再看 RSG 在同一位置怎么处理。数字来源：<code>rtb_cont.md</code>、<code>rtb_cont/atfault.md</code>。</p>
+{"".join(secs)}
+<script>document.querySelectorAll("video[data-rate]").forEach(v=>{{const r=+v.dataset.rate;const set=()=>{{v.defaultPlaybackRate=r;v.playbackRate=r;}};
+set();v.addEventListener("loadedmetadata",set);v.addEventListener("play",set);}});</script></body></html>''')
 print(len(man), "videos", sum(m["mb"] for m in man), "MB")
