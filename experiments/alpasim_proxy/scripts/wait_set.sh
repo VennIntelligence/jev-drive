@@ -19,7 +19,9 @@
 #   wait_set.sh anchors [after]        the five private anchors (APY10m10-AB-s0 via ap2, YR10m10-F-s0, LTF-sample, DD-sample, G0014), one
 #                                      job each, then a report job over every read
 #   wait_set.sh chain [anchors]        build (if needed) -> starter + replay -> gate -> P0, RSG-L18-s0, RTB1ARO-L18-s0 (+ the anchors) -> report
-#   wait_set.sh gate                   job body: go-straight scores >= 0.99 on variant a and the replay >= 0.98 on a and b, else rc 1
+#   wait_set.sh models [after]         after a passed validation (starter / replay tables exist): gate job -> P0, RSG-L18-s0, RTB1ARO-L18-s0
+#                                      and the five anchors -> report
+#   wait_set.sh gate                   job body (on the windows of the current set.txt): go-straight scores >= 0.99 on variant a and the replay >= 0.98 on a and b, else rc 1
 #                                      (a failed gate fails every read chained after it)
 #   wait_set.sh report [tag ...]       job body / by hand: tables of every read (or the tags) -> $W/report/{tables.md, all.csv}
 #   wait_set.sh smoke <tag> [n] [after] the first n windows of each variant (default 2) -> $W/smoke/<tag> (pool job; plumbing check)
@@ -112,8 +114,8 @@ run)
 gate)
   python3 - $W/reads/starter/table/starter.csv $W/reads/replay/table/replay.csv $S/set.txt <<'PY' | tee $W/gate.txt; return ${PIPESTATUS[0]}
 import csv, sys
-n = len(open(sys.argv[3]).read().split())
-g, r = (list(csv.DictReader(open(f))) for f in sys.argv[1:3])
+ids = set(open(sys.argv[3]).read().split()); n = len(ids)          # the current set (set.txt): tables of older set versions are filtered
+g, r = ([x for x in csv.DictReader(open(f)) if x["id"] in ids] for f in sys.argv[1:3])
 mean = lambda rows, v: sum(float(x["score"]) for x in rows if x["variant"] == v) / max(1, sum(x["variant"] == v for x in rows))
 ga, ra, rb = mean(g, "a"), mean(r, "a"), mean(r, "b")
 bad = [(x["id"], x["score"], x["zero"]) for x in g if x["variant"] == "a" and float(x["score"]) < 1]
@@ -134,6 +136,13 @@ chain)
   fi
   q=$(sub ws-report --after $(IFS=,; echo "${ids[*]}") --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $E/scripts/wait_set.sh report) || exit 1
   echo "chain: build $b; starter $s replay $r; gate $g; reads ${ids[*]}; report $q" | tee -a $W/stages.txt ;;
+models)       # after a passed validation: the gate job re-evaluated on the current set, then P0 / RSG / V2 and the five anchors, then the report
+  g=$(sub ws-gate ${1:+--after $1} --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $E/scripts/wait_set.sh gate) || exit 1
+  ids=(); for T in P0 RSG-L18-s0 RTB1ARO-L18-s0; do ids+=($(bash $0 read $T $g)) || exit 1; done
+  ids+=($(WS_DRIVER=ap2 bash $0 read APY10m10-AB-s0 $g)) || exit 1
+  for T in YR10m10-F-s0 LTF-sample DD-sample G0014; do ids+=($(bash $0 read $T $g)) || exit 1; done
+  q=$(sub ws-report --after $(IFS=,; echo "${ids[*]}") --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $E/scripts/wait_set.sh report) || exit 1
+  echo "models: gate $g; reads ${ids[*]}; report $q" | tee -a $W/stages.txt ;;
 anchors)
   A=${1:-}; ids=()
   ids+=($(WS_DRIVER=ap2 bash $0 read APY10m10-AB-s0 $A)) || exit 1
@@ -143,7 +152,7 @@ anchors)
 report)
   mkdir -p $W/report; ins=()
   for T in ${@:-$(ls $W/reads)}; do [[ -d $W/reads/$T/table ]] && ins+=($W/reads/$T/table); done
-  $PY report --in "${ins[@]}" --out $W/report/tables.md --csv $W/report/all.csv \
+  $PY report --set $S/set.json --in "${ins[@]}" --out $W/report/tables.md --csv $W/report/all.csv \
     --pairs RTB1ARO-L18-s0:RSG-L18-s0 P0:RSG-L18-s0 || die "report rc $?" ;;
 *) die "unknown stage $STAGE" ;;
 esac

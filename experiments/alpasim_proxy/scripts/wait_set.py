@@ -421,6 +421,8 @@ def cmd_report(a):
     import pandas as pd
     from jevdrive import stats
     R = pd.concat([pd.read_csv(f) for d in a.inp for f in sorted(glob.glob(f"{d}/*.csv"))], ignore_index=True)
+    if a.set:   # only the windows of the current set version (tables of an older version may hold dropped windows)
+        R = R[R.id.isin({w["id"] for w in json.load(open(a.set))["windows"]})]
     R["log"] = R.src.str.rsplit("-", n=1).str[0]
     order = [x for x in a.order.split(",") if x in set(R.label)] + sorted(set(R.label) - set(a.order.split(",")))
     L = []
