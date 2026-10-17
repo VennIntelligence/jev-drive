@@ -347,10 +347,17 @@ def lat_zeros(dirs):
 WS = DATA / "runs/alpasim_proxy/wait_set/reads"
 
 
+WS_SET = REPO / "experiments/alpasim_proxy/results/wait_set/set.txt"     # the current set (v2: 312 windows; route-fold windows dropped)
+
+
 def ws_rows(tag):
+    """One read's rows, restricted to the windows of the current set file (reads made on the 316-window v1 list keep 4 route-fold zeros otherwise)."""
     import csv
     f = WS / tag / "table" / f"{tag}.csv"
-    return list(csv.DictReader(open(f))) if f.exists() else None
+    if not f.exists():
+        return None
+    keep = set(WS_SET.read_text().split())
+    return [x for x in csv.DictReader(open(f)) if x["id"] in keep]
 
 
 def ws_read(tag, ref=None):
@@ -396,7 +403,7 @@ def fmt_ws(tag, w):
     return [f"| {tag} | {s('all')} | {s('held')} | {v('all')} | {v('held')} |"]
 
 
-WS_HEAD = ["| tag | a zeros, b median delay (all 316) | the same, held-split | vs RSG: a-zero diff [CI], delay diff (all) | (held-split) |", "|---|---|---|---|---|"]
+WS_HEAD = ["| tag | a zeros, b median delay (set v2, 312) | the same, held-split | vs RSG: a-zero diff [CI], delay diff (all) | (held-split) |", "|---|---|---|---|---|"]
 
 
 def cl_read(tag, refs):
