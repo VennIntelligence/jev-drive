@@ -164,6 +164,19 @@ memory"). On 2026-10-10 this killed 28 tries of 18 jobs in 90 min (one WOD eval 
 - **retries a SIGKILLed job** (root rc 137 without a pool stop; event `kill` with the memory picture) `kill_retries`
   (3) times beyond `--tries`. `top` prints working set, line, margin and the kills of today and yesterday;
   `usage --hours H` the kills per day.
+- **retries a job whose child was SIGKILLed** at the line (since 2026-10-17): the platform kills the largest process by
+  RSS, often an AlpaSim runtime worker, and the read then fails with rc 1 ("Worker 0 died with exit code -9"). A job
+  that fails with such a line in its try's log (`KILL_RE`) within 10 min of the box being near the line (margin under
+  2 x `ws_reserve_gb`, or a root rc 137) is retried like a root kill (event `kill` with `child: true`).
+- **stops the job that broke its RAM declaration** (since 2026-10-17): a job whose tree's private memory is above
+  1.1 x `--ram` + 2 GB (undeclared: `ram_default_gb`) gets a `ram_over` event and a STATUS line, and its peak goes to
+  history (any end state; the next job of its key is booked at that peak). While the margin is under `ram_stop_gb`
+  (48) the one furthest above its declaration is stopped at once (event `ram_stop`) and requeued `ram_retries` (1)
+  times with `--ram` raised to its measured peak + 1 GB; rounds come every `fast_poll_s` (5 s) while the margin is
+  under 96. Otherwise the platform picks the largest process by RSS, which is a training (its mmapped tokens are
+  45-58 GB of RSS on 6 GB of anon), not the many-worker job that grew: two CPU jobs at 48 / 160 GB declared grew to
+  240 / 344 GB on 2026-10-17 and three trainings died twice. The `ws_override` start after `ws_wait_s` happens only when
+  the job fits with all page cache dropped (`memory.current - file`): an override started the 240 GB job.
 
 For lanes: declare `--ram` (the peak private memory of the job's process tree: WOD eval 40, `pp_train.py --host` 45,
 AlpaSim stack 52). The pool then spaces fast growers by itself; no cap on how many jobs of a kind may start together

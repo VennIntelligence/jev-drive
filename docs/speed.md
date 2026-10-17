@@ -141,4 +141,39 @@ rises almost linearly with packing until VRAM or RAM runs out. Today the two lim
 | 6 | Replay the eager step as a CUDA graph (same kernels, same order: no fusion, so no new numerics); needs the `if tensor` tests in the losses and the boolean-mask indexing made static first | up to ~1.5x (kernels busy 63 % of the step; the rest is launch / dispatch) | expected yes, must be shown | high | `nx.py bitcmp` on 300 steps, as for "nosync" above |
 | - | Not worth doing | more fetch workers / prefetch (0.98x); per-term loss syncs (0.98x); 2-3 trainings per card (per job 0.57x / 0.40x); `start_limit`; `--batch 256` (recipe change for 1.39x samples/s) | | | |
 
+### RAM, CPU and kills (2026-10-17 evening)
+
+Symptom at 17:17: 24 running, 36 queued (34 GPU-ready held on RAM), working set 323 of 451 GiB, load 90-100, six platform
+kills that day. Audit 17:36-17:55: process census by job tree, cgroup `memory.stat`, pool events, boxwatch.
+
+| Question | Finding |
+|---|---|
+| Orphans, leaks | None. The 352 processes outside running pool trees held 1.1 GiB and 0.1 cores (the trainval download's 322 curls, autopanel, jupyter); the pool stopped every killed job's tree (`stop` events); /dev/shm 1.7 MB; page cache 61 GiB, 46 of it inactive |
+| RAM per class (anon + shmem of the tree; summing RssAnon over-counts forked workers: 303 GiB summed against 255 cgroup anon) | sh30 held read 13-15 GiB (declared 40, booked 25.2 = 1.2 x history max 20.2 + 1); pub read 10-16 GiB, growing to 20; waiting-set read 12-22 GiB (declared 30); static read 7-10 GiB; PAI chunk 11-15 GiB (declared 30, booked 19.5); rm_train 3-6 GiB anon plus 31 GB file-backed RSS (declared 70-90, booked 8) |
+| Why 34 jobs were held on RAM | A burst: the NR1F s1 chain's ~20 reads and 8 PAI chunks started into 24 running jobs. For 5 min each start adds the RAM it has not allocated yet under the 85 % anon rule (391 GiB). The hold cleared in ~20 min (17:36: none held on RAM, the rest wait on VRAM). In 12 h no card ever sat idle on RAM ("queued: ram" 0 card-hours): the RAM holds limited packing, they did not idle cards |
+| Kills | 15:41:33: CPU-only `df-lat2-build` (declared 160) grew to 344 GiB; cgroup anon went from 304 to 408 GB in 50 s. 16:03:48: `an-x-a_pub` (declared 48, used 240 GiB) and `an-x-pool_rb0` (48, used 67), both started by `ws_override` after 10 min held. Both times the platform killed the three trainings (45-58 GB RSS each, 6 GB anon) and some AlpaSim runtime workers. Five reads failed with rc 1 at the kill times and were not retried. Three logs show "Worker 0 died with exit code -9" (`df-ws-RTB1AR-F-s0`, `df-pub-NR1H0P-L18-s0-6` / `-7`); the logs of the other two (`ws-read-starter`, `ws-read-replay`) were overwritten by later reruns. On the dependency, `ws-gate` and its four reads failed, and so did `df-pilotsum` / `df-pilotsum2`. Earlier, at 14:34, `al-a-pub` (48 declared, 243 used), `al-rsg-pub` (189), `al-v2-pub` (181) and `xg5-geo` (96, 137) had pushed anon to 420 GiB, 19 GiB short of the line |
+| CPU | Not binding: 60-80 of 110 cores used, `cpu.pressure` some 4 %, 0.7 % of periods throttled, 77 runnable threads (53 of them renderer threads). Latent: every job without a profile inherits `OMP_NUM_THREADS` = `MKL_NUM_THREADS` = 110 from the platform's profile.d (remote-box.md). A 6-core rm_train runs 126 threads. Not changed mid-lane, because thread counts can change numerics |
+| Ceiling | About 25 concurrent AlpaSim jobs, where VRAM booking and host RAM bind together. VRAM: 5 reads per card at 14.3 GB, or 4 reads plus one PAI chunk at 22. RAM: 25 jobs x 13-15 GiB = 300-340 GiB anon at peak, against the 85 % rule (391) and the line (451). Booking reads at per-n concurrent shares (11.0-11.4 GB at n = 3-5 instead of 13.0) would free 7-11 GB per card: not enough for a sixth read |
+| Where the card-hours went (12 h to 17:40) | Computing 44 %, no work queued 41 %, a job on the card but the GPU idle 9 %, serial 6 % |
+
+Changes in 086c095f; the dispatcher was restarted at 17:55:51 and adopted 25 running and 31 queued jobs:
+- `ram_over` / `ram_stop`: while the margin is under 48 GiB, stop the job furthest above its `--ram` and requeue it once at its measured peak; rounds every 5 s while the margin is under 96 GiB.
+- History raises a key's RAM booking when its recorded peak broke the declaration.
+- A job whose child was SIGKILLed near the line is retried like a root kill.
+- `ws_override` starts a job only when it fits with all page cache dropped.
+
+At deploy time this changed nothing on the live queue: no job was above its declaration.
+
+After: one measurement at 18:08, 12 min after the restart:
+- 24 running and 10 queued. Nine GPU-ready jobs were held on RAM by the 85 % rule while a new wave of NR1FB10 reads started; one waited on `--after`.
+- Working set 253 GiB (margin 198). The peak since the restart was 352 GiB at 17:59, with 24 jobs and 336 GiB anon.
+- Load 89-94; 59 cores measured.
+- 22 launches, and no `ram_over`, `ram_stop`, `kill` or `ws_override` event.
+
+Concurrency is unchanged: the ceiling above still holds. What changed: a job that outgrows its declaration is now the one that gets stopped, and a read whose worker the platform kills is retried instead of failing its chain. On 2026-10-17 the kills cost about 90 training-minutes, five reads and two summary jobs.
+
+Open, for the user: a large CPU-only job that is held on RAM now waits for reads to drain (a 344 GiB build needs an almost
+empty box) and has no reservation. Per-kind history keys for reads would shorten burst holds: held 15, pub 20, static 10 and
+waiting-set 22 GiB peaks all share `alpasim-read4` and are booked at 25.2. The thread env should be pinned per lane at a lane boundary.
+
 Last verified: 2026-10-17

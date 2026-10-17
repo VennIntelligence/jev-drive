@@ -56,6 +56,18 @@ with a monitor, for looking at CARLA with your own eyes.
   - **Rule for lanes:** declare `--ram` = the job's peak private memory (a WOD eval with a TensorRT / ORT model:
     40; a `pp_train.py --host` training: 45; an AlpaSim stack: 52). An undeclared job counts as 8 GiB and is the one
     that gets its neighbours killed. Jobs outside the pool: check `cl top` for the margin first.
+  - **Who dies is not who grew.** The victim is the largest single process by RSS: an `rm_train` training (45-58 GB
+    of RSS, of which 6 GB anon: the rest is its memory-mapped token store) or an AlpaSim runtime worker (the read then
+    fails with rc 1, "Worker 0 died with exit code -9"), never a job that grew across 16-64 worker processes. Since
+    2026-10-17 the pool stops a job above its `--ram` when the margin is under 48 GiB, requeues it at its measured
+    peak, and retries reads whose worker was SIGKILLed near the line (closed-loop-runbook.md, "Memory: the kill line";
+    the incident: [speed.md](speed.md#ram-cpu-and-kills-2026-10-17-evening)).
+- **Thread env from the platform.** `/etc/profile.d/autodl.env.sh` exports `OMP_NUM_THREADS` = `MKL_NUM_THREADS` = the
+  instance's core quota (110 since 2026-10-17; it was 75 and 66 on earlier instances). Every login shell, tmux window, the
+  dispatcher and so every pool job inherit it unless a profile or the job's env sets it: a job pinned to 6 cores runs a
+  110-thread OpenMP pool (an `rm_train` process has 126 threads), and anything whose numerics depend on the thread
+  count (OpenBLAS / MKL reductions: NAVSIM scoring moved by <= 3e-11 between 1 and 75 threads) changes with the
+  instance size. Set the thread env in a lane's job env at a lane boundary (with a bit-identity check), not mid-lane.
   - `/proc/meminfo` is the host's (754 GiB for all tenants; this container's limit is 73 % of it), not the container's.
     `scripts/boxwatch.sh` writes memory, the two file lists and the three largest processes every 5 s to
     `$DATA_DIR/runs/boxwatch/`; the dispatcher keeps it running and `usage.jsonl` carries
@@ -88,4 +100,4 @@ with a monitor, for looking at CARLA with your own eyes.
 - Python: use `uv`, and create venvs under `~/data`.
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-10-14 (remote box configuration, 3-card instance); host memory 2026-10-10
+Last verified: 2026-10-14 (remote box configuration, 3-card instance); host memory and thread env 2026-10-17
