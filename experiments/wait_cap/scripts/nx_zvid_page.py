@@ -20,15 +20,16 @@ S = [
 ]
 
 
-def slow(f):
-    """Playback slow-down from the clip's frame rate and real duration: sparse decision clips (<= 5 fps) or short scenes (< 15 s) 3x, else 2x."""
+def speed(f):
+    """Fast-forward factor from the clip's frame rate and real duration: aim at ~30 fps (10 Hz -> 3x), never above 3x, and keep at least ~6 s
+    on screen so sparse short clips (2 Hz, 10 s -> 1.7x) do not flash by."""
     try:
         r, d = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate:format=duration",
                               "-of", "csv=p=0", str(f)], capture_output=True, text=True).stdout.split()
         n, m = r.split("/"); fps, dur = float(n) / float(m), float(d)
     except (ValueError, OSError):
-        return 3
-    return 3 if fps <= 5 or dur < 15 else 2
+        return 2.0
+    return round(max(1.0, min(3.0, 30.0 / fps, dur / 6.0)), 2)
 
 
 man, secs = [], []
@@ -37,10 +38,10 @@ for sid, log, cls, rsg, note in S:
     for t, lab in TAGS:
         f = D / f"{sid[:8]}_{t}.mp4"
         if f.exists():
-            k = slow(f)
-            man.append(dict(scene=sid, tag=t, file=f.name, mb=round(f.stat().st_size / 1e6, 1), slow=k))
-            cells.append(f'<figure><video src="{f.name}" data-rate="{1 / k:.4f}" autoplay muted loop playsinline controls preload="metadata"></video>'
-                         f'<figcaption>{lab}（放慢 {k}×）</figcaption></figure>')
+            k = speed(f)
+            man.append(dict(scene=sid, tag=t, file=f.name, mb=round(f.stat().st_size / 1e6, 1), speed=k))
+            cells.append(f'<figure><video data-src="{f.name}" data-rate="{k}" muted loop playsinline controls preload="none"></video>'
+                         f'<figcaption>{lab}（{k:g}× 快放）</figcaption></figure>')
         else:
             cells.append(f'<figure class="miss"><figcaption>{lab}：无视频</figcaption></figure>')
     secs.append(f'<section><h2>{sid[:8]} <small>{sid}</small></h2><p>日志：{log}</p>'
@@ -53,8 +54,16 @@ section{{border-top:1px solid #ccc;padding-top:.5em;margin-top:1.5em}}.miss{{col
 <h1>RTB1 四个臂共同新增的 7 个零分场景</h1>
 <p>held 460 @18 决策、单次读数（seed 0 为主）。这 7 个场景在 RTB1 的四个臂（a RTB1O-L18-s0、b RTB1N-L18-s0、c RTB1O-L18-s1、d RTB1OB1-L18-s1）里全部得零，
 而参照 RSG-L18（s0 / s1）都没有清零。每节并排放臂 a、RSG-L18-s0 和臂 d（另一基座种子）的回放（上为 BEV 与打分面板，下为前视相机，约 2 帧/秒、10 秒，每帧一个决策）；视频是用同一 sh30 路径加视频重跑得到的，不是原读数的录像。
-播放速度按帧率与实际时长放慢 2–3 倍（每段标注；本页的片段 2 帧/秒、10 秒，都是 3×）。先看零分发生的时刻，再看 RSG 在同一位置怎么处理。数字来源：<code>rtb_cont.md</code>、<code>rtb_cont/atfault.md</code>。</p>
+视频按帧率与实际时长快放（约 2–3 倍，低帧率短片段少一些，每段标注），滑到视野里才加载、播放，滑出即暂停。先看零分发生的时刻，再看 RSG 在同一位置怎么处理。数字来源：<code>rtb_cont.md</code>、<code>rtb_cont/atfault.md</code>。</p>
 {"".join(secs)}
-<script>document.querySelectorAll("video[data-rate]").forEach(v=>{{const r=+v.dataset.rate;const set=()=>{{v.defaultPlaybackRate=r;v.playbackRate=r;}};
-set();v.addEventListener("loadedmetadata",set);v.addEventListener("play",set);}});</script></body></html>''')
+<script>
+// Lazy: fetch a clip when it comes within one screen, play it only while half visible, pause when it leaves.
+const R = v => {{ const r = +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
+const near = new IntersectionObserver(es => es.forEach(e => {{ const v = e.target;
+  if (e.isIntersecting && !v.src) {{ v.src = v.dataset.src; v.preload = "auto"; v.addEventListener("loadedmetadata", () => R(v)); near.unobserve(v); }} }}),
+  {{ rootMargin: "100% 0px" }});
+const seen = new IntersectionObserver(es => es.forEach(e => {{ const v = e.target;
+  if (e.isIntersecting) {{ if (!v.src) {{ v.src = v.dataset.src; }} R(v); v.play().catch(() => {{}}); }} else v.pause(); }}), {{ threshold: 0.5 }});
+document.querySelectorAll("video[data-src]").forEach(v => {{ near.observe(v); seen.observe(v); }});
+</script></body></html>''')
 print(len(man), "videos", sum(m["mb"] for m in man), "MB")
