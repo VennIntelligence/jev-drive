@@ -179,10 +179,11 @@ def cmd_defer(a):
     cl = [str(REPO / ".venv/bin/python"), "-m", "jevdrive.cl"]
     q = subprocess.run(cl + ["queue"], capture_output=True, text=True, check=True).stdout.splitlines()
     pat = re.compile(r"^ar-read-(DD-sample|LTF-sample|starter|G0014)-c\d+$")
-    rows = [x.split() for x in q if len(x.split()) > 2]
-    queued = [r[0] for r in rows if r[1] == "queued" and pat.match(r[2])]
-    running = [r[0] for r in rows if r[1] == "running" and pat.match(r[2])]
-    sm = [r[0] for r in rows if r[2] == "ar-sum-all2" and r[1] == "queued"]
+    rows = [x.split() for x in q if len(x.split()) > 3]
+    nm = lambda r: r[3] if r[1] == "running" else r[2]  # noqa: E731  (a running row has its card column first)
+    queued = [r[0] for r in rows if r[1] == "queued" and pat.match(nm(r))]
+    running = [r[0] for r in rows if r[1] == "running" and pat.match(nm(r))]
+    sm = [r[0] for r in rows if r[1] == "queued" and nm(r) == "ar-sum-all2"]
     print(json.dumps(dict(queued=len(queued), running=running, summary=sm)))
     if a.dry:
         return
@@ -193,7 +194,7 @@ def cmd_defer(a):
     def resubmit(sp, after):
         f = ["submit", "--owner", sp["owner"], "--name", sp["name"], "--priority", f"{sp['priority']:g}", "--tries", str(sp["tries"]), "--no-check",
              "--log-dir", sp["log_dir"], "--vram", f"{sp['vram_gb']:g}", "--cpu", str(sp["cpu"]), "--ram", f"{sp['ram_gb']:g}",
-             "--timeout-h", f"{sp['timeout_h']:g}", "--after", ",".join(after)]
+             "--timeout-h", f"{sp['timeout_h']:g}", "--cwd", sp["cwd"], "--after", ",".join(after)]
         f += [x for k, v in sp["env"].items() for x in ("--env", f"{k}={v}")]
         out = subprocess.run(cl + f + ["--"] + sp["cmd"], capture_output=True, text=True, check=True, cwd=sp["cwd"]).stdout
         return out.split()[-1]
