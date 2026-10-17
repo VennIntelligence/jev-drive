@@ -8,6 +8,7 @@
 #                           summary job (compile_val.py summary) after every read
 # Out: $DATA_DIR/runs/cl_infra/compile/ (pool logs, pai/<tag>/, summary.{json,md}); repo experiments/cl_infra/results/compile_val.{json,md}
 # Env: PRIO (pool priority, default 9)
+export JEV_RM_EAGER=1   # rm_train compiles by default since 2026-10-17; these probes compare against eager explicitly
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 O=$DATA_DIR/runs/cl_infra/compile; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/cl_infra/scripts/compile_val.sh
 NX=experiments/wait_cap/scripts/nx.sh; NXP=experiments/wait_cap/scripts/nx.py; WT=experiments/wait_cap/scripts/wt.py

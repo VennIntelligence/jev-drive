@@ -8,6 +8,7 @@
 #   train_probe.sh multi <n> <steps> n copies of base at once on one card
 #   train_probe.sh syncs <steps>     base with the scalar-conversion (host sync) count of train_probe.py --syncs
 # Out: $DATA_DIR/runs/speed/train_probe/<mode>-<time>/ (<tag>.json per run, smi.csv = card util / memory every 2 s, bitcmp_*.json).
+export JEV_RM_EAGER=1   # rm_train compiles by default since 2026-10-17; these probes compare against eager explicitly
 set -u
 cd "$(dirname "$0")/../../.." || exit 1
 R=$PWD; TR=$DATA_DIR/envs/op-train/bin/python; RT=experiments/route_mem/scripts/rm_train.py; PR=$R/experiments/cl_infra/scripts/train_probe.py

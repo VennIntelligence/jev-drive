@@ -50,7 +50,7 @@ PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1"; PAIWIZ=controller.gains.rel_front
 mkdir -p $X/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner wait-next --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $X/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $X/jobs.txt; echo "$id"; }
-FW=(--train --vram 24 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train); FK=(--train --vram 28 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)   # FK: the second forwards of --kd-lam / --d2-lam;
+FW=(--train --vram 24 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1); FK=(--train --vram 28 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)   # FK: the second forwards of --kd-lam / --d2-lam;
 # one pool history key for every rm_train arm (per-arm names never reach 3 runs): booked at the measured ~3 GB RAM, not 70
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $X/jobs.txt; }

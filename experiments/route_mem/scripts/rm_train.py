@@ -169,7 +169,9 @@ Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-
   --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
             pattern): ~2x the steps per second on the RSG-L18 recipe. Not bit-identical to eager (fused fp16 kernels round differently;
             pp_train: compiled runs repeat each other). The second forwards (--kd-lam, --awr-lam, --d2-lam), dev eval and the reliance read stay eager.
-            Off (default): no operation is added.
+            Default ON for new lanes since 2026-10-17 (user decision; experiments/cl_infra/results/compile.md: dev / held / PAI within seed
+            noise, 1.7x wall). Lanes started before keep eager through JEV_RM_EAGER=1 in their pool --env (nx / wt / si / aw / rm_chain),
+            so no lane switches mid-way. --no-compile (or JEV_RM_EAGER=1): eager, no operation added, bit-identical to the old default.
 
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
@@ -182,7 +184,7 @@ Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R / "experiments/onpol_nuplan/scripts"), str(_R / "experiments/route_mem/lib")]
-import argparse, hashlib, json, time  # noqa: E401,E402
+import argparse, hashlib, json, os, time  # noqa: E401,E402
 from dataclasses import asdict  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -1175,7 +1177,8 @@ if __name__ == "__main__":
             p.add_argument(f"--lon-{t}", type=float, default=0.0, help=f"weight of on_lonsafe's {t} term on the pool rows (0 = off)")
         p.add_argument("--prefetch", type=int, default=4)
         p.add_argument("--fetch-workers", type=int, default=2)
-        p.add_argument("--compile", action="store_true", help="torch.compile of the main training forward: ~2x faster, not bit-identical to eager")
+        p.add_argument("--compile", action=argparse.BooleanOptionalAction, default=os.environ.get("JEV_RM_EAGER", "") in ("", "0"),
+                       help="torch.compile of the main training forward (default on since 2026-10-17; --no-compile or JEV_RM_EAGER=1 = eager)")
         p.add_argument("--dev-card-gb", type=float, default=4.0)
         p.add_argument("--rm-lr", type=float, default=3e-4)
         p.add_argument("--rm-warmup", type=int, default=100)

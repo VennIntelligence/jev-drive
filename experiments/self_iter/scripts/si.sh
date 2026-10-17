@@ -24,7 +24,7 @@ PAICH=$DATA_DIR/runs/alpasim/pai_box/tokyo/r281/rsg/chunks; PAISERVE="JEV_VCONT=
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner self-iter --name "$name" --tries 1 --priority ${PRIO:-9} --no-check \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
-FW=(--train --vram 28 --cpu 6 --ram 24 --env CL_HIST_KEY=rm-train)   # measured: RSG recipe 19 GB VRAM, 3 GB RSS; one pool history key for every rm_train arm
+FW=(--train --vram 28 --cpu 6 --ram 24 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)   # measured: RSG recipe 19 GB VRAM, 3 GB RSS; one pool history key for every rm_train arm
 csv() { local IFS=,; echo "$*"; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {if (i) print i; else exit 1}' $O/jobs.txt; }
 fresh() { for T in "$@"; do [[ ! -e $CK/$T/ckpt-final.pt ]] || { echo "$T exists" >&2; exit 1; }; done; }
