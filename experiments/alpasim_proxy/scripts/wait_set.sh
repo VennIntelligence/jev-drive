@@ -10,7 +10,7 @@
 #                                      outcome table $W/reads/<tag>/table/<tag>.csv. <tag>: a checkpoint in runs/op_parity/runs or P0
 #                                      (sh30, the public 10-decision read's driver path: run.sh sh30 + c0b_chain.OVERRIDES, as ol_chain.sh
 #                                      readlist; the only addition is the cache), starter (AlpaSim's go-straight starter kit) or replay
-#                                      (human replay: the starter kit under AlpaSim's +exp/sim=force_gt preset: the ego follows the log).
+#                                      (human replay: the starter kit with force-GT over the whole run: the ego takes the logged poses).
 #                                      Prints the job id. Env PRIO (default 9).
 #   wait_set.sh chain                  the first read: build -> starter + replay -> gate -> P0, RSG-L18-s0, RTB1ARO-L18-s0 -> report
 #   wait_set.sh gate                   job body: go-straight scores >= 0.99 on variant a and the replay >= 0.98 on a and b, else rc 1
@@ -24,6 +24,10 @@ DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 E=experiments/alpasim_proxy; S=$E/results/wait_set; W=$DATA_DIR/runs/alpasim_proxy/wait_set; C=$DATA_DIR/datasets/alpasim_nuplan_wait/v1
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; PY="$P $E/scripts/wait_set.py"; CK=$DATA_DIR/runs/op_parity/runs
 KEY=runtime.scene_provider.trajdata; CACHE=("$KEY.cache_location=$C")
+# human replay = the two effective settings of AlpaSim's exp/sim/force_gt preset (the preset itself names a controller config that
+# 0bb4c4b does not ship): force-GT over the whole run (the runtime then takes the logged poses, the controller response is ignored)
+# and no pre-engagement filtering in the aggregation
+REPLAY=(runtime.simulation_config.force_gt_duration_us=20000000 ++eval.aggregation_modifiers.remove_preengagement_timesteps=false)
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
 mkdir -p $W/pool
@@ -57,7 +61,7 @@ run)
   rm -rf "$D"; mkdir -p "$D"; L=${WS_LIST:-$S/set.txt}      # WS_LIST: a sub-list (smoke)
   case $T in
     starter) bash experiments/alpasim/scripts/run.sh "$D" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?" ;;
-    replay)  bash experiments/alpasim/scripts/run.sh "$D" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" +exp/sim=force_gt || die "run.sh rc $?" ;;
+    replay)  bash experiments/alpasim/scripts/run.sh "$D" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" "${REPLAY[@]}" || die "run.sh rc $?" ;;
     *)       env SH30_TAG=$T bash experiments/alpasim/scripts/run.sh "$D" sh30 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?" ;;
   esac
   $PY collect --set $S/set.json --run $D --label $T --out $(dirname $D)/table || die "collect rc $?"
@@ -86,7 +90,7 @@ sys.exit(0 if ok else 1)
 PY
   ;;
 chain)
-  b=$(bash $0 build) || exit 1
+  if [[ -f $C/check.json ]]; then b=""; else b=$(bash $0 build) || exit 1; fi
   s=$(bash $0 read starter $b) || exit 1; r=$(bash $0 read replay $b) || exit 1
   g=$(sub ws-gate --after $s,$r --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $E/scripts/wait_set.sh gate) || exit 1
   ids=(); for T in P0 RSG-L18-s0 RTB1ARO-L18-s0; do ids+=($(bash $0 read $T $g)) || exit 1; done
