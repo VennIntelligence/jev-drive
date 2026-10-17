@@ -6,8 +6,15 @@
 #   arena_hold.sh chain                      smoke (JEV_HOLD off + full on 12 held windows) -> gate -> one read job per (variant, chunk)
 #                                            after the gate -> one summary job. Env PRIO (10). Prints and appends the ids to $H/stages.txt
 #   arena_hold.sh read <variant> <chunk>     job body: one chunk with JEV_HOLD=<variant> (off = unset) -> $H/reads/<variant>/c<chunk>/run
-#   arena_hold.sh smokeread <variant>        job body: the smoke list -> $H/smoke/<variant>/run
+#   arena_hold.sh smokeread <variant> [list] job body: the smoke list (lists/<list>.txt, default smoke) -> $H/smoke/<variant>/run
 #   arena_hold.sh gate | sum                 job bodies: arena_hold.py gate; wait for every read job, collect, arena_hold.py report
+#                                            (sum: env VARIANTS, GATE = the gate's job name, OUT = the report dir, VS = a read to pair against too)
+# Supplement 2 (stop3 = leash3 + the stop leash, prereg supplement 2):
+#   arena_hold.sh diag                       by hand, seconds: arena_hold.py diag -> $H/diag.md (costs of leash3, the stop3 estimate) and
+#                                            the smoke list lists/smoke2.txt (+ .json with its shard)
+#   arena_hold.sh chain2                     smoke (stop3 on smoke2) -> gate2 -> one stop3 read per chunk -> summary into $H/report2
+#                                            (paired against leash3 and RSG). Env PRIO
+#   arena_hold.sh gate2                      job body: arena_hold.py gate2 on the stop3 smoke
 # The body is one function called on the last line.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
@@ -68,11 +75,26 @@ chain)
   q=$(sub ah-sum --tries 1 --vram 0.1 --cpu 4 --ram 16 --timeout-h 16 -- bash $E/scripts/arena_hold.sh sum) || exit 1
   echo "$(date '+%F %T') chain: smoke ${s[*]} gate $g, ${#ids[@]} reads, summary $q" | tee -a $H/stages.txt ;;
 smokeread)
-  V=$1; D=$H/smoke/$V/run; rm -rf $D
-  k=$(python3 -c "import json; print(json.load(open('$H/meta.json'))['smoke']['shard'])")
-  one_run $V $D $H/lists/smoke.txt $C/s$k ;;
+  V=$1; SL=${2:-smoke}; D=$H/smoke/$V/run; rm -rf $D
+  if [[ -f $H/lists/$SL.json ]]; then k=$(python3 -c "import json; print(json.load(open('$H/lists/$SL.json'))['shard'])")
+  else k=$(python3 -c "import json; print(json.load(open('$H/meta.json'))['smoke']['shard'])"); fi
+  one_run $V $D $H/lists/$SL.txt $C/s$k ;;
 gate)
   $PY gate --off $H/smoke/off/run --full $H/smoke/full/run --ref-reads $W/reads/$TAG --out $H/smoke/gate.txt ;;
+diag)
+  $PY diag --set $ST/set.csv.gz --corridor $W/corridor --hold $H --out $H/diag.md --smoke $H/lists/smoke2.txt ;;
+chain2)
+  [[ -f $H/lists/smoke2.txt ]] || die "diag first"
+  s=$(sub ah2-smoke-stop3 "${RD[@]}" -- bash $E/scripts/arena_hold.sh smokeread stop3 smoke2) || exit 1
+  g=$(sub ah2-gate --after $s --tries 1 --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $E/scripts/arena_hold.sh gate2) || exit 1
+  tid=()
+  while read -r c; do tid+=($(sub ah-read-stop3-c$c --after $g "${RD[@]}" -- bash $E/scripts/arena_hold.sh read stop3 $c)) || exit 1
+  done < <(python3 -c "import json; [print(c['chunk']) for c in json.load(open('$H/meta.json'))['chunks']]")
+  q=$(sub ah2-sum --after $g --tries 1 --vram 0.1 --cpu 4 --ram 16 --timeout-h 16 -- env VARIANTS=stop3 GATE=ah2-gate OUT=$H/report2 VS=leash3 \
+      bash $E/scripts/arena_hold.sh sum) || exit 1
+  echo "$(date '+%F %T') chain2 (supplement 2): smoke $s gate $g, reads stop3 ${tid[0]} .. ${tid[-1]} (${#tid[@]}), summary $q" | tee -a $H/stages.txt ;;
+gate2)
+  $PY gate2 --run $H/smoke/stop3/run --out $H/smoke/gate2.txt ;;
 read)
   V=$1; c=$2; D=$H/reads/$V/c$c/run
   [[ -f $D/aggregate/results-summary.json ]] && { echo "$D already read"; return 0; }
@@ -80,19 +102,19 @@ read)
   [[ -f $C/s$k/check.json ]] || die "shard $k not built"
   rm -rf $D; one_run $V $D $H/lists/c$c.txt $C/s$k ;;
 sum)
-  t0=$(date +%s); O=$H/report; mkdir -p $O
+  t0=$(date +%s); O=${OUT:-$H/report}; mkdir -p $O
   n=$(( $(python3 -c "import json; print(len(json.load(open('$H/meta.json'))['chunks']))") * $(echo $VARIANTS | wc -w) ))
   while :; do
     fin=0; for V in $VARIANTS; do for f in $H/pool/ah-read-$V-c*/STATUS; do [[ -f $f ]] || continue
       case "$(tail -1 $f)" in *": done"*|*": failed"*|*": cancel"*|*": skip"*|*": error"*) fin=$((fin+1));; esac; done; done
-    g=$(tail -1 $H/pool/ah-gate/STATUS 2>/dev/null)
+    g=$(tail -1 $H/pool/${GATE:-ah-gate}/STATUS 2>/dev/null)
     [[ $g == *": failed"* || $g == *": error"* || $g == *": cancel"* ]] && { echo "gate failed: $g"; break; }
     (( n - fin <= 0 )) && break; (( $(date +%s) - t0 > ${SUM_CAP:-54000} )) && { echo "cap reached: $((n - fin)) read jobs open"; break; }; sleep 300
   done
   for V in $VARIANTS; do for f in $H/pool/ah-read-$V-c*/STATUS; do tail -1 $f; done; done | grep -v ": done" | tee $O/not_done.txt
   $P $E/scripts/arena.py collect --reads $H/reads --out $O/rows.csv.gz || die "collect"
   $P $E/scripts/arena.py collect --reads $W/reads --out $O/ref_rows.csv.gz || die "collect ref"
-  $PY report --set $ST/set.csv.gz --hold $O --ref $O/ref_rows.csv.gz --out $O > $O/stdout.txt || die "report"
+  $PY report --set $ST/set.csv.gz --hold $O --ref $O/ref_rows.csv.gz --out $O ${VS:+--variants $VS $VARIANTS --vs $VS} > $O/stdout.txt || die "report"
   date '+%F %T' > $O/DONE ;;
 *) die "unknown stage $STAGE" ;;
 esac

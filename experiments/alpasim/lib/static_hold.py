@@ -17,6 +17,12 @@ plan cut at arc s_lim from the ego (poses beyond it collapse onto the point at s
                       seen while held that is no longer present. No lead ever seen = never released (first in line, parked)
   JEV_HOLD=leash<m>   s_lim = max(0, m - |ego - xy0|) for the whole session: the ego never gets farther than m metres from the latch point
                       (e.g. leash3: 3.0 m, 1 m inside the corridor's 4 m), but launches up to there with the model's plan
+  JEV_HOLD=stop<m>    leash<m>, and also a stop leash (arena prereg supplement 2): a session that is free at the handoff but braking hard
+                      enough to stop early in the window, i.e. a = (v - v_prev) / dt from the measured speeds of the previous and the
+                      handoff call is below -A_STOP and v / -a <= T_STOP, latches at the handoff with s_lim = max(0, v^2 / (-2 a) + m - |ego - xy0|):
+                      the human's constant-deceleration stop point plus the same m metres. A human who brakes to a stop turns the corridor into
+                      a 4 m disc around its rest point, and the model, which brakes later, overshoots it (arena held: 26 of the 34 corridor
+                      zeros that the static latch leaves). Sessions latched below V_LATCH are leash<m>'s, bit for bit
 Inputs are the driver's own: the measured ego speed and pose, the session clock, the model's plan and lead outputs (no log, no map).
 """
 from __future__ import annotations
@@ -26,18 +32,20 @@ import os
 import numpy as np
 
 _raw = (os.environ.get("JEV_HOLD", "") or "off").strip().lower()
-MODE, CAP = ("leash", float(_raw[5:])) if _raw.startswith("leash") else (_raw, 0.0)
-assert MODE in ("off", "full", "lead", "leash") and CAP >= 0, f"JEV_HOLD={_raw!r}: off | full | lead | leash<m>"
+MODE, CAP = next(((m, float(_raw[len(m):])) for m in ("leash", "stop") if _raw.startswith(m) and _raw != m), (_raw, 0.0))
+assert MODE in ("off", "full", "lead", "leash", "stop") and CAP >= 0, f"JEV_HOLD={_raw!r}: off | full | lead | leash<m> | stop<m>"
 ON, NEED_LEAD = MODE != "off", MODE == "lead"
 SUFFIX = f"-hold{_raw}" if ON else ""
 T_HAND = 0.5                                              # s: serve_fix.ACC_T_HAND_NUPLAN (nuPlan's handoff call)
 V_LATCH = 0.3                                             # m/s: ego speed at the handoff below which the hold latches
 REL_ARC = 2.0                                             # m: the model's 2 s arc that counts as "wants to move" (vhist.REL_ARC)
 V_LEAD_GO = 1.0                                           # m/s: a lead faster than this has moved
+A_STOP = 0.5                                              # m/s^2: stop<m>: deceleration at the handoff above which a stop is predicted
+T_STOP = 3.0                                              # s: stop<m>: ... if it comes within this time (v / -a), 2 s before the window ends
 
 
 def new(cam_to_front: float = 2.26) -> dict:
-    st = dict(t_first=None, state=None, xy0=None, seen=False, k=0)
+    st = dict(t_first=None, state=None, xy0=None, seen=False, k=0, cap=CAP, v_last=None, t_last=None)
     if NEED_LEAD:
         from serve_fix import LeadPlanner
         st["lp"] = LeadPlanner(cam_to_front)              # its probability filter only
@@ -72,9 +80,16 @@ def step(st: dict, poses, v: float, xy, t_us: int, o: dict | None = None) -> tup
     st["t_first"] = t_us if st["t_first"] is None else st["t_first"]
     t_s = (t_us - st["t_first"]) / 1e6
     xy = np.asarray(xy, np.float64)
+    stop = None
     if st["state"] is None and t_s >= T_HAND - 1e-6:
         st["state"], st["xy0"] = ("held" if v < V_LATCH else "free"), xy
-    info = dict(mode=MODE, t_s=round(t_s, 3), v=round(float(v), 3))
+        if MODE == "stop" and st["state"] == "free" and st["t_last"] is not None and t_s - st["t_last"] > 1e-3:
+            a = (v - st["v_last"]) / (t_s - st["t_last"])
+            if a < -A_STOP and v / -a <= T_STOP:
+                st["state"], st["cap"] = "held", CAP + v * v / (-2.0 * a)
+                stop = dict(stop_a=round(a, 3), stop_s=round(v * v / (-2.0 * a), 3), cap=round(st["cap"], 3))
+    st["v_last"], st["t_last"] = v, t_s
+    info = dict(mode=MODE, t_s=round(t_s, 3), v=round(float(v), 3), **(stop or {}))
     if NEED_LEAD and o is not None and "lead" in o:
         lp = st["lp"]
         lp.inside(v, o["lead"], o["lead_prob"], float(o["mu"][0, 3]))
@@ -90,7 +105,7 @@ def step(st: dict, poses, v: float, xy, t_us: int, o: dict | None = None) -> tup
     if st["state"] != "held":
         return poses, info
     d = float(np.hypot(*(xy - st["xy0"])))
-    s_lim = max(0.0, CAP - d) if MODE == "leash" else 0.0
+    s_lim = max(0.0, st["cap"] - d) if MODE in ("leash", "stop") else 0.0
     out = limit_arc(poses, s_lim)
     info.update(d0=round(d, 3), s_lim=round(s_lim, 3), arc_model=round(arc2(poses), 3), cut=out is not poses)
     return out, info

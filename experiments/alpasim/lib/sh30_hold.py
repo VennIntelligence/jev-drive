@@ -58,8 +58,8 @@ def install(log_dir: Path) -> None:
         return make0(t0, anchor, served)
 
     D.Driver.drive, D.C.Core.plan, D.make_cached_plan = drive, plan, make_cached_plan
-    D.LOG.info("serving JEV_HOLD=%s (lib/static_hold.py): latch below %g m/s at the %g s call, leash %g m, release arc %g m / lead %g m/s",
-               HD.MODE, HD.V_LATCH, HD.T_HAND, HD.CAP, HD.REL_ARC, HD.V_LEAD_GO)
+    D.LOG.info("serving JEV_HOLD=%s (lib/static_hold.py): latch below %g m/s at the %g s call, leash %g m, release arc %g m / lead %g m/s, "
+               "stop leash below %g m/s^2 within %g s", HD.MODE, HD.V_LATCH, HD.T_HAND, HD.CAP, HD.REL_ARC, HD.V_LEAD_GO, HD.A_STOP, HD.T_STOP)
 
 
 if __name__ == "__main__":

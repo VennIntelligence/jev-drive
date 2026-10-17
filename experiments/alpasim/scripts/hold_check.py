@@ -8,7 +8,10 @@ supplement 1). Box, repo root, envs/op-train (sh30_driver imports torch / grpc /
      bit-identical, the rest lie on the polyline at arc s_lim, and the served polyline's arc is s_lim
   3. step, per mode (module reloaded with JEV_HOLD set): pre-handoff calls unchanged; the latch at the 0.5 s call (held below 0.3 m/s,
      free above, free sessions bit-identical); full = every position at the origin; leash3 = arc cut to 3 - |ego - xy0|; lead = held until a
-     present lead moves (or a seen lead is gone) while the plan's 2 s arc >= 2 m, never released without a lead
+     present lead moves (or a seen lead is gone) while the plan's 2 s arc >= 2 m, never released without a lead; stop3 = leash3 on the
+     same random sessions (constant speed, so no stop latch)
+  4. stop3 (supplement 2): served poses bit-identical to leash3's on sessions with random speeds below 0.3 m/s at the handoff; at or above
+     it, a stop latch exactly when (v1 - v0) / 0.5 < -0.5 and v1 / -a <= 3, with s_lim = v1^2 / (-2a) + 3 - |ego - xy0|; free otherwise
   hold_check.py [--n 2000]
 """
 import argparse
@@ -73,7 +76,7 @@ def check_limit(n):
 def check_step(n):
     rng = np.random.default_rng(1)
     T = lambda k: 10**6 + 500_000 * k  # noqa: E731   decisions every 0.5 s; k = 1 is the handoff call
-    for mode in ("full", "leash3", "lead"):
+    for mode in ("full", "leash3", "lead", "stop3"):
         H = mod(mode)
         assert H.ON and H.SUFFIX == f"-hold{mode}"
         for _ in range(n // 10):
@@ -99,7 +102,7 @@ def check_step(n):
                     continue
                 if mode == "full" or (mode == "lead" and i["state"] == "held"):
                     assert i["state"] == "held" and np.all(Q[:, :2] == 0) and arc(Q)[-1] == 0 and Q.dtype == P.dtype
-                if mode == "leash3":
+                if mode in ("leash3", "stop3"):
                     lim = max(0.0, 3.0 - d)
                     assert arc(Q)[-1] <= lim + 1e-4 and (Q is P) == (arc(P)[-1] <= lim)
                 if mode == "lead" and i["state"] == "free":
@@ -114,11 +117,46 @@ def check_step(n):
         print(f"3 step {mode}: ok")
 
 
+def check_stop(n):
+    T = lambda k: 10**6 + 500_000 * k  # noqa: E731
+    run = {}
+    for mode in ("leash3", "stop3"):
+        H, rng, out = mod(mode), np.random.default_rng(2), []
+        for _ in range(n // 10):
+            v0, v1 = rng.uniform(0, 6), rng.choice([rng.uniform(0, 0.3), rng.uniform(0.3, 6)])
+            st, xy, seq = H.new(), rng.uniform(-50, 50, 2), []
+            for k in range(0, 11):
+                P = plan(rng, rng.uniform(0, 8))
+                d = 0.0 if k <= 1 else rng.uniform(0, 8)
+                Q, i = H.step(st, P, (v0, v1)[min(k, 1)] if k <= 1 else rng.uniform(0, 3), xy + d * np.array([np.cos(k), np.sin(k)]), T(k))
+                seq.append((Q is P, np.asarray(Q).copy(), i["state"], i.get("s_lim"), d, P))
+            out.append((v0, v1, seq))
+        run[mode] = out
+    ns = 0
+    for (v0, v1, a), (_, _, b) in zip(run["leash3"], run["stop3"]):
+        if v1 < 0.3:
+            assert all(x[0] == y[0] and np.array_equal(x[1], y[1]) and x[2] == y[2] for x, y in zip(a, b)), "stop3 differs from leash3 below 0.3"
+            continue
+        acc = (v1 - v0) / 0.5
+        hit = acc < -0.5 and v1 / -acc <= 3.0
+        ns += hit
+        for k, (same, Q, state, s_lim, d, P) in enumerate(b[1:], 1):
+            assert state == ("held" if hit else "free")
+            if not hit:
+                assert same
+                continue
+            lim = max(0.0, v1 * v1 / (-2 * acc) + 3.0 - d)
+            assert abs(s_lim - round(lim, 3)) < 2e-3 and arc(Q)[-1] <= lim + 1e-4 and same == (arc(P)[-1] <= lim)
+    assert ns > 0
+    print(f"4 stop3: identical to leash3 below 0.3 m/s; {ns} stop latches exactly where the rule says")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--n", type=int, default=2000)
     a = ap.parse_args()
     check_limit(a.n)
     check_step(a.n)
+    check_stop(a.n)
     check_off()
     print("hold_check: all checks passed")
