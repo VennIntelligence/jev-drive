@@ -52,29 +52,29 @@ Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plan
 [results/wait_set.md](results/wait_set.md); code `scripts/wait_set.py` (definitions in the docstring), `scripts/wait_set.sh`; the set
 `results/wait_set/set.json` (split `alpasim_nuplan/waitset@v1`), cache `$DATA_DIR/datasets/alpasim_nuplan_wait/v1` on the box.
 
-- **Set.** The 199 public scenes whose human starts from a standstill, with the trajdata window moved into the human's wait (same asset,
-  same scorer and serving): variant **a** = 147 windows where the human never moves (window ends 0.5 s before the movement onset), variant
-  **b** = 169 windows where the human starts moving at 3.0 s. Classes: red light first in line / queued, other with a lead / free (75-84
+- **Set (v2).** The 199 public scenes whose human starts from a standstill, with the trajdata window moved into the human's wait (same
+  asset, same scorer and serving): variant **a** = 146 windows where the human never moves (window ends 0.5 s before the movement onset),
+  variant **b** = 166 windows where the human starts moving at 3.0 s. Classes: red light first in line / queued, other with a lead / free (75-84
   each); 95 windows come from held-split scenes. Every window lies inside its reconstruction's camera video; 34 windows were dropped for an
-  undrawn vehicle in the ego's lane, 48 for a standstill too short.
+  undrawn vehicle in the ego's lane, 48 for a standstill too short, 4 (amendment 2) because every driver's rollout fails there.
 - **Read a tag:** `bash experiments/alpasim_proxy/scripts/wait_set.sh read <tag>` (one pool job, public 10-decision driver path + the cache),
   then `wait_set.sh report`.
-- **Validated before any model read:** the rebuilt cache equals the shipped one on all 171 source scenes' public windows; all 316 windows
-  pass the cached-track check; smoke (4 windows): go-straight and human replay 1.0, the replay launches 0.02-0.07 s after the human.
+- **Validated before any model read:** the rebuilt cache equals the shipped one on all 171 source scenes' public windows; all windows pass
+  the cached-track check; go-straight 0.993 on a (one window where its held handoff speed creeps it 3.1 m off the road) and 0.212 on b
+  (never launches); human replay 1.000 on a and b, launch within one 10 Hz step of the logged human (median -0.03 s).
 
-**Handoff (2026-10-17 15:48 CST; the agent ended before the reads, the main session collects).** One chain in the pool
-(`bash experiments/alpasim_proxy/scripts/wait_set.sh chain anchors`; ids in `$DATA_DIR/runs/alpasim_proxy/wait_set/{jobs.txt, stages.txt}`,
-logs `pool/<name>/`):
-- validation: `ws-read-starter` 1017-154757-5c1c, `ws-read-replay` 1017-154757-bf74 -> `ws-gate` 1017-154758-2d2f (go-straight >= 0.99 on
-  variant a, replay >= 0.98 on a and b; verdict in `wait_set/gate.txt`; a failed gate fails every read below);
-- reads after the gate: `ws-read-P0` 1017-154759-a61f, `ws-read-RSG-L18-s0` 1017-154759-83e1, `ws-read-RTB1ARO-L18-s0` 1017-154800-a9a6;
-  private anchors `ws-read-APY10m10-AB-s0` 1017-154800-3689 (ap2 driver), `ws-read-YR10m10-F-s0` 1017-154801-3e4e, `ws-read-LTF-sample`
-  1017-154801-8c82, `ws-read-DD-sample` 1017-154802-c808, `ws-read-G0014` 1017-154802-c336 (third-party drivers native, as their public
-  reads) -> `ws-report` 1017-154803-8789 over every read.
-- The first chain (15:23) died at 15:41: the platform SIGKILLed the runtime workers of both validation reads (and of the defect-fix read)
-  at the box's memory line; a 316-window runtime outgrew its 30 GB booking. A read now runs variant a and variant b as two runtimes of
-  about a public chunk each inside its one job, and a killed worker exits 137 so the pool retries it (logs of the dead jobs:
-  `pool/failed-1541/`).
+**Handoff (2026-10-17 16:49 CST; the agent ended before the reads, the main session collects).** Validation passed (gate on set v2:
+go-straight 0.993 on variant a, human replay 1.000 on a and b; `wait_set/gate.txt`). Reads in the pool, submitted by
+`bash experiments/alpasim_proxy/scripts/wait_set.sh models` (ids also in `$DATA_DIR/runs/alpasim_proxy/wait_set/{jobs.txt, stages.txt}`):
+- gate job 1017-164835-7969 (passed) -> `ws-read-P0` 1017-164835-39ce, `ws-read-RSG-L18-s0` 1017-164836-94a0, `ws-read-RTB1ARO-L18-s0`
+  1017-164836-3e95; private anchors `ws-read-APY10m10-AB-s0` 1017-164837-d360 (ap2 driver), `ws-read-YR10m10-F-s0` 1017-164837-933c,
+  `ws-read-LTF-sample` 1017-164838-76d2, `ws-read-DD-sample` 1017-164838-08d6, `ws-read-G0014` 1017-164839-a6e1 (third-party drivers
+  native, as their public reads) -> `ws-report` 1017-164839-7fc1 over every read.
+- History: the first chain (15:23) died when the platform SIGKILLed the 316-window runtimes at the box's memory line (a read now runs a and
+  b as two runtimes of a public chunk's size, and a killed worker exits 137 for the pool's kill retry); the second (15:48) validated but the
+  gate failed (go-straight on a 0.986): 4 windows fail before scoring for every driver, the replay included (route fold-back). Amendment 2
+  dropped them: set v2 = 312 windows (146 a, 166 b), split `alpasim_nuplan/waitset@v2`. Tables of v1 reads (316 rows, e.g. defect-fix's
+  first reads) hold those 4 zeros: filter by `results/wait_set/set.txt` (report and gate do).
 
 Collect (box, repo root): `bash experiments/alpasim_proxy/scripts/wait_set.sh report` -> `wait_set/report/{tables.md, all.csv}` (per tag and
 variant: score, zeros by type, roll while the human waits, wait success, b: early / never / launch delay; by class; held-only; paired

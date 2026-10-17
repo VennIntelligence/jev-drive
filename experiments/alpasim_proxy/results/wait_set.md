@@ -42,6 +42,28 @@ Validation before any model read: the rebuilt cache equals the shipped one on al
 all 316 cached windows pass the track check (a: ego displacement <= 0.28 m; b: <= 0.38 m before the onset); smoke on 4 windows: go-straight
 and human replay 1.0, the replay passes 1 m/s 0.02-0.07 s after the logged human.
 
+Amendment 2 (before any model read): the full validation found 4 windows (1 a, 3 b) whose rollout fails before scoring for every driver,
+the human replay included (the runtime's route sanity check, "route folds back on itself", as in the 12 public route-fold scenes); they
+were dropped: set v2 = 312 windows (146 a, 166 b) from 168 source scenes, split `alpasim_nuplan/waitset@v2`.
+
+## Validation (set v2, before any model read)
+
+| arm | variant | n | score | zeros | roll while the human waits: median / p90 / max m | launch: never / median delay |
+|:--|:--|--:|--:|--:|:--|:--|
+| go-straight (starter kit) | a | 146 | 0.993 | 1 (offroad) | 0.003 / 0.28 / 3.12 | |
+| go-straight (starter kit) | b | 166 | 0.212 | 0 | 0.006 / 0.26 / 1.59 | 166 / - |
+| human replay (force-GT whole run) | a | 146 | 1.000 | 0 | 0.008 / 0.07 / 0.33 | |
+| human replay (force-GT whole run) | b | 166 | 1.000 | 0 | 0.22 / 0.24 / 0.47 | 5 / -0.03 s |
+
+- Gate (go-straight >= 0.99 on a, replay >= 0.98 on a and b): PASS. The one go-straight zero is a window where the starter kit holds the
+  small speed it measures at the hand-over and creeps 3.1 m off the road (11 of 146 a windows show > 0.5 m of such creep); the replay is
+  fine there.
+- The replay's b roll (0.22 m) is the human's own creep inside the 0.25 m rest radius before the onset: the floor for "roll while the human
+  waits" in b. Its launch delay (median -0.03 s, p90 +0.02 s) is the resolution of the delay metric (10 Hz controller trace against the
+  20 Hz log); 5 b windows have a human who stays under 1 m/s (no launch reference).
+- Variant b's score barely punishes a late launch (go-straight never launches and still has no zero; 31 windows have a human path < 5 m):
+  read b by launch delay and early launches, a by zeros and roll.
+
 ## Reads
 
 In the pool (job ids and the collect / anchor-check commands: the WAIT-SET handoff in [../README.md](../README.md)). Gate: go-straight
