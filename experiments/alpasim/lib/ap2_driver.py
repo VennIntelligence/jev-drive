@@ -50,7 +50,7 @@ class Driver(D.Driver):
         t_in = time.perf_counter()
         with s.lock:
             s.count["drive"] += 1
-            s.t_first = getattr(s, "t_first", now)
+            s.t_first = now if getattr(s, "t_first", None) is None else s.t_first      # sh30_driver's Session now starts it at None (JEV_ACC)
             ts = [t for t in s.poses if t <= now and t in s.frames]
             t0 = max(ts) if ts else None
             if t0 is None or now - t0 > D.TOL_US:
