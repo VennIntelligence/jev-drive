@@ -1,0 +1,385 @@
+{
+ "reads": {
+  "NR1HV2-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 51,
+    "mean": 0.8520055601011852,
+    "progress_rel": 0.8293538900273898,
+    "at_fault": 6,
+    "offroad": 26,
+    "coll": {
+     "front": 3,
+     "lateral": 3,
+     "rear": 27
+    },
+    "creep": 11,
+    "no_launch": 0,
+    "lat_zeros": 40,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": -0.01356475064856388,
+      "lo": -0.033619995262693776,
+      "hi": 0.01635774320232794,
+      "zeros": 51,
+      "zeros_ref": 34,
+      "scenes": 460
+     },
+     "NR1F-L18-s0": {
+      "n": 460,
+      "mean": -0.028009683674239425,
+      "lo": -0.04600592604982952,
+      "hi": -0.015748354984164995,
+      "zeros": 51,
+      "zeros_ref": 39,
+      "scenes": 460
+     },
+     "NR1HV-L18-s0": {
+      "n": 460,
+      "mean": -0.028155379386340846,
+      "lo": -0.046250739368791406,
+      "hi": -0.013631001635361784,
+      "zeros": 51,
+      "zeros_ref": 37,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": null,
+   "static": {
+    "score": 1.0,
+    "dist": 1.1377233316711748,
+    "collision": false,
+    "min_gap": 0.8885643796806024
+   },
+   "stop17": null,
+   "W": 0.03916666666666667,
+   "G": 1.0
+  },
+  "NR1HV2-L18-s1": {
+   "held": {
+    "scenes": 460,
+    "zeros": 52,
+    "mean": 0.8527668376905866,
+    "progress_rel": 0.829709313508716,
+    "at_fault": 7,
+    "offroad": 23,
+    "coll": {
+     "front": 4,
+     "lateral": 3,
+     "rear": 28
+    },
+    "creep": 8,
+    "no_launch": 0,
+    "lat_zeros": 40,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": -0.012803473059162516,
+      "lo": -0.031636401346372814,
+      "hi": 0.015298580363064508,
+      "zeros": 52,
+      "zeros_ref": 34,
+      "scenes": 460
+     },
+     "NR1F-L18-s1": {
+      "n": 460,
+      "mean": -0.025764796669333186,
+      "lo": -0.054827079461520226,
+      "hi": -0.0018561314304243633,
+      "zeros": 52,
+      "zeros_ref": 41,
+      "scenes": 460
+     },
+     "NR1HV-L18-s1": {
+      "n": 460,
+      "mean": -0.03218038758995642,
+      "lo": -0.052011731630008384,
+      "hi": -0.007250574057616617,
+      "zeros": 52,
+      "zeros_ref": 37,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": null,
+   "static": {
+    "score": 1.0,
+    "dist": 0.7946337381896496,
+    "collision": false,
+    "min_gap": 1.2345894697631234
+   },
+   "stop17": null,
+   "W": 0.037083333333333336,
+   "G": 1.0
+  },
+  "RSG-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 34,
+    "mean": 0.8655703107497491,
+    "progress_rel": 0.7875651019562819,
+    "at_fault": 4,
+    "offroad": 17,
+    "coll": {
+     "front": 4,
+     "lateral": 0,
+     "rear": 38
+    },
+    "creep": 7,
+    "no_launch": 0,
+    "lat_zeros": 22,
+    "pair": {}
+   },
+   "pub": {
+    "scenes": 1491,
+    "zeros": 58,
+    "mean": 0.939714647079603,
+    "progress_rel": 0.8496561745904841,
+    "at_fault": 8,
+    "offroad": 31,
+    "coll": {
+     "front": 6,
+     "lateral": 2,
+     "rear": 18
+    },
+    "creep": 17,
+    "no_launch": 0,
+    "lat_zeros": 40,
+    "pair": {}
+   },
+   "static": null,
+   "stop17": null,
+   "W": 0.005,
+   "G": 1.0
+  },
+  "NR1F-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 39,
+    "mean": 0.8800152437754246,
+    "progress_rel": 0.8322711220243109,
+    "at_fault": 5,
+    "offroad": 19,
+    "coll": {
+     "front": 4,
+     "lateral": 1,
+     "rear": 29
+    },
+    "creep": 7,
+    "no_launch": 0,
+    "lat_zeros": 28,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.014444933025675542,
+      "lo": -0.0020597572518054963,
+      "hi": 0.041520320915932905,
+      "zeros": 39,
+      "zeros_ref": 34,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": {
+    "scenes": 1491,
+    "zeros": 57,
+    "mean": 0.9429478435660077,
+    "progress_rel": 0.8700453601246642,
+    "at_fault": 2,
+    "offroad": 31,
+    "coll": {
+     "front": 1,
+     "lateral": 1,
+     "rear": 14
+    },
+    "creep": 17,
+    "no_launch": 1,
+    "lat_zeros": 45,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 1491,
+      "mean": 0.0032331964864047032,
+      "lo": -0.0052423120395516465,
+      "hi": 0.011340710529930968,
+      "zeros": 57,
+      "zeros_ref": 58,
+      "scenes": 1491
+     }
+    }
+   },
+   "static": {
+    "score": 1.0,
+    "dist": 0.8540882947450006,
+    "collision": false,
+    "min_gap": 1.1751262903897464
+   },
+   "stop17": {
+    "zeros": 16,
+    "n": 17
+   },
+   "W": 0.07916666666666666,
+   "G": 0.9979123173277662
+  },
+  "NR1F-L18-s1": {
+   "held": {
+    "scenes": 460,
+    "zeros": 41,
+    "mean": 0.8785316343599198,
+    "progress_rel": 0.836110025182088,
+    "at_fault": 5,
+    "offroad": 20,
+    "coll": {
+     "front": 5,
+     "lateral": 0,
+     "rear": 27
+    },
+    "creep": 8,
+    "no_launch": 0,
+    "lat_zeros": 28,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.01296132361017066,
+      "lo": -0.007458002879770107,
+      "hi": 0.04042935805912912,
+      "zeros": 41,
+      "zeros_ref": 34,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": {
+    "scenes": 1491,
+    "zeros": 57,
+    "mean": 0.9436475785396473,
+    "progress_rel": 0.8719621311154861,
+    "at_fault": 1,
+    "offroad": 31,
+    "coll": {
+     "front": 1,
+     "lateral": 0,
+     "rear": 16
+    },
+    "creep": 18,
+    "no_launch": 2,
+    "lat_zeros": 45,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 1491,
+      "mean": 0.00393293146004427,
+      "lo": -0.004374848269070335,
+      "hi": 0.012658455897310166,
+      "zeros": 57,
+      "zeros_ref": 58,
+      "scenes": 1491
+     }
+    }
+   },
+   "static": {
+    "score": 1.0,
+    "dist": 1.0785030505245008,
+    "collision": false,
+    "min_gap": 0.9492967015538768
+   },
+   "stop17": {
+    "zeros": 16,
+    "n": 17
+   },
+   "W": 0.06791666666666667,
+   "G": 0.9979123173277662
+  },
+  "NR1HV-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 37,
+    "mean": 0.880160939487526,
+    "progress_rel": 0.8312861647168523,
+    "at_fault": 5,
+    "offroad": 16,
+    "coll": {
+     "front": 4,
+     "lateral": 1,
+     "rear": 31
+    },
+    "creep": 9,
+    "no_launch": 0,
+    "lat_zeros": 25,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.01459062873777697,
+      "lo": 0.0006440598818894771,
+      "hi": 0.040839992848383015,
+      "zeros": 37,
+      "zeros_ref": 34,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": null,
+   "static": {
+    "score": 1.0,
+    "dist": 1.3274208727250925,
+    "collision": false,
+    "min_gap": 0.6924834075389471
+   },
+   "stop17": null,
+   "W": 0.04541666666666667,
+   "G": 1.0
+  },
+  "NR1HV-L18-s1": {
+   "held": {
+    "scenes": 460,
+    "zeros": 37,
+    "mean": 0.884947225280543,
+    "progress_rel": 0.8345595326071068,
+    "at_fault": 6,
+    "offroad": 14,
+    "coll": {
+     "front": 5,
+     "lateral": 1,
+     "rear": 25
+    },
+    "creep": 9,
+    "no_launch": 0,
+    "lat_zeros": 24,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.0193769145307939,
+      "lo": 0.005665881290942603,
+      "hi": 0.03742533638334846,
+      "zeros": 37,
+      "zeros_ref": 34,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": null,
+   "static": {
+    "score": 0.0,
+    "dist": 2.378392981928016,
+    "collision": true,
+    "min_gap": 0.0
+   },
+   "stop17": null,
+   "W": 0.03875,
+   "G": 1.0
+  }
+ },
+ "gate": {
+  "NR1HV2-L18-s0": {
+   "zeros_le_29": false,
+   "ci_lo_gt0": false,
+   "static_no_contact": true
+  },
+  "NR1HV2-L18-s1": {
+   "zeros_le_29": false,
+   "ci_lo_gt0": false,
+   "static_no_contact": true
+  }
+ },
+ "passed": false
+}
