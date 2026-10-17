@@ -531,6 +531,16 @@ def one(job):
     return row, rows, trace, bev
 
 
+def one_cached(job):
+    """one() with its result kept in DIR/geo_cache (a rerun resumes: a worker killed mid-run breaks the whole process pool)."""
+    f = Path(job[0]) / f"{job[1]}__{job[2]}__{job[4]}.pkl"
+    if f.exists():
+        return pickle.load(open(f, "rb"))
+    v = one(job[1:])
+    pickle.dump(v, open(f, "wb"), protocol=4)
+    return v
+
+
 def geo(a):
     import pandas as pd
     import ev as EV  # noqa: F401
@@ -540,7 +550,8 @@ def geo(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
     out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
+    cache = out / "geo_cache"
+    cache.mkdir(parents=True, exist_ok=True)
     held = splits.load("alpasim_nuplan/onpol-held")
     with Run("wait_cap", "explore_g_geo", config=vars(a)) as run:
         run.use_split(held)
@@ -556,12 +567,13 @@ def geo(a):
                             continue
                         for r in rr:
                             r.pop("ms", None), r.pop("hist", None)
-                        jobs.append((st_, lab, D, sc, rr, summ[sc][1]))
+                        jobs.append((str(cache), st_, lab, D, sc, rr, summ[sc][1]))
                         n += 1
                 run.info(f"{st_} {lab}: {n} rollouts from {len(dirs)} dirs")
-        res = par.pmap(one, jobs, run=run, workers=min(a.workers or n_cpus(), len(jobs)), desc="rollouts")
-        err = {jobs[i][1] + " " + jobs[i][3]: str(e)[-300:] for i, e in res.errors.items()}
+        res = par.pmap(one_cached, jobs, run=run, workers=min(a.workers or n_cpus(), len(jobs)), desc="rollouts")
+        err = {jobs[i][2] + " " + jobs[i][4]: str(e)[-300:] for i, e in res.errors.items()}
         run.info(f"{len(err)} rollouts failed: {list(err.items())[:3]}")
+        assert not any("BrokenProcessPool" in e for e in err.values()), "a worker died (rerun resumes from geo_cache)"
         V = [v for v in res.values if v is not None]
         pd.DataFrame([v[0] for v in V]).to_parquet(out / "scenes.parquet", index=False)
         pd.DataFrame([d for v in V for d in v[1]]).to_parquet(out / "dec.parquet", index=False)
