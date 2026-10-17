@@ -34,7 +34,8 @@ if __name__ == "__main__":
     pat.write_text(json.dumps(S))
     for t in a.tags:
         run = W / t / "run"
-        if not (run / "aggregate/results-summary.json").exists():
+        dirs = [run / v for v in ("a", "b")]                                  # wait_set.sh run: variant a, then b, each its own runtime dir
+        if not all((d / "aggregate/results-summary.json").exists() for d in dirs):
             print(t, "no finished run", flush=True)
             continue
-        WSM.cmd_collect(argparse.Namespace(set=str(pat), run=str(run), label=t, out=str(W / t / "table")))
+        WSM.cmd_collect(argparse.Namespace(set=str(pat), run=[str(d) for d in dirs], label=t, out=str(W / t / "table")))
