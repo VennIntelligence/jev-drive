@@ -10,8 +10,9 @@ in it (experiments/wait_cap/results/next/census_red_rear.md section 4; decision 
                                                  experiments/alpasim_long/scripts/build_cache.py builds it (AlpaSim's own config -> params ->
                                                  UnifiedDataset, vehicles only, prebuilt maps symlinked); only central_tokens_config differs
   $P wait_set.py check --set F --cache DIR     the cached ego track of every window against the set (static / onset), -> DIR/check.json
-  $P wait_set.py collect --set F --run D --label L --out DIR   per-window outcome of one read (score, zero type, roll, launch)
+  $P wait_set.py collect --set F --run D [D ...] --label L --out DIR   per-window outcome of one read (score, zero type, roll, launch)
   wait_set.py report --set F --in DIR [DIR ...] --out <md> [--csv <csv>]   (Mac or box) tables of results/wait_set.md
+  wait_set.py anchors --csv <report all.csv> --out <md>   public score + variant-a zeros against the private anchors (Kendall tau, fits)
 
 Definitions (fixed before any model read):
   frames      raw lidar_pc rows of a log ordered by timestamp (20 Hz), trajdata's order. A scene <log>-<token> covers frames
@@ -367,9 +368,8 @@ def cmd_collect(a):
     import polars as pl
     S = json.load(open(a.set))
     W = {w["id"]: w for w in S["windows"]}
-    summ = json.load(open(Path(a.run) / "aggregate/results-summary.json"))
     out, seen = [], set()
-    for r in summ["rollouts"]:
+    for run, r in [(d, r) for d in a.run for r in json.load(open(Path(d) / "aggregate/results-summary.json"))["rollouts"]]:
         sid = r["clipgt_id"]
         if sid not in W or sid in seen:
             continue
@@ -383,7 +383,7 @@ def cmd_collect(a):
         row = dict(label=a.label, id=sid, variant=w["variant"], src=w["src"], split=w["split"], cls=w["cls"], score=sc, zero=z,
                    fail=r.get("failure_reason"), rear=(m.get("collision_rear") or 0) > 0, driven_m=m.get("dist_traveled_m"),
                    gt_m=m.get("gt_dist_traveled_m"))
-        f = Path(a.run) / f"controller/alpasim_controller_{r['rollout_id']}.csv"
+        f = Path(run) / f"controller/alpasim_controller_{r['rollout_id']}.csv"
         if f.exists():
             t, xy, v = ctrl(f)
             disp = np.hypot(*(xy - xy[0]).T)
@@ -399,7 +399,7 @@ def cmd_collect(a):
                 row["early"] = row["launch_s"] is not None and row["launch_s"] < t_on
                 row["disp_end"] = float(disp[-1])
             row["wait_ok"] = bool(row["roll_m"] <= WAIT_OK and z is None)
-        mp = sorted(glob.glob(f"{a.run}/rollouts/{sid}/*/metrics.parquet"))
+        mp = sorted(glob.glob(f"{run}/rollouts/{sid}/*/metrics.parquet"))
         if mp:   # first onset of each event series (scene time, s)
             M = pl.read_parquet(mp[0], columns=["name", "timestamps_us", "values"]).filter(pl.col("values") > 0)
             for n in ("collision_front", "collision_lateral", "collision_rear", "offroad", "left_corridor_laterally"):
@@ -492,6 +492,66 @@ def cmd_report(a):
     print("\n".join(L))
 
 
+# private board anchors (results/leaderboard_nuplan_20261012.json; public = all 1491 scenes, decision 262; go-straight public = the
+# 300-scene log-stratified sample of decision 325's N1, 0.522)
+ANCHORS = {"APY10m10-AB-s0": (0.935, 0.640), "YR10m10-F-s0": (0.925, 0.800), "LTF-sample": (0.824, 0.738), "DD-sample": (0.797, 0.772),
+           "G0014": (0.740, 0.848), "starter": (0.522, 0.799)}
+
+
+def ktau(x, y):
+    """Kendall tau-b."""
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    c = d = tx = ty = 0
+    for i in range(len(x)):
+        for j in range(i + 1, len(x)):
+            sx, sy = np.sign(x[i] - x[j]), np.sign(y[i] - y[j])
+            tx += sx == 0
+            ty += sy == 0
+            c += sx * sy > 0
+            d += sx * sy < 0
+    n0 = len(x) * (len(x) - 1) / 2
+    return float((c - d) / np.sqrt((n0 - tx) * (n0 - ty)))
+
+
+def cmd_anchors(a):
+    """Does public score + the wait set's variant-a zeros order the private anchors? Two one-parameter fits over the anchors read:
+    linear  private = public - k * z_a            (z_a = share of variant-a windows scored 0, failures included)
+    mixture private = (1 - p) * public + p * s_a  (s_a = variant-a mean score = 1 - z_a; p = the share of waiting windows on private)
+    each with its in-sample and leave-one-anchor-out predictions and Kendall tau-b against private."""
+    import pandas as pd
+    R = pd.read_csv(a.csv)
+    rows = []
+    for lab, (pub, prv) in ANCHORS.items():
+        x = R[(R.label == lab) & (R.variant == "a")]
+        y = R[(R.label == lab) & (R.variant == "b")]
+        if len(x):
+            rows.append(dict(anchor=lab, private=prv, public=pub, n_a=len(x), z_a=float((x.score == 0).mean()), s_a=float(x.score.mean()),
+                             s_b=float(y.score.mean()) if len(y) else np.nan, early_b=float(y.early.mean()) if len(y) else np.nan))
+    T = pd.DataFrame(rows)
+    if len(T) < 3:
+        sys.exit(f"only {len(T)} anchors read")
+    fk = lambda t: float((t.z_a * (t.public - t.private)).sum() / max((t.z_a ** 2).sum(), 1e-12))      # noqa: E731
+    fp = lambda t: float(((t.s_a - t.public) * (t.private - t.public)).sum() / max(((t.s_a - t.public) ** 2).sum(), 1e-12))  # noqa: E731
+    k, p = fk(T), fp(T)
+    T["pred_lin"] = T.public - k * T.z_a
+    T["pred_mix"] = (1 - p) * T.public + p * T.s_a
+    T["loo_lin"] = [T.public[i] - fk(T.drop(i)) * T.z_a[i] for i in T.index]
+    T["loo_mix"] = [(1 - (q := fp(T.drop(i)))) * T.public[i] + q * T.s_a[i] for i in T.index]
+    taus = {c: ktau(T[c], T.private) for c in ("public", "s_a", "pred_lin", "pred_mix", "loo_lin", "loo_mix")}
+    L = [f"Anchors read: {len(T)}; fitted k = {k:.3f} (linear), p = {p:.3f} (mixture).\n",
+         "| anchor | private | public | n a | zero rate a | score a | score b | early b | pred linear | pred mixture | LOO linear | LOO mixture |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for _, r in T.sort_values("private", ascending=False).iterrows():
+        L.append(f"| {r.anchor} | {r.private:.3f} | {r.public:.3f} | {r.n_a} | {r.z_a:.3f} | {r.s_a:.3f} | {r.s_b:.3f} | {r.early_b:.3f} | "
+                 f"{r.pred_lin:.3f} | {r.pred_mix:.3f} | {r.loo_lin:.3f} | {r.loo_mix:.3f} |")
+    L += ["", "Kendall tau-b against private: " + ", ".join(f"{c} {v:+.2f}" for c, v in taus.items()),
+          f"Mean abs error: linear {np.abs(T.pred_lin - T.private).mean():.3f}, mixture {np.abs(T.pred_mix - T.private).mean():.3f}, "
+          f"LOO linear {np.abs(T.loo_lin - T.private).mean():.3f}, LOO mixture {np.abs(T.loo_mix - T.private).mean():.3f}, "
+          f"public alone {np.abs(T.public - T.private).mean():.3f}"]
+    Path(a.out).write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -505,12 +565,15 @@ if __name__ == "__main__":
     p.add_argument("--set", required=True), p.add_argument("--cache", required=True)
     p.set_defaults(fn=cmd_check)
     p = sub.add_parser("collect")
-    p.add_argument("--set", required=True), p.add_argument("--run", required=True), p.add_argument("--label", required=True)
+    p.add_argument("--set", required=True), p.add_argument("--run", nargs="+", required=True), p.add_argument("--label", required=True)
     p.add_argument("--out", required=True)
     p.set_defaults(fn=cmd_collect)
     p = sub.add_parser("report")
     p.add_argument("--set"), p.add_argument("--in", dest="inp", nargs="+", required=True), p.add_argument("--out", required=True)
     p.add_argument("--csv"), p.add_argument("--order", default="starter,replay,P0,RSG-L18-s0,RTB1ARO-L18-s0"), p.add_argument("--pairs", nargs="*")
     p.set_defaults(fn=cmd_report)
+    p = sub.add_parser("anchors")
+    p.add_argument("--csv", required=True, help="all.csv of wait_set.sh report"), p.add_argument("--out", required=True)
+    p.set_defaults(fn=cmd_anchors)
     a = ap.parse_args()
     sys.exit(a.fn(a) or 0)

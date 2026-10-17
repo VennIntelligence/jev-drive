@@ -1,27 +1,30 @@
 #!/usr/bin/env bash
 # WAIT-SET (results/wait_set.md, scripts/wait_set.py): the local closed-loop set where the logged human waits at standstill, and its reads.
-# Box, repo root. Every GPU job goes through the pool; stages are chained with --after.
+# Box, repo root. Every GPU job goes through the pool; stages are chained with --after. The body is one function called on the last line,
+# so editing this file never changes what a running job executes.
 #   wait_set.sh select                 CPU, ~1 min: windows from the raw logs (wait_set.py select) -> $W/select/<ts>/; then copy
 #                                      set.json / set.txt / controls.txt / cands.csv to results/wait_set/ (the repo copy is the set)
 #   wait_set.sh build [after]          pool CPU job: the cache $C from results/wait_set/set.json, the control check (the source scenes'
 #                                      public windows against the shipped cache: build_cache.py compare, exact on every control) and
 #                                      wait_set.py check
-#   wait_set.sh read <tag> [after]     ONE COMMAND PER ARM: one pool job reads the whole set (variants a + b) with <tag> and writes the
-#                                      outcome table $W/reads/<tag>/table/<tag>.csv. <tag>: a checkpoint in runs/op_parity/runs or P0
-#                                      (sh30, the public 10-decision read's driver path: run.sh sh30 + c0b_chain.OVERRIDES, as ol_chain.sh
-#                                      readlist; the only addition is the cache), starter (AlpaSim's go-straight starter kit) or replay
-#                                      (human replay: the starter kit with force-GT over the whole run: the ego takes the logged poses).
-#                                      Third-party anchors (alpasim_proxy decision 262, run natively as their public reads): LTF-sample
-#                                      (run.sh ltf), DD-sample (run.sh dd), G0014 (run.sh garage). WS_DRIVER=ap2: the checkpoint through
-#                                      the AP2 driver (APY10m10-AB-s0). Prints the job id. Env PRIO (default 9).
+#   wait_set.sh read <tag> [after]     ONE COMMAND PER ARM: one pool job reads the whole set (variant a, then variant b: two runs of about a
+#                                      public chunk each, so the runtime stays at a public read's memory) with <tag> and writes the outcome
+#                                      table $W/reads/<tag>/table/<tag>.csv. <tag>: a checkpoint in runs/op_parity/runs or P0 (sh30, the
+#                                      public 10-decision read's driver path: run.sh sh30 + c0b_chain.OVERRIDES, as ol_chain.sh readlist;
+#                                      the only addition is the cache), starter (AlpaSim's go-straight starter kit) or replay (human replay:
+#                                      the starter kit with force-GT over the whole run: the ego takes the logged poses). Third-party
+#                                      anchors (alpasim_proxy decision 262, run natively as their public reads): LTF-sample (run.sh ltf),
+#                                      DD-sample (run.sh dd), G0014 (run.sh garage). WS_DRIVER=ap2: the checkpoint through the AP2 driver
+#                                      (APY10m10-AB-s0). Prints the job id. Env PRIO (default 9).
 #   wait_set.sh anchors [after]        the five private anchors (APY10m10-AB-s0 via ap2, YR10m10-F-s0, LTF-sample, DD-sample, G0014), one
 #                                      job each, then a report job over every read
-#   wait_set.sh chain                  the first read: build -> starter + replay -> gate -> P0, RSG-L18-s0, RTB1ARO-L18-s0 -> report
+#   wait_set.sh chain [anchors]        build (if needed) -> starter + replay -> gate -> P0, RSG-L18-s0, RTB1ARO-L18-s0 (+ the anchors) -> report
 #   wait_set.sh gate                   job body: go-straight scores >= 0.99 on variant a and the replay >= 0.98 on a and b, else rc 1
 #                                      (a failed gate fails every read chained after it)
 #   wait_set.sh report [tag ...]       job body / by hand: tables of every read (or the tags) -> $W/report/{tables.md, all.csv}
 #   wait_set.sh smoke <tag> [n] [after] the first n windows of each variant (default 2) -> $W/smoke/<tag> (pool job; plumbing check)
-#   wait_set.sh run <tag> <dir>        job body (WS_LIST overrides the scene list)
+#   wait_set.sh run <tag> <dir>        job body (WS_LIST: one run on that sub-list instead of the two variant runs). A runtime worker killed
+#                                      by the platform (exit -9, the memory line) exits 137, so the pool's kill retry applies.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -37,9 +40,41 @@ source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts
 mkdir -p $W/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner alpasim-proxy --name "$name" --tries 1 --priority ${PRIO:-9} \
     --no-check --log-dir $W/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id $name" >> $W/jobs.txt; echo "$id"; }
-RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)     # the public reads' declaration (rtb-wide, rf_allrows)
+RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 3 --env CL_HIST_KEY=alpasim-read4)     # the public reads' declaration (rtb-wide, rf_allrows)
 R3=(--vram 24 --cpu 8 --ram 40 --timeout-h 3)                                       # third-party drivers (anchors: 8 cores, as ot2_loop)
 third() { [[ $1 == LTF-sample || $1 == DD-sample || $1 == G0014 ]]; }
+
+one_run() {   # one_run <tag> <run dir> <scene list>: run.sh with the tag's driver; rc 137 when the platform killed a runtime worker
+  local T=$1 R=$2 L=$3 drv rc=0
+  mkdir -p "$R"
+  case $T in
+    starter) bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$? ;;
+    replay)  bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" "${REPLAY[@]}" || rc=$? ;;
+    LTF-sample|DD-sample|G0014)
+             drv=$(case $T in LTF-sample) echo ltf ;; DD-sample) echo dd ;; G0014) echo garage ;; esac)
+             bash experiments/alpasim/scripts/run.sh "$R" $drv --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$? ;;
+    *)       if [[ ${WS_DRIVER:-sh30} == ap2 ]]; then
+               env AP2_TAG=$T bash experiments/alpasim/scripts/run.sh "$R" ap2 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$?
+             else
+               env SH30_TAG=$T bash experiments/alpasim/scripts/run.sh "$R" sh30 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$?
+             fi ;;
+  esac
+  if [[ $rc -ne 0 ]]; then
+    grep -q "exit code -9" "$R/native_summary.json" 2>/dev/null && { echo "$(date '+%F %T') runtime worker killed (-9): exit 137 for the pool's kill retry" >&2; exit 137; }
+    die "run.sh rc $rc ($R)"
+  fi
+  python3 - "$R" <<'PY'
+import glob, json, os, sys
+D = sys.argv[1]; n = 0
+for r in json.load(open(f"{D}/aggregate/results-summary.json"))["rollouts"]:
+    if not r.get("failure_reason") and (r.get("score") or 0) > 0:
+        for f in glob.glob(f"{D}/rollouts/{r['clipgt_id']}/*/rollout.asl"):
+            os.remove(f); n += 1
+print("pruned", n, "rollout.asl")
+PY
+}
+
+main() {
 STAGE=${1:?stage}; shift
 case $STAGE in
 select)
@@ -55,7 +90,7 @@ build)
     $PY check --set $S/set.json --cache $C" ;;
 read)
   T=${1:?tag}; A=${2:-}; D=$W/reads/$T
-  [[ ! -e $D/run/aggregate/results-summary.json ]] || die "$D already read"
+  [[ ! -e $D/table/$T.csv ]] || die "$D already read"
   [[ $T == P0 || $T == starter || $T == replay || -f $CK/$T/ckpt-final.pt ]] || third $T || die "no checkpoint $T"
   if third $T; then X=("${R3[@]}"); else X=("${RD[@]}"); fi
   mkdir -p $D; sub ws-read-$T ${A:+--after $A} "${X[@]}" ${WS_DRIVER:+--env WS_DRIVER=$WS_DRIVER} -- bash $E/scripts/wait_set.sh run $T $D/run ;;
@@ -64,33 +99,18 @@ smoke)
   python3 -c "import json, sys; w = json.load(open('$S/set.json'))['windows']; print('\n'.join([x['id'] for x in w if x['variant'] == 'a'][:$n] + [x['id'] for x in w if x['variant'] == 'b'][:$n]))" > $D/list.txt
   sub ws-smoke-$T ${A:+--after $A} "${RD[@]}" --env WS_LIST=$D/list.txt -- bash $E/scripts/wait_set.sh run $T $D/run ;;
 run)
-  T=$1; D=$2; [[ -f $C/check.json ]] || die "no cache check $C/check.json"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
-  rm -rf "$D"; mkdir -p "$D"; L=${WS_LIST:-$S/set.txt}      # WS_LIST: a sub-list (smoke)
-  case $T in
-    starter) bash experiments/alpasim/scripts/run.sh "$D" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?" ;;
-    replay)  bash experiments/alpasim/scripts/run.sh "$D" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" "${REPLAY[@]}" || die "run.sh rc $?" ;;
-    LTF-sample|DD-sample|G0014)
-             drv=$(case $T in LTF-sample) echo ltf ;; DD-sample) echo dd ;; G0014) echo garage ;; esac)
-             bash experiments/alpasim/scripts/run.sh "$D" $drv --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?" ;;
-    *)       if [[ ${WS_DRIVER:-sh30} == ap2 ]]; then
-               env AP2_TAG=$T bash experiments/alpasim/scripts/run.sh "$D" ap2 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?"
-             else
-               env SH30_TAG=$T bash experiments/alpasim/scripts/run.sh "$D" sh30 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || die "run.sh rc $?"
-             fi ;;
-  esac
-  $PY collect --set $S/set.json --run $D --label $T --out $(dirname $D)/table || die "collect rc $?"
-  python3 - "$D" <<'PY'
-import glob, json, os, sys
-D = sys.argv[1]; n = 0
-for r in json.load(open(f"{D}/aggregate/results-summary.json"))["rollouts"]:
-    if not r.get("failure_reason") and (r.get("score") or 0) > 0:
-        for f in glob.glob(f"{D}/rollouts/{r['clipgt_id']}/*/rollout.asl"):
-            os.remove(f); n += 1
-print("pruned", n, "rollout.asl")
-PY
-  ;;
+  T=$1; D=$2; [[ -f $C/check.json ]] || die "no cache check $C/check.json"; [[ ! -e $D/done ]] || die "$D already ran"
+  rm -rf "$D"; mkdir -p "$D"; parts=()
+  if [[ -n ${WS_LIST:-} ]]; then cp $WS_LIST $D/list_all.txt; parts=(all)
+  else
+    for v in a b; do python3 -c "import json; print('\n'.join(x['id'] for x in json.load(open('$S/set.json'))['windows'] if x['variant'] == '$v'))" > $D/list_$v.txt; done
+    parts=(a b)
+  fi
+  for v in "${parts[@]}"; do one_run $T $D/$v $D/list_$v.txt; done
+  $PY collect --set $S/set.json --run $(printf "$D/%s " "${parts[@]}") --label $T --out $(dirname $D)/table || die "collect rc $?"
+  date '+%F %T' > $D/done ;;
 gate)
-  python3 - $W/reads/starter/table/starter.csv $W/reads/replay/table/replay.csv $S/set.txt <<'PY' | tee $W/gate.txt; exit ${PIPESTATUS[0]}
+  python3 - $W/reads/starter/table/starter.csv $W/reads/replay/table/replay.csv $S/set.txt <<'PY' | tee $W/gate.txt; return ${PIPESTATUS[0]}
 import csv, sys
 n = len(open(sys.argv[3]).read().split())
 g, r = (list(csv.DictReader(open(f))) for f in sys.argv[1:3])
@@ -108,6 +128,10 @@ chain)
   s=$(bash $0 read starter $b) || exit 1; r=$(bash $0 read replay $b) || exit 1
   g=$(sub ws-gate --after $s,$r --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $E/scripts/wait_set.sh gate) || exit 1
   ids=(); for T in P0 RSG-L18-s0 RTB1ARO-L18-s0; do ids+=($(bash $0 read $T $g)) || exit 1; done
+  if [[ ${1:-} == anchors ]]; then
+    ids+=($(WS_DRIVER=ap2 bash $0 read APY10m10-AB-s0 $g)) || exit 1
+    for T in YR10m10-F-s0 LTF-sample DD-sample G0014; do ids+=($(bash $0 read $T $g)) || exit 1; done
+  fi
   q=$(sub ws-report --after $(IFS=,; echo "${ids[*]}") --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $E/scripts/wait_set.sh report) || exit 1
   echo "chain: build $b; starter $s replay $r; gate $g; reads ${ids[*]}; report $q" | tee -a $W/stages.txt ;;
 anchors)
@@ -123,3 +147,5 @@ report)
     --pairs RTB1ARO-L18-s0:RSG-L18-s0 P0:RSG-L18-s0 || die "report rc $?" ;;
 *) die "unknown stage $STAGE" ;;
 esac
+}
+main "$@"; exit $?
