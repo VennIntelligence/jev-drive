@@ -1,0 +1,21 @@
+{
+ "a": "JTBGG-old",
+ "b": "JTBGG-new",
+ "note": "JT00's command (arc 0.0039) 60 steps eager: code f81ea48b vs 2c55cef1 with --on-arc-rows off",
+ "scalars": 258,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5357130765914917,
+  0.5357130765914917
+ ],
+ "on_hash_60": [
+  "f23e7da637d0d4bb",
+  "f23e7da637d0d4bb"
+ ],
+ "want_hash": null,
+ "identical": true
+}
