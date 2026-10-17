@@ -36,6 +36,12 @@ stops in the static scene without contact (0.53-0.63 m, RSG hits the lead) but p
 keeps the stop (static 0.86 m, stop17 15 / 17), brings public 1491 to -0.002 [-0.011, 0.007] vs RSG with rear contacts 17, and held to +0.007 [-0.005, 0.025];
 halving lambda (V1) does not help. What is left is lateral (public offroad 36 vs 31). Start-delay diagnosis: [results/next/explore_f.md](results/next/explore_f.md).
 
+**Red-light and rear-end census (handoff 2026-10-17 step 0, CPU).** [results/next/census_red_rear.md](results/next/census_red_rear.md): the scorer has no
+red-light term, a rear contact is never at fault and only freezes progress, and a car that moves ~3 m where the human stands still leaves the corridor.
+The MTGS renders keep the lamps red; RSG / V2 launch with the human at red lights as elsewhere. 24 % of d325's uniform windows are red-light waits
+(public 0.4 %); a log replay of an "ignore red" car scores 0.03 there, so the switch would cost about 0.11 per scene on a private-like mix. Rear
+contacts (public 18 / 17 / 24 for RSG / V2 / a) are mostly the ego slower than the log while moving.
+
 **Prepared, not launched (2026-10-17 night).** Follow-up pilots for the morning choice between decision 335's options (iii) and (iv), re-aimed
 by decision 336; draft lines in [plans/2026-10-17-retain-anticopy-draft.md](plans/2026-10-17-retain-anticopy-draft.md) (Chinese); chain `scripts/nx.sh`, reads and lines `scripts/nx.py`:
 - (iii) RETAIN, favoured: distil shipped Cinque's speed profile only (arc length, the lateral path untouched) on rolling-arrival / standing-wait

@@ -775,7 +775,7 @@ def cmd_report(a):
                          f"{m.fail or '-'} / " + (f"{m.rear_t:.1f}, {f1(m.rear_dv)}" if m.rear else "-"))
         md.append(f"| {rd} | {sc[-16:-8]} | {h.hcls} / {f1(h.h_launch_t)} / {f1(h.h_pass_t)} ({lab.get(h.h_pass_st, '-') if pd.notna(h.h_pass_t) else '-'}) / "
                   f"{f1(h.t_green)} / {f1(h.lead)} | {h.v_str} | " + " | ".join(cells) + " |")
-    T[T.red].to_csv(out / "red_scenes.csv", index=False)
+    T[T.red].to_csv(out / "red_scenes.csv.gz", index=False)
 
     # D3: windows
     W = pd.read_parquet(a.windows)
