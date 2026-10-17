@@ -330,10 +330,18 @@ def cmd_candgate(a):
     raise SystemExit(0 if r["candidate"] else 3)
 
 
+_NR_READ_DIRS = None
+
+
 def read_dirs(tag):
+    """held 460 @18 and public 1491 @10 run dirs of a tag: this topic's public runs first, else nx_regress's locations (its function captured
+    before the summaries point nx_regress at this one)."""
     import glob
     import nx_regress as NR
-    pub = glob.glob(str(OUT / "pub" / tag / "b*")) or NR.read_dirs(tag)["pub"]
+    global _NR_READ_DIRS
+    if _NR_READ_DIRS is None:
+        _NR_READ_DIRS = NR.read_dirs
+    pub = glob.glob(str(OUT / "pub" / tag / "b*")) or _NR_READ_DIRS(tag)["pub"]
     return dict(held=glob.glob(wt.xdirs("held", tag)), pub=pub)
 
 

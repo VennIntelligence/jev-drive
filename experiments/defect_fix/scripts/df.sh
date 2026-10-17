@@ -153,7 +153,7 @@ l18pilot)   # job body after the label gate
     echo "l18pilot: summary $s" | tee -a $O/stages.txt; } ;;
 full)
   B=${2:?base}; Wt=${3:?lateral weight}; NOAC=${4:-}; all=(); TT=()
-  for s in 0 1; do T=NR1F-L18-s$s; fresh $T; TT+=($T)
+  for s in 0 1; do T=${TAGP:-NR1F}-L18-s$s; fresh $T; TT+=($T)                                   # TAGP: a second chain's tag prefix
     t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC $s 2500 $T) || exit 1
     ids=$(reads $T $t $([[ $s == 0 ]] && echo pai || echo stop17)) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
   echo "full: ${TT[*]} after $(csv ${all[@]})" | tee -a $O/stages.txt ;;
@@ -173,7 +173,7 @@ wait)   # wait [submitter ...]: blocks until every NR1 pool job ($O/pool/*/STATU
     (( open == 0 && sub == 1 && pai == 1 )) && break; (( $(date +%s) - t0 > ${CAP:-7000} )) && { echo "cap reached: $open open, pai $pai"; break; }; sleep 60
   done; date; for f in $O/pool/*/STATUS; do tail -1 $f; done | grep -v ": done" ;;
 fullsum)   # after the full chain ended (df.sh wait df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1, then the PAI chunks): the table against the bar
-  $TR $PY fullsum --j NR1F-L18-s0 NR1F-L18-s1 --pai NR1F-L18-s0 ;;
+  P=${TAGP:-NR1F}; $TR $PY fullsum --j $P-L18-s0 $P-L18-s1 --pai $P-L18-s0 ;;
 train)   # train <arm> <seed> <steps> <tag>
   case $2 in
     v2base) F="$RB0 $KD" ;;                                                                       # identity only (= nx.sh rtb1ar)
