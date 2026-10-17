@@ -311,8 +311,9 @@ def base_reads(tag):
     """Open-loop reads of one base: dev ADE (DONE), W / G (d326 instrument, wc.py plans), arrival replay 4 s arc at k = 1, launch-cell bias."""
     import nx
     cap, _ = wt.cap_read(tag)
+    hist = DATA / "runs/wait_cap/next/hist" / f"{tag}.npz"                 # amendment 2: the bases' hist read was cut (selection does not use it)
     return dict(dev_ade=wt.dev_ade(tag), wait_W=cap["wait_W"], go_G=cap["go_G"], D=cap["D"], into_WL=cap["into_WL"], stop_SL=cap["stop_SL"],
-                arrival_k1=nx.arrival_of(tag)[1]["arc4"], launch=launch_bias(tag))
+                arrival_k1=nx.arrival_of(tag)[1]["arc4"], launch=launch_bias(tag) if hist.exists() else dict(rows=0, bias=float("nan")))
 
 
 def cand_lines(r, ref_ade):
@@ -480,8 +481,7 @@ def cmd_basesum(a):
         x = cl_read(c, [V2, RSG])
         res["conts"][c] = x
         L += fmt_cl(c, x, [V2, RSG])
-        ok = bool(x["held"] and x["pub"] and V2 in x["pub"]["pair"] and x["pub"]["pair"][V2]["lo"] >= CONT_PUB_LO
-                  and x["held"]["zeros"] <= rv["held"]["zeros"] + CONT_HELD_ZEROS)
+        ok = bool(x["held"] and x["held"]["zeros"] <= rv["held"]["zeros"] + CONT_HELD_ZEROS)     # amendment 2: held only (no public at the pilot stage)
         r["closed_loop_admissible"] = ok
         if ok:
             adm.append(b)
@@ -503,7 +503,7 @@ def cmd_basesum(a):
         pick = max(adm, key=lambda b: (res["bases"][b]["wait_W"], -res["bases"][b]["dev_ade"])) if adm else None
         rule = "no waiting-set read usable: highest W among the closed-loop-admissible candidates"
     res |= dict(admissible=adm, waitset_eligible=sel, pick=pick, rule=rule)
-    L += ["", f"closed-loop admissible (public paired vs V2 CI lower bound >= {CONT_PUB_LO}, held zeros <= V2 + {CONT_HELD_ZEROS}): {adm or 'none'}",
+    L += ["", f"closed-loop admissible (amendment 2: held zeros <= V2 continuation + {CONT_HELD_ZEROS}): {adm or 'none'}",
           f"waiting-set eligible (b median delay <= V2 + 0.5 s): {sel or 'none'}", f"rule: {rule}",
           f"pick: {pick or 'none -> the full chain starts from ' + V2B}"]
     write("base_pilot", res, L)
@@ -520,11 +520,11 @@ def cmd_pilotsum(a):
     L = [f"# NR1 L18 pilots (1 000 steps from {V2B}, merged pool on1_L18NR1, history-speed noise on) against the control {C}", ""] + CL_HEAD
     for t in tags:
         L += fmt_cl(t, R[t], [C, V2, RSG] if t != C else [V2, RSG])
-    L += ["", "| tag | W | G | static scene | lateral zeros held + public |", "|---|--:|--:|---|--:|"]
+    L += ["", "| tag | W | G | static scene | held lateral zeros |", "|---|--:|--:|---|--:|"]
     for t in tags:
         s = R[t]["static"]
         L.append(f"| {t} | {R[t]['W'] if R[t]['W'] is None else round(R[t]['W'], 3)} | {R[t]['G'] if R[t]['G'] is None else round(R[t]['G'], 3)} | "
-                 f"{'-' if s is None else '%.2f m, %s' % (s['dist'], 'contact' if s['collision'] else 'no contact')} | {R[t]['held']['lat_zeros'] + R[t]['pub']['lat_zeros']} |")
+                 f"{'-' if s is None else '%.2f m, %s' % (s['dist'], 'contact' if s['collision'] else 'no contact')} | {R[t]['held']['lat_zeros']} |")
     L += ["", "## Waiting set", ""] + WS_HEAD
     W = {t: ws_read(t, RSG) for t in [RSG, V2] + tags}
     for t, w in W.items():
@@ -533,14 +533,13 @@ def cmd_pilotsum(a):
     passing = []
     for t in a.j:
         r, c = R[t], R[C]
-        g = dict(pub_noninf=r["pub"]["pair"][C]["lo"] >= -0.005, held_zeros=r["held"]["zeros"] <= c["held"]["zeros"],
-                 lateral=r["held"]["lat_zeros"] + r["pub"]["lat_zeros"] < c["held"]["lat_zeros"] + c["pub"]["lat_zeros"])
+        g = dict(held_zeros=r["held"]["zeros"] <= c["held"]["zeros"], held_lateral=r["held"]["lat_zeros"] < c["held"]["lat_zeros"])   # amendment 2: held only
         res["arms"][t] = dict(read=r, lines=g, passed=bool(all(g.values())))
         if all(g.values()):
             passing.append(t)
-    pick = max(passing, key=lambda t: (R[t]["pub"]["pair"][C]["mean"], -(R[t]["held"]["lat_zeros"] + R[t]["pub"]["lat_zeros"]))) if passing else None
+    pick = min(passing, key=lambda t: (R[t]["held"]["lat_zeros"], R[t]["held"]["zeros"], -R[t]["held"]["mean"])) if passing else None
     res |= dict(control_read=R[C], passing=passing, pick=pick)
-    L += ["", "hinge rule (vs the control): public paired CI lower bound >= -0.005, held zeros <= control, lateral zeros (held + public) < control",
+    L += ["", "hinge rule (amendment 2, vs the control): held zeros <= control and held lateral zeros < control (fewest held lateral zeros among the passing)",
           "; ".join(f"{t}: {res['arms'][t]['lines']}" for t in a.j), f"pick: {pick or 'none -> the full chain runs without the lateral terms'}"]
     nx.RES, nx.NX = RES, OUT                                          # nx_regress writes through nx.write: into this topic
     NR.read_dirs = read_dirs                                          # and reads this topic's public runs

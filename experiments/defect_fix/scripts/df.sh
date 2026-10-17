@@ -54,8 +54,8 @@ reads() {  # reads <tag> <after> [pai]: held 460 @18 (6) + public 1491 @10 (10) 
   local T=$1 A=$2 ids=() i
   for i in 0 1 2 3 4 5; do ids+=($(sub df-held-$T-$i --after $A --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
       -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || return 1; done
-  for i in $(seq 0 9); do ids+=($(sub df-pub-$T-$i --after $A --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
-      -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $O/pub/$T/b$i)) || return 1; done
+  [[ -n ${NOPUB:-} ]] || for i in $(seq 0 9); do ids+=($(sub df-pub-$T-$i --after $A --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+      -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $O/pub/$T/b$i)) || return 1; done          # NOPUB=1: amendment 2 (pilot reads without public)
   ids+=($(sub df-static-$T --after $A --vram 20 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 --env SH30_DUMP=1 \
       -- bash $OL readlist $T $STATIC 10 $O/static/$T/run)) || return 1
   ids+=($(sub df-wc-$T --after $A --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags $T)) || return 1
@@ -126,7 +126,19 @@ base)
 cont)   # job body after a passing candgate
   B=$2; C=${B/-F-s0/O-L18-s0}; fresh $C
   t=$(sub df-train-$C "${FT[@]}" --timeout-h 2 -- bash $ME train cont=$B 0 2500 $C) || exit 1
-  ids=$(reads $C $t) || exit 1; echo "cont $B: train $t reads $ids" | tee -a $O/stages.txt ;;
+  ids=$(NOPUB=1 reads $C $t) || exit 1; echo "cont $B: train $t reads $ids (no public: amendment 2)" | tee -a $O/stages.txt ;;
+regate)   # amendment 2: the bases' led / hist reads cut; candgate (after wc + arrival only) and the cont submitter again, per base
+  for x in "${BASES[@]}"; do read -r DOSE ARM B <<< "$x"
+    w=$(jid df-wc-$B) && r=$(jid df-arr-$B) || exit 1
+    g=$(sub df-candgate-$B --after $w,$r --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $TR $PY candgate --j $B) || exit 1
+    c=$(sub df-contsub-$B --after $g --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont $B) || exit 1
+    echo "regate $B: candgate $g cont-submitter $c" | tee -a $O/stages.txt; done ;;
+repub)   # repub <tag> <chunk ..>: resubmit public 1491 chunks of a tag (partial outputs removed first)
+  T=$2; for i in "${@:3}"; do rm -rf $O/pub/$T/b$i
+    id=$(sub df-pub-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $O/pub/$T/b$i) || exit 1
+    echo "repub $T b$i: $id" | tee -a $O/stages.txt; done ;;
+rews)   # rews <tag>: resubmit a waiting-set read
+  id=$(wsread $2) || exit 1; echo "rews $2: $id" | tee -a $O/stages.txt ;;
 l18pilot)   # job body after the label gate
   [[ -f $O/lat_pick.env ]] || { echo "no $O/lat_pick.env" >&2; exit 1; }; source $O/lat_pick.env; e=$(jid df-bitcmp-rsg) || exit 1; all=()
   PP=("0 NR1H0P-L18-s0"); [[ $ONC$SOFT$SIDE != 000 ]] && PP+=("0.15 NR1H15P-L18-s0" "0.3 NR1H30P-L18-s0")
