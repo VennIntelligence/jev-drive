@@ -25,7 +25,10 @@
 #                           config), arrival replay -> rf_follow (tag + RSG-L18-s0 + WTC-L18-s0) -> nx.py cont -> results/next/rtb_cont_<a|b>, cont/<a|b>/FINISHED
 #   nx.sh train <arm> <seed> <steps> <tag>   job body; arm: rb0 | rsg (the recipes, flags off) | rta0.3 | rta1 | rtb1 | rtb3 | rtsmoke | rtsmokea |
 #                           rtsmokeb | acs2 | acs4 | acsmoke | rtbo | rtbn
-# Env: PRIO (pool priority, default 9)
+#   nx.sh rtb-v             prereg 补记 2: V1 RTB05-F-s0 (--kd-lam 0.5) and V2 RTB1AR-F-s0 (--kd-groups AR:1), each 10 000 steps -> base arrival
+#                           replay -> nx.py vgate (stop rule; STOP fails everything after it) -> (A)-style continuation on the old pool (RTB05O / RTB1ARO-L18-s0)
+#                           -> cont-reads v1|v2 + rtb-wide (public only); base wc / led F / hist -> devdecomp (vs RB0-F-s0, with RTB1-F-s0)
+# Env: PRIO (pool priority, default 9); WIDE_PAI=0: rtb-wide reads public 1491 only
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 X=$DATA_DIR/runs/wait_cap/next; CK=$DATA_DIR/runs/op_parity/runs; ME=experiments/wait_cap/scripts/nx.sh; PY=experiments/wait_cap/scripts/nx.py
 WT=experiments/wait_cap/scripts/wt.py; WC=experiments/wait_cap/scripts/wc.py; DC=experiments/desire_cap/scripts/dc.py
@@ -157,10 +160,30 @@ rtb-wide)   # 补记 1 addition 2: rtb-wide <tag> [prio]: public 1491 @10 (10 ch
   T=${2:?tag}; PW=${3:-5}; Y=$X/cont/wide; mkdir -p $Y; rr=()
   for i in $(seq 0 9); do rr+=($(jid nx-pub-$T-$i || PRIO=$PW sub nx-pub-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
       -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $Y/pub/$T/b$i)) || exit 1; done
-  CHUNKS_FROM=$PAICH SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=$PW bash experiments/alpasim/scripts/pai_box.sh submit $Y/pai/$T $T > $Y/pai_$T.submit.txt || exit 1
-  pp=$(awk '{print $1}' $Y/pai_$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || { echo "no PAI job" >&2; exit 1; }
-  w=$(PRIO=$PW sub nx-wide-sum-$T --after "$(csv ${rr[@]}),$pp" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY wide --j $T --dir $Y --out rtb_wide_$T) || exit 1
+  if [[ ${WIDE_PAI:-1} == 1 ]]; then
+    CHUNKS_FROM=$PAICH SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=$PW bash experiments/alpasim/scripts/pai_box.sh submit $Y/pai/$T $T > $Y/pai_$T.submit.txt || exit 1
+    pp=$(awk '{print $1}' $Y/pai_$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || { echo "no PAI job" >&2; exit 1; }; WA="$(csv ${rr[@]}),$pp"; NP_=""
+  else pp=-; WA=$(csv ${rr[@]}); NP_=--no-pai; fi
+  w=$(PRIO=$PW sub nx-wide-sum-$T --after "$WA" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY wide --j $T --dir $Y --out rtb_wide_$T $NP_) || exit 1
   echo "rtb-wide $T: public $(csv ${rr[@]}) PAI $pp summary $w" | tee -a $X/stages.txt ;;
+rtb-v)   # 补记 2 (see the header); the bases' training command differs from rtb1 (RTB1-F-s0) by one flag each
+  [[ -f $DATA_DIR/$NAV && -f $X/hist/$B0.npz && -f $X/arrival/$B0.json ]] || { echo "no approach rows / $B0 reads" >&2; exit 1; }
+  fresh RTB05-F-s0 RTB1AR-F-s0 RTB05O-L18-s0 RTB1ARO-L18-s0; hs=()
+  for v in "v1 rtb05 RTB05-F-s0 RTB05O-L18-s0" "v2 rtb1ar RTB1AR-F-s0 RTB1ARO-L18-s0"; do
+    read -r V ARM B T <<< "$v"; mkdir -p $X/cont/$V
+    t=$(sub nx-train-$B "${FK[@]}" --timeout-h 2 -- bash $ME train $ARM 0 10000 $B) || exit 1
+    r=$(sub nx-arr-$B --after $t --vram 12 --cpu 4 --ram 40 --timeout-h 1 -- $TR $PY arrival --tags $B) || exit 1
+    g=$(sub nx-vgate-$B --after $t,$r --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $TR $PY vgate --j $B) || exit 1
+    w=$(sub nx-wc-$B --after $t --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR $WC plans --tags $B) || exit 1
+    l=$(sub nx-led-$B --after $t --vram 10 --cpu 4 --ram 40 --timeout-h 1 -- $TR experiments/cap_ledger/scripts/led.py plans --tags $B --conds F) || exit 1
+    h=$(sub nx-hist-$B --after $t --vram 24 --cpu 6 --ram 80 --timeout-h 1 -- $TR $PY hist --tags $B) || exit 1; hs+=($h)
+    c=$(sub nx-train-$T "${FW[@]}" --after $g --timeout-h 2 -- bash $ME train rtbo=$B 0 2500 $T) || exit 1
+    p=$(sub nx-cont-$V --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads $V $T) || exit 1
+    q=$(sub nx-widesub-$T --after $c --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env WIDE_PAI=0 -- bash $ME rtb-wide $T ${PRIO:-9}) || exit 1
+    echo "rtb-v $V: base $t arrival $r vgate $g wc $w led $l hist $h; cont $c reads-submitter $p public-submitter $q" | tee -a $X/stages.txt
+  done
+  d=$(sub nx-v-decomp --after "$(csv ${hs[@]})" --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY devdecomp --j RTB05-F-s0 RTB1AR-F-s0 $B0 --c $RTC --out rtb_v_devdecomp) || exit 1
+  echo "rtb-v: devdecomp $d" | tee -a $X/stages.txt ;;
 rtb-seeds)   # 补记 1 addition: (1) RTB1O-L18-s1 (A's command, continuation seed 1, from RTB1-F-s0); (2) RTB1-F-s1 (the base retain recipe,
              # lambda 1, seed 1) -> RTB1OB1-L18-s1 (A's command from it, seed 1); each -> cont-reads (c, d)
   fresh RTB1O-L18-s1 RTB1-F-s1 RTB1OB1-L18-s1
@@ -198,9 +221,12 @@ train)   # train <arm> <seed> <steps> <tag>
     acs4|acsmoke) F="$RSG --ego-scale-speed 0.5 --ego-scale-max 0.4" ;;
     rtbo) F="${RSG/--init RB0-F-s0/--init $B0 --allow-init}" ;;                                       # 补记 1 (A): the RSG-L18 recipe from RTB1, old pool
     rtbo1) F="${RSG/--init RB0-F-s0/--init RTB1-F-s1 --allow-init}" ;;                  # 补记 1 addition (2): base seed 1
+    rtb05) F="$RB0 --kd-lam 0.5 --d2-lam 1 $KD" ;;                                              # 补记 2 V1: rtb1 with the retention weight halved (D2 stays 1)
+    rtb1ar) F="$RB0 --kd-lam 1 --d2-lam 1 --kd-groups AR:1 $KD" ;;                               # 补记 2 V2: rtb1 with pool rows from rolling arrival only
+    rtbo=*) F="${RSG/--init RB0-F-s0/--init ${2#rtbo=} --allow-init}" ;;                        # 补记 2: (A)'s command from any base
     rtbn) F="${RSG/--init RB0-F-s0/--init $B0 --allow-init}"; F="${F/--on on1_L18RB0/--on on1_$NP}" ;;   # 补记 1 (B): RTB1's own L18 pool
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
-*) sed -n 2,32p $0; exit 2 ;;
+*) sed -n 2,31p $0; exit 2 ;;
 esac

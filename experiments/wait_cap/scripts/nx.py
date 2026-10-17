@@ -26,6 +26,12 @@ Prereg 补记 1 (the user's exploratory continuation of RTB1-F-s0 after its pilo
   cont --j T --dir D --out NAME   (CPU)  one continuation arm vs RSG-L18-s0 and WTC-L18-s0: held 460 @18 (wt.xpair), 24 held turns (rf_follow in
                 D/follow), the static public scene @10 (distance, contact), PAI stop17 zeros, arrival replay, dev ADE; references P0 / RSG-L18-s0 /
                 WTCP-L18-s0 from 补记 D / E -> results/next/NAME.{json,md}, D/FINISHED
+  wide --j T --dir D --out NAME [--no-pai]   (CPU)  public 1491 @10 (+ PAI 281 unless --no-pai) vs the stored RSG-L18-s0 reads
+Prereg 补记 2 (two targeted variants of the retain base, exploratory):
+  vgate --j BASE [--max-arc 2.0 --max-dev RTB1-F-s0's]   (CPU)  the stop rule: STOP (exit 3) if the arrival replay's 4 s arc at k = 1 > max-arc or
+                the DONE dev ADE > max-dev (RTB1-F-s0's); the continuation and its reads hang on it with --after -> results/next/rtb_v_gate_BASE
+  vsum --arms V=BASE:CONT,.. --out NAME   (CPU)  every arm (and a = RTB1O-L18-s0) vs a and RSG-L18-s0: held 460 @18, the 7 shared new zeros, static,
+                stop17, arrival, public 1491 @10 with front / lateral / rear collisions, the bases' open-loop reads -> results/next/NAME.{json,md}
 """
 from __future__ import annotations
 
@@ -461,40 +467,124 @@ def cmd_cont(a):
     (D / "FINISHED").write_text("ok\n")
 
 
+def coll_counts(dirs):
+    """Front / lateral / rear collision counts over the run dirs (metrics collision_<side> > 0, every rollout)."""
+    n = dict(front=0, lateral=0, rear=0)
+    for d in dirs:
+        f = Path(d) / "aggregate/results-summary.json"
+        if f.exists():
+            for x in json.loads(f.read_text())["rollouts"]:
+                m = x.get("metrics") or {}
+                for q in n:
+                    n[q] += int((m.get(f"collision_{q}") or 0) > 0)
+    return n
+
+
 def cmd_wide(a):
-    """补记 1 addition 2: public 1491 @10 and PAI 281 (submission config) of one arm against the stored RSG-L18-s0 reads."""
+    """补记 1 addition 2: public 1491 @10 and PAI 281 (submission config) of one arm against the stored RSG-L18-s0 reads (--no-pai: public only)."""
     t, D = a.j, Path(a.dir)
     res = dict(arm=t)
-    for k, mine, ref in (("pub", f"{D}/pub/{t}/b*", f"{DATA}/runs/route_follow/guard/read10/RSG-L18-s0/b*"),
-                         ("pai", f"{D}/pai/{t}/runs/*/sim", f"{wt.PAI_REF}/runs/*/sim")):
+    reads = (("pub", f"{D}/pub/{t}/b*", f"{DATA}/runs/route_follow/guard/read10/RSG-L18-s0/b*"),
+             ("pai", f"{D}/pai/{t}/runs/*/sim", f"{wt.PAI_REF}/runs/*/sim"))[:1 if a.no_pai else 2]
+    for k, mine, ref in reads:
         MJ, MC = wt.metrics(glob.glob(mine)), wt.metrics(glob.glob(ref))
         r = wt.xpair(MJ, MC)
         for side, dirs in (("J", glob.glob(mine)), ("C", glob.glob(ref))):
-            n = dict(front=0, lateral=0, rear=0)
-            for d in dirs:
-                f = Path(d) / "aggregate/results-summary.json"
-                if f.exists():
-                    for x in json.loads(f.read_text())["rollouts"]:
-                        m = x.get("metrics") or {}
-                        for q in n:
-                            n[q] += int((m.get(f"collision_{q}") or 0) > 0)
-            r[side]["collisions"] = n
+            r[side]["collisions"] = coll_counts(dirs)
         r.pop("zero_flips", None)
         res[k] = r
-    full = [wt.pai_full(p) for p in wt.STOP17]
-    for side, g in (("J", f"{D}/pai/{t}/runs/*/sim"), ("C", f"{wt.PAI_REF}/runs/*/sim")):
-        m = wt.metrics(glob.glob(g))
-        res.setdefault("stop17", {})[side] = dict(zeros=sum(m[s][0] == 0 for s in full if s in m), n=sum(s in m for s in full))
+    if not a.no_pai:
+        full = [wt.pai_full(p) for p in wt.STOP17]
+        for side, g in (("J", f"{D}/pai/{t}/runs/*/sim"), ("C", f"{wt.PAI_REF}/runs/*/sim")):
+            m = wt.metrics(glob.glob(g))
+            res.setdefault("stop17", {})[side] = dict(zeros=sum(m[s][0] == 0 for s in full if s in m), n=sum(s in m for s in full))
     L = [f"# 补记 1 addition 2 (exploratory): {t} wide reads vs RSG-L18-s0 (stored)", "",
          "| read | scenes | zeros (C) | mean (C) | paired [session CI] | progress_rel (C) | at-fault (C) | offroad (C) | front / lateral / rear collisions (C) |",
          "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for k in ("pub", "pai"):
+    for k in (x[0] for x in reads):
         r = res[k]
         cj, cc = r["J"]["collisions"], r["C"]["collisions"]
         L.append(f"| {k} | {r['scenes']} | {r['J']['zeros']} ({r['C']['zeros']}) | {r['J']['mean']:.4f} ({r['C']['mean']:.4f}) | {r['paired']} | "
                  f"{r['J']['progress_rel']:.3f} ({r['C']['progress_rel']:.3f}) | {r['J']['at_fault']} ({r['C']['at_fault']}) | {r['J']['offroad']} ({r['C']['offroad']}) | "
                  f"{cj['front']} / {cj['lateral']} / {cj['rear']} ({cc['front']} / {cc['lateral']} / {cc['rear']}) |")
-    L.append(f"\nPAI stop17 zeros: {t} {res['stop17']['J']['zeros']} / {res['stop17']['J']['n']}, RSG-L18-s0 {res['stop17']['C']['zeros']} / {res['stop17']['C']['n']}")
+    if not a.no_pai:
+        L.append(f"\nPAI stop17 zeros: {t} {res['stop17']['J']['zeros']} / {res['stop17']['J']['n']}, RSG-L18-s0 {res['stop17']['C']['zeros']} / {res['stop17']['C']['n']}")
+    write(a.out, res, L)
+
+
+# ---------------------------------------------------------------- 补记 2 (CPU)
+SHARED7 = ("53d3", "de4a", "6d2b", "9d1d", "9a67", "ddc1", "1f54")      # the new held zeros every RTB1 arm shares (decision 337)
+A_ARM = ("a", "RTB1-F-s0", "RTB1O-L18-s0")
+
+
+def cmd_vgate(a):
+    """补记 2 stop rule for one base, after its training and arrival replay: GO iff the 4 s arc at k = 1 <= --max-arc and DONE dev ADE <= --max-dev."""
+    arr, ade = arrival_of(a.j)[1]["arc4"], wt.dev_ade(a.j)
+    a.max_dev = wt.dev_ade("RTB1-F-s0") if a.max_dev is None else a.max_dev           # "worse than RTB1-F-s0" = its exact DONE value (0.5556)
+    go = bool(arr <= a.max_arc and ade <= a.max_dev)
+    res = dict(base=a.j, arrival_k1=arr, dev_ade=ade, max_arc=a.max_arc, max_dev=a.max_dev, verdict="GO" if go else "STOP")
+    write(f"rtb_v_gate_{a.j}", res, [f"# 补记 2 stop rule: {a.j}", "", f"arrival 4 s arc @k=1 {arr:.2f} m (STOP if > {a.max_arc}); "
+                                      f"dev ADE {ade:.4f} (STOP if > {a.max_dev:.4f}): **{res['verdict']}**"])
+    sys.exit(0 if go else 3)
+
+
+def cmd_vsum(a):
+    """补记 2: each variant's continuation (and a) vs a = RTB1O-L18-s0 and RSG-L18-s0, closed loop + the bases' open-loop reads."""
+    arms = [A_ARM] + [(v, *bc.split(":")) for v, bc in (x.split("=") for x in a.arms.split(","))]
+    held = {t: wt.metrics(glob.glob(wt.xdirs("held", t))) for t in [x[2] for x in arms] + ["RSG-L18-s0"]}
+    pubd = lambda t: (glob.glob(f"{DATA}/runs/route_follow/guard/read10/{t}/b*") if t == "RSG-L18-s0"  # noqa: E731
+                      else glob.glob(str(NX / f"cont/wide/pub/{t}/b*")))
+    pub = {t: wt.metrics(pubd(t)) for t in held}
+    shared = [s for s in held["RSG-L18-s0"] if s.rsplit("-", 1)[-1][:4] in SHARED7]
+    assert len(shared) == 7, shared
+    res = dict(arms={})
+    for v, b, t in arms:
+        D = NX / "cont" / v
+        r = dict(base=b, cont=t, held={c: wt.xpair(held[t], held[c]) for c in ("RTB1O-L18-s0", "RSG-L18-s0") if c != t},
+                 shared7_zero=[s for s in shared if held[t].get(s, (1,))[0] == 0], static=static_of(D / f"static/{t}/run"), stop17=stop17_of(D / f"paisub/{t}"),
+                 arrival_cont=arrival_of(t)[1]["arc4"], dev_ade_cont=wt.dev_ade(t),
+                 pub={c: wt.xpair(pub[t], pub[c]) for c in ("RTB1O-L18-s0", "RSG-L18-s0") if c != t and pub[t]},
+                 pub_coll=coll_counts(pubd(t)) if pub[t] else None, base_reads=dict(arrival=arrival_of(b)[1]["arc4"], dev_ade=wt.dev_ade(b)))
+        try:
+            cap, led = wt.cap_read(b)[0], wt.ledger_read(b)
+            r["base_reads"] |= dict(wait_W=cap["wait_W"], go_G=cap["go_G"], D=cap["D"], **{k: float(led[k][0].mean()) for k in ("S_L", "Y_P", "Y_V")})
+        except FileNotFoundError as e:
+            r["base_reads"]["missing"] = str(e)
+        for k in ("held", "pub"):
+            for x in r[k].values():
+                x.pop("zero_flips", None)
+        res["arms"][v] = r
+    res["pub_coll_RSG"] = coll_counts(pubd("RSG-L18-s0"))
+    f2 = lambda x, q=".2f": "-" if x is None else format(x, q)  # noqa: E731
+    L = ["# 补记 2 (exploratory): RTB1 variants vs a = RTB1O-L18-s0 and RSG-L18-s0, one seed", "",
+         "| arm | base / cont | held zeros (a / RSG) | at-fault (a / RSG) | offroad | mean vs a [CI] | mean vs RSG [CI] | shared-7 still zero | static dist / contact | "
+         "stop17 zeros | arrival @k=1 cont (base) | dev ADE base / cont |", "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for v, r in res["arms"].items():
+        hr, ha = r["held"]["RSG-L18-s0"], r["held"].get("RTB1O-L18-s0")
+        s = r["static"]
+        L.append(f"| {v} | {r['base']} / {r['cont']} | {hr['J']['zeros']} ({ha['C']['zeros'] if ha else '-'} / {hr['C']['zeros']}) | "
+                 f"{hr['J']['at_fault']} ({ha['C']['at_fault'] if ha else '-'} / {hr['C']['at_fault']}) | {hr['J']['offroad']} ({hr['C']['offroad']}) | "
+                 f"{ha['paired'] if ha else '-'} | {hr['paired']} | {len(r['shared7_zero'])} / 7 | "
+                 f"{'-' if s is None else f2(s['dist']) + (' yes' if s['collision'] else ' no')} | {r['stop17']['zeros']} / {r['stop17']['n']} | "
+                 f"{f2(r['arrival_cont'])} ({f2(r['base_reads']['arrival'])}) | {r['base_reads']['dev_ade']:.4f} / {r['dev_ade_cont']:.4f} |")
+    L += ["", "| arm | public scenes | zeros (a / RSG) | mean | vs a [CI] | vs RSG [CI] | at-fault (RSG) | offroad (RSG) | front / lateral / rear |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for v, r in res["arms"].items():
+        pr, pa = r["pub"].get("RSG-L18-s0"), r["pub"].get("RTB1O-L18-s0")
+        if pr is None:
+            L.append(f"| {v} | - | | | | | | | |")
+            continue
+        c = r["pub_coll"]
+        L.append(f"| {v} | {pr['scenes']} | {pr['J']['zeros']} ({pa['C']['zeros'] if pa else '-'} / {pr['C']['zeros']}) | {pr['J']['mean']:.4f} | "
+                 f"{pa['paired'] if pa else '-'} | {pr['paired']} | {pr['J']['at_fault']} ({pr['C']['at_fault']}) | {pr['J']['offroad']} ({pr['C']['offroad']}) | "
+                 f"{c['front']} / {c['lateral']} / {c['rear']} |")
+    c = res["pub_coll_RSG"]
+    L += [f"| RSG-L18-s0 | | | | | | | | {c['front']} / {c['lateral']} / {c['rear']} |", "",
+          "| base | arrival @k=1 | dev ADE | wait W | go G | D | S_L F | Y_P F | Y_V F |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for v, r in res["arms"].items():
+        q = r["base_reads"]
+        L.append(f"| {r['base']} | {q['arrival']:.2f} | {q['dev_ade']:.4f} | " + " | ".join(f2(q.get(k), ".3f") for k in ("wait_W", "go_G", "D", "S_L", "Y_P", "Y_V")) + " |")
+    L += ["", "shared-7 still zero: " + "; ".join(f"{v} " + " ".join(s.rsplit('-', 1)[-1][:4] for s in r["shared7_zero"]) for v, r in res["arms"].items())]
     write(a.out, res, L)
 
 
@@ -522,7 +612,12 @@ if __name__ == "__main__":
     p.add_argument("--j", nargs="+", required=True), p.add_argument("--c", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("wide")
     p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--no-pai", action="store_true", help="public 1491 only")
+    p = sp.add_parser("vgate")
+    p.add_argument("--j", required=True), p.add_argument("--max-arc", type=float, default=2.0), p.add_argument("--max-dev", type=float, default=None)
+    p = sp.add_parser("vsum")
+    p.add_argument("--arms", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("cont")
     p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
+    dict(vgate=cmd_vgate, vsum=cmd_vsum, devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
