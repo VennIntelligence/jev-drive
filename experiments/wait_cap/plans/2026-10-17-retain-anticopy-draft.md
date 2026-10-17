@@ -214,3 +214,44 @@ plan 取 `nx.py hist` 已存的 s = 1 plan（读数时已对 DONE 的 dev ADE �
 (iii) 占多数即支持 V2 的假设。结果写 `results/next/explore_f.md`，附几条速度轨迹。
 
 **成本（估）**：每变体底座 ~0.8 卡时（RTB1-F-s0 实测 46 min）、续训 ~0.15、held / 静止 / stop17 ~1.3、公开 10 chunk ~1，合计约 3.2 卡时 × 2；墙钟 ~2.5 h。
+
+## 补记 3：V2 的第二个底座 seed 与 PAI 281（2026-10-17 ~14:00 CST；写在下列作业的任何输出之前）
+
+**目的**：第 339 条把 V2（`RTB1AR`：保留项 λ 1，池行只从滚动到达组抽）立为保留线的配方，但**还不是提交候选**：只有 1 个底座 seed，公开 1491 只是与 RSG 不可区分，
+PAI 281 没读（RTB1ARO-L18-s0 的 `rtb-wide` 当时 `WIDE_PAI=0`，只有公开读数）。第 339 条要求谈提交之前先补这两项读数。它们是读数，不是新训练、不是新变体。
+仍是探索，不产生登记判词；补记 2 的线与判词不改。
+
+**跑什么**（一条池链 `bash experiments/wait_cap/scripts/nx.sh rtb-v2s1`，一次提交，`--after` 串联，默认优先级 9，不抢占其他车道的作业）：
+1. 底座 `RTB1AR-F-s1` = `nx.sh train rtb1ar 1 10000 RTB1AR-F-s1`：RTB1AR-F-s0 的命令逐字不变，只把 seed 0 换成 1
+   （RB0-F 配方 + `--kd-lam 1 --d2-lam 1 --kd-groups AR:1` + 接近行）。
+2. 到达重放（`nx.py arrival`）与停规则（`nx.py vgate`），和 `rtb-v` 里一样，规则原样：k = 1 的 4 s 弧长 > 2.0 m，**或** DONE dev ADE > 0.5556（RTB1-F-s0 的值）即 STOP；
+   STOP 时续训与其后全部读数经 `--after` 一起失败、不开跑，直接报告，不改配方。底座的其余开环读数（wc / led / hist / devdecomp）这次不跑。
+3. 续训 `RTB1AROB1-L18-s1` = RSG-L18 配方 2 500 步，`--init RTB1AR-F-s1 --allow-init`，旧池 on1_L18RB0，seed 1
+   （与 d 臂 RTB1OB1-L18-s1 的命令逐字相同，只换 `--init`；`nx.sh train rtbo=RTB1AR-F-s1 1 2500 RTB1AROB1-L18-s1`）。
+4. `cont-reads v2s1`（与 a ~ d、V1、V2 同一套）：held 460 @18（6 chunk）、公开静止 scene @10、PAI stop17（提交配置）、到达重放、24 个 held 转弯（rf_follow）
+   → `results/next/rtb_cont_v2s1.{json,md}`。
+5. `rtb-wide RTB1AROB1-L18-s1` 开 PAI：公开 1491 @10（10 chunk，对存档 `guard/read10/RSG-L18-s0` 配对）+ PAI 281 提交配置
+   （`PAISERVE` = `JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1`，`PAIWIZ` = `controller.gains.rel_front_steering_angle_weight=10`，ALPASIM_FAST=1，沿用 RTB1O-L18-s0 那次 PAI 读数的同一仪器，
+   对存档 `route_follow/pai_g10/acc` = RSG-L18-s0 配对）→ `rtb_wide_RTB1AROB1-L18-s1`。
+6. **RTB1ARO-L18-s0 的 PAI 281**：同一条命令里再调 `nx.sh rtb-wide RTB1ARO-L18-s0`（公开读数已存在，复用原作业 id，不重读；只新交 PAI 8 chunk 与汇总），
+   同配置、同参照；覆盖写 `rtb_wide_RTB1ARO-L18-s0`（公开部分与旧文件同源）。
+7. 汇总：读数到齐后用 `nx.py v2seeds`（CPU）写 `results/next/rtb_v2_seeds.md`。行 V2-s0、V2-s1、RSG-L18-s0（RSG-L18-s1 有读数的列也列）。
+   held 460：零分、均分配对（对 RSG-L18-s0，另列对种子配对的 RSG-L18-s1）、at-fault、出路、转弯 /24、静止 scene、stop17；公开 1491：零分、均分配对、at-fault、出路、前 / 侧 / 后；
+   PAI 281：均分配对、零分、at-fault、stop17。
+
+**线与判词（补记 2 原样，不改）**：
+- 「代价修好」= held 零分 ≤ RSG + 3（≤ 37）**且** at-fault ≤ RSG + 2（≤ 6），**同时**「闭环看得到到达时停」仍成立（静止 scene 不接触且 ≤ 1.0 m，或 stop17 零分 ≤ 15）。
+- 公开 1491：对 RSG 的均分配对 CI 含 0，被追尾 ≤ RSG + 2（≤ 20）。
+- 数字按 RSG-L18-s0 的那一组（34 / 4 / 18），V2-s1 也对这一组判；对 RSG-L18-s1 的配对只作描述。只报：均分配对 CI、出路、转弯、被追尾。
+- 这两项新读数没有登记线：PAI 281 只报对 RSG-L18-s0 的均分配对 CI、零分、at-fault、出路、前 / 侧 / 后碰撞、stop17。
+
+**会推翻第 339 条的证据（原文）及其读法（读数前定）**：
+- **(R1)** V2 第二个底座 seed（RTB1AROB1-L18-s1）的公开 1491 被追尾 **≥ 22**。计数口径与第 339 条的表相同（`collision_rear > 0` 的场景数；RSG 18、a 24、V2-s0 17）。
+- **(R2)** V2 的 PAI 281 at-fault / 零分**明显高于** RSG-L18-s0。第 339 条没给数；这里在读数前定成三个描述标记，任一 V2 seed（RTB1ARO-L18-s0、RTB1AROB1-L18-s1）越过任一个即记为 R2 成立：
+  零分 ≥ RSG + 5；at-fault ≥ RSG + 4；对 RSG 的均分配对 CI 上界 < 0（RSG = `nx.py wide` 输出里配对场景上的 C 值，RTB1O-L18-s0 那次是零分 76、at-fault 9，即 ≥ 81 / ≥ 13）。
+  参照点：RTB1O-L18-s0（a）的 PAI 读数是零分 76 对 76、at-fault 12 对 9、均分 +0.003 [−0.034, 0.038]，三个标记都不越过，第 337 条就是这么读的（「PAI 持平」）。
+  未越过标记的差值（含 a 的 at-fault + 3）只作描述，不记为 R2 成立。
+- 结果文件按上面的口径逐条报 R1、R2 是否成立，并附原始数，由主会话据此改第 339 条；本车道不改建议、不入 decisions。
+
+**成本（估）**：底座 ~0.8 卡时（RTB1-F-s0 实测 46 min）、到达重放 + 停规则 ~0.1、续训 ~0.15、held / 静止 / stop17 ~1.3、公开 1491 ~5 作业时、PAI 281 ~7 作业时 / 标签（两个标签）；
+合计 ~21 作业时，墙钟几小时（与 cl-compile 的编译验证、cl-pack-ch 的调度验证共用池，同优先级，按提交顺序排队）。
