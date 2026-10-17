@@ -245,7 +245,7 @@ command when rc alone is not enough.
 
 | Resource | Rule |
 |---|---|
-| VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(measured now, booked) >= the job's need. A declaration is an upper bound: with >= 3 finished runs under the job's history key, need and booked are min(declared, 1.2 x their max peak + 1 GB); without history a job books its declaration for 10 min, then min(declared, 1.2 x its own peak + 1 GB). CARLA and `exclusive` jobs always book the declaration. **Same-key jobs on one card are booked together** (since 2026-10-17): m of them book max(what they use now, min(the sum of their own bookings, max(m x `conc_margin` (1.1) x share, one own booking))), share = the key's measured concurrent VRAM per job (largest p99 over job counts n of card VRAM used / n, card-minutes of `usage.jsonl` with only that key on the card, last 72 h, re-read every 30 min, >= 30 card-minutes per n), for up to the largest measured n + 1 per card. `top` shows used / booked per job, `cl vram` the shares. |
+| VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(measured now, booked) >= the job's need. A declaration is an upper bound: with >= 3 finished runs under the job's history key, need and booked are min(declared, 1.2 x their max peak + 1 GB); without history a job books its declaration for 10 min, then min(declared, 1.2 x its own peak + 1 GB). CARLA and `exclusive` jobs always book the declaration. `top` shows used / booked per job. |
 | CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
 | CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max peak cores). |
@@ -263,16 +263,14 @@ fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large 
 
 **History.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM, peak cores and peak private memory to
 `runs/pool/history.json` under its history key: env `CL_HIST_KEY` when the submitter sets one (`jevdrive.bench` sets
-`bn-<stage kind>@<vram>gb`, so a new model's first run is already known; `submit` sets `rm-train` for every `--train`
-job of `rm_train.py`, named in the command or run by a lane script's `train` / `body-train` stage, `pool.TRAINER_KEYS`,
-since 2026-10-17: per-arm names never reached three runs, so `--ram 70` held starts for trainings that use 3-7 GB), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
+`bn-<stage kind>@<vram>gb`, so a new model's first run is already known), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
 repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
 defaults to p95 x 1.2 of that history and prints the choice on stderr. An explicit value is kept in the spec, but the
 dispatcher books min(declared, measured) as in the table (VRAM cap from history = 1.1 x p95 of the prefix's peaks + 1 GB,
 since 2026-10-13: one spiky scene among 20 must not cost every later job a slot; cores and RAM use the max) (`submit` says so when a declaration is far above history);
 `"trust_measured": false` in the config books declarations only, as before 2026-10-08. Dispatcher config keys:
 `idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`, `ws_kill_frac`,
-`ws_reserve_gb`, `ws_keep_gb`, `ws_wait_s`, `ram_default_gb`, `kill_retries`, `trim`, `trim_roots`, `conc`, `conc_margin`.
+`ws_reserve_gb`, `ws_keep_gb`, `ws_wait_s`, `ram_default_gb`, `kill_retries`, `trim`, `trim_roots`.
 
 **Reading under-use.** `top` ends with two lines: `idle now` (cards without a GPU job and for how long; cores measured
 / charged / budget) and `queued` (ready GPU jobs and ready CPU-only jobs by what they wait on: vram, ram, cpu, train,
