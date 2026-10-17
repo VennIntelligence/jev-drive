@@ -4,14 +4,16 @@
 
 Per step it records the wall time between consecutive get() calls (the whole step) and the time spent inside get() (waiting for the
 prefetched batch: > 0 means the step is data-bound). With --prof, torch.profiler records steps 80-99 and the summary gets the GPU kernel
-time against the wall time of those steps and the CPU time spent in host-device synchronisation. Nothing in the run changes: the
-patched get() returns the same batch in the same order; the profiled run is not used for timing.
+time against the wall time of those steps and the CPU time spent in host-device synchronisation. With --syncs, steps 60-64 count every
+tensor -> Python scalar conversion (item / float / int / bool / index: each one a host-device sync) by the calling line outside torch.
+Nothing in the run changes: the patched get() returns the same batch in the same order; probed runs are not used for timing.
 """
 import argparse, atexit, json, os, pathlib, runpy, sys, time  # noqa: E401
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--out", required=True)
 ap.add_argument("--prof", action="store_true")
+ap.add_argument("--syncs", action="store_true")
 ap.add_argument("--skip", type=int, default=20, help="first steps left out of the statistics (warm-up)")
 ap.add_argument("rest", nargs=argparse.REMAINDER)
 a = ap.parse_args()
@@ -57,6 +59,30 @@ def _prof_stop():
 
 
 _get = T.Prefetch.get
+S0, S1 = 60, 65                                            # sync-counted steps [S0, S1)
+SYNCS, _orig = __import__("collections").Counter(), {}
+
+
+def _caller():
+    f = sys._getframe(2)
+    while f is not None and ("/torch/" in f.f_code.co_filename or f.f_code.co_filename == __file__):
+        f = f.f_back
+    return "%s:%d %s" % (pathlib.Path(f.f_code.co_filename).name, f.f_lineno, f.f_code.co_name) if f else "?"
+
+
+def _counting(name):
+    o = _orig[name] = getattr(torch.Tensor, name)
+
+    def w(self, *x, **k):
+        if self.is_cuda:
+            SYNCS[name + " " + _caller()] += 1
+        return o(self, *x, **k)
+    return w
+
+
+def _syncs(on):
+    for n in ("item", "__float__", "__int__", "__bool__", "__index__", "tolist"):
+        setattr(torch.Tensor, n, _counting(n) if on else _orig[n])
 
 
 def get(self):
@@ -69,6 +95,8 @@ def get(self):
         _prof_start()
     if a.prof and st["n"] == P1 and st["prof"] is not None:
         _prof_stop()
+    if a.syncs and st["n"] in (S0, S1):
+        _syncs(st["n"] == S0)
     t = time.perf_counter()
     b = _get(self)
     t2 = time.perf_counter()
@@ -91,6 +119,9 @@ def _dump():
                     wait_share=round(float(w.sum() / s.sum()), 4))
     if torch.cuda.is_available():
         out["max_reserved_gb"] = round(torch.cuda.max_memory_reserved() / 2 ** 30, 2)
+    if SYNCS:
+        out["syncs_per_step"] = {k: v / (S1 - S0) for k, v in SYNCS.most_common(40)}
+        out["syncs_per_step_total"] = sum(SYNCS.values()) / (S1 - S0)
     if "prof" in rec:
         out["prof"] = rec["prof"]
     pathlib.Path(a.out).write_text(json.dumps(out, indent=1))

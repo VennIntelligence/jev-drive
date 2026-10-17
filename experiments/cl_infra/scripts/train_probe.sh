@@ -6,6 +6,7 @@
 #                                    profiled base, torch.compile of the training forward (patched copy), --batch 256; then bitcmp of the
 #                                    identity candidates against base-a. Checkpoints are deleted at the end (the summaries stay).
 #   train_probe.sh multi <n> <steps> n copies of base at once on one card
+#   train_probe.sh syncs <steps>     base with the scalar-conversion (host sync) count of train_probe.py --syncs
 # Out: $DATA_DIR/runs/speed/train_probe/<mode>-<time>/ (<tag>.json per run, smi.csv = card util / memory every 2 s, bitcmp_*.json).
 set -u
 cd "$(dirname "$0")/../../.." || exit 1
@@ -55,6 +56,8 @@ seq)
     cp "$DATA_DIR/runs/wait_cap/next/speedp_bitcmp_$b.json" "$O/" 2>/dev/null
   done
   git worktree remove --force "$WN"; git worktree remove --force "$WC" ;;
+syncs)
+  N=${2:-100}; run "$R" $P-syncs "--syncs" ;;
 multi)
   K=${2:?n}; N=${3:-300}; pids=()
   for i in $(seq 1 "$K"); do run "$R" $P-m$K-$i "" & pids+=($!); done
