@@ -44,8 +44,9 @@ def wrap(a):
     return (np.asarray(a) + np.pi) % (2 * np.pi) - np.pi
 
 
-def merged_meta(pool, rows):
-    """Rows meta of the parts, in the merged pool's order (rf_pait merge: names on:<prefix>:<name>)."""
+def merged_meta(pool, rows, prefix=False):
+    """Rows meta of the parts, in the merged pool's order (rf_pait merge: names on:<prefix>:<name>); prefix: the parts are the pool's first
+    rows (a mixed pool whose imitation-only part comes last has no raster; nr1_lat reads such a raster as covering a prefix)."""
     tb = np.load(DATA / "runs/op_parity/cache" / pool / "tab.npz")
     pn = tb["names"].astype(str)
     parts = []
@@ -56,7 +57,7 @@ def merged_meta(pool, rows):
         parts.append(M)
     keys = ("names", "run", "scene", "anchor", "t_us", "logfut", "poses", "k")
     M = {k: np.concatenate([p[k] for p in parts]) for k in keys}
-    assert np.array_equal(M["names"], pn), "rows meta != the pool's rows"
+    assert np.array_equal(M["names"], pn[:len(M["names"])] if prefix else pn), "rows meta != the pool's rows"
     return M
 
 
@@ -161,7 +162,7 @@ def work(job):
 
 
 def cmd_build(a):
-    M = merged_meta(a.pool, a.rows)
+    M = merged_meta(a.pool, a.rows, a.prefix)
     n = len(M["names"])
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -203,7 +204,7 @@ def cmd_gate(a):
     import nr1_lat as NL
     from agent_hinge import AgentHinge
     from drivable_hinge import Hinge
-    M = merged_meta(a.pool, a.rows)
+    M = merged_meta(a.pool, a.rows, a.prefix)
     n = len(M["names"])
     cr = DATA / "runs/op_parity/cache" / a.pool
     dev = torch.device("cpu")
@@ -325,6 +326,7 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=64)
     p.add_argument("--dilate", type=float, default=0.0, help="amendment 1: grow the junction mask by this many metres (0 = registered build)")
     p.add_argument("--points", default="both", choices=("both", "ra"), help="amendment 1: points the region terms read (meta key)")
+    p.add_argument("--prefix", action="store_true", help="JT: --rows cover the pool's first rows only (the rest has no raster)")
     p = sub.add_parser("gate")
     p.add_argument("--pool", default="on1_L18NR1"), p.add_argument("--rows", default="L18RB0:rb0,L18RTB1:rtb1"), p.add_argument("--lat", required=True)
     p.add_argument("--v2", default=""), p.add_argument("--out", default="lat_gate")

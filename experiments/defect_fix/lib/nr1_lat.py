@@ -29,12 +29,14 @@ import numpy as np
 
 BC = (4.049 - 1.127) / 2                       # box centre ahead of the rear axle (nuPlan Pacifica), = the scorer's centroid offset
 BIN_DEG = 30.0
-CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0)
+CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False)
 
 
-def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0):
+def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False):
+    """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
+    for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
-               arc=float(arc))
+               arc=float(arc), host=bool(host))
     return dict(CFG)
 
 
@@ -58,13 +60,16 @@ def load(pool_dir, names, dev, file=None):
     f = Path(file or CFG["file"]) if (file or CFG["file"]) else None
     if CFG["onc"] > 0 or CFG["soft"] > 0 or file:
         z = np.load(f / "meta.npz")
-        assert np.array_equal(z["names"].astype(str), names), f"{f}: rows != the pool's"
+        nr = len(z["names"])                                                   # JT (df_lat build --prefix): the raster may cover the pool's first rows
+        assert np.array_equal(z["names"].astype(str), names[:nr]) and (nr == len(names) or CFG["host"]), f"{f}: rows != the pool's"
         assert np.array_equal(z["bins"], np.arange(-90.0, 91.0, BIN_DEG)), "heading bins"
         pack["bins"] = torch.as_tensor(z["bins"].astype(np.float32), device=dev)
-        pack["ok"] = torch.as_tensor(z["ok"].astype(bool), device=dev)
+        pack["ok"] = torch.as_tensor(np.r_[z["ok"].astype(bool), np.zeros(len(names) - nr, bool)], device=dev)
         pack["points"] = str(z["points"]) if "points" in z.files else "both"      # prereg amendment 1: "ra" = the rear axle only
         for k in ("onc", "soft"):
-            if CFG[k] > 0 or file:
+            if (CFG[k] > 0 or file) and CFG["host"]:
+                pack[k] = np.load(f / f"{k}.npy", mmap_mode="r")
+            elif CFG[k] > 0 or file:
                 a = np.load(f / f"{k}.npy", mmap_mode="r")
                 t = torch.empty(a.shape, dtype=torch.float16, device=dev)
                 for i in range(0, len(a), 2048):
@@ -99,9 +104,20 @@ def region_m(d, rows, pack, key):
     nb = len(pack["bins"])
     b = torch.round(torch.rad2deg(h).clamp(-90.0, 90.0) / BIN_DEG).long() + nb // 2
     g = torch.stack([(P[..., 1] + 24.0) / 24.0 - 1.0, (P[..., 0] + 8.0) / 32.0 - 1.0], -1)[:, :, None]           # drivable_hinge's X0 / Y0
-    m = F.grid_sample(pack[key][rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[..., 0]   # (n, B, 80)
+    m = F.grid_sample(rows_of(pack[key], rows).float(), g, mode="bilinear", padding_mode="border", align_corners=False)[..., 0]   # (n, B, 80)
     m = m.gather(1, b[:, None]).squeeze(1)
     return m[:, :m.shape[1] // 2] if pack.get("points", "both") == "ra" else m
+
+
+def rows_of(R, rows):
+    """R[rows]: a card tensor, or (CFG host) a host memmap gathered for these rows (rows past its end read its last row; their `ok` is False)."""
+    import torch
+    if torch.is_tensor(R):
+        return R[rows]
+    ri = np.minimum(rows.detach().cpu().numpy(), len(R) - 1)
+    u, inv = np.unique(ri, return_inverse=True)
+    t = torch.from_numpy(np.ascontiguousarray(R[u])).to(rows.device, non_blocking=True)
+    return t[torch.as_tensor(inv.reshape(-1), device=rows.device)]
 
 
 def region(d, rows, pack, key, depth):

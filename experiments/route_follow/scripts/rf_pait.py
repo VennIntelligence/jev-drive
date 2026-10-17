@@ -510,6 +510,9 @@ def cmd_merge(a):
         t.setdefault("src", np.full(len(t["names"]), "human"))
     keys = set.intersection(*[set(t) for t in tabs])
     M = {k: np.concatenate([ren(t[k], pre) if k == "names" else t[k] for t, (_, pre) in zip(tabs, src)]) for k in keys}
+    for k in a.nan_keys:                                               # --nan-keys: a float key some parts lack, NaN on their rows (consumers skip them)
+        t0 = next(t[k] for t in tabs if k in t)
+        M[k] = np.concatenate([t[k] if k in t else np.full((n,) + t0.shape[1:], np.nan, t0.dtype) for t, n in zip(tabs, ns)])
     for k in set.union(*[set(t) for t in tabs]) - keys:                # per-row string tags of one pool (topo, part, cls): "" elsewhere
         if all(k not in t or (t[k].dtype.kind == "U" and len(t[k]) == n) for t, n in zip(tabs, ns)):
             M[k] = np.concatenate([t[k] if k in t else np.full(n, "") for t, n in zip(tabs, ns)]).astype("U20")
@@ -532,8 +535,10 @@ def cmd_merge(a):
             A[k] = np.concatenate([z[k] if z is not None else np.zeros((n,) + z0[k].shape[1:], z0[k].dtype) for z, n in zip(Z, ns)])
         assert all(z is None or len(z["tokens"]) == n for z, n in zip(Z, ns)), f"{f}: rows"
         np.savez(out / f, **A)
-    Z = [dict(np.load(CR / p / "route.npz")) for p, _ in src]
-    np.savez(out / "route.npz", tokens=names, **{k: np.concatenate([z[k] for z in Z]) for k in ("ok", "poly", "seglen", "dz", "cov20")})
+    Z = [dict(np.load(CR / p / "route.npz")) if (CR / p / "route.npz").exists() else None for p, _ in src]   # a part without one: rows ok False
+    z0 = next(z for z in Z if z is not None)
+    np.savez(out / "route.npz", tokens=names, **{k: np.concatenate([z[k] if z is not None else np.zeros((n,) + z0[k].shape[1:], z0[k].dtype)
+                                                                    for z, n in zip(Z, ns)]) for k in ("ok", "poly", "seglen", "dz", "cov20")})
     Fz = [np.load(FEAT / f"{p}.npz") for p, _ in src]
     np.savez(FEAT / f"on1_{a.out}.npz", names=names, f=np.concatenate([z["f"] for z in Fz]).astype(np.float16), k=np.concatenate([z["k"] for z in Fz]),
              ok=np.concatenate([z["ok"] for z in Fz]))
@@ -611,6 +616,7 @@ if __name__ == "__main__":
     p.add_argument("--exclude", nargs="*", default=[], help="scene list files never packed")
     p = sub.add_parser("merge")
     p.add_argument("--out", required=True), p.add_argument("--pools", nargs="+", required=True)
+    p.add_argument("--nan-keys", nargs="*", default=[], help="float tab keys some parts lack: NaN on those parts' rows (e.g. fut_reg)")
     p = sub.add_parser("r1")
     p.add_argument("--name", default="PAIT"), p.add_argument("--cache", required=True), p.add_argument("--out", required=True)
     p.add_argument("--tag", default="P2H10S-F-s0"), p.add_argument("--control", nargs="+", default=["P2H10S-F-s1"])

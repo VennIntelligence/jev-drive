@@ -764,6 +764,7 @@ def cmd_train(a):
         assert len(tb["names"]) == ns.n_on, "--on-weight: pool rows"
         w, caprec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
         pw = w / w.sum()
+    PRB = {}                                                          # JT: wait / launch probe rows (from the wfile's groups)
     if a.on_wfile:                                                    # NR1: per-row draw weights from a file (docstring)
         from jevdrive.common import data_dir
         assert k_on and not (a.on_weight or a.on_cap_scene or a.si_scan), "--on-wfile: needs --on; not with --on-weight / --on-cap-scene / --si-scan"
@@ -776,6 +777,10 @@ def cmd_train(a):
         caprec = dict(on_wfile=str(a.on_wfile), rows_w0=int((w == 0).sum()))
         if "grp" in wz.files:
             caprec["group_share"] = group_shares(pw, wz["grp"])
+            if a.probe_n and {"stand_r", "launch"} <= set(wz["grp"].astype(str).tolist()):   # JT: fixed wait / launch probe rows (monitoring)
+                prng_ = np.random.default_rng([cfg.seed, 0, 173])
+                PRB = {g: np.sort(prng_.choice(np.flatnonzero(wz["grp"].astype(str) == g), min(a.probe_n, int((wz["grp"].astype(str) == g).sum())),
+                                               replace=False)) for g in ("stand_r", "launch")}
     upre = 0                                                          # weight-0 rows at the end, equal weights elsewhere: the plain uniform draw
     if pw is not None and (pw == 0).any():
         m0 = int((pw > 0).sum())
@@ -789,13 +794,20 @@ def cmd_train(a):
         if pw_si is not None:
             pw, upre = pw_si, 0
     onx, hrec = None, {}
-    if a.on_hold_res >= 0:                                            # NR1HVR: held-out pool logs (docstring); off: no operation is added
+    if a.on_hold_res >= 0 or a.on_hold_pct:                          # NR1HVR: held-out pool logs (docstring); off: no operation is added
         from jevdrive.common import data_dir as _dd
-        lg_ = np.load(_dd() / "runs/op_parity/cache" / a.on / "tab.npz")["log"].astype(str)
+        tbh_ = np.load(_dd() / "runs/op_parity/cache" / a.on / "tab.npz")
+        lg_ = tbh_["log"].astype(str)
         assert len(lg_) == ns.n_on, "--on-hold-res: pool rows"
-        ul_ = sorted(set(lg_))
-        held_l = [g for g in ul_ if int(hashlib.sha1(g.encode()).hexdigest(), 16) % 10 == a.on_hold_res]
-        held_m = np.isin(lg_, held_l)
+        el_ = tbh_["mode"].astype(str) == "self" if ns.mode == "mixed" and "mode" in tbh_.files else np.ones(len(lg_), bool)   # JT: the S rows
+        ul_ = sorted(set(lg_[el_]))
+        if a.on_hold_pct:                                             # JT: crc32(log) % 100 < P (research/onpol-scaleup.md section 4)
+            import zlib
+            held_l = [g for g in ul_ if zlib.crc32(g.encode()) % 100 < a.on_hold_pct]
+        else:
+            held_l = [g for g in ul_ if int(hashlib.sha1(g.encode()).hexdigest(), 16) % 10 == a.on_hold_res]
+        held_m = np.isin(lg_, held_l) & el_
+        hwb_ = float(pw[held_m].sum()) if pw is not None else None   # JT: the wfile already gives them weight 0 (then the draw is unchanged)
         assert held_m.any() and not held_m.all(), "--on-hold-res: the residue holds no log or every log"
         if pw is None:
             onx = np.flatnonzero(~held_m)
@@ -804,9 +816,9 @@ def cmd_train(a):
             pw, upre = pw / pw.sum(), 0
         hg_ = np.random.default_rng([cfg.seed, 0, 167])
         HR = np.sort(hg_.choice(np.flatnonzero(held_m), min(a.on_hold_n, int(held_m.sum())), replace=False))
-        FR = np.sort(hg_.choice(np.flatnonzero(~held_m), min(a.on_hold_n, int((~held_m).sum())), replace=False))
-        hrec = dict(res=a.on_hold_res, logs=len(ul_), held_logs=held_l, held_rows=int(held_m.sum()), drawn_rows=int((~held_m).sum()),
-                    scored_held=len(HR), scored_fit=len(FR))
+        FR = np.sort(hg_.choice(np.flatnonzero(~held_m & el_), min(a.on_hold_n, int((~held_m & el_).sum())), replace=False))
+        hrec = dict(res=a.on_hold_res, pct=a.on_hold_pct, logs=len(ul_), held_logs=held_l, held_rows=int(held_m.sum()), drawn_rows=int((~held_m).sum()),
+                    scored_held=len(HR), scored_fit=len(FR), eligible_rows=int(el_.sum()), held_weight_before=hwb_)
 
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
     des_on, d2_on = bool(a.desire_rows), a.d2_lam > 0                # DESIRE D1 / D2 (docstring); both off: no operation below is added
@@ -905,7 +917,7 @@ def cmd_train(a):
         model.eval()
         res = {}
         with torch.no_grad():
-            for nm, rr in (("held", HR), ("fit", FR)):
+            for nm, rr in (("held", HR), ("fit", FR)) if hrec else ():
                 acc, n_, d4 = {}, 0, []
                 for j in range(0, len(rr), 128):
                     g = ns.on0 + rr[j:j + 128]
@@ -936,11 +948,25 @@ def cmd_train(a):
                         d4.append(torch.stack([sp - arcp["s_h"][rt - LS.on0][:, -1], arcp["s_h"][rt - LS.on0][:, -1]], 1)[lab])
                     n_ += len(g)
                 res |= {f"pool_{nm}/{q}": v / n_ for q, v in acc.items()}
-                if d4:
+                if d4 and nm in ("held", "fit"):
                     D_ = torch.cat(d4)
                     sh = D_[:, 1].clamp_min(1e-3)
                     res |= {f"pool_{nm}/arc4_bias": float(D_[:, 0].mean()), f"pool_{nm}/slow08": float(((D_[:, 0] + sh) < 0.8 * sh).float().mean()),
                             f"pool_{nm}/fast12": float(((D_[:, 0] + sh) > 1.2 * sh).float().mean())}
+            for nm, rr in PRB.items():                                # JT probe: plan 4 s arc on the trainval standing / launch rows
+                import nr1_lon
+                a4, h4, ad = [], [], []
+                for j in range(0, len(rr), 128):
+                    g = ns.on0 + rr[j:j + 128]
+                    rt = torch.as_tensor(g, device=dev)
+                    o = model(S.front[g], S.ego[rt], S.tc[rt], None, None, nv=None if ns.nv is None else ns.nv[rt]).float()
+                    x, y, psi = T.rear(o[:, pi_].view(-1, 33, 15), S.cam_x[rt], LS.W)
+                    f = S.fut[rt].float()
+                    a4.append(nr1_lon.arc(x, y)[:, -1]), h4.append(nr1_lon.arc(f[..., 0], f[..., 1])[:, -1])
+                    ad.append(torch.hypot(x - f[..., 0], y - f[..., 1]).mean(1))
+                A4, H4, AD = torch.cat(a4), torch.cat(h4), torch.cat(ad)
+                res |= {f"probe_{nm}/arc4": float(A4.mean()), f"probe_{nm}/stay1m": float((A4 < 1.0).float().mean()),
+                        f"probe_{nm}/human_arc4": float(H4.mean()), f"probe_{nm}/ade": float(AD.mean())}
         model.train()
         return res
     if a.diag:
@@ -1026,6 +1052,14 @@ def cmd_train(a):
         run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
         is_pool = torch.zeros(S.n, dtype=torch.bool, device=dev)
         is_pool[ns.on0:] = bool(k_on) and not a.on_normal             # --rm-drop never applies to pool rows (NR1 --on-normal: imitation rows)
+        if k_on and a.on_normal and ns.mode == "mixed":               # JT: in a mixed pool only the non-`self` rows are imitation rows
+            from jevdrive.common import data_dir as _dd
+            md_ = np.load(_dd() / "runs/op_parity/cache" / a.on / "tab.npz")["mode"].astype(str)
+            is_pool[ns.on0:] = torch.as_tensor(md_ == "self", device=dev)
+            run.info(f"--on-normal, mixed pool: {int((md_ != 'self').sum())} imitation rows (memory drop, history noise), {int((md_ == 'self').sum())} S rows")
+            if a.si_split:
+                from jevdrive.data import splits as _sp
+                run.use_split(_sp.load(a.si_split))
         if a.si_scan:                                                 # SELF-ITER: the new trainval rows are imitation rows (memory dropped as normal rows)
             is_pool[torch.as_tensor(si_free, device=dev)] = False
             run.info(f"SELF-ITER draw: {json.dumps(sirec)}")
@@ -1233,7 +1267,7 @@ def cmd_train(a):
                 run.scalars({f"dev/{q}": v for q, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items()))
                 run.summary.update({f"dev_{q}": v for q, v in ev.items()})
-                if hrec:
+                if hrec or PRB:
                     pe = pool_ev()
                     run.scalars(pe, step + 1)
                     run.info(f"pool slices @ {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
@@ -1403,6 +1437,10 @@ if __name__ == "__main__":
         p.add_argument("--on-arc", type=float, default=0.0, help="NR1HVR: weight of the two-sided longitudinal arc term on the pool rows (0 = off)")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
+        p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
+                       "the `self` rows only); as --on-hold-res otherwise")
+        p.add_argument("--lat-host", action="store_true", help="JT: the lateral rasters stay a host memmap (a pool too big for the card)")
+        p.add_argument("--probe-n", type=int, default=1024, help="JT: rows per wait / launch probe slice (--on-wfile groups stand_r / launch; 0 = off)")
         p.add_argument("--diag", action="store_true", help="monitoring only: activity rates, grad norm / clip rate, per-term trunk gradients")
         p.add_argument("--diag-every", type=int, default=100, help="--diag: steps between per-term gradient norms")
         p.add_argument("--lr-floor", type=float, default=0.0, help="cosine floor as a share of each group's base lr (0 = the plain cosine)")
@@ -1477,10 +1515,11 @@ if __name__ == "__main__":
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc)}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"
+    assert getattr(a, "on_hold_pct", 0) == 0 or (a.on and 0 < a.on_hold_pct < 100 and a.on_hold_res < 0), "--on-hold-pct: needs --on, 1..99, not with --on-hold-res"
     assert 0 <= getattr(a, "lr_floor", 0.0) < 1 and getattr(a, "diag_every", 100) > 0, "--lr-floor in [0, 1), --diag-every > 0"
     assert not (getattr(a, "rm_anchor", False) and a.lc_cf), "--rm-anchor: no anchored --lc-cf rows (rf_cfpool builds the ordered layout)"   # ANCHOR
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)
