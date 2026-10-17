@@ -437,7 +437,7 @@ def cmd_cont(a):
         res["cl"][k] = dict(static=static_of(st), stop17=stop17_of(pd))
     for k in (t, "RTB1-F-s0", "RB0-F-s0", "RSG-L18-s0", "WTCP-L18-s0", "P0"):
         f = NX / "arrival" / f"{k}.json"
-        res["arrival"][k] = arrival_of(k)[1] if f.exists() else None
+        res["arrival"][k] = arrival_of(k)[1]["arc4"] if f.exists() else None
         if k != "P0":
             res["dev_ade"][k] = wt.dev_ade(k)
     s = res["cl"][t]["static"]
