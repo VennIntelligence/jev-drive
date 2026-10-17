@@ -1,0 +1,296 @@
+{
+ "tags": [
+  "NR1F-L18-s0",
+  "NR1F-L18-s1"
+ ],
+ "lines": {
+  "NR1F-L18-s0": {
+   "held_zeros": false,
+   "held_ci": false,
+   "pub_ci": false,
+   "pub_rear": true,
+   "static": true,
+   "W": false,
+   "G": true,
+   "waitset (proposed)": false
+  },
+  "NR1F-L18-s1": {
+   "held_zeros": false,
+   "held_ci": false,
+   "pub_ci": true,
+   "pub_rear": true,
+   "static": false,
+   "W": false,
+   "G": true,
+   "waitset (proposed)": false
+  },
+  "PAI NR1F-L18-s0": {
+   "paired": false,
+   "zeros": false
+  }
+ },
+ "waitset": {
+  "RSG-L18-s0": {
+   "all": {
+    "a_n": 146,
+    "a_zeros": 7,
+    "a_wait_ok": 0.2328767123287671,
+    "a_score": 0.952054794520548,
+    "b_n": 166,
+    "b_never": 3,
+    "b_delay_med": -0.4830000000000001,
+    "b_score": 0.9379902727856325,
+    "vs_ref": {
+     "ref": "RSG-L18-s0",
+     "a_zero_diff": 0.0,
+     "a_zero_diff_lo": 0.0,
+     "a_zero_diff_hi": 0.0,
+     "b_delay_med_diff": 0.0
+    }
+   },
+   "held": {
+    "a_n": 44,
+    "a_zeros": 2,
+    "a_wait_ok": 0.22727272727272727,
+    "a_score": 0.9545454545454546,
+    "b_n": 50,
+    "b_never": 1,
+    "b_delay_med": -0.6830000000000003,
+    "b_score": 0.9693689855916471,
+    "vs_ref": {
+     "ref": "RSG-L18-s0",
+     "a_zero_diff": 0.0,
+     "a_zero_diff_lo": 0.0,
+     "a_zero_diff_hi": 0.0,
+     "b_delay_med_diff": 0.0
+    }
+   }
+  },
+  "RTB1ARO-L18-s0": {
+   "all": {
+    "a_n": 146,
+    "a_zeros": 6,
+    "a_wait_ok": 0.410958904109589,
+    "a_score": 0.958904109589041,
+    "b_n": 166,
+    "b_never": 5,
+    "b_delay_med": -0.633,
+    "b_score": 0.927346468323132,
+    "vs_ref": {
+     "ref": "RSG-L18-s0",
+     "a_zero_diff": -1.0,
+     "a_zero_diff_lo": -5.615384615384616,
+     "a_zero_diff_hi": 3.106382978723404,
+     "b_delay_med_diff": -0.1499999999999999
+    }
+   },
+   "held": {
+    "a_n": 44,
+    "a_zeros": 2,
+    "a_wait_ok": 0.38636363636363635,
+    "a_score": 0.9545454545454546,
+    "b_n": 50,
+    "b_never": 1,
+    "b_delay_med": -0.7330000000000001,
+    "b_score": 0.9584758957186511,
+    "vs_ref": {
+     "ref": "RSG-L18-s0",
+     "a_zero_diff": 0.0,
+     "a_zero_diff_lo": 0.0,
+     "a_zero_diff_hi": 0.0,
+     "b_delay_med_diff": -0.04999999999999982
+    }
+   }
+  },
+  "NR1F-L18-s0": null,
+  "NR1F-L18-s1": null
+ },
+ "pai": {
+  "tag": "NR1F-L18-s0",
+  "pair": {
+   "n": 281,
+   "mean": -0.013065964080932498,
+   "lo": -0.04399968772095038,
+   "hi": 0.01733448487990589
+  },
+  "zeros": 80,
+  "zeros_ref": 76,
+  "at_fault": 12,
+  "at_fault_ref": 9
+ },
+ "reads": {
+  "NR1F-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 39,
+    "mean": 0.8800152437754246,
+    "progress_rel": 0.8322711220243109,
+    "at_fault": 5,
+    "offroad": 19,
+    "coll": {
+     "front": 4,
+     "lateral": 1,
+     "rear": 29
+    },
+    "creep": 7,
+    "no_launch": 0,
+    "lat_zeros": 28,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.014444933025675542,
+      "lo": -0.0020597572518054963,
+      "hi": 0.041520320915932905,
+      "zeros": 39,
+      "zeros_ref": 34,
+      "scenes": 460
+     },
+     "RTB1ARO-L18-s0": {
+      "n": 460,
+      "mean": 0.007141783035095945,
+      "lo": -0.0038696287383341438,
+      "hi": 0.025664325974699333,
+      "zeros": 39,
+      "zeros_ref": 39,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": {
+    "scenes": 1491,
+    "zeros": 57,
+    "mean": 0.9429478435660077,
+    "progress_rel": 0.8700453601246642,
+    "at_fault": 2,
+    "offroad": 31,
+    "coll": {
+     "front": 1,
+     "lateral": 1,
+     "rear": 14
+    },
+    "creep": 17,
+    "no_launch": 1,
+    "lat_zeros": 45,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 1491,
+      "mean": 0.0032331964864047032,
+      "lo": -0.0052423120395516465,
+      "hi": 0.011340710529930968,
+      "zeros": 57,
+      "zeros_ref": 58,
+      "scenes": 1491
+     },
+     "RTB1ARO-L18-s0": {
+      "n": 1491,
+      "mean": 0.005190594454357315,
+      "lo": 0.00048366314522618503,
+      "hi": 0.01007014929221849,
+      "zeros": 57,
+      "zeros_ref": 65,
+      "scenes": 1491
+     }
+    }
+   },
+   "static": {
+    "score": 1.0,
+    "dist": 0.8540882947450006,
+    "collision": false,
+    "min_gap": 1.1751262903897464
+   },
+   "stop17": {
+    "zeros": 16,
+    "n": 17
+   },
+   "W": 0.07916666666666666,
+   "G": 0.9979123173277662
+  },
+  "NR1F-L18-s1": {
+   "held": {
+    "scenes": 460,
+    "zeros": 41,
+    "mean": 0.8785316343599198,
+    "progress_rel": 0.836110025182088,
+    "at_fault": 5,
+    "offroad": 20,
+    "coll": {
+     "front": 5,
+     "lateral": 0,
+     "rear": 27
+    },
+    "creep": 8,
+    "no_launch": 0,
+    "lat_zeros": 28,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 460,
+      "mean": 0.01296132361017066,
+      "lo": -0.007458002879770107,
+      "hi": 0.04042935805912912,
+      "zeros": 41,
+      "zeros_ref": 34,
+      "scenes": 460
+     },
+     "RTB1ARO-L18-s0": {
+      "n": 460,
+      "mean": 0.0056581736195910615,
+      "lo": -0.008885014112374912,
+      "hi": 0.026722025812965663,
+      "zeros": 41,
+      "zeros_ref": 39,
+      "scenes": 460
+     }
+    }
+   },
+   "pub": {
+    "scenes": 1491,
+    "zeros": 57,
+    "mean": 0.9436475785396473,
+    "progress_rel": 0.8719621311154861,
+    "at_fault": 1,
+    "offroad": 31,
+    "coll": {
+     "front": 1,
+     "lateral": 0,
+     "rear": 16
+    },
+    "creep": 18,
+    "no_launch": 2,
+    "lat_zeros": 45,
+    "pair": {
+     "RSG-L18-s0": {
+      "n": 1491,
+      "mean": 0.00393293146004427,
+      "lo": -0.004374848269070335,
+      "hi": 0.012658455897310166,
+      "zeros": 57,
+      "zeros_ref": 58,
+      "scenes": 1491
+     },
+     "RTB1ARO-L18-s0": {
+      "n": 1491,
+      "mean": 0.005890329427996883,
+      "lo": 0.00028204104973746357,
+      "hi": 0.011421737133963902,
+      "zeros": 57,
+      "zeros_ref": 65,
+      "scenes": 1491
+     }
+    }
+   },
+   "static": {
+    "score": 1.0,
+    "dist": 1.0785030505245008,
+    "collision": false,
+    "min_gap": 0.9492967015538768
+   },
+   "stop17": {
+    "zeros": 16,
+    "n": 17
+   },
+   "W": 0.06791666666666667,
+   "G": 0.9979123173277662
+  }
+ },
+ "bar_met": false
+}
