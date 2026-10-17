@@ -33,6 +33,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+import time
 import zlib
 from pathlib import Path
 
@@ -273,7 +274,8 @@ def cmd_scan(a):
     S, model, W = ns.S, ns.model, ns.losses(ns.mode).W
     pi = torch.as_tensor(S.pi, device=dev)
     tb = np.load(CR / a.pool / "tab.npz")
-    pool, hold = tb["pool"].astype(str), tb["hold"].astype(str) == "1"
+    pool = tb["pool"].astype(str) if "pool" in tb.files else np.full(len(tb["names"]), "s")
+    hold = tb["hold"].astype(str) == "1" if "hold" in tb.files else np.zeros(len(pool), bool)
     has = S.has_fut.cpu().numpy().astype(bool)
     R = dict(nav_tr=ns.tr_o, nav_dv=ns.dv_o[has[ns.dv_o]], tv_tr=ns.on0 + np.flatnonzero((pool == "t") & ~hold), tv_hold=ns.on0 + np.flatnonzero((pool == "t") & hold))
     want = SETS if a.sets == "all" else ("nav_dv", "tv_hold")
@@ -282,6 +284,7 @@ def cmd_scan(a):
     stem = (a.name or pol) + ("" if a.sets == "all" else ".dev")
     with Run("self_iter", f"scan-{stem}", config=vars(a)) as run:
         model.eval()
+        t0 = time.time()
         P = np.zeros((len(rows), 8, 3), np.float32)
         with torch.no_grad():
             for i in range(0, len(rows), a.bs):
@@ -299,7 +302,8 @@ def cmd_scan(a):
             ref = wt.dev_ade(pol)
         except Exception:                                             # noqa: BLE001  (no DONE: no reference)
             ref = None
-        rec = dict(policy=pol, pool=a.pool, rows={k: int((sets == k).sum()) for k in want}, ade={k: float(E["ade"][sets == k].mean()) for k in want},
+        rec = dict(policy=pol, pool=a.pool, rows={k: int((sets == k).sum()) for k in want}, ade={k: float(E["ade"][sets == k].mean()) if (sets == k).any() else None for k in want},
+                   forward_s=time.time() - t0,
                    nav_dev_ade=float(E["ade"][dv].mean()), done_dev_ade=ref)
         run.info(f"scan {pol}: {json.dumps(rec)}")
         if ref is not None and abs(rec["nav_dev_ade"] - ref) > 1e-3:
