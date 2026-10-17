@@ -222,3 +222,9 @@ $DATA_DIR/third_party/alpasim/.venv/bin/python experiments/alpasim_proxy/scripts
 .venv/bin/python experiments/alpasim_proxy/scripts/proxy_fit.py tmp/aud1_drift/per_scene.csv experiments/alpasim_proxy/results/anchors/{ltf,dd,g0014}.csv \
   --anchors APY10m10-AB-s0,YR10m10-F-s0,LTF-sample,DD-sample,G0014 --out experiments/alpasim_proxy/results/fit_a5 --frozen experiments/alpasim_proxy/results/fit_a2/weights.npz
 ```
+
+## PAI-CORRIDOR: the still-end corridor lever does not carry to PAI (2026-10-18)
+
+Same scorer and 4 m corridor on PAI, but only 2 of 281 PAI scenes have the human still from the handoff to the end, so a handoff hold
+(leash3) nets -0.04 (g10) to -0.08 (ACC+GAP) offline, ceiling +0.004; PAI's 14-16 still-end corridor zeros per read are humans stopping
+mid-scene. [results/pai_corridor.md](results/pai_corridor.md), script `scripts/pai_corridor.py`.
