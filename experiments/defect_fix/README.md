@@ -13,37 +13,40 @@ hard / soft constraint hinge on kerbs, other vehicles and opposite-direction lan
 0.562), so by the prereg the full chain starts from V2's base. Of the lateral terms, the side buffer + soft term barely move held (47 / 46
 zeros against 47); the amended opposite-lane region (amendment 1) does: NR1H15O 42 zeros, lateral zeros 28 against 34, paired +0.010
 [+0.003, +0.019] against its control. Full chain = RTB1AR-F-s0 -> L18 with NR1H15O's terms + history-speed noise, seeds 0 / 1.
+Update 17:45: the user accepted the dev-ADE cost of the trainval-wait base for its waiting gain, so NR1FB10 (NR1B10-F-s0 -> the same L18 recipe, seeds 0 / 1)
+is the candidate chain, judged by the same bar, with NR1F as the no-waiting comparison (prereg supplement 4).
 
-**Next.** Read the full chain against the bar (handoff below). For the user: whether to accept the base doses' dev-ADE cost for their
-waiting gain (a seed-0 look from NR1B10-F-s0, `NR1FB10-L18-s0`, is submitted: prereg supplement 3, handoff below); the opposite-lane region's label definition (amendment 1) for later rounds.
+**Next.** Read both full chains, NR1FB10 (candidate) and NR1F (comparison), against the bar (handoff below). For the user: the opposite-lane region's
+label definition (amendment 1) for later rounds.
 
-## Handoff (2026-10-17 17:05 CST)
+## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,
   pool on1_L18NR1, `--ego-scale-speed 0.5 --ego-scale-max 0.2`, opposite lane 0.15 + side 0.15 + soft 0.03 on the amendment-1 raster
   runs/defect_fix/lat/L18NR1v2). Every read job id (held 6, public 10, static, wc, waiting set, PAI submitter) is in box
   `runs/defect_fix/stages.txt` (lines `full NR1F-L18-s*`) and `jobs.txt`; the PAI submitter `df-paisub-NR1F-L18-s0` puts stop17 and PAI 281
   (submission config) under `runs/defect_fix/{paisub,pai}/NR1F-L18-s0` (seed 1: stop17 only).
-- Exploratory arm `NR1FB10-L18-s0` (prereg supplement 3, submitted 17:18 CST, seed 0 only, no public / PAI / seed 1; descriptive, no bar line; the user
-  decides on expansion): NR1B10-F-s0 (trainval-wait base, W 0.860 / G 0.977, dev ADE 0.5801 > 0.5619) -> the NR1F L18 recipe unchanged (compiled, merged pool,
-  history noise, 0.15v2 terms), via `SEEDS=0 NOPUB=1 NOPAI=1 TAGP=NR1FB10 bash experiments/defect_fix/scripts/df.sh full NR1B10-F-s0 0.15v2` (SEEDS / NOPAI are
-  new switches of `full`; nothing was submitted and cancelled). Jobs (box `runs/defect_fix/jobs.txt`, `stages.txt`): training 1017-171808-b239; held 460 @18
-  `df-held-NR1FB10-L18-s0-0..5` 1017-171809-b141, 1017-171809-969b, 1017-171810-a39a, 1017-171810-31df, 1017-171811-7feb, 1017-171811-2176; static scene
-  1017-171812-005b; W / G (wc plans) 1017-171812-0eec; waiting set (v2, 312 windows) 1017-171813-856f. Its waiting-set job may end rc 1 at the collect step, as
-  the `df-ws-NR1H*` did (3 b windows without a logged human launch): then add `NR1FB10-L18-s0` to the `wscollect` call below. Expansion if wanted: seed 1 (+ public,
-  stop17) `SEEDS=1 TAGP=NR1FB10 bash experiments/defect_fix/scripts/df.sh full NR1B10-F-s0 0.15v2`; seed 0 public `df.sh repub NR1FB10-L18-s0 0 1 2 3 4 5 6 7 8 9`;
-  seed 0 PAI 281 `df.sh paisub NR1FB10-L18-s0 pai` (the body `full` submits). `df.sh wait` below also waits for these jobs (it watches every job in `pool/`).
+- Candidate chain `NR1FB10-L18-s0 / s1` (prereg supplements 3-4; the user accepted the dev-ADE cost of the trainval-wait base NR1B10-F-s0, 0.5801 against
+  the 0.5619 line, for its waiting gain W 0.860 / G 0.977; launched 17:42 CST at pool priority 12, which runs first: `--priority` is higher-first, NR1F's chain is 9):
+  `PRIO=12 TAGP=NR1FB10 bash experiments/defect_fix/scripts/df.sh full NR1B10-F-s0 0.15v2` = NR1F's chain and recipe with only the base changed. Trainings
+  `NR1FB10-L18-s0` 1017-174202-d892, `NR1FB10-L18-s1` 1017-174213-db2e; the other 20 jobs per seed (held 6, public 10, static, wc, waiting set, PAI submitter) are
+  in box `runs/defect_fix/stages.txt` (lines `full NR1FB10-L18-s*`) and `jobs.txt`; PAI submitters `df-paisub-NR1FB10-L18-s0` 1017-174212-ef6a (stop17 + PAI 281 under
+  `runs/defect_fix/{paisub,pai}/NR1FB10-L18-s0`, PRIO 12) and `df-paisub-NR1FB10-L18-s1` 1017-174223-56e6 (stop17 only). Judged by the section 5 bar, NR1F is the
+  comparison. The first seed-0-only submission of 17:18 (priority 9, `1017-171808-b239` .. `1017-171813-856f`, nothing had started) was cancelled and resubmitted this way.
+  Switches `full` gained for it (not needed by the chain above): `SEEDS` (default "0 1") and `NOPAI=1`, next to `NOPUB` and `TAGP`.
 - Summaries: `experiments/defect_fix/results/` (written into the box checkout, copied to this repo by hand): `base_pilot`, `l18_pilot`
   (+ `_regress`: the 28 named + 12 no-launch scenes), `lat_gate`, `lat_gate_v2`, `identity_base` / `identity_rsg`, `candgate_*`, `w_*`, `pack_NR1TV`.
 - Final table against the bar (box, repo root), in order, each once:
-  1. `WAIT_PAI=$DATA_DIR/runs/defect_fix/pai/NR1F-L18-s0 CAP=7000 bash experiments/defect_fix/scripts/df.sh wait df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1`
+  1. `WAIT_PAI="$DATA_DIR/runs/defect_fix/pai/NR1F-L18-s0 $DATA_DIR/runs/defect_fix/pai/NR1FB10-L18-s0" CAP=7000 bash experiments/defect_fix/scripts/df.sh wait
+     df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1 df-paisub-NR1FB10-L18-s0 df-paisub-NR1FB10-L18-s1`
      (one blocking wait, run in the background; since 86209efb it no longer counts a "cancelled: cancelled while queued" STATUS line as open, which
      matched `*queued*` and kept the earlier wait running to its cap)
-  2. `bash experiments/defect_fix/scripts/df.sh wscollect NR1F-L18-s0 NR1F-L18-s1 NR1H15O-L18-s0 NR1B05-F-s0 NR1B10-F-s0 NR1BALL-F-s0`
+  2. `bash experiments/defect_fix/scripts/df.sh wscollect NR1F-L18-s0 NR1F-L18-s1 NR1FB10-L18-s0 NR1FB10-L18-s1 NR1H15O-L18-s0 NR1B05-F-s0 NR1B10-F-s0 NR1BALL-F-s0`
      (waiting-set tables: wait_set.py collect stops on the 3 variant-b windows of waitset@v2 without a logged human launch; this reruns it with
-     them as NaN)
+     them as NaN; its run-directory path was wrong until a30b33a2 and printed "no finished run" for every tag)
   3. `bash experiments/defect_fix/scripts/df.sh fullsum` -> `results/full_chain.{md,json}` and `full_chain_regress.{md,json}` (bar lines 1-6;
-     line 6, the waiting set, is proposed to the user)
+     line 6, the waiting set, is proposed to the user); the candidate chain: `TAGP=NR1FB10 bash experiments/defect_fix/scripts/df.sh fullsum` ->
+     `results/full_chain_NR1FB10.{md,json}` and `_regress` (the file names carry the chain, so the second run does not overwrite the first)
 - Not done here: the route-memory anchoring (C) runs as a separate agent (results to experiments/route_mem/results/anchor_check.md);
   NR1 does not use it.
 

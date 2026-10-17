@@ -17,7 +17,7 @@
 #                           Env: TAGP tag prefix (NR1F), SEEDS ("0 1"), NOPUB=1 no public chunks, NOPAI=1 no PAI submitter (stop17 + PAI 281);
 #                           prereg supplement 3: SEEDS=0 NOPUB=1 NOPAI=1 TAGP=NR1FB10 df.sh full NR1B10-F-s0 0.15v2
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
-#   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress
+#   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress (TAGP=X: full_chain_X.*)
 #   df.sh train <arm> <seed> <steps> <tag>   job body; arms below
 # Env: PRIO (pool priority, default 9)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
@@ -175,7 +175,7 @@ wait)   # wait [submitter ...]: blocks until every NR1 pool job ($O/pool/*/STATU
     (( open == 0 && sub == 1 && pai == 1 )) && break; (( $(date +%s) - t0 > ${CAP:-7000} )) && { echo "cap reached: $open open, pai $pai"; break; }; sleep 60
   done; date; for f in $O/pool/*/STATUS; do tail -1 $f; done | grep -v ": done" ;;
 fullsum)   # after the full chain ended (df.sh wait df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1, then the PAI chunks): the table against the bar
-  P=${TAGP:-NR1F}; $TR $PY fullsum --j $P-L18-s0 $P-L18-s1 --pai $P-L18-s0 ;;
+  P=${TAGP:-NR1F}; $TR $PY fullsum --j $P-L18-s0 $P-L18-s1 --pai $P-L18-s0 --out $([[ $P == NR1F ]] && echo full_chain || echo full_chain_$P) ;;
 train)   # train <arm> <seed> <steps> <tag>
   case $2 in
     v2base) F="$RB0 $KD" ;;                                                                       # identity only (= nx.sh rtb1ar)

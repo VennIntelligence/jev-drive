@@ -603,8 +603,8 @@ def cmd_fullsum(a):
     L.append(f"\nbar 'clearly better than RSG-L18-s0' met: {'yes' if res['bar_met'] else 'no'}")
     nx.RES, nx.NX = RES, OUT
     NR.read_dirs = read_dirs
-    write("full_chain", res, L)
-    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"N{i}={t}" for i, t in enumerate(a.j)], ref="V2", out="full_chain_regress", dry=False))
+    write(a.out, res, L)                                                # a second chain (TAGP) names its own files
+    NR.cmd_table(argparse.Namespace(tags=[f"RSG={RSG}", f"V2={V2}"] + [f"N{i}={t}" for i, t in enumerate(a.j)], ref="V2", out=f"{a.out}_regress", dry=False))
 
 
 # ---------------------------------------------------------------- V2's plans on the L18 pool rows (GPU), for the label gate
@@ -650,7 +650,7 @@ if __name__ == "__main__":
     p = sp.add_parser("pilotsum")
     p.add_argument("--j", nargs="+", required=True), p.add_argument("--control", required=True), p.add_argument("--out", default="l18_pilot")
     p = sp.add_parser("fullsum")
-    p.add_argument("--j", nargs="+", required=True), p.add_argument("--pai", default="")
+    p.add_argument("--j", nargs="+", required=True), p.add_argument("--pai", default=""), p.add_argument("--out", default="full_chain")
     sp.add_parser("reasons").add_argument("--workers", type=int, default=48)
     sp.add_parser("pack")
     p = sp.add_parser("weights")
