@@ -531,13 +531,23 @@ def one(job):
     return row, rows, trace, bev
 
 
+_DONE = [0]
+
+
 def one_cached(job):
-    """one() with its result kept in DIR/geo_cache (a rerun resumes: a worker killed mid-run breaks the whole process pool)."""
+    """one() with its result kept in DIR/geo_cache (a rerun resumes: a worker killed mid-run breaks the whole process pool). The scene
+    loader keeps every data source it opened (a 32-worker run peaked at 322 GB RSS): it is dropped every 20 rollouts."""
     f = Path(job[0]) / f"{job[1]}__{job[2]}__{job[4]}.pkl"
     if f.exists():
         return pickle.load(open(f, "rb"))
     v = one(job[1:])
     pickle.dump(v, open(f, "wb"), protocol=4)
+    _DONE[0] += 1
+    if _DONE[0] % 20 == 0:
+        import gc
+        import ao_e1
+        ao_e1._L.clear()
+        gc.collect()
     return v
 
 
