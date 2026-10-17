@@ -288,7 +288,7 @@ def cmd_report(a):
              f"replay-zero windows when a replay read exists): stop3 {W.score[keep].mean():.4f}, RSG {W.rsg_score[keep].mean():.4f} on {len(keep)} windows.")
     # free partials
     F = W[(W.latch == "free") & (W.score > 0) & (W.score < 1)].copy()
-    F["obs"] = pd.cut(F.obs_min, [0, 5, 10, 20, np.inf], labels=["< 5 m", "5-10 m", "10-20 m", ">= 20 m"])
+    F["obs"] = pd.cut(F.obs_min.clip(upper=1e9), [0, 5, 10, 20, 1e9], labels=["< 5 m", "5-10 m", "10-20 m", ">= 20 m (or none)"])
     o += ["", "## Free-session partials (no latch): points by the nearest obstacle over the kept steps (scorer min_distance_to_obstacle_m)", "",
           "| nearest obstacle | windows | points | median distance ratio ego / human | median progress / 0.8 |", "|---|--:|--:|--:|--:|"]
     for b, g in F.groupby("obs", observed=False):
