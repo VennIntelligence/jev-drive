@@ -115,6 +115,20 @@ the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_pro
   then `arena.py report --set $DATA_DIR/runs/alpasim_proxy/arena/set/set.csv.gz --rows X.csv.gz --out DIR --step 3`; a failed chunk is resubmitted
   with `bash experiments/alpasim_proxy/scripts/arena.sh read <tag> <chunk>` as a pool job body (idempotent: finished chunks are skipped).
 
+## CORRIDOR RULE and ARENA-HOLD (2026-10-18)
+
+- **Corridor rule** ([results/corridor_rule.md](results/corridor_rule.md), `scripts/corridor_rule.py`). The scorer's corridor is a 4 m
+  tube around the human's path inside the scored window. Past the path's end, only the offset perpendicular to the human's last segment
+  counts. When the human stands still to the window's end, that segment is sub-mm jitter, and the corridor becomes a 4 m disc around
+  the rest point. RSG on held still-end static windows: zeroed on 379 of the 382 that reached 4 m, never below 4 m.
+  The waiting set's variant a ends while the human already creeps (8-20 mm per 0.1 s along the heading), so rolling there was free.
+  That is the source of decision 344's "small lever".
+- **ARENA-HOLD** (prereg supplement 1 in [plans/2026-10-17-arena-prereg.md](plans/2026-10-17-arena-prereg.md); `scripts/arena_hold.sh`,
+  `arena_hold.py`). RSG-L18-s0 with the serve-side static hold `JEV_HOLD` (`full` / `lead` / `leash3`;
+  `experiments/alpasim/lib/static_hold.py`, served by `lib/sh30_hold.py` around an unchanged `sh30_driver.py`; checks
+  `experiments/alpasim/scripts/hold_check.py`) on the 2 246 held arena windows, paired against the stored RSG arena read.
+  Readout: `$DATA_DIR/runs/alpasim_proxy/arena/hold/report/hold.md`.
+
 ## Anchors: five policies whose private numbers are known
 
 Private numbers from the leaderboard JSON pulled 2026-10-12 ([results/leaderboard_nuplan_20261012.json](results/leaderboard_nuplan_20261012.json)).
