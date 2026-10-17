@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 WIN = dict(held=9.5, pub=5.5)
 NEW = ("NR1F-L18-s0", "NR1F-L18-s1", "NR1FB10-L18-s0", "NR1FB10-L18-s1")
@@ -128,6 +129,7 @@ def report(a):
     figs.mkdir(exist_ok=True)
     D = pd.read_csv(a.rows)
     D["label"] = D.tag.map(LABEL)
+    D.loc[D.groupby(["read", "tag", "scene"]).rep.transform("min").eq(D.rep), "rep"] = 1     # a scene AUD1 did not use (route fold) keeps its one read
     P = pd.read_csv(REPO / "experiments/alpasim_proxy/results/scene_mix/public_windows.csv")
     P = P[P.kind == "public"].dropna(subset=["v0"])
     st = dict(zip(P.scene, strata(P)))
@@ -135,8 +137,8 @@ def report(a):
     D["zero"] = D.score == 0
     D["zc"] = np.where(D.zero, D.type.map(zclass), "")
     D["pc"] = [pclass(r) if r.score > 0 else "" for r in D.itertuples()]
-    D["dv"] = (D.dist - D.gt) / D.read.map(WIN)
-    D["ratio"] = np.where(D.gt > 5, D.dist / D.gt.clip(lower=1e-6), np.nan)
+    D["dv"] = (D["dist"] - D["gt"]) / D.read.map(WIN)
+    D["ratio"] = np.where(D["gt"] > 5, D["dist"] / D["gt"].clip(lower=1e-6), np.nan)
     main = D[D.rep == 1]
     L = ["# Zero overlap and speed relative to the human: NR1F / NR1FB10 against the older models (stored reads)", "",
          "Descriptive follow-up to [decision 346](../../../research/decisions/346.md); no prereg line. Script: `scripts/df_zero.py` (definitions in its header); "
@@ -167,7 +169,9 @@ def report(a):
     # 2. overlap table
     L += ["## 2. Zeros of each new model against the older ones", "",
           "shared RSG = also zero for RSG; V2-not-RSG = zero for V2 or V2AC but not RSG; new (L18) = zero for none of RSG / V2 / V2AC; "
-          "new (any) = additionally not zero for P0 (held only), YR or APY. Seed-consistent = zero for both seeds of the chain.", "",
+          "new (any) = additionally not zero for P0 (held only), YR or APY. Seed-consistent = zero for both seeds of the chain. "
+          "The route-fail zeros (8 held, 12 public: the map route generation fails before any driving, the same scenes for every model) sit inside every "
+          "model's zeros and inside 'shared RSG'.", "",
           "| read | model | scenes | zeros | shared RSG | V2-not-RSG | new (L18) | new (any) | seed-consistent | of them new (L18) |", "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
     ov = {}
     for rd in ("held", "pub"):
@@ -226,17 +230,20 @@ def report(a):
             L.append(f"| {rd} | {sname} | {len(ids)} | " + " | ".join(cells) + " |")
     L.append("")
 
-    # 5. speed relative to the human
+    # 5. speed relative to the human (route-fail zeros excluded: no rollout, both arcs 0)
+    S5 = main[main.type != "route-fail"]
     SP = ["RSG-L18-s0", "NR1F-L18-s0", "NR1F-L18-s1", "NR1FB10-L18-s0", "NR1FB10-L18-s1", "RTB1ARO-L18-s0", "P0"]
     L += ["## 5. Speed relative to the human on scenes that do not score 1.0", "",
           "dv = (ego arc - human arc) / T in m/s (negative = slower than the human); ratio = ego arc / human arc (human arc > 5 m). Per model over its own "
-          "non-1.0 scenes, split by zero / partial; quantiles q10 / q25 / median / q75 / q90.", ""]
+          "non-1.0 scenes, split by zero / partial; quantiles q10 / q25 / median / q75 / q90. Route-fail zeros (no rollout) are left out. "
+          "Selection caveat: a scene without a contact scores below 1.0 only through progress, so partial scenes are slower than the human by construction; "
+          "the paired rows against RSG (union of both models' non-1.0 scenes) are the comparison.", ""]
     q = lambda x: " / ".join(f"{v:+.2f}" for v in np.nanquantile(x, [0.1, 0.25, 0.5, 0.75, 0.9])) if len(x) else "-"  # noqa: E731
     qr = lambda x: " / ".join(f"{v:.2f}" for v in np.nanquantile(x, [0.1, 0.25, 0.5, 0.75, 0.9])) if np.isfinite(x).sum() else "-"  # noqa: E731
     for rd in ("held", "pub"):
         L += [f"### {rd}", "", "| model | split | scenes | slower / faster than human | dv quantiles (m/s) | ratio quantiles |", "|---|---|--:|--:|---|---|"]
         for t in SP:
-            g = main[(main.read == rd) & (main.tag == t) & (main.score < 1.0)]
+            g = S5[(S5.read == rd) & (S5.tag == t) & (S5.score < 1.0)]
             if g.empty:
                 continue
             for split, h in (("all < 1.0", g), ("zero", g[g.zero]), ("partial", g[~g.zero])):
@@ -247,16 +254,16 @@ def report(a):
         for sname in ("static", "launch", "braking", "turn", "cruise", "other"):
             cells = []
             for t in SP:
-                h = main[(main.read == rd) & (main.tag == t) & (main.score < 1.0) & (main.stratum == sname)]
+                h = S5[(S5.read == rd) & (S5.tag == t) & (S5.score < 1.0) & (S5.stratum == sname)]
                 cells.append("-" if h.empty else f"{h.dv.median():+.2f} ({len(h)})")
             L.append(f"| {sname} | " + " | ".join(cells) + " |")
         L.append("")
         # paired against RSG on scenes where either is below 1.0
         L += [f"Paired against RSG ({rd}): scenes where RSG or the model scores below 1.0; model minus RSG, session-clustered 95 % CI.", "",
               "| model | scenes | dv diff (m/s) | ratio diff | model slower than RSG / faster (by > 0.2 m/s) |", "|---|--:|---|---|--:|"]
-        R0 = main[(main.read == rd) & (main.tag == "RSG-L18-s0")].set_index("scene")
+        R0 = S5[(S5.read == rd) & (S5.tag == "RSG-L18-s0")].set_index("scene")
         for t in SP[1:]:
-            M = main[(main.read == rd) & (main.tag == t)].set_index("scene")
+            M = S5[(S5.read == rd) & (S5.tag == t)].set_index("scene")
             c = M.index.intersection(R0.index)
             c = c[(M.loc[c, "score"] < 1) | (R0.loc[c, "score"] < 1)]
             if not len(c):
@@ -280,23 +287,23 @@ def report(a):
         for j, split in enumerate(("zero", "partial")):
             ax = axs[i, j]
             for t, c in col.items():
-                h = main[(main.read == rd) & (main.tag == t) & (main.score < 1.0)]
+                h = S5[(S5.read == rd) & (S5.tag == t) & (S5.score < 1.0)]
                 h = h[h.zero] if split == "zero" else h[~h.zero]
                 if len(h):
-                    ax.hist(h.dv.clip(-6, 3), bins=bins, histtype="step", lw=1.6, color=c, label=f"{LABEL[t]} (n={len(h)}, med {h.dv.median():+.2f})")
+                    ax.hist(h.dv.clip(-6, 3), bins=bins, histtype="step", lw=1.6, weights=np.full(len(h), 1 / len(h)), color=c, label=f"{LABEL[t]} (n={len(h)}, med {h.dv.median():+.2f})")
             ax.axvline(0, color="k", lw=0.8)
             ax.set_title(f"{'held 460 @18' if rd == 'held' else 'public 1491 @10'}: {split} scenes", fontsize=10)
-            ax.legend(fontsize=7, frameon=False)
+            ax.legend(fontsize=7, frameon=False, loc="upper left")
             ax.spines[["top", "right"]].set_visible(False)
             if i == 1:
                 ax.set_xlabel("ego minus human mean speed over the window (m/s; clipped to [-6, 3])")
             if j == 0:
-                ax.set_ylabel("scenes")
+                ax.set_ylabel("share of the model's scenes")
     fig.tight_layout()
     fig.savefig(figs / "zo_speed_hist.png", dpi=130)
     L += ["## Figure", "", "![dv histogram](../figs/zo_speed_hist.png)", "",
           "`figs/zo_speed_hist.png`: per model, the histogram of ego-minus-human mean speed over the scenes that do not score 1.0 (rows: held / public; "
-          "columns: zero / partial). What to look at: where the mass sits relative to 0 (left = slower than the human) and whether NR1F / NR1FB10 "
+          "columns: zero / partial; each curve normalised to its own scene count, n in the legend). What to look at: where the mass sits relative to 0 (left = slower than the human) and whether NR1F / NR1FB10 "
           "shift left of RSG on partial scenes (the longitudinal loss) or on zero scenes (a zero while slow is usually rear-ended or corridor after stalling).", ""]
     (out / "zero_overlap.md").write_text("\n".join(L) + "\n")
     js = {f"{rd}|{t}": dict(zeros=v["zeros"], shared_rsg=v["rsg"], v2_not_rsg=v["v2"], new=v["new"], new_any=v["new_any"], seed_both=v["both"], seed_both_new=v["both_new"])

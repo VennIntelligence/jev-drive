@@ -21,6 +21,10 @@ PAI -0.028); L18 washes out the base's waiting (W 0.86 -> 0.17 / 0.19). **Next**
 serve a base without L18; closed-loop reads of the bases NR1B10-F-s0 / RTB1AR-F-s0 (held 460 + static, `df-baseheld-*`, `df-basestatic-*`) submitted 19:02.
 Waiting-set collect for the four chain tags re-submitted 19:00 (1017-185934-9be6). Exploratory NR1FB05 / NR1FBALL still at priority -5 (supplement 5).
 
+**Zero overlap (20:20, [results/zero_overlap.md](results/zero_overlap.md), figure `figs/zo_speed_hist.png`).** Reads are deterministic (RSG held read 3x: 0 / 460 flips).
+NR1F's zeros are old ones (held 28-29 shared with RSG, 8-9 V2-lineage offroad / corridor, 1 seed-consistent new); NR1FB10 adds 5 seed-consistent new held zeros
+(AF-front, corridor, offroad). Paired on non-1.0 scenes the new chains drive faster than RSG (held +0.4-0.7 m/s), still about 1.5-2 m/s below the human.
+
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,
