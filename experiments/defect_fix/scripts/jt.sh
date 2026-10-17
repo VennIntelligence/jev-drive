@@ -4,7 +4,7 @@
 # every job through the GPU pool, --after chained; ids in $O/jt/jobs.txt. Env PRIO (12; the arena / held reads take PRIO + 1).
 #   jt.sh provis                 code smoke on a provisional mixed pool on1_JTP (on1_L18RB0 + on1_L18RTB1 S rows + on1_NR1TV, whose S part is
 #                                exactly on1_L18NR1's rows: the amendment-1 raster L18NR1v2 serves as its prefix raster): 300 steps, every JT flag
-#   jt.sh pool                   route features of on1_L18YS / Y / P (rm_build pool, 6 workers: the box's RAM) -> the merged pool on1_JT
+#   jt.sh pool [route ids]       route features of on1_L18YS / Y (amendment B: no P) (rm_build pool, 6 workers: the box's RAM) -> the merged pool on1_JT
 #                                (rb0 / rtb1 first, so on1_L18NR1's amendment-1 raster L18NR1v2 is its prefix raster) -> draw weights JT10 / JT00
 #                                (supplement 9 amendment A: no NR1HV rollouts and no new raster)
 #   jt.sh smoke <after> <arc>    1 000-step smoke JTSM-L18-s0 (JT10, arc weight <arc>)
@@ -21,7 +21,7 @@ AH=$DATA_DIR/runs/alpasim_proxy/arena/hold; AC=$DATA_DIR/datasets/alpasim_nuplan
 RSG="--warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train \
 --lr-scale 0.1 --on-k 13 --on-mode self"                                                     # RSG-L18-s0's command minus --init / --on (= df.sh RSG)
 NOISE="--ego-scale-speed 0.5 --ego-scale-max 0.2"
-PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_L18P:p:self on1_NR1TV:tv:both"
+PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both"                       # amendment B: no on1_L18P
 LAT=$O/lat/L18NR1v2                                                                           # the prefix raster (rb0 / rtb1 rows)
 KS=32; KTV=38                                                                                 # S rows / trainval rows per batch (supplement 9)
 mkdir -p $J/pool
@@ -43,8 +43,8 @@ provis)
   t=$(sub jt-train-JTSM0 --after $w "${FT[@]}" --timeout-h 1 -- bash $ME train JTSM0-L18-s0 on1_JTP $O/lat/L18NR1v2 JTP10 300 0.0025) || exit 1
   echo "$(date '+%F %T') provis: merge $m weights $w smoke $t" | tee -a $J/stages.txt ;;
 pool)
-  rr=()
-  for N in L18YS L18Y L18P; do rr+=($(sub jt-route6-$N --vram 0.1 --cpu 6 --ram 28 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py pool --name $N --workers 6)) || exit 1; done
+  rr=(${2:-})                                                                  # amendment B: the route ids given (already built / running)
+  [[ -n ${2:-} ]] || for N in L18YS L18Y; do rr+=($(sub jt-route6-$N --vram 0.1 --cpu 6 --ram 60 --timeout-h 1 -- $AP experiments/route_mem/scripts/rm_build.py pool --name $N --workers 6)) || exit 1; done
   m=$(sub jt-merge-JT --after $(csv ${rr[@]}) --vram 0.1 --cpu 4 --ram 24 --timeout-h 2 -- bash $ME merge) || exit 1
   w=$(sub jt-w-JT --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME weights) || exit 1
   echo "$(date '+%F %T') pool: route ${rr[*]} merge $m weights $w" | tee -a $J/stages.txt ;;
