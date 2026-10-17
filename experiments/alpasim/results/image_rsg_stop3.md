@@ -1,6 +1,6 @@
 # nuPlan submission image: RSG-L18-s0 + serve-side hold `JEV_HOLD=stop3` (2026-10-18)
 
-Status: built and tested, **independent audit pending, nothing pushed or submitted**. The candidate of
+Status: built and tested; **independent audit GO** ([image_rsg_stop3_audit.md](image_rsg_stop3_audit.md)), nothing pushed or submitted yet. The candidate of
 [decision 351](../../../research/decisions/351.md) (arena held windows: leash3 0.934 -> stop3 0.944; RSG-L18-s0 0.786). It supersedes the
 leash3 image ([image_rsg_leash3.md](image_rsg_leash3.md)), which stays the audited fallback. It includes the two code fixes that the leash3
 audit ([image_rsg_leash3_audit.md](image_rsg_leash3_audit.md), items 8 and 9) asked for in the next image. Built on the Tokyo box with
