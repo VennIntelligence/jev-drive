@@ -36,6 +36,12 @@ stops in the static scene without contact (0.53-0.63 m, RSG hits the lead) but p
 keeps the stop (static 0.86 m, stop17 15 / 17), brings public 1491 to -0.002 [-0.011, 0.007] vs RSG with rear contacts 17, and held to +0.007 [-0.005, 0.025];
 halving lambda (V1) does not help. What is left is lateral (public offroad 36 vs 31). Start-delay diagnosis: [results/next/explore_f.md](results/next/explore_f.md).
 
+**Explore G (turn tracking and lane lines, exploratory, no training).** The retain line (RTB1 / V2) does not track turns measurably worse than RSG-L18. On identical
+inputs it plans the same turns: logged dev rows +0.01 m at 10 m; replayed closed-loop states a 1.4–1.7 % under-turn, 2–3 % in large narrow bends, none in the seed-1 pair.
+Its entry speed equals RSG's, and paired hard-failure flips in bends are balanced (held 11 / 6, 8 / 7, 9 / 6; public 11 / 10, 9 / 9). The remaining corner-cutting /
+opposite-lane failures are shared with RSG, so no lateral work this round. The shipped lane lines read 0.2–0.3 m on continuous straight roads; at junctions and on irregular
+roads they are 1–6 m off. [results/next/explore_g.md](results/next/explore_g.md).
+
 **Red-light and rear-end census (handoff 2026-10-17 step 0, CPU).** [results/next/census_red_rear.md](results/next/census_red_rear.md): the scorer has no
 red-light term, a rear contact is never at fault and only freezes progress, and a car that moves ~3 m where the human stands still leaves the corridor.
 The MTGS renders keep the lamps red; RSG / V2 launch with the human at red lights as elsewhere. 24 % of d325's uniform windows are red-light waits
