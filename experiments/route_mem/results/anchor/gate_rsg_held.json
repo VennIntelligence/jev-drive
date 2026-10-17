@@ -1,0 +1,13 @@
+{
+  "t": "2026-10-17 16:27:26",
+  "wall_s": 42.7,
+  "set_rsg_held": {
+    "units": 30,
+    "errors": 0,
+    "rollouts": 452,
+    "decisions": 8129,
+    "g_serve_max": 0.00027120113372802734,
+    "m_serve": 1.0,
+    "msg_lead_abs_gt1": 0.0033214417517529833
+  }
+}

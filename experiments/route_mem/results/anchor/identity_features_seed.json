@@ -1,0 +1,162 @@
+{
+ "a": "/root/autodl-tmp/ujs/jev-drive",
+ "b": "/root/autodl-tmp/ujs/jev-drive",
+ "arrays": {
+  "nav_o_f": {
+   "shape": [
+    277,
+    203
+   ],
+   "identical": false
+  },
+  "nav_o_ok": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_o_trav": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_p_f": {
+   "shape": [
+    277,
+    200
+   ],
+   "identical": false
+  },
+  "nav_p_fut_d": {
+   "shape": [
+    277,
+    8
+   ],
+   "identical": true
+  },
+  "nav_p_jdist": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_p_k": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_p_nmsg": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_p_ok": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_p_turn40": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "nav_rows": {
+   "shape": [
+    277
+   ],
+   "identical": true
+  },
+  "pool_o_f": {
+   "shape": [
+    416,
+    203
+   ],
+   "identical": true
+  },
+  "pool_p_anchor": {
+   "shape": [
+    416,
+    3
+   ],
+   "identical": true
+  },
+  "pool_p_f": {
+   "shape": [
+    416,
+    200
+   ],
+   "identical": true
+  },
+  "pool_p_label": {
+   "shape": [
+    416,
+    51,
+    2
+   ],
+   "identical": true
+  },
+  "pool_p_r0": {
+   "shape": [
+    416
+   ],
+   "identical": true
+  },
+  "pool_rows": {
+   "shape": [
+    416
+   ],
+   "identical": true
+  },
+  "sidecars": {
+   "shape": [],
+   "identical": true
+  },
+  "sidecars_anchor": {
+   "shape": [],
+   "identical": true
+  },
+  "sidecars_order": {
+   "shape": [],
+   "identical": true
+  },
+  "trk_rsg_held_default": {
+   "shape": null,
+   "identical": false
+  },
+  "trk_rsg_held_o": {
+   "shape": null,
+   "identical": false
+  },
+  "trk_rsg_held_p": {
+   "shape": null,
+   "identical": false
+  },
+  "trk_v2_held_default": {
+   "shape": null,
+   "identical": false
+  },
+  "trk_v2_held_o": {
+   "shape": null,
+   "identical": false
+  },
+  "trk_v2_held_p": {
+   "shape": null,
+   "identical": false
+  }
+ },
+ "identical": false,
+ "stored_nav_p_equal": 0.9962962962962963,
+ "stored_nav_o_equal": 0.9777777777777777,
+ "stored_pool_p_equal": 1.0,
+ "stored_pool_o_equal": 1.0,
+ "sidecars": {
+  "n": 271,
+  "order": 21,
+  "anchor": 1
+ }
+}

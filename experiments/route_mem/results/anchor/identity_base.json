@@ -1,0 +1,20 @@
+{
+ "a": "ANCGG-B-old",
+ "b": "ANCGG-B-new",
+ "note": "V2 base command (RTB1AR-F-s0: RB0 + KD, exercises the RETAIN block) 60 steps from the shipped weights, eager: code 4ff092b2 vs de3e94c7 with --rm-anchor off",
+ "scalars": 56,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  1.5023669004440308,
+  1.5023669004440308
+ ],
+ "on_hash_60": [
+  null,
+  null
+ ],
+ "want_hash": null,
+ "identical": true
+}

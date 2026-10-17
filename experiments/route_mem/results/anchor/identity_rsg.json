@@ -1,0 +1,20 @@
+{
+ "a": "ANCGG-RSG-old",
+ "b": "ANCGG-RSG-new",
+ "note": "RSG-L18 command 60 steps, eager: code 4ff092b2 vs de3e94c7 with --rm-anchor off; on_hash_60 = RSG-L18-s0s",
+ "scalars": 89,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.529079020023346,
+  0.529079020023346
+ ],
+ "on_hash_60": [
+  "ea8cacc3e451c577",
+  "ea8cacc3e451c577"
+ ],
+ "want_hash": "ea8cacc3e451c577",
+ "identical": true
+}

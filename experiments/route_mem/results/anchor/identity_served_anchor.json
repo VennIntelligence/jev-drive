@@ -1,0 +1,33 @@
+{
+ "rsg_held": {
+  "decisions": 8129,
+  "identical": 8129,
+  "max_abs_diff": 0.0
+ },
+ "v2_held": {
+  "decisions": 8129,
+  "identical": 8129,
+  "max_abs_diff": 0.0
+ },
+ "rsg_pub": {
+  "decisions": 14790,
+  "identical": 14790,
+  "max_abs_diff": 0.0
+ },
+ "v2_pub": {
+  "decisions": 14790,
+  "identical": 14790,
+  "max_abs_diff": 0.0
+ },
+ "a_pub": {
+  "decisions": 14790,
+  "identical": 14790,
+  "max_abs_diff": 0.0
+ },
+ "pool_rb0": {
+  "decisions": 13134,
+  "identical": 13134,
+  "max_abs_diff": 0.0
+ },
+ "identical": true
+}

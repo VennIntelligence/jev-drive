@@ -15,9 +15,11 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
   nav     (box, AlpaSim venv)  rm_align.py nav --out DIR [--data navtrain_full.s0of12 ..] [--limit N]
           the NAVSIM training rows rebuilt exactly as rm_build nav builds them (decision k of a log-following 18-decision rollout; checked
           against the stored feature rows of runs/route_mem/feat), the same lead / early / fold per row against the generator's polyline,
-          and a_* = the same for the row's anchored layout (rm_build anchor's row, rmem.memory_a; a_fold = merge_a's fold)
-          -> DIR/nav_<data>.parquet. The on-policy pool rows (on1_L18RB0, rm_build pool = the served Tracker) are `extract` on RB0-F-s0's
-          rollouts.
+          and a_* = the same for the row's anchored layout (rm_build anchor's row, rmem.memory_a; a_fold = merge_a's fold), o_lead_first /
+          p_lead_first = the ordered layout and the plain anchor, r_loop = the route revisits a place (route_loop: stations ambiguous), and
+          a_g_store / a_m_store against feat/<data>.a.npz when built -> DIR/nav_<data>.parquet. The on-policy pool rows (on1_L18RB0, rm_build
+          pool = the served Tracker) are `extract` on RB0-F-s0's rollouts.
+  navdump (box, AlpaSim venv)  rm_align.py navdump --rows DATA:ROW .. --out FILE   the rebuilt messages of chosen NAVSIM rows (a look offline)
   msgs    (box, AlpaSim venv)  rm_align.py msgs --out DIR      the driver messages (rollout.asl) of every zero rollout with an `ahead` decision
           in the 3 s before its failure (+ RSG's score-1 rerun of 42c7526f as a control) -> DIR/msgs/<group>/<scene>.pkl, targets.json
   replay  (box, envs/op-train, one GPU: a pool job)  rm_align.py replay --out DIR [--ckpts ..]

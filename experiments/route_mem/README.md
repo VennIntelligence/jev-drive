@@ -2,7 +2,7 @@
 
 status: concluded
 decisions: 282 (inputs 266, 272, 275, 278, 279; contrast 127-134, 189, 204)
-index: route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop
+index: route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop; anchored layout (no fold-back, AlpaSim trim tracked) behind --rm-anchor, not trained
 
 **Question.** Decision 279 showed that the AlpaSim route waypoints the driver received earlier, carried into the current frame by its own ego
 poses, place the lane centre to 0.2-0.35 m inside the junction stretch where the frozen eyes miss by 1.1-1.7 m (decision 275). Fed to the
@@ -26,6 +26,13 @@ p90 32-46 m, max 85 m). It is consistent with at most 1-3 zeros per read. An ope
 median of at most 0.1 m. Training rows are anchored exactly like serving. The d302 ordered layout fixes the labels but inherits a
 `merge` fold-back at loops. The fix is an input definition plus a base retrain. Tables in [results/align/](results/align/), figure
 [figs/align_42c7526f.png](figs/align_42c7526f.png), code `scripts/rm_align.py`; box `$DATA_DIR/runs/route_mem/align/`.
+
+**Anchored layout (2026-10-17, behind a flag, not trained yet).** [results/anchor_check.md](results/anchor_check.md). The audit's fix C + D
+as an input definition: `rmem.merge_a` appends a newer batch by arc (no fold-back), `rmem.memory_a` takes AlpaSim's progress anchor and
+tracks its trim by the waypoint count (a short message's hypotheses, chosen by the car's driven chord). It is one function for the training
+rows (`rm_build.py anchor` -> `feat/<data>.a.npz`) and the served memory (`Tracker(anchor=True)`, chosen by the sidecar head `anchor` in
+sh30_driver and pai_driver); `rm_train --rm-anchor` trains on it. Every flag off, the old features, served memory and training are bit for
+bit unchanged (`scripts/rm_ident.py`). The base-retrain build command is in `rm_build.py`'s docstring.
 
 <!-- files:begin -->
 ## Files
