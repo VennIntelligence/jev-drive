@@ -4,12 +4,14 @@
 plausibly cause a zero? CPU only; stored reads and stored training features are read, never written.
 
   extract (box, AlpaSim venv)  rm_align.py extract --set NAME=GLOB [NAME=GLOB ..] --out DIR [--limit N] [--workers N] [--scene S] [--chunk N]
+          [--dump]
           every rollout of the reads (GLOB = run dirs): the drive records, AlpaSim's route rebuilt at the logged anchors in decision order
           (rm_build.regen: RouteGeneratorMap, MAP, 40 m, scene data of the run's own config), the memory of the same messages offline in both
           layouts (rm_build.feats_of = the served projected layout, gate against the logged `rmem`; feats_of_o = the ordered, progress-anchored
           layout of decision 302), the evaluator's 2 Hz event series, the controller trace at the failure
           -> DIR/<NAME>.dec.parquet (one row per decision), DIR/<NAME>.roll.parquet (one per rollout), DIR/<NAME>.geo.pkl (route, path, both
-          memories and plans of the U-turn, early-memory and zero rollouts, for figures)
+          memories and plans of the U-turn, early-memory and zero rollouts, for figures); --dump: DIR/<NAME>.msg.pkl, the regenerated messages,
+          anchors, decision times and route R of every rollout (the input of `anchor`, which needs no AlpaSim)
   nav     (box, AlpaSim venv)  rm_align.py nav --out DIR [--data navtrain_full.s0of12 ..] [--limit N]
           the NAVSIM training rows rebuilt exactly as rm_build nav builds them (decision k of a log-following 18-decision rollout; checked
           against the stored feature rows of runs/route_mem/feat), the same lead / early / fold per row against the generator's polyline
@@ -221,16 +223,16 @@ def ctrl_front(run, rid, t, ahead=3.0):
 
 
 def extract_unit(u):
-    """(set, run, cfg, [(scene, [(rid, score, metrics, records)])]) -> (decision rows, rollout rows, geo dict); one run dir per unit, so a
-    worker builds its scene loader once per unit; a rollout that fails is kept as a rollout row with `err`."""
+    """(set, run, cfg, [(scene, [(rid, score, metrics, records)])], dump) -> (decision rows, rollout rows, geo dict, message dumps); one run dir
+    per unit, so a worker builds its scene loader once per unit; a rollout that fails is kept as a rollout row with `err`."""
     import logging
     import traceback
     logging.disable(logging.WARNING)
-    name, run, cfg, items = u
-    D, Rr, G = [], [], {}
+    name, run, cfg, items, dump = u
+    D, Rr, G, Mg = [], [], {}, {}
     for scene, rid, score, met, recs in ((sc, *x) for sc, rolls in items for x in rolls):
         try:
-            rows, ro, g = one_rollout(name, run, cfg, scene, rid, score, met, recs)
+            rows, ro, g, m = one_rollout(name, run, cfg, scene, rid, score, met, recs, dump)
         except Exception:  # noqa: BLE001
             Rr.append(dict(set=name, scene=scene, rid=rid, err=traceback.format_exc()[-600:]))
             continue
@@ -238,11 +240,14 @@ def extract_unit(u):
         Rr.append(ro)
         if g is not None:
             G[rid] = g
-    return D, Rr, G
+        if m is not None:
+            Mg[rid] = m
+    return D, Rr, G, Mg
 
 
-def one_rollout(name, run, cfg, scene, rid, score, met, recs):
-    """One rollout -> (decision rows, rollout row, geo dict or None) (module docstring)."""
+def one_rollout(name, run, cfg, scene, rid, score, met, recs, dump=False):
+    """One rollout -> (decision rows, rollout row, geo dict or None, message dump or None) (module docstring). dump: the regenerated messages
+    (W (K, 20, 2) rig frame, NaN padded; anchors A (K, 3); t0 (K,) us) and the route R (the truth polyline), for `anchor`."""
     import rm_build as RB
     Fu = {}
     W, A = RB.regen(scene, [dict(r, k=i) for i, r in enumerate(recs)], cfg, Fu)
@@ -310,7 +315,10 @@ def one_rollout(name, run, cfg, scene, rid, score, met, recs):
               g_serve_max=float(np.nanmax([x["g_serve"] for x in rows] + [0.0])), fold_max=float(max(x["fold"] for x in rows)), dist_m=float(met.get("dist_traveled_m") or np.nan),
               gt_dist_m=float(met.get("gt_dist_traveled_m") or np.nan), progress=float(met.get("progress_rel") or np.nan))
     keep = geo_cls == "uturn" or ro["zero"] or ro["n_early"] or ro["wrong_lane"]
-    return rows, ro, (dict(scene=scene, route=route.R.astype(np.float32), S=route.S.astype(np.float32), dec=geo, roll=ro) if keep else None)
+    ks = sorted(W)
+    m = dict(scene=scene, W=np.stack([W[k] for k in ks]), A=np.stack([A[k] for k in ks]), t0=np.array([float(recs[k]["t0"]) for k in ks]),
+             R=route.R) if dump else None
+    return rows, ro, (dict(scene=scene, route=route.R.astype(np.float32), S=route.S.astype(np.float32), dec=geo, roll=ro) if keep else None), m
 
 
 def cmd_extract(a):
@@ -336,18 +344,21 @@ def cmd_extract(a):
                     if rr:
                         by.setdefault(r["clipgt_id"], []).append((r["rollout_id"], r.get("score"), r.get("metrics") or {}, rr))
                 its = [(sc, v) for sc, v in sorted(by.items()) if a.scene in sc]
-                units += [(name, run_dir, cfg, its[i:i + a.chunk]) for i in range(0, len(its), a.chunk)]
+                units += [(name, run_dir, cfg, its[i:i + a.chunk], a.dump) for i in range(0, len(its), a.chunk)]
             units = units[: a.limit or None]
             res = par.pmap(extract_unit, units, run=run, workers=a.workers or n_cpus(), desc=name)
-            D, Rr, G = [], [], {}
+            D, Rr, G, Mg = [], [], {}, {}
             for v in res.values:
                 if v is not None:
                     D += v[0]
                     Rr += v[1]
                     G.update(v[2])
+                    Mg.update(v[3])
             pd.DataFrame(D).to_parquet(out / f"{name}.dec.parquet")
             pd.DataFrame(Rr).to_parquet(out / f"{name}.roll.parquet")
             pickle.dump(G, open(out / f"{name}.geo.pkl", "wb"), protocol=4)
+            if a.dump:                                       # the regenerated messages of every rollout (`anchor` reads them; no AlpaSim there)
+                pickle.dump(Mg, open(out / f"{name}.msg.pkl", "wb"), protocol=4)
             n_roll = len(Rr)
             dd = pd.DataFrame(D)
             rec = dict(units=len(units), errors=len(res.errors), rollouts=n_roll, decisions=len(dd),
@@ -879,6 +890,7 @@ def main():
     e.add_argument("--workers", type=int, default=0)
     e.add_argument("--scene", default="", help="only scenes whose id contains this (a check)")
     e.add_argument("--chunk", type=int, default=16, help="scenes of one run dir per unit")
+    e.add_argument("--dump", action="store_true", help="also write DIR/<NAME>.msg.pkl: the regenerated messages and the route per rollout")
     t = sp.add_parser("nav")
     t.add_argument("--data", nargs="+", default=[f"navtrain_full.s{i}of12" for i in range(12)])
     t.add_argument("--out", required=True)
