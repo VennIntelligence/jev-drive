@@ -1,0 +1,24 @@
+{
+ "pool": "on1_NR1TV",
+ "rows": 82594,
+ "logs": 847,
+ "route_feat_ok": 0.9836670944620675,
+ "classes": {
+  "braking": 8614,
+  "cruising": 31156,
+  "starting": 3883,
+  "stopped": 34053,
+  "turning": 4888
+ },
+ "standing": 33597,
+ "launch": 876,
+ "standing_reasoned": 21909,
+ "reasons_on_standing": {
+  "rlead": 19528,
+  "rsign": 26,
+  "rred": 5582
+ },
+ "split_selfiter_tv_equal": true,
+ "front_check_32": true,
+ "k_tv": 52
+}

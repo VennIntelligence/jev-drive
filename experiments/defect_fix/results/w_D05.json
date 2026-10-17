@@ -1,0 +1,78 @@
+{
+ "pool": "on1_NR1TV",
+ "rows": 82594,
+ "rule": "reasoned",
+ "wait": 0.05,
+ "launch": 0.05,
+ "line_max": 10.0,
+ "nav_class_shares": {
+  "braking": 0.32980853138955907,
+  "cruising": 0.28229557004260564,
+  "starting": 0.13805246137261948,
+  "stopped": 0.0006057183922796571,
+  "turning": 0.2492377188029362
+ },
+ "nav_rows": {
+  "rows": 103288,
+  "standing": 23,
+  "launching": 5860
+ },
+ "classes_used": [
+  "braking",
+  "cruising",
+  "starting",
+  "stopped",
+  "turning"
+ ],
+ "rows_by_group": {
+  "c_braking": 8614,
+  "c_cruising": 31021,
+  "c_starting": 3130,
+  "c_stopped": 474,
+  "c_turning": 4882,
+  "launch": 876,
+  "stand_r": 21909,
+  "stand_u": 11688
+ },
+ "share": {
+  "c_braking": 0.29682767825060313,
+  "c_cruising": 0.2540660130383451,
+  "c_starting": 0.1242472152353575,
+  "c_stopped": 0.0005451465530516912,
+  "c_turning": 0.22431394692264256,
+  "launch": 0.05000000000000001,
+  "stand_r": 0.05,
+  "stand_u": 0.0
+ },
+ "per_row_vs_uniform": {
+  "c_braking": 2.8460860526387646,
+  "c_cruising": 0.6764555714157853,
+  "c_starting": 3.2786180495684083,
+  "c_stopped": 0.09499121182015059,
+  "c_turning": 3.7949582409112534,
+  "launch": 4.714269406392695,
+  "stand_r": 0.18849331325026247,
+  "stand_u": 0.0
+ },
+ "k_tv": 52,
+ "draws_10k": {
+  "c_braking": 154350.39269031363,
+  "c_cruising": 132114.32677993944,
+  "c_starting": 64608.5519223859,
+  "c_stopped": 283.4762075868794,
+  "c_turning": 116643.25239977414,
+  "launch": 26000.000000000004,
+  "stand_r": 26000.0,
+  "stand_u": 0.0
+ },
+ "repeats_10k": {
+  "c_braking": 17.918550347145768,
+  "c_cruising": 4.258867437540358,
+  "c_starting": 20.64170987935652,
+  "c_stopped": 0.5980510708583954,
+  "c_turning": 23.892513805771024,
+  "launch": 29.680365296803657,
+  "stand_r": 1.186726915879319,
+  "stand_u": 0.0
+ }
+}

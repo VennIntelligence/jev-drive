@@ -2,16 +2,40 @@
 
 status: live
 decisions: pending
-index: NR1 prereg written; pilots (3 base doses, 2 lateral doses) running
+index: base doses W 0.84-0.97 but dev ADE +0.028-0.041 (all fail); lateral v2 arm held zeros 42 vs 47; full chain running
 
 **Question.** On top of V2 (RTB1AR base -> RTB1ARO-L18), does one joint arm aimed at the defects the user saw in the zero-score videos (slow
 launches and waiting: trainval rows with a visible reason to stand, balanced by launch rows; creep: history-speed noise; lateral failures: a
 hard / soft constraint hinge on kerbs, other vehicles and opposite-direction lanes) beat RSG-L18-s0 clearly (prereg section 5)?
 
-**Conclusion.** Not read yet.
+**Conclusion.** Pilots (one seed, open loop for the bases, held 460 for the L18 arms): the trainval base doses teach waiting
+(W 0.836 / 0.860 / 0.971 against V2's 0.326, G 0.973 / 0.977 / 0.885) but all three miss the dev-ADE line (0.580 / 0.580 / 0.593 against
+0.562), so by the prereg the full chain starts from V2's base. Of the lateral terms, the side buffer + soft term barely move held (47 / 46
+zeros against 47); the amended opposite-lane region (amendment 1) does: NR1H15O 42 zeros, lateral zeros 28 against 34, paired +0.010
+[+0.003, +0.019] against its control. Full chain = RTB1AR-F-s0 -> L18 with NR1H15O's terms + history-speed noise, seeds 0 / 1.
 
-**Next.** Pilots: base doses NR1B05 / NR1B10 / NR1BALL-F-s0 (open-loop lines, plain continuations on held 460 / public 1491 / the waiting set),
-L18 pilots NR1H0P / H15P / H30P-L18-s0 after the label gate; then the full chain NR1F-L18-s0 / s1 (prereg 4-6).
+**Next.** Read the full chain against the bar (handoff below). For the user: whether to accept the base doses' dev-ADE cost for their
+waiting gain (a second chain from NR1B10-F-s0 is one command); the opposite-lane region's label definition (amendment 1) for later rounds.
+
+## Handoff (2026-10-17 17:05 CST)
+
+- Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,
+  pool on1_L18NR1, `--ego-scale-speed 0.5 --ego-scale-max 0.2`, opposite lane 0.15 + side 0.15 + soft 0.03 on the amendment-1 raster
+  runs/defect_fix/lat/L18NR1v2). Every read job id (held 6, public 10, static, wc, waiting set, PAI submitter) is in box
+  `runs/defect_fix/stages.txt` (lines `full NR1F-L18-s*`) and `jobs.txt`; the PAI submitter `df-paisub-NR1F-L18-s0` puts stop17 and PAI 281
+  (submission config) under `runs/defect_fix/{paisub,pai}/NR1F-L18-s0` (seed 1: stop17 only).
+- Summaries: `experiments/defect_fix/results/` (written into the box checkout, copied to this repo by hand): `base_pilot`, `l18_pilot`
+  (+ `_regress`: the 28 named + 12 no-launch scenes), `lat_gate`, `lat_gate_v2`, `identity_base` / `identity_rsg`, `candgate_*`, `w_*`, `pack_NR1TV`.
+- Final table against the bar (box, repo root), in order, each once:
+  1. `WAIT_PAI=$DATA_DIR/runs/defect_fix/pai/NR1F-L18-s0 CAP=7000 bash experiments/defect_fix/scripts/df.sh wait df-paisub-NR1F-L18-s0 df-paisub-NR1F-L18-s1`
+     (one blocking wait, run in the background)
+  2. `bash experiments/defect_fix/scripts/df.sh wscollect NR1F-L18-s0 NR1F-L18-s1 NR1H15O-L18-s0 NR1B05-F-s0 NR1B10-F-s0 NR1BALL-F-s0`
+     (waiting-set tables: wait_set.py collect stops on the 3 variant-b windows of waitset@v2 without a logged human launch; this reruns it with
+     them as NaN)
+  3. `bash experiments/defect_fix/scripts/df.sh fullsum` -> `results/full_chain.{md,json}` and `full_chain_regress.{md,json}` (bar lines 1-6;
+     line 6, the waiting set, is proposed to the user)
+- Not done here: the route-memory anchoring (C) runs as a separate agent (results to experiments/route_mem/results/anchor_check.md);
+  NR1 does not use it.
 
 **Read more.** [plans/2026-10-17-nr1-prereg.md](plans/2026-10-17-nr1-prereg.md) (Chinese; design, gates, bar, branch rules).
 
@@ -29,7 +53,7 @@ L18 pilots NR1H0P / H15P / H30P-L18-s0 after the label gate; then the full chain
 - `explore_g.md` (experiments/wait_cap/results/next): does the retain line track turns worse …
 - `wait_set.md` (experiments/alpasim_proxy/results): a local closed-loop set where the …
 
-[results/](results/) 0 result files · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 3 entry points
+[results/](results/) 19 result files · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 4 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

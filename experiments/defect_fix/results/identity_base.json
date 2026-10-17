@@ -1,0 +1,20 @@
+{
+ "a": "NR1GG-B-old",
+ "b": "NR1GG-B-new",
+ "note": "V2 base command (RTB1AR-F-s0) 60 steps from the shipped weights, eager: code a32616c3 vs this code (c86c37ed) with every NR1 flag off",
+ "scalars": 56,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  1.5023669004440308,
+  1.5023669004440308
+ ],
+ "on_hash_60": [
+  null,
+  null
+ ],
+ "want_hash": null,
+ "identical": true
+}

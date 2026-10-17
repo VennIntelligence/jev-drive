@@ -1,0 +1,22 @@
+{
+ "dev_ade": 0.580410897731781,
+ "wait_W": 0.8358333333333333,
+ "go_G": 0.9728601252609603,
+ "D": 0.8086934585942936,
+ "into_WL": 0.005,
+ "stop_SL": 0.9295154185022027,
+ "arrival_k1": 0.9607262136721804,
+ "launch": {
+  "rows": 0,
+  "bias": NaN
+ },
+ "lines": {
+  "dev_ade": false,
+  "go_G": true,
+  "arrival": true
+ },
+ "candidate": false,
+ "ref_dev_ade": 0.5519481897354126,
+ "W_line": true,
+ "launch_line": false
+}

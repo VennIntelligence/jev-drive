@@ -11,7 +11,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; PAI high-speed spins = force-GT handoff, MPC gain 20 fixes in replay; slowness = speed-history loop (CF +83 %) [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
 - [cap_ledger](cap_ledger/README.md): live; P2-F lost only see-and-brake: wait, stop behind car, yield [d331]
-- [defect_fix](defect_fix/README.md): live; NR1 prereg written; pilots (3 base doses, 2 lateral doses) running [dpending]
+- [defect_fix](defect_fix/README.md): live; base doses W 0.84-0.97 but dev ADE +0.028-0.041 (all fail); lateral v2 arm held zeros 42 vs 47; full chain running [dpending]
 - [desire_cap](desire_cap/README.md): closed; P0 laneChange 1.04 m at 4 s (partial); P2-F cuts 69 %, left 97 % [d332]; driver-side route desire D0 does not carry lane changes, costs collisions [d334]
 - [others_turn](others_turn/README.md): live; held 24 turns: RSG 16, rule expert 22, WA-JEPA 7, garage 1, LTF 0, DD 0 [dnone]
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
@@ -112,7 +112,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
 - [local_map](local_map/README.md): route received earlier: 0.35 m at 20 m on 28 / 45 zero windows (line < 0.5); carried probe 2-4 m [d279,(inputs,272,275)]
 - [road_probe](road_probe/README.md): frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m; junction blur also on real navtest frames (1.18 vs 0.46 m), not a reconstruction artefact [d275,(inputs,223,243,268,272)]
-- [route_mem](route_mem/README.md): route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop [d282,(inputs,266,272,275,278,279;,contrast,127-134,189,204)]
+- [route_mem](route_mem/README.md): route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop; anchored layout (no fold-back, AlpaSim trim tracked) behind --rm-anchor, not trained [d282,(inputs,266,272,275,278,279;,contrast,127-134,189,204)]
 - [route_only](route_only/README.md): route-as-path not supported: held ties RSG, public at-fault +9; route covers 48 % of decisions [dpending]
 - [stopline_probe](stopline_probe/README.md): nuPlan red vs non-red from t0 view_39 tokens 0.936 (base 0.875); PAI: 4 red events only [d(inputs:,089,238,256,286)]
 - [rule_oracle](rule_oracle/README.md): planned; scoped: PDM-Closed re-impl on the scene loader, 4 arms ~2.5 card-h [d-] — closed 2026-10-12, not run

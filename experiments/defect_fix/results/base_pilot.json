@@ -1,0 +1,85 @@
+{
+ "ref": "RTB1AR-F-s0",
+ "ref_dev_ade": 0.5519481897354126,
+ "bases": {
+  "NR1B05-F-s0": {
+   "dev_ade": 0.580410897731781,
+   "wait_W": 0.8358333333333333,
+   "go_G": 0.9728601252609603,
+   "D": 0.8086934585942936,
+   "into_WL": 0.005,
+   "stop_SL": 0.9295154185022027,
+   "arrival_k1": 0.9607262136721804,
+   "launch": {
+    "rows": 0,
+    "bias": NaN
+   },
+   "dose": "0.05/0.05",
+   "lines": {
+    "dev_ade": false,
+    "go_G": true,
+    "arrival": true
+   },
+   "candidate": false,
+   "cont": "NR1B05O-L18-s0"
+  },
+  "NR1B10-F-s0": {
+   "dev_ade": 0.5801210999488831,
+   "wait_W": 0.8595833333333334,
+   "go_G": 0.9770354906054279,
+   "D": 0.8366188239387613,
+   "into_WL": 0.006666666666666667,
+   "stop_SL": 0.9295154185022027,
+   "arrival_k1": 0.9947193152673259,
+   "launch": {
+    "rows": 0,
+    "bias": NaN
+   },
+   "dose": "0.10/0.10",
+   "lines": {
+    "dev_ade": false,
+    "go_G": true,
+    "arrival": true
+   },
+   "candidate": false,
+   "cont": "NR1B10O-L18-s0"
+  },
+  "NR1BALL-F-s0": {
+   "dev_ade": 0.5931175947189331,
+   "wait_W": 0.97125,
+   "go_G": 0.8851774530271399,
+   "D": 0.8564274530271399,
+   "into_WL": 0.0008333333333333334,
+   "stop_SL": 0.9383259911894273,
+   "arrival_k1": 1.0724633084798632,
+   "launch": {
+    "rows": 0,
+    "bias": NaN
+   },
+   "dose": "natural",
+   "lines": {
+    "dev_ade": false,
+    "go_G": false,
+    "arrival": true
+   },
+   "candidate": false,
+   "cont": "NR1BALLO-L18-s0"
+  }
+ },
+ "conts": {},
+ "waitset": {
+  "RTB1AR-F-s0": null,
+  "RTB1ARO-L18-s0": null,
+  "RSG-L18-s0": null,
+  "NR1B05-F-s0": null,
+  "NR1B10-F-s0": null,
+  "NR1BALL-F-s0": null,
+  "NR1B05O-L18-s0": null,
+  "NR1B10O-L18-s0": null,
+  "NR1BALLO-L18-s0": null
+ },
+ "admissible": [],
+ "waitset_eligible": [],
+ "pick": null,
+ "rule": "no waiting-set read usable: highest W among the closed-loop-admissible candidates"
+}

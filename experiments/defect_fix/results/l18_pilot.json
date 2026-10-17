@@ -1,0 +1,382 @@
+{
+ "control": "NR1H0P-L18-s0",
+ "arms": {
+  "NR1H15P-L18-s0": {
+   "read": {
+    "held": {
+     "scenes": 460,
+     "zeros": 47,
+     "mean": 0.8568565132315867,
+     "progress_rel": 0.8233946976983518,
+     "at_fault": 6,
+     "offroad": 22,
+     "coll": {
+      "front": 6,
+      "lateral": 0,
+      "rear": 27
+     },
+     "creep": 9,
+     "no_launch": 0,
+     "lat_zeros": 33,
+     "pair": {
+      "NR1H0P-L18-s0": {
+       "n": 460,
+       "mean": -9.744577304151473e-05,
+       "lo": -0.00596787502933321,
+       "hi": 0.004805725138748751,
+       "zeros": 47,
+       "zeros_ref": 47,
+       "scenes": 460
+      },
+      "RTB1ARO-L18-s0": {
+       "n": 460,
+       "mean": -0.016016947508742,
+       "lo": -0.03133134391097025,
+       "hi": 0.004658890389788588,
+       "zeros": 47,
+       "zeros_ref": 39,
+       "scenes": 460
+      },
+      "RSG-L18-s0": {
+       "n": 460,
+       "mean": -0.008713797518162397,
+       "lo": -0.03019427602076939,
+       "hi": 0.021227492389330766,
+       "zeros": 47,
+       "zeros_ref": 34,
+       "scenes": 460
+      }
+     }
+    },
+    "pub": {
+     "scenes": 1491,
+     "zeros": 61,
+     "mean": 0.9376372986272937,
+     "progress_rel": 0.8655351307088914,
+     "at_fault": 2,
+     "offroad": 34,
+     "coll": {
+      "front": 2,
+      "lateral": 0,
+      "rear": 15
+     },
+     "creep": 21,
+     "no_launch": 4,
+     "lat_zeros": 48,
+     "pair": {
+      "NR1H0P-L18-s0": {
+       "n": 1491,
+       "mean": -0.0024484291519848494,
+       "lo": -0.007121102271728459,
+       "hi": 0.0011038834688928282,
+       "zeros": 61,
+       "zeros_ref": 57,
+       "scenes": 1491
+      },
+      "RTB1ARO-L18-s0": {
+       "n": 1491,
+       "mean": -0.00011995048435651128,
+       "lo": -0.006656712247175985,
+       "hi": 0.006323220427626211,
+       "zeros": 61,
+       "zeros_ref": 65,
+       "scenes": 1491
+      },
+      "RSG-L18-s0": {
+       "n": 1491,
+       "mean": -0.002077348452309124,
+       "lo": -0.015587130555394619,
+       "hi": 0.009234947721679163,
+       "zeros": 61,
+       "zeros_ref": 58,
+       "scenes": 1491
+      }
+     }
+    },
+    "static": {
+     "score": 1.0,
+     "dist": 0.7822380564733495,
+     "collision": false,
+     "min_gap": 1.247368962585304
+    },
+    "stop17": null,
+    "W": 0.16875,
+    "G": 0.9979123173277662
+   },
+   "lines": {
+    "held_zeros": true,
+    "held_lateral": true
+   },
+   "passed": true
+  },
+  "NR1H30P-L18-s0": {
+   "read": {
+    "held": {
+     "scenes": 460,
+     "zeros": 46,
+     "mean": 0.8594753739907556,
+     "progress_rel": 0.8241711063516122,
+     "at_fault": 7,
+     "offroad": 21,
+     "coll": {
+      "front": 6,
+      "lateral": 1,
+      "rear": 24
+     },
+     "creep": 9,
+     "no_launch": 0,
+     "lat_zeros": 33,
+     "pair": {
+      "NR1H0P-L18-s0": {
+       "n": 460,
+       "mean": 0.0025214149861273604,
+       "lo": -0.00502389183383577,
+       "hi": 0.0090719589350799,
+       "zeros": 46,
+       "zeros_ref": 47,
+       "scenes": 460
+      },
+      "RTB1ARO-L18-s0": {
+       "n": 460,
+       "mean": -0.013398086749573122,
+       "lo": -0.028436364531815143,
+       "hi": 0.004308047597202674,
+       "zeros": 46,
+       "zeros_ref": 39,
+       "scenes": 460
+      },
+      "RSG-L18-s0": {
+       "n": 460,
+       "mean": -0.0060949367589935265,
+       "lo": -0.02656954803562958,
+       "hi": 0.020943786130793753,
+       "zeros": 46,
+       "zeros_ref": 34,
+       "scenes": 460
+      }
+     }
+    },
+    "pub": {
+     "scenes": 299,
+     "zeros": 9,
+     "mean": 0.9570969487691907,
+     "progress_rel": 0.8592545815556554,
+     "at_fault": 0,
+     "offroad": 7,
+     "coll": {
+      "front": 0,
+      "lateral": 0,
+      "rear": 4
+     },
+     "creep": 1,
+     "no_launch": 0,
+     "lat_zeros": 8,
+     "pair": {
+      "NR1H0P-L18-s0": {
+       "n": 299,
+       "mean": 0.00026882498210619376,
+       "lo": -2.1392737718509142e-05,
+       "hi": 0.0006750226462495776,
+       "zeros": 9,
+       "zeros_ref": 9,
+       "scenes": 299
+      },
+      "RTB1ARO-L18-s0": {
+       "n": 299,
+       "mean": 0.007362557236230851,
+       "lo": -0.007962254192199614,
+       "hi": 0.025152344425771134,
+       "zeros": 9,
+       "zeros_ref": 12,
+       "scenes": 299
+      },
+      "RSG-L18-s0": {
+       "n": 299,
+       "mean": 0.007459176380014381,
+       "lo": -0.011368177158357137,
+       "hi": 0.02561080834595107,
+       "zeros": 9,
+       "zeros_ref": 10,
+       "scenes": 299
+      }
+     }
+    },
+    "static": {
+     "score": 1.0,
+     "dist": 0.7831959040908345,
+     "collision": false,
+     "min_gap": 1.2463712285335118
+    },
+    "stop17": null,
+    "W": 0.16416666666666666,
+    "G": 0.9979123173277662
+   },
+   "lines": {
+    "held_zeros": true,
+    "held_lateral": true
+   },
+   "passed": true
+  },
+  "NR1H15O-L18-s0": {
+   "read": {
+    "held": {
+     "scenes": 460,
+     "zeros": 42,
+     "mean": 0.8672482675369063,
+     "progress_rel": 0.823019145279688,
+     "at_fault": 6,
+     "offroad": 18,
+     "coll": {
+      "front": 6,
+      "lateral": 0,
+      "rear": 25
+     },
+     "creep": 9,
+     "no_launch": 0,
+     "lat_zeros": 28,
+     "pair": {
+      "NR1H0P-L18-s0": {
+       "n": 460,
+       "mean": 0.010294308532278078,
+       "lo": 0.002670514814462056,
+       "hi": 0.019424698928523207,
+       "zeros": 42,
+       "zeros_ref": 47,
+       "scenes": 460
+      },
+      "RTB1ARO-L18-s0": {
+       "n": 460,
+       "mean": -0.005625193203422407,
+       "lo": -0.02110300633584007,
+       "hi": 0.015528529149205389,
+       "zeros": 42,
+       "zeros_ref": 39,
+       "scenes": 460
+      },
+      "RSG-L18-s0": {
+       "n": 460,
+       "mean": 0.0016779567871571914,
+       "lo": -0.02172088840862549,
+       "hi": 0.03372366416541152,
+       "zeros": 42,
+       "zeros_ref": 34,
+       "scenes": 460
+      }
+     }
+    },
+    "pub": null,
+    "static": {
+     "score": 1.0,
+     "dist": 0.7834046572570728,
+     "collision": false,
+     "min_gap": 1.246188115103661
+    },
+    "stop17": null,
+    "W": 0.15666666666666668,
+    "G": 0.9979123173277662
+   },
+   "lines": {
+    "held_zeros": true,
+    "held_lateral": true
+   },
+   "passed": true
+  }
+ },
+ "waitset": {
+  "RSG-L18-s0": null,
+  "RTB1ARO-L18-s0": null,
+  "NR1H0P-L18-s0": null,
+  "NR1H15P-L18-s0": null,
+  "NR1H30P-L18-s0": null,
+  "NR1H15O-L18-s0": null
+ },
+ "control_read": {
+  "held": {
+   "scenes": 460,
+   "zeros": 47,
+   "mean": 0.8569539590046282,
+   "progress_rel": 0.8235100270553766,
+   "at_fault": 5,
+   "offroad": 22,
+   "coll": {
+    "front": 5,
+    "lateral": 0,
+    "rear": 26
+   },
+   "creep": 9,
+   "no_launch": 0,
+   "lat_zeros": 34,
+   "pair": {
+    "RTB1ARO-L18-s0": {
+     "n": 460,
+     "mean": -0.015919501735700482,
+     "lo": -0.033440725084600026,
+     "hi": 0.006625765819613495,
+     "zeros": 47,
+     "zeros_ref": 39,
+     "scenes": 460
+    },
+    "RSG-L18-s0": {
+     "n": 460,
+     "mean": -0.008616351745120883,
+     "lo": -0.03362227128324375,
+     "hi": 0.023856540743333543,
+     "zeros": 47,
+     "zeros_ref": 34,
+     "scenes": 460
+    }
+   }
+  },
+  "pub": {
+   "scenes": 1491,
+   "zeros": 57,
+   "mean": 0.9400857277792788,
+   "progress_rel": 0.8655150711043532,
+   "at_fault": 2,
+   "offroad": 32,
+   "coll": {
+    "front": 2,
+    "lateral": 0,
+    "rear": 16
+   },
+   "creep": 22,
+   "no_launch": 4,
+   "lat_zeros": 43,
+   "pair": {
+    "RTB1ARO-L18-s0": {
+     "n": 1491,
+     "mean": 0.002328478667628338,
+     "lo": -0.00322981687108575,
+     "hi": 0.008131307953695361,
+     "zeros": 57,
+     "zeros_ref": 65,
+     "scenes": 1491
+    },
+    "RSG-L18-s0": {
+     "n": 1491,
+     "mean": 0.0003710806996757263,
+     "lo": -0.0092641120953228,
+     "hi": 0.009454460904876982,
+     "zeros": 57,
+     "zeros_ref": 58,
+     "scenes": 1491
+    }
+   }
+  },
+  "static": {
+   "score": 1.0,
+   "dist": 0.782651446378543,
+   "collision": false,
+   "min_gap": 1.2469739251590448
+  },
+  "stop17": null,
+  "W": 0.16583333333333333,
+  "G": 0.9979123173277662
+ },
+ "passing": [
+  "NR1H15P-L18-s0",
+  "NR1H30P-L18-s0",
+  "NR1H15O-L18-s0"
+ ],
+ "pick": "NR1H15O-L18-s0"
+}
