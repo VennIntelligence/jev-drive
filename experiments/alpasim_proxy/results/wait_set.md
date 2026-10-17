@@ -10,10 +10,14 @@ waiting in it. Code: [`scripts/wait_set.py`](../scripts/wait_set.py) (definition
 ## Read a new tag (one command)
 
 ```bash
-# box, repo root: one pool job (both variants, 316 windows, public 10-decision driver path + the wait-set cache), then the outcome table
+# box, repo root: one pool job (both variants, 312 windows of set v2, public 10-decision driver path + the wait-set cache), then the outcome table
 bash experiments/alpasim_proxy/scripts/wait_set.sh read <tag> [after-job-ids]      # <tag>: checkpoint in runs/op_parity/runs, or P0
 bash experiments/alpasim_proxy/scripts/wait_set.sh report                           # tables of every read -> $DATA_DIR/runs/alpasim_proxy/wait_set/report/
 ```
+
+If the job ends rc 1 at its collect step (the ego launched in one of the 3 variant-b windows whose human never passes 1 m/s, so there is no launch
+reference: `TypeError ... 'float' and 'NoneType'`), the run itself is complete: `experiments/defect_fix/scripts/df_wscollect.py <tag>` (AlpaSim venv; a CPU pool job)
+writes the table with those 3 references as NaN, then `report`.
 
 Outputs: `$DATA_DIR/runs/alpasim_proxy/wait_set/reads/<tag>/{run, table/<tag>.csv}` (one row per window: score, zero type, roll while
 the human waits, wait success, launch time and delay). The driver path is exactly the public reads' (`ol_chain.sh readlist`: `run.sh sh30`,
@@ -64,7 +68,110 @@ were dropped: set v2 = 312 windows (146 a, 166 b) from 168 source scenes, split 
 - Variant b's score barely punishes a late launch (go-straight never launches and still has no zero; 31 windows have a human path < 5 m):
   read b by launch delay and early launches, a by zeros and roll.
 
-## Reads
+## Reads (set v2, 312 windows; collected 2026-10-17)
 
-In the pool (job ids and the collect / anchor-check commands: the WAIT-SET handoff in [../README.md](../README.md)). Gate: go-straight
->= 0.99 on variant a and human replay >= 0.98 on a and b, else no model read runs.
+One pool job per model, the public reads' driver path (`wait_set.sh models`): **P0** (the shipped openpilot Cinque weights, no training; waits in closed loop,
+decision 336), **RSG-L18-s0**, **V2** = RTB1ARO-L18-s0, and the five private anchors (garage `model_0014`, our YR10m10-F-s0 and APY10m10-AB-s0 (AP2 driver), the
+shipped LTF and DD samples), with the go-straight and human-replay validation reads above as references. One read per model, so the intervals are over
+windows, not seeds. Per-window outcomes of these ten reads: [wait_set/reads_all.csv.gz](wait_set/reads_all.csv.gz) (`wait_set.py anchors --csv` reads it
+as it is; the defect-fix lane's reads of its own tags are not in it).
+
+**Collection notes.** (1) `wait_set.py collect` stopped on the 3 variant-b windows without a human launch time once the ego launched there: RSG, V2, YR, LTF, DD and
+APY ended rc 1 after a complete run, and the report job (1017-164839-7fc1) failed on the dependency. Their tables came from `df_wscollect.py` (collect unedited,
+launch reference NaN for those windows; it looked for the run directories one level too high and printed "no finished run", fixed) and `wait_set.sh report` was
+run by hand; `wait_set.py` is unchanged. (2) The first APY10m10-AB-s0 read scored 0 on all 312 windows: the AP2 driver died at every drive on `k <= s.t_first`
+(sh30_driver's session has started `t_first` at None since JEV_ACC; ap2_driver read it with `getattr(s, "t_first", now)`). Fixed in `experiments/alpasim/lib/ap2_driver.py`,
+re-read as 1017-172558-8b65 at priority 10 (the failed read is kept on the box under `wait_set/failed/`). (3) The held-split subset is 94 windows (44 a, 50 b), not 95:
+95 was set v1; amendment 2 dropped one held b window.
+
+### Variant a: the human never moves (146 windows; the score is 1.0 unless a zero fires)
+
+| model | n | zeros | coll / off / corr / fail | roll median / p90 (m) | roll > 3 m | wait success |
+|:--|--:|--:|:--|:--|--:|--:|
+| P0 (shipped Cinque) | 146 | 1 | 0 / 0 / 1 / 0 | 0.02 / 5.02 | 22 | 0.849 |
+| RSG-L18-s0 | 146 | 7 | 4 / 0 / 3 / 0 | 4.07 / 11.07 | 77 | 0.233 |
+| V2 = RTB1ARO-L18-s0 | 146 | 6 | 2 / 1 / 3 / 0 | 3.33 / 11.27 | 75 | 0.411 |
+| anchor garage 0014 | 146 | 7 | 0 / 6 / 1 / 0 | 0.01 / 6.29 | 28 | 0.747 |
+| anchor YR10m10-F-s0 | 146 | 6 | 3 / 0 / 3 / 0 | 4.50 / 11.00 | 79 | 0.219 |
+| anchor DD sample | 146 | 3 | 0 / 0 / 3 / 0 | 4.83 / 15.21 | 103 | 0.007 |
+| anchor LTF sample | 146 | 6 | 2 / 0 / 4 / 0 | 6.36 / 13.78 | 112 | 0.034 |
+| anchor APY10m10-AB-s0 | 146 | **28** | 25 / 0 / 3 / 0 | 9.19 / 14.10 | 135 | 0.000 |
+| go-straight (starter kit) | 146 | 1 | 0 / 1 / 0 / 0 | 0.00 / 0.28 | 3 | 0.952 |
+| human replay | 146 | 0 | 0 / 0 / 0 / 0 | 0.01 / 0.07 | 0 | 1.000 |
+
+Zeros by type: collision = at-fault contact, offroad, corridor (4 m from the human's path), fail = the rollout failed before scoring. Roll = the largest distance
+from the start position while the human waits (whole run in a); wait success = roll <= 1 m and no zero.
+
+### Variant b: the human launches at 3.0 s (166 windows)
+
+| model | n | score | zeros | early | never | launch delay median / p90 (s) | late > 1 s |
+|:--|--:|--:|--:|--:|--:|:--|--:|
+| P0 (shipped Cinque) | 166 | 0.365 | 3 | 23 | 129 | -0.53 / +1.54 | 8 |
+| RSG-L18-s0 | 166 | 0.938 | 3 | 101 | 3 | -0.51 / +0.41 | 3 |
+| V2 = RTB1ARO-L18-s0 | 166 | 0.927 | 3 | 100 | 5 | -0.63 / +0.53 | 5 |
+| anchor garage 0014 | 166 | 0.368 | 16 | 33 | 98 | -0.26 / +1.53 | 14 |
+| anchor YR10m10-F-s0 | 166 | 0.936 | 4 | 98 | 3 | -0.53 / +0.42 | 1 |
+| anchor DD sample | 166 | 0.932 | 1 | 122 | 13 | -1.58 / +0.47 | 7 |
+| anchor LTF sample | 166 | 0.954 | 0 | 135 | 8 | -1.63 / +0.37 | 6 |
+| anchor APY10m10-AB-s0 | 166 | 0.981 | 3 | 149 | 0 | -1.08 / -0.44 | 0 |
+| go-straight (starter kit) | 166 | 0.211 | 0 | 0 | 166 | - | 0 |
+| human replay | 166 | 1.000 | 0 | 2 | 5 | -0.03 / +0.02 | 0 |
+
+Delay = ego launch (first time faster than 1 m/s) minus the human's, over the windows where the ego launches; early = the ego passes 1 m/s before the human's onset
+(3.0 s); never = no launch in the run (2.5 s after the onset). The b score does not punish an early launch by itself (RSG, V2, YR, DD, LTF, APY: 0-4 zeros of 166) and only partly a late one
+(go-straight never launches and scores 0.211): read b by delay.
+
+### Held-split windows only (94: 44 a, 50 b)
+
+| model | a: zeros | a: coll / off / corr / fail | a: roll median / p90 (m) | a: wait success | b: score | b: zeros | b: early / never | b: delay median / p90 (s) |
+|:--|--:|:--|:--|--:|--:|--:|:--|:--|
+| P0 (shipped Cinque) | 1 | 0 / 0 / 1 / 0 | 0.02 / 4.18 | 0.841 | 0.381 | 1 | 8 / 37 | -0.53 / +0.52 |
+| RSG-L18-s0 | 2 | 0 / 0 / 2 / 0 | 5.97 / 11.79 | 0.227 | 0.969 | 0 | 33 / 1 | -0.68 / +0.34 |
+| V2 = RTB1ARO-L18-s0 | 2 | 0 / 0 / 2 / 0 | 7.71 / 11.79 | 0.386 | 0.958 | 0 | 32 / 1 | -0.76 / +0.53 |
+| anchor garage 0014 | 3 | 0 / 2 / 1 / 0 | 0.01 / 5.81 | 0.705 | 0.322 | 6 | 10 / 30 | -0.36 / +1.52 |
+| anchor YR10m10-F-s0 | 2 | 0 / 0 / 2 / 0 | 5.60 / 11.30 | 0.227 | 0.962 | 0 | 29 / 2 | -0.71 / +0.42 |
+| anchor DD sample | 1 | 0 / 0 / 1 / 0 | 6.00 / 14.29 | 0.023 | 0.922 | 0 | 35 / 6 | -1.66 / +0.50 |
+| anchor LTF sample | 2 | 0 / 0 / 2 / 0 | 6.88 / 13.36 | 0.023 | 0.941 | 0 | 40 / 5 | -1.68 / +0.24 |
+| anchor APY10m10-AB-s0 | **8** | 6 / 0 / 2 / 0 | 9.23 / 14.26 | 0.000 | 1.000 | 0 | 44 / 0 | -1.13 / -0.33 |
+| go-straight (starter kit) | 0 | 0 / 0 / 0 / 0 | 0.00 / 0.23 | 0.977 | 0.203 | 0 | 0 / 50 | - |
+
+Paired score differences over all windows (log-clustered bootstrap): V2 - RSG a +0.007 [-0.022, +0.037], b -0.011 [-0.034, +0.011]; P0 - RSG a +0.041
+[+0.013, +0.075], b -0.573 [-0.650, -0.496].
+
+### Anchor check: public score + the variant-a zero rate against the private board
+
+`wait_set.py anchors` (six anchors: the five and go-straight, whose public number is N1's 300-scene sample). z_a = share of variant-a windows scored 0;
+linear fit private = public - k z_a; mixture fit private = (1 - p) public + p (1 - z_a); the LOO columns refit without that anchor.
+
+| anchor | private | public | zero rate a | pred linear | pred mixture | LOO linear | LOO mixture |
+|:--|--:|--:|--:|--:|--:|--:|--:|
+| G0014 | 0.848 | 0.740 | 0.048 | 0.674 | 0.848 | 0.665 | 0.848 |
+| YR10m10-F-s0 | 0.800 | 0.925 | 0.041 | 0.869 | 0.942 | 0.872 | 0.943 |
+| starter (go-straight) | 0.799 | 0.522 | 0.007 | 0.513 | 0.761 | 0.512 | 0.687 |
+| DD-sample | 0.772 | 0.797 | 0.021 | 0.769 | 0.890 | 0.769 | 0.903 |
+| LTF-sample | 0.738 | 0.824 | 0.041 | 0.768 | 0.892 | 0.769 | 0.901 |
+| APY10m10-AB-s0 | 0.640 | 0.935 | 0.192 | 0.673 | 0.871 | 0.869 | 0.882 |
+
+| Kendall tau-b against private | public alone | zero rate a (1 - z_a) | linear | mixture | LOO linear | LOO mixture |
+|:--|--:|--:|--:|--:|--:|--:|
+| six anchors (k = 1.367, p = 0.508) | -0.47 | +0.14 | +0.20 | -0.07 | -0.33 | +0.07 |
+| the five without go-straight (k = 1.413, p = 0.351) | -0.60 | +0.11 | +0.40 | -0.40 | -0.20 | -0.20 |
+
+Mean absolute error: six anchors linear 0.099, mixture 0.114, LOO linear 0.134, LOO mixture 0.132, public alone 0.153; five anchors 0.060 / 0.129 / 0.092 / 0.154, public
+alone 0.128.
+
+### Reading
+
+- **Waiting.** P0 stays at its rest point (median roll 0.02 m, wait success 0.85), as do the garage checkpoint (0.75) and go-straight. RSG, V2 and YR leave it in about
+  half of the windows (77 / 75 / 79 of 146 roll more than 3 m; wait success 0.23 / 0.41 / 0.22), the LTF and DD samples in most (112 / 103; success 0.03 / 0.01), APY
+  in nearly all (135; median 9.2 m). At b they launch before the human: median 0.5-0.6 s early for RSG, V2 and YR, 1.1 s for APY, 1.6 s for the samples.
+- **The scorer rarely turns it into a zero.** Variant-a zero rates are 4-5 % for RSG, V2, YR, LTF and the garage, 2 % for DD, 0.7 % for P0 and go-straight. V2 and RSG
+  do not differ (+0.007 [-0.022, +0.037] on a); P0 is +0.041 [+0.013, +0.075] above RSG on a and -0.573 below it on b (it does not launch in 129 of 166 windows).
+- **APY is the exception**: 28 zeros in 146 (25 at-fault contacts, 3 corridor; 8 of 44 on the held-split subset), it never waits and launches early in 149 of 166 b windows.
+  The anchor most hurt on private is the only one the waiting set separates.
+- **Public + waiting set does not order the anchors like private.** Public alone ranks them backwards (tau -0.47; -0.60 on the five, decision 262). With z_a the in-sample
+  fits reach +0.20 (linear) and -0.07 (mixture), the leave-one-out predictions -0.33 and +0.07 (five anchors: +0.40 / -0.40 and -0.20 / -0.20); the leave-one-out error
+  (0.13 / 0.13; five anchors 0.09 / 0.15) stays near the public-alone error (0.15; 0.13), more than half of the 0.21 spread of the private scores. The fit is carried by APY alone: k = 1.4 would mean a zero in a static window costs more than a whole scene even if every
+  private window were a wait, and the mixture needs p = 0.35-0.51 waiting windows against 0.30 in d325's uniform windows; left out of the fit, its private score is predicted
+  at 0.81-0.93 (0.640 on the board). The other anchors have 1-7 zeros of 146 (go-straight 1, DD 3, YR and LTF 6, garage 7), which is no order. The waiting set flags a waiting failure (APY) but does not
+  predict the size of the private gap or rank the rest.

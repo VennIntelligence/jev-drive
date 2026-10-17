@@ -2,7 +2,7 @@
 
 status: live
 decisions: 262, 325
-index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 316 windows where the human waits, any tag in one pool job
+index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -27,7 +27,7 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 - `wait_set.py` (scripts): a local closed-loop set where the …
 - `wait_set.sh` (scripts): the local closed-loop set where the …
 
-[results/](results/) 40 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 8 entry points
+[results/](results/) 41 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 8 entry points
 <!-- files:end -->
 
 ## SCENE-MIX: the private suite is rich in scenes where the human waits (decision 325)
@@ -55,7 +55,7 @@ Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plan
 - **Set (v2).** The 199 public scenes whose human starts from a standstill, with the trajdata window moved into the human's wait (same
   asset, same scorer and serving): variant **a** = 146 windows where the human never moves (window ends 0.5 s before the movement onset),
   variant **b** = 166 windows where the human starts moving at 3.0 s. Classes: red light first in line / queued, other with a lead / free (75-84
-  each); 95 windows come from held-split scenes. Every window lies inside its reconstruction's camera video; 34 windows were dropped for an
+  each); 94 windows (44 a, 50 b) come from held-split scenes (v1: 95). Every window lies inside its reconstruction's camera video; 34 windows were dropped for an
   undrawn vehicle in the ego's lane, 48 for a standstill too short, 4 (amendment 2) because every driver's rollout fails there.
 - **Read a tag:** `bash experiments/alpasim_proxy/scripts/wait_set.sh read <tag>` (one pool job, public 10-decision driver path + the cache),
   then `wait_set.sh report`.
@@ -84,6 +84,15 @@ zero rate z_a and score s_a = 1 - z_a next to public and private, the fits priva
 (p = share of waiting windows a private-like mix would need), in-sample and leave-one-anchor-out predictions, and Kendall tau-b of each
 against private (public alone ranks the five non-trivial anchors at tau -0.6, decision 262). Six anchors: the five plus go-straight
 (`starter`, private 0.799; its public is N1's 300-scene sample, 0.522). One read per anchor; results go to `results/wait_set.md`.
+
+**Result (2026-10-17 18:05 CST).** The eight reads are collected; tables, the 94-window held-split subset and the anchor check are in
+[results/wait_set.md](results/wait_set.md) (per-window outcomes `results/wait_set/reads_all.csv.gz`). The waiting set separates APY10m10-AB-s0 (28 of 146 variant-a
+zeros, 25 of them at-fault contacts, against 1-7 for every other model; P0 waits, RSG / V2 roll more than 3 m in half of the windows), but public score plus the variant-a
+zero rate does not order the anchors like private: Kendall tau-b against private, six anchors, public alone -0.47, linear fit +0.20, mixture fit -0.07, leave-one-out
+-0.33 / +0.07 (the five without go-straight: -0.60, +0.40, -0.40, -0.20 / -0.20); leave-one-out error 0.13 against 0.15 for public alone. Two defects found and fixed on the
+way: `wait_set.py collect` stops on the 3 variant-b windows without a human launch time once the ego launches there (RSG, V2, YR, LTF, DD and the APY re-read ended rc 1 after
+complete runs and the report job failed on the dependency; the tables came from `experiments/defect_fix/scripts/df_wscollect.py`, the report was run by hand), and the AP2 driver died at every
+drive since JEV_ACC gave sh30_driver's session `t_first = None` (the first APY read scored 0 on all 312 windows; `experiments/alpasim/lib/ap2_driver.py`, re-read 1017-172558-8b65).
 
 ## Anchors: five policies whose private numbers are known
 
