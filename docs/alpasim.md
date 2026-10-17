@@ -307,13 +307,14 @@ The same `docker/` path with `TRACK=pai`: `serve.py` gets `JEV_DRIVER=pai` (`pai
 the stable checkpoint layer is `RSG-L18-s0` + `RBSG2-L18-s0` with their `route_mem.json`, the closure adds the PAI modules and
 `route_mem/lib/rmem.py`, `verify.py` loads every ROUTE-MEM checkpoint through pai_driver's loader on the CPU. Baked defaults = the box reads'
 served configuration: `JEV_VCONT=1.0 JEV_LEAD=1`, `JEV_TRACK` never set (v8 `gate`), `VHIST` (`JEV_VHIST`, e.g. `holdlead`) and `ACC`
-(`JEV_ACC=1`) optional. One build command per tag; a new combination costs one `ENV` layer:
+(`JEV_ACC=1`) and `GAP` (`JEV_GAP`, e.g. `0.7,2.7`) optional. One build command per tag; a new combination costs one `ENV` layer:
 
 ```bash
 # Tokyo, repo root (checkpoints at /data/runs/op_parity/runs/<tag>: tokyo_pull.sh ckpt <tag>)
 env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 experiments/alpasim/docker/build.sh                    # -> jev-alpasim:rsg-l18-s0-<hash>-pai-vc1.0-lead
 env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 VHIST=holdlead experiments/alpasim/docker/build.sh     # ...-vhholdlead
 env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 ACC=1 experiments/alpasim/docker/build.sh              # ...-acc
+env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 ACC=1 GAP=0.7,2.7 experiments/alpasim/docker/build.sh  # ...-acc-gap0.7_2.7 (JEV_GAP, own ENV layer)
 env DATA_DIR=/data TRACK=pai TAG=RBSG2-L18-s0 experiments/alpasim/docker/build.sh
 # whole chain (build -> test.sh -> replicas.sh -> pai_smoke.sh on a scene list against its native run, gains 10, card 1):
 env DATA_DIR=/data TRACK=pai SCENES=<list> [VHIST=..] [ACC=1] experiments/alpasim/docker/new_tag.sh <tag> <native results-summary.json>

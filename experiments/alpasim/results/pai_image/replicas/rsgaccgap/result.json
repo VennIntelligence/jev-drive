@@ -1,0 +1,58 @@
+{
+ "image": "jev-alpasim:rsg-l18-s0-ea61e9df-pai-vc1.0-lead-acc-gap0.7_2.7",
+ "replicas": 4,
+ "gpu": "NVIDIA GeForce RTX 3090",
+ "cold_start_s": [
+  19.2,
+  19.6,
+  19.9,
+  20.3
+ ],
+ "card_mib": {
+  "before": 18,
+  "idle": 5903,
+  "peak": 5903
+ },
+ "replica_peak_mib": [
+  1466,
+  1466,
+  1466,
+  1466
+ ],
+ "versions": [
+  "jev-pai-RSG-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate"
+ ],
+ "drive_ms": [
+  {
+   "p50": 166.1,
+   "p90": 172.3,
+   "p99": 212.7,
+   "max": 368.3,
+   "mean": 167.3
+  },
+  {
+   "p50": 166.0,
+   "p90": 171.7,
+   "p99": 211.1,
+   "max": 422.5,
+   "mean": 167.4
+  },
+  {
+   "p50": 165.7,
+   "p90": 171.8,
+   "p99": 206.9,
+   "max": 451.3,
+   "mean": 167.3
+  },
+  {
+   "p50": 166.0,
+   "p90": 172.2,
+   "p99": 199.1,
+   "max": 457.2,
+   "mean": 167.5
+  }
+ ],
+ "drives": 3200,
+ "tracebacks": 0,
+ "pass": true
+}

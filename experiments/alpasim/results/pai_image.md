@@ -14,6 +14,7 @@ and layers). Tokyo artefacts: `/data/runs/alpasim/pai_image/`. Nothing was pushe
 | rsghl | `... TAG=RSG-L18-s0 VHIST=holdlead ...build.sh` | `jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-vhholdlead` | `sha256:a5a93c3c...` |
 | rsgacc | `... TAG=RSG-L18-s0 ACC=1 ...build.sh` | `jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc` | `sha256:67f002e9...` |
 | rbsg2 | `... TAG=RBSG2-L18-s0 ...build.sh` | `jev-alpasim:rbsg2-l18-s0-382164ae-pai-vc1.0-lead` | `sha256:bd48b58d...` |
+| rsgaccgap | `... TAG=RSG-L18-s0 ACC=1 GAP=0.7,2.7 ...new_tag.sh` (built from ea61e9df, 2026-10-18, section below) | `jev-alpasim:rsg-l18-s0-ea61e9df-pai-vc1.0-lead-acc-gap0.7_2.7` | `sha256:328433cb...` |
 
 Full ids in [pai_image/images.txt](pai_image/images.txt). All four share every layer up to the checkpoints (both candidates are in every
 image, `RSG-L18-s0` and `RBSG2-L18-s0` with their `route_mem.json`; sha256 equal to the box: `fbe7ac9f` / `672ef154`, `5572c7e8` / `b667704a`)
@@ -92,6 +93,46 @@ Reading: this is decision 215's cross-host drift (the ACC prereg's parity check 
 zeros agreeing 276 / 281, 1bfad87c among the box-only zeros). 4e4a2a51 is an offroad zero on the box in all four configurations and scored
 in the image in all four: a host property of that scene, not of the image. Means of a 29-scene chunk are not a read; the configuration is
 chosen on the box's 281-scene reads (plans/2026-10-16-pai-gains10-prereg.md, pai-acc-prereg.md).
+
+## ACC-GAP image (2026-10-18, decision 330: RSG-L18-s0 + `JEV_ACC=1` + `JEV_GAP=0.7,2.7`, steering weight 10 at submit)
+
+Built on Tokyo from ea61e9df (build.sh gained the `GAP` build argument there), one chain:
+`env DATA_DIR=/data TRACK=pai TAG=RSG-L18-s0 ACC=1 GAP=0.7,2.7 SCENES=/data/runs/alpasim/pai_image/lists/c007.txt OUT=/data/runs/alpasim/pai_image/rsgaccgap TGPU=1 experiments/alpasim/docker/new_tag.sh RSG-L18-s0 /data/runs/alpasim/pai_image/native/accgap/aggregate/results-summary.json`.
+Image `jev-alpasim:rsg-l18-s0-ea61e9df-pai-vc1.0-lead-acc-gap0.7_2.7`, id `sha256:328433cbab611095543e1846ad379f5245c06f5f82f212fbe068a4e3d3ef2679`
+(8 033 245 840 bytes). Files: [build/rsgaccgap/](pai_image/build/rsgaccgap/), [test/rsgaccgap/](pai_image/test/rsgaccgap/),
+[replicas/rsgaccgap/](pai_image/replicas/rsgaccgap/), [smoke/c007_rsgaccgap/](pai_image/smoke/c007_rsgaccgap/) (`report.md` = the chain's table).
+
+**Against rsgacc.** Layers 1-12 (base, packages, Cinque, AlpaSim files) are the same layers. Metadata: one new `ARG GAP` + `ENV JEV_GAP=0.7,2.7`
+after the switches `ENV`, and `GIT_HASH` 382164ae -> ea61e9df. Code layer (`COPY jev-drive`, 508 -> 530 kB): 9 closure files changed between
+382164ae and ea61e9df on purpose (serve_fix.py and lead_long.py carry `JEV_GAP`; pai_core / pai_driver / sh30_* / rmem / pp_train / ap2_driver
+gained flag-gated switches, all off in this image; the serve code equals the d330 native read's 94711ca9 for serve_fix.py / lead_long.py).
+The layers after it (`serve.py`..., user, checkpoints, `verify.py`) were rebuilt because the cache broke above them; their contents are unchanged
+(manifest sha256 equal; checkpoints inside the image `fbe7ac9f` / `672ef154`, `5572c7e8` / `b667704a`, as the box). `get_version`
+`jev-pai-RSG-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate` (one string across 4 replicas).
+
+| check | rsgaccgap | limit | |
+|---|--:|--:|---|
+| image size | 7.48 GiB | 40 GiB | pass |
+| read-only root: write errors / changed files | 0 / 0 | 0 | pass |
+| GPU memory of the driver | 1.44 GiB | 16 GiB | pass |
+| `/tmp` high-water (probe; 29-scene smoke) | 2.7; 25 MiB | 2048 MiB | pass |
+| `/run` high-water | 0 | 64 MiB | pass |
+| cold start | 17.7 s | runtime waits 240 s | pass |
+| `drive`, client p50 / p90 / p99 / max (ms) | 47 / 53 / 114 / 192 | target 100 | as the others |
+| 4 replicas on one 3090 | 1.43 GiB per replica (card 5.76 GiB), cold start max 20.3 s, 1 version, p50 / p90 / max 166 / 172 / 457 ms | 16 GiB | pass |
+| smoke `drive`, server side | p50 56 / p90 73 / max 239 ms, 5 752 calls, 0 inference errors | | pass |
+
+**Smoke** (chunk c007, 29 scenes, Tokyo card 1, official containerised stack, weight 10, image as built) against the box's native ACC-GAP read
+(`route_follow/acc_gap/read/s2/runs/rsg-l18-s0_c007`, d330 stage 2; results-summary + drive.jsonl copied to `pai_image/native/accgap`):
+
+| image | box native | image mean (zeros) | native mean (zeros) | paired diff [95 % CI] | equal / within 0.01 / within 0.05 | zero agreement | zero flips |
+|---|---|--:|--:|--:|--:|--:|---|
+| rsgaccgap | accgap | 0.5519 (12) | 0.5502 (12) | +0.002 [-0.001, +0.007] | 25 / 27 / 28 | 29 / 29 | none |
+
+The zero set and its reasons are identical (2 at-fault collisions 1a69f757 / 3ce13eed, 1 offroad, 9 corridor). Decision 0 plan difference median
+0.11 cm (decision 215 numerics); 35e082a4 differs by 1.9 m at decision 0 (the knife-edge stop / go scene above; a corridor zero on both).
+The four differing scenes are non-zero on both sides (largest 52bd89ce 0.35 vs 0.29). 4e4a2a51, the box-only offroad zero of the four earlier
+images, scores 1.0 on both hosts under ACC-GAP. Nothing pushed, tagged to ECR or submitted by an agent.
 
 ## Audit
 
