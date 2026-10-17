@@ -15,6 +15,7 @@
 #   df.sh full <base> <w> [noac]   full chain: L18 2 500 steps from <base>, lateral weight <w> (0 = none), seeds 0 / 1 -> held, public, static,
 #                           stop17, wc per seed, PAI 281 (seed 0, submission config) -> df.py fullsum; noac: without the history-speed noise.
 #                           Env: TAGP tag prefix (NR1F), SEEDS ("0 1"), NOPUB=1 no public chunks, NOPAI=1 no PAI submitter (stop17 + PAI 281);
+#                           STEPS (2500), ONK on-policy rows per batch (13); supplement 6: TAGP=NR1HV STEPS=5000 ONK=32 NOPUB=1 NOPAI=1 df.sh full RTB1AR-F-s0 0.5v2
 #                           prereg supplement 3: SEEDS=0 NOPUB=1 NOPAI=1 TAGP=NR1FB10 df.sh full NR1B10-F-s0 0.15v2
 #   df.sh reads <tag> [pai] job body: the closed-loop reads of one L18 checkpoint (held 6, public 10, static, wc; + stop17 / PAI 281 with pai)
 #   df.sh wait [submitter ..] blocks until every NR1 pool job ended (run once in the background); df.sh fullsum: results/full_chain.{md,json} + _regress (TAGP=X: full_chain_X.*)
@@ -156,7 +157,7 @@ l18pilot)   # job body after the label gate
 full)
   B=${2:?base}; Wt=${3:?lateral weight}; NOAC=${4:-}; all=(); TT=()
   for s in ${SEEDS:-0 1}; do T=${TAGP:-NR1F}-L18-s$s; fresh $T; TT+=($T)                         # TAGP: a second chain's tag prefix; SEEDS: fewer seeds
-    t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC $s 2500 $T) || exit 1
+    t=$(sub df-train-$T "${FL[@]}" --timeout-h 3 -- bash $ME train full=$B:$Wt:$NOAC:${ONK:-} $s ${STEPS:-2500} $T) || exit 1
     ids=$(reads $T $t $([[ -n ${NOPAI:-} ]] || { [[ $s == 0 ]] && echo pai || echo stop17; })) || exit 1; all+=($ids); echo "full $T (base $B, w $Wt, $NOAC): train $t reads $ids" | tee -a $O/stages.txt; done
   echo "full: ${TT[*]} after $(csv ${all[@]})" | tee -a $O/stages.txt ;;
 paisub)   # job body: paisub <tag> <pai|stop17>: PAI stop17 (+ PAI 281 with pai), submission config, of an L18 checkpoint
@@ -186,8 +187,8 @@ train)   # train <arm> <seed> <steps> <tag>
     cont=*) F="--init ${2#cont=} --allow-init $RSG --on on1_L18RB0" ;;                           # V2's L18 command from any base
     h=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h=})" ;;            # L18 pilots
     h2=*) F="--init $V2B --allow-init $RSG --on on1_L18NR1 $AC $(lat_flags ${2#h2=} v2)" ;;       # amendment 1's extra arm
-    full=*) IFS=: read -r FB FW FN <<< "${2#full=}"
-            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags ${FW%v2} $([[ $FW == *v2 ]] && echo v2))" ;;   # w = 0.15v2: amendment 1's terms
+    full=*) IFS=: read -r FB FW FN FK <<< "${2#full=}"                                         # FK: on-policy rows per batch (ONK; RSG's 13 when empty)
+            F="--init $FB --allow-init $RSG --on on1_L18NR1 $([[ $FN == noac ]] || echo $AC) $(lat_flags ${FW%v2} $([[ $FW == *v2 ]] && echo v2)) ${FK:+--on-k $FK}" ;;   # w = 0.15v2: amendment 1's terms
     *) echo "train: arm $2?" >&2; exit 2 ;;
   esac
   exec $TR $RT train --tag $5 $F --steps $4 --seed $3 ;;
