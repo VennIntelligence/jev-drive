@@ -82,6 +82,8 @@ def one(tag, run, scene):
     ex, ey = E[i, 1:3]
     best = None
     for aid, A in o["actors"].items():
+        if aid == "EGO":                                               # the ego's own box (rear axle -> centre 1.5 m)
+            continue
         j = int(np.argmin(np.abs(A[:, 0] - tc)))
         if abs(A[j, 0] - tc) > 2e5:
             continue
