@@ -1,0 +1,6 @@
+# ARENA-HOLD smoke gate (12 windows)
+
+1 off: 12 windows against the stored RSG read (0 missing), 0 scores differ []; 120 decisions matched of 120, 0 served plans differ (max 0.000 m)
+2 full: 12 sessions reached the handoff (12 windows), 9 latched held, 0 latch errors, 0 held windows moved > 0.5 m
+
+PASS
