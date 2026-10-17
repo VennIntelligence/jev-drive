@@ -153,6 +153,14 @@ rtb-cont-b2)  # (B) from tok again: gate R1 clause (c) (wrong-seed control) need
   tb=$(sub nx-train-RTB1N-L18-s0 "${FW[@]}" --after $q --timeout-h 2 -- bash $ME train rtbn 0 2500 RTB1N-L18-s0) || exit 1
   pb=$(sub nx-cont-b --after $tb --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 --env PRIO=${PRIO:-9} -- bash $ME cont-reads b RTB1N-L18-s0) || exit 1
   echo "rtb-cont-b2: tok $k strip $s pool $p poolgate $q train $tb reads-submitter $pb" | tee -a $X/stages.txt ;;
+rtb-wide)   # 补记 1 addition 2: rtb-wide <tag> [prio]: public 1491 @10 (10 chunks) + PAI 281 in the submission config -> nx.py wide (vs stored RSG-L18-s0)
+  T=${2:?tag}; PW=${3:-5}; Y=$X/cont/wide; mkdir -p $Y; rr=()
+  for i in $(seq 0 9); do rr+=($(jid nx-pub-$T-$i || PRIO=$PW sub nx-pub-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+      -- bash $OL readlist $T $OLW/lists/all_n10/c$i.txt 10 $Y/pub/$T/b$i)) || exit 1; done
+  CHUNKS_FROM=$PAICH SERVE="$PAISERVE" WIZ=$PAIWIZ PRIO=$PW bash experiments/alpasim/scripts/pai_box.sh submit $Y/pai/$T $T > $Y/pai_$T.submit.txt || exit 1
+  pp=$(awk '{print $1}' $Y/pai_$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || { echo "no PAI job" >&2; exit 1; }
+  w=$(PRIO=$PW sub nx-wide-sum-$T --after "$(csv ${rr[@]}),$pp" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR $PY wide --j $T --dir $Y --out rtb_wide_$T) || exit 1
+  echo "rtb-wide $T: public $(csv ${rr[@]}) PAI $pp summary $w" | tee -a $X/stages.txt ;;
 rtb-seeds)   # 补记 1 addition: (1) RTB1O-L18-s1 (A's command, continuation seed 1, from RTB1-F-s0); (2) RTB1-F-s1 (the base retain recipe,
              # lambda 1, seed 1) -> RTB1OB1-L18-s1 (A's command from it, seed 1); each -> cont-reads (c, d)
   fresh RTB1O-L18-s1 RTB1-F-s1 RTB1OB1-L18-s1

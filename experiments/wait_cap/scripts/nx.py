@@ -461,6 +461,43 @@ def cmd_cont(a):
     (D / "FINISHED").write_text("ok\n")
 
 
+def cmd_wide(a):
+    """补记 1 addition 2: public 1491 @10 and PAI 281 (submission config) of one arm against the stored RSG-L18-s0 reads."""
+    t, D = a.j, Path(a.dir)
+    res = dict(arm=t)
+    for k, mine, ref in (("pub", f"{D}/pub/{t}/b*", f"{DATA}/runs/route_follow/guard/read10/RSG-L18-s0/b*"),
+                         ("pai", f"{D}/pai/{t}/runs/*/sim", f"{wt.PAI_REF}/runs/*/sim")):
+        MJ, MC = wt.metrics(glob.glob(mine)), wt.metrics(glob.glob(ref))
+        r = wt.xpair(MJ, MC)
+        for side, dirs in (("J", glob.glob(mine)), ("C", glob.glob(ref))):
+            n = dict(front=0, lateral=0, rear=0)
+            for d in dirs:
+                f = Path(d) / "aggregate/results-summary.json"
+                if f.exists():
+                    for x in json.loads(f.read_text())["rollouts"]:
+                        m = x.get("metrics") or {}
+                        for q in n:
+                            n[q] += int((m.get(f"collision_{q}") or 0) > 0)
+            r[side]["collisions"] = n
+        r.pop("zero_flips", None)
+        res[k] = r
+    full = [wt.pai_full(p) for p in wt.STOP17]
+    for side, g in (("J", f"{D}/pai/{t}/runs/*/sim"), ("C", f"{wt.PAI_REF}/runs/*/sim")):
+        m = wt.metrics(glob.glob(g))
+        res.setdefault("stop17", {})[side] = dict(zeros=sum(m[s][0] == 0 for s in full if s in m), n=sum(s in m for s in full))
+    L = [f"# 补记 1 addition 2 (exploratory): {t} wide reads vs RSG-L18-s0 (stored)", "",
+         "| read | scenes | zeros (C) | mean (C) | paired [session CI] | progress_rel (C) | at-fault (C) | offroad (C) | front / lateral / rear collisions (C) |",
+         "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for k in ("pub", "pai"):
+        r = res[k]
+        cj, cc = r["J"]["collisions"], r["C"]["collisions"]
+        L.append(f"| {k} | {r['scenes']} | {r['J']['zeros']} ({r['C']['zeros']}) | {r['J']['mean']:.4f} ({r['C']['mean']:.4f}) | {r['paired']} | "
+                 f"{r['J']['progress_rel']:.3f} ({r['C']['progress_rel']:.3f}) | {r['J']['at_fault']} ({r['C']['at_fault']}) | {r['J']['offroad']} ({r['C']['offroad']}) | "
+                 f"{cj['front']} / {cj['lateral']} / {cj['rear']} ({cc['front']} / {cc['lateral']} / {cc['rear']}) |")
+    L.append(f"\nPAI stop17 zeros: {t} {res['stop17']['J']['zeros']} / {res['stop17']['J']['n']}, RSG-L18-s0 {res['stop17']['C']['zeros']} / {res['stop17']['C']['n']}")
+    write(a.out, res, L)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -483,7 +520,9 @@ if __name__ == "__main__":
     p.add_argument("--j", required=True), p.add_argument("--c", required=True)
     p = sp.add_parser("devdecomp")
     p.add_argument("--j", nargs="+", required=True), p.add_argument("--c", required=True), p.add_argument("--out", required=True)
+    p = sp.add_parser("wide")
+    p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     p = sp.add_parser("cont")
     p.add_argument("--j", required=True), p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(devdecomp=cmd_devdecomp, cont=cmd_cont, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)
+    dict(devdecomp=cmd_devdecomp, cont=cmd_cont, wide=cmd_wide, bitcmp=cmd_bitcmp, hist=cmd_hist, approach=cmd_approach, arrival=cmd_arrival, rtgate=cmd_rtgate, acgate=cmd_acgate, acheld=cmd_acheld)[a.cmd](a)

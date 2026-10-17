@@ -175,3 +175,4 @@ plan 取 `nx.py hist` 已存的 s = 1 plan（读数时已对 DONE 的 dev ADE �
 **PAI stop17**：P0 零分 14 / 17，之后各段 16 / 17。「闭环看得到到达时停」= 静止 scene 不接触且距离 ≤ 1.0 m，或 stop17 零分 ≤ 15。
 之后是否做 2 seed 正式由用户定。
 - 补记 1 追加（2026-10-17 ~08:40，用户批准、在其输出之前）：再加两臂、同一读数，参照另加 RSG-L18-s1 / WTC-L18-s1：(1) `RTB1O-L18-s1` = (A) 的命令，续训 seed 1，`--init RTB1-F-s0`；(2) 第二个底座 seed：`RTB1-F-s1`（RB0-F 配方 10 000 步 + 保留项 λ 1，seed 1，同 RTB1-F-s0 的命令）→ `RTB1OB1-L18-s1`（(A) 的命令，`--init RTB1-F-s1`，seed 1）。实际上是正式的第二个 seed；判读仍是探索性的。另从 (A) 已存的 run 诊断 9 对 4 的 at-fault 前向碰撞（迟到的到达停车、起步冲进空档，还是 veh-52 那一簇）。
+- 补记 1 追加 2（~09:05，输出之前）：用空卡给 RTB1O-L18-s0 补大样本读数（优先级低于 b / c / d 的读数）：公开 1491 @10（10 chunk，对存档 RSG-L18-s0 的 guard/read10 配对）与 PAI 281（提交配置 g10 + VCONT + LEAD + ACC，ALPASIM_FAST=1，对存档 pai_g10/acc 的 RSG-L18-s0 配对）；报均分配对 CI、零分、at-fault、出路、前向 / 侧向碰撞、stop17。仍是探索，单 seed。
