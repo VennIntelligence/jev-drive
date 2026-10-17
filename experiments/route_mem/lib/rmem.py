@@ -36,9 +36,10 @@ Anchored layout (2026-10-17, results/align_audit.md "Minimal fix" C + D, check r
 `order: true, anchor: true`; the ordered slot format, so RouteHead(order=True) reads it; the projected and ordered layouts never use this):
   merge_a   the fold-back fix: a newer batch extends the memory from the ARC of the memory's end on that batch (its nearest point on the batch's
             segments that run within 90 deg of the memory's last segment, if within A_ON m): the batch's points more than TOL further along are
-            appended. A batch that starts beyond the memory's end (a gap) is appended whole; one the memory's end lies beyond adds nothing. merge
-            decides "beyond the end" by the direction of the last segment, which at loops points at the newer batch's first points and appends
-            the whole batch (the polyline folds back 33-37 m).
+            appended. A batch that starts beyond the memory's end (a gap) is appended whole; one the memory's end lies beyond adds nothing, and
+            so does one with no segment running with the memory's end (it lies on the approach of a loop the memory has passed). merge decides
+            "beyond the end" by the direction of the last segment, which at loops points at the newer batch's first points and appends the
+            whole batch (the polyline folds back 33-37 m).
   anchor    the car's arc from AlpaSim's own progress, corrected for its trim, carried by the car's driven chord. Per message k with waypoints:
             C_k = arc of its first waypoint on the merged polyline (as merged up to k) - L0 (memory_o's progress anchor). AlpaSim resamples 20
             points every SPC = 80 / 19 m from the car's projection and drops those whose CHORD sum is under 40 m (_trim_route_start): on a
@@ -46,8 +47,10 @@ Anchored layout (2026-10-17, results/align_audit.md "Minimal fix" C + D, check r
             (N_FULL = 10; a message is also short when the route ends or a segment leaves 3.5-4.5 m, which cuts its far end instead). So the
             car's arc is one of c_k(m) = C_k - m x SPC, m = 0 .. N_FULL - n_k: the first such message takes m = 0 (a far end cut by a route
             end leaves the same short message as a trim, e.g. 9 of RSG's 13 one-short first messages on public 1491, and nothing in it tells
-            them apart: the ordered layout's assumption), every later one the hypothesis nearest the previous anchor + the chord the car drove
-            since (ties: the smaller m); a full message is C_k itself. At the decision: s_K + the chord driven since message K (chords along every message pose with a known pose, then to the
+            them apart: the ordered layout's assumption); every later one takes the hypothesis nearest the previous anchor + the chord the car
+            drove since if it explains that within A_TRIM m (ties: the smaller m), else keeps the previous m (clipped to the message's range):
+            a legit jump of the car's projection against its chord at a far-end cut is otherwise read as a trim. A full message is C_k
+            itself. At the decision: s_K + the chord driven since message K (chords along every message pose with a known pose, then to the
             decision pose). Route arc legitimately outruns the driven chord at the inside of a turn by up to 7 m per 0.5 s, so the anchor is
             never capped by the chord (anchor_check.md: the cap min(C_k, s_{k-1} + chord + 1 m) lags there).
   scalars   memory_o's (d_turn / 60, known, min(trav, 200) / 100; to_order of the point block); DIM_O = 203.
@@ -655,6 +658,20 @@ if __name__ == "__main__":                                   # self-test: straig
     v = P_[:, 0] > 0.5
     err = np.abs(st(to_local(pu[1], P_[v, 1:3] * 20.0)) - 8.85 - OFFS[v]).max()          # slot point's route arc - (car arc + label)
     assert v.sum() >= 15 and err < 1.0, (v.sum(), err)
+    # a tight U-turn (r 3 m at arc 50 .. 59.4) inside the first message: a later 3-point message on the approach runs against the memory's
+    # end on the return leg, so it adds nothing (without the strict direction test merge_a found the end before the batch: a gap, appended)
+    th3 = np.linspace(0, np.pi, 200)
+    V = np.r_[np.c_[np.linspace(-50, 0, 501), np.zeros(501)], np.c_[3 * np.sin(th3[1:]), 3 - 3 * np.cos(th3[1:])], np.c_[-np.linspace(0, 60, 601)[1:], np.full(600, 6.0)]]
+    sV = np.r_[0, np.cumsum(np.hypot(*np.diff(V, axis=0).T))]
+    atV = lambda s: np.c_[np.interp(s, sV, V[:, 0]), np.interp(s, sV, V[:, 1])]   # noqa: E731
+    mv = [atV(0.0 + 80 / 19 * np.arange(10, 20)), atV(3.0 + 80 / 19 * np.arange(10, 13))]
+    uv = merge_a(mv[:1])[-1] - merge_a(mv[:1])[-2]
+    assert _on(mv[1], mv[0][-1], uv)[2] == -1 and _on(mv[1], mv[0][-1], uv, strict=True) is None and len(merge_a(mv)) == len(merge(mv)) == 10
+    # the trim count changes only when a hypothesis explains the step within A_TRIM: the projection outran the chord by 2.3 m while the far
+    # end lost a point (route end) -> m stays 0 (the nearest hypothesis, m = 1, misses by 1.9 m)
+    inf = {}
+    memory_a([mz[0], mz[1], np.c_[8.3 + 80 / 19 * np.arange(10, 19), np.zeros(9)]], pz, pz[-1], inf)
+    assert inf["s_msg"][-1][2] == 0, inf["s_msg"]
     print(f"anchored layout: merge_a = merge without a fold, no fold-back at a U-turn (slots within {err:.2f} m of their arc); a one-spacing "
           f"trim {lead(fx):+.2f} m (ordered) -> {lead(fy):+.2f} m (anchored)")
     try:
