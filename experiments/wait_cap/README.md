@@ -1,8 +1,8 @@
 # wait_cap: does each training stage wait where the human waits
 
 status: live
-decisions: 326, 335, 336, 337, 338
-index: shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP on dev ADE, the rise is a real closed-loop cost (held -0.112, offroad x2), no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]; RTB1 retain base keeps the arrival stop at a cost [d337], V2 (rolling-arrival rows only) fixes the public cost, the left cost is lateral [d338]
+decisions: 326, 335, 336, 337, 339
+index: shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP on dev ADE, the rise is a real closed-loop cost (held -0.112, offroad x2), no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]; RTB1 retain base keeps the arrival stop at a cost [d337], V2 (rolling-arrival rows only) fixes the public cost, the left cost is lateral [d339]
 
 **Question.** On frames where the human waits (stopped car ahead, light / stop line) or stops, and contrasting frames where the human goes,
 does each stage of our lineage (shipped Cinque P0 -> P2-F -> P2H10-F -> YR10m10-F / APY10m10-AB -> YS-L18 -> RB0-F -> RSG-L18 -> RBSG2-L18)
@@ -30,9 +30,9 @@ No formal was run.
 Zeroing the adapter's speed history does not help. J2P's offroad doubling is mostly a +0.08 m closed-loop left drift on edge-hugging
 paths. Details: [results/wait_train/explore_e.md](results/wait_train/explore_e.md).
 
-**RTB1 retain line (decisions 337, 338, exploratory).** The RB0-F base plus a P0 longitudinal-only KD on arrival rows, continued with the RSG-L18 recipe,
+**RTB1 retain line (decisions 337, 339, exploratory).** The RB0-F base plus a P0 longitudinal-only KD on arrival rows, continued with the RSG-L18 recipe,
 stops in the static scene without contact (0.53-0.63 m, RSG hits the lead) but pays held zeros +4 to +7, at-fault +5 and public rear contacts 24 vs 18
-([results/next/rtb_cont.md](results/next/rtb_cont.md), d337). Variant round ([results/next/rtb_v.md](results/next/rtb_v.md), d338): dropping the standing-wait rows (V2)
+([results/next/rtb_cont.md](results/next/rtb_cont.md), d337). Variant round ([results/next/rtb_v.md](results/next/rtb_v.md), d339): dropping the standing-wait rows (V2)
 keeps the stop (static 0.86 m, stop17 15 / 17), brings public 1491 to -0.002 [-0.011, 0.007] vs RSG with rear contacts 17, and held to +0.007 [-0.005, 0.025];
 halving lambda (V1) does not help. What is left is lateral (public offroad 36 vs 31). Start-delay diagnosis: [results/next/explore_f.md](results/next/explore_f.md).
 

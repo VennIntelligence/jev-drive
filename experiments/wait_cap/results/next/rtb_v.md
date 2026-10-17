@@ -1,6 +1,6 @@
 # RTB1 variant round: V1 (lambda 0.5) and V2 (rolling-arrival rows only), prereg 补记 2 (exploratory, one seed)
 
-Decision: [338](../../../../research/decisions/338.md). Follows [rtb_cont.md](rtb_cont.md) (decision 337: the RTB1 retain base buys the
+Decision: [339](../../../../research/decisions/339.md). Follows [rtb_cont.md](rtb_cont.md) (decision 337: the RTB1 retain base buys the
 closed-loop arrival stop but costs held zeros, at-fault and public rear contacts). Prereg: [2026-10-17-retain-anticopy-draft.md](../../plans/2026-10-17-retain-anticopy-draft.md)
 §补记 2. Exploratory; no registered verdict; one seed each.
 
