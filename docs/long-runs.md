@@ -70,6 +70,7 @@ as they ship: measure them, do not rewrite them.
 - Estimate wall time first. Anything above ~3 h gets a profiling pass before it starts: measure on a
   subset, find the actual bottleneck (disk, RAM, CPU, GPU compute, GPU memory, network), then rewrite the
   hot path as an expert would - parallel, vectorised, overlapping I/O with compute - until it is gone.
+- Recipes we already use, their gains and identity status, and the measured headroom: [speed.md](speed.md).
 - Tune the defaults for our box, not for a generic machine: batch size, DataLoader workers, prefetch,
   dtype, chunk sizes. Derive limits at runtime (`jevdrive.common.n_cpus()`, free VRAM, free disk) so the
   code still runs elsewhere, but leave OUR best values as the defaults.
