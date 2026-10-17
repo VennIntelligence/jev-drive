@@ -12,6 +12,11 @@
         public 1491 @10 zeros, mean, paired mean against every other arm with the session-clustered CI, at-fault, offroad, progress_rel, turns /24, static scene,
         stop17, front / side / rear collisions, creep counts; and the five lines of that prereg against the line reference. -> results/next/<NAME>.{json,md}
 
+  nx_regress.py dist --tags [LABEL=]TAG ... --ref LABEL [--out NAME] [--dry]
+        Descriptive creep measure (added after the first V2AC read; not a prereg line): per read, over the scenes where the log drives > 5 m, the distance the policy
+        drives relative to the log (sum / sum and per-scene mean), the paired per-scene ratio and distance against --ref with the session-clustered CI, and the number of
+        scenes under 50 % / 30 % of the log and under 1 m.
+
 Definitions (fixed in code; prereg plans/2026-10-17-v2ac-prereg.md section 4):
   failure type  one rollout's results-summary.json row, checked in this order. score 0: at-fault collision (AF-front, else AF-side, else AF-rear, by which collision_*
                 flag is set), offroad, corridor (left_corridor_laterally), joined with "+" when several; no flag: route-fail (map route generation, independent of the
@@ -152,6 +157,10 @@ def cmd_table(a):
         cnt = lambda sel: {s: sum(r["status"][l] == s for r in sel) for s in states}  # noqa: E731
         res["counts"][l] = {READ_NAME[rd]: cnt([r for r in rows if r["read"] == READ_NAME[rd]]) for rd in READS} | dict(total=cnt(rows))
         res["by_class"][l] = {c: cnt([r for r in rows if c in r["set"].split("+")]) for c in "ABCDEFGN"}
+    mean = lambda v: float(np.mean(v)) if v else None  # noqa: E731
+    res["class_mean"] = {c: dict(rows=sum(c in r["set"].split("+") for r in rows), **{l: mean([r["arms"][l]["score"] for r in rows if c in r["set"].split("+") and r["arms"][l]])
+                                                                                        for l in labels}) for c in "ABCDEFGN"}
+    res["class_mean"]["all"] = dict(rows=len(rows), **{l: mean([r["arms"][l]["score"] for r in rows if r["arms"][l]]) for l in labels})
     f2 = lambda x: "-" if x is None or x != x else f"{x:.2f}"  # noqa: E731
     L = [f"# Regression set: {', '.join(f'{l} = {t}' for l, t in arms)}; status against {a.ref}", "",
          f"{len(S)} scenes (the user's 28 + the 12 public no-launch scenes of explore_f.md, 6 overlap), one row per scene and stored read (held18 = held 460 @18, pub10 = public 1491 @10). "
@@ -169,6 +178,10 @@ def cmd_table(a):
         L += ["", "| class | fixed | still wrong | newly wrong | still right | rows |", "|---|--:|--:|--:|--:|--:|"]
         for k, c in res["by_class"][l].items():
             L.append(f"| {CLASS_NAME[k]} | " + " | ".join(str(c[s]) for s in states) + f" | {sum(c.values())} |")
+    L += ["", "## Mean score by class (scene-reads; a row counts in every class it belongs to; descriptive, added after the first read)", "",
+          "| class | rows | " + " | ".join(labels) + " |", "|---|--:|" + "--:|" * len(labels)]
+    for c, v in res["class_mean"].items():
+        L.append(f"| {CLASS_NAME.get(c, 'all rows')} | {v['rows']} | " + " | ".join(f2(v[l]) for l in labels) + " |")
     nx.write(a.out, res, L, a.dry)
 
 
@@ -270,6 +283,37 @@ def cmd_agg(a):
     nx.write(a.out, res, L, a.dry)
 
 
+# ---------------------------------------------------------------- distance relative to the log
+def cmd_dist(a):
+    from jevdrive import stats
+    arms = [lab_tag(x) for x in a.tags]
+    assert a.ref in [l for l, _ in arms], f"--ref {a.ref} is not one of {[l for l, _ in arms]}"
+    R = {l: {rd: rollouts(read_dirs(t)[rd]) for rd in READS} for l, t in arms}
+    res = dict(arms=dict(arms), ref=a.ref, reads={})
+    L = [f"# Distance driven relative to the log (scenes where the log drives > 5 m): {', '.join(f'{l} = {t}' for l, t in arms)}", "",
+         f"Paired columns are against {a.ref} (arm minus {a.ref}, session-clustered CI over scenes; one training seed per arm, so the CI does not cover seed-to-seed spread). "
+         "Descriptive; not a line of the prereg.", ""]
+    for rd in READS:
+        common = sorted(set.intersection(*[set(R[l][rd]) for l, _ in arms]))
+        dg = lambda l, s: tuple(float((R[l][rd][s].get("metrics") or {}).get(k) or 0.0) for k in ("dist_traveled_m", "gt_dist_traveled_m"))  # noqa: E731
+        ids = [s for s in common if dg(arms[0][0], s)[1] > 5]
+        grp = np.array(["_".join(s.split("_")[:2]) for s in ids])
+        X = {l: np.array([dg(l, s) for s in ids]) for l, _ in arms}
+        out = res["reads"][READ_NAME[rd]] = dict(scenes=len(ids), arms={})
+        L += [f"## {READ_NAME[rd]}: {len(ids)} scenes", "", f"| arm | distance / log (sum) | per-scene ratio (mean) | paired ratio vs {a.ref} [CI] | paired distance vs {a.ref} (m) [CI] | < 50 % of log | < 30 % | < 1 m |",
+              "|---|--:|--:|--:|--:|--:|--:|--:|"]
+        for l, _ in arms:
+            x, y = X[l], X[a.ref]
+            r = out["arms"][l] = dict(sum_ratio=float(x[:, 0].sum() / x[:, 1].sum()), mean_ratio=float(np.mean(x[:, 0] / x[:, 1])), lt50=int((x[:, 0] < 0.5 * x[:, 1]).sum()),
+                                      lt30=int((x[:, 0] < 0.3 * x[:, 1]).sum()), lt1m=int((x[:, 0] < 1).sum()))
+            if l != a.ref:
+                pr, pd_ = (stats.paired(u, v, groups=grp) for u, v in ((x[:, 0] / x[:, 1], y[:, 0] / y[:, 1]), (x[:, 0], y[:, 0])))
+                r["paired_ratio"], r["paired_dist"] = stats.fmt(pr), stats.fmt(pd_)
+            L.append(f"| {l} | {r['sum_ratio']:.3f} | {r['mean_ratio']:.3f} | {r.get('paired_ratio', '-')} | {r.get('paired_dist', '-')} | {r['lt50']} | {r['lt30']} | {r['lt1m']} |")
+        L.append("")
+    nx.write(a.out, res, L, a.dry)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -279,5 +323,8 @@ if __name__ == "__main__":
     p = sp.add_parser("agg")
     p.add_argument("--j", required=True, help="[LABEL=]TAG of the arm"), p.add_argument("--refs", nargs="+", required=True, help="[LABEL=]TAG; the first is the line reference")
     p.add_argument("--out", default="agg"), p.add_argument("--dry", action="store_true", help="print only")
+    p = sp.add_parser("dist")
+    p.add_argument("--tags", nargs="+", required=True, help="[LABEL=]TAG"), p.add_argument("--ref", required=True, help="label of the reference arm")
+    p.add_argument("--out", default="dist"), p.add_argument("--dry", action="store_true", help="print only")
     a = ap.parse_args()
-    dict(table=cmd_table, agg=cmd_agg)[a.cmd](a)
+    dict(table=cmd_table, agg=cmd_agg, dist=cmd_dist)[a.cmd](a)
