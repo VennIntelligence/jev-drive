@@ -12,12 +12,20 @@ supplement 1). Box, repo root, envs/op-train (sh30_driver imports torch / grpc /
      same random sessions (constant speed, so no stop latch)
   4. stop3 (supplement 2): served poses bit-identical to leash3's on sessions with random speeds below 0.3 m/s at the handoff; at or above
      it, a stop latch exactly when (v1 - v0) / 0.5 < -0.5 and v1 / -a <= 3, with s_lim = v1^2 / (-2a) + 3 - |ego - xy0|; free otherwise
+  5. wrapper (sh30_hold.install, JEV_HOLD=stop3, the driver's make_cached_plan replaced by a recorder): on random sessions the plan the
+     wrapper hands on is the one static_hold.step serves (same object when uncut, bit-identical when cut) and hold.jsonl carries step's
+     records; with step raising, every call hands on the model's own plan object and the exception is logged once; get_version appends
+     -holdstop3 to sh30_driver's version
   hold_check.py [--n 2000]
 """
 import argparse
 import importlib
+import json
+import logging
 import os
 import sys
+import tempfile
+from types import SimpleNamespace as NS
 
 import numpy as np
 
@@ -151,6 +159,57 @@ def check_stop(n):
     print(f"4 stop3: identical to leash3 below 0.3 m/s; {ns} stop latches exactly where the rule says")
 
 
+def check_wrap(n):
+    H = mod("stop3")
+    import sh30_driver as D
+    import sh30_hold as W
+    ref = (D.Driver.drive, D.C.Core.plan, D.make_cached_plan, D.Driver.get_version)
+    D.make_cached_plan = lambda t0, anchor, poses: poses       # records what the wrapper hands on
+    logs = []
+    h = logging.Handler(level=logging.ERROR)
+    h.emit = logs.append
+    D.LOG.addHandler(h)
+    tmp = tempfile.mkdtemp()
+    try:
+        W.install(tmp)
+        rng, T, recs, nc, nh = np.random.default_rng(3), (lambda k: 10**6 + 500_000 * k), [], 0, 0  # noqa: E731
+        for j in range(n // 10):
+            v0, v1 = rng.uniform(0, 6), rng.choice([rng.uniform(0, 0.3), rng.uniform(0.3, 6)])
+            st, xy = H.new(), rng.uniform(-50, 50, 2)
+            for k in range(11):
+                P = plan(rng, rng.uniform(0, 8))
+                v = (v0, v1)[k] if k <= 1 else rng.uniform(0, 3)
+                pos = xy + (0.0 if k <= 1 else rng.uniform(0, 8)) * np.array([np.cos(k), np.sin(k)])
+                W.TL.s, W.TL.uuid, W.TL.o = NS(scene=f"sc{j}", velocity=lambda t, v=v: np.array([[v * 0.6, v * 0.8]])), f"u{j}", None
+                got = D.make_cached_plan(T(k), NS(pose=NS(vec=NS(x=pos[0], y=pos[1]))), P)
+                Q, i = H.step(st, P, float(np.hypot(v * 0.6, v * 0.8)), pos, T(k))
+                assert (got is P) == (Q is P) and np.array_equal(got, Q) and got.dtype == Q.dtype
+                recs.append(i)
+                nc += Q is not P
+                nh += i["state"] == "held"
+        logged = [json.loads(x) for x in open(os.path.join(tmp, "hold.jsonl"))]
+        assert len(logged) == len(recs) and all({k: r[k] for k in i} == i for r, i in zip(logged, recs)) and nc > 0 and nh > 0
+        step0 = W.HD.step
+        W.HD.step = lambda *a, **k: 1 / 0
+        try:
+            for k in range(20):
+                P = plan(rng, 5.0)
+                W.TL.s, W.TL.uuid, W.TL.o = NS(scene="scx", velocity=lambda t: np.zeros((1, 2))), "ux", None
+                assert D.make_cached_plan(T(k), NS(pose=NS(vec=NS(x=0.0, y=0.0))), P) is P
+        finally:
+            W.HD.step = step0
+        assert len(logs) == 1 and logs[0].exc_info, logs
+        core = NS(tag="RSG-L18-s0", cold="backwarp")
+        v_w = D.Driver.get_version(NS(core=core), None, None).version_id
+        v_0 = ref[3](NS(core=core), None, None).version_id
+        assert v_w == v_0 + "-holdstop3", (v_w, v_0)
+    finally:
+        D.Driver.drive, D.C.Core.plan, D.make_cached_plan, D.Driver.get_version = ref
+        D.LOG.removeHandler(h)
+    print(f"5 wrapper stop3: {len(recs)} calls ({nh} held, {nc} cut) hand on step's plan bit for bit, hold.jsonl = step's records; "
+          f"step raising: 20 / 20 calls serve the model's plan object, 1 log line; version {v_w}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--n", type=int, default=2000)
@@ -159,4 +218,5 @@ if __name__ == "__main__":
     check_step(a.n)
     check_stop(a.n)
     check_off()
+    check_wrap(a.n)
     print("hold_check: all checks passed")

@@ -75,7 +75,7 @@ ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VC
 # GAP = JEV_GAP (lib/serve_fix.py: the lead MPC's T_FOLLOW[,STOP_DISTANCE]; "" = off, needs LEAD=1): its own metadata layer on top of the one above.
 ARG GAP=""
 ENV JEV_GAP=${GAP}
-# HOLD = JEV_HOLD (lib/static_hold.py: full | lead | leash<m>; "" = off): the serve-side static hold of the nuPlan sh30 driver. Set, serve.py
+# HOLD = JEV_HOLD (lib/static_hold.py: full | lead | leash<m> | stop<m>; "" = off): the serve-side static hold of the nuPlan sh30 driver. Set, serve.py
 # runs lib/sh30_hold.py (sh30_driver.py wrapped, as the box's `sh30hold` reads); empty, it runs sh30_driver.py as before. Its own metadata layer.
 ARG HOLD=""
 ENV JEV_HOLD=${HOLD}

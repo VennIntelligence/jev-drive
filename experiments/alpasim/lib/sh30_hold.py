@@ -2,10 +2,12 @@
 the trajectory. sh30_driver.py itself is not changed (arena reads were running it when this was added): this module wraps it.
 
 JEV_HOLD unset / off: sh30_driver.main() runs with nothing patched (the served output is sh30_driver's by construction).
-JEV_HOLD on: three patches, all inside this process -
+JEV_HOLD on: four patches, all inside this process -
   Driver.drive         records the session of the call (thread-local) and keeps one static_hold state per session
   C.Core.plan          keeps the core's outputs of the call (thread-local); for JEV_HOLD=lead also returns the lead outputs (lead_out)
-  make_cached_plan     the poses it receives (the plan after every other serving switch) -> static_hold.step -> the original function
+  make_cached_plan     the poses it receives (the plan after every other serving switch) -> static_hold.step -> the original function;
+                       fail open: an exception in the hold serves the model's plan for that call (logged once per process)
+  Driver.get_version   version_id + static_hold.SUFFIX (e.g. -holdstop3), so the served version names the hold
 Logged per decision to $ALPASIM_DRIVER_LOG_DIR/hold.jsonl (session, scene, t0, the step record; the served poses when cut); drive.jsonl's
 `poses` stay the model's plan. JEV_TRACK is refused (its reference does not go through make_cached_plan).
 Run: run.sh <run dir> sh30hold ... (scripts/drivers/sh30hold.sh), JEV_HOLD in the environment.
@@ -47,17 +49,30 @@ def install(log_dir: Path) -> None:
         s = getattr(TL, "s", None)
         if s is None:                                    # not inside a drive call (never in serving)
             return make0(t0, anchor, poses)
-        with lock:
-            st = states.setdefault(TL.uuid, HD.new())
-        v = float(np.hypot(*s.velocity(t0)[0]))
-        served, info = HD.step(st, poses, v, (anchor.pose.vec.x, anchor.pose.vec.y), t0, TL.o)
-        rec = dict(session=TL.uuid, scene=s.scene, t0=t0, **info)
-        if info.get("cut"):
-            rec["poses"] = np.asarray(served).round(4).tolist()
-        out.write(json.dumps(rec) + "\n")
+        served = poses                                   # fail open: any exception below serves the model's own plan for this call
+        try:
+            with lock:
+                st = states.setdefault(TL.uuid, HD.new())
+            v = float(np.hypot(*s.velocity(t0)[0]))
+            served, info = HD.step(st, poses, v, (anchor.pose.vec.x, anchor.pose.vec.y), t0, TL.o)
+            rec = dict(session=TL.uuid, scene=s.scene, t0=t0, **info)
+            if info.get("cut"):
+                rec["poses"] = np.asarray(served).round(4).tolist()
+            out.write(json.dumps(rec) + "\n")
+        except Exception:
+            if not failed:
+                failed.append(t0)
+                D.LOG.exception("JEV_HOLD: the hold raised; this call serves %s (logged once per process)",
+                                "the hold's plan (only its log failed)" if served is not poses else "the model's own plan")
         return make0(t0, anchor, served)
 
-    D.Driver.drive, D.C.Core.plan, D.make_cached_plan = drive, plan, make_cached_plan
+    def get_version(self, req, ctx):                     # the version names the hold: jev-<tag>-<cold>...-hold<mode>
+        r = version0(self, req, ctx)
+        r.version_id += HD.SUFFIX
+        return r
+
+    failed, version0 = [], D.Driver.get_version
+    D.Driver.drive, D.C.Core.plan, D.make_cached_plan, D.Driver.get_version = drive, plan, make_cached_plan, get_version
     D.LOG.info("serving JEV_HOLD=%s (lib/static_hold.py): latch below %g m/s at the %g s call, leash %g m, release arc %g m / lead %g m/s, "
                "stop leash below %g m/s^2 within %g s", HD.MODE, HD.V_LATCH, HD.T_HAND, HD.CAP, HD.REL_ARC, HD.V_LEAD_GO, HD.A_STOP, HD.T_STOP)
 
