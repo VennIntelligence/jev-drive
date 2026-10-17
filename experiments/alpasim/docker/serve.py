@@ -4,8 +4,10 @@
   JEV_DRIVER  sh30 | ap2 | ens | pai | auto (default). auto = the nuPlan family recorded for the tag in tags.json (verify.py, at build
               time): checkpoints trained on the AlpaSim input standard -> ap2_driver.py, every other op_parity tag -> sh30_driver.py.
               pai = the PAI-track driver (pai_driver.py, SH30_TAG = the tag); never chosen by auto, a PAI image bakes it in (build.sh TRACK=pai)
-Everything else (SH30_COLD, AP2_COLD, SH30_MOTION, PAI_*, the serving switches JEV_VCONT / JEV_LEAD / JEV_VHIST / JEV_ACC / JEV_TRACK,
-ALPASIM_DRIVER_*) passes through to the driver unchanged.
+  JEV_HOLD    the serve-side static hold (lib/static_hold.py; build.sh HOLD): set and not off, the sh30 family runs lib/sh30_hold.py
+              (sh30_driver.py wrapped, the box's `sh30hold` driver) instead of sh30_driver.py; any other family refuses to start
+Everything else (SH30_COLD, AP2_COLD, SH30_MOTION, PAI_*, the serving switches JEV_VCONT / JEV_LEAD / JEV_VHIST / JEV_ACC / JEV_GAP /
+JEV_TRACK / JEV_HOLD, ALPASIM_DRIVER_*) passes through to the driver unchanged.
 """
 import json
 import os
@@ -30,11 +32,16 @@ def main() -> None:
     env = {"sh30": {"SH30_TAG": tag}, "ap2": {"AP2_TAG": tag}, "ens": {"ENS_TAGS": ",".join(tags)}, "pai": {"SH30_TAG": tag}}.get(fam)
     if env is None:
         sys.exit(f"serve: unknown JEV_DRIVER {fam!r} (sh30 | ap2 | ens | pai | auto)")
-    print(f"serve: driver {fam}, tag {tag}, replica {os.environ.get('ALPASIM_CONTESTANT_REPLICA_INDEX', '-')}"
+    hold = os.environ.get("JEV_HOLD", "").strip().lower() not in ("", "off")
+    if hold and fam != "sh30":
+        sys.exit(f"serve: JEV_HOLD={os.environ['JEV_HOLD']} is served by the sh30 driver only, not {fam!r}")
+    entry = "sh30_hold.py" if hold else f"{fam}_driver.py"
+    print(f"serve: driver {fam} ({entry}), tag {tag}, replica {os.environ.get('ALPASIM_CONTESTANT_REPLICA_INDEX', '-')}"
           f" of {os.environ.get('ALPASIM_CONTESTANT_REPLICAS', '-')}; switches "
-          + " ".join(f"{k}={os.environ[k]}" for k in ("JEV_VCONT", "JEV_LEAD", "JEV_VHIST", "JEV_ACC", "JEV_TRACK") if k in os.environ), flush=True)
+          + " ".join(f"{k}={os.environ[k]}" for k in ("JEV_VCONT", "JEV_LEAD", "JEV_VHIST", "JEV_ACC", "JEV_GAP", "JEV_TRACK", "JEV_HOLD")
+                     if k in os.environ), flush=True)
     os.environ.update(env)
-    os.execv(sys.executable, [sys.executable, str(LIB / f"{fam}_driver.py")])
+    os.execv(sys.executable, [sys.executable, str(LIB / entry)])
 
 
 if __name__ == "__main__":

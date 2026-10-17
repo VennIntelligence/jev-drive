@@ -10,7 +10,7 @@ from pathlib import Path
 
 RUNS = Path(os.environ["DATA_DIR"]) / "runs/op_parity/runs"
 sys.path.insert(0, "/app/jev-drive/experiments/alpasim/lib")
-import ap2_driver, ens_driver, sh30_driver  # noqa: E401,E402,F401
+import ap2_driver, ens_driver, sh30_driver, sh30_hold  # noqa: E401,E402,F401
 import pai_driver as PD  # noqa: E402
 import cv2, torch  # noqa: E401,E402,F401
 import pp_train as T  # noqa: E402

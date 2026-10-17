@@ -8,12 +8,14 @@
 #   TRACK=pai TAG=RSG-L18-s0 .../build.sh                             # PAI: pai_driver.py, JEV_VCONT=1.0 JEV_LEAD=1, JEV_TRACK unset (v8 gate)
 #   TRACK=pai TAG=RSG-L18-s0 VHIST=holdlead ACC=1 .../build.sh        # PAI with the optional switches: same layers, another last layer
 #   TRACK=pai TAG=RSG-L18-s0 ACC=1 GAP=0.7,2.7 .../build.sh           # + the lead MPC following gap (JEV_GAP, needs LEAD=1): one more ENV layer
+#   TAG=RSG-L18-s0 DRIVER=sh30 HOLD=leash3 .../build.sh               # nuPlan + the serve-side static hold (JEV_HOLD, sh30 only): one more ENV layer
 # Env: TRACK (nuplan | pai, default nuplan), TAGS (stable checkpoint layer; pai: "RSG-L18-s0 RBSG2-L18-s0"), EXTRA (thin layer), TAG (served
 # by default; several joined by + = ensemble, nuPlan only), DRIVER (auto | sh30 | ap2 | ens | pai; pai forces pai), VCONT / LEAD / ACC / VHIST
 # (the serving switches baked in as JEV_VCONT / JEV_LEAD / JEV_ACC / JEV_VHIST, lib/serve_fix.py, lib/vhist.py; nuplan default 0 / 0 / 0 / ""
 # = off, pai default 1.0 / 1 / 0 / "" = the box reads' served configuration; JEV_TRACK is never baked in), GAP (JEV_GAP=<t_follow>[,<stop m>],
-# default "" = off; its own ENV layer after the one above, needs LEAD=1),
-# IMAGE (repository, default jev-alpasim), VERSION (image tag, default <TAG>-<git short hash>[-pai][-vc<VCONT>][-lead][-vh<VHIST>][-acc][-gap<GAP, comma -> _>]),
+# default "" = off; its own ENV layer after the one above, needs LEAD=1), HOLD (JEV_HOLD = full | lead | leash<m>, lib/static_hold.py; default
+# "" = off; nuPlan sh30 only: serve.py then runs lib/sh30_hold.py; its own ENV layer after GAP's),
+# IMAGE (repository, default jev-alpasim), VERSION (image tag, default <TAG>-<git short hash>[-pai][-vc<VCONT>][-lead][-vh<VHIST>][-acc][-gap<GAP, comma -> _>][-hold<HOLD>]),
 # WHEELS (dir of pre-fetched wheels, see wheels.py: the build then installs offline from it; default $DATA_DIR/cache/jev_wheels when it
 # exists, WHEELS= forces the indexes, whose triton wheel does not match requirements.lock as of 2026-10-09), PROXY (http proxy for the build's
 # downloads, e.g. http://127.0.0.1:7890; uses the host network), DATA_DIR, ALPASIM_SRC.
@@ -34,8 +36,11 @@ COMMIT=0bb4c4bfe10951ea5589aa8ea514e422cf3c3506                       # the chal
 git_hash=$(git -C "$repo" rev-parse --short HEAD)$(git -C "$repo" diff --quiet -- experiments/alpasim jevdrive lib experiments/op_parity experiments/op_adapt_l experiments/op_adapt_r2 experiments/route_mem || echo -dirty)
 ACC=${ACC:-0}; VHIST=${VHIST:-}; GAP=${GAP:-}
 [[ -z $GAP || $LEAD == 1 ]] || { echo "GAP needs LEAD=1" >&2; exit 2; }
+HOLD=${HOLD:-}; [[ $HOLD == off ]] && HOLD=
+[[ -z $HOLD || $HOLD =~ ^(full|lead|leash[0-9]+(\.[0-9]+)?)$ ]] || { echo "HOLD=$HOLD: full | lead | leash<m>" >&2; exit 2; }
+[[ -z $HOLD || ( $TRACK == nuplan && ${DRIVER:-auto} != ap2 && ${DRIVER:-auto} != ens && $TAG != *+* ) ]] || { echo "HOLD is served by the nuPlan sh30 driver only" >&2; exit 2; }
 sw=; [[ $TRACK == pai ]] && sw+=-pai; [[ $VCONT != 0 ]] && sw+=-vc$VCONT; [[ $LEAD == 1 ]] && sw+=-lead
-[[ -n $VHIST && $VHIST != off ]] && sw+=-vh$VHIST; [[ $ACC == 1 ]] && sw+=-acc; [[ -n $GAP ]] && sw+=-gap${GAP//,/_}
+[[ -n $VHIST && $VHIST != off ]] && sw+=-vh$VHIST; [[ $ACC == 1 ]] && sw+=-acc; [[ -n $GAP ]] && sw+=-gap${GAP//,/_}; [[ -n $HOLD ]] && sw+=-hold$HOLD
 VERSION=${VERSION:-$(echo "$TAG" | tr '+A-Z' '-a-z')-$git_hash$sw}
 [[ $(git -C "$SRC" rev-parse HEAD) == "$COMMIT" ]] || { echo "AlpaSim checkout $SRC is not at $COMMIT" >&2; exit 2; }
 
@@ -57,6 +62,7 @@ echo "context: $(du -sh "$ctx" | cut -f1), $(wc -l < "$ctx/MANIFEST.sha256") fil
 args=(--build-arg "TAG=$TAG" --build-arg "DRIVER=${DRIVER:-auto}" --build-arg "GIT_HASH=$git_hash"
       --build-arg "CUDA=${CUDA:-cu126}" --build-arg "VCONT=$VCONT" --build-arg "LEAD=$LEAD" --build-arg "ACC=$ACC" --build-arg "VHIST=$VHIST")
 [[ -n $GAP ]] && args+=(--build-arg "GAP=$GAP")
+[[ -n $HOLD ]] && args+=(--build-arg "HOLD=$HOLD")
 [[ -z ${WHEELS+x} && -d ${DATA_DIR:-}/cache/jev_wheels ]] && WHEELS=$DATA_DIR/cache/jev_wheels
 if [[ -n ${WHEELS:-} ]]; then args+=(--build-context "wheels=$WHEELS" --build-arg "UV_SRC=--no-index --find-links /wheels")
 else mkdir "$ctx/.nowheels"; args+=(--build-context "wheels=$ctx/.nowheels"); fi
