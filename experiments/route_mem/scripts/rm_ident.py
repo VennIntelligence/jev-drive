@@ -9,6 +9,8 @@ with the new flag off, the old layouts' features, the served memory and training
          (rm_align extract --dump; pose_of = the decision anchors, as the gate served = offline). Run once per checkout.
   cmp    (any)  rm_ident.py cmp --a OLD.npz --b NEW.npz --out NAME --res DIR      every array byte-identical (dtype, shape, bytes)
          -> DIR/NAME.json; also the share of the sampled rows equal to the stored training files after the float16 cast (context only)
+  served (box, AlpaSim venv)  rm_ident.py served --out NAME --res DIR [--sets rsg_held v2_held]   the anchored layout as the drivers serve
+         it (SERVE_ANCHOR, Tracker()) = rm_build.feats_of_a at every decision of the dumped read messages (byte for byte) -> DIR/NAME.json
   bitcmp (op-train)  rm_ident.py bitcmp --a TAG --b TAG --out NAME --res DIR [--hash H]   two rm_train runs: every logged scalar (throughput
          aside), every weight, dev ADE and on_hash_60 equal (and = H) -> DIR/NAME.json; exit 2 otherwise (nx.py bitcmp's rule)
 """
@@ -115,6 +117,36 @@ def cmd_cmp(a):
     raise SystemExit(0 if res["identical"] else 2)
 
 
+def cmd_served(a):
+    """The anchored layout as the drivers serve it (rmem.SERVE_ANCHOR = True, then Tracker(): sh30_driver / pai_driver main's path) against the
+    rows rm_build builds (feats_of_a) at every decision of the dumped read messages -> DIR/NAME.json."""
+    import rmem as RM
+    import rm_build as RB
+    from jevdrive.common import data_dir
+    RM.SERVE_ANCHOR = True
+    res = {}
+    for s in a.sets:
+        Mg = pickle.load(open(data_dir() / "runs/route_mem/anchor" / f"{s}.msg.pkl", "rb"))
+        n = same = 0
+        dmax = 0.0
+        for rid in sorted(Mg):
+            g = Mg[rid]
+            ts, A = [int(t) for t in g["t0"]], [np.asarray(x, float) for x in g["A"]]
+            pose = dict(zip(ts, A))
+            Fb = RB.feats_of_a(dict(enumerate(g["W"])), dict(enumerate(A)))
+            tr = RM.Tracker()
+            assert tr.anchor
+            for k, (t, w) in enumerate(zip(ts, g["W"])):
+                tr.add(t, w)
+                f = tr.features(t, pose.get, pose[t])
+                n, same = n + 1, same + (f.dtype == Fb[k].dtype and f.tobytes() == Fb[k].tobytes())
+                dmax = max(dmax, float(np.abs(f - Fb[k]).max()))
+        res[s] = dict(decisions=n, identical=int(same), max_abs_diff=dmax)
+    res["identical"] = all(v["identical"] == v["decisions"] for v in res.values())
+    write(a, res)
+    raise SystemExit(0 if res["identical"] else 2)
+
+
 def run_of(tag):
     import torch
     from jevdrive.common import data_dir
@@ -158,8 +190,10 @@ if __name__ == "__main__":
     f.add_argument("--sets", nargs="*", default=["rsg_held", "v2_held"])
     c = sp.add_parser("cmp")
     c.add_argument("--a", required=True), c.add_argument("--b", required=True), c.add_argument("--out", required=True), c.add_argument("--res", required=True)
+    sv = sp.add_parser("served")
+    sv.add_argument("--out", required=True), sv.add_argument("--res", required=True), sv.add_argument("--sets", nargs="*", default=["rsg_held", "v2_held"])
     b = sp.add_parser("bitcmp")
     b.add_argument("--a", required=True), b.add_argument("--b", required=True), b.add_argument("--out", required=True), b.add_argument("--res", required=True)
     b.add_argument("--hash", default=""), b.add_argument("--note", default="")
     a = p.parse_args()
-    dict(feats=cmd_feats, cmp=cmd_cmp, bitcmp=cmd_bitcmp)[a.cmd](a)
+    dict(feats=cmd_feats, cmp=cmd_cmp, served=cmd_served, bitcmp=cmd_bitcmp)[a.cmd](a)

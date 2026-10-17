@@ -401,7 +401,7 @@ def nav_unit(u):
         off = np.r_[org, P[0, 2]]
         try:
             g = RouteGeneratorMap((P - off).astype(np.float32), vm, route_start_offset_m=AR.OFFSET_M)
-            B, BA, PA = [], [], []
+            B, BA, PA, last = [], [], [], None
             for jj in range(k + 1):
                 f_ = i - k + jj
                 wp = AR.route_at(g, fr.p[f_] - off, fr.yaw[f_])
@@ -409,6 +409,7 @@ def nav_unit(u):
                 pj = np.r_[fr.p[f_, :2] - org, fr.yaw[f_]]
                 if len(wp):
                     B.append(RM.to_local(pj, wp))
+                    last = pj
                 BA.append(RM.to_local(pj, wp) if len(wp) else np.zeros((0, 2)))         # the anchored layout: every message and its pose
                 PA.append(pj)
         except Exception:  # noqa: BLE001  (off-map / fold-back scenes fail in AlpaSim as well; rm_build skips them too)
@@ -420,11 +421,13 @@ def nav_unit(u):
         ls, _ = lead_block(route, a, float(s_e[0]), f)
         fa = RM.pts(RM.memory_a(BA, PA, a))                                        # rm_build anchor's row (rmem.memory_a)
         la, _ = lead_block(route, a, float(s_e[0]), fa)
-        ga = {}
+        lo, _ = lead_block(route, a, float(s_e[0]), RM.pts(RM.memory_o(B, a, last if last is not None else a, RM.travelled([q_[:2] for q_ in PA], a))))
+        lp, _ = lead_block(route, a, float(s_e[0]), _ablate(BA, PA, a, "plain"))
+        ga = dict(r_loop=route_loop(route), o_lead_first=lo["lead_first"], o_ahead=lo["ahead"], p_lead_first=lp["lead_first"])
         if fastore is not None:                                                    # the built row = this row (f16)
             fs_ = RM.pts(fastore[m_])
             va = (fa[:, 0] > 0.5) | (fs_[:, 0] > 0.5)
-            ga = dict(a_g_store=float(np.abs(fa[va, 1:3] - fs_[va, 1:3]).max() * 20.0) if va.any() else 0.0,
+            ga |= dict(a_g_store=float(np.abs(fa[va, 1:3] - fs_[va, 1:3]).max() * 20.0) if va.any() else 0.0,
                       a_m_store=bool(((fa[:, 0] > 0.5) == (fs_[:, 0] > 0.5)).all()))
         vv = (f[:, 0] > 0.5) | (fst[:, 0] > 0.5)
         fut = float(np.degrees(wrap(fr.yaw[i + 8] - fr.yaw[i]))) if i + 8 < len(fr.yaw) else np.nan
@@ -441,6 +444,17 @@ def fold_m(route, M):
         return 0.0
     st = route.proj(M)[0]
     return float(max(0.0, -np.diff(st).min()))
+
+
+def route_loop(route, ds=15.0, dd=2.5):
+    """The route passes within dd m of itself more than ds m of arc apart (it revisits a place: a point there has two stations, so the
+    truth's global projection, the lead and the fold metric are ambiguous)."""
+    R, S = route.R, route.S
+    if len(R) > 400:
+        i = np.linspace(0, len(R) - 1, 400).astype(int)
+        R, S = R[i], S[i]
+    D = np.hypot(*(R[:, None] - R[None]).transpose(2, 0, 1))
+    return bool(((D < dd) & (np.abs(S[:, None] - S[None]) > ds)).any())
 
 
 def cmd_nav(a):
@@ -717,6 +731,13 @@ def anchor_tables(X, nav=False):
              fold_old_anch_bad=int(((X.fold > 1) & (X.a_lead_first.abs() > 1)).sum()))
     tw = X.turn_d.le(42)
     r["turn42_proj"], r["turn42_anch"] = st(X.lead_first[tw].values), st(X.a_lead_first[tw].values)
+    if nav and "o_lead_first" in X:                                  # NAVSIM rows: the ordered / plain variants and the route self-overlap
+        lp = X.r_loop.astype(bool)
+        big = X.a_lead_first.abs() > 5
+        r |= dict(ord=st(X.o_lead_first.values), plain=st(X.p_lead_first.values), ahead_ord=int(X.o_ahead.sum()), loop_rows=int(lp.sum()),
+                  big_anch=int(big.sum()), big_anch_loop=int((big & lp).sum()), fold_anch_loop=int(((X.a_fold > 1) & lp).sum()),
+                  fold_old_loop=int(((X.fold > 1) & lp).sum()), abs1_anch_noloop=int(((X.a_lead_first.abs() > 1) & ~lp).sum()),
+                  anch_noloop=st(X.a_lead_first[~lp].values), ord_noloop=st(X.o_lead_first[~lp].values))
     if nav and "a_g_store" in X:                                     # rm_build anchor's stored rows against this rebuild (where built)
         h = X.a_g_store.notna()
         r |= dict(store_rows=int(h.sum()), store_ok=float((X.a_g_store[h] <= 0.05).mean()) if h.any() else None,
@@ -758,15 +779,22 @@ def anchor_md(res):
     for s, r in res.items():
         L.append(f"| {lab[s]} | {r['fold_old']} | {r['fold_anch']} | {r.get('fold_old_ord_bad', '-')} | {r['fold_old_anch_bad']} | {r.get('offset', '-')} | "
                  f"{r.get('offset_ord_bad', '-')} | {r.get('offset_anch_bad', '-')} | {r.get('offset_tracked', '-')} | {r.get('trim_false', '-')} |")
-    if res.get("nav", {}).get("store_rows"):
-        n = res["nav"]
+    n = res.get("nav", {})
+    if n.get("store_rows"):
         L += ["", f"NAVSIM rows built by rm_build anchor (feat/<data>.a.npz, float16) against this rebuild: {n['store_rows']} rows, "
               f"{n['store_ok']:.4f} within 0.05 m, masks equal on {n['store_mask']:.4f}."]
+    if "loop_rows" in n:
+        L += ["", f"NAVSIM rows whose route revisits a place (passes within 2.5 m of itself > 15 m of arc apart: the truth's stations are ambiguous "
+              f"there): {n['loop_rows']}. Of the anchored rows off by > 5 m, {n['big_anch_loop']} of {n['big_anch']} are such rows; of merge_a's "
+              f"folds, {n['fold_anch_loop']} of {n['fold_anch']} (old merge: {n['fold_old_loop']} of {n['fold_old']}). Without them: anchored "
+              f"|lead| > 1 m {n['anch_noloop']['abs1']} ({n['anch_noloop']['gt1']} / {n['anch_noloop']['lt1']}), min / max "
+              f"{n['anch_noloop']['min']:.1f} / {n['anch_noloop']['max']:.1f}; ordered {n['ord_noloop']['abs1']} ({n['ord_noloop']['gt1']} / "
+              f"{n['ord_noloop']['lt1']}), min / max {n['ord_noloop']['min']:.1f} / {n['ord_noloop']['max']:.1f}."]
     L += ["", "## A4 Ablations of the per-message anchor (|lead| > 1 m: ahead + / behind -; min / max)", "",
           "plain = merge_a + C_k (no trim tracking); cap = min(C_k, s_prev + chord + 1 m per message), the cap first proposed; anchored = the rule "
           "(rmem.memory_a).", "", "| set | plain | cap | anchored |", "|:--|--:|--:|--:|"]
     for s, r in res.items():
-        if "plain" in r:
+        if "cap" in r:
             g = lambda x: f"{x['abs1']} ({x['gt1']} / {x['lt1']}); {x['min']:.1f} / {x['max']:.1f}"  # noqa: E731
             L.append(f"| {lab[s]} | {g(r['plain'])} | {g(r['cap'])} | {g(r['anch'])} |")
     return L
