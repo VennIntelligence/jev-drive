@@ -17,6 +17,14 @@
 #                                code, new flags off) -> JTB smoke (1 000 steps, arc rows "brake", W 0.002, JT00 draw) -> gate (W by the 0.1 rule,
 #                                no probe gate) -> JTB-L18-s0 (9 500 steps, W from gate_jtb.json); JTN-L18-s0 (no arc term) after the identity.
 #                                Reads per arm: arena held with stop3 and without the hold + held 460 (results/jtb/<tag>/)
+#   jt.sh rtja-prep              supplement 12 preparation: anchored features (rm_build anchor: navtrain 12 + yr1, idx_waitcap / idx_selfiter
+#                                -> on1_WAIT / on1_NR1TV, pools L18RB0 / L18RTB1 / L18YS / L18Y, merged on1_JT) -> rtja.py acheck -> smoke
+#                                RTJASM-L18-s0 (kd-lam 1, 300 steps) -> rtja.py smoke; wait_set.sh ccheck RSG-L18-s0 (chunked vs whole read)
+#   jt.sh rtja [after]           supplement 12 arms RTJA0 / RTJA05 / RTJA1-L18-s0 (kd-lam 0 / 0.5 / 1, 9 500 steps) -> per arm wait set v2
+#                                (wait_set.sh readc) + held 460 @18 -> rtja-select (rtja.py select: the dose rule; it submits the winner's reads
+#                                through rtja-win: arena held stop3 + off, PAI 281 with ACC + GAP, then rtja-sum -> results/rtja/). NOANCHOR=1:
+#                                the projected-layout fallback (no --rm-anchor)
+#   jt.sh rtja-train <tag> <kd-lam> <steps> | rtja-amerge | rtja-select | rtja-win <tag> | rtja-sum <tag>   job bodies
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; J=$O/jt; ME=experiments/defect_fix/scripts/jt.sh; PY=experiments/defect_fix/scripts/jt.py
 TR=$DATA_DIR/envs/op-train/bin/python; NS=$DATA_DIR/envs/navsim2/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python
@@ -28,6 +36,10 @@ NOISE="--ego-scale-speed 0.5 --ego-scale-max 0.2"
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both"                       # amendment B: no on1_L18P
 LAT=$O/lat/L18NR1v2                                                                           # the prefix raster (rb0 / rtb1 rows)
 KS=32; KTV=38                                                                                 # S rows / trainval rows per batch (supplement 9)
+RJ=$J/rtja; RB=experiments/route_mem/scripts/rm_build.py; RP=experiments/defect_fix/scripts/rtja.py; WSH=experiments/alpasim_proxy/scripts/wait_set.sh
+RTJA=(RTJA0-L18-s0:0 RTJA05-L18-s0:0.5 RTJA1-L18-s0:1)                                       # supplement 12: tag:kd-lam
+KDF="--kd-groups AR:1 --kd-nav runs/wait_cap/next/approach_nav.npz --kd-nav-k 8 --d2-lam 1 --d2-teacher $DATA_DIR/runs/desire_cap/train/teacher"
+NT="$(echo navtrain_full.s{0..11}of12)"; PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"
 mkdir -p $J/pool
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner defect-fix --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-12} \
@@ -39,6 +51,7 @@ lat_flags() {  # lat_flags <w> <dir>: the amendment-1 pick (lat_pick_v2.env) at 
   echo "$f --lat-file $2 --lat-depth $DEPTH --lat-soft-depth $SDEPTH --lat-buf $BUF --lat-host"; }
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)        # rm-train's recorded RAM peak is < 7 GB (rasters: page cache)
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)
+FR=(--train --vram 40 --cpu 6 --ram 70 --env CL_HIST_KEY=rm-train)                         # RTJA: + the eager --kd-lam / --d2-lam forwards
 case ${1:-} in
 provis)
   m=$(sub jt-merge-JTP --vram 0.1 --cpu 4 --ram 24 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_pait.py merge \
@@ -130,9 +143,66 @@ side)      # supplement 11: side-buffer mechanism check, JTN at 1 000 steps with
   export ARCROWS=brake WARM=50 HOLDS="" RES=jtb
   bash $ME arm JTNS1K-L18-s0 JT00 1000 0 ${2:-} || exit 1
   SIDEW=0 bash $ME arm JTNN1K-L18-s0 JT00 1000 0 ${2:-} || exit 1 ;;
+rtja-prep)
+  mkdir -p $RJ; E0=(--vram 0.1 --env PYTHONHASHSEED=0 --timeout-h 2); ids=()
+  ids+=($(sub rtja-abuild-nav "${E0[@]}" --cpu 64 --ram 128 -- $AP $RB anchor --workers 64 --data $NT idx_waitcap_trA idx_waitcap_trB idx_waitcap_trC \
+      idx_selfiter_trA idx_selfiter_trB idx_selfiter_trC --cat on1_WAIT=idx_waitcap_trA,idx_waitcap_trB,idx_waitcap_trC \
+      on1_NR1TV=idx_selfiter_trA,idx_selfiter_trB,idx_selfiter_trC)) || exit 1
+  for N in L18RB0 L18RTB1 L18YS L18Y; do                                    # map loads per worker: 8 workers (rm_build pool ran 6 at 60 GB)
+    ids+=($(sub rtja-abuild-$N "${E0[@]}" --cpu 8 --ram 80 -- $AP $RB anchor --workers 8 --pool $N)) || exit 1; done
+  m=$(sub rtja-amerge --after $(csv ${ids[@]}) "${E0[@]}" --cpu 4 --ram 48 -- bash $ME rtja-amerge) || exit 1
+  t=$(sub rtja-train-RTJASM "${FR[@]}" --after $m --timeout-h 1 -- bash $ME rtja-train RTJASM-L18-s0 1 300) || exit 1
+  k=$(sub rtja-smoke --after $t --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $AP $RP smoke --tag RTJASM-L18-s0 --kd-lam 1) || exit 1
+  c=$(PRIO=13 bash $WSH ccheck RSG-L18-s0 | tail -1); [[ -n $c ]] || die "ccheck"; echo "$c ws-ccheck-RSG-L18-s0" >> $J/jobs.txt
+  echo "$(date '+%F %T') rtja-prep: builds ${ids[*]} merge+check $m smoke $t gate $k wait chunk check $c" | tee -a $J/stages.txt ;;
+rtja-amerge)
+  $AP $RB anchor --merge on1_JT=on1_L18RB0:rb0,on1_L18RTB1:rtb1,on1_L18YS:ys,on1_L18Y:y,on1_NR1TV:tv || die "merge rc $?"
+  $AP $RP acheck --data $NT $(printf 'yr1_%s ' $NT) on1_JT on1_WAIT on1_NR1TV on1_L18RB0 on1_L18RTB1 on1_L18YS on1_L18Y ;;
+rtja-train)   # rtja-train <tag> <kd-lam> <steps>: JTN's command (jt.sh train JTN-L18-s0 on1_JT $LAT JT00 9500 0, ARCROWS=brake) with supplement 12's four changes
+  T=$2; L=$3; N=$4
+  CMD=($TR $RT train --tag $T --init RTB1AR-F-s0 --allow-init $RSG --on on1_JT --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
+    --on-wfile runs/defect_fix/w/JT00.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LAT) --on-arc 0 --diag --warmup 500 --lr-floor 0.1 \
+    --on-arc-rows brake $([[ -n ${NOANCHOR:-} ]] || echo --rm-anchor) --kd-lam $L $KDF --steps $N --seed 0)
+  echo "$(date '+%F %T') rtja-train $T: kd-lam $L, $N steps, layout $([[ -n ${NOANCHOR:-} ]] && echo projected || echo anchored)" | tee -a $J/stages.txt
+  [[ -z ${DRY:-} ]] || { echo "${CMD[*]}"; exit 0; }
+  exec "${CMD[@]}" ;;
+rtja)
+  A=${2:-}; mkdir -p $RJ; ids=()
+  for x in "${RTJA[@]}"; do [[ ! -e $DATA_DIR/runs/op_parity/runs/${x%%:*}/ckpt-final.pt ]] || die "${x%%:*} exists"; done
+  for x in "${RTJA[@]}"; do T=${x%%:*}; L=${x#*:}
+    t=$(sub rtja-train-$T ${A:+--after $A} "${FR[@]}" ${NOANCHOR:+--env NOANCHOR=1} --timeout-h 4 -- bash $ME rtja-train $T $L 9500) || exit 1
+    w=$(PRIO=$((${PRIO:-12} + 1)) bash $WSH readc $T $t | tail -1); [[ -n $w ]] || die "readc $T"; echo "$w ws-collect-$T" >> $J/jobs.txt; ids+=($w)
+    for i in 0 1 2 3 4 5; do
+      ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+          -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+    echo "$(date '+%F %T') rtja arm $T (kd-lam $L${NOANCHOR:+, projected layout}): train $t wait-set collect $w" | tee -a $J/stages.txt
+  done
+  s=$(sub rtja-select --after $(csv ${ids[@]}) --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME rtja-select) || exit 1
+  echo "$(date '+%F %T') rtja: reads ${ids[*]}; selection $s (submits the winner's reads + rtja-sum)" | tee -a $J/stages.txt ;;
+rtja-select)
+  $TR $RP select --tags $(for x in "${RTJA[@]}"; do echo -n "${x%%:*} "; done) --lams $(for x in "${RTJA[@]}"; do echo -n "${x#*:} "; done) || exit $?
+  W=$(python3 -c "import json; print(json.load(open('$RJ/select.json'))['winner'])"); bash $ME rtja-win $W ;;
+rtja-win)     # rtja-win <tag>: the winner's arena held reads (stop3, off) and PAI 281 (g10 + VCONT + LEAD + ACC + GAP, JTN+ACC+GAP's chunk lists) -> rtja-sum
+  T=${2:?tag}; ids=(); nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))")
+  for V in stop3 off; do for c in $(seq 0 $((nch - 1))); do
+    ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-ar-$T-$V-c$c "${RD[@]}" -- bash $ME aread $T $V $c)) || exit 1; done; done
+  CHUNKS_FROM=$O/pai_accgap/JTN-L18-s0/chunks SERVE="$PAISERVE" WIZ=controller.gains.rel_front_steering_angle_weight=10 CONC=4 PRIO=$((${PRIO:-12} + 1)) \
+    bash experiments/alpasim/scripts/pai_box.sh submit $O/pai_accgap/$T $T > $RJ/pai_$T.submit.txt || die "pai submit"
+  pp=$(awk '{print $1}' $RJ/pai_$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || die "no PAI job"
+  awk '$1 ~ /^[0-9]{4}-/' $RJ/pai_$T.submit.txt >> $J/jobs.txt
+  s=$(sub rtja-sum-$T --after $(csv ${ids[@]}),$pp --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME rtja-sum $T) || exit 1
+  echo "$(date '+%F %T') rtja-win $T: arena ${ids[0]} .. ${ids[-1]} (${#ids[@]}) PAI $pp summary $s" | tee -a $J/stages.txt ;;
+rtja-sum)
+  T=$2; R=experiments/defect_fix/results/rtja/$T; mkdir -p $R
+  $AP $PY arena --tags $T@stop3 $T@off --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md || die "arena"
+  $TR $PY held --tags $T > $R/held.txt 2>&1 || die "held"
+  .venv/bin/python experiments/defect_fix/scripts/pai281.py --j $O/pai_accgap/$T --jl $T+ACC+GAP --j2 $O/pai_accgap/JTN-L18-s0 --j2l JTN+ACC+GAP \
+    --ref $DATA_DIR/runs/route_follow/acc_gap/read/s2 --rl RSG+ACC+GAP --out $R/pai281.md || die "pai281"
+  $TR $RP adopt --tag $T || die "adopt"
+  date '+%F %T' > $RJ/DONE ;;
 sum)
   T=$2; HL=(${3-leash3 off}); R=experiments/defect_fix/results/${4:-jt}/$T; mkdir -p $R
   [[ ${#HL[@]} -eq 0 ]] || $AP $PY arena --tags ${HL[@]/#/$T@} --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
   $TR $PY held --tags $T > $R/held.txt 2>&1; cat $R/held.txt ;;
-*) sed -n 2,16p $0; exit 2 ;;
+*) sed -n 2,24p $0; exit 2 ;;
 esac

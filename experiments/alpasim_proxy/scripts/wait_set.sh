@@ -25,6 +25,12 @@
 #                                      (a failed gate fails every read chained after it)
 #   wait_set.sh report [tag ...]       job body / by hand: tables of every read (or the tags) -> $W/report/{tables.md, all.csv}
 #   wait_set.sh smoke <tag> [n] [after] the first n windows of each variant (default 2) -> $W/smoke/<tag> (pool job; plumbing check)
+#   wait_set.sh readc <tag> [after]    the same read split into chunks run in parallel: each variant's windows in WS_NCH (4) lists, one pool
+#                                      job per list (crun), then one collect job over every chunk run (ccollect) writing the same table as
+#                                      `read`; prints the collect job id. WS_OUT (default $W/reads) puts the read elsewhere (the chunk check)
+#   wait_set.sh ccheck <tag> [after]   chunk check on a tag with a stored whole read: chunks a_c0 and b_c0 into $W/chunkcheck/<tag>, collected and
+#                                      compared window by window (score, zero, wait_ok, launch_s) with reads/<tag>/table (rc 1 on a difference)
+#   wait_set.sh crun <tag> <dir> <list> | ccollect <tag> <read dir>   job bodies
 #   wait_set.sh run <tag> <dir>        job body (WS_LIST: one run on that sub-list instead of the two variant runs). A runtime worker killed
 #                                      by the platform (exit -9, the memory line) exits 137, so the pool's kill retry applies.
 set -uo pipefail
@@ -40,7 +46,7 @@ REPLAY=(runtime.simulation_config.force_gt_duration_us=20000000 ++eval.aggregati
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
 mkdir -p $W/pool
-sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner alpasim-proxy --name "$name" --tries 1 --priority ${PRIO:-9} \
+sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner alpasim-proxy --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-9} \
     --no-check --log-dir $W/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id $name" >> $W/jobs.txt; echo "$id"; }
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 3 --env CL_HIST_KEY=alpasim-read4)     # the public reads' declaration (rtb-wide, rf_allrows)
 R3=(--vram 24 --cpu 8 --ram 40 --timeout-h 3)                                       # third-party drivers (anchors: 8 cores, as ot2_loop)
@@ -96,6 +102,37 @@ read)
   [[ $T == P0 || $T == starter || $T == replay || -f $CK/$T/ckpt-final.pt ]] || third $T || die "no checkpoint $T"
   if third $T; then X=("${R3[@]}"); else X=("${RD[@]}"); fi
   mkdir -p $D; sub ws-read-$T ${A:+--after $A} "${X[@]}" ${WS_DRIVER:+--env WS_DRIVER=$WS_DRIVER} -- bash $E/scripts/wait_set.sh run $T $D/run ;;
+readc)
+  T=${1:?tag}; A=${2:-}; D=${WS_OUT:-$W/reads}/$T; n=${WS_NCH:-4}
+  [[ ! -e $D/table/$T.csv ]] || die "$D already read"
+  [[ -n $A || $T == P0 || -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"          # with an after: trained by it
+  rm -rf $D/run; mkdir -p $D/run/lists; ids=()
+  python3 - $S/set.json $D/run/lists $n <<'PY'
+import json, sys
+w, out, n = json.load(open(sys.argv[1]))["windows"], sys.argv[2], int(sys.argv[3])
+for v in "ab":
+    ids = [x["id"] for x in w if x["variant"] == v]
+    for c in range(n):
+        open(f"{out}/{v}_c{c}.txt", "w").write("\n".join(ids[c::n]) + "\n")
+PY
+  for f in $D/run/lists/*.txt; do p=$(basename $f .txt)
+    ids+=($(TRIES=2 sub ws-readc-$T-$p ${A:+--after $A} "${RD[@]}" -- bash $E/scripts/wait_set.sh crun $T $D/run/$p $f)) || exit 1; done
+  sub ws-collect-$T --after $(IFS=,; echo "${ids[*]}") --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $E/scripts/wait_set.sh ccollect $T $D ;;
+ccheck)
+  T=${1:?tag}; A=${2:-}; D=$W/chunkcheck/$T; R=$W/reads/$T/table/$T.csv; [[ -f $R ]] || die "no stored read $R"
+  rm -rf $D; mkdir -p $D/run/lists
+  for v in a b; do python3 -c "import json; print('\n'.join([x['id'] for x in json.load(open('$S/set.json'))['windows'] if x['variant'] == '$v'][0::${WS_NCH:-4}]))" > $D/run/lists/${v}_c0.txt; done
+  ids=(); for p in a_c0 b_c0; do ids+=($(TRIES=2 sub ws-ccheck-$T-$p ${A:+--after $A} "${RD[@]}" -- bash $E/scripts/wait_set.sh crun $T $D/run/$p $D/run/lists/$p.txt)) || exit 1; done
+  sub ws-ccheck-$T --after $(IFS=,; echo "${ids[*]}") --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash -c "set -o pipefail; bash $E/scripts/wait_set.sh ccollect $T $D && \
+    $P experiments/defect_fix/scripts/rtja.py wcheck --a $D/table/$T.csv --b $R | tee $D/check.json" ;;
+crun)
+  T=$1; D=$2; L=$3; [[ -f $C/check.json ]] || die "no cache check $C/check.json"; [[ ! -e $D/done ]] || { echo "$D already ran"; exit 0; }
+  rm -rf "$D"; one_run $T $D $L; date '+%F %T' > $D/done ;;
+ccollect)
+  T=$1; D=$2; runs=($(ls -d $D/run/*/ | grep -v /lists/))
+  for r in "${runs[@]}"; do [[ -f $r/done ]] || die "chunk $r not done"; done
+  $PY collect --set $S/set.json --run "${runs[@]%/}" --label $T --out $D/table || die "collect rc $?"
+  date '+%F %T' > $D/run/done ;;
 smoke)
   T=${1:?tag}; n=${2:-2}; A=${3:-}; D=$W/smoke/$T; rm -rf $D; mkdir -p $D
   python3 -c "import json, sys; w = json.load(open('$S/set.json'))['windows']; print('\n'.join([x['id'] for x in w if x['variant'] == 'a'][:$n] + [x['id'] for x in w if x['variant'] == 'b'][:$n]))" > $D/list.txt
