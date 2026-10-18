@@ -52,6 +52,11 @@ def plan(a) -> int:
         o.mkdir(parents=True)
     for d in ("todo", "claim", "done", "slots"):
         (q / d).mkdir(parents=True, exist_ok=True)
+    if a.order == "scene":   # the reads of one scene back to back: they share the renderer's scene cache
+        first = {}
+        for n, (_, sc) in enumerate(items):
+            first.setdefault(sc, n)
+        items.sort(key=lambda x: (first[x[1]], x[0]))
     for n, (i, s) in enumerate(items):
         (q / "todo" / f"{n:06d}").write_text(f"{i} {s}\n")
     json.dump({"reads": reads, "scenes": sorted(set(scenes)), "overrides": a.overrides, "t": time.time()},
@@ -285,6 +290,7 @@ def main() -> int:
     p = sub.add_parser("plan")
     p.add_argument("queue")
     p.add_argument("--read", action="append", required=True, metavar="OUT=LIST[=DRIVER[=K:V,K:V]]")
+    p.add_argument("--order", choices=("read", "scene"), default="scene", help="queue order: read by read, or scene by scene")
     p.add_argument("overrides", nargs="+")
     s = sub.add_parser("slot")
     s.add_argument("queue")
