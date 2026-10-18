@@ -35,7 +35,7 @@ Stored references: RSG + stop3 0.9438, JTN + stop3 0.943 (tie, decision 353). Un
 | cruise (116) | +0.0006 | 0 / 0 | +0.0006 | 0 / 0 | +0.000 |
 | other (449) | -0.0001 | 3 / 3 | -0.0014 | 7 / 4 | -0.007 [-0.018, +0.003] (5 / 2) |
 
-The loss is in braking, turn and launch windows (46 new zeros in braking / turn / launch for RSG, 44 for JTN, 1 fixed). Static windows are untouched for RSG (stop3 already serves them).
+The loss is in braking, turn and launch windows (new zeros in launch + braking + turn: 37 for RSG, 44 for JTN; fixed: 1 and 2). Static windows are untouched for RSG (stop3 already serves them).
 
 ## Zero and partial types (2 228 common windows)
 
