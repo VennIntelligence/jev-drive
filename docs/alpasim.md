@@ -544,7 +544,11 @@ and about 16 % of a 77-scene one. The rest is about 5.2 s per scene per stack, b
   `torch.Size([8, N, 3])` errors and changed scores. This happens with scene-major multi-checkpoint queues, or with
   `nr_rollouts` > 1 at concurrency. `queue_read.py` guards against it.
 - **Shipped bug:** at 0bb4c4b, `get_runtime_info` of the runtime daemon raises on the trajdata provider.
-- **Lever left:** renderer replicas per stack, not measured.
+- **Renderer replicas per stack** (`services.renderer.replicas_per_container=N`, concurrency 4N), one run each on the same 149 scenes:
+  - N=2 is 22 % faster in wall time (635 vs 811 s) but peaks at 19.9 GB instead of 12.2 GB, so about +6 % scenes per card-hour at
+    declared VRAM (24 vs 20 GB). Only 141 / 149 scores matched the stored read (max diff 0.011).
+  - N=3 is 11 % faster (723 s), peaks at 25.7 GB, and is bit-identical. Both are below the +15 % line, so the default stays N=1.
+  - Single runs on different cards, so differences inside ±15 % are noise.
 
 Last verified: 2026-10-18
 
