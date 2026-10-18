@@ -1,0 +1,83 @@
+{
+ "check": {
+  "all_done": true,
+  "fail_rate": 0.004322766570605188,
+  "dumps_per_window": 10.0,
+  "mean_score": 0.923611770982332,
+  "dump_gb_projected_all": 90.31714331112286,
+  "disk_free_gb": 1180.8145751953125,
+  "pass": true
+ },
+ "chunks": [
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c0/run",
+   "done": true,
+   "rollouts": 105,
+   "failed": 0,
+   "dumps": 1050,
+   "dump_mb": 2280.8585815429688,
+   "mean": 0.9842671477848063,
+   "zeros": 0
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c6/run",
+   "done": true,
+   "rollouts": 95,
+   "failed": 0,
+   "dumps": 950,
+   "dump_mb": 2025.0466871261597,
+   "mean": 0.9857153748419957,
+   "zeros": 0
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c11/run",
+   "done": true,
+   "rollouts": 99,
+   "failed": 1,
+   "dumps": 980,
+   "dump_mb": 1894.7155227661133,
+   "mean": 0.9704093547211409,
+   "zeros": 2
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c20/run",
+   "done": true,
+   "rollouts": 99,
+   "failed": 0,
+   "dumps": 990,
+   "dump_mb": 1814.5893564224243,
+   "mean": 0.9068181007661152,
+   "zeros": 6
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c27/run",
+   "done": true,
+   "rollouts": 106,
+   "failed": 1,
+   "dumps": 1050,
+   "dump_mb": 1945.7976961135864,
+   "mean": 0.849504242373354,
+   "zeros": 14
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c33/run",
+   "done": true,
+   "rollouts": 101,
+   "failed": 0,
+   "dumps": 1010,
+   "dump_mb": 2159.7157440185547,
+   "mean": 0.8883871482845637,
+   "zeros": 11
+  },
+  {
+   "run": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c42/run",
+   "done": true,
+   "rollouts": 89,
+   "failed": 1,
+   "dumps": 880,
+   "dump_mb": 1796.1063766479492,
+   "mean": 0.8801810281043477,
+   "zeros": 7
+  }
+ ]
+}

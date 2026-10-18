@@ -1,0 +1,105 @@
+{
+ "pilot": "JTX1K-L18-s0",
+ "control": "JTNC1K-L18-s0",
+ "refs": [
+  "JTNS1K-L18-s0"
+ ],
+ "verdict": {
+  "rule": "zeros(pilot) <= zeros(control) + 2",
+  "zeros_pilot": 37,
+  "zeros_control": 42,
+  "pass_": true,
+  "paired_vs_control": {
+   "n": 460,
+   "mean": 0.002371194890411233,
+   "lo": -0.015550251786649974,
+   "hi": 0.021267381711672365,
+   "zeros": 37,
+   "zeros_ref": 42,
+   "scenes": 460
+  }
+ },
+ "reads": {
+  "JTX1K-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 37,
+    "mean": 0.8291877383087091,
+    "progress_rel": 0.7585023332101435,
+    "at_fault": 2,
+    "offroad": 14,
+    "coll": {
+     "front": 2,
+     "lateral": 0,
+     "rear": 35
+    },
+    "creep": 18,
+    "no_launch": 6,
+    "lat_zeros": 27
+   },
+   "pair": {
+    "n": 460,
+    "mean": 0.002371194890411233,
+    "lo": -0.015550251786649974,
+    "hi": 0.021267381711672365,
+    "zeros": 37,
+    "zeros_ref": 42,
+    "scenes": 460
+   }
+  },
+  "JTNC1K-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 42,
+    "mean": 0.8268165434182978,
+    "progress_rel": 0.7665098756085941,
+    "at_fault": 7,
+    "offroad": 14,
+    "coll": {
+     "front": 7,
+     "lateral": 0,
+     "rear": 38
+    },
+    "creep": 15,
+    "no_launch": 4,
+    "lat_zeros": 27
+   },
+   "pair": {
+    "n": 460,
+    "mean": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "zeros": 42,
+    "zeros_ref": 42,
+    "scenes": 460
+   }
+  },
+  "JTNS1K-L18-s0": {
+   "held": {
+    "scenes": 460,
+    "zeros": 42,
+    "mean": 0.8268194707488237,
+    "progress_rel": 0.7665138457538203,
+    "at_fault": 7,
+    "offroad": 14,
+    "coll": {
+     "front": 7,
+     "lateral": 0,
+     "rear": 38
+    },
+    "creep": 15,
+    "no_launch": 4,
+    "lat_zeros": 27
+   },
+   "pair": {
+    "n": 460,
+    "mean": 2.927330525754745e-06,
+    "lo": 0.0,
+    "hi": 1.0439219031490908e-05,
+    "zeros": 42,
+    "zeros_ref": 42,
+    "scenes": 460
+   }
+  }
+ }
+}
