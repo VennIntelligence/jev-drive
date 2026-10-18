@@ -195,6 +195,13 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             three pool groups together) and cos(imit, pool), through torch.autograd.grad(retain_graph=True) on the scaled terms before the
             step's backward (.grad untouched). With --compile it sets torch._functorch.config.donated_buffer = False (donated buffers refuse
             retain_graph; memory reuse only); the compiled smoke pair in results/identity_nr1hvr_smoke.json checks the update is unchanged.
+  --diag-infl N [--diag-freeze]   (LAUNCH-DIAG, experiments/defect_fix/results/rtja/launch_diag.md; with --diag) monitoring only: at every
+            --diag-every step, for fixed probe sets of N rows (the --probe-n trainval launch / standing rows; the fitted pool slice's launch /
+            still / cruise S rows), the gradient of the mean plan 4 s arc against each loss term's gradient (the imitation term split by row
+            group: navtrain, yaw-rate, trainval and each trainval draw group; the same rows without the history-speed noise; the S-row agent /
+            road hinges, the trainval rows' hinges, the drivable hinge, the three lateral terms, the total): cos and d1k = the arc change per
+            1 000 steps that term alone predicts under Adam's current preconditioner at each group's base lr -> scalars infl/<probe>/*.
+            --diag-freeze: every group's lr is 0 each step (the weights stay at the init, Adam's moments accumulate). Off: no operation added.
   --lr-floor F      the cosine decays to F x base lr instead of 0 (lr = base x warm-up x (F + (1 - F) cos)); 0 (default) = the plain cosine.
             The warm-up length is the existing --warmup.
 
@@ -1010,6 +1017,100 @@ def cmd_train(a):
                     dot = sum((u * w).sum() for u, w in zip(G["imit"], P) if u is not None and w is not None)
                     out["grad/cos_imit_pool"] = float(dot / max(out["grad/imit"] * out["grad/pool"], 1e-30))
             return out
+
+    IPR, grp_t = {}, None
+    if a.diag_infl:                                                   # LAUNCH-DIAG probe sets (fixed rows; docstring)
+        import nr1_lon
+        n_ = a.diag_infl
+        IPR = {f"{g}_tv": PRB[g][:n_] for g in ("launch", "stand_r") if g in PRB}
+        arcp_ = LS.pack.get("arc") if isinstance(LS.pack, dict) else None
+        if arcp_ is not None and hrec:
+            kd_ = arcp_["kind"][torch.as_tensor(FR, device=arcp_["kind"].device)].cpu().numpy()
+            for kn in ("launch", "still", "cruise"):
+                IPR[f"{kn}_S"] = FR[kd_ == nr1_lon.KINDS.index(kn)][:n_]
+        if a.on_wfile and "grp" in wz.files:
+            gn_ = np.unique(wz["grp"].astype(str))
+            grp_t = (torch.as_tensor(np.searchsorted(gn_, wz["grp"].astype(str)), device=dev), list(gn_))
+        print(f"--diag-infl probe sets: { {q: len(v) for q, v in IPR.items()} }", flush=True)
+
+    def diag_infl(Ls, out, rows, anchor, total, front, ego_c, step):
+        """LAUNCH-DIAG (monitoring only, .grad untouched): for each probe set, d(mean plan 4 s arc) per 1 000 steps predicted from each loss
+        term alone under the optimizer's current Adam preconditioner at the groups' base lr: -1000 sum_i lr_i g_f,i g_k,i / (sqrt(v_i) + eps)."""
+        import nr1_lon
+        hw, ll = LS.ho_w, getattr(LS, "lon_lam", 1.0)
+        g0 = lambda q: Ls[q] if q in Ls and torch.is_tensor(Ls[q]) and Ls[q].requires_grad else None  # noqa: E731
+        pos = torch.arange(len(rows), device=dev)
+        imit_m = ~anchor & S.has_fut[rows]
+        h_ = LS.ho[rows] if getattr(LS, "ho", None) is not None else torch.zeros_like(anchor)
+        imit_m = imit_m & ~h_
+        n_im = imit_m.sum().clamp_min(1).float()
+        grpm = dict(nav=pos < nN, yr=(pos >= nN) & (pos < nN + k_yr), tv=(pos >= nN + k_yr) & (rows >= ns.on0) & ~is_pool[rows])
+        if grp_t is not None:                                         # trainval rows by draw group
+            gi = torch.full_like(rows, -1)
+            pm = rows >= ns.on0
+            gi[pm] = grp_t[0][rows[pm] - ns.on0]
+            for j, gname in enumerate(grp_t[1]):
+                grpm[f"tv_{gname}"] = grpm["tv"] & (gi == j)
+        terms, chk = {}, 0.0
+        for gname, gm in grpm.items():                                # the imitation term restricted to a row group, weighted as in `imit`
+            m = gm & imit_m
+            if not m.any():
+                continue
+            _, Lg = LS(out[m], S, rows[m], anchor[m])
+            if torch.is_tensor(Lg.get("imit")) and Lg["imit"].requires_grad:
+                terms[f"imit_{gname}"] = Lg["imit"] * m.sum().float() / n_im
+                if gname in ("nav", "yr", "tv"):
+                    chk = chk + float(terms[f"imit_{gname}"])
+        res = {"infl/imit_split_resid": float(Ls["imit"]) - chk if torch.is_tensor(Ls.get("imit")) else float("nan")}
+        if ego_c is not None:                                         # the same rows without the history-speed noise
+            oc = model(front, ego_c, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows]).float()
+            _, Lc = LS(oc, S, rows, anchor)
+            if torch.is_tensor(Lc.get("imit")):
+                terms["imit_clean"] = Lc["imit"]
+        for nm_, (w_, q) in dict(imit=(1.0, "imit"), agent_S=(hw * cfg.agent_lam, "agent_ho"), road_S=(hw * LS.road_lam, "road_ho"),
+                                 agent_tv=(hw * cfg.agent_lam, "on/agent_ho"), road_tv=(hw * LS.road_lam, "on/road_ho"),
+                                 nav_hinge=(cfg.hinge_lam, "hinge"), lat_onc=(hw * ll, "on/lat_onc_ho"), lat_soft=(hw * ll, "on/lat_soft_ho"),
+                                 lat_side=(hw * ll, "on/lat_side_ho")).items():
+            if g0(q) is not None:
+                terms[nm_] = w_ * g0(q)
+        if total.requires_grad:
+            terms["total"] = total
+        sc = float(scaler.get_scale())
+        G = {}
+        for k, t_ in terms.items():
+            gr = torch.autograd.grad(scaler.scale(t_), tp_, retain_graph=True, allow_unused=True)
+            G[k] = [None if q is None else q.float() / sc for q in gr]
+        pre = []                                                      # lr_i / (sqrt(v_hat_i) + eps) per trunk tensor
+        lr_of = {id(p_): (g["base"] if not a.diag_freeze else g["nom"], g.get("betas", (0.9, 0.999))[1], g.get("eps", 1e-8))
+                 for g in opt.param_groups for p_ in g["params"]}
+        for p_ in tp_:
+            st_ = opt.state.get(p_, {})
+            lr_, b2, eps_ = lr_of[id(p_)]
+            if "exp_avg_sq" not in st_:
+                pre.append(None)
+                continue
+            t_ = float(st_["step"])
+            vh = st_["exp_avg_sq"].float() / (1 - b2 ** t_)
+            pre.append(lr_ / (vh.sqrt() + eps_))
+        pi_ = torch.as_tensor(S.pi, device=dev)
+        model.eval()
+        for pn, rr in IPR.items():
+            g = torch.as_tensor(ns.on0 + rr, device=dev)
+            o = model(S.front[ns.on0 + rr], S.ego[g], S.tc[g], None, None, nv=None if ns.nv is None else ns.nv[g]).float()
+            x, y, _ = T.rear(o[:, pi_].view(-1, 33, 15), S.cam_x[g], LS.W)
+            f_ = nr1_lon.arc(x, y)[:, -1].mean()
+            gf = torch.autograd.grad(f_, tp_, allow_unused=True)
+            res[f"infl/{pn}/arc4"] = float(f_)
+            nf = float(torch.sqrt(sum((q.float() ** 2).sum() for q in gf if q is not None)))
+            for k, Gk in G.items():
+                dot = sum((u.float() * w).sum() for u, w in zip(gf, Gk) if u is not None and w is not None)
+                nk = float(torch.sqrt(sum((w * w).sum() for w in Gk if w is not None)))
+                res[f"infl/{pn}/cos_{k}"] = float(dot) / max(nf * nk, 1e-30)
+                if any(q is not None for q in pre):
+                    d = sum((u.float() * w * q).sum() for u, w, q in zip(gf, Gk, pre) if u is not None and w is not None and q is not None)
+                    res[f"infl/{pn}/d1k_{k}"] = -1000.0 * float(d)
+        model.train()
+        return res
     with Run("route_mem", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"onpol": vars(a), "route_mem": dict(head=ns.head, feat_ok=okc)}) as run:
         for x in ns.sp + ((ns.trl,) if k_ho or ns.agent2 is not None else ()) + ((splits.load(a.on_split),) if a.on and a.on_split else ()):
             run.use_split(x)
@@ -1098,6 +1199,8 @@ def cmd_train(a):
                 cosf = a.lr_floor + (1.0 - a.lr_floor) * cosf
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / g["wu"]) * cosf
+                if a.diag_freeze:                                     # LAUNCH-DIAG: the weights stay at the init (Adam state still accumulates)
+                    g["nom"], g["lr"] = g["base"], 0.0
             ego = S.ego[rows] * (~anchor)[:, None].float()
             if lc_on:
                 keep = torch.as_tensor(mrng.random(n_main) >= a.rm_drop, device=dev) | is_pool[rows[:n_main]]
@@ -1142,6 +1245,8 @@ def cmd_train(a):
                     bs_ = torch.stack([na.sum(), (dm & na).sum()] + [x for c in range(3) for x in ((na & (cl == c)).sum(), (na & op & (cl == c)).sum())]).double()
                     dacc += bs_
                 ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
+            dstep = a.diag and a.diag_infl and (step + 1) % a.diag_every == 0
+            ego_c = ego.clone() if dstep and a.ego_scale_speed > 0 else None   # LAUNCH-DIAG: the rows before the history-speed noise
             if a.ego_scale_speed > 0:                                 # history-speed noise on the imitation rows (anchor and pool rows never)
                 us = torch.as_tensor(srng.random((len(r), 2)), device=dev, dtype=torch.float32)
                 sm = (us[:, 0] < a.ego_scale_speed) & ~anchor[:len(r)] & ~is_pool[rows[:len(r)]]
@@ -1235,6 +1340,8 @@ def cmd_train(a):
             opt.zero_grad(set_to_none=True)
             if a.diag and (step + 1) % a.diag_every == 0:            # monitoring only: before the step's backward, .grad untouched
                 Ls |= diag_grads(Ls)
+                if a.diag_infl:
+                    Ls |= diag_infl(Ls, out, rows, anchor, total, front, ego_c, step)
             if ns.rx:                                                 # the module learns from the constraint side only
                 g_rx = (torch.autograd.grad(scaler.scale(total_C), rxp, retain_graph=True, allow_unused=True) if total_C.requires_grad
                         else [None] * len(rxp))
@@ -1457,6 +1564,9 @@ if __name__ == "__main__":
         p.add_argument("--probe-n", type=int, default=1024, help="JT: rows per wait / launch probe slice (--on-wfile groups stand_r / launch; 0 = off)")
         p.add_argument("--diag", action="store_true", help="monitoring only: activity rates, grad norm / clip rate, per-term trunk gradients")
         p.add_argument("--diag-every", type=int, default=100, help="--diag: steps between per-term gradient norms")
+        p.add_argument("--diag-infl", type=int, default=0, help="LAUNCH-DIAG (with --diag): rows per probe set of the per-term arc influence (0 = off)")
+        p.add_argument("--diag-freeze", action="store_true", help="LAUNCH-DIAG: every group's lr is 0 (the weights stay at the init; Adam "
+                       "state accumulates; --diag-infl uses the base lr)")
         p.add_argument("--lr-floor", type=float, default=0.0, help="cosine floor as a share of each group's base lr (0 = the plain cosine)")
         p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
         p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
