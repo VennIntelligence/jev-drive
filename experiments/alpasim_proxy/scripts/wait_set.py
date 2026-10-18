@@ -395,7 +395,7 @@ def cmd_collect(a):
             row["launch_s"] = float(t[go[0]]) if len(go) else None
             if w["variant"] == "b":
                 row["h_launch_s"] = w["h_launch_s"]
-                row["delay_s"] = None if row["launch_s"] is None else row["launch_s"] - w["h_launch_s"]
+                row["delay_s"] = None if row["launch_s"] is None or w["h_launch_s"] is None else row["launch_s"] - w["h_launch_s"]   # 3 v2 windows: no logged launch
                 row["early"] = row["launch_s"] is not None and row["launch_s"] < t_on
                 row["disp_end"] = float(disp[-1])
             row["wait_ok"] = bool(row["roll_m"] <= WAIT_OK and z is None)
