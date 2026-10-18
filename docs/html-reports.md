@@ -27,7 +27,9 @@ agy (Google Antigravity) is no longer used (2026-10-09). Agent-facing records st
 Any page with rollout or scene videos (galleries, diagnosis indexes):
 - **Speed bar on top.** A sticky bar at the very top: buttons 自动 / 1× / 2× / 3× / 5× / 10× / 16× plus a 0.5–16× slider.
   自动 is each clip's own rate; any other choice overrides every clip at once, updates each clip's rate tag, and is
-  kept in `localStorage.vidRate` so it carries across pages. 16× is the browser ceiling.
+  kept in `localStorage.vidRate` so it carries across pages. 16× is the browser ceiling. The web reader serves pages
+  in a CSP sandbox (opaque origin) where touching `localStorage` throws: wrap every access in try / catch, or the
+  whole script dies and no clip loads. Test a page through `/read/_preview/...` before calling it done.
 - **Auto rate.** `max(2, min(3, 30/fps, dur/6))`, shown as a tag on each clip; 2 fps clips are choppy below 2×.
 - **Lazy loading.** No `autoplay`, no `src` up front: `data-src` + `preload="none"`, one IntersectionObserver fetches
   a clip within about one screen, a second plays it only while >= 50 % visible and pauses it when it leaves.

@@ -121,10 +121,10 @@ held 场景按 held 460 @18 配置重跑，public 场景按 public 1491 @10 的 
 <nav>{"".join(nav)}</nav>
 {"".join(secs)}
 <script>
-// Speed bar: 0 = per-clip auto rate (data-rate); any other value overrides every clip. Kept in localStorage across pages.
-let G = +localStorage.vidRate || 0;
+// Speed bar: 0 = per-clip auto rate (data-rate); any other value overrides every clip. Kept in localStorage across pages where storage is allowed.
+let G = 0; try {{ G = +localStorage.vidRate || 0; }} catch (e) {{}}  // the web reader's sandbox (opaque origin) throws on storage
 const R = v => {{ const r = G || +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
-const setG = r => {{ G = r; localStorage.vidRate = r;
+const setG = r => {{ G = r; try {{ localStorage.vidRate = r; }} catch (e) {{}}
   document.querySelectorAll("#rb button").forEach(b => b.classList.toggle("on", +b.dataset.r === r));
   document.querySelector("#rb input").value = r || 2; document.getElementById("rv").textContent = r ? r + "×" : "自动";
   document.querySelectorAll("video[data-src]").forEach(v => {{ if (v.src) R(v); const s = v.parentNode.querySelector(".rate"); if (s) s.textContent = (G || +v.dataset.rate) + "×"; }}); }};
