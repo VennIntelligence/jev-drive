@@ -297,16 +297,26 @@ small{{color:#888;font-weight:400;font-size:11px;word-break:break-all}}.row{{dis
 video{{width:100%;background:#000}}figcaption{{font-size:13px;color:#444}}section{{border-top:1px solid #ddd;margin-top:1em;padding-top:.3em}}h4{{margin:.3em 0}}
 h4.cls{{background:#eef;padding:3px 8px;margin-top:1.6em}}h3{{margin-top:2em;border-bottom:2px solid #889}}.warn{{color:#a50}}.miss{{color:#a00}}
 .rate{{background:#333;color:#fff;border-radius:4px;padding:0 5px;font-size:12px}}table{{border-collapse:collapse;font-size:13px}}td,th{{border:1px solid #ccc;padding:2px 8px;text-align:left}}
-nav a{{margin-right:1em}}</style></head><body>
+nav a{{margin-right:1em}}#rb{{position:sticky;top:0;z-index:9;background:#fffffff0;padding:5px 0;border-bottom:1px solid #ddd;font-size:14px}}#rb button{{margin:0 2px;padding:1px 7px;border:1px solid #999;border-radius:4px;background:#fff}}#rb button.on{{background:#333;color:#fff}}#rb input{{vertical-align:middle;width:140px}}</style></head><body>
+<div id="rb">播放速度 <button data-r="0">自动</button><button data-r="1">1×</button><button data-r="2">2×</button><button data-r="3">3×</button><button data-r="5">5×</button><button data-r="10">10×</button><button data-r="16">16×</button> <input type="range" min="0.5" max="16" step="0.5"> <b id="rv"></b></div>
 <h1>JTN-L18-s0 的零分与低分长什么样（对照 RSG-L18-s0，同一 serve、同一窗）</h1>
 {intro}
 <table><tr><th>来源</th><th>组</th><th>机制（按 JTN 的失败类型）</th><th>窗数</th><th>其中 RSG 也零分</th></tr>{"".join(tab)}</table>
-<p>{len(man)} 段视频，合计 {tot:.0f} MB。每段左上角是快放倍数（max(2, min(3, 30/fps, 时长/6))），滑到附近才加载，过半可见才播放。</p>
+<p>{len(man)} 段视频，合计 {tot:.0f} MB。每段左上角是当前倍数；顶部速度条可改全部视频（自动 = 每段 max(2, min(3, 30/fps, 时长/6))，选择记在浏览器里），滑到附近才加载，过半可见才播放。</p>
 <nav>{"".join(nav)}</nav>
 {"".join(secs)}
 <script>
+// Speed bar: 0 = per-clip auto rate (data-rate); any other value overrides every clip. Kept in localStorage across pages.
+let G = +localStorage.vidRate || 0;
+const R = v => {{ const r = G || +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
+const setG = r => {{ G = r; localStorage.vidRate = r;
+  document.querySelectorAll("#rb button").forEach(b => b.classList.toggle("on", +b.dataset.r === r));
+  document.querySelector("#rb input").value = r || 2; document.getElementById("rv").textContent = r ? r + "×" : "自动";
+  document.querySelectorAll("video[data-src]").forEach(v => {{ if (v.src) R(v); const s = v.parentNode.querySelector(".rate"); if (s) s.textContent = (G || +v.dataset.rate) + "×"; }}); }};
+document.querySelectorAll("#rb button").forEach(b => b.onclick = () => setG(+b.dataset.r));
+document.querySelector("#rb input").oninput = e => setG(+e.target.value);
+setG(G);
 // Lazy: fetch a clip within about one screen, play it only while >= 50 % visible, pause when it leaves.
-const R = v => {{ const r = +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
 const near = new IntersectionObserver(es => es.forEach(e => {{ const v = e.target;
   if (e.isIntersecting && !v.src) {{ v.src = v.dataset.src; v.preload = "auto"; v.addEventListener("loadedmetadata", () => R(v)); near.unobserve(v); }} }}),
   {{ rootMargin: "100% 0px" }});

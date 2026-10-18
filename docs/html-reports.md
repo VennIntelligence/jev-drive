@@ -22,3 +22,14 @@ agy (Google Antigravity) is no longer used (2026-10-09). Agent-facing records st
 3. Whoever did not write the page checks every number and claim on it against the sources (main for a lane's page,
    a dispatched reader for a main-written page) before it is called done.
 4. Commit only the page, its figures and the figure script, plus the README link; push. tmp/ never keeps reports.
+
+## Video pages
+Any page with rollout or scene videos (galleries, diagnosis indexes):
+- **Speed bar on top.** A sticky bar at the very top: buttons 自动 / 1× / 2× / 3× / 5× / 10× / 16× plus a 0.5–16× slider.
+  自动 is each clip's own rate; any other choice overrides every clip at once, updates each clip's rate tag, and is
+  kept in `localStorage.vidRate` so it carries across pages. 16× is the browser ceiling.
+- **Auto rate.** `max(2, min(3, 30/fps, dur/6))`, shown as a tag on each clip; 2 fps clips are choppy below 2×.
+- **Lazy loading.** No `autoplay`, no `src` up front: `data-src` + `preload="none"`, one IntersectionObserver fetches
+  a clip within about one screen, a second plays it only while >= 50 % visible and pauses it when it leaves.
+- Videos stay gitignored next to the page; commit the page and a manifest.
+- Reference implementation: `experiments/defect_fix/scripts/jtn_diag.py` (`speed()`, the bar and the observer script).
