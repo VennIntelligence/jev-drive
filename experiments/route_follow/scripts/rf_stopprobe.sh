@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PAI-STOP-PROBE chain (plans/2026-10-18-pai-stop-probe-prereg.md). Box, repo root; every job through the GPU pool, priority $PRIO (11).
-#   rf_stopprobe.sh submit [smoke]   rows -> cache -> feats -> probe (smoke: probe --smoke only, after feats), job ids -> $O/jobs.txt
+#   rf_stopprobe.sh submit [smoke]   rows -> cache -> feats -> probe (smoke: probe --smoke only, on existing feats), job ids -> $O/jobs.txt
 #   job bodies: rows | cache | feats | probe [--smoke]
 # rows: onp_rows rows + cold on the 18-scene camera rerun (runs/route_follow/pai_stop_cues/read, rollout.asl kept; no PAI_DUMP, so G-in checks
 # the drive.jsonl half only) -> $O/rows/c18; cache: onp_cache build -> $O/cache/c18 (tokens + teacher); feats / probe: rf_stopprobe.py.
@@ -18,7 +18,8 @@ submit)
   r=$(sub sp-rows --vram 0.5 --cpu 18 --ram 64 --timeout-h 1 -- bash $ME rows) || exit 1
   c=$(sub sp-cache --after $r --vram 20 --cpu 8 --ram 64 --timeout-h 1 -- bash $ME cache) || exit 1
   f=$(sub sp-feats --after $c --vram 20 --cpu 8 --ram 96 --timeout-h 1 -- bash $ME feats) || exit 1
-  echo "rows $r cache $c feats $f" ;;
+  q=$(sub sp-probe --after $f --vram 16 --cpu 16 --ram 128 --timeout-h 2 -- bash $ME probe) || exit 1
+  echo "rows $r cache $c feats $f probe $q" ;;
 rows)
   mkdir -p $STG
   env JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AS/.venv/bin/python experiments/onpol_pai/scripts/onp_rows.py rows --pass c18 --runs "$RD/runs/*" \
