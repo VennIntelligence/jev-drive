@@ -15,6 +15,7 @@ and layers). Tokyo artefacts: `/data/runs/alpasim/pai_image/`. Nothing was pushe
 | rsgacc | `... TAG=RSG-L18-s0 ACC=1 ...build.sh` | `jev-alpasim:rsg-l18-s0-382164ae-pai-vc1.0-lead-acc` | `sha256:67f002e9...` |
 | rbsg2 | `... TAG=RBSG2-L18-s0 ...build.sh` | `jev-alpasim:rbsg2-l18-s0-382164ae-pai-vc1.0-lead` | `sha256:bd48b58d...` |
 | rsgaccgap | `... TAG=RSG-L18-s0 ACC=1 GAP=0.7,2.7 ...new_tag.sh` (built from ea61e9df, 2026-10-18, section below) | `jev-alpasim:rsg-l18-s0-ea61e9df-pai-vc1.0-lead-acc-gap0.7_2.7` | `sha256:328433cb...` |
+| ntv0accgap | `... ACC=1 GAP=0.7,2.7 ...new_tag.sh NTV0-L18-s0` (built from 0d417ee4, 2026-10-19, section "NTV0 ACC-GAP image") | `jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7` | `sha256:37183c04...` |
 
 Full ids in [pai_image/images.txt](pai_image/images.txt). All four share every layer up to the checkpoints (both candidates are in every
 image, `RSG-L18-s0` and `RBSG2-L18-s0` with their `route_mem.json`; sha256 equal to the box: `fbe7ac9f` / `672ef154`, `5572c7e8` / `b667704a`)
@@ -134,7 +135,132 @@ The zero set and its reasons are identical (2 at-fault collisions 1a69f757 / 3ce
 The four differing scenes are non-zero on both sides (largest 52bd89ce 0.35 vs 0.29). 4e4a2a51, the box-only offroad zero of the four earlier
 images, scores 1.0 on both hosts under ACC-GAP. Nothing pushed, tagged to ECR or submitted by an agent.
 
+## NTV0 ACC-GAP image (2026-10-19, decision 366: NTV0-L18-s0 + `JEV_ACC=1` + `JEV_GAP=0.7,2.7`, steering weight 10 at submit)
+
+The probe's serve configuration (decision 356) with the checkpoint swapped. Built on Tokyo from 0d417ee4 (main; the driver closure is
+byte-equal to the native read's 2e2d0e46 and, apart from the nuPlan-only hold files, to ea61e9df), one chain:
+`env DATA_DIR=/data TRACK=pai ACC=1 GAP=0.7,2.7 SCENES=/data/runs/alpasim/pai_image/lists/c007.txt OUT=/data/runs/alpasim/pai_image/ntv0accgap TGPU=1 experiments/alpasim/docker/new_tag.sh NTV0-L18-s0 /data/runs/alpasim/pai_image/native/ntv0accgap/aggregate/results-summary.json`.
+Image `jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7`, id `sha256:37183c048a06965ef588d1b7c6810865018956bf926ebf8e0718f0da616a0558`
+(8 110 811 511 bytes). Files: [build/ntv0accgap/](pai_image/build/ntv0accgap/), [test/ntv0accgap/](pai_image/test/ntv0accgap/),
+[replicas/ntv0accgap/](pai_image/replicas/ntv0accgap/), [smoke/c007_ntv0accgap/](pai_image/smoke/c007_ntv0accgap/) (`report.md` = the chain's
+table, `cmp_box.md` decision by decision), [smoke/c007_ntv0accgap_rep/](pai_image/smoke/c007_ntv0accgap_rep/) (same-host repeat).
+
+**Checkpoint.** NTV0-L18-s0 enters through the thin `ckpt-extra` layer (not in the stable RSG / RBSG2 layer, which is unchanged):
+`ckpt-final.pt` sha256 `5fa544ac...655b`, `route_mem.json` `f5c25900...7816`, equal on the AutoDL box, Tokyo `/data/runs` and the build
+manifest (copied box -> Mac -> Tokyo on 2026-10-19 because `tokyo_pull.sh` found no Clash node that reached the box). The sidecar's `head` is
+`{d 128, layers 2, heads 4}`, with no `order`, `anchor` or `reflex` key: the projected route-memory layout (rmem `SERVE_ORDER` / `SERVE_ANCHOR`
+False, as RSG-L18-s0), init RB0-F-s0, `on1_JT` / `nr1_lat`, 9 500 steps.
+
+**Against rsgaccgap.** Build manifest: only the two NTV0 files are new, plus `sh30_hold.py` / `static_hold.py` (nuPlan hold, in the closure since
+e7db399e, imported only by verify.py and by serve.py when `JEV_HOLD` is set) and serve.py / verify.py (the HOLD dispatch: with `JEV_HOLD` empty serve.py
+execs `pai_driver.py` as before). Every other closure file (pai_core, pai_driver, serve_fix, lead_long, rmem, sh30_core, ...) and the stable checkpoints
+are byte-equal to rsgaccgap. Metadata: `JEV_TAG=NTV0-L18-s0`, `SH30_GIT_HASH=0d417ee4`, plus the empty `ENV JEV_HOLD=` layer; `JEV_VCONT=1.0
+JEV_LEAD=1 JEV_ACC=1 JEV_VHIST= JEV_GAP=0.7,2.7`, `JEV_TRACK` unset (driver logs `JEV_TRACK gate`), `SH30_COMPILE=0`, identical to rsgaccgap. The driver's start line in the
+smoke: `switches JEV_VCONT=1.0 JEV_LEAD=1 JEV_VHIST= JEV_ACC=1 JEV_GAP=0.7,2.7 JEV_HOLD=`, ROUTE-MEM branch on. `get_version`
+`jev-pai-NTV0-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate`, the same string as the native read's (one string across 4 replicas).
+
+| check | ntv0accgap | limit | |
+|---|--:|--:|---|
+| image size | 7.55 GiB | 40 GiB | pass |
+| read-only root: write errors / changed files | 0 / 0 | 0 | pass |
+| GPU memory of the driver | 1.44 GiB | 16 GiB | pass |
+| `/tmp` high-water (probe; 29-scene smoke) | 2.8; 25 MiB | 2048 MiB | pass |
+| `/run` high-water | 0 | 64 MiB | pass |
+| cold start | 17.6 s | runtime waits 240 s | pass |
+| `drive`, client p50 / p90 / p99 / max (ms) | 47 / 53 / 115 / 191 | target 100 | as the others |
+| SIGTERM -> exit | 0.6 s, code 0 | | pass |
+| 4 replicas on one 3090 | 1.43 GiB per replica (card 5.76 GiB), cold start max 20.5 s, 1 version, p50 / p90 / max 167 / 173 / 388 ms | 16 GiB | pass |
+| smoke `drive`, server side | p50 57 / p90 76 / max 199 ms, 5 752 calls, 0 inference / input errors | | pass |
+
+**Smoke** (chunk c007, 29 scenes, the same list as rsgaccgap's smoke; Tokyo card 1, official containerised stack, weight 10, image as built, no driver env)
+against the box's native NTV0 + ACC + GAP read (`defect_fix/pai_accgap/NTV0-L18-s0/runs/ntv0-l18-s0_c007`, code 2e2d0e46, the d366 PAI 281 read;
+results-summary + drive.jsonl copied to Tokyo `pai_image/native/ntv0accgap`):
+
+| image | box native | image mean (zeros) | native mean (zeros) | paired diff [95 % CI] | equal / within 0.01 / within 0.05 | zero agreement | zero flips |
+|---|---|--:|--:|--:|--:|--:|---|
+| ntv0accgap | ntv0 accgap | 0.5403 (13) | 0.6090 (11) | -0.069 [-0.172, +0.001] | 25 / 27 / 27 | 27 / 29 | 2bbf1efc 0 vs 1.0, 3232fdb7 0 vs 1.0 (both corridor) |
+| ntv0accgap, repeat (card 0) | image run 1 | 0.5403 (13) | 0.5403 (13) | +0.000 | 29 / 29 / 29 | 29 / 29 | none; served plans identical at every decision in 29 / 29 |
+
+Decision 0 (same rendered frame and ego state on both hosts): plan difference median 0.06 cm (rsgaccgap 0.11 cm); the cm-level numerics of decision 215,
+so code, checkpoint and switches agree with the native read. One scene, 1a5da90a, differs by 1.28 m at decision 0 (scored 1.0 on both).
+The two flips are not at decision 0: on 2bbf1efc the served plans part by > 0.1 m at decision 4 and > 1 m at decision 16, on 3232fdb7 at
+decisions 24 and 69, the closed loop amplifying the cross-host numerics. Both are corridor zeros of RSG + ACC + GAP on both hosts (rsgaccgap
+smoke table), i.e. scenes that NTV0 only just recovers. The other two differing scenes are non-zero on both sides (404541da 0.765 vs 0.757,
+478d6ec4 0.9028 on both to 4 places); 4e4a2a51 is a zero on both with another reason (at-fault collision vs corridor). The repeat on the other Tokyo card is bit-identical to run 1, so the image is deterministic on
+one host and the gap is the box (`+cu130`, RTX 6000D) against Tokyo (`+cu126`, RTX 3090), as rsg's image showed +0.063 with 2 flips the other way on
+this chunk (section above). Reading: the image serves what the box read served; this chunk's -0.069 is two knife-edge corridor scenes of 29,
+not a read (d366's PAI 281 margin is +0.0545 [+0.024, +0.088] over 280 scenes on one host). The organisers' H100s are a third host, so the
+private score carries this kind of drift on both sides. Nothing pushed, tagged to ECR or submitted by an agent.
+
+**What the user runs** (Tokyo, profile acct3 = the vennai-org team of the decision 356 probe; none of it by an agent; quota: 3 official per UTC
+month shared with nuPlan, 3 `pai-warmup` per 30 days):
+
+```bash
+# Tokyo. ~/bin/ap <profile> = the competitor CLI (or docker) with that profile's config / ECR login
+~/bin/ap acct3 me; ~/bin/ap acct3 limits                      # session alive? (re-auth: ~/bin/ap acct3 auth-url; ~/bin/ap acct3 configure-token)
+~/bin/ap acct3 ecr-login
+IMG=jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7
+URI=696254625193.dkr.ecr.us-east-1.amazonaws.com/teams/vennai-org:ntv0-l18-s0-acc-gap-v1   # team slug as `ap acct3 me` prints it; public tag, not `latest`
+docker image inspect "$IMG" --format '{{.Id}}'                # must print sha256:37183c048a06965ef588d1b7c6810865018956bf926ebf8e0718f0da616a0558
+docker tag "$IMG" "$URI"; until ~/bin/ap acct3 docker push "$URI"; do sleep 10; done   # the layers below the code layer are already in the registry
+echo '{"rel_front_steering_angle_weight": 10}' > /data/runs/alpasim/pai_image/gains10.json
+~/bin/ap acct3 submit --track pai-warmup --controller-gains /data/runs/alpasim/pai_image/gains10.json "$URI"   # optional status-only check
+~/bin/ap acct3 status <submission_id>                         # first rollout's version must be jev-pai-NTV0-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate
+~/bin/ap acct3 submit --track pai --controller-gains /data/runs/alpasim/pai_image/gains10.json "$URI"          # official
+```
+
 ## Audit
+
+**ntv0accgap (`sha256:37183c04...`), independent pre-submission audit, 2026-10-19: GO.** Checked on the image on Tokyo (inspect, `docker run
+--network none` with entrypoint overrides, one own `test.sh` run on card 1, own runs of `pai_image_cmp.py` and an own bootstrap), against the
+AutoDL box originals, not only on the records above.
+
+1. Identity and config: pass. Id `sha256:37183c048a06...0558`, 8 110 811 511 bytes. Sorted ENV against rsgaccgap differs in exactly three
+   lines: `JEV_TAG` RSG-L18-s0 -> NTV0-L18-s0, `SH30_GIT_HASH` ea61e9df -> 0d417ee4, new `JEV_HOLD=` (empty). `JEV_DRIVER=pai JEV_VCONT=1.0
+   JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7 JEV_VHIST= SH30_COMPILE=0`, no `JEV_TRACK` (driver logs `JEV_TRACK gate`), no other `JEV_*` / `SH30_*`.
+   CMD `python /app/serve.py`, no entrypoint, user 10001:10001, port 6789, SIGTERM, workdir /app: as rsgaccgap. No steering weight baked in.
+2. Layers and code: pass. RootFS layers 1-12 (base, packages, wheels, models 766 363 005 B, AlpaSim files) identical to rsgaccgap; 13-18 (code,
+   serve files, user, ckpt, ckpt-extra, verify) differ. sha256 of every file under /app except models (48 vs 44 files): new NTV0
+   `ckpt-final.pt` / `route_mem.json`, new `sh30_hold.py` / `static_hold.py` (absent at ea61e9df), changed serve.py / verify.py / tags.json
+   (+ `"NTV0-L18-s0": "sh30"`); everything else, including RSG / RBSG2 checkpoints, pai_spec.json, probe.py and every other closure file,
+   byte-equal. serve.py's diff ea61e9df..0d417ee4 is the HOLD dispatch only: `JEV_HOLD` empty -> `pai_driver.py` exec'd as before (start line
+   `serve: driver pai (pai_driver.py)`); verify.py only adds `import sh30_hold`. All 35 baked code files equal `git show 0d417ee4`; all
+   /app/jev-drive files equal `git show 2e2d0e46` (the box read's `config.txt`: `code=2e2d0e46`, `SERVE=JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1
+   JEV_GAP=0.7,2.7`, `WIZ=...rel_front_steering_angle_weight=10`).
+3. Checkpoint: pass. `ckpt-final.pt` `5fa544ac...155b`, `route_mem.json` `f5c25900...7816`, equal in the image, on Tokyo `/data/runs` and on
+   the AutoDL original. Sidecar `head` `{d 128, layers 2, heads 4}`, no `order` / `anchor` / `reflex` key; pai_driver sets
+   `RMEM.SERVE_ORDER` / `SERVE_ANCHOR` from `head_order` / `head_anchor` (-> False, projected layout) and attaches reflex only on a sidecar
+   `reflex`. `verify.py` under `--read-only --network none`, no GPU: `branch NTV0-L18-s0 dim 200 order False reflex False`; only the
+   build-time tags.json write fails, as it should.
+4. Limits: pass. Own `test.sh` (organisers' hardening flags, read-only, `--network none`, card 1, card idle at 18 MiB): listening after 17.6 s,
+   800 `drive` calls server p50 46.3 / p99 119 ms, 0 inference errors, 0 tracebacks, 0 read-only errors, 0 changed files, /tmp 2.8 MiB,
+   /run 0, GPU 1.47 GiB, SIGTERM -> exit 0 in 0.6 s, version `jev-pai-NTV0-L18-s0-backwarp-vc1-lead-acc-gap0.7_2.7-trackgate`, git 0d417ee4,
+   `pass: true` (`/data/runs/alpasim/pai_image/audit_ntv0accgap/test`). Size 7.55 GiB < 40 GiB.
+5. Secrets: pass. `docker history --no-trunc`: no token, proxy, credential URL or host address (only the Python base's public `GPG_KEY` id).
+   Filesystem: no .env, .netrc, .git-credentials, .alpasim, ssh key / authorized_keys / known_hosts, .git; the only *.pem are public CA
+   bundles, none with a private key; no hf_ / AKIA / ghp_ / sk- / nvapi- / private-key / user:pass@ URL / box address / proxy port / team or
+   ECR account id in /app, /etc, /root (as root), /home, /tmp (one pattern hit, a float in pai_spec.json). /root holds the base image's
+   .bashrc / .profile / empty .python_history / a .wget-hsts with www.python.org, all in the unchanged base layers.
+6. Smoke evidence: pass. Native reference on Tokyo is byte-equal to the box's results-summary (`029b236f...`). Recomputed from the two
+   results-summary files: image 0.5403 (13 zeros), native 0.6090 (11), paired -0.0687, bootstrap 95 % [-0.1724, +0.0005]; zero flips only
+   2bbf1efc and 3232fdb7 (image corridor 0, native 1.0), none the other way; other differing scenes 404541da 0.765 / 0.757 and 478d6ec4
+   (equal to 6 places); 4e4a2a51 a zero on both (collision vs corridor). Driver run without `-e JEV_*` (only the replica variables), wizard
+   `controller.gains.rel_front_steering_angle_weight=10`; all 29 rollout.asl carry `...-acc-gap0.7_2.7-trackgate`. Flips: decision 0 plan
+   difference 0.3 mm / 3.1 mm; plans part > 0.1 m at decision 4 (> 1 m at 16) on 2bbf1efc and at 24 (> 1 m at 69) on 3232fdb7, and both are
+   corridor zeros of rsgaccgap on both hosts: closed-loop amplification of cross-host numerics on knife-edge scenes, not an image defect.
+   Own `pai_image_cmp.py` of smoke_rep vs smoke: 29 / 29 scores equal, served plans identical at every decision in 29 / 29 (the builder's
+   bit-identical claim holds). Submit block: `~/bin/ap acct3 ...` sets `ALPASIM_CONFIG_DIR` / `DOCKER_CONFIG` to the acct3 profile (exists on
+   Tokyo) and execs the competitor CLI or docker; `me`, `limits`, `ecr-login`, `status`, `submit --track pai|pai-warmup --controller-gains`
+   all exist in the CLI; gains10.json on Tokyo is `{"rel_front_steering_angle_weight": 10}` (bound [0, 10]); image id in the check line is
+   this image's; tag `ntv0-l18-s0-acc-gap-v1` is new (d356 used `rsg-l18-s0-acc-gap-v1` on the same vennai-org repo, so layers 1-12 are
+   already there). Not run.
+
+Concerns (none blocking): 1a5da90a's decision 0 plan differs by 1.28 m longitudinally (end point 59.07 vs 57.78 m, scored 1.0 on both; rsgaccgap
+had 0.001 m on this scene), so NTV0 has at least one first-frame knife edge that RSG did not; the -0.069 on this chunk is cross-host drift, which
+the organisers' H100s will add on top of the d366 single-host margin. The team slug `vennai-org` was not re-read (`ap acct3 me` contacts the
+challenge); the user's first command prints it. The `until ... docker push` loop retries forever on a persistent error (e.g. an expired ECR
+login); stop it by hand if it does not converge. As for rsgaccgap, only the version string and the serve start line show `JEV_GAP`; check the
+version on the submission's first rollout.
 
 **rsgaccgap (`sha256:328433cb...`), independent pre-submission audit, 2026-10-18: GO.** Checked on the image on Tokyo (inspect, `docker run
 --network none` with entrypoint overrides, one own `test.sh` run on card 1), not only on the records above.

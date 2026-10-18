@@ -1,0 +1,1 @@
+{"scenes": 29, "conc": 4, "wall_s": 1501, "gpu": 1, "image": "jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7", "base": "alpasim-base:0.89.0", "wiz": "controller.gains.rel_front_steering_angle_weight=10", "drv_env": ""}
