@@ -128,3 +128,20 @@ Relaunched as `ROUTE=direct HF_ENDPOINT=https://hf-mirror.com RANGES=8 JOBS=5`: 
 15:00 CST re-tune of the direct hf-mirror.com run (box rx counter, 90 s after ~2 min settling): the 40-stream run (JOBS=5 RANGES=8) gave ~5 MB/s;
 JOBS=2 RANGES=4 (8 streams) 0.7 MB/s (mirror also slow at that moment); JOBS=4 RANGES=4 (16 streams) 4.1 MB/s, kept. The ranged_get
 chunk layout (`<part>.d/<offset>`, 32 MB) does not depend on RANGES, so changing it resumes cleanly. At ~4 MB/s the ~430 GB left is ~30 h; the mirror rate varies over the day.
+
+## hf-mirror 429 circuit breaker for the trainval camera download (2026-10-18 night)
+
+Route decision: direct hf-mirror.com only (Clash is rate-limited for the day and out of scope). Probe at 23:20 CST, one
+40 MB range of `openscene_sensor_trainval_camera_133.tgz`: direct hf-mirror.com HTTP 429 (0.5 KB/s, mirror throttling while
+16 streams were already running), Clash to hf-mirror.com and to huggingface.co: connection failed, huggingface.co direct:
+unreachable (20 s timeout). Box rx before the restart: ~1 MB/s total (earlier archives averaged 0.4-0.8 MB/s each).
+
+`scripts/ranged_get.sh` now has a shared breaker (state in `_archives/state/.gate/`, all archives and chunks share it):
+any chunk that does not return 206 with the full byte count (429, 5xx, stall, reset) halves the allowed number of
+concurrent range requests (min 2) and sets a cool-down of 30 s doubling per consecutive failure (cap 900 s, plus jitter);
+failures already in flight when it trips do not stack; 15 clean chunks in a row raise the limit by 1 up to `MAXCONN`
+(default 16). Trips and recoveries are logged to `.gate/events.log`. `scripts/dl_progress.sh [interval_s] [total]`
+appends `done N/183, box MB/s, archives MB/s, gate_limit` to `$DATA_DIR/runs/download/navsim/progress.log`.
+Launch (the env must go through `env`, because `tmux_run.sh` does not pass the caller's environment):
+`scripts/tmux_run.sh navdl env PIGZ=-p4 RANGES=4 CAMS=CAM_F0 SKIP_LIST=... ROUTE=direct HF_ENDPOINT=https://hf-mirror.com JOBS=4 MAXCONN=16 scripts/download_navsim.sh trainvalall`
+(.part files and chunk dirs are reused; kill the job by Ctrl-C in the tmux window, not by pattern).
