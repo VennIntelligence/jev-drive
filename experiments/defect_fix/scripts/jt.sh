@@ -24,7 +24,13 @@
 #                                (wait_set.sh readc) + held 460 @18 -> rtja-select (rtja.py select: the dose rule; it submits the winner's reads
 #                                through rtja-win: arena held stop3 + off, PAI 281 with ACC + GAP, then rtja-sum -> results/rtja/). NOANCHOR=1:
 #                                the projected-layout fallback (no --rm-anchor)
-#   jt.sh rtja-train <tag> <kd-lam> <steps> | rtja-amerge | rtja-select | rtja-win <tag> | rtja-sum <tag>   job bodies
+#   jt.sh rtja-train <tag> <kd-lam> <steps> | rtja-amerge | rtja-select | rtja-win <tag> | rtja-sum <tag>   job bodies (env RESD: results/<RESD>/
+#                                and $J/<RESD>/ instead of rtja)
+#   jt.sh ntv [after]            supplement 14 (the decision-363 fix): JTN's command with only the trainval draw changed, 9 500 steps, seed 0:
+#                                NTVN-L18-s0 (draw JT00N: trainval rows uniform over JT00's non-wait rows, no starting / braking lift) and
+#                                NTV0-L18-s0 (draw JT00S, --on-k 32: no trainval rows) -> per arm wait set v2 (readc) + held 460 @18 -> ntv-select
+#                                (rtja.py --res ntv select --no-wait-gate; a winner's reads through rtja-win: arena held stop3 + off, PAI 281
+#                                with ACC + GAP -> rtja-sum -> results/ntv/)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; J=$O/jt; ME=experiments/defect_fix/scripts/jt.sh; PY=experiments/defect_fix/scripts/jt.py
 TR=$DATA_DIR/envs/op-train/bin/python; NS=$DATA_DIR/envs/navsim2/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python
@@ -36,7 +42,7 @@ NOISE="--ego-scale-speed 0.5 --ego-scale-max 0.2"
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both"                       # amendment B: no on1_L18P
 LAT=$O/lat/L18NR1v2                                                                           # the prefix raster (rb0 / rtb1 rows)
 KS=32; KTV=38                                                                                 # S rows / trainval rows per batch (supplement 9)
-RJ=$J/rtja; RB=experiments/route_mem/scripts/rm_build.py; RP=experiments/defect_fix/scripts/rtja.py; WSH=experiments/alpasim_proxy/scripts/wait_set.sh
+RJ=$J/${RESD:-rtja}; RB=experiments/route_mem/scripts/rm_build.py; RP=experiments/defect_fix/scripts/rtja.py; WSH=experiments/alpasim_proxy/scripts/wait_set.sh
 RTJA=(RTJA0-L18-s0:0 RTJA05-L18-s0:0.5 RTJA1-L18-s0:1)                                       # supplement 12: tag:kd-lam
 KDF="--kd-groups AR:1 --kd-nav runs/wait_cap/next/approach_nav.npz --kd-nav-k 8 --d2-lam 1 --d2-teacher $DATA_DIR/runs/desire_cap/train/teacher"
 NT="$(echo navtrain_full.s{0..11}of12)"; PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"
@@ -93,7 +99,7 @@ train)
   [[ $N == auto ]] && N=$(python3 -c "import json; print(json.load(open('$G'))['steps'])")
   [[ $W == auto ]] && W=$(python3 -c "import json; print(json.load(open('$G'))['w_final'])")
   echo "$(date '+%F %T') train $T: steps $N, arc $W, arc rows ${ARCROWS:-move}" | tee -a $J/stages.txt
-  CMD=($TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
+  CMD=($TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k ${ONK:-$((KS + KTV))} --on-mode mixed --on-lon-all --on-normal \
     --on-wfile runs/defect_fix/w/$WF.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LD) --on-arc $W --diag --warmup ${WARM:-500} --lr-floor 0.1 \
     ${ARCROWS:+--on-arc-rows $ARCROWS} --steps $N --seed 0)
   [[ -z ${DRY:-} ]] || { echo "${CMD[*]}"; exit 0; }                                            # DRY=1: print the command only
@@ -188,21 +194,39 @@ rtja-win)     # rtja-win <tag>: the winner's arena held reads (stop3, off) and P
     ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-ar-$T-$V-c$c "${RD[@]}" -- bash $ME aread $T $V $c)) || exit 1; done; done
   CHUNKS_FROM=$O/pai_accgap/JTN-L18-s0/chunks SERVE="$PAISERVE" WIZ=controller.gains.rel_front_steering_angle_weight=10 CONC=4 PRIO=$((${PRIO:-12} + 1)) \
     bash experiments/alpasim/scripts/pai_box.sh submit $O/pai_accgap/$T $T > $RJ/pai_$T.submit.txt || die "pai submit"
-  pp=$(awk '{print $1}' $RJ/pai_$T.submit.txt | grep -E '^[0-9]{4}-' | paste -sd,); [[ -n $pp ]] || die "no PAI job"
-  awk '$1 ~ /^[0-9]{4}-/' $RJ/pai_$T.submit.txt >> $J/jobs.txt
-  s=$(sub rtja-sum-$T --after $(csv ${ids[@]}),$pp --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME rtja-sum $T) || exit 1
+  pp=$(awk '$2 ~ /^pai-/ {print $1}' $RJ/pai_$T.submit.txt | paste -sd,); [[ -n $pp ]] || die "no PAI job"   # = jtn_s1.sh pai (log lines never match)
+  awk '$2 ~ /^pai-/' $RJ/pai_$T.submit.txt >> $J/jobs.txt
+  s=$(sub rtja-sum-$T --after $(csv ${ids[@]}),$pp ${RESD:+--env RESD=$RESD} --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME rtja-sum $T) || exit 1
   echo "$(date '+%F %T') rtja-win $T: arena ${ids[0]} .. ${ids[-1]} (${#ids[@]}) PAI $pp summary $s" | tee -a $J/stages.txt ;;
 rtja-sum)
-  T=$2; R=experiments/defect_fix/results/rtja/$T; mkdir -p $R
+  T=$2; R=experiments/defect_fix/results/${RESD:-rtja}/$T; mkdir -p $R
   $AP $PY arena --tags $T@stop3 $T@off --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md || die "arena"
   $TR $PY held --tags $T > $R/held.txt 2>&1 || die "held"
   .venv/bin/python experiments/defect_fix/scripts/pai281.py --j $O/pai_accgap/$T --jl $T+ACC+GAP --j2 $O/pai_accgap/JTN-L18-s0 --j2l JTN+ACC+GAP \
     --ref $DATA_DIR/runs/route_follow/acc_gap/read/s2 --rl RSG+ACC+GAP --out $R/pai281.md || die "pai281"
-  $TR $RP adopt --tag $T || die "adopt"
+  $TR $RP --res ${RESD:-rtja} adopt --tag $T || die "adopt"
   date '+%F %T' > $RJ/DONE ;;
+ntv)
+  A=${2:-}; mkdir -p $J/ntv; ids=(); NTV=(NTVN-L18-s0:JT00N:70 NTV0-L18-s0:JT00S:32)
+  for x in "${NTV[@]}"; do [[ ! -e $DATA_DIR/runs/op_parity/runs/${x%%:*}/ckpt-final.pt ]] || die "${x%%:*} exists"; done
+  w=$(sub ntv-w-JT00N ${A:+--after $A} --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $TR $PY weights --pool on1_JT --k-s $KS --k-tv $KTV --hold-pct 15 \
+      --tv D10 --no-wait --tv-natural --out JT00N) || exit 1
+  for x in "${NTV[@]}"; do IFS=: read -r T WF K <<< "$x"
+    t=$(sub ntv-train-$T --after $w "${FT[@]}" --env ARCROWS=brake --env ONK=$K --timeout-h 3 -- bash $ME train $T on1_JT $LAT $WF 9500 0) || exit 1
+    r=$(PRIO=$((${PRIO:-12} + 1)) bash $WSH readc $T $t | tail -1); [[ -n $r ]] || die "readc $T"; echo "$r ws-collect-$T" >> $J/jobs.txt; ids+=($r)
+    for i in 0 1 2 3 4 5; do
+      ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
+          -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+    echo "$(date '+%F %T') ntv arm $T (draw $WF, on-k $K): train $t wait-set collect $r" | tee -a $J/stages.txt
+  done
+  s=$(sub ntv-select --after $(csv ${ids[@]}) --env RESD=ntv --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME ntv-select) || exit 1
+  echo "$(date '+%F %T') ntv: weights $w reads ${ids[*]}; selection $s (submits the winner's reads + rtja-sum)" | tee -a $J/stages.txt ;;
+ntv-select)
+  $TR $RP --res ntv select --tags NTVN-L18-s0 NTV0-L18-s0 --no-wait-gate --md select --title "NTV selection (NR1 prereg supplement 14)" || exit $?
+  W=$(python3 -c "import json; print(json.load(open('$RJ/select.json'))['winner'])"); bash $ME rtja-win $W ;;
 sum)
   T=$2; HL=(${3-leash3 off}); R=experiments/defect_fix/results/${4:-jt}/$T; mkdir -p $R
   [[ ${#HL[@]} -eq 0 ]] || $AP $PY arena --tags ${HL[@]/#/$T@} --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
   $TR $PY held --tags $T > $R/held.txt 2>&1; cat $R/held.txt ;;
-*) sed -n 2,24p $0; exit 2 ;;
+*) sed -n 2,33p $0; exit 2 ;;
 esac

@@ -9,7 +9,9 @@ anchored route memory. Read-outs and checks of the chain in jt.sh (`rtja-*` stag
   wcheck --a CSV --b CSV      (any python) a chunked wait-set table against the whole read of the same tag, window by window (score, zero,
       wait_ok, launch_s) -> stdout json; rc 1 on any difference
   select --tags T .. --lams L ..   (op-train) the dose rule of supplement 12 on wait set v2 + held 460 -> results/rtja/dose.md, $J/rtja/select.json
-      (winner or none); rc 3 when no arm passes (the winner's reads chained after it never start)
+      (winner or none); rc 3 when no arm passes (the winner's reads chained after it never start). --no-wait-gate (supplement 14): no variant-a
+      wait line, the winner is the passer with the fewest held zeros (tie: the higher held mean); --md NAME names the table (default dose)
+  --res NAME (before the command, default rtja): results/NAME/ and $J/NAME/ instead of results/rtja/ and jt/rtja/
   adopt --tag T               (op-train) the adoption lines of supplement 12 from results/rtja/<T>/{arena.md, held.txt, pai281.md}
       -> results/rtja/adoption.md
 """
@@ -133,22 +135,25 @@ def held(tag):
 
 def cmd_select(a):
     rows, ok = [], []
-    for t, lam in zip(a.tags, a.lams):
+    for t, lam in zip(a.tags, a.lams or [0] * len(a.tags)):
         w, h = wait_stats(t), held(t)
-        g = {f"wait_{c}": w[c]["wait"] >= WAIT_MIN[c] for c in LEAD} | {f"delay_{c}": abs(w[c]["delay_med"]) <= DELAY_MAX for c in LEAD} \
+        g = ({} if a.no_wait_gate else {f"wait_{c}": w[c]["wait"] >= WAIT_MIN[c] for c in LEAD}) | {f"delay_{c}": abs(w[c]["delay_med"]) <= DELAY_MAX for c in LEAD} \
             | {f"launch_{c}": w[c]["launched"] >= LAUNCH_MIN for c in LEAD} | {"held_zeros": h["zeros"] <= HELD_ZMAX}
         rows.append(dict(tag=t, lam=float(lam), wait=w, held=h, gates=g, passed=all(g.values())))
         if all(g.values()):
             ok.append(rows[-1])
     win = None
-    if ok:
+    if ok and a.no_wait_gate:
+        win = min(ok, key=lambda r: (r["held"]["zeros"], -r["held"]["mean"]))["tag"]
+    elif ok:
         z0 = min(r["held"]["zeros"] for r in ok)
         win = min((r for r in ok if r["held"]["zeros"] <= z0 + 1), key=lambda r: r["lam"])["tag"]
     refs = {t: wait_stats(t) for t in ("RTB1ARO-L18-s0", "JTN-L18-s0", "RSG-L18-s0")}
-    L = ["# RTJA dose selection (NR1 prereg supplement 12)", "",
-         f"Rule: per lead class (other_lead / red_queue) wait-set v2 variant a wait rate >= {WAIT_MIN['other_lead']} / {WAIT_MIN['red_queue']} (V2 - 0.05), "
-         f"variant b median launch delay (car minus human, launched windows) within +-{DELAY_MAX} s and launched >= {LAUNCH_MIN:.0%}; held 460 @18 zeros "
-         f"<= {HELD_ZMAX}. Among the passing arms the fewest held zeros (within 1: the smaller lambda).", "",
+    L = [f"# {a.title}", "",
+         ("Rule: per lead class (other_lead / red_queue) " if a.no_wait_gate else f"Rule: per lead class (other_lead / red_queue) wait-set v2 variant a wait "
+          f"rate >= {WAIT_MIN['other_lead']} / {WAIT_MIN['red_queue']} (V2 - 0.05), ") + f"wait-set v2 variant b median launch delay (car minus human, launched windows) within +-{DELAY_MAX} s and launched >= {LAUNCH_MIN:.0%}; held 460 @18 zeros "
+         f"<= {HELD_ZMAX}. " + ("Among the passing arms the fewest held zeros (tie: the higher held mean); variant a is reported only." if a.no_wait_gate
+         else "Among the passing arms the fewest held zeros (within 1: the smaller lambda)."), "",
          "| arm | kd-lam | a wait other_lead / red_queue | b launched other_lead / red_queue | b delay med s | a zeros | b mean | held zeros | held mean | held vs RSG [CI] | pass |",
          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|"]
     for r in rows:
@@ -162,12 +167,12 @@ def cmd_select(a):
         L.append(f"| {t} (stored) | - | {w['other_lead']['wait']:.3f} / {w['red_queue']['wait']:.3f} | {w['other_lead']['launched']:.3f} / "
                  f"{w['red_queue']['launched']:.3f} | {w['other_lead']['delay_med']:+.2f} / {w['red_queue']['delay_med']:+.2f} | {w['a_zeros']} | "
                  f"{w['b_score']:.3f} | - | - | - | - |")
-    L += ["", f"**Winner: {win}**" if win else "**No arm passes: stop (supplement 12), the winner's reads do not run.**"]
+    L += ["", f"**Winner: {win}**" if win else "**No arm passes: stop, the winner's reads do not run.**"]
     RES.mkdir(parents=True, exist_ok=True)
-    (RES / "dose.md").write_text("\n".join(L) + "\n")
+    (RES / f"{a.md}.md").write_text("\n".join(L) + "\n")
     J.mkdir(parents=True, exist_ok=True)
     (J / "select.json").write_text(json.dumps(dict(winner=win, arms=rows), indent=1, default=str))
-    (RES / "dose.json").write_text(json.dumps(dict(winner=win, arms=rows), indent=1, default=str))
+    (RES / f"{a.md}.json").write_text(json.dumps(dict(winner=win, arms=rows), indent=1, default=str))
     print("\n".join(L))
     if not win:
         (J / "STOP").write_text("no arm passes the dose rule\n")
@@ -190,7 +195,7 @@ def cmd_adopt(a):
     zj = zr[jl][2]
     nu = st["diff"] >= 0.005 and st["lo"] > 0 and h["zeros"] <= HELD_ZMAX
     pa = float(pj[1]) >= -0.005 and zj <= 67
-    L = [f"# RTJA adoption lines: {a.tag}", "",
+    L = [f"# Adoption lines: {a.tag}", "",
          "| board | line | measured | pass |", "|---|---|---|:--|",
          f"| nuPlan | arena held stop3 vs stored RSG + stop3: paired >= +0.005 and CI low > 0 | {st['diff']:+.4f} [{st['lo']:+.4f}, {st['hi']:+.4f}] "
          f"({st['windows']} windows; {st['mean']:.4f} vs {st['rsg']:.4f}) | {'yes' if st['diff'] >= 0.005 and st['lo'] > 0 else 'no'} |",
@@ -199,13 +204,14 @@ def cmd_adopt(a):
          f"| PAI 281 | zeros <= 67 | {zj} (JTN+ACC+GAP {zr['JTN+ACC+GAP'][2]}, RSG+ACC+GAP {zr['RSG+ACC+GAP'][2]}) | {'yes' if zj <= 67 else 'no'} |",
          f"| PAI 281 | (reported) vs stored RSG + ACC + GAP | {pr[1]} [{pr[2]}, {pr[3]}] | - |", "",
          f"nuPlan: **{'adopt' if nu else 'not adopted'}**; PAI: **{'adopt' if pa else 'not adopted'}** (each board judged on its own; a pass builds the image "
-         "with the anchored rmem.py, the audit and a second seed)."]
+         "(with the anchored rmem.py for an --rm-anchor checkpoint), the audit and a second seed)."]
     (RES / "adoption.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--res", default="rtja", help="results/<res>/ and runs/defect_fix/jt/<res>/")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("acheck")
     p.add_argument("--data", nargs="+", required=True)
@@ -214,8 +220,11 @@ if __name__ == "__main__":
     p = sub.add_parser("wcheck")
     p.add_argument("--a", required=True), p.add_argument("--b", required=True)
     p = sub.add_parser("select")
-    p.add_argument("--tags", nargs="+", required=True), p.add_argument("--lams", nargs="+", required=True)
+    p.add_argument("--tags", nargs="+", required=True), p.add_argument("--lams", nargs="+")
+    p.add_argument("--no-wait-gate", action="store_true"), p.add_argument("--md", default="dose")
+    p.add_argument("--title", default="RTJA dose selection (NR1 prereg supplement 12)")
     p = sub.add_parser("adopt")
     p.add_argument("--tag", required=True)
     a = ap.parse_args()
+    J, RES = J.parent / a.res, RES.parent / a.res
     dict(acheck=cmd_acheck, smoke=cmd_smoke, wcheck=cmd_wcheck, select=cmd_select, adopt=cmd_adopt)[a.cmd](a)
