@@ -29,12 +29,16 @@ submit)
   for i in 0 1 2 3 4 5; do
     ids+=($(PRIO=11 TRIES=2 sub jt-held-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
         -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
-  mkdir -p $O/pai_accgap; AFTER=$t CHUNKS_FROM=$O/pai_accgap/$T0/chunks SERVE="$PAISERVE" WIZ=controller.gains.rel_front_steering_angle_weight=10 CONC=4 PRIO=11 \
+  echo "${ids[*]}" > $J/s1_reads.txt     # pai_box.sh submit needs the checkpoint, so the PAI reads and the summary are submitted by a stage job after training
+  pj=$(PRIO=11 sub jt-pai-$T --after $t --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME pai) || exit 1
+  echo "$(date '+%F %T') submit $T: train $t reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) PAI stage $pj" | tee -a $J/stages.txt ;;
+pai)   # after training: the 8 PAI chunks (s0's lists, probe serve config), then the summary after the reads and the PAI chunks
+  mkdir -p $O/pai_accgap; CHUNKS_FROM=$O/pai_accgap/$T0/chunks SERVE="$PAISERVE" WIZ=controller.gains.rel_front_steering_angle_weight=10 CONC=4 PRIO=11 \
     bash experiments/alpasim/scripts/pai_box.sh submit $O/pai_accgap/$T $T > $J/pai_$T.submit.txt || die "pai submit"
-  pp=$(awk '$1 ~ /^[0-9]{4}-|^[0-9a-f]+$/ {print $1}' $J/pai_$T.submit.txt | paste -sd,); [[ -n $pp ]] || die "no PAI job"
+  pp=$(awk '$2 ~ /^pai-/ {print $1}' $J/pai_$T.submit.txt | paste -sd,); [[ -n $pp ]] || die "no PAI job"
   awk '$2 ~ /^pai-/' $J/pai_$T.submit.txt >> $J/jobs.txt
-  s=$(PRIO=11 sub jt-sum-$T --after $(csv ${ids[@]}),$pp --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME sum) || exit 1
-  echo "$(date '+%F %T') submit $T: train $t reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) PAI $pp summary $s" | tee -a $J/stages.txt ;;
+  s=$(PRIO=11 sub jt-sum-$T --after $(csv $(cat $J/s1_reads.txt)),$pp --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME sum) || exit 1
+  echo "$(date '+%F %T') pai $T: PAI $pp summary $s" | tee -a $J/stages.txt ;;
 sum)
   mkdir -p $R   # same bodies as jt.sh sum, with s0 alongside s1 in the arena and held tables
   $AP experiments/defect_fix/scripts/jt.py arena --tags $T@stop3 $T@off $T0@stop3 $T0@off --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md || die "arena"
