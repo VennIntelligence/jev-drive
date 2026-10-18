@@ -130,9 +130,7 @@ zero types per label (count of zeros: corridor / at-fault front / offroad):
 ## Reading
 
 Nobody reads the red lamp. In the wait set the red_first and other_free classes get nearly the same behaviour from RSG, V2, YR, APY, DD, LTF, WA-JEPA and NR1F
-(wait success 0-3 % in both, 98-100 % launched in b, launch earlier than the human by about 0.9-1.8 s in both): they roll in both classes, and the roll costs a zero
-in the arena exactly where the human stands still (red-static zero rates 41-73 % against 42-63 % for the nolight-static windows of the same models, with DD / LTF
-worse at no light). Two models separate the classes, both for reasons other than the lamp. P0 and garage G0014 wait more at red_first than at other_free (P0 80 vs
+(wait success 0-3 % in both, 98-100 % launched in b, launch earlier than the human by about 0.9-1.8 s in both): they roll in both classes, and the roll costs a zero in the arena where the human stands still (red-static zero rate RSG 45 %, NR1F 41, YR 49, APY 73, DD 42, LTF 45; nolight-static 24, 8, 31, 59, 63, 67: higher at red for the L18 family, lower for DD / LTF, so no consistent red effect; the nolight-static class is small, n 147). Two models separate the classes, both for reasons other than the lamp. P0 and garage G0014 wait more at red_first than at other_free (P0 80 vs
 61 %, G0014 83 vs 33 %) and launch less (P0 27 vs 40 %, G0014 22 vs 67 %): G0014 is also the only model with a low red-static zero rate in the arena (9.8 %)
 but it is no better at nolight-static (12.9 %) and pays elsewhere (other 20.8 %), so it is a generally conservative, slow-starting policy; P0 waits everywhere and
 launches in only 22 % of b windows. The starter (go-straight) shows the same pattern trivially. JTN waits at red_first 43 % vs 31 % at other_free and launches
