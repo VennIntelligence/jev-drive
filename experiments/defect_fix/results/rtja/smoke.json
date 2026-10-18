@@ -1,0 +1,32 @@
+{
+ "tag": "RTJASM-L18-s0",
+ "events": "/root/autodl-tmp/ujs/runs/route_mem/train-RTJASM-L18-s0/20261018-204029/events.jsonl",
+ "last_step": 300,
+ "gates": {
+  "no_nan": true,
+  "terms_active": true,
+  "head": true
+ },
+ "passed": true,
+ "nan": [],
+ "active": {
+  "loss/kd": 0.00656959656548376,
+  "loss/d2": 0.07620064715544383,
+  "loss/act/pool_agent": 0.06952998376140991,
+  "loss/act/pool_road": 0.14905219139531253,
+  "loss/act/pool_lat_onc": 0.004761904797827204,
+  "loss/act/pool_lat_soft": 0.009714285796508194,
+  "loss/act/pool_lat_side": 0.02023809548467398
+ },
+ "head": {
+  "d": 128,
+  "layers": 2,
+  "heads": 4,
+  "order": true,
+  "anchor": true
+ },
+ "steps_per_s": 2.572172621680412,
+ "s_per_step": 0.38877639532089237,
+ "kd_mean": 0.00656959656548376,
+ "d2_mean": 0.07620064715544383
+}
