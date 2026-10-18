@@ -17,6 +17,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]
 - [practice_nuplan](practice_nuplan/README.md): live; arena train windows away from public starts, rolled by JTN, merged into on1_JT; 1 000-step pilot gate [dpending]
+- [practice_pai](practice_pai/README.md): live; pilot on practice-pai@v1 (= train160) queued; closed-loop gate on 4 PAI 281 chunks [d(pending)]
 - [self_iter](self_iter/README.md): live; round 1 pilot STOP: trainval rows teach standstill holds, launches lag [d338]
 - [wait_cap](wait_cap/README.md): live; shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP, the dev-ADE rise is a real closed-loop cost, no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]; RTB1 retain base keeps the arrival stop at a cost [d337], V2 (rolling-arrival rows only) fixes the public cost, the left cost is lateral [d339]
 - [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): concluded; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 stopped by the user before any arm [d283]
