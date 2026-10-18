@@ -12,7 +12,7 @@ die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner defect-fix --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-10} \
      --no-check --log-dir $J/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $J/jobs.txt; echo "$id"; }
 csv() { local IFS=,; echo "$*"; }
-cmd() { DRY=1 ARCROWS=brake bash $JT train $1 on1_JT $LAT JT00 9500 0; }
+cmd() { DRY=1 ARCROWS=brake bash $JT train $1 on1_JT $LAT JT00 9500 0 | tail -1; }
 case ${1:-} in
 check)
   diff <(cmd $T0 | tr ' ' '\n') <(cmd $T | sed 's/ --seed 0$/ --seed 1/' | tr ' ' '\n') ; echo "(expected: --tag and --seed lines only)" ;;
