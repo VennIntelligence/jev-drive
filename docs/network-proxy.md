@@ -113,3 +113,15 @@ into its own `--local-dir`) did not slow the ModelScope side: sampled over 6 min
 both, not from more connections on one (see the table above: four parallel curls on one route stayed at 3 MB/s).
 Take each file from whichever side finishes it first and check its size against the repo listing. `aria2c` is not
 installed on the box.
+
+## Clash dead for the day, hf-mirror.com direct instead (2026-10-18)
+
+NAVSIM trainval download stalled at 05:00 CST: through Clash, TLS to huggingface.co died with `SSL unexpected eof`.
+Cause: the subscription had hit its daily traffic cap. Fetching it returns only three placeholder nodes ("too much traffic
+today", "limit lifted at 12:00 midnight"), while `subscription-userinfo` still shows quota left (317 of 1000 GB), so a
+refreshed or recharged subscription does not help until the next midnight. The box config keeps the 71 old node entries,
+which the provider rejects server side; do not overwrite it with the placeholder list. Check the fetched node count
+before replacing `~/data/clash/config.yaml`.
+Fallback that needs no proxy: direct `hf-mirror.com` (huggingface.co direct is unreachable). 90 s sustained, MB/s total over N
+range streams of one archive: 2 -> 3.7, 4 -> 7.2, 8 -> 11.8, 16 -> 10.8 (the 16 test was probably capped by the file size).
+Relaunched as `ROUTE=direct HF_ENDPOINT=https://hf-mirror.com RANGES=8 JOBS=5`: 8 MB/s into the archive dir, box 9 MB/s.
