@@ -22,6 +22,8 @@ recipe's existing road hinge and vehicle contact its existing agent hinge; both 
 Every term moves the plan's poses only across their own heading (loss43's shape_only; the recipe runs --shape).
   arc   (NR1HVR, rm_train --on-arc W; prereg supplement 8) the two-sided longitudinal term of nr1_lon.py, carried here because the pool has one
         --on-lon module: logged as lon_arc, 10 x W x nr1_lon.term; it moves the poses only along their own heading. W = 0: nothing loaded or added.
+  free  (NR1FREE, rm_train --on-free W; prereg supplement 15) the one-sided longitudinal consequence term of nr1_free.py (plan slower than 0.8 x
+        the human with the way ahead free): logged as lon_free, 10 x W x nr1_free.term, on the agent hinge's boxes. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -29,15 +31,15 @@ import numpy as np
 
 BC = (4.049 - 1.127) / 2                       # box centre ahead of the rear axle (nuPlan Pacifica), = the scorer's centroid offset
 BIN_DEG = 30.0
-CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move")
+CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0)
 
 
-def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move"):
+def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
-               arc=float(arc), host=bool(host), arc_rows=str(arc_rows))
-    return dict(CFG)
+               arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
+    return dict(CFG) if CFG["free"] > 0 else {k: v for k, v in CFG.items() if k != "free"}
 
 
 def shape_only(x, y, psi):
@@ -82,6 +84,13 @@ def load(pool_dir, names, dev, file=None):
         import nr1_lon                                                         # --on-arc-rows loads them for the monitoring even at W 0)
         pack["arc"] = nr1_lon.load(pool_dir, names, dev, CFG["arc_rows"])
         print(f"nr1_lat: lon_arc labels {pack['arc']['rec']}", flush=True)
+    if CFG["free"] > 0:                                                        # NR1FREE: the reference arcs + the agent hinge's boxes
+        import nr1_free
+        if "ah" not in pack:
+            from agent_hinge import AgentHinge
+            pack["ah"] = AgentHinge(Path(pool_dir) / "agent.npz", names, dev, 0.0, None)
+        pack["free"] = nr1_free.load(pool_dir, names, dev, pack["ah"])
+        print(f"nr1_lat: lon_free labels {pack['free']['rec']}", flush=True)
     return pack
 
 
@@ -175,4 +184,7 @@ def loss(poses, rows, pack):
     if CFG["arc"] > 0:
         import nr1_lon
         out["lon_arc"] = 10.0 * CFG["arc"] * nr1_lon.term(poses, rows, pack["arc"])
+    if CFG["free"] > 0:
+        import nr1_free
+        out["lon_free"] = 10.0 * CFG["free"] * nr1_free.term(poses, rows, pack["free"], pack["ah"])
     return out

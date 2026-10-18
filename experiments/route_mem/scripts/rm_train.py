@@ -184,6 +184,10 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             every dev eval, N rows of them and N rows of the drawn logs (fixed, rng [seed, 0, 167], its own stream) are scored in eval mode on
             the pool terms (agent, road, the --on-lon terms; per-row mean and active share) and, with --on-arc, the 4 s arc bias against the
             target and the shares slower than 0.8x / faster than 1.2x it -> scalars pool_held/* and pool_fit/*.
+  --on-free W       (NR1FREE, NR1 prereg supplement 15) the one-sided longitudinal consequence term of experiments/defect_fix/lib/nr1_free.py
+            on the S rows: the plan's 4 s arc below 0.8 x the human's (the smaller of his logged and his reachable arc) with no logged object in
+            the plan's extended sweep -> the per-step deficit, gradient only along each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit.
+            0 (default) = off: nothing loaded, no operation added.
   --on-arc-rows brake   (JTB / JTN, NR1 prereg supplement 10) the arc term's rows: also the rows where the human stops in the horizon; only
             the rows where he stays below 0.5 m/s all 4 s are excluded (nr1_lon.labels). Loads the labels even at --on-arc 0 (monitoring) and adds
             to the held / fitted slices the 4 s arc bias per row kind (cruise / brake / stop / launch / still) -> pool_*/arc4_bias_<kind>,
@@ -1556,6 +1560,8 @@ if __name__ == "__main__":
         p.add_argument("--on-arc", type=float, default=0.0, help="NR1HVR: weight of the two-sided longitudinal arc term on the pool rows (0 = off)")
         p.add_argument("--on-arc-rows", default="move", choices=("move", "brake"), help="JTB: the arc term's rows (move = old rule; brake = "
                        "every row but the still-all-horizon ones) and the per-kind arc bias monitoring")
+        p.add_argument("--on-free", type=float, default=0.0, help="NR1FREE: weight of the one-sided longitudinal consequence term on the S rows "
+                       "(defect_fix lib/nr1_free.py; 0 = off)")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
         p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
@@ -1634,13 +1640,13 @@ if __name__ == "__main__":
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
     assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc) > 0, "--on-arc-rows: needs nr1_lat"
-    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
+    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"
