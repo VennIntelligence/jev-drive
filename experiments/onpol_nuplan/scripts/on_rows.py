@@ -60,7 +60,9 @@ DATA = _pl.Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 FAM = "on1"
 CR = DATA / "runs/op_parity/cache"
 ROWS = DATA / "runs/onpol_nuplan/rows"
-SPLIT = "alpasim_nuplan/onpol-train"
+SPLIT = os.environ.get("ON_SPLIT", "alpasim_nuplan/onpol-train")          # ON_SPLIT: another registered split of the rolled scenes (practice_nuplan)
+_TOKT = json.loads(_pl.Path(os.environ["ON_TOK_TIMES"]).read_text()) if os.environ.get("ON_TOK_TIMES") else {}  # scene id -> raw 20 Hz token time (us), for
+                                                               # window ids whose token the 2 Hz navsim log lacks (arena windows); unset = unchanged
 FRAME_OFF, STEP_US, NT, K = -3, 500_000, 9, 32
 CEN, CORRIDOR, EXT = 1.461, 4.0, 40.0                          # rear axle -> box centre (m); the scorer's corridor; straight continuation of the logged path
 PSI_MAX, LR_MIN, LR_T, BLEND_S = np.radians(30.0), 4.0, 1.0, 2.0
@@ -252,7 +254,7 @@ def box_poly(c, L, W):
 
 
 # ---------------------------------------------------------------- one rollout -> rows
-def sim_start(L, i, rig) -> tuple:
+def sim_start(L, i, rig, t_tok=None) -> tuple:
     """Log time (us) of simulation time 0, from data: the candidate (a log frame 6 before .. 2 after the token's, or the token's time - 1.5 s)
     whose log track, translated to its first pose, lies closest to the rollout's own logged ego track `rig` (t_us, x, y, yaw; local, 10 Hz).
     Poses are compared by time, at 0, 0.5 .. 5 s, never by frame index (some logs have a 1 s gap). -> (T0, its largest distance in m)."""
@@ -260,7 +262,8 @@ def sim_start(L, i, rig) -> tuple:
     tau = np.arange(0, rig[-1, 0] + 1, STEP_US, dtype=np.float64)
     loc = np.c_[np.interp(tau, rig[:, 0], rig[:, 1]), np.interp(tau, rig[:, 0], rig[:, 2])] - rig[0, 1:3]
     best = (None, np.inf)
-    for T0 in [int(T[j]) for j in range(max(i - 6, 0), min(i + 3, len(T)))] + [int(T[i]) + FRAME_OFF * STEP_US]:
+    extra = [] if t_tok is None else [int(t_tok) + FRAME_OFF * STEP_US]        # a 20 Hz token between navsim frames: its own time - 1.5 s
+    for T0 in [int(T[j]) for j in range(max(i - 6, 0), min(i + 3, len(T)))] + [int(T[i]) + FRAME_OFF * STEP_US] + extra:
         if T0 < T[0] or T0 + tau[-1] > T[-1]:
             continue
         g = np.c_[np.interp(T0 + tau, T, P[:, 0]), np.interp(T0 + tau, T, P[:, 1])]
@@ -284,13 +287,14 @@ def geo_one(job):
         return dict(rows=[base | dict(k=k, t_us=r["t0"], excl="no_sim") for k, r in sorted(recs.items())], r2=None)
     drv = sess.get(o.get("session")) or (max(sess.values(), key=lambda v: v["n"]) if sess else dict(n=-1, rec={}))
     L = _log(log)
-    i = L["tok"].index(tok)
+    t_tok = None if tok in L["tok"] else int(_TOKT[scene])                    # ON_TOK_TIMES: the nearest navsim frame, the token's own time
+    i = L["tok"].index(tok) if t_tok is None else int(np.abs(L["T"] - t_tok).argmin())
     ego_c = o["actors"]["EGO"]
     ego = np.c_[ego_c[:, 0], CL.to_rig(ego_c, CEN)]                             # the simulator's rear axle, local frame
     g = o["logged"][0]["traj"]
     rig = np.c_[g[:, 0], CL.to_rig(g, CEN)]                                     # the rollout's logged ego, local frame, 10 Hz
     logp = lambda t: np.array([np.interp(t, L["T"], L["P"][:, q]) for q in range(3)])  # noqa: E731  the log's pose at log time t
-    T0, e_best = sim_start(L, i, rig)                                           # log time of simulation time 0
+    T0, e_best = sim_start(L, i, rig, t_tok)                                           # log time of simulation time 0
     if T0 is None:
         recs = drv["rec"]
         return dict(rows=[base | dict(k=k, t_us=r["t0"], excl="no_sim") for k, r in sorted(recs.items())], r2=None)
