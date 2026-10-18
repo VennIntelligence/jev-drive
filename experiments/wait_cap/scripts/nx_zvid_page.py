@@ -34,7 +34,7 @@ def speed(f):
         n, m = r.split("/"); fps, dur = float(n) / float(m), float(d)
     except (ValueError, OSError):
         return 2.0
-    return round(max(1.0, min(3.0, 30.0 / fps, dur / 6.0)), 2)
+    return round(max(2.0, min(3.0, 30.0 / fps, dur / 6.0)), 2)
 
 
 fmt = lambda x: "-" if x is None else f"{x:.2f}"  # noqa: E731
@@ -105,7 +105,8 @@ total = sum(m["mb"] for m in man)
 <style>body{{font:15px/1.5 -apple-system,sans-serif;max-width:1500px;margin:1em auto;padding:0 1em}}small{{color:#888;font-weight:400;font-size:12px}}
 .row{{display:flex;gap:8px;flex-wrap:wrap}}figure{{margin:0;flex:1 1 420px;max-width:480px}}video{{width:100%;background:#000}}figcaption{{font-size:13px;color:#555}}
 section{{border-top:1px solid #ccc;padding-top:.5em;margin-top:1.5em}}.miss{{color:#a00}}.chip{{background:#fed;border:1px solid #ca8;border-radius:8px;padding:0 6px;font-size:12px;margin-left:4px;font-weight:400}}.warn{{color:#a60}}h3.cls{{background:#eef;padding:2px 8px;margin-top:2em}}
-table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:2px 10px;text-align:left}}tr.tot{{font-weight:600;background:#f4f4f4}}nav a{{margin-right:1.2em}}</style></head><body>
+table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:2px 10px;text-align:left}}tr.tot{{font-weight:600;background:#f4f4f4}}nav a{{margin-right:1.2em}}#rb{{position:sticky;top:0;z-index:9;background:#fffffff0;padding:5px 0;border-bottom:1px solid #ddd;font-size:14px}}#rb button{{margin:0 2px;padding:1px 7px;border:1px solid #999;border-radius:4px;background:#fff}}#rb button.on{{background:#333;color:#fff}}#rb input{{vertical-align:middle;width:140px}}</style></head><body>
+<div id="rb">播放速度 <button data-r="0">自动</button><button data-r="1">1×</button><button data-r="2">2×</button><button data-r="3">3×</button><button data-r="5">5×</button><button data-r="10">10×</button><button data-r="16">16×</button> <input type="range" min="0.5" max="16" step="0.5"> <b id="rv"></b></div>
 <h1>RTB1 的零分与低分长什么样：{len(sel)} 个示例场景（对照 RSG-L18-s0）</h1>
 <p>目的：判断 RTB1（retain-base 线）与 RSG-L18 比，零分和低分的真实构成。每个场景并排放臂 a (RTB1O-L18-s0)、参照 RSG-L18-s0，held 场景再加臂 d (RTB1OB1-L18-s1，另一基座种子)；
 每段上为 BEV 与打分面板，下为前视相机，约 2 帧/秒，每帧一个决策。视频是用同一 sh30 路径加视频<b>重跑</b>得到的，不是原读数的录像（同一输入，但每段标题注明重跑得分；与原读数不一致的场景会标出）。
@@ -120,13 +121,23 @@ held 场景按 held 460 @18 配置重跑，public 场景按 public 1491 @10 的 
 <nav>{"".join(nav)}</nav>
 {"".join(secs)}
 <script>
-// Lazy: fetch a clip when it comes within one screen, play it only while half visible, pause when it leaves.
-const R = v => {{ const r = +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
+// Speed bar: 0 = per-clip auto rate (data-rate); any other value overrides every clip. Kept in localStorage across pages.
+let G = +localStorage.vidRate || 0;
+const R = v => {{ const r = G || +v.dataset.rate; v.defaultPlaybackRate = r; v.playbackRate = r; }};
+const setG = r => {{ G = r; localStorage.vidRate = r;
+  document.querySelectorAll("#rb button").forEach(b => b.classList.toggle("on", +b.dataset.r === r));
+  document.querySelector("#rb input").value = r || 2; document.getElementById("rv").textContent = r ? r + "×" : "自动";
+  document.querySelectorAll("video[data-src]").forEach(v => {{ if (v.src) R(v); const s = v.parentNode.querySelector(".rate"); if (s) s.textContent = (G || +v.dataset.rate) + "×"; }}); }};
+document.querySelectorAll("#rb button").forEach(b => b.onclick = () => setG(+b.dataset.r));
+document.querySelector("#rb input").oninput = e => setG(+e.target.value);
+setG(G);
+// Lazy: fetch a clip within about one screen, play it only while >= 50 % visible, pause when it leaves.
 const near = new IntersectionObserver(es => es.forEach(e => {{ const v = e.target;
   if (e.isIntersecting && !v.src) {{ v.src = v.dataset.src; v.preload = "auto"; v.addEventListener("loadedmetadata", () => R(v)); near.unobserve(v); }} }}),
   {{ rootMargin: "100% 0px" }});
 const seen = new IntersectionObserver(es => es.forEach(e => {{ const v = e.target;
-  if (e.isIntersecting) {{ if (!v.src) {{ v.src = v.dataset.src; }} R(v); v.play().catch(() => {{}}); }} else v.pause(); }}), {{ threshold: 0.5 }});
+  if (e.isIntersecting) {{ if (!v.src) {{ v.src = v.dataset.src; v.addEventListener("loadedmetadata", () => R(v)); }} R(v); v.play().catch(() => {{}}); }} else v.pause(); }}),
+  {{ threshold: 0.5 }});
 document.querySelectorAll("video[data-src]").forEach(v => {{ near.observe(v); seen.observe(v); }});
 </script></body></html>''')
 print(len(sel), "scenes", len(man), "videos", round(total, 1), "MB")
