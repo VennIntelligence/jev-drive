@@ -169,14 +169,14 @@ def cmd_collect(a):
 
 # ---------------------------------------------------------------- page (Mac)
 def speed(f):
-    """Fast-forward factor (nx_zvid_page.speed): ~30 fps, never above 3x, at least ~6 s on screen."""
+    """Fast-forward factor (nx_zvid_page.speed): ~30 fps, never above 3x, at least ~6 s on screen, never below 2x (2 fps clips look choppy at 1x)."""
     try:
         r, d = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate:format=duration",
                               "-of", "csv=p=0", str(f)], capture_output=True, text=True).stdout.split()
         n, m = r.split("/"); fps, dur = float(n) / float(m), float(d)
     except (ValueError, OSError):
         return 2.0
-    return round(max(1.0, min(3.0, 30.0 / fps, dur / 6.0)), 2)
+    return round(max(2.0, min(3.0, 30.0 / fps, dur / 6.0)), 2)
 
 
 MECH = [  # (key, Chinese label, test on the JTN row of the window)
@@ -301,7 +301,7 @@ nav a{{margin-right:1em}}</style></head><body>
 <h1>JTN-L18-s0 的零分与低分长什么样（对照 RSG-L18-s0，同一 serve、同一窗）</h1>
 {intro}
 <table><tr><th>来源</th><th>组</th><th>机制（按 JTN 的失败类型）</th><th>窗数</th><th>其中 RSG 也零分</th></tr>{"".join(tab)}</table>
-<p>{len(man)} 段视频，合计 {tot:.0f} MB。每段左上角是快放倍数（max(1, min(3, 30/fps, 时长/6))），滑到附近才加载，过半可见才播放。</p>
+<p>{len(man)} 段视频，合计 {tot:.0f} MB。每段左上角是快放倍数（max(2, min(3, 30/fps, 时长/6))），滑到附近才加载，过半可见才播放。</p>
 <nav>{"".join(nav)}</nav>
 {"".join(secs)}
 <script>
