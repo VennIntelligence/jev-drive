@@ -13,6 +13,7 @@ Arena labels (census rule of experiments/wait_cap/scripts/nx_census.py `windows`
 """
 import argparse, glob, os, sys
 import numpy as np, pandas as pd
+pd.set_option('future.no_silent_downcasting', True)
 
 D = os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs")
 W = f"{D}/runs/alpasim_proxy/wait_set/reads"
@@ -53,7 +54,7 @@ def arena(split, tags):
     Wd["k"] = (Wd.t0 / 0.5).round().astype(int)
     S["k"] = (S.t0 / 0.5).round().astype(int)
     M = S.merge(Wd, on=["log", "k"], how="left", suffixes=("", "_c"))
-    miss = M.red_stop.isna().sum()
+    miss = M.maxdisp_c.isna().sum()
     rs, cl = M.red_stop.fillna(False).astype(bool), M.red_cls.fillna("")
     lab = np.where(rs & (cl == "C") & M.red_start.fillna(False).astype(bool), "red-static",
           np.where(rs & (cl == "G"), "red-launch",
