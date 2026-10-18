@@ -132,12 +132,14 @@ scripts/tmux_run.sh alpasim-env   experiments/alpasim/scripts/setup_env.sh   # u
 scripts/tmux_run.sh alpasim-fetch experiments/alpasim/scripts/fetch_data.sh  # nuplan_test + configs + part001
 scripts/tmux_run.sh alpasim-ltf   experiments/alpasim/scripts/setup_ltf.sh   # shipped LTF sample, own venv
 R=$DATA_DIR/runs/alpasim; D=$R/<name>/<ts>
-.venv/bin/python -m jevdrive.cl submit --name alpasim-<name> --vram 40 --cpu 16 --log-dir $D/pool -- \
-  bash experiments/alpasim/scripts/run.sh $D ltf --scene-list $R/scenes_navtest_full_part001_48.txt \
-  +e2e_challenge_nuplan=full runtime.nr_workers=2 runtime.endpoints.renderer.n_concurrent_rollouts=8 \
-  runtime.endpoints.driver.n_concurrent_rollouts=8 runtime.endpoints.controller.n_concurrent_rollouts=8 \
-  defines.nre_cache_size=9
+B=$(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print(" ".join(B.OVERRIDES))')
+.venv/bin/python -m jevdrive.cl submit --name alpasim-<name> --vram 20 --cpu 6 --ram 30 --env CL_HIST_KEY=alpasim-read4 --log-dir $D/pool -- \
+  bash experiments/alpasim/scripts/run.sh $D ltf --scene-list $R/scenes_navtest_full_part001_48.txt $B
 ```
+
+`c0b_chain.OVERRIDES` (2 workers, 4 concurrent rollouts, cache 5) is the read configuration every lane imports; the declaration
+is the one in closed-loop-runbook.md ("Fixing a queued job's declaration"). Lanes submit reads through their chain scripts
+(`ol_chain.sh readlist`, `ol_fast.sh read`, `rm_chain.sh read`, ...), one pool job per chunk of about 150 scenes.
 
 `run.sh <dir> starter|ltf [--tap] [--scene-list F] <wizard overrides>`; `--tap` puts `driver_tap.py` (a logging gRPC
 proxy) between runtime and driver. Each run dir has `native_summary.json`, `usage.jsonl` (1 Hz), `native-logs/`,
@@ -204,7 +206,8 @@ another rollout (2.6 h in C0).
   three stacks and ~90 GB), so the working cap stays 3 stacks per lane until boxwatch has recorded a kill; the pool
   does not enforce a stack count.
 
-Not verified: several renderer replicas per card, three stacks at once, scenes outside part001, the `ec2` preset,
+Not verified: several renderer replicas per stack (config-supported, `services.renderer.replicas_per_container=N`; not measured,
+research/alpasim-read-throughput.md), three stacks at once, scenes outside part001, the `ec2` preset,
 controller gain overrides. Numerical agreement with the official Docker environment: measured on 2026-10-09, next
 section (to the third decimal on 47 of 48 scenes, not bit-identical).
 
@@ -524,6 +527,26 @@ sorted order, not list order: copy the scenes of a chunk you need first one file
 | Output per scene | 0.41 GB with `rollout.asl`, mp4s already dropped; under 2 MB without |
 
 Last verified: 2026-10-13
+
+### Read throughput ceiling (2026-10-18)
+
+Read this before trying to make nuPlan reads faster. A read job on the current path spends about 75 s on fixed costs: the stack
+start (44 s, the driver warm-up overlapping the services) and the eval aggregation (about 31 s). That is 9 % of a 149-scene chunk
+and about 16 % of a 77-scene one. The rest is about 5.2 s per scene per stack, bound by the single MTGS renderer.
+
+- **Persistent stacks with work stealing** (`experiments/alpasim/scripts/read.sh submit`, `queue_read.py`):
+  - The runtime runs in its shipped daemon mode (`wizard.run_mode=SERVER`) with a driver per request. N slot jobs pull
+    scenes from one queue, and a CPU-only collect job runs AlpaSim's aggregation per out dir.
+  - Results are bit-identical to `run.sh`: 149 / 149 and 298 / 298 scenes, score and every metric.
+  - It measured +4 % and -11 % scenes per card-hour, inside the ±15 % noise between cards. It is not the default.
+  - Its out dirs keep `run.sh`'s layout, except the driver logs, which go under `driver-logs/s<k>/`.
+- **One MTGS renderer must never run two sessions of the same scene at once.** They corrupt each other: INTERNAL
+  `torch.Size([8, N, 3])` errors and changed scores. This happens with scene-major multi-checkpoint queues, or with
+  `nr_rollouts` > 1 at concurrency. `queue_read.py` guards against it.
+- **Shipped bug:** at 0bb4c4b, `get_runtime_info` of the runtime daemon raises on the trajdata provider.
+- **Lever left:** renderer replicas per stack, not measured.
+
+Last verified: 2026-10-18
 
 ### Fast local reads (`ALPASIM_FAST`, 2026-10-16)
 

@@ -1,5 +1,7 @@
 # AlpaSim read 作业剖析（2026-10-13，perf lane）
 
+> 后续：2026-10-18 的吞吐 pilot（常驻栈 / work stealing / renderer 副本）见 [alpasim-read-throughput.md](alpasim-read-throughput.md)：没有杠杆过 15 % 线，默认路径不变。
+
 对象：GPU 池里占主导的 AlpaSim read 作业（`ol_chain.sh readlist` / `ro_chain.sh run` / `rm_chain.sh read` → `experiments/alpasim/scripts/run.sh sh30` → `run_native.py` 起 driver + AlpaSim 四个服务）。
 三个问题：8 分钟花在哪、~25 GB 内存在哪、4 张/卡在 VRAM 上能否成立。
 
