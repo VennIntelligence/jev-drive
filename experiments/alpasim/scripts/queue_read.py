@@ -20,14 +20,17 @@ Lanes submit through experiments/alpasim/scripts/read.sh, not by hand.
 Queue dir: spec.json, todo/<seq> (one line "<read index> <scene>"), claim/s<k>/, done/, slots/s<k>/ (the stack's run dir).
 A slot that starts again (pool retry) first puts its own claimed scenes back and drops their partial outputs.
 """
-import argparse, asyncio, json, os, random, shutil, subprocess, sys, time
+import argparse, asyncio, json, math, os, random, shutil, subprocess, sys, time
 from pathlib import Path
 
-import yaml
-
 HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[2]
 sys.path.insert(0, str(HERE))
-import run_native as RN  # noqa: E402
+
+def RN():
+    import run_native
+    return run_native
+
 
 CFG_FILES = ("run_metadata.yaml", "eval-config.yaml", "wizard-config.yaml", "wizard-config-loadable.yaml")
 
@@ -62,6 +65,25 @@ def plan(a) -> int:
     json.dump({"reads": reads, "scenes": sorted(set(scenes)), "overrides": a.overrides, "t": time.time()},
               open(q / "spec.json", "w"), indent=1)
     print(f"[queue] {q}: {len(reads)} reads, {len(items)} rollouts, {len(set(scenes))} scenes")
+    return 0
+
+
+def submit(a, pool_args: list) -> int:
+    """plan, then N slot jobs (cl fanout) and the collect job after them; prints the collect job's id (chain on it)."""
+    plan(a)
+    n = a.slots or max(1, math.ceil(sum(1 for _ in (Path(a.queue) / "todo").iterdir()) / 150))
+    q, sh = str(Path(a.queue).resolve()), str(HERE / "read.sh")
+    defaults = {"--vram": "20", "--cpu": "6", "--ram": "30", "--tries": "2", "--timeout-h": "3"}
+    flags = [x for k, v in defaults.items() if k not in pool_args for x in (k, v)]
+    cmd = [str(REPO / ".venv/bin/python"), "-m", "jevdrive.cl", "fanout", "--arms", ",".join(map(str, range(n))), "--name", a.name,
+           "--log-dir", f"{q}/pool", "--env", "CL_HIST_KEY=alpasim-slot", "--no-check", *flags, *pool_args,
+           "--collect", f"bash {sh} collect {q}", "--", "bash", sh, "slot", q, "{arm}"]
+    out = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
+    sys.stderr.write(out.stderr)
+    if out.returncode:
+        raise SystemExit(f"fanout rc {out.returncode}: {out.stdout[-500:]}")
+    (Path(q) / "jobs.txt").write_text(out.stdout)
+    print(out.stdout.split()[-2])   # the collect job (fanout prints "<id> <name>-collect" last)
     return 0
 
 
@@ -116,7 +138,7 @@ class Slot:
     def start_driver(self, i: int) -> None:
         if i in self.drv:
             return
-        rd, port = self.reads[i], RN.free_port()
+        rd, port = self.reads[i], RN().free_port()
         cwd, cmd = driver_cmd(rd)
         # each slot's driver logs to its own dir under the read's driver-logs (dump files are numbered per driver)
         log = Path(rd["out"]) / "driver-logs" / f"s{self.k}"
@@ -170,13 +192,14 @@ class Slot:
 
     async def main(self, timeout: float) -> int:
         import grpc
+        import yaml
         from alpasim_grpc.v0 import runtime_pb2_grpc
         self.timeout, ov = timeout, list(self.spec["overrides"])
         conc = [int(o.split("=")[1]) for o in ov if o.startswith("runtime.endpoints.driver.n_concurrent_rollouts=")]
         self.conc = conc[-1] if conc else 4
         self.requeue()
-        self.procs, rc = RN.Procs(self.sd), 1
-        self.base = {**dict(RN.profiles.PROFILES["alpasim"].env), **os.environ, "UV_NO_SYNC": "1", "PYTHONUNBUFFERED": "1",
+        self.procs, rc = RN().Procs(self.sd), 1
+        self.base = {**dict(RN().profiles.PROFILES["alpasim"].env), **os.environ, "UV_NO_SYNC": "1", "PYTHONUNBUFFERED": "1",
                      "ALPASIM_NUPLAN_ROOT": os.path.expandvars("$DATA_DIR/datasets/alpasim_nuplan")}
         src = os.path.expandvars("$DATA_DIR/third_party/alpasim")
         import threading
@@ -201,7 +224,7 @@ class Slot:
             rt = [n for n in services if n.startswith("runtime")]
             for name in [n for n in services if n not in rt] + rt:
                 svc = services[name]
-                self.procs.start(name, RN.host_cmd(svc, src), dict(self.base, **dict(e.split("=", 1) for e in svc.get("environment", []))), src)
+                self.procs.start(name, RN().host_cmd(svc, src), dict(self.base, **dict(e.split("=", 1) for e in svc.get("environment", []))), src)
             for name in services:
                 for p in services[name].get("ports", []):
                     self.times[f"{name}_ready_s"] = await asyncio.get_running_loop().run_in_executor(
@@ -238,7 +261,7 @@ class Slot:
                     dead = [n for n, p in self.procs.p.items() if p.poll() is not None and n not in self.stopped]
                     if dead:
                         raise RuntimeError(f"{dead} died while the slot was running")
-                    crash, rt_off = RN.worker_crash(rt_log, rt_off)
+                    crash, rt_off = RN().worker_crash(rt_log, rt_off)
                     if crash:
                         raise RuntimeError(f"runtime worker crashed and the runtime does not recover: {crash}")
             rc = 0
@@ -263,6 +286,7 @@ def collect(a) -> int:
     from eval.aggregation.failed_rollouts import FailedRollout
     from eval.aggregation.main import run_aggregation_from_runtime
     from eval.schema import EvalConfig
+    import yaml
     q = Path(a.queue).resolve()
     spec = json.load(open(q / "spec.json"))
     left = list((q / "todo").iterdir()) + [f for d in (q / "claim").iterdir() for f in d.iterdir()]
@@ -296,20 +320,26 @@ def collect(a) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("plan")
-    p.add_argument("queue")
-    p.add_argument("--read", action="append", required=True, metavar="OUT=LIST[=DRIVER[=K:V,K:V]]")
-    p.add_argument("--order", choices=("read", "scene"), default="scene", help="queue order: read by read, or scene by scene")
-    p.add_argument("overrides", nargs="+")
+    for verb in ("plan", "submit"):
+        p = sub.add_parser(verb)
+        p.add_argument("queue")
+        p.add_argument("--read", action="append", required=True, metavar="OUT=LIST[=DRIVER[=K:V,K:V]]")
+        p.add_argument("--order", choices=("read", "scene"), default="scene", help="queue order: read by read, or scene by scene")
+        if verb == "submit":
+            p.add_argument("--slots", type=int, default=0, help="slot jobs (default: one per 150 rollouts)")
+            p.add_argument("--name", required=True)
+            p.add_argument("--pool", default="", help="extra cl fanout flags, one string (e.g. '--priority 14 --after <id> --owner x')")
+        p.add_argument("overrides", nargs="+")
     s = sub.add_parser("slot")
     s.add_argument("queue")
     s.add_argument("k", type=int)
     s.add_argument("--ready-timeout", type=float, default=900)
-    c = sub.add_parser("collect")
-    c.add_argument("queue")
+    sub.add_parser("collect").add_argument("queue")
     a = ap.parse_args()
     if a.cmd == "plan":
         return plan(a)
+    if a.cmd == "submit":
+        return submit(a, a.pool.split())
     if a.cmd == "slot":
         return asyncio.run(Slot(Path(a.queue).resolve(), a.k).main(a.ready_timeout))
     return collect(a)
