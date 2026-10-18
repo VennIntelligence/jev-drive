@@ -108,12 +108,12 @@ json.dump(m, open(f"{R}/manifest.json", "w"), indent=1)
 print(len(m), "of", len(cs), "chunks"); sys.exit(len(m) != len(cs))
 PY
   ON_SPLIT=alpasim_nuplan/practice-starts ON_TOK_TIMES=$S/tok_times.json $NAV $ON geo --name $N --roll $R --workers ${PN_WORKERS:-24} || die "on_rows geo rc $?" ;;
-tok)      # tok <pool>: tokens + teacher + gate R1 (on_rows.py tok, control smoke10e as ol_chain), then R1 / R2 (R2 as amended: ego <= 0.3 m, actors >= 0.9999)
+tok)      # tok <pool>: tokens + teacher + gate R1 (on_rows.py tok, control smoke10e as ol_chain), then R1 / R2 (prereg amendment 1: ego <= 0.3 m, frame <= 0.1 m, actors >= 0.995 within 0.5 m, median <= 0.05 m)
   N=$2; ON_SPLIT=alpasim_nuplan/practice-starts $TR $ON tok --name $N --control smoke10e || die "on_rows tok rc $?"
   python3 - $DATA_DIR/runs/onpol_nuplan/rows/$N <<'PY' || die "pool gates failed ($N): not merged"
 import json, sys
 d = sys.argv[1]; r1, r2 = json.load(open(f"{d}/r1.json")), json.load(open(f"{d}/r2.json"))
-ok2 = r2["ego_max_m"] <= 0.3 and r2["act_share_within"] >= 0.9999
+ok2 = r2["ego_max_m"] <= 0.3 and r2["frame_err_max_m"] <= 0.1 and r2["act_share_within"] >= 0.995 and r2["act_median_m"] <= 0.05   # prereg amendment 1
 print("R1", r1["pass"], "R2 (amended)", ok2, "ego_max", r2["ego_max_m"], "act_share", r2["act_share_within"], "frame excluded", len(r2["frame_excluded"]))
 sys.exit(0 if r1["pass"] and ok2 else 2)
 PY
