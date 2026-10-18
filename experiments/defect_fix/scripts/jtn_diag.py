@@ -180,14 +180,14 @@ def speed(f):
 
 
 MECH = [  # (key, Chinese label, test on the JTN row of the window)
-    ("af_front", "at-fault 正面碰撞（追尾前车 / 撞前方物体）", lambda t, o: t.startswith("AF-front")),
+    ("af_front", "at-fault 碰撞（正面 / 侧向）", lambda t, o: t.startswith("AF-front")),
     ("af_side", "at-fault 侧向 / 后部碰撞", lambda t, o: t.startswith("AF-")),
-    ("offroad", "出路（offroad）", lambda t, o: "offroad" in t),
+    ("offroad", "出路 / 偏出走廊", lambda t, o: "offroad" in t),
     ("corridor", "偏出走廊（离人类轨迹 >= 4 m；静止窗里是滚出人类停车点 4 m 圆）", lambda t, o: t == "corridor"),
     ("rear", "被追尾（rear-hit，部分分）", lambda t, o: t == "rear-hit"),
     ("hit", "其他非 at-fault 碰撞（部分分）", lambda t, o: t == "hit"),
     ("nolaunch", "不起步（人类走了 > 5 m，本车 < 2 m）", lambda t, o: t == "no-launch"),
-    ("creep", "爬行（本车里程 < 人类的 30%）", lambda t, o: t == "creep"),
+    ("creep", "爬行 / 偏慢（本车里程 < 人类的 30% 或略多）", lambda t, o: t == "creep"),
     ("slow", "偏慢（本车里程 >= 人类的 30%）", lambda t, o: t == "slow"),
     ("ok", "JTN 不为零、不低（分组见标题）", lambda t, o: True),
 ]
@@ -205,7 +205,7 @@ INTRO = """<p>JTN-L18-s0 是 JTB / JTN 一轮里不加弧长项的那一臂（�
 <p><b>怎么做的。</b>A 组取 arena held 2 228 窗（stop3）里 JTN 得分 &lt; 0.5 或比 RSG 低 &gt;= 0.3 的窗，B 组同规则取 held 460 @18（sh30，无 hold），
 两边都排除路线失败（Waypoint）窗。C 组是不加 hold 的 arena 读数：JTN 所有新零分 / 低分全放，另按种子 0 抽 24 个 JTN 修好的静止窗（全池 213）和 16 个两者都零分的窗（全池 225）。
 存档读数只对零分保留 rollout.asl，所以每段视频都是同一 checkpoint、同一 serve、同一窗的<b>重跑</b>，打开 AlpaSim 自带的评测视频（上：BEV + 指标表，下：前视相机，2 帧/秒）。
-470 段重跑得分与存档读数全部一致（差 &lt; 0.05），可以当原读数的录像看。卡片里的速度（起步 0.5 s / 峰值 / 1 s 后平均 / 末速）、里程和 hold 锁定状态来自存档读数的控制器轨迹和 hold.jsonl。
+全部 470 段重跑（本页只展示其中的代表窗）得分与存档读数全部一致（差 &lt; 0.05），可以当原读数的录像看。卡片里的速度（起步 0.5 s / 峰值 / 1 s 后平均 / 末速）、里程和 hold 锁定状态来自存档读数的控制器轨迹和 hold.jsonl。
 得分 = min(进度 / 0.8, 1)，被 at-fault 碰撞 / 出路 / 偏出走廊清零；没有舒适度分量，低分只来自进度损失。</p>
 <p><b>先看什么。</b></p>
 <ol>
@@ -218,7 +218,7 @@ A 组 20 个里 7 个、B 组 11 个里 5 个是 JTN 比 RSG 更快地进入弯�
 JTN 自己的差别在 7 个「不起步」：同样锁住，RSG 用满 3 m，JTN 只挪 0–1.8 m，对应 arena 起步层 −0.033。</li>
 <li><b>C 组：JTN 原生会停。</b>抽样的 24 个修好的静止窗里 JTN 走 0–4.0 m（16 个几乎不动），RSG 走 2.1–5.8 m、滚出人类停车点的 4 m 圆被清零。代价在起步：C 组 JTN 新增 7 个不起步、2 个爬行。</li>
 </ol>
-<p>组内按 JTN 的失败类型分节（arena_proxy 的 failure_type：零分按 at-fault 碰撞 / 出路 / 走廊；部分分按被追尾 / 不起步 / 爬行 / 偏慢），节内按 JTN 得分升序。
+<p>组内按 JTN 的失败类型（arena_proxy 的 failure_type：零分按 at-fault 碰撞 / 出路 / 走廊；部分分按被追尾 / 不起步 / 爬行 / 偏慢）再按子模式（速度、hold 锁定、同一条日志、两车轨迹是否相同）归类，一类只放一对代表。
 重跑目录和 selection.json 在 box 的 <code>runs/defect_fix/jtn_diag/</code>；生成脚本 <code>experiments/defect_fix/scripts/jtn_diag.{py,sh}</code>。</p>
 """
 
@@ -240,6 +240,48 @@ def desc(r, gt):
     return "；".join(s)
 
 
+PARK = "2021.10.06.08.16.17_veh-52"  # the parking-lot loop log
+
+
+def subpat(o):
+    """(mechanism key, sub-pattern key, Chinese sub-pattern label) of a window, from the stored controller traces and hold records."""
+    j, r = o["orig"][T], o["orig"][R]
+    t = j["type"]
+    k = next(k for k, _, fn in MECH if fn(t, o))
+    k = {"af_side": "af_front", "slow": "creep"}.get(k, k)  # same cluster: collisions; slow / creep both lose progress
+    dd = abs((j.get("dist") or 0) - (r.get("dist") or 0))
+    fast = (j.get("vmax") or 0) - (r.get("vmax") or 0) >= 0.5 or (j.get("vend") or 0) - (r.get("vend") or 0) >= 1
+    h = j.get("hold") or {}
+    new = r["score"] > 0 and j["score"] == 0
+    if o["group"] == "off_fixed":
+        return k, "stay" if (j.get("dist") or 0) < 1 else "move", "JTN 几乎不动（< 1 m），RSG 滚出人类停车点 4 m 圆" if (j.get("dist") or 0) < 1 else "JTN 走 1-4 m 后停下，RSG 滚出圆"
+    if k in ("af_front", "af_side"):
+        return k, f"lead{o.get('lead')}", ("排队 / 前车在前，停车点偏远蹭上" if str(o.get("lead")) == "True" else "汇入口前车转入，plan 向前车偏、接触") if new else "两车同样撞上（同一轨迹）"
+    if k == "corridor" and not (o.get("stratum") == "static"):
+        k = "offroad"  # off-road and corridor exits are one failure to the eye
+    if k in ("offroad", "corridor"):
+        if o["id"].startswith(PARK):
+            return k, "park", "停车场回环：JTN 提前切内侧，开出路面" if new else "停车场回环：两者都出路"
+        if new and fast:
+            return k, "wide", "弯道 / 弯后 JTN 更快，跑宽出路"
+        if new:
+            return k, "newother", "JTN 新出路（速度与 RSG 相近）"
+        if k == "corridor" and o.get("stratum") == "static":
+            return k, "static", "静止窗：两者都滚出人类停车点 4 m 圆"
+        return k, "same", "两车轨迹基本相同（多数里程差 < 1 m），路口 / 弯道出路"
+    lock = o["src"] == "arena"
+    return k, "lock" if lock else "free", "起步窗被 3 m 静止 leash 锁住（hold 内），多数与 RSG 同分" if lock else "无 hold，JTN 自身起步 / 跟车偏慢或被追尾"
+
+
+def pick_rep(os_):
+    """Most typical window of a cluster: the largest RSG - JTN gap when JTN is clearly worse somewhere, else the median by JTN score."""
+    g = lambda o: o["orig"][R]["score"] - o["orig"][T]["score"]  # noqa: E731
+    if max(map(g, os_)) > 0.05:
+        return max(os_, key=lambda o: (g(o), -o["orig"][T]["score"]))
+    q = sorted(os_, key=lambda o: (o["orig"][T]["score"], o["id"]))
+    return q[len(q) // 2]
+
+
 def cmd_page(a):
     import html
     D = Path(a.dir)
@@ -247,7 +289,7 @@ def cmd_page(a):
     man, secs, nav, tab = [], [], [], []
     f2 = lambda x: "-" if x is None else f"{x:.2f}"  # noqa: E731
 
-    def card(o):
+    def card(o, n_sim, others):
         cells = []
         for tag, lab in ((T, "JTN-L18-s0"), (R, "参照 RSG-L18-s0")):
             f = D / "videos" / f"{o['src']}_{o['h16']}_{tag}.mp4"
@@ -264,9 +306,14 @@ def cmd_page(a):
             else:
                 cells.append(f'<figure class="miss"><figcaption>{cap}<br>无视频</figcaption></figure>')
         w = (f"；窗型 {o['stratum']}，人类 {o['hv0']} → {o['hv_end']} m/s{'，有前车' if str(o.get('lead')) == 'True' else ''}" if o.get("stratum") else "")
-        return (f'<section><h4>{o["h16"][:8]} <small>{html.escape(o["id"])}</small></h4>'
-                f'<p>JTN {f2(o["orig"][T]["score"])} vs RSG {f2(o["orig"][R]["score"])}；{GRP[o["group"]]}{w}</p><div class="row">{"".join(cells)}</div></section>')
+        more = ""
+        if others:
+            li = "".join(f"<li><code>{x['h16'][:8]}</code> {html.escape(x['id'][:27])} JTN {f2(x['orig'][T]['score'])} / RSG {f2(x['orig'][R]['score'])}</li>" for x in others)
+            more = f'<details><summary>另有 {n_sim} 个相似窗（不放视频）</summary><ul class="sim">{li}</ul></details>'
+        return (f'<section><h5>{o["h16"][:8]} <small>{html.escape(o["id"])}</small></h5>'
+                f'<p>JTN {f2(o["orig"][T]["score"])} vs RSG {f2(o["orig"][R]["score"])}；{GRP[o["group"]]}{w}</p><div class="row">{"".join(cells)}</div>{more}</section>')
 
+    ncl, shown, kinds = 0, set(), set()
     for src, title in SRC.items():
         os_ = [o for o in S["sel"] if o["src"] == src]
         if not os_:
@@ -278,15 +325,35 @@ def cmd_page(a):
             if not og:
                 continue
             body += f'<h3>{GRP[g]}（{len(og)}）</h3>'
-            left = og
-            for k, lab, fn in MECH:
-                om = [o for o in left if fn(o["orig"][T]["type"], o)]
-                left = [o for o in left if o not in om]
-                if om:
-                    aid = f"{src}-{g}-{k}"
-                    body += f'<h4 class="cls" id="{aid}">{lab}：{len(om)}</h4>' + "".join(card(o) for o in sorted(om, key=lambda o: o["orig"][T]["score"]))
-                    tab.append(f'<tr><td>{title.split("（")[0]}</td><td>{GRP[g]}</td><td><a href="#{aid}">{lab}</a></td><td>{len(om)}</td>'
-                               f'<td>{sum(o["orig"][R]["score"] == 0 for o in om)}</td></tr>')
+            cl = {}
+            for o in og:
+                k, sk, sl = subpat(o)
+                cl.setdefault((k, sk, sl), []).append(o)
+            for k in {kk[0] for kk in cl}:  # sub-patterns of <= 2 windows (collisions excepted) fold into one "other" cluster per mechanism
+                sm = [kk for kk in cl if kk[0] == k and len(cl[kk]) <= 2 and k != "af_front"]
+                if len(sm) > 1:
+                    cl[(k, "other", "其他子模式（各 <= 2 窗）")] = sum((cl.pop(kk) for kk in sm), [])
+            order = {k: i for i, (k, _, _) in enumerate(MECH)}
+            for (k, sk, sl), om in sorted(cl.items(), key=lambda kv: (order[kv[0][0]], -len(kv[1]))):
+                ck = ("new" if g.endswith("new") else "both", k, sk)  # zero-score failure types are shown once across sources
+                dup = g in ("zero_new", "off_new", "zero_both", "off_both") and ck in kinds
+                fresh = [] if dup else [x for x in om if x["h16"] not in shown]  # a window already shown gets no second video
+                rep = pick_rep(fresh) if fresh else None
+                if rep:
+                    shown.add(rep["h16"]); kinds.add(ck)
+                others = sorted((x for x in om if x is not rep), key=lambda x: x["orig"][T]["score"])
+                aid = f"{src}-{g}-{k}-{sk}"
+                lab = dict((kk, ll) for kk, ll, _ in MECH)[k]
+                ncl += 1
+                if rep:
+                    body += f'<h4 class="cls" id="{aid}">{lab} / {sl}：{len(om)} 窗</h4>' + card(rep, len(others), others)
+                else:
+                    li = "".join(f"<li><code>{x['h16'][:8]}</code> JTN {f2(x['orig'][T]['score'])} / RSG {f2(x['orig'][R]['score'])}</li>" for x in others)
+                    body += (f'<h4 class="cls" id="{aid}">{lab} / {sl}：{len(om)} 窗</h4><p>这类失败（同一机制、同一子模式）前面的组里已放过视频，不重复放。</p>'
+                             f'<details><summary>窗列表</summary><ul class="sim">{li}</ul></details>')
+                tab.append(f'<tr><td>{title.split("（")[0]}</td><td>{GRP[g]}</td><td><a href="#{aid}">{lab} / {sl}</a></td><td>{len(om)}</td>'
+                           f'<td>{sum(o["orig"][R]["score"] == 0 for o in om)}</td><td>{"<code>" + rep["h16"][:8] + "</code>" if rep else "同前"}</td></tr>')
+                print(f"{src:5s} {g:10s} {k:9s} {sk:8s} n={len(om):2d} rep={rep['h16'][:8] if rep else 'shown-before'}" + (f" JTN {rep['orig'][T]['score']:.2f} RSG {rep['orig'][R]['score']:.2f}" if rep else ""))
         secs.append(body)
     (D / "manifest.json").write_text(json.dumps(man, indent=1))
     tot = sum(m["mb"] for m in man)
@@ -294,15 +361,16 @@ def cmd_page(a):
     (D / "index.html").write_text(f'''<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>JTN-L18-s0 零分 / 低分视频诊断</title><style>body{{font:15px/1.55 -apple-system,sans-serif;max-width:1100px;margin:1em auto;padding:0 .8em;color:#222}}
 small{{color:#888;font-weight:400;font-size:11px;word-break:break-all}}.row{{display:flex;gap:8px;flex-wrap:wrap}}figure{{margin:0;flex:1 1 320px;max-width:540px}}
-video{{width:100%;background:#000}}figcaption{{font-size:13px;color:#444}}section{{border-top:1px solid #ddd;margin-top:1em;padding-top:.3em}}h4{{margin:.3em 0}}
+video{{width:100%;background:#000}}figcaption{{font-size:13px;color:#444}}section{{border-top:1px solid #ddd;margin-top:1em;padding-top:.3em}}h4,h5{{margin:.3em 0}}details{{font-size:13px;margin:.4em 0}}ul.sim{{columns:2;margin:.3em 0}}
 h4.cls{{background:#eef;padding:3px 8px;margin-top:1.6em}}h3{{margin-top:2em;border-bottom:2px solid #889}}.warn{{color:#a50}}.miss{{color:#a00}}
 .rate{{background:#333;color:#fff;border-radius:4px;padding:0 5px;font-size:12px}}table{{border-collapse:collapse;font-size:13px}}td,th{{border:1px solid #ccc;padding:2px 8px;text-align:left}}
 nav a{{margin-right:1em}}#rb{{position:sticky;top:0;z-index:9;background:#fffffff0;padding:5px 0;border-bottom:1px solid #ddd;font-size:14px}}#rb button{{margin:0 2px;padding:1px 7px;border:1px solid #999;border-radius:4px;background:#fff}}#rb button.on{{background:#333;color:#fff}}#rb input{{vertical-align:middle;width:140px}}</style></head><body>
 <div id="rb">播放速度 <button data-r="0">自动</button><button data-r="1">1×</button><button data-r="2">2×</button><button data-r="3">3×</button><button data-r="5">5×</button><button data-r="10">10×</button><button data-r="16">16×</button> <input type="range" min="0.5" max="16" step="0.5"> <b id="rv"></b></div>
 <h1>JTN-L18-s0 的零分与低分长什么样（对照 RSG-L18-s0，同一 serve、同一窗）</h1>
 {intro}
-<table><tr><th>来源</th><th>组</th><th>机制（按 JTN 的失败类型）</th><th>窗数</th><th>其中 RSG 也零分</th></tr>{"".join(tab)}</table>
-<p>{len(man)} 段视频，合计 {tot:.0f} MB。每段左上角是当前倍数；顶部速度条可改全部视频（自动 = 每段 max(2, min(3, 30/fps, 时长/6))，选择记在浏览器里），滑到附近才加载，过半可见才播放。</p>
+<table><tr><th>来源</th><th>组</th><th>机制（按 JTN 的失败类型）</th><th>窗数</th><th>其中 RSG 也零分</th><th>代表窗</th></tr>{"".join(tab)}</table>
+<p><b>这一页只放代表窗。</b>{len(S["sel"])} 个窗按「来源 × 组 × 失败机制 × 子模式」归成 {ncl} 类，每类放一对最典型的（JTN 独有的类取 JTN-RSG 得分差最大的窗，共享的类取 JTN 得分的中位窗），其余相似窗只列 id 和得分（点开看）。
+共 {len(man)} 段视频，{tot:.0f} MB。每段左上角是当前倍数；顶部速度条可改全部视频（自动 = 每段 max(2, min(3, 30/fps, 时长/6))，选择记在浏览器里），滑到附近才加载，过半可见才播放。</p>
 <nav>{"".join(nav)}</nav>
 {"".join(secs)}
 <script>
