@@ -6,8 +6,10 @@
 Per arm: zeros, offroad zeros, lateral zeros (offroad / corridor / AF-side), at-fault front / side collisions, AF-side zeros, mean score, progress_rel.
 Paired (arm minus ctl, clustered by log session): the same as indicator means x n, so the CI of a count difference is the CI of the mean x n.
 Offroad zeros: the scenes that flip in either direction, and for every offroad-zero rollout the distance to the nearest other actor on the side opposite
-to the departure (ego frame, |lon| <= 10 m, centre to centre) at the last pose and the minimum over the last 2 s. Departure side = sign of the ego's
-offset from the logged path at the last pose (+ left); rollouts end at the failure, so the last poses are the event.
+to the departure (ego frame, |lon| <= 10 m, centre to centre) at the event step and the minimum over the 1 s up to it. Event = the first step of the
+rollout's per-step `offroad` metric (rollouts/*/metrics.parquet, polars: pyarrow cannot read its int128 timestamps) that is > 0, timestamps relative
+to the rollout start; events at < 1 s are reported as "from start" (the ego is offroad before the policy acts). Departure side = sign of the ego's
+offset from the logged path at the event pose (+ left of its direction).
 """
 from __future__ import annotations
 
@@ -79,19 +81,26 @@ def geometry(r):
     if not len(ego) or log is None:
         return dict(error="no ego / log")
     t = ego[:, 0]
-    # departure side: sign of the offset of the last ego pose from the logged polyline (+ left of its direction)
+    import polars as pl
+    mp = glob.glob(f"{r['run']}/rollouts/{r['clipgt_id']}/*/metrics.parquet")
+    pm = pl.read_parquet(mp[0]).filter((pl.col("name") == "offroad") & (pl.col("values") > 0)) if mp else None
+    if pm is None or not len(pm):
+        return dict(error="no per-step offroad > 0")
+    ts = int(pm["timestamps_us"].min())
+    ie = int(np.abs(t - (t[0] + ts)).argmin())                          # the event step in the ego trace
+    # departure side: sign of the offset of the event pose from the logged polyline (+ left of its direction)
     a, d = log[:-1, 1:3], np.diff(log[:, 1:3], axis=0)
     keep = (d ** 2).sum(1) > 1e-8
     a, d = a[keep], d[keep]
-    p = ego[-1, 1:3]
+    p = ego[ie, 1:3]
     rr = p - a
     u = np.clip((rr * d).sum(1) / (d ** 2).sum(1), 0, 1)
     e = rr - u[:, None] * d
     k = (e ** 2).sum(1).argmin()
     dep = float(np.sign(d[k, 0] * e[k, 1] - d[k, 1] * e[k, 0]) * np.linalg.norm(e[k]))
-    out = dict(dur_s=round((t[-1] - t[0]) * 1e-6, 1), depart_lat_m=round(dep, 2), per_step=[])
+    out = dict(event_s=round(ts * 1e-6, 1), from_start=bool(ts < 1e6), depart_lat_m=round(dep, 2))
     best = []
-    for i in np.flatnonzero(t >= t[-1] - 2e6):
+    for i in np.flatnonzero((t >= t[ie] - 1e6) & (t <= t[ie])):
         c, s = np.cos(ego[i, 3]), np.sin(ego[i, 3])
         row = []
         for aid, A in oth.items():
@@ -104,13 +113,12 @@ def geometry(r):
                 row.append((float(np.hypot(lon, lat)), float(lon), float(lat), aid))
         best.append(row)
     sgn = 1.0 if dep >= 0 else -1.0                                     # opposite side = lat with the other sign
-    for name, rows in (("last", best[-1:]), ("last2s", best)):
+    for name, rows in (("ev", best[-1:]), ("ev1s", best)):
         cand = [(h, lon, lat, aid) for row in rows for (h, lon, lat, aid) in row if lat * sgn < 0]
         any_ = [(h, lon, lat, aid) for row in rows for (h, lon, lat, aid) in row]
         out[f"opp_{name}_m"] = None if not cand else round(min(cand)[0], 1)
         out[f"opp_{name}_lat_m"] = None if not cand else round(abs(min(cand)[2]), 1)
         out[f"any_{name}_m"] = None if not any_ else round(min(any_)[0], 1)
-    out.pop("per_step")
     return out
 
 
