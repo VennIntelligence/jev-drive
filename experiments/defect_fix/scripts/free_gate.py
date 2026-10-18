@@ -180,7 +180,7 @@ def cmd_late(res, rows_out):
         logs = {}
         for sc, (C, dec, _) in R.items():
             w = W.get(sc)
-            if w is None:
+            if w is None or w["h_launch_s"] is None:                     # 3 windows have no logged human launch (wait_set collect)
                 continue
             nwin += 1
             go = np.flatnonzero(C["v"] > 1.0)
