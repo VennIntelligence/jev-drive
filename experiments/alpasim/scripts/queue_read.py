@@ -137,6 +137,14 @@ class Slot:
         except ProcessLookupError:
             pass
 
+    @staticmethod
+    def capacity(ov: list) -> int:
+        """Rollouts the stack runs at once: min over renderer (x replicas) and controller of their slots (wizard defaults 4 / 1)."""
+        val = lambda key, d: int(([o.split("=", 1)[1] for o in ov if o.startswith(key + "=")] or [d])[-1])
+        rend = val("runtime.endpoints.renderer.n_concurrent_rollouts", 4) * val("services.renderer.replicas_per_container", 1)
+        ctl = val("runtime.endpoints.controller.n_concurrent_rollouts", 4) * val("services.controller.replicas_per_container", 1)
+        return min(rend, ctl)
+
     async def run_item(self, stub, name: str, i: int, scene: str) -> None:
         from alpasim_grpc.v0 import runtime_pb2
         await self.ready[i]
@@ -162,7 +170,7 @@ class Slot:
 
     async def main(self, timeout: float) -> int:
         import grpc
-        from alpasim_grpc.v0 import common_pb2, runtime_pb2_grpc
+        from alpasim_grpc.v0 import runtime_pb2_grpc
         self.timeout, ov = timeout, list(self.spec["overrides"])
         conc = [int(o.split("=")[1]) for o in ov if o.startswith("runtime.endpoints.driver.n_concurrent_rollouts=")]
         self.conc = conc[-1] if conc else 4
@@ -201,8 +209,9 @@ class Slot:
             port = int(str(services[rt[0]]["ports"][0]).split(":")[0])
             async with grpc.aio.insecure_channel(f"127.0.0.1:{port}", options=[("grpc.max_receive_message_length", 256 << 20)]) as ch:
                 stub = runtime_pb2_grpc.RuntimeServiceStub(ch)
-                info = await stub.get_runtime_info(common_pb2.Empty(), wait_for_ready=True, timeout=timeout)
-                cap = info.max_supported_concurrent_rollouts + 2   # keep the runtime's queue non-empty
+                # the runtime listens once its engine has started; get_runtime_info fails on the trajdata provider at 0bb4c4b
+                # ('TrajdataSceneProvider' has no 'scene_infos'), so the capacity comes from the overrides
+                cap = self.capacity(ov) + 2   # keep the runtime's queue non-empty
                 self.times["runtime_ready_s"] = time.time() - self.times["t_start"]
                 rt_log, rt_off, empty = self.sd / "native-logs" / f"{rt[0]}.log", 0, False
                 while True:
