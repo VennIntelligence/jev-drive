@@ -1,0 +1,81 @@
+{
+ "pool": "on1_JTX",
+ "rows": 211392,
+ "s_rows": 128798,
+ "tv_rows": 82594,
+ "k_s": 32,
+ "k_tv": 0,
+ "on_k": 32,
+ "hold_pct": 15,
+ "held_logs": [
+  "2021.05.25.14.16.10_veh-35",
+  "2021.09.16.15.12.03_veh-42",
+  "2021.09.16.19.27.01_veh-45",
+  "2021.09.29.14.44.26_veh-28"
+ ],
+ "s_logs": 28,
+ "held_rows": 28172,
+ "tv": "D10",
+ "no_wait": true,
+ "tv_natural": false,
+ "share": {
+  "S": 1.0,
+  "S_held": 0.0,
+  "c_braking": 0.0,
+  "c_cruising": 0.0,
+  "c_starting": 0.0,
+  "c_stopped": 0.0,
+  "c_turning": 0.0,
+  "launch": 0.0,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ },
+ "per_batch": {
+  "S": 32.0,
+  "S_held": 0.0,
+  "c_braking": 0.0,
+  "c_cruising": 0.0,
+  "c_starting": 0.0,
+  "c_stopped": 0.0,
+  "c_turning": 0.0,
+  "launch": 0.0,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ },
+ "rows_by_group": {
+  "S": 100626,
+  "S_held": 28172,
+  "c_braking": 8614,
+  "c_cruising": 31021,
+  "c_starting": 3130,
+  "c_stopped": 474,
+  "c_turning": 4882,
+  "launch": 876,
+  "stand_r": 21909,
+  "stand_u": 11688
+ },
+ "draws_per_row_10k": {
+  "S": 3.1800926201975632,
+  "S_held": 0.0,
+  "c_braking": 0.0,
+  "c_cruising": 0.0,
+  "c_starting": 0.0,
+  "c_stopped": 0.0,
+  "c_turning": 0.0,
+  "launch": 0.0,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ },
+ "s_parts": {
+  "pn0": 6216,
+  "pn1": 4749,
+  "pn2": 8781,
+  "pn3": 6800,
+  "pn4": 6251,
+  "pn5": 8989,
+  "rb0": 17429,
+  "rtb1": 17489,
+  "y": 17306,
+  "ys": 34788
+ }
+}

@@ -1,0 +1,79 @@
+{
+ "tag": "NTVX-L18-s0",
+ "ref": "NTV0-L18-s0",
+ "gates": {
+  "arena": false,
+  "held": false,
+  "pai_pair": false,
+  "pai_zeros": false
+ },
+ "nuplan": false,
+ "pai": false,
+ "arena": {
+  "windows": 2228,
+  "mean": 0.9396,
+  "rsg": 0.9438,
+  "diff": -0.0042,
+  "lo": -0.0112,
+  "hi": 0.0015
+ },
+ "arena_off": {
+  "windows": 2228,
+  "mean": 0.7669,
+  "rsg": 0.7857,
+  "diff": -0.0188,
+  "lo": -0.0347,
+  "hi": -0.0057
+ },
+ "held": {
+  "zeros": 45,
+  "mean": 0.8619237469944985,
+  "pair": {
+   "RSG-L18-s0": {
+    "n": 460,
+    "mean": -0.0036465637552506583,
+    "lo": -0.01851788094444873,
+    "hi": 0.016982580186033925,
+    "zeros": 45,
+    "zeros_ref": 34,
+    "scenes": 460
+   },
+   "NTV0-L18-s0": {
+    "n": 460,
+    "mean": -0.025645638186963613,
+    "lo": -0.044705955477585615,
+    "hi": -0.0036121108186585277,
+    "zeros": 45,
+    "zeros_ref": 32,
+    "scenes": 460
+   }
+  }
+ },
+ "pai_vs_ref": [
+  -0.0157,
+  -0.038,
+  0.0056
+ ],
+ "pai_vs_rsg": [
+  0.0389,
+  0.0047,
+  0.0743
+ ],
+ "pai_table": {
+  "NTVX-L18-s0+ACC+GAP": {
+   "scenes": 279,
+   "mean": 0.7278,
+   "zeros": 64
+  },
+  "NTV0-L18-s0+ACC+GAP": {
+   "scenes": 279,
+   "mean": 0.7435,
+   "zeros": 59
+  },
+  "RSG+ACC+GAP": {
+   "scenes": 279,
+   "mean": 0.6889,
+   "zeros": 76
+  }
+ }
+}
