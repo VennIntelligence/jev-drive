@@ -1,0 +1,21 @@
+{
+ "a": "FREEGG-old",
+ "b": "FREEGG-new",
+ "note": "JTN's command (JT00, arc 0, arc rows brake) 60 steps eager: code 5a20dc80 vs 440f5e1e without --on-free",
+ "scalars": 275,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5278753042221069,
+  0.5278753042221069
+ ],
+ "on_hash_60": [
+  "f23e7da637d0d4bb",
+  "f23e7da637d0d4bb"
+ ],
+ "want_hash": null,
+ "identical": true
+}

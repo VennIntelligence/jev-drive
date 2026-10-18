@@ -1,0 +1,123 @@
+{
+ "tag": "NR1FREE1K-L18-s0",
+ "ctl": "NTVN1K-L18-s0",
+ "wait": {
+  "NR1FREE1K-L18-s0": {
+   "other_lead": {
+    "n_a": 36,
+    "wait": 0.5833333333333334,
+    "n_b": 48,
+    "launched": 0.9375,
+    "delay_med": -0.2330000000000001,
+    "b_score": 0.9326181735843013
+   },
+   "red_queue": {
+    "n_a": 39,
+    "wait": 0.48717948717948717,
+    "n_b": 35,
+    "launched": 0.9428571428571428,
+    "delay_med": -0.03300000000000014,
+    "b_score": 0.8710933743759899
+   },
+   "a_zeros": 6,
+   "b_score": 0.928536997241272
+  },
+  "NTVN1K-L18-s0": {
+   "other_lead": {
+    "n_a": 36,
+    "wait": 0.8611111111111112,
+    "n_b": 48,
+    "launched": 0.7916666666666666,
+    "delay_med": 0.3420000000000001,
+    "b_score": 0.7637395913069449
+   },
+   "red_queue": {
+    "n_a": 39,
+    "wait": 0.8717948717948718,
+    "n_b": 35,
+    "launched": 0.7428571428571429,
+    "delay_med": 0.31699999999999995,
+    "b_score": 0.7008841416791296
+   },
+   "a_zeros": 3,
+   "b_score": 0.7314068005352168
+  }
+ },
+ "held": {
+  "NR1FREE1K-L18-s0": {
+   "scenes": 460,
+   "zeros": 47,
+   "mean": 0.8885196877811607,
+   "progress_rel": 0.885876462523971,
+   "at_fault": 12,
+   "offroad": 15,
+   "coll": {
+    "front": 12,
+    "lateral": 0,
+    "rear": 6
+   },
+   "creep": 7,
+   "no_launch": 0,
+   "lat_zeros": 28,
+   "pair": {
+    "NTVN1K-L18-s0": {
+     "n": 460,
+     "mean": 0.03784251159223442,
+     "lo": 0.019494158089549355,
+     "hi": 0.061460256535527454,
+     "zeros": 47,
+     "zeros_ref": 37,
+     "scenes": 460
+    },
+    "RSG-L18-s0": {
+     "n": 460,
+     "mean": 0.022949377031411644,
+     "lo": 0.0050534841512529785,
+     "hi": 0.05415027225392886,
+     "zeros": 47,
+     "zeros_ref": 34,
+     "scenes": 460
+    }
+   }
+  },
+  "NTVN1K-L18-s0": {
+   "scenes": 460,
+   "zeros": 37,
+   "mean": 0.8506771761889264,
+   "progress_rel": 0.7750614042679587,
+   "at_fault": 6,
+   "offroad": 13,
+   "coll": {
+    "front": 5,
+    "lateral": 1,
+    "rear": 35
+   },
+   "creep": 9,
+   "no_launch": 0,
+   "lat_zeros": 24,
+   "pair": {
+    "RSG-L18-s0": {
+     "n": 460,
+     "mean": -0.014893134560822776,
+     "lo": -0.03305866075192436,
+     "hi": 0.008842634442540572,
+     "zeros": 37,
+     "zeros_ref": 34,
+     "scenes": 460
+    }
+   }
+  }
+ },
+ "gates": {
+  "held_zeros": false,
+  "held_front": false,
+  "launched_other_lead": true,
+  "launched_red_queue": true,
+  "delay_other_lead": true,
+  "delay_red_queue": true,
+  "wait_other_lead": false,
+  "wait_red_queue": false
+ },
+ "effect": true,
+ "verdict": "fail: stop the line"
+}

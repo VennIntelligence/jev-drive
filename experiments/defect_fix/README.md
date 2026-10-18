@@ -35,6 +35,12 @@ No RTJA arm passes the dose rule: lead-class launches are late. The diagnosis tr
 (starting / braking rows oversampled). S-row hinges, the side term, noise and length do not cause it. Removing the rows (LDNTV1K, 1 000 steps) turns +0.57 / +0.77 s late
 into -0.33 / -0.28 s early and takes JTN's variant-a wait away with it (decision 363).
 
+**NR1FREE (10-19; [results/free/](results/free/README.md), supplement 15).** A one-sided longitudinal consequence term (plan below 0.8 x the
+human's 4 s arc with the way ahead free; no target speed). It passes the offline gate: 0 % false fires on human paths, 70 % on late-launch
+states, 0 / 251 JT front-collision windows. In the 1 000-step pilot it fixes the late launch (+0.33 -> -0.23 / -0.03 s) and raises the
+held mean +0.038 over its control. It fails the guards: the wait collapses (0.86 -> 0.58 / 0.49), held zeros 37 -> 47, front collisions
+5 -> 12. The line stops (decision 365).
+
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,

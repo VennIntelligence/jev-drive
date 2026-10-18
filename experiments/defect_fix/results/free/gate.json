@@ -1,0 +1,121 @@
+{
+ "frac": 0.8,
+ "s_min": 1.0,
+ "d0": 2.0,
+ "th": 0.5,
+ "ns": 8,
+ "human": {
+  "rows": 87012,
+  "fut|ref_min": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut|ref_fut": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut|ref_reg": {
+   "fires": 2355,
+   "rate": 0.02706523238174045
+  },
+  "fut_reg|ref_min": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut_reg|ref_fut": {
+   "fires": 2289,
+   "rate": 0.026306716314991034
+  },
+  "fut_reg|ref_reg": {
+   "fires": 0,
+   "rate": 0.0
+  }
+ },
+ "late": {
+  "JTN-L18-s0": {
+   "windows": 80,
+   "late_windows": 60,
+   "decisions": 86,
+   "fires": 55,
+   "rate": 0.6395348837209303,
+   "slow": 67,
+   "free_of_slow": 55,
+   "windows_with_fire": 30,
+   "plan4_mean": 8.674973487854004,
+   "ref4_mean": 15.134350776672363
+  },
+  "RTJA0-L18-s0": {
+   "windows": 80,
+   "late_windows": 68,
+   "decisions": 105,
+   "fires": 78,
+   "rate": 0.7428571428571429,
+   "slow": 84,
+   "free_of_slow": 78,
+   "windows_with_fire": 40,
+   "plan4_mean": 9.791706085205078,
+   "ref4_mean": 15.822328567504883
+  },
+  "pooled": {
+   "decisions": 191,
+   "fires": 133,
+   "rate": 0.6963350785340314
+  }
+ },
+ "front": {
+  "JT10-L18-s0@leash3": {
+   "af_front_windows": 51,
+   "no_event_time": 0,
+   "windows_with_decisions": 51,
+   "decisions": 335,
+   "windows_fired": 0,
+   "decisions_fired": 0,
+   "slow_decisions": 0
+  },
+  "JT10-L18-s0@off": {
+   "af_front_windows": 71,
+   "no_event_time": 0,
+   "windows_with_decisions": 71,
+   "decisions": 466,
+   "windows_fired": 0,
+   "decisions_fired": 0,
+   "slow_decisions": 0
+  },
+  "JT00-L18-s0@leash3": {
+   "af_front_windows": 52,
+   "no_event_time": 0,
+   "windows_with_decisions": 52,
+   "decisions": 332,
+   "windows_fired": 0,
+   "decisions_fired": 0,
+   "slow_decisions": 0
+  },
+  "JT00-L18-s0@off": {
+   "af_front_windows": 77,
+   "no_event_time": 0,
+   "windows_with_decisions": 77,
+   "decisions": 491,
+   "windows_fired": 0,
+   "decisions_fired": 0,
+   "slow_decisions": 0
+  },
+  "pooled": {
+   "windows": 251,
+   "windows_fired": 0,
+   "rate": 0.0,
+   "decisions": 1624,
+   "decisions_fired": 0
+  }
+ },
+ "align_residual_m": {
+  "n": 400,
+  "median": 0.19762509940206793,
+  "p90": 0.9432398805398483
+ },
+ "gate": {
+  "human": true,
+  "late": true,
+  "front": true,
+  "pass_": true
+ }
+}
