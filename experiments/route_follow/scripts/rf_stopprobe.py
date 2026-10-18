@@ -101,7 +101,7 @@ def fold_of(scene: str) -> int:
 
 
 # ---------------------------------------------------------------- AUC with a scene-cluster bootstrap (weighted Mann-Whitney)
-def _auc_w(s_sorted_pos, w, pos):
+def _auc_w(_, w, pos):
     """w (B, n) weights in score order; pos (n,) bool -> (B,) AUC (ties broken by the sort; scores are continuous)."""
     wn = np.where(pos, 0.0, w)
     below = np.cumsum(wn, 1) - wn
@@ -272,9 +272,37 @@ def cmd_probe(a):
         run.summary.update(rows=n, out=str(out / "probe.json"))
 
 
+def cmd_report(a):
+    """probe.json -> markdown tables (stdout): AUC by label x source x stratum x feature set, TOK minus KIN / LEAD, the 18 named scenes."""
+    J = json.load(open(O / ("probe_smoke" if a.smoke else "probe") / "probe.json"))
+    fks = ("KIN", "LEAD", "PLAN", "HID-RSG", "HID-JTN", "TOK-lin", "TOK")
+    f = lambda t: f"{t[0]:.3f} [{t[1]:.2f}, {t[2]:.2f}]"  # noqa: E731
+    L = [f"rows {J['rows']}", "", "| label | source | stratum | pos (scenes) / neg | " + " | ".join(fks) + " | TOK - KIN | TOK - LEAD |",
+         "|---|---|---|--:|" + "--:|" * (len(fks) + 2)]
+    for r in J["table"]:
+        if "auc" not in r:
+            L.append(f"| {r['label']} | {r['source']} | {r['stratum']} | {r['n_pos']} / {r['n_neg']} | " + " | ".join("-" for _ in fks) + " | - | - |")
+            continue
+        L.append(f"| {r['label']} | {r['source']} | {r['stratum']} | {r['n_pos']} ({r['n_pos_scenes']}) / {r['n_neg']} | "
+                 + " | ".join(f(r["auc"][k]) for k in fks) + f" | {r['TOK-KIN'][0]:+.3f} [{r['TOK-KIN'][1]:+.2f}, {r['TOK-KIN'][2]:+.2f}] | "
+                 f"{r['TOK-LEAD'][0]:+.3f} [{r['TOK-LEAD'][1]:+.2f}, {r['TOK-LEAD'][2]:+.2f}] |")
+    L += ["", "| scene | cue | rows before stop | " + " | ".join(f"{k}: first fire d m @ v (need) / hit in y5" for k in ("TOK", "LEAD", "KIN", "HID-RSG")) + " |",
+          "|---|---|--:|--:|--:|--:|--:|"]
+    for e in J["named"]:
+        c = []
+        for k in ("TOK", "LEAD", "KIN", "HID-RSG"):
+            x = e[k]
+            h = "-" if x["hit5"] is None else f"{x['hit5']:.2f}"
+            c.append(f"{x['d']:.0f} @ {x['v']:.1f} ({x['need']:.0f}){' ok' if x['ok'] else ' late'} / {h}" if x["d"] is not None else f"never / {h}")
+        L.append(f"| {e['scene'][7:15]} | {e['cue']} | {e['n']} | " + " | ".join(c) + " |")
+    L.append("")
+    L.append("ok counts: " + ", ".join(f"{k} {sum(e[k]['ok'] for e in J['named'])} / {len(J['named'])}" for k in ("TOK", "LEAD", "KIN", "HID-RSG")))
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("feats", "probe"))
+    ap.add_argument("cmd", choices=("feats", "probe", "report"))
     ap.add_argument("--smoke", action="store_true")
     a = ap.parse_args()
-    dict(feats=cmd_feats, probe=cmd_probe)[a.cmd](a)
+    dict(feats=cmd_feats, probe=cmd_probe, report=cmd_report)[a.cmd](a)
