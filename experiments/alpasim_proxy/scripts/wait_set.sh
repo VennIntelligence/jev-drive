@@ -44,7 +44,7 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
     --no-check --log-dir $W/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id $name" >> $W/jobs.txt; echo "$id"; }
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 3 --env CL_HIST_KEY=alpasim-read4)     # the public reads' declaration (rtb-wide, rf_allrows)
 R3=(--vram 24 --cpu 8 --ram 40 --timeout-h 3)                                       # third-party drivers (anchors: 8 cores, as ot2_loop)
-third() { [[ $1 == LTF-sample || $1 == DD-sample || $1 == G0014 ]]; }
+third() { [[ $1 == LTF-sample || $1 == DD-sample || $1 == G0014 || $1 == WAJEPA ]]; }
 
 one_run() {   # one_run <tag> <run dir> <scene list>: run.sh with the tag's driver; rc 137 when the platform killed a runtime worker
   local T=$1 R=$2 L=$3 drv rc=0
@@ -52,8 +52,8 @@ one_run() {   # one_run <tag> <run dir> <scene list>: run.sh with the tag's driv
   case $T in
     starter) bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$? ;;
     replay)  bash experiments/alpasim/scripts/run.sh "$R" starter --scene-list $L "${BASE[@]}" "${CACHE[@]}" "${REPLAY[@]}" || rc=$? ;;
-    LTF-sample|DD-sample|G0014)
-             drv=$(case $T in LTF-sample) echo ltf ;; DD-sample) echo dd ;; G0014) echo garage ;; esac)
+    LTF-sample|DD-sample|G0014|WAJEPA)
+             drv=$(case $T in LTF-sample) echo ltf ;; DD-sample) echo dd ;; G0014) echo garage ;; WAJEPA) echo wajepa ;; esac)
              bash experiments/alpasim/scripts/run.sh "$R" $drv --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$? ;;
     *)       if [[ ${WS_DRIVER:-sh30} == ap2 ]]; then
                env AP2_TAG=$T bash experiments/alpasim/scripts/run.sh "$R" ap2 --scene-list $L "${BASE[@]}" "${CACHE[@]}" || rc=$?
