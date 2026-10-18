@@ -30,6 +30,11 @@ JTN, the same pool and schedule with no arc term, ties RSG + stop3 (-0.001) and 
 JTB (arc term with the braking / stopping rows, W 0.0012) also ties under stop3 (-0.003) but fails the crash guard (48 zeros, front collisions 4 -> 14).
 Offline it overshoots the human's stops more (+3.5 -> +5.5 m). So the arc term caused JT's loss, and labelling the braking rows did not repair it.
 
+**RTJA and LAUNCH-DIAG (10-18/19; [results/rtja/dose.md](results/rtja/dose.md), [results/rtja/launch_diag.md](results/rtja/launch_diag.md), supplements 12-13).**
+No RTJA arm passes the dose rule: lead-class launches are late. The diagnosis traces the late launch to the 38 trainval imitation rows per batch of the JT00 draw
+(starting / braking rows oversampled). S-row hinges, the side term, noise and length do not cause it. Removing the rows (LDNTV1K, 1 000 steps) turns +0.57 / +0.77 s late
+into -0.33 / -0.28 s early and takes JTN's variant-a wait away with it (decision 363).
+
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,
