@@ -114,11 +114,15 @@ class Slot:
         shutil.rmtree(self.sd, ignore_errors=True)
         self.sd.mkdir(parents=True)
 
-    def claim(self):
+    def claim(self, busy: set):
+        """The first todo item whose scene is not running on this stack: two sessions of one scene on one MTGS renderer
+        corrupt each other (shape errors, changed scores; research/alpasim-read-throughput.md)."""
         for name in sorted(os.listdir(self.q / "todo")):
             try:
+                if (self.q / "todo" / name).read_text().split()[1] in busy:
+                    continue
                 os.rename(self.q / "todo" / name, self.cl / name)
-            except FileNotFoundError:
+            except (FileNotFoundError, IndexError):
                 continue
             i, s = (self.cl / name).read_text().split()
             return name, int(i), s
@@ -239,13 +243,13 @@ class Slot:
                 rt_log, rt_off, empty = self.sd / "native-logs" / f"{rt[0]}.log", 0, False
                 while True:
                     while not empty and len(tasks) < cap:
-                        c = self.claim()
+                        c = self.claim({x[1] for x in tasks.values()})
                         if c is None:
-                            empty = True
+                            empty = not os.listdir(self.q / "todo")   # else: only scenes running here are left; retry
                             break
                         name, i, s = c
                         self.start_driver(i)
-                        tasks[asyncio.create_task(self.run_item(stub, name, i, s))] = i
+                        tasks[asyncio.create_task(self.run_item(stub, name, i, s))] = (i, s)
                         for j in set(self.todo_reads(cap)) - set(self.drv):   # the next read's driver warms up early
                             self.start_driver(j)
                     if not tasks:
@@ -255,7 +259,7 @@ class Slot:
                         tasks.pop(t)
                         t.result()
                     if done:
-                        left = set(self.todo_reads()) | set(tasks.values())
+                        left = set(self.todo_reads()) | {x[0] for x in tasks.values()}
                         for j in [j for j in self.drv if j not in left]:
                             self.stop_driver(j)
                     dead = [n for n, p in self.procs.p.items() if p.poll() is not None and n not in self.stopped]
