@@ -35,7 +35,7 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
 csv() { local IFS=,; echo "$*"; }
 lat_flags() {  # lat_flags <w> <dir>: the amendment-1 pick (lat_pick_v2.env) at weight w on raster <dir>, kept on the host
   source $O/lat_pick_v2.env; local f=""
-  [[ $ONC == 1 ]] && f="$f --lat-onc $1"; [[ $SOFT == 1 ]] && f="$f --lat-soft $(python3 -c "print($1 / 5)")"; [[ $SIDE == 1 ]] && f="$f --lat-side $1"
+  [[ $ONC == 1 ]] && f="$f --lat-onc $1"; [[ $SOFT == 1 ]] && f="$f --lat-soft $(python3 -c "print($1 / 5)")"; [[ $SIDE == 1 ]] && f="$f --lat-side ${SIDEW:-$1}"
   echo "$f --lat-file $2 --lat-depth $DEPTH --lat-soft-depth $SDEPTH --lat-buf $BUF --lat-host"; }
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)        # rm-train's recorded RAM peak is < 7 GB (rasters: page cache)
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)
@@ -63,10 +63,10 @@ gatejob)   # gatejob <smoke id>: the smoke gates -> $J/gate.json (arc W, steps);
 arm)
   T=${2:?tag}; WF=${3:?wfile}; N=${4:?steps}; W=${5:?arc}; A=${6:-}
   [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"   # steps / arc may be `auto` (from $J/gate.json)
-  t=$(sub jt-train-$T ${A:+--after $A} "${FT[@]}" ${ARCROWS:+--env ARCROWS=$ARCROWS} ${GATE:+--env GATE=$GATE} --timeout-h 3 \
+  t=$(sub jt-train-$T ${A:+--after $A} "${FT[@]}" ${ARCROWS:+--env ARCROWS=$ARCROWS} ${SIDEW:+--env SIDEW=$SIDEW} ${WARM:+--env WARM=$WARM} ${GATE:+--env GATE=$GATE} --timeout-h 3 \
       -- bash $ME train $T on1_JT $LAT $WF $N $W) || exit 1
   ids=(); nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))")
-  HL=${HOLDS:-leash3 off}
+  HL=${HOLDS-leash3 off}                                                                      # HOLDS="" = held 460 only
   for V in $HL; do for c in $(seq 0 $((nch - 1))); do
     ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub jt-ar-$T-$V-c$c --after $t "${RD[@]}" -- bash $ME aread $T $V $c)) || exit 1; done; done
   for i in 0 1 2 3 4 5; do
@@ -80,9 +80,11 @@ train)
   [[ $N == auto ]] && N=$(python3 -c "import json; print(json.load(open('$G'))['steps'])")
   [[ $W == auto ]] && W=$(python3 -c "import json; print(json.load(open('$G'))['w_final'])")
   echo "$(date '+%F %T') train $T: steps $N, arc $W, arc rows ${ARCROWS:-move}" | tee -a $J/stages.txt
-  exec $TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
-    --on-wfile runs/defect_fix/w/$WF.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LD) --on-arc $W --diag --warmup 500 --lr-floor 0.1 \
-    ${ARCROWS:+--on-arc-rows $ARCROWS} --steps $N --seed 0 ;;
+  CMD=($TR $RT train --tag $T --init RB0-F-s0 --allow-init $RSG --on $P --on-k $((KS + KTV)) --on-mode mixed --on-lon-all --on-normal \
+    --on-wfile runs/defect_fix/w/$WF.npz --on-hold-pct 15 $NOISE $(lat_flags 0.5 $LD) --on-arc $W --diag --warmup ${WARM:-500} --lr-floor 0.1 \
+    ${ARCROWS:+--on-arc-rows $ARCROWS} --steps $N --seed 0)
+  [[ -z ${DRY:-} ]] || { echo "${CMD[*]}"; exit 0; }                                            # DRY=1: print the command only
+  exec "${CMD[@]}" ;;
 aread)   # aread <tag> <off|leash3> <chunk>: = arena_hold.sh one_run with SH30_TAG=<tag> (sh30hold driver; off = JEV_HOLD unset, = sh30)
   T=$2; V=$3; c=$4; D=$J/arena/$T@$V/c$c/run
   [[ -f $D/aggregate/results-summary.json ]] && { echo "$D already read"; exit 0; }
@@ -123,9 +125,14 @@ jtb)
   echo "$(date '+%F %T') jtb: identity $a $b bitcmp $e smoke $sm gate $g" | tee -a $J/stages.txt
   ARCROWS=brake GATE=$J/gate_jtb.json HOLDS="stop3 off" RES=jtb bash $ME arm JTB-L18-s0 JT00 9500 auto $g || exit 1
   ARCROWS=brake HOLDS="stop3 off" RES=jtb bash $ME arm JTN-L18-s0 JT00 9500 0 $e ;;
+side)      # supplement 11: side-buffer mechanism check, JTN at 1 000 steps with / without --lat-side; held 460 @18 only. side [after]
+  for T in JTNS1K-L18-s0 JTNN1K-L18-s0; do [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"; done
+  export ARCROWS=brake WARM=50 HOLDS="" RES=jtb
+  bash $ME arm JTNS1K-L18-s0 JT00 1000 0 ${2:-} || exit 1
+  SIDEW=0 bash $ME arm JTNN1K-L18-s0 JT00 1000 0 ${2:-} || exit 1 ;;
 sum)
-  T=$2; HL=(${3:-leash3 off}); R=experiments/defect_fix/results/${4:-jt}/$T; mkdir -p $R
-  $AP $PY arena --tags ${HL[@]/#/$T@} --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
+  T=$2; HL=(${3-leash3 off}); R=experiments/defect_fix/results/${4:-jt}/$T; mkdir -p $R
+  [[ ${#HL[@]} -eq 0 ]] || $AP $PY arena --tags ${HL[@]/#/$T@} --out $J/report/$T && cp $J/report/$T/arena.md $R/arena.md
   $TR $PY held --tags $T > $R/held.txt 2>&1; cat $R/held.txt ;;
 *) sed -n 2,16p $0; exit 2 ;;
 esac
