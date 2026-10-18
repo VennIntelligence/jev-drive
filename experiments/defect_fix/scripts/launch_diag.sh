@@ -13,7 +13,7 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
 case ${1:-} in
 infl)
   I=${2:?init}; N=${3:-300}
-  sub ld-infl${SFX:-}-$I --train --vram 56 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1 ${SFX:+--env SFX=$SFX} ${DE:+--env DE=$DE} -- bash $ME infl-body $I $N ;;
+  sub ld-infl${SFX:-}-$I --train --vram 80 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1 ${SFX:+--env SFX=$SFX} ${DE:+--env DE=$DE} -- bash $ME infl-body $I $N ;;
 infl-body)
   I=$2; N=$3; T=LDF${SFX:-}-$I
   CMD=$(DRY=1 ARCROWS=brake bash experiments/defect_fix/scripts/jt.sh train $T on1_JT $DATA_DIR/runs/defect_fix/lat/L18NR1v2 JT00 $N 0 | tail -1)
