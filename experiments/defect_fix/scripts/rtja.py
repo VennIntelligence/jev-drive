@@ -113,9 +113,10 @@ def wait_stats(tag):
     for c in LEAD:
         ra = [r for r in rows if r["variant"] == "a" and r["cls"] == c]
         rb = [r for r in rows if r["variant"] == "b" and r["cls"] == c]
-        dl = [float(r["delay_s"]) for r in rb if r["delay_s"] not in ("", None)]
+        val = lambda v: v not in ("", None, "nan")  # noqa: E731   (older tables write a missing value as "nan")
+        dl = [float(r["delay_s"]) for r in rb if val(r["delay_s"])]
         out[c] = dict(n_a=len(ra), wait=sum(r["wait_ok"] == "True" for r in ra) / max(1, len(ra)), n_b=len(rb),
-                      launched=len(dl) / max(1, len(rb)), delay_med=float(np.median(dl)) if dl else float("nan"),
+                      launched=sum(val(r["launch_s"]) for r in rb) / max(1, len(rb)), delay_med=float(np.median(dl)) if dl else float("nan"),
                       b_score=float(np.mean([float(r["score"]) for r in rb])) if rb else float("nan"))
     out["a_zeros"] = sum(r["variant"] == "a" and r["zero"] not in ("", "False") for r in rows)
     out["b_score"] = float(np.mean([float(r["score"]) for r in rows if r["variant"] == "b"]))
