@@ -28,8 +28,9 @@ V_STILL, V_FAST, TURN_DEG = 0.3, 20.0, 30.0       # human "stopped"; "high speed
 
 
 def _speed(T, P, t, h=0.1):
+    """Central-difference speed (m/s) at t (us) over h seconds."""
     x = lambda tt: np.array([np.interp(tt, T, P[:, 0]), np.interp(tt, T, P[:, 1])])   # noqa: E731
-    return float(np.hypot(*(x(t + h / 2) - x(t - h / 2))) / h)
+    return float(np.hypot(*(x(t + h * 5e5) - x(t - h * 5e5))) / h)
 
 
 def _job(job):
