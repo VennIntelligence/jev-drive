@@ -161,15 +161,15 @@ def cmd_report(a):
           "Held ego stays within `cap` of the handoff point xy0. Fix = the human is still at the end and its rest point is within cap + 4 m "
           "of xy0 (the ego can end inside the 4 m disc) -> score 1 if GT < 5 m else min(1, cap / (0.8 GT)) as an upper bound. Launch = the "
           "human later goes farther than cap from xy0 -> held score <= min(1, cap / (0.8 GT)) (progress bound, collisions not modelled).", "",
-          "| rule | latched | human still to end | fix candidates (score 0 now) | gain | launches | of which scored > 0 now | cost | net / 281 |",
+          "| rule | latched | human still to end | fix candidates (score 0 now) | gain (all positive deltas) | launches | of which scored > 0 now | cost | net / 281 |",
           "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for name, msk in (("leash3", F.latch_leash), ("stop3 extra", F.latch_stop), ("stop3 total", F.latch_leash | F.latch_stop)):
         g = F[msk]
         held = np.where(g.gt_len < 5, 1.0, np.minimum(1.0, g.cap / (0.8 * g.gt_len)))
         fixable = g.h_still_end & (g.h_rest_from_xy0 <= g.cap + CORR)
         launch = g.h_disp_max > g.cap
-        gain = float(np.clip(held - g.score, 0, None)[fixable & (g.score == 0)].sum())
-        cost = float(np.clip(g.score - held, 0, None)[launch].sum())
+        dlt = (held - g.score)[fixable | launch]                    # signed: a held launch that scores 0 now gains its small progress
+        gain, cost = float(dlt[dlt > 0].sum()), float(-dlt[dlt < 0].sum())
         L.append(f"| {name} | {len(g)} | {int(g.h_still_end.sum())} | {int((fixable & (g.score == 0)).sum())} | {gain:+.2f} | {int(launch.sum())} | "
                  f"{int((launch & (g.score > 0)).sum())} | {-cost:.2f} | {(gain - cost) / n:+.4f} |")
     Path(a.out).write_text("\n".join(L) + "\n")
