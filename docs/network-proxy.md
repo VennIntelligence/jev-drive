@@ -125,3 +125,6 @@ before replacing `~/data/clash/config.yaml`.
 Fallback that needs no proxy: direct `hf-mirror.com` (huggingface.co direct is unreachable). 90 s sustained, MB/s total over N
 range streams of one archive: 2 -> 3.7, 4 -> 7.2, 8 -> 11.8, 16 -> 10.8 (the 16 test was probably capped by the file size).
 Relaunched as `ROUTE=direct HF_ENDPOINT=https://hf-mirror.com RANGES=8 JOBS=5`: 8 MB/s into the archive dir, box 9 MB/s.
+15:00 CST re-tune of the direct hf-mirror.com run (box rx counter, 90 s after ~2 min settling): the 40-stream run (JOBS=5 RANGES=8) gave ~5 MB/s;
+JOBS=2 RANGES=4 (8 streams) 0.7 MB/s (mirror also slow at that moment); JOBS=4 RANGES=4 (16 streams) 4.1 MB/s, kept. The ranged_get
+chunk layout (`<part>.d/<offset>`, 32 MB) does not depend on RANGES, so changing it resumes cleanly. At ~4 MB/s the ~430 GB left is ~30 h; the mirror rate varies over the day.
