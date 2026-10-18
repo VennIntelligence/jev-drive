@@ -61,3 +61,5 @@ still in static windows, and stop3 already serves that at deploy.
 
 One seed per arm. The JT reference used leash3, while JTB / JTN were read under stop3 (the deployed rule), so the like-for-like JT comparison is
 the no-hold read.
+
+- [turns24.md](turns24.md): the 24 held turns (rf_follow) for JTN / JTB / JT00 / JT10 vs RSG-L18-s0, turn shape, equal-arc and G-rely.
