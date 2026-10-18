@@ -1,0 +1,370 @@
+{
+ "n": 460,
+ "ctl": "JTNS1K-L18-s0",
+ "arm": "JTNN1K-L18-s0",
+ "per_arm": {
+  "JTNS1K-L18-s0": {
+   "zeros": 42.0,
+   "offroad_zeros": 14.0,
+   "lateral_zeros": 27.0,
+   "af_front": 7.0,
+   "af_side": 0.0,
+   "af_side_zeros": 0.0,
+   "score": 0.8268194707488237,
+   "progress_rel": 0.7665138457538203
+  },
+  "JTNN1K-L18-s0": {
+   "zeros": 36.0,
+   "offroad_zeros": 11.0,
+   "lateral_zeros": 23.0,
+   "af_front": 5.0,
+   "af_side": 0.0,
+   "af_side_zeros": 0.0,
+   "score": 0.8359091297989145,
+   "progress_rel": 0.7628226668650736
+  }
+ },
+ "paired": {
+  "zeros": {
+   "diff": -6.0,
+   "lo": -9.583333333333332,
+   "hi": -1.3813813813813813
+  },
+  "offroad_zeros": {
+   "diff": -3.0,
+   "lo": -5.993555098599409,
+   "hi": 0.0
+  },
+  "lateral_zeros": {
+   "diff": -4.0,
+   "lo": -6.5506329113924044,
+   "hi": 0.0
+  },
+  "af_front": {
+   "diff": -2.0,
+   "lo": -4.509988447097332,
+   "hi": 0.0
+  },
+  "af_side": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0
+  },
+  "af_side_zeros": {
+   "diff": 0.0,
+   "lo": 0.0,
+   "hi": 0.0
+  },
+  "score": {
+   "diff": 0.009089659050090937,
+   "lo": -5.5891240493564534e-05,
+   "hi": 0.015628126617036508
+  },
+  "progress_rel": {
+   "diff": -0.0036911788887465944,
+   "lo": -0.00637748872876982,
+   "hi": -0.0015223774043408818
+  }
+ },
+ "flips": [
+  {
+   "scene": "2021.09.29.15.23.04_veh-28_00601_00802-aec02ec2aec85c06",
+   "direction": "removed (offroad zero in ctl only)",
+   "ctl": "0.00 offroad",
+   "arm": "0.77 nonzero"
+  },
+  {
+   "scene": "2021.10.06.08.16.17_veh-52_01949_02501-20728d3e677b593d",
+   "direction": "removed (offroad zero in ctl only)",
+   "ctl": "0.00 offroad",
+   "arm": "0.47 nonzero"
+  },
+  {
+   "scene": "2021.10.06.08.16.17_veh-52_01949_02501-e072351fbbfd5765",
+   "direction": "removed (offroad zero in ctl only)",
+   "ctl": "0.00 offroad",
+   "arm": "1.00 nonzero"
+  }
+ ],
+ "offroad_events": {
+  "JTNS1K-L18-s0": {
+   "2021.06.03.17.06.58_veh-35_02943_03220-f1b802f6e9a559af": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": 14.3,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": 14.3
+   },
+   "2021.09.09.18.04.06_veh-40_00743_01071-152679f2edce5c73": {
+    "event_s": 5.5,
+    "from_start": false,
+    "depart_lat_m": -2.7,
+    "opp_ev_m": 7.5,
+    "opp_ev_lat_m": 6.7,
+    "any_ev_m": 4.5,
+    "opp_ev1s_m": 6.7,
+    "opp_ev1s_lat_m": 6.7,
+    "any_ev1s_m": 4.2
+   },
+   "2021.09.16.19.49.00_veh-42_00990_01609-c687799dac8d5aa2": {
+    "event_s": 7.5,
+    "from_start": false,
+    "depart_lat_m": 4.73,
+    "opp_ev_m": 17.2,
+    "opp_ev_lat_m": 17.2,
+    "any_ev_m": 17.2,
+    "opp_ev1s_m": 17.2,
+    "opp_ev1s_lat_m": 17.2,
+    "any_ev1s_m": 17.2
+   },
+   "2021.09.29.15.23.04_veh-28_00601_00802-aec02ec2aec85c06": {
+    "event_s": 6.0,
+    "from_start": false,
+    "depart_lat_m": -3.51,
+    "opp_ev_m": 12.5,
+    "opp_ev_lat_m": 10.0,
+    "any_ev_m": 7.7,
+    "opp_ev1s_m": 9.7,
+    "opp_ev1s_lat_m": 2.0,
+    "any_ev1s_m": 7.7
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-be6f90f06bc35be3": {
+    "event_s": 4.0,
+    "from_start": false,
+    "depart_lat_m": 0.21,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-ddc1271ea57154bc": {
+    "event_s": 7.0,
+    "from_start": false,
+    "depart_lat_m": -0.84,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-f9ed38d9ddfa531e": {
+    "event_s": 2.5,
+    "from_start": false,
+    "depart_lat_m": -1.31,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00922_01296-3502b30911d75ed8": {
+    "event_s": 5.0,
+    "from_start": false,
+    "depart_lat_m": 1.81,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00922_01296-da6d3b6810995466": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_01430_01579-64a7186ab49b5cdc": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-20728d3e677b593d": {
+    "event_s": 8.5,
+    "from_start": false,
+    "depart_lat_m": -2.42,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": 7.2,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": 5.2
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-3b4031def0f45d96": {
+    "event_s": 5.0,
+    "from_start": false,
+    "depart_lat_m": 0.84,
+    "opp_ev_m": 22.1,
+    "opp_ev_lat_m": 21.3,
+    "any_ev_m": 15.6,
+    "opp_ev1s_m": 21.2,
+    "opp_ev1s_lat_m": 19.4,
+    "any_ev1s_m": 14.6
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-9a3778686fd058d2": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-e072351fbbfd5765": {
+    "event_s": 7.0,
+    "from_start": false,
+    "depart_lat_m": 0.84,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   }
+  },
+  "JTNN1K-L18-s0": {
+   "2021.06.03.17.06.58_veh-35_02943_03220-f1b802f6e9a559af": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": 14.3,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": 14.3
+   },
+   "2021.09.09.18.04.06_veh-40_00743_01071-152679f2edce5c73": {
+    "event_s": 5.5,
+    "from_start": false,
+    "depart_lat_m": -2.69,
+    "opp_ev_m": 7.4,
+    "opp_ev_lat_m": 6.7,
+    "any_ev_m": 4.5,
+    "opp_ev1s_m": 6.7,
+    "opp_ev1s_lat_m": 6.7,
+    "any_ev1s_m": 4.2
+   },
+   "2021.09.16.19.49.00_veh-42_00990_01609-c687799dac8d5aa2": {
+    "event_s": 7.0,
+    "from_start": false,
+    "depart_lat_m": 2.08,
+    "opp_ev_m": 17.6,
+    "opp_ev_lat_m": 16.8,
+    "any_ev_m": 17.6,
+    "opp_ev1s_m": 17.6,
+    "opp_ev1s_lat_m": 16.8,
+    "any_ev1s_m": 17.6
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-be6f90f06bc35be3": {
+    "event_s": 4.0,
+    "from_start": false,
+    "depart_lat_m": 0.2,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-ddc1271ea57154bc": {
+    "event_s": 7.5,
+    "from_start": false,
+    "depart_lat_m": -0.99,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00181_00574-f9ed38d9ddfa531e": {
+    "event_s": 2.5,
+    "from_start": false,
+    "depart_lat_m": -1.43,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00922_01296-3502b30911d75ed8": {
+    "event_s": 5.0,
+    "from_start": false,
+    "depart_lat_m": 2.01,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_00922_01296-da6d3b6810995466": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_01430_01579-64a7186ab49b5cdc": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-3b4031def0f45d96": {
+    "event_s": 5.0,
+    "from_start": false,
+    "depart_lat_m": 0.91,
+    "opp_ev_m": 22.1,
+    "opp_ev_lat_m": 21.4,
+    "any_ev_m": 15.6,
+    "opp_ev1s_m": 21.2,
+    "opp_ev1s_lat_m": 19.4,
+    "any_ev1s_m": 14.5
+   },
+   "2021.10.06.08.16.17_veh-52_01949_02501-9a3778686fd058d2": {
+    "event_s": 0.0,
+    "from_start": true,
+    "depart_lat_m": 0.0,
+    "opp_ev_m": null,
+    "opp_ev_lat_m": null,
+    "any_ev_m": null,
+    "opp_ev1s_m": null,
+    "opp_ev1s_lat_m": null,
+    "any_ev1s_m": null
+   }
+  }
+ }
+}
