@@ -19,6 +19,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [practice_nuplan](practice_nuplan/README.md): live; arena train windows away from public starts, rolled by JTN, merged into on1_JT; 1 000-step pilot gate [dpending]
 - [practice_pai](practice_pai/README.md): live; pilot on practice-pai@v1 (= train160) queued; closed-loop gate on 4 PAI 281 chunks [d(pending)]
 - [self_iter](self_iter/README.md): live; round 1 pilot STOP: trainval rows teach standstill holds, launches lag [d338]
+- [self_model](self_model/README.md): live; SELF-FWD: (a) fails 1.14 m vs 0.2; (b) passes AUC +0.080 (contact-led) [d364]
 - [wait_cap](wait_cap/README.md): live; shipped Cinque waits 0.978, P2-F onward 0.012 [d326]; WAIT-TRAIN pilot STOP, the dev-ADE rise is a real closed-loop cost, no closed-loop waiting [d335]; P0 waits in closed loop, J holds a stop but cannot make one on arrival [d336]; RTB1 retain base keeps the arrival stop at a cost [d337], V2 (rolling-arrival rows only) fixes the public cost, the left cost is lateral [d339]
 - [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): concluded; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 stopped by the user before any arm [d283]
 - [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
