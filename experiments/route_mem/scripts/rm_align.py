@@ -33,6 +33,10 @@ plausibly cause a zero? CPU only; stored reads and stored training features are 
           the merge_a polyline; the cap first proposed), each slot block through lead_block; the NAVSIM rows' a_ columns from `nav`
           -> RESULTS_DIR/anchor.json + anchor.md (results/anchor_check.md), RESULTS_DIR/<set>.anchor.parquet; --a-trim X: rmem.A_TRIM = X
           for the comparison of the trim band (analysis only; nav takes it too)
+  memlead (any machine, pandas)  rm_align.py memlead --dir DIR [--ref-dir DIR2 ..] --reads LABEL=SET:REFSET[:NOMEMSET] .. --res RESULTS_DIR
+          (experiments/defect_fix/results/rtja/memlead.md) per rollout of SET's extract: near-slot lead, fold and the plan's / memory's side
+          (signed toward the route's turn) over the 3 s before the failure; every zero of --log window by window, with REFSET's decisions over
+          the same 3 s and NOMEMSET's score -> RESULTS_DIR/memlead.json + memlead_tables.md
 
 Definitions (fixed before any output was read):
   route    R = the generator's whole local polyline after the rollout's last decision (every extension it triggered), stations S; heading h(s) =
@@ -1113,6 +1117,141 @@ def fig_example(d, png, example):
     print("figure ->", png)
 
 
+# ---------------------------------------------------------------- memlead (any machine with pandas: extract outputs of other reads)
+def _win(D, t_lo, t_hi, turn_sign):
+    """Decision rows D of one rollout in [t_lo, t_hi] -> memory lead / fold / plan side over that window (results/rtja/memlead.md): the max
+    near-slot lead, the max fold, and at the decision with the max lead (else the last one) the memory's lateral from the route (pull) and the
+    plan's (plan10), both also signed toward the route's turn (+ = the inside of the loop / turn); lead1 = the max first-slot lead (any
+    distance), near = the most valid near slots at one decision (0: the car is still short of the memory)."""
+    W = D[(D.t0 >= t_lo) & (D.t0 <= t_hi)]
+    out = dict(n=len(W), lead=np.nan, lead1=np.nan, near=0, fold=np.nan, pull=np.nan, plan10=np.nan, pull_in=np.nan, plan_in=np.nan, plan_tow=np.nan)
+    if not len(W):
+        return out
+    l1 = W.lead_first.values.astype(float)
+    out.update(lead1=float(np.nanmax(l1)) if np.isfinite(l1).any() else np.nan, near=int(W.near_n.max()))
+    ln = W.lead_near.values.astype(float)
+    j = int(np.nanargmax(ln)) if np.isfinite(ln).any() else len(W) - 1
+    r = W.iloc[j]
+    out.update(lead=float(np.nanmax(ln)) if np.isfinite(ln).any() else np.nan, fold=float(W.fold.max()), pull=float(r.pull), plan10=float(r.plan10),
+               pull_in=float(r.pull) * turn_sign, plan_in=float(r.plan10) * turn_sign,
+               plan_tow=float(r.plan10) * float(np.sign(r.pull)) if np.isfinite(r.pull) else np.nan)
+    return out
+
+
+PULL_M = 1.0                                             # memlead: the memory's points at least this far inside the route to count as a pull
+
+
+def _far(g, D, t_lo, t_hi, turn_sign, n=3):
+    """The geo dump g of one rollout (extract keeps zero / U-turn / early rollouts) -> over the decisions of D in [t_lo, t_hi]: at the one
+    with the largest first-slot lead, the lateral (left +) of its first n valid slots from the route at their labels, signed toward the turn
+    (far_in), their mean label (far_o) and the plan's lateral at +10 m signed toward them (far_tow)."""
+    out = dict(far_in=np.nan, far_o=np.nan, far_tow=np.nan)
+    if g is None:
+        return out
+    route = Route(g["route"])
+    W = D[(D.t0 >= t_lo) & (D.t0 <= t_hi) & np.isfinite(D.lead_first.values.astype(float))]
+    if not len(W):
+        return out
+    r = W.loc[W.lead_first.astype(float).idxmax()]
+    gd = next((x for x in g["dec"] if x["k"] == r.k), None)
+    if gd is None or gd["served"] is None:
+        return out
+    o, P = gd["served"]["o"][:n], gd["served"]["P"][:n].astype(float)
+    q, ht = route.xy(gd["s_e"] + o), route.hdg(gd["s_e"] + o)
+    dl = float((-(P[:, 0] - q[:, 0]) * np.sin(ht) + (P[:, 1] - q[:, 1]) * np.cos(ht)).mean())
+    return dict(far_in=dl * turn_sign, far_o=float(o.mean()), far_tow=float(r.plan10) * float(np.sign(dl)))
+
+
+def cmd_memlead(a):
+    """Memory lead / fold before the failures of one model's stored reads, the loop log's windows in detail, a reference model on the same
+    windows (its decisions over the same 3 s): --reads LABEL=SET:REFSET[:NOMEMSET] .. with SET = DIR/<SET>.{dec,roll}.parquet (extract), REFSET
+    / NOMEMSET looked up in --dir then --ref-dir -> RES/memlead.json + memlead_tables.md."""
+    import pandas as pd
+
+    def load(s, geo=False):
+        for d in (a.dir, *a.ref_dir):
+            if (Path(d) / f"{s}.roll.parquet").exists():
+                out = pd.read_parquet(Path(d) / f"{s}.dec.parquet"), pd.read_parquet(Path(d) / f"{s}.roll.parquet")
+                return (*out, pickle.load(open(Path(d) / f"{s}.geo.pkl", "rb")) if geo and (Path(d) / f"{s}.geo.pkl").exists() else {})
+        raise FileNotFoundError(s)
+
+    def f(x, p=1):
+        return "-" if x is None or not np.isfinite(x) else f"{x:+.{p}f}"
+    res, L = {}, []
+    for spec in a.reads:
+        label, sets = spec.split("=", 1)
+        s_main, s_ref, *s_nm = sets.split(":")
+        D, R, Gg = load(s_main, True)
+        Dr, Rr, Ggr = load(s_ref, True)
+        Rn = load(s_nm[0])[1] if s_nm else None
+        rid_of = Rr.set_index("scene").rid
+        R = R[R.err.isna()] if "err" in R else R
+        G, Gr = dict(tuple(D.groupby("rid"))), dict(tuple(Dr.groupby("scene")))
+        ref_by = Rr.set_index("scene")
+        nm_by = Rn.set_index("scene") if Rn is not None else None
+        rows = []
+        for _, ro in R.iterrows():
+            d = G.get(ro.rid)
+            if d is None:
+                continue
+            d = d.sort_values("t0")
+            ts = float(np.sign(ro.turn_net)) or 1.0
+            zero = bool(ro.zero) and np.isfinite(ro.t_f)
+            t_hi = ro.t_f if zero else d.t0.max()
+            t_lo = t_hi - BEFORE_S * 1e6
+            w = _win(d, t_lo, t_hi, ts) | _far(Gg.get(ro.rid), d, t_lo, t_hi, ts)
+            pre = d[d.t0 <= t_hi]
+            row = dict(scene=ro.scene, win=ro.scene[27:47], park=ro.scene.startswith(a.log), score=float(ro.score), zero=zero, ztype=ro.ztype,
+                       geo=ro.geo, turn_net=float(ro.turn_net), t_f=float((ro.t_f - d.t0.min()) / 1e6) if zero else np.nan,
+                       lat_f_in=float(ro.lat_f) * ts if zero else np.nan, lead_any=float(np.nanmax(np.r_[pre.lead_near.values.astype(float), -np.inf])),
+                       fold_any=float(pre.fold.max()), **{f"w_{k}": v for k, v in w.items()})
+            row["inward"] = bool(zero and w["lead"] >= AHEAD_M and w["pull_in"] >= PULL_M and w["plan_in"] > 0 and row["lat_f_in"] > 0)
+            row["far_inward"] = bool(zero and w["lead1"] >= AHEAD_M and w["far_in"] >= PULL_M and w["plan_in"] > 0 and row["lat_f_in"] > 0)
+            if ro.scene in ref_by.index:
+                rr = ref_by.loc[ro.scene]
+                dr = Gr.get(ro.scene)
+                wr = (_win(dr.sort_values("t0"), t_lo, t_hi, ts) | _far(Ggr.get(rid_of[ro.scene]), dr, t_lo, t_hi, ts)) if dr is not None else {}
+                row.update(ref_score=float(rr.score), ref_ztype=rr.ztype, **{f"r_{k}": v for k, v in wr.items()})
+            if nm_by is not None and ro.scene in nm_by.index:
+                row.update(nomem_score=float(nm_by.loc[ro.scene].score), nomem_ztype=nm_by.loc[ro.scene].ztype)
+            rows.append(row)
+        X = pd.DataFrame(rows)
+        res[label] = X.replace({np.nan: None}).to_dict("records")
+        # per-window table: every zero of the loop log
+        P = X[X.park & X.zero].sort_values("win")
+        L += [f"", f"### {label}: zeros in {a.log} ({len(P)} of {int(X.park.sum())} windows; reference {s_ref})", "",
+              "| window | zero | unique | t_f s | near slots | near lead max m | first-slot lead max m | fold max m | near pull in m | far slots at m | far pull in m | plan10 in m | fail side in m | inward | ref: score | ref first-slot lead | ref far pull in | ref plan10 in | memory off |",
+              "|:--|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|--:|--:|--:|--:|:--|"]
+        for _, r in P.iterrows():
+            uq = "yes" if r.get("ref_score", np.nan) > 0 else "no"
+            L.append(f"| {r.win} | {r.ztype} | {uq} | {r.t_f:.1f} | {r.w_near} | {f(r.w_lead)} | {f(r.w_lead1)} | {f(r.w_fold)} | {f(r.w_pull_in)} | "
+                     f"{'-' if not np.isfinite(r.w_far_o) else format(r.w_far_o, '.0f')} | {f(r.w_far_in)} | {f(r.w_plan_in, 2)} | "
+                     f"{f(r.lat_f_in, 2)} | {'YES' if r.inward else 'no'} | {r.get('ref_score', np.nan):.2f} | {f(r.get('r_lead1', np.nan))} | {f(r.get('r_far_in', np.nan))} | "
+                     f"{f(r.get('r_plan_in', np.nan), 2)} | {'-' if not np.isfinite(r.get('nomem_score', np.nan)) else format(r['nomem_score'], '.2f') + ' ' + (r.get('nomem_ztype') or '')} |")
+        # summary: zeros vs non-zeros, the loop log and the rest
+        L += ["", f"Summary {label} (zeros: the 3 s before the failure; non-zeros: the last 3 s; 'lead >= 10' / 'fold > 1' over the window):", "",
+              "| subset | rollouts | no near slots | near lead >= 10 m | first-slot lead >= 10 m | fold > 1 m | near lead median / p90 / max m | inward (near lead >= 10, near slots >= 1 m inside, plan + failure inside) | far-inward (first-slot lead >= 10, far slots >= 1 m inside, plan + failure inside) | ref same window: near lead >= 10 m |",
+              "|:--|--:|--:|--:|--:|--:|:--|--:|--:|--:|"]
+        for name, m in (("zeros, loop log", X.park & X.zero), ("zeros, unique (ref > 0), loop log", X.park & X.zero & (X.get("ref_score", 0) > 0)),
+                        ("zeros, other logs", ~X.park & X.zero), ("non-zeros, loop log", X.park & ~X.zero), ("non-zeros, other logs", ~X.park & ~X.zero)):
+            Y = X[m]
+            if not len(Y):
+                continue
+            lv = Y.w_lead.values.astype(float)
+            rl = Y["r_lead"].values.astype(float) if "r_lead" in Y else np.full(len(Y), np.nan)
+            L.append(f"| {name} | {len(Y)} | {int((Y.w_near == 0).sum())} | {int((lv >= AHEAD_M).sum())} | {int((Y.w_lead1.astype(float) >= AHEAD_M).sum())} | "
+                     f"{int((Y.w_fold > 1.0).sum())} | {q(lv, .5):.1f} / {q(lv, .9):.1f} / {np.nanmax(np.r_[lv, -np.inf]):.1f} | {int(Y.inward.sum())} | {int(Y.far_inward.sum())} | "
+                     f"{int((rl >= AHEAD_M).sum())} |")
+        zr = X[X.zero]
+        a_ = (X.lead_any >= AHEAD_M).values
+        L.append(f"\nZero rate, rollouts with any near-slot lead >= 10 m before the outcome vs none: {X.zero[a_].mean():.3f} ({int(a_.sum())}) vs "
+                 f"{X.zero[~a_].mean():.3f} ({int((~a_).sum())}); zeros {len(zr)}.")
+    Path(a.res).mkdir(parents=True, exist_ok=True)
+    (Path(a.res) / "memlead.json").write_text(json.dumps(res, indent=0, default=float))
+    (Path(a.res) / "memlead_tables.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -1149,8 +1288,15 @@ def main():
     r.add_argument("--res", required=True)
     r.add_argument("--fig", default="")
     r.add_argument("--example", default="v2_pub:42c7526f")
+    ml = sp.add_parser("memlead")
+    ml.add_argument("--dir", required=True)
+    ml.add_argument("--ref-dir", nargs="*", default=[])
+    ml.add_argument("--reads", nargs="+", required=True, help="LABEL=SET:REFSET[:NOMEMSET]")
+    ml.add_argument("--log", default="2021.10.06.08.16.17_veh-52", help="the log shown window by window")
+    ml.add_argument("--res", required=True)
     a = p.parse_args()
-    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report, anchor=cmd_anchor, navdump=cmd_navdump)[a.cmd](a)
+    dict(extract=cmd_extract, nav=cmd_nav, msgs=cmd_msgs, replay=cmd_replay, report=cmd_report, anchor=cmd_anchor, navdump=cmd_navdump,
+         memlead=cmd_memlead)[a.cmd](a)
 
 
 if __name__ == "__main__":
