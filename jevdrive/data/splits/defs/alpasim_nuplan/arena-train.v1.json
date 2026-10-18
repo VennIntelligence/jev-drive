@@ -1,0 +1,15 @@
+{
+ "dataset": "alpasim_nuplan",
+ "name": "arena-train",
+ "version": 1,
+ "unit": "scene",
+ "n": 5495,
+ "sha256": "06b52e5ce917686235ab3fb99c26f0e18625d936dce95f23d6a78d2ca2c99ce5",
+ "origin": "experiments/practice_nuplan/scripts/pn.py select: every train-split window of the arena set (runs/alpasim_proxy/arena/set/set.csv.gz, 3 s grid, 5.5 s windows; experiments/alpasim_proxy arena.py pick)",
+ "used_by": [
+  "experiments/practice_nuplan"
+ ],
+ "status": "frozen",
+ "notes": "windows of the 28 onpol-train logs only (asserted log-disjoint from onpol-held); ids <segment>-<20 Hz token of w0 + 30>",
+ "members_file": "arena-train.v1.txt.gz"
+}
