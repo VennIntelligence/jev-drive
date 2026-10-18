@@ -15,7 +15,7 @@ csv() { local IFS=,; echo "$*"; }
 cmd() { DRY=1 ARCROWS=brake bash $JT train $1 on1_JT $LAT JT00 9500 0; }
 case ${1:-} in
 check)
-  diff <(cmd $T0 | tr ' ' '\n') <(cmd $T | tr ' ' '\n') ; echo "(expected: --tag and --seed lines only)" ;;
+  diff <(cmd $T0 | tr ' ' '\n') <(cmd $T | sed 's/ --seed 0$/ --seed 1/' | tr ' ' '\n') ; echo "(expected: --tag and --seed lines only)" ;;
 train)
   C=$(cmd $T | sed 's/ --seed 0$/ --seed 1/'); [[ $C == *" --seed 1" && $C == *"--tag $T "* ]] || die "bad command: $C"
   echo "$(date '+%F %T') train $T: $C" | tee -a $J/stages.txt
