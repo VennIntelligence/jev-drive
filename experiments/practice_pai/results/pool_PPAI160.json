@@ -1,0 +1,16 @@
+{
+ "name": "PPAI160",
+ "rows": 25634,
+ "scenes": 160,
+ "rows_cached": 31772,
+ "route_in_ok": 1.0,
+ "rows_without_messages": 0,
+ "served_compared": 25634,
+ "served_max_abs_diff": 0.0578460693359375,
+ "c20": 0.7899664508075213,
+ "route_ok": 1.0,
+ "route_pts_med": 51.0,
+ "route_lat0_med": 0.5092430114746094,
+ "road_rows": 0,
+ "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PPAI160"
+}

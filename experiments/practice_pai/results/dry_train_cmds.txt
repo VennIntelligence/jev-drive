@@ -1,0 +1,10 @@
+5c5
+< PPAIP-L18-s0
+---
+> PPAIC-L18-s0
+35c35
+< pool=p:W
+---
+> pool=p:0.000000
+pilot:   /root/autodl-tmp/ujs/envs/op-train/bin/python experiments/route_mem/scripts/rm_train.py train --tag PPAIP-L18-s0 --init RSG-L18-s0 --allow-init --warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on-k 13 --on-mode self --on on1_PPM160 --on-weight pool=p:W --steps 1000 --seed 0
+control: /root/autodl-tmp/ujs/envs/op-train/bin/python experiments/route_mem/scripts/rm_train.py train --tag PPAIC-L18-s0 --init RSG-L18-s0 --allow-init --warmup 1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on-k 13 --on-mode self --on on1_PPM160 --on-weight pool=p:0.000000 --steps 1000 --seed 0

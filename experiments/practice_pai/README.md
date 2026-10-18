@@ -1,15 +1,15 @@
 # practice_pai: PAI practice pool, small-pool pilot
 
-status: live
-decisions: (pending)
-index: pilot on practice-pai@v1 (= train160) queued; closed-loop gate on 4 PAI 281 chunks
+status: concluded
+decisions: 367
+index: gate FAIL: pilot - control -0.010 [-0.053, +0.033], zeros 45 vs 44
 
 **Question.** Do S rows (consequence hinges only) built from RSG-L18-s0's own PAI rollouts under the PAI probe serve, mixed into RSG's pool for a
 1 000-step continuation, leave the PAI 281 closed loop no worse than the same continuation without them (practice plan item 3)?
 
-**Conclusion.** Pending: the chain is queued (prereg's gate: zeros <= control + 2 and paired mean >= 0 on chunks c000 / c002 / c004 / c006).
+**Conclusion.** Gate failed (decision 367): on PAI 281 chunks c000 / c002 / c004 / c006 (144 scenes) the pilot (RSG pool + 25 634 PAI S rows from 160 scenes, half the draws) scores 0.661 against the control's 0.671, paired -0.010 [-0.053, +0.033], zeros 45 vs 44; against the stored RSG + ACC + GAP read -0.015 / -0.005. Weak evidence: 1 seed, 1 000 steps (~0.25 passes over the PAI rows), the old train160 scenes.
 
-**Next.** Gate PASS: the curated-train full roll (1 761 scenes, none on disk; download-bound, estimate in the prereg). FAIL: stop item 3.
+**Next.** Stopped as registered; no full roll (it is download-bound anyway: 1 761 scenes, 3.2 TB, none on disk). Results: [results/gate.md](results/gate.md), [results/pai281_4ch.md](results/pai281_4ch.md).
 
 **Read more.** [plans/2026-10-19-pai-practice-prereg.md](plans/2026-10-19-pai-practice-prereg.md) (scene choice, recipe, gate, full-roll estimate).
 
@@ -24,5 +24,5 @@ index: pilot on practice-pai@v1 (= train160) queued; closed-loop gate on 4 PAI 2
 - `pai281.py` (experiments/defect_fix/scripts): Paired PAI 281 read-out of one …
 - `practice-plan.md` (research/next-round): 练习计划：按「可归因的试次」改训练管线（2026-10-19，工作方案）
 
-[plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
+[results/](results/) 7 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->
