@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Paired PAI 281 read-out of one pai_box.sh read against another (box, repo root, .venv python; read-only on stored runs).
 
-  pai281.py --j <read root> --ref <read root> [--jl JTN] [--rl RSG] [--out FILE.md]
+  pai281.py --j <read root> --ref <read root> [--jl JTN] [--rl RSG] [--out FILE.md] [--j2 <read root> --j2l LABEL]
+
+--j2 adds a third read (middle column; paired against the reference and against J); scenes must then be clean in all three.
 
 A read root holds runs/*/sim/aggregate/results-summary.json (pai_box.sh layout). Scenes: those both reads scored without a driver RPC error
 (decision 327's rule: the RPC-error rollout is scored 0 by the scorer but is infrastructure, not behaviour). Paired difference of the scene score:
@@ -91,12 +93,15 @@ def summ(R: dict, S: list) -> dict:
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--j", required=True), a.add_argument("--ref", required=True)
+    a.add_argument("--j2", default=""), a.add_argument("--j2l", default="J2")
     a.add_argument("--jl", default="J"), a.add_argument("--rl", default="REF"), a.add_argument("--out", default="")
     a = a.parse_args()
     J, bj = load(a.j)
     C, bc = load(a.ref)
-    S = sorted((set(J) & set(C)) - set(bj) - set(bc))
+    K, bk = load(a.j2) if a.j2 else ({}, {})
+    S = sorted((set(J) & set(C) & (set(K) if a.j2 else set(J))) - set(bj) - set(bc) - set(bk))
     sj, sc = summ(J, S), summ(C, S)
+    sk = summ(K, S) if a.j2 else None
     sa = np.array([float(J[s].get("score") or 0.0) for s in S])
     sb = np.array([float(C[s].get("score") or 0.0) for s in S])
     grp = np.array(["_".join(s.split("_")[:2]) for s in S])
@@ -106,18 +111,28 @@ def main():
          f"J = `{a.j}`, reference = `{a.ref}`. Scenes scored by both without a driver RPC error: {len(S)} of {len(set(J) | set(C))} "
          f"(excluded: J {sorted(x[-8:] for x in bj)} {sorted(set(bj.values()))}, reference {sorted(x[-8:] for x in bc)}).", "",
          "| | scenes | mean | zeros | scored 1 | progress_rel | log distance covered |", "|---|--:|--:|--:|--:|--:|--:|"]
-    for lab, x in ((a.jl, sj), (a.rl, sc)):
+    for lab, x in ((a.jl, sj), (a.j2l, sk), (a.rl, sc)) if a.j2 else ((a.jl, sj), (a.rl, sc)):
         L.append(f"| {lab} | {x['n']} | {x['mean']:.4f} | {x['zeros']} | {x['scored1']} | {x['prog']:.3f} | {x['dist_ratio']:.3f} |")
     L += ["", f"Paired mean ({a.jl} - {a.rl}): **{stats.fmt(p, '+.4f')}** (log-clustered bootstrap 95 % CI, 10 000 draws, seed 0). "
           f"Zero-rate difference: {stats.fmt(z, '+.4f')} ({sj['zeros'] - sc['zeros']:+d} zeros).", "",
-          "## Zero types", "", f"| type | {a.jl} | {a.rl} |", "|---|--:|--:|"]
-    for k in sorted(set(sj["zc"]) | set(sc["zc"])):
-        L.append(f"| {k} | {sj['zc'][k]} | {sc['zc'][k]} |")
-    L += ["", "## Partial scores (0 < s < 0.98)", "", f"| type | {a.jl} | {a.rl} |", "|---|--:|--:|"]
+          ""]
+    if a.j2:
+        sb2 = np.array([float(K[s].get("score") or 0.0) for s in S])
+        for x, y, lx, ly in ((sb2, sb, a.j2l, a.rl), (sa, sb2, a.jl, a.j2l)):
+            q = stats.paired(x, y, groups=grp)
+            L += [f"Paired mean ({lx} - {ly}): **{stats.fmt(q, '+.4f')}**; zeros {int((x == 0).sum()) - int((y == 0).sum()):+d}.", ""]
+    cols = [(a.jl, sj), (a.j2l, sk), (a.rl, sc)] if a.j2 else [(a.jl, sj), (a.rl, sc)]
+    hdr = "| type | " + " | ".join(c[0] for c in cols) + " |", "|---|" + "--:|" * len(cols)
+    L += ["## Zero types", "", *hdr]
+    for k in sorted(set().union(*[set(c[1]["zc"]) for c in cols])):
+        L.append(f"| {k} | " + " | ".join(str(c[1]['zc'][k]) for c in cols) + " |")
+    L += ["", "## Partial scores (0 < s < 0.98)", "", *hdr]
     for k in PARTIAL:
-        L.append(f"| {k} | {sj['pc'][k]} | {sc['pc'][k]} |")
+        L.append(f"| {k} | " + " | ".join(str(c[1]['pc'][k]) for c in cols) + " |")
     L += ["", "## Strata (contribution = sum of the score differences in the stratum / all scenes; sums to the paired mean)", "",
           f"| stratum | scenes | {a.jl} mean | {a.rl} mean | diff | contribution | {a.jl} zeros | {a.rl} zeros | new | fixed |", "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    if a.j2:
+        sb2 = np.array([float(K[s].get("score") or 0.0) for s in S])
     st = np.array([stratum(C[s]) for s in S])
     for k in ("static", "launch", "moving"):
         i = st == k
@@ -125,14 +140,18 @@ def main():
             continue
         new = int(((sa[i] == 0) & (sb[i] > 0)).sum())
         fix = int(((sa[i] > 0) & (sb[i] == 0)).sum())
+        if a.j2:
+            L.append(f"| ({a.j2l}) {k} | {i.sum()} | {sb2[i].mean():.4f} | {sb[i].mean():.4f} | {(sb2[i] - sb[i]).mean():+.4f} | {(sb2[i] - sb[i]).sum() / len(S):+.4f} | "
+                     f"{int((sb2[i] == 0).sum())} | {int((sb[i] == 0).sum())} | {int(((sb2[i] == 0) & (sb[i] > 0)).sum())} | {int(((sb2[i] > 0) & (sb[i] == 0)).sum())} |")
         L.append(f"| {k} | {i.sum()} | {sa[i].mean():.4f} | {sb[i].mean():.4f} | {(sa[i] - sb[i]).mean():+.4f} | {(sa[i] - sb[i]).sum() / len(S):+.4f} | "
                  f"{int((sa[i] == 0).sum())} | {int((sb[i] == 0).sum())} | {new} | {fix} |")
     for title, cond in (("New zeros (zero for " + a.jl + ", scored for " + a.rl + ")", lambda x, y: x == 0 < y),
                         ("Fixed zeros (zero for " + a.rl + ", scored for " + a.jl + ")", lambda x, y: y == 0 < x)):
         idx = [i for i in range(len(S)) if cond(sa[i], sb[i])]
-        L += ["", f"## {title}: {len(idx)}", "", f"| scene | stratum | {a.jl} | {a.rl} |", "|---|---|---|---|"]
+        L += ["", f"## {title}: {len(idx)}", "", f"| scene | stratum | {a.jl} | {a.rl} |" + (f" {a.j2l} |" if a.j2 else ""), "|---|---|---|---|" + ("---|" if a.j2 else "")]
         for i in idx:
-            L.append(f"| {S[i][-8:]} | {st[i]} | {sa[i]:.3f} {ptype(J[S[i]])} | {sb[i]:.3f} {ptype(C[S[i]])} |")
+            L.append(f"| {S[i][-8:]} | {st[i]} | {sa[i]:.3f} {ptype(J[S[i]])} | {sb[i]:.3f} {ptype(C[S[i]])} |"
+                     + (f" {sb2[i]:.3f} {ptype(K[S[i]])} |" if a.j2 else ""))
     out = "\n".join(L) + "\n"
     print(out)
     if a.out:
