@@ -12,7 +12,8 @@ have=$(stat -c %s "$part")
 # in a row raise the limit by one, up to $MAXCONN. State files: $GATE/{limit,until,fails,ok}, log: $GATE/events.log.
 GATE=${GATE:-$(dirname "$part")/state/.gate}; MAXCONN=${MAXCONN:-16}; mkdir -p "$GATE"
 gate_get() { cat "$GATE/$1" 2>/dev/null || echo "${2:-0}"; }
-gate_fail() ( flock 9; f=$(( $(gate_get fails) + 1 )); l=$(( $(gate_get limit "$MAXCONN") / 2 )); (( l < 2 )) && l=2
+gate_fail() ( flock 9; (( $(gate_get until) > $(date +%s) )) && exit 0  # already tripped: in-flight failures do not stack
+  f=$(( $(gate_get fails) + 1 )); l=$(( $(gate_get limit "$MAXCONN") / 2 )); (( l < 2 )) && l=2
   w=$(( 30 << (f > 5 ? 5 : f - 1) )); (( w > 900 )) && w=900
   echo "$f" > "$GATE/fails"; echo "$l" > "$GATE/limit"; echo 0 > "$GATE/ok"; echo $(( $(date +%s) + w )) > "$GATE/until"
   printf '%s fail #%s (%s): limit -> %s, pause %ss\n' "$(date '+%F %T')" "$f" "$1" "$l" "$w" >> "$GATE/events.log" ) 9>"$GATE/lock"
