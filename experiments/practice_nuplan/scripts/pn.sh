@@ -77,6 +77,17 @@ rest)     # run by the stage2 job (CTRL_READS: the control's read ids)
   q=$(sub pn-gate --after $(csv ${pr[@]}),${CTRL_READS:?} --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- \
       $TR $PY gate --pilot $PILOT --control $CTRL --ref $REF) || exit 1
   echo "$(date '+%F %T') rest: shard chains ${done_ids[*]}; merge $m; pilot $t reads ${pr[*]}; gate $q" | tee -a $W/stages.txt ;;
+post)     # post <control read ids>: amendment 3's resubmission of rest's tail (shard chains after their roll ids in jobs.txt, merge, pilot, reads, gate)
+  done_ids=(); for k in $(shards); do
+    rr=(); for j in $(chunks_of $k); do rr+=($(awk -v n=pn-roll-c$j '$2 == n {i = $1} END {print i}' $W/jobs.txt)); done
+    done_ids+=($(chain PN$k $(csv ${rr[@]}))) || exit 1
+  done
+  m=$(sub pn-merge --after $(csv ${done_ids[@]}) --vram 0.1 --cpu 4 --ram 64 --timeout-h 2 -- bash $ME merge) || exit 1
+  t=$(sub pn-train-$PILOT --after $m "${FT[@]}" -- bash $ME train $PILOT) || exit 1
+  pr=($(reads $PILOT $t)) || exit 1
+  q=$(sub pn-gate --after $(csv ${pr[@]}),${2:?control reads} --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- \
+      $TR $PY gate --pilot $PILOT --control $CTRL --ref $REF) || exit 1
+  echo "$(date '+%F %T') post: shard chains ${done_ids[*]}; merge $m; pilot $t reads ${pr[*]}; gate $q" | tee -a $W/stages.txt ;;
 roll)     # roll <chunk|smoke>: the shard's arena cache, sh30 (no hold, = the default nuPlan serve of the L18 pools), frame dumps, then ol_chain roll1's steps
   j=$2; L=$S/lists/c$j.txt; k=0; [[ $j == smoke ]] && L=$S/lists/smoke.txt || k=$(shard_of $j); D=$W/roll/$T/c$j/run
   [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
@@ -114,8 +125,11 @@ tok)      # tok <pool>: tokens + teacher + gate R1 (on_rows.py tok, control smok
 import json, sys
 d = sys.argv[1]; r1, r2 = json.load(open(f"{d}/r1.json")), json.load(open(f"{d}/r2.json"))
 ok2 = r2["ego_max_m"] <= 0.3 and r2["frame_err_max_m"] <= 0.1 and r2["act_share_within"] >= 0.995 and r2["act_median_m"] <= 0.05   # prereg amendment 1
-print("R1", r1["pass"], "R2 (amended)", ok2, "ego_max", r2["ego_max_m"], "act_share", r2["act_share_within"], "frame excluded", len(r2["frame_excluded"]))
-sys.exit(0 if r1["pass"] and ok2 else 2)
+print("R1 (registered)", r1["pass"], "R2 (amended)", ok2, "ego_max", r2["ego_max_m"], "act_share", r2["act_share_within"], "frame excluded", len(r2["frame_excluded"]))
+q = next(iter(r1["tags"].values()))
+ok1 = r1["a"] and r1["b"] and (r1["c"] or q["control_mu_share"] <= q["mu_share"] - 0.2)          # prereg amendment 3: (c) by separation on standing-heavy pools
+print("R1 (a, b, c / amended c)", r1["a"], r1["b"], r1["c"], ok1, "mu_share", q["mu_share"], "control_mu_share", q["control_mu_share"], "control_pose_share", q["control_pose_share"])
+sys.exit(0 if ok1 and ok2 else 2)
 PY
   ;;
 route|anchor)   # route / anchor features of the pool rows (rm_build pool / anchor --pool), the shard's own scene loader (EV_CFG = a run's config)

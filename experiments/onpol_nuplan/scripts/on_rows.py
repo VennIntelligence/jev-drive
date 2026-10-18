@@ -262,8 +262,10 @@ def sim_start(L, i, rig, t_tok=None) -> tuple:
     tau = np.arange(0, rig[-1, 0] + 1, STEP_US, dtype=np.float64)
     loc = np.c_[np.interp(tau, rig[:, 0], rig[:, 1]), np.interp(tau, rig[:, 0], rig[:, 2])] - rig[0, 1:3]
     best = (None, np.inf)
-    extra = [] if t_tok is None else [int(t_tok) + FRAME_OFF * STEP_US]        # a 20 Hz token between navsim frames: its own time - 1.5 s
-    for T0 in [int(T[j]) for j in range(max(i - 6, 0), min(i + 3, len(T)))] + [int(T[i]) + FRAME_OFF * STEP_US] + extra:
+    cands = [int(T[j]) for j in range(max(i - 6, 0), min(i + 3, len(T)))] + [int(T[i]) + FRAME_OFF * STEP_US]
+    if t_tok is not None:                                                     # ON_TOK_TIMES: the time is known from the raw log (token - 1.5 s); no search,
+        cands = [int(t_tok) + FRAME_OFF * STEP_US]                            # which on a standing window matches any candidate equally well
+    for T0 in cands:
         if T0 < T[0] or T0 + tau[-1] > T[-1]:
             continue
         g = np.c_[np.interp(T0 + tau, T, P[:, 0]), np.interp(T0 + tau, T, P[:, 1])]
