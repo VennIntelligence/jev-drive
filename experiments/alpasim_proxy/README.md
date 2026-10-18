@@ -134,6 +134,10 @@ the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_pro
 - **ARENA-RESID** ([results/arena_hold/residual.md](results/arena_hold/residual.md), `scripts/arena_resid.py`, CPU on stored reads): stop3's
   125-point gap to 1.0 on held = launch hold cost 40, human track itself offroad 26 (no policy can score; ceiling 0.988), policy offroad 17,
   free slow 15, AF 13, corridor 8, stop-latch 6. No serve-side lever reaches +0.005 (best: leash 3.7 m +0.0017), so no read.
+- **LEAD-AWARE HOLD** ([results/arena_hold/lead_aware.md](results/arena_hold/lead_aware.md), `scripts/lead_aware.py`, CPU on stored reads):
+  latch only without a lead, serve natively behind one. It loses for RSG / NR1F / JTN (oracle flag -0.025 / -0.014 / -0.003; serve flag
+  -0.050 / -0.043 / -0.018), because behind a stationary lead the models still roll 3.5-16.5 % of the still-end windows into a zero, and
+  52 of the 82 costly launches have no lead. Release and shorter-leash variants reach at most +0.0038 at serve time. No read.
 
 ## Anchors: five policies whose private numbers are known
 
