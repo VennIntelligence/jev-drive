@@ -120,7 +120,7 @@ class Procs:
                 except Exception:
                     pass
                 rec = {"t": time.time()}
-                for name, p in self.p.items():
+                for name, p in list(self.p.items()):
                     pids = tree(table, p.pid)
                     v = {"gpu_mib": sum(gpu.get(x, 0.0) for x in pids), "cpu_s": sum(table[x][1] for x in pids),
                          "rss_gib": sum(table[x][2] for x in pids) / 2**30, "procs": len(pids)}

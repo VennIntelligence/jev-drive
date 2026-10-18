@@ -28,4 +28,6 @@ SH30_DUMP=${SH30_DUMP:-0} SH30_LHT=${SH30_LHT:-0} $DATA_DIR/envs/op-train/bin/py
     [[ -f $here/drivers/$drv.sh ]] || { echo "unknown driver $drv" >&2; exit 2; }
     source "$here/drivers/$drv.sh" ;;
 esac
+# RUN_SH_DRIVER_ONLY=1: print the driver's cwd and command and stop (queue_read.py starts the drivers of its slots itself)
+[[ ${RUN_SH_DRIVER_ONLY:-0} == 1 ]] && { printf '%s\n%s\n' "$cwd" "$cmd"; exit 0; }
 exec "$SRC/.venv/bin/python" "$here/run_native.py" --log-dir "$out" --driver "$cmd" --driver-cwd "$cwd" "$@"
