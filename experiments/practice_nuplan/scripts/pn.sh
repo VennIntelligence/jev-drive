@@ -26,7 +26,8 @@ csv() { local IFS=,; echo "$*"; }
 nchunks() { python3 -c "import json; print(len(json.load(open('$S/meta.json'))['chunks']))"; }
 shard_of() { python3 -c "import json; print(next(c['shard'] for c in json.load(open('$S/meta.json'))['chunks'] if c['chunk'] == $1))"; }
 chunks_of() { python3 -c "import json; print(' '.join(str(c['chunk']) for c in json.load(open('$S/meta.json'))['chunks'] if c['shard'] == $1))"; }
-shards() { python3 -c "import json; print(' '.join(map(str, sorted({c['shard'] for c in json.load(open('$S/meta.json'))['chunks']}))))"; }
+shards() { [[ -n ${PN_SHARDS:-} ]] && { echo $PN_SHARDS; return; }    # PN_SHARDS: the shards whose pools passed their gates (merge)
+  python3 -c "import json; print(' '.join(map(str, sorted({c['shard'] for c in json.load(open('$S/meta.json'))['chunks']}))))"; }
 RO=(--vram 32 --cpu 8 --ram 60 --timeout-h 3 --env CL_HIST_KEY=pn-roll)
 RD=(--vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train --timeout-h 1)
@@ -88,6 +89,13 @@ post)     # post <control read ids>: amendment 3's resubmission of rest's tail (
   q=$(sub pn-gate --after $(csv ${pr[@]}),${2:?control reads} --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- \
       $TR $PY gate --pilot $PILOT --control $CTRL --ref $REF) || exit 1
   echo "$(date '+%F %T') post: shard chains ${done_ids[*]}; merge $m; pilot $t reads ${pr[*]}; gate $q" | tee -a $W/stages.txt ;;
+tail)     # tail <after ids> <control read ids>: merge (PN_SHARDS) -> pilot -> reads -> gate, for a resubmission after a shard pool failed its gate
+  m=$(sub pn-merge --after $2 --vram 0.1 --cpu 4 --ram 64 --timeout-h 2 ${PN_SHARDS:+--env "PN_SHARDS=$PN_SHARDS"} -- bash $ME merge) || exit 1
+  t=$(sub pn-train-$PILOT --after $m "${FT[@]}" -- bash $ME train $PILOT) || exit 1
+  pr=($(reads $PILOT $t)) || exit 1
+  q=$(sub pn-gate --after $(csv ${pr[@]}),${3:?control reads} --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- \
+      $TR $PY gate --pilot $PILOT --control $CTRL --ref $REF) || exit 1
+  echo "$(date '+%F %T') tail (shards ${PN_SHARDS:-all}): merge $m; pilot $t reads ${pr[*]}; gate $q" | tee -a $W/stages.txt ;;
 roll)     # roll <chunk|smoke>: the shard's arena cache, sh30 (no hold, = the default nuPlan serve of the L18 pools), frame dumps, then ol_chain roll1's steps
   j=$2; L=$S/lists/c$j.txt; k=0; [[ $j == smoke ]] && L=$S/lists/smoke.txt || k=$(shard_of $j); D=$W/roll/$T/c$j/run
   [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
