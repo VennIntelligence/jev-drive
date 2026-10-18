@@ -34,6 +34,7 @@ W = DATA / "runs/practice_nuplan"
 ARENA = DATA / "runs/alpasim_proxy/arena/set"
 RES = REPO / "experiments/practice_nuplan/results"
 HZ, BEFORE, MIN_OFF_S, CHUNK = 20, 30, 1.5, 110
+ZERO_TYPES = ("collision_at_fault", "left_corridor_laterally", "offroad")   # the scorer's zero types in results-summary failure_reason
 
 
 def log_of(s):                                       # c0b_report.log_of
@@ -124,9 +125,10 @@ def roll_stats(runs):
         ro = json.loads(f.read_text())["rollouts"]
         dumps = glob.glob(f"{d}/driver-logs/dump/*.npz")
         mb = sum(os.path.getsize(x) for x in dumps) / 2 ** 20
-        sc = [r.get("score") for r in ro if not r.get("failure_reason")]
-        rows.append(dict(run=str(d), done=True, rollouts=len(ro), failed=sum(bool(r.get("failure_reason")) for r in ro), dumps=len(dumps),
-                         dump_mb=mb, mean=float(np.mean([s or 0 for s in sc])) if sc else float("nan"), zeros=sum(not (s or 0) > 0 for s in sc)))
+        bad = [r for r in ro if r.get("failure_reason") and r["failure_reason"] not in ZERO_TYPES]   # amendment 2: a scorer zero is not a failed rollout
+        sc = [0.0 if r.get("failure_reason") else (r.get("score") or 0.0) for r in ro if r not in bad]
+        rows.append(dict(run=str(d), done=True, rollouts=len(ro), failed=len(bad), dumps=len(dumps), dump_mb=mb,
+                         mean=float(np.mean(sc)) if sc else float("nan"), zeros=sum(not s > 0 for s in sc)))
     return rows
 
 
