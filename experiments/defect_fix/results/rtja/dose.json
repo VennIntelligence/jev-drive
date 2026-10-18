@@ -1,0 +1,137 @@
+{
+ "winner": null,
+ "arms": [
+  {
+   "tag": "RTJA0-L18-s0",
+   "lam": 0.0,
+   "wait": {
+    "other_lead": {
+     "n_a": 36,
+     "wait": 0.9166666666666666,
+     "n_b": 48,
+     "launched": 0.8333333333333334,
+     "delay_med": 0.5169999999999999,
+     "b_score": 0.7505923972092714
+    },
+    "red_queue": {
+     "n_a": 39,
+     "wait": 0.9230769230769231,
+     "n_b": 35,
+     "launched": 0.7428571428571429,
+     "delay_med": 0.7669999999999997,
+     "b_score": 0.6412607635709422
+    },
+    "a_zeros": 3,
+    "b_score": 0.7281080459848829
+   },
+   "held": {
+    "zeros": 33,
+    "mean": 0.877970330805607,
+    "offroad": 17,
+    "pair_rsg": [
+     0.012400020055857875,
+     -0.00872583325224732,
+     0.03120042744728046
+    ]
+   },
+   "gates": {
+    "wait_other_lead": true,
+    "wait_red_queue": true,
+    "delay_other_lead": false,
+    "delay_red_queue": false,
+    "launch_other_lead": false,
+    "launch_red_queue": false,
+    "held_zeros": true
+   },
+   "passed": false
+  },
+  {
+   "tag": "RTJA05-L18-s0",
+   "lam": 0.5,
+   "wait": {
+    "other_lead": {
+     "n_a": 36,
+     "wait": 0.8888888888888888,
+     "n_b": 48,
+     "launched": 0.875,
+     "delay_med": 0.44199999999999995,
+     "b_score": 0.806945251645152
+    },
+    "red_queue": {
+     "n_a": 39,
+     "wait": 0.8974358974358975,
+     "n_b": 35,
+     "launched": 0.7428571428571429,
+     "delay_med": 0.36699999999999977,
+     "b_score": 0.7353197602596515
+    },
+    "a_zeros": 2,
+    "b_score": 0.7793006935169002
+   },
+   "held": {
+    "zeros": 34,
+    "mean": 0.8721716910373719,
+    "offroad": 17,
+    "pair_rsg": [
+     0.006601380287622591,
+     -0.011319941600238805,
+     0.029154728406209175
+    ]
+   },
+   "gates": {
+    "wait_other_lead": true,
+    "wait_red_queue": true,
+    "delay_other_lead": false,
+    "delay_red_queue": false,
+    "launch_other_lead": false,
+    "launch_red_queue": false,
+    "held_zeros": true
+   },
+   "passed": false
+  },
+  {
+   "tag": "RTJA1-L18-s0",
+   "lam": 1.0,
+   "wait": {
+    "other_lead": {
+     "n_a": 36,
+     "wait": 0.8888888888888888,
+     "n_b": 48,
+     "launched": 0.875,
+     "delay_med": 0.367,
+     "b_score": 0.8159043898903949
+    },
+    "red_queue": {
+     "n_a": 39,
+     "wait": 0.8717948717948718,
+     "n_b": 35,
+     "launched": 0.7428571428571429,
+     "delay_med": 0.3169999999999997,
+     "b_score": 0.757251661644271
+    },
+    "a_zeros": 2,
+    "b_score": 0.7888247193079729
+   },
+   "held": {
+    "zeros": 33,
+    "mean": 0.8776380815020561,
+    "offroad": 17,
+    "pair_rsg": [
+     0.012067770752307097,
+     -0.009541776411554017,
+     0.02829150038494323
+    ]
+   },
+   "gates": {
+    "wait_other_lead": true,
+    "wait_red_queue": true,
+    "delay_other_lead": false,
+    "delay_red_queue": false,
+    "launch_other_lead": false,
+    "launch_red_queue": false,
+    "held_zeros": true
+   },
+   "passed": false
+  }
+ ]
+}
