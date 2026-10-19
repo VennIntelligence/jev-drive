@@ -16,6 +16,10 @@ held 460 than NTV0. Diagnosis on stored data, no training. Box, repo root.
   closed-loop paths: experiments/route_follow/scripts/rf_follow.py (unchanged, AlpaSim venv, --cover none) on the stored held 460 @18 reads
         -> $W/follow (NTVX, NTV0, RSG, JTN-s0 @18) and $W/follow1k (JTX1K, JTNC1K, NTV0-s1, JTN-s1, RSG-s1 @18): per decision the anchor's
         signed lateral offset to AlpaSim's own route (left +), the first zero-score event k_z, turns >= 60 deg.
+  $TR lat_diag.py trainee --ckpt TAG   (GPU pool job, op-train, training-sized host memory) the trainer's own setup for NTVX's command
+        (rm_train.py executed unedited up to its dispatch, then its build() with the checkpoint TAG loaded as `rely` does): TAG's eval-mode
+        plans on every S row of on1_JTX and, on them, the pool terms exactly as the loss sees them (agent and road hinge shape-only x ho_w x
+        lam, the nr1_lat terms x ho_w) with the signed sideways push of each term per row -> $W/trainee_<TAG>.parquet
   $TR lat_diag.py report    (CPU) the tables of results/lateral_diag.md from rows.parquet, follow*/ and replay.parquet -> stdout (markdown)
 """
 from __future__ import annotations
@@ -198,6 +202,68 @@ def cmd_replay(a):
         print(json.dumps(dict(decisions=len(df), mean_max_gap_to_served=gate)))
 
 
+def cmd_trainee(a):
+    """The trainee's view of the S rows (docstring): rm_train's main block up to the dispatch, its build(), TAG's weights."""
+    import pandas as pd
+    import torch
+    line = next(x for x in (DATA / "runs/practice_nuplan/ntvx/stages.txt").read_text().splitlines() if " train NTVX-L18-s0: " in x)
+    argv = line.split("rm_train.py train ", 1)[1].split()
+    i = argv.index("--tag")
+    argv[i + 1] = a.ckpt
+    rt = REPO / "experiments/route_mem/scripts/rm_train.py"
+    src = rt.read_text()
+    tail = "dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)"
+    assert src.count(tail) == 1
+    g = {"__name__": "__main__", "__file__": str(rt)}
+    sys.argv = [str(rt), "rely", *argv]
+    exec(compile(src.replace(tail, "_LATDIAG_ARGS = a"), str(rt), "exec"), g)
+    ra = g["_LATDIAG_ARGS"]
+    ra.rm_from = a.ckpt                                                          # cmd_rely: the checkpoint with its branch
+    dev = torch.device("cuda")
+    ns, *_ = g["build"](ra, dev)
+    LS = ns.losses(ns.mode)
+    import pp_train as T
+    from loss43 import shape_only
+    S, model = ns.S, ns.model.eval()
+    pt = np.load(POOL / "tab.npz")
+    assert len(pt["names"]) == ns.n_on and np.array_equal(S.tab["names"][ns.on0:], pt["names"]), "pool rows are not on1_JTX's"
+    sel = np.flatnonzero(pt["mode"].astype(str) == "self")
+    pi_ = torch.as_tensor(S.pi, device=dev)
+    wA, wR, wL = ra.ho_w * ra.agent_lam, ra.ho_w * ra.road_lam, ra.ho_w * ra.on_lon_lam
+    cols = {}
+    for j in range(0, len(sel), a.bs):
+        r = torch.as_tensor(ns.on0 + sel[j:j + a.bs], device=dev)
+        with torch.no_grad():
+            o = model(S.front[r.cpu().numpy()], S.ego[r], S.tc[r], None, None, nv=None if ns.nv is None else ns.nv[r]).float()
+            x0, y0, p0 = T.rear(o[:, pi_].view(-1, 33, 15), S.cam_x[r], LS.W)
+        x, y, psi = x0.detach().requires_grad_(True), y0.detach().requires_grad_(True), p0.detach()
+        xs, ys = shape_only(x, y, psi) if LS.shape else (x, y)
+        terms = {}
+        ok = LS.on_aok[r]
+        terms["agent"] = wA * LS.agent2.per_step(xs, ys, psi, r).mean(1) * ok
+        ko = LS.road.ok[r]
+        terms["road"] = wR * torch.relu(LS.road.margin - LS.road.margins(xs, ys, psi, r)).mean(1) * ko
+        if LS.lon is not None:
+            for q, v in LS.lon.loss(torch.stack([x, y, psi], -1), r - LS.on0, LS.pack).items():
+                terms[q] = wL * v
+        n = torch.stack([-torch.sin(psi), torch.cos(psi)], -1)
+        rec = dict(arc4=torch.hypot(x0[:, -1], y0[:, -1]), y4=y0[:, -1], y2=y0[:, 3])
+        for q, v in terms.items():
+            gx, gy = torch.autograd.grad(v.sum(), (x, y), retain_graph=True, allow_unused=True)
+            gx, gy = (torch.zeros_like(x) if t is None else t for t in (gx, gy))
+            lat = -(gx * n[..., 0] + gy * n[..., 1])                                       # descent direction, + = left
+            rec[q] = v.detach()
+            rec[f"{q}_left"] = lat.sum(1)
+            rec[f"{q}_abs"] = lat.abs().sum(1)
+        for q, v in rec.items():
+            cols.setdefault(q, []).append(v.detach().cpu().numpy())
+    df = pd.DataFrame({q: np.concatenate(v) for q, v in cols.items()})
+    df.insert(0, "name", pt["names"][sel]), df.insert(1, "pool", pt["pool"][sel].astype(str)), df.insert(2, "speed", pt["speed"][sel])
+    W.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(W / f"trainee_{a.ckpt}.parquet")
+    print(json.dumps(dict(ckpt=a.ckpt, rows=len(df), weights=dict(agent=wA, road=wR, lat=wL), terms=[q for q in cols if not q.endswith(("_left", "_abs"))])))
+
+
 def _boot(x, g, n=2000, seed=0):
     """mean of x and its 95 % CI, bootstrap clustered by g (log)."""
     L, inv = np.unique(np.asarray(g), return_inverse=True)
@@ -312,5 +378,7 @@ if __name__ == "__main__":
     p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "NTVX-L18-s0", "RSG-L18-s0", "JTN-L18-s1"])
     p.add_argument("--src", nargs="+", default=["JTN1", "RSG"]), p.add_argument("--limit", type=int, default=0)
     sp.add_parser("report")
+    p = sp.add_parser("trainee")
+    p.add_argument("--ckpt", required=True), p.add_argument("--bs", type=int, default=256)
     a = ap.parse_args()
-    dict(rows=cmd_rows, replay=cmd_replay, report=cmd_report)[a.cmd](a)
+    dict(rows=cmd_rows, replay=cmd_replay, report=cmd_report, trainee=cmd_trainee)[a.cmd](a)
