@@ -253,18 +253,24 @@ def cmd_census(a):
     tr, ho = splits.load("navsim/tv-clean-train-logs"), splits.load("navsim/tv-clean-hold-logs")
     with Run("self_iter", "tv-census", config=vars(a)) as run:
         run.use_split(tr), run.use_split(ho)
-        res = par.pmap(_census_job, sorted(TV.glob("*.pkl")), run=run, workers=a.workers, desc="logs")
-        res.raise_if_failed()
-        rows = [x for v in res.values for x in v]
-        C = {k: np.array([x[j] for x in rows]) for j, k in enumerate(COLS)}
-        fut = np.stack([x[-1] for x in rows]).astype(np.float32)
-        OUT.mkdir(parents=True, exist_ok=True)
-        np.savez(OUT / "frames.npz", fut=fut, cells=np.array(led.CELLS), **C)
+        if (OUT / "frames.npz").exists() and not a.force:                 # the labelling pass is deterministic; --force redoes it
+            z = np.load(OUT / "frames.npz")
+            C, fut = {k: z[k] for k in COLS}, z["fut"]
+        else:
+            res = par.pmap(_census_job, sorted(TV.glob("*.pkl")), run=run, workers=a.workers, desc="logs")
+            res.raise_if_failed()
+            rows = [x for v in res.values for x in v]
+            C = {k: np.array([x[j] for x in rows]) for j, k in enumerate(COLS)}
+            fut = np.stack([x[-1] for x in rows]).astype(np.float32)
+            OUT.mkdir(parents=True, exist_ok=True)
+            np.savez(OUT / "frames.npz", fut=fut, cells=np.array(led.CELLS), **C)
         tok, log = C["token"].astype(str), C["log"].astype(str)
         nav = np.isin(tok, list(splits.load("navsim/navtrain").members))
         used = np.isin(tok, list(splits.load("navsim/selfiter_tv").members))
         intr, inho = np.isin(log, list(tr.members)), np.isin(log, list(ho.members))
-        cls = SI.classes(fut, C["v0"])
+        G = np.zeros(fut.shape[:2] + (3,))                               # log_rows' future is (x, y); the 4 s heading change comes from dpsi4
+        G[..., :2], G[:, 7, 2] = fut, np.radians(C["dpsi4"])
+        cls = SI.classes(G, C["v0"])
         cell = C["cell"].astype(str)
         stand = (C["v0"] < V_STAND) & (C["d4"] < D_STAND)
         near = (C["ln_dF"] >= LINE_MIN) & (C["ln_dF"] <= LINE_MAX)
@@ -324,6 +330,7 @@ def main():
     sp.add_parser("leak")
     p = sp.add_parser("census")
     p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--force", action="store_true")
     a = ap.parse_args()
     dict(integrity=cmd_integrity, leak=cmd_leak, census=cmd_census)[a.cmd](a)
 
