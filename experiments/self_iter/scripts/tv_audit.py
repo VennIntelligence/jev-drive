@@ -186,7 +186,7 @@ def cmd_leak(a):
         ho = splits.define("navsim", "tv-clean-hold-logs", [l for l in ok if held_out(l)], unit="log", origin=org + "; crc32(log) % 10 == 0 (si.py hold rule)",
                            status="frozen", used_by=["experiments/self_iter"], notes="never trained; log-disjoint validation for probes / imitation")
         splits.check_disjoint(tr, ho)
-        rec |= dict(split_train=tr.id, split_hold=ho.id, n_train_logs=tr.n, n_hold_logs=ho.n)
+        rec |= dict(split_train=tr.id, split_hold=ho.id, n_train_logs=len(tr.members), n_hold_logs=len(ho.members))
     md = [f"# TV-AUDIT leak ({len(tv_logs)} trainval log segments, {len(D)} drives, {len(tv_tok)} tokens)", "",
           "| evaluation set | segments | drives | segment overlap | drive overlap |", "|:--|--:|--:|--:|--:|"]
     md += [f"| {k} | {v['segments']} | {v['drives']} | {len(v['seg_overlap'])} | {len(v['drive_overlap'])} |" for k, v in rows.items()]
