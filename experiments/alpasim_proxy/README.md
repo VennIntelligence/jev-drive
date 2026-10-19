@@ -241,7 +241,10 @@ WA-JEPA 1.19; JAPS 1.24 / 1.26; SH30 1.34; AP2 1.51; DD 1.84; LTF 1.88. No store
 
 `scripts/proxy_fit.py` (reweighting fits, V1-V5), `scripts/proxy_transfer.py` (P4), `scripts/proxy_collect.py` (box: anchor tables through
 `aud1_drift_collect.py`), `scripts/garage_driver.py`, `scripts/setup_garage.sh`; results: `anchors/*.csv` (per-scene anchor tables),
-`fit_a2/`, `fit_a5/`, `transfer_a5/`, `tokyo_samples/`, `scene_city.csv`, the leaderboard snapshot. Mac inputs for stored drivers:
+`fit_a2/`, `fit_a5/`, `transfer_a5/`, `tokyo_samples/`, `scene_city.csv`, the leaderboard snapshot.
+How to fetch the board (public, no token; the API base is `DEFAULT_API_BASE` in the challenge CLI): `curl -s
+"https://rgf863fslk.execute-api.us-east-1.amazonaws.com/leaderboard?track=pai" > results/leaderboard_pai_<date>.json` (`track=nuplan`),
+the same as `alpasim_challenge.py leaderboard --track pai`; latest: [results/pai_board_20261019.md](results/pai_board_20261019.md). Mac inputs for stored drivers:
 `tmp/aud1_drift/`, `tmp/aud1_drift_x/` (box `$DATA_DIR/runs/alpasim/aud1_drift*`). Commands:
 
 ```bash
