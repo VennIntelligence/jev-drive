@@ -91,3 +91,7 @@ not an adoption gate.
 - Full-length B2 `STANDFMXH-L18-s0` (supplement 19.7; FREE-M W 0.001, everything else the same command as the full B, diff in
   [cmd_diff_H.txt](cmd_diff_H.txt), smoke in [smoke_H.json](smoke_H.json)) is running to test whether the lower dose keeps the static hold and
   the PCS while removing the overshoot. Outputs when done: `full_H.md`, `arena_windows_full_H.csv.gz`, `pai281_accgap_H.md`, `arena_full_H.json`.
+- Full-length B2 submitted 2026-10-19 19:18 box time as one chain (`chainh`): train `1019-191831-0e2f` (priority 12), 18 arena chunks + 6 held 460
+  + 8 PAI 281 jobs (priority 13), summary `stb-fsum-H` **1019-191850-d1a3** (writes the H files here and `runs/defect_fix/stand_b/FULL_H_DONE`).
+  Expected finish about 21:30-22:00 box time. The smoke's first criterion (fire share not above B, meant for the B1 gate) failed on the dose arm
+  (0.0966 vs 0.0949 at the first step), so it was changed to finite-only before the chain; see supplement 19.7.
