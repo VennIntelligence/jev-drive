@@ -475,7 +475,7 @@ def cmd_subject(a):
     CB["garage"] = G.reindex(CB.id).values
     CB["JTN1"] = yJ.reindex(CB.id).values; CB["JTN1S3"] = yJ3.reindex(CB.id).values
     CB["a"] = it.a.reindex(CB.id).values
-    CB.to_csv(res / "easy_items/misses_STANDFMX.csv.gz", index=False, float_format="%.4f")
+    CB.to_csv(res / f"easy_items/{a.misses}.csv.gz", index=False, float_format="%.4f")
     classes = list(CB.cause.value_counts().index)
     T = []
     for c in classes + sorted(set(CJ.cause) - set(classes)):
@@ -540,7 +540,7 @@ def cmd_subject(a):
                                     lost=float((1 - yJ[stratum == s]).sum())) for s in sorted(stratum.unique())}
     winJ, lossJ = yJ > G + 1e-4, G > yJ + 1e-4
     J["JTN1_premise"] = dict(win=int(winJ.sum()), loss=int(lossJ.sum()), win_points=float((yJ - G)[winJ].sum()), loss_points=float((G - yJ)[lossJ].sum()))
-    out = res / "easy_items_B.json"
+    out = res / f"{a.out}.json"
     json.dump(J, open(out, "w"), indent=1, default=float)
     print(json.dumps(J, indent=1, default=float))
 
@@ -641,6 +641,8 @@ if __name__ == "__main__":
     u.add_argument("--tag", default="STANDFMX-L18-s0")
     u.add_argument("--ref", default="JTN-L18-s1", help="the native reference's tag in --dec (its sub-causes also label its stop3 read)")
     u.add_argument("--dec", default=str(REPO / "tmp/easy_items_B"), help="native_gap extract dir of the read (box: stand_b/ext_full)")
+    u.add_argument("--out", default="easy_items_B", help="results/<out>.json")
+    u.add_argument("--misses", default="misses_STANDFMX", help="results/easy_items/<misses>.csv.gz (per-window classes)")
     sp.add_parser("fig")
     a = ap.parse_args()
     {"extract": cmd_extract, "report": cmd_report, "pai": cmd_pai, "subject": cmd_subject, "fig": cmd_fig}[a.cmd](a)
