@@ -33,6 +33,9 @@ standing all 4 s and a finite station gap g = s_h(t + 4 s) - s_e (the human's st
 <pool>/stand_gap.npz, scripts/stand_r.py gap = stop_label's h4c). Cap c_j = max(b_j, max(g, 0) + M): a rolling ego behind the human may
 roll up to his standing station + M, one level with or past it gets b_j (stop within what `fut`'s 2 s blend reaches). V_ROLL = 0 (default):
 nothing loaded, the pack and the term exactly as supplement 17. nr1_lat logs the rolling rows' part apart as lon_standr.
+STAND-R2 (prereg supplement 23; rm_train --on-stand-launch H): standing and rolling rows whose human launches (moves > L_MOVE from his
+station at t or reaches L_VGO) within H_FUT + H s of t are dropped, as are rows whose log ends before then without a launch (labels from the
+whole log: <pool>/stand_launch.npz, scripts/stand_r2.py launch = launch_label). H = 0 (default): nothing loaded, the pack exactly as before.
 
 NR1STOPPT (prereg supplement 18; rm_train --on-stoppt W): "do not pass the human's stop point" on approach states. Labels from the log
 (stop_label, built offline into <pool>/stoppt.npz by scripts/stoppt.py labels): rest = the human's station, relative to the ego's, at the first
@@ -59,6 +62,7 @@ FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the re
 DT = 0.5
 V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
 V_ROLL = 0.0                                      # supplement 20: upper ego speed of the rolling STAND rows (0 = off)
+LAUNCH_H, L_MOVE, L_VGO = 0.0, 0.5, 1.0           # supplement 23: launch exclusion window past the 4 s label (s; 0 = off), launch rule
 V_REST, V_APP, M_STOP, A_MAX, H_FUT, LOOK = 0.5, 0.5, 1.0, 4.0, 4.0, 30.0
 V_TC, H_TC, TURN_TC, K_TC, TC_BACK, TC_AHEAD = 2.0, 4.0, 45.0, 1.05, 10, 20     # supplement 21 (TURN-CAP)
 
@@ -199,11 +203,30 @@ def term(poses, rows, pack, ah):
     return terms(poses, pack["s_ref"][rows], pack["ok"][rows], ah.box[rows], ah.val[rows])
 
 
-def configure_stand(margin=1.0, roll=0.0):
-    global MARGIN, V_ROLL
-    assert margin > 0 and (roll == 0 or roll > V_STAND), (margin, roll)
-    MARGIN, V_ROLL = float(margin), float(roll)
-    return dict(stand_margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND) | (dict(v_roll=V_ROLL) if V_ROLL else {})
+def configure_stand(margin=1.0, roll=0.0, launch=0.0):
+    global MARGIN, V_ROLL, LAUNCH_H
+    assert margin > 0 and (roll == 0 or roll > V_STAND) and launch >= 0, (margin, roll, launch)
+    MARGIN, V_ROLL, LAUNCH_H = float(margin), float(roll), float(launch)
+    return (dict(stand_margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND) | (dict(v_roll=V_ROLL) if V_ROLL else {})
+            | (dict(launch_h=LAUNCH_H, l_move=L_MOVE, l_vgo=L_VGO) if LAUNCH_H else {}))
+
+
+def launch_label(t, T, S, look=LOOK):
+    """supplement 23, one state: log time t (s), the human's log times T (s) and stations S -> (t_L: s after t of his first launch, i.e. his
+    station > L_MOVE past s_h(t) or his speed >= L_VGO, on a 0.1 s grid up to t + look; inf: none; cover: s of log after t)."""
+    T, S = np.asarray(T, np.float64), np.maximum.accumulate(np.asarray(S, np.float64))
+    sh = lambda tau: np.interp(tau, T, S)  # noqa: E731
+    g = (t + 0.1 * np.arange(1, int(round(look / 0.1)) + 1))
+    g = g[g <= T[-1] - 0.05]
+    v = (sh(g + 0.05) - sh(g - 0.05)) / 0.1
+    hit = np.flatnonzero((sh(g) - sh(t) > L_MOVE) | (v >= L_VGO))
+    return (float(g[hit[0]] - t) if len(hit) else np.inf), float(T[-1] - t)
+
+
+def launch_excl(t_l, cover):
+    """(N,) launch times / log cover after t (s) -> (N,) bool: rows supplement 23 drops (a launch within H_FUT + LAUNCH_H, or unknown)."""
+    t_l, cover, lim = np.asarray(t_l, np.float64), np.asarray(cover, np.float64), H_FUT + LAUNCH_H
+    return (np.nan_to_num(t_l, nan=0.0) <= lim) | (~np.isfinite(t_l) & ~(cover >= lim))
 
 
 def rolling(v0, hum4, gap):
@@ -242,11 +265,21 @@ def stand_load(pool_dir, names, dev):
     ok = fin & S & st
     rec = dict(rows=int(len(ok)), s_rows=int(S.sum()), standing=int(ok.sum()), ego_slow=int((S & fin & (z["speed"] < V_STAND)).sum()),
                margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND)
+    if LAUNCH_H:                                                        # supplement 23: scripts/stand_r2.py launch
+        lz = np.load(Path(pool_dir) / "stand_launch.npz")
+        assert np.array_equal(lz["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: stand_launch rows != the pool's"
+        ex = launch_excl(lz["t_l"], lz["cover"])
+        rec |= dict(launch_h=LAUNCH_H, launch_excl_standing=int((ok & ex).sum()), launch_unknown_standing=int((ok & ex & ~np.isfinite(lz["t_l"])).sum()))
+        ok = ok & ~ex
+        rec["standing"] = int(ok.sum())
     if not V_ROLL:
         return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
     g = np.load(Path(pool_dir) / "stand_gap.npz")                       # supplement 20: scripts/stand_r.py gap
     assert np.array_equal(g["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: stand_gap rows != the pool's"
     roll = fin & S & rolling(z["speed"], hum4, g["gap"]) & ~st
+    if LAUNCH_H:
+        rec |= dict(launch_excl_rolling=int((roll & ex).sum()), launch_unknown_rolling=int((roll & ex & ~np.isfinite(lz["t_l"])).sum()))
+        roll = roll & ~ex
     cap[roll] = roll_cap(cap[roll], g["gap"][roll])
     rec |= dict(rolling=int(roll.sum()), rolling_behind_b8=int((roll & (g["gap"] + MARGIN > cap[:, -1] - 1e-6)).sum()), v_roll=V_ROLL)
     return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok | roll, device=dev), roll=torch.as_tensor(roll, device=dev), rec=rec)
@@ -519,6 +552,16 @@ if __name__ == "__main__":                     # known-answer check (CPU)
         assert stand_terms(go(lo / 4.0), c, ok1) == 0 and stand_terms(go(hi / 4.0), c, ok1) > 0, (g_, c)
     assert np.allclose(roll_cap(b, [-3.0]), b) and np.allclose(roll_cap(b, [10.0])[0, 0], 11.0)
     configure_stand(1.0)
+    # STAND-R2 (supplement 23): launch label and exclusion
+    Th = np.arange(0.0, 20.01, 0.5)
+    Sh = np.where(Th < 7.0, 0.0, 2.0 * (Th - 7.0))                     # stands until 7 s, then 2 m/s
+    tl, cv = launch_label(1.0, Th, Sh)
+    assert 5.9 < tl < 6.4 and abs(cv - 19.0) < 1e-9, (tl, cv)          # leaves 0.5 m / reaches 1 m/s about 6 s after t = 1
+    assert launch_label(0.0, Th, np.zeros_like(Th))[0] == np.inf
+    assert configure_stand(1.0, 3.0, 2.0)["launch_h"] == 2.0 and LAUNCH_H == 2.0
+    assert launch_excl([6.2, 5.9, np.inf, np.inf, 3.0], [19.0, 19.0, 19.0, 5.0, 2.0]).tolist() == [False, True, False, True, True]
+    configure_stand(1.0)
+    assert LAUNCH_H == 0
     # TURN-CAP (supplement 21): turn label on a 1 m path, rows, cap and fire
     s_ = np.arange(-TC_BACK, TC_AHEAD + 1, dtype=np.float64)              # 31 samples, the ego at index TC_BACK
     straight = np.stack([s_, 0 * s_], -1)
