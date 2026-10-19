@@ -125,7 +125,7 @@ push() {   # push <image id> <remote tag>: tag by id, push (bounded retries), pr
   docker image inspect "$1" >/dev/null || return 1
   docker tag "$1" "$REPO:$2" || return 1
   for i in 1 2 3 4 5; do ~/bin/ap $P docker push "$REPO:$2" && break; [[ $i == 5 ]] && return 1; sleep 15; done
-  ~/bin/ap $P docker manifest inspect "$REPO:$2" >/dev/null && docker image inspect "$REPO:$2" --format '{{.Id}} {{join .RepoDigests " "}}'
+  ~/bin/ap $P docker manifest inspect "$REPO:$2" >/dev/null && docker image inspect "$REPO:$2" --format '{{.Id}} {{.RepoDigests}}'
 }
 
 # image 1: native (no hold), version jev-JTN-L18-s1-backwarp
@@ -145,3 +145,14 @@ repository). The CLI also accepts `$REPO@sha256:<digest>` (it refuses only `late
 kept. The second push uploads only the image config: the two images share all 18 rootfs layers. Remote tags are public on the leaderboard.
 
 Last verified: 2026-10-19
+
+## Submitted (2026-10-19, profile ujs-iv, track nuplan)
+
+| image | remote tag | registry digest | submission id |
+|---|---|---|---|
+| native `1b682461` | `teams/ujs-iv:jtn-l18-s1-native` | `sha256:81a7deaceb3d55b2d02a76c89d206ff7f730afa8537b45f5db51bd9d0cfcb742` | `91f5b902-e938-49b1-93de-cf20f4c80e88` |
+| stop3 `b547cca3` | `teams/ujs-iv:jtn-l18-s1-holdstop3` | `sha256:e81aa87386d140b9718220771379fe91db6f73e8ae333c0f213a2262baab57e2` | `a3836ef6-ae58-4b6d-9274-a3ede5272fb4` |
+
+Script and log: Tokyo `/data/runs/alpasim/submit_jtn_s1/` (`run.sh`, `log.txt`; `log_try1.txt` is the first attempt, which pushed the native image
+and then stopped on a `docker image inspect --format '{{join .RepoDigests ...}}'` template error before submitting; the Tokyo docker rejects `join`
+on that field, so the record's `push()` helper must print `{{.RepoDigests}}` instead). Monthly official quota for ujs-iv: 3 -> 1.
