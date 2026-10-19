@@ -236,6 +236,24 @@ def main():
         rec = NUM["2c/tau >= 3 s, r_F < 0.95"]["recB"]
         L += ["", f"Registered line on B: recovery {rec:+.2f} -> " + ("through the history row" if rec >= 0.5 else "through the frames (not the history)" if rec <= 0.2 else "partial")]
 
+    # serve fix by the lead limit (added after the registered read: where the fix term of 2b comes from)
+    L += ["", "## Serve fix by the lead limit (inference decisions, ego >= 1 m/s; fix = log(vps / vpm) as 2b)", "",
+          "| arm | decisions | lead cut share | lead src mpc share | mean fix when cut | cut part of the mean fix | mean log(vpm / v) |", "|---|--:|--:|--:|--:|--:|--:|"]
+    for arm in [k for k in ARMS if k in SC]:
+        root = a.a0 if arm == "A0" else f"{a.o}/{arm}"
+        cut, fx, src, pm = [], [], [], []
+        for f in glob.glob(f"{root}/runs/*/driver/drive.jsonl"):
+            for line in open(f):
+                r = json.loads(line)
+                if r["kind"] != "drive" or not r.get("infer"):
+                    continue
+                v, vpm, vps = r["ego"][4] * 10, vp(r.get("poses_model") or r["poses"]), vp(r["poses"])
+                if v < 1 or vpm < 0.3:
+                    continue
+                ld = (r.get("fix") or {}).get("lead") or {}
+                cut.append((ld.get("cut") or 0) > 0), fx.append(np.log(vps / vpm)), src.append(ld.get("src") == "mpc"), pm.append(np.log(vpm / v))
+        cut, fx, src, pm = map(np.array, (cut, fx, src, pm))
+        L.append(f"| {arm} | {len(cut)} | {cut.mean():.3f} | {src.mean():.3f} | {fx[cut].mean():+.4f} | {fx[cut].sum() / len(fx):+.4f} | {pm.mean():+.4f} |")
     (out / "tables.md").write_text("\n".join(L) + "\n")
     (out / "numbers.json").write_text(json.dumps(NUM, indent=1, default=float))
     fig(RT, out / "pil_ratio_time.png")
