@@ -674,6 +674,7 @@ def cmd_pilot(a):
     try:
         import stand
         cs = stand.cue_strata(a.ext, a.tag, a.ctl)
+        cs = cs[0] if isinstance(cs, tuple) else cs                          # STAND's later version also returns counts
     except Exception as e:  # noqa: BLE001  description only
         cs = {"error": str(e)}
     oc, oa = Ov[a.ctl], Ov[a.tag]
