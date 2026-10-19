@@ -3,6 +3,7 @@
 # Usage (on the box, in tmux): scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh [split ...] [--option ...]
 #   splits: small val train test (default: all, in that order); options: see scripts/waymo_e2e.py download -h
 #   scripts/download_waymo_e2e.sh inspect <tfrecord>    # frame/camera/trajectory facts of one shard
+#   scripts/download_waymo_e2e.sh reslim [--workers N]  # front3/ -> front1/ (FRONT only), resumable
 # Idempotent and resumable: finished shards (manifest.csv) are skipped; rerun after the disk guard stops it.
 # Sets up its own venv ($DATA_DIR/envs/waymo: protobuf + google-crc32c, no TensorFlow) and compiled protos.
 set -euo pipefail
@@ -31,8 +32,8 @@ if [[ ! -f $WAYMO_PROTO_GEN/waymo_open_dataset/protos/end_to_end_driving_data_pb
   rm -rf "$src"
 fi
 
-if [[ ${1:-} == inspect ]]; then
-  exec "$ENV/bin/python" "$repo/scripts/waymo_e2e.py" "$@"
+if [[ ${1:-} == inspect || ${1:-} == reslim ]]; then
+  exec "$ENV/bin/python" -u "$repo/scripts/waymo_e2e.py" "$@"
 fi
 
 # Google OAuth only works through Clash: start it here, but keep it out of this process's env.

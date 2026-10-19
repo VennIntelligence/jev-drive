@@ -5,6 +5,8 @@ Runs in the throwaway venv $DATA_DIR/envs/waymo (protobuf/upb, google-crc32c, tq
 $WAYMO_PROTO_GEN), set up by scripts/download_waymo_e2e.sh. No TensorFlow.
 
   download [split ...]   splits: small val train test (default: all, in that order)
+  reslim                 front3/ -> front1/ (FRONT image only), shard by shard, deleting each front3 shard once
+                         its front1 copy is verified (2026-10-20, to free disk; resumable)
   inspect <tfrecord>     frame count, cameras, resolution, frame rate, trajectory fields, intent
 
 Download pipeline:
@@ -37,7 +39,7 @@ import sys
 import threading
 import time
 import urllib.parse
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import google_crc32c
@@ -51,6 +53,7 @@ BUCKET = "waymo_open_dataset_end_to_end_camera_v_1_0_0"
 HOST = "storage.googleapis.com"
 SPLITS = ("small", "val", "train", "test")
 FRONT3 = frozenset((1, 2, 3))  # CameraName.Name: FRONT, FRONT_LEFT, FRONT_RIGHT
+FRONT1 = frozenset((1,))       # FRONT only: the on-disk layout since 2026-10-20 (front1/)
 CAM_NAMES = {0: "UNKNOWN", 1: "FRONT", 2: "FRONT_LEFT", 3: "FRONT_RIGHT", 4: "SIDE_LEFT", 5: "SIDE_RIGHT",
              6: "REAR_LEFT", 7: "REAR", 8: "REAR_RIGHT"}
 MANIFEST_COLS = ("name", "split", "raw_bytes", "slim_bytes", "ratio", "frames", "dl_s", "slim_s", "done_at")
@@ -105,25 +108,28 @@ def e2ed_frame():
 
 # ---------------------------------------------------------------- slim worker (one process per shard)
 
-def slim_shard(raw: str, out: str, md5_b64: str) -> dict:
-    """raw TFRecord -> slim TFRecord with only FRONT3 images. Deletes raw once the slim copy is verified."""
+def slim_shard(raw: str, out: str, md5_b64: str | None, keep=FRONT3) -> dict:
+    """TFRecord -> slim TFRecord with only the `keep` images (original bytes, every other field as-is).
+    Checks the source md5 when given, re-reads the slim copy (both CRCs, proto parse, same frames, same kept
+    cameras with byte-identical images by crc32c), then renames it into place and deletes the source."""
     E2EDFrame, raw, out = e2ed_frame(), Path(raw), Path(out)
     tmp = out.with_name(out.name + ".tmp")
-    t0, md5, kept = time.time(), hashlib.md5(), []
+    t0, md5, kept = time.time(), hashlib.md5() if md5_b64 else None, []
     with open(raw, "rb", buffering=16 << 20) as fi, open(tmp, "wb", buffering=16 << 20) as fo:
         for rec in read_records(fi, md5):
             fr = E2EDFrame.FromString(rec)
             imgs = fr.frame.images
             for i in range(len(imgs) - 1, -1, -1):
-                if imgs[i].name not in FRONT3:
+                if imgs[i].name not in keep:
                     del imgs[i]
-            kept.append(tuple(im.name for im in imgs))
+            kept.append(tuple((im.name, google_crc32c.value(im.image)) for im in imgs))
             write_record(fo, fr.SerializeToString())
-    if base64.b64encode(md5.digest()).decode() != md5_b64:
+    if md5 and base64.b64encode(md5.digest()).decode() != md5_b64:
         tmp.unlink(), raw.unlink()
         return {"ok": False, "why": "md5 mismatch"}
-    with open(tmp, "rb", buffering=16 << 20) as f:  # verify: parses, same frames, same kept cameras
-        got = [tuple(im.name for im in E2EDFrame.FromString(r).frame.images) for r in read_records(f)]
+    with open(tmp, "rb", buffering=16 << 20) as f:
+        got = [tuple((im.name, google_crc32c.value(im.image)) for im in E2EDFrame.FromString(r).frame.images)
+               for r in read_records(f)]
     if got != kept:
         tmp.unlink()
         return {"ok": False, "why": f"verify failed: {len(got)} vs {len(kept)} frames"}
@@ -131,7 +137,7 @@ def slim_shard(raw: str, out: str, md5_b64: str) -> dict:
     tmp.rename(out)
     raw.unlink()
     return {"ok": True, "frames": len(kept), "raw_bytes": raw_bytes, "slim_bytes": slim_bytes,
-            "slim_s": round(time.time() - t0, 1), "front_cams": sorted({c for k in kept for c in k})}
+            "slim_s": round(time.time() - t0, 1), "front_cams": sorted({c for k in kept for c, _ in k})}
 
 
 # ---------------------------------------------------------------- GCS access (bearer token from gcloud)
@@ -495,6 +501,66 @@ def download(a):
     return 1 if failed else 0
 
 
+def reslim(a):
+    """front3/ -> front1/: drop FRONT_LEFT / FRONT_RIGHT from every shard (slim_shard with keep=FRONT1).
+    Peak extra space is one slim copy per worker. Resumable: a shard whose front1 copy exists is done (the copy is
+    only renamed into place after it verified), a front3 left beside it is then deleted; *.tmp are redone."""
+    root = Path(a.root)
+    src, out = root / "front3", root / "front1"
+    out.mkdir(exist_ok=True)
+    run = Run("reslim")
+    for t in out.glob("*.tmp"):
+        t.unlink()
+    for p in src.iterdir() if src.exists() else []:
+        if ".tfrecord-" not in p.name:              # the three small json/txt files: move as-is
+            os.replace(p, out / p.name)
+        elif (out / p.name).exists():               # interrupted between rename and unlink
+            p.unlink()
+    todo = sorted(p.name for p in src.glob("*.tfrecord-*")) if src.exists() else []
+    todo = todo[:a.limit] if a.limit else todo
+    workers = min(a.workers or max(1, n_cpus() // 4), max(1, len(todo)))
+    man = root / "manifest_front1.csv"
+    new = not man.exists()
+    mf = open(man, "a", newline="", buffering=1)
+    w = csv.writer(mf)
+    if new:
+        w.writerow(("name", "split", "front3_bytes", "front1_bytes", "ratio", "frames", "slim_s", "done_at"))
+    log.info(f"reslim: {len(todo)} shards to do, {sum(1 for _ in out.glob('*.tfrecord-*'))} already in front1, "
+             f"workers={workers}")
+    run.event("start", todo=len(todo), workers=workers)
+    t0, fails, b3, b1 = time.time(), [], 0, 0
+    with ProcessPoolExecutor(workers, mp_context=mp.get_context("spawn")) as ex:
+        futs = {ex.submit(slim_shard, str(src / n), str(out / n), None, FRONT1): n for n in todo}
+        bar = tqdm(total=len(futs), unit="shard", mininterval=30)
+        for f in as_completed(futs):
+            n = futs[f]
+            try:
+                r = f.result()
+            except Exception as e:  # noqa: BLE001  (a bad shard must not stop the others)
+                r = {"ok": False, "why": repr(e)}
+            if r["ok"] and r["front_cams"] == [1]:
+                b3, b1 = b3 + r["raw_bytes"], b1 + r["slim_bytes"]
+                w.writerow((n, split_of(n), r["raw_bytes"], r["slim_bytes"],
+                            f"{r['slim_bytes'] / r['raw_bytes']:.4f}", r["frames"], r["slim_s"],
+                            time.strftime("%Y-%m-%d %H:%M:%S")))
+                run.event("shard", name=n, frames=r["frames"], front3=r["raw_bytes"], front1=r["slim_bytes"],
+                          s=r["slim_s"])
+            else:
+                fails.append(n)
+                log.error(f"{n}: {r.get('why', r.get('front_cams'))}")
+                run.event("fail", name=n, why=str(r.get("why", r.get("front_cams"))))
+            bar.update()
+        bar.close()
+    mf.close()
+    dt = time.time() - t0
+    log.info(f"reslim: {len(todo) - len(fails)}/{len(todo)} shards in {dt / 60:.1f} min, "
+             f"{b3 / GB:.1f} GB -> {b1 / GB:.1f} GB, freed {(b3 - b1) / GB:.1f} GB, failures {fails}")
+    run.event("done", ok=len(todo) - len(fails), fails=fails, s=round(dt), front3=b3, front1=b1)
+    if not fails and src.exists() and not any(src.iterdir()):
+        src.rmdir()
+    return 1 if fails else 0
+
+
 def inspect(a):
     """Print the facts that decide our camera subset. Reads all records of one shard."""
     E2EDFrame = e2ed_frame()
@@ -557,6 +623,10 @@ def main():
                    help="cap on shards downloading at once (new ones start while < 2x streams chunks are open)")
     d.add_argument("--slim-workers", type=int, default=0, help="0: cgroup cores - 4")
     d.add_argument("--min-free-gb", type=float, default=200)
+    r = sub.add_parser("reslim")
+    r.add_argument("--root", default=str(Path(os.environ.get("DATA_DIR", ".")) / "datasets" / "waymo_e2e"))
+    r.add_argument("--workers", type=int, default=0, help="0: cgroup cores / 4")
+    r.add_argument("--limit", type=int, default=0, help="first N shards only (pilot)")
     i = sub.add_parser("inspect")
     i.add_argument("file")
     a = p.parse_args()
@@ -564,6 +634,8 @@ def main():
         a.splits = a.splits or list(SPLITS)
     if a.cmd == "inspect":
         sys.exit(inspect(a))
+    if a.cmd == "reslim":
+        sys.exit(reslim(a))
     try:
         sys.exit(download(a))
     except KeyboardInterrupt:  # download threads are not daemons: skip joining them; rerun resumes
