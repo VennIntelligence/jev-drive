@@ -108,3 +108,5 @@ Layout: `scripts/` entry points (live), `lib/` code other topics import, `archiv
 experiment, `results/` small result files, `figs/` figures, `plans/` live plan notes. Refresh the file list and
 INDEX.md with `python tools/topic_index.py --topic <name>` (your topic only; a bare run or `--all` would rewrite
 other lanes' READMEs, so `--all` is a dry run unless `--write`; `--check` is read-only).
+
+**NATIVE-GAP (10-19; [results/native_gap.md](results/native_gap.md), d372).** Diagnosis of the native arena gap to ~0.93 (no hold). JTN-L18-s1 is 87 points short, 85 of them in static windows at a red light's line with no lead (the model holds behind a close lead, not at a red light; the decision-0 plan arc decides, creep amplifies). Holding there is worth +72 net, an on-time launch +14 (0.9296). The speed ratchet is 90-102 % plan-side but worth <= 13 points on 5 s windows; the human's speed history on the same frames recovers 26-44 % of the plan shortfall.

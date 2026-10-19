@@ -191,14 +191,14 @@ def part_cf(src, D):
 
 
 def cue(S, C):
-    red = C.red_stop.fillna(False).astype(bool) & (C.red_cls.fillna("") == "C") & C.red_start.fillna(False).astype(bool)
-    lead = S.lead.fillna(False).astype(bool)
-    gap = S.lead_gap.astype(float)
-    tl = C.tl.fillna(False).astype(bool)
-    red_any = C.red_stop.fillna(False).astype(bool) & (C.red_cls.fillna("") == "C")
-    return pd.Series(np.select([lead & (gap <= 8), lead, red.reindex(S.index).fillna(False), red_any.reindex(S.index).fillna(False), tl.reindex(S.index).fillna(False)],
-                               ["lead <= 8 m", "lead 8-30 m", "red light, no lead (red at start)", "red light, no lead (red later)", "other light, no lead"],
-                               "no light, no lead"), index=S.index)
+    """the static window's visible reason to stand (first match): the arena set's lead at the window start (wait_set's strip rule), the
+    census light labels (red_stop & red_cls C: the human stands at a red light's line; tl only: a light line ahead with no known state,
+    median 119 m away)."""
+    C = C.reindex(S.index)
+    red = C.red_stop.fillna(False).astype(bool) & (C.red_cls.fillna("") == "C")
+    lead, gap, tl = S.lead.fillna(False).astype(bool), S.lead_gap.astype(float), C.tl.fillna(False).astype(bool)
+    return pd.Series(np.select([lead & (gap <= 8), lead, red, tl], ["lead <= 8 m", "lead 8-30 m", "red light at the line, no lead",
+                                                                    "light of unknown state, no lead"], "no light, no lead"), index=S.index)
 
 
 def part_b(D, X, T, ids, S, C):
@@ -248,6 +248,16 @@ def part_b(D, X, T, ids, S, C):
             auc = (r[y[m] == 1].sum() - npos * (npos + 1) / 2) / (npos * nneg)
             p(f"  AUC of {c} (plan 4 s arc at that decision) for the window's zero: {auc:.3f}")
         p("")
+    # does decision 0 decide? zero rate by the plan's 4 s arc at k = 0 (force-GT: the ego still on the human's standing pose)
+    b = pd.concat([per[t_].assign(model=t_) for t_ in TAGS])
+    b["a0b"] = pd.cut(b.a0, [0, 1.5, 2, 2.5, 3, 4, 6, 99])
+    t = b.pivot_table(index="a0b", columns="model", values="zero", aggfunc="mean", observed=False)[TAGS]
+    t["windows (all models)"] = b.groupby("a0b", observed=False).size()
+    t.index.name = "plan 4 s arc at k = 0 (m)"
+    p("Zero rate of the static windows by the plan's 4 s arc at decision 0 (all four models; k = 0 is under force-GT, so this is the plan on "
+      "the human's own standing input):")
+    p("")
+    table(t)
     # creep amplification on JTN1 zeros: arc4 by k
     for tag in ("JTN1", "RSG"):
         z = Z[(Z.tag == tag) & Z.id.isin(per[tag].index[per[tag].zero])]
@@ -275,6 +285,7 @@ def part_c(D, X, T, ids, S, C, hum_off, per):
     cu = cue(S.loc[ids], C)
     stt = S.loc[ids, "stratum"]
     best = X.loc[ids, TAGS].max(axis=1)
+    stt = S.loc[ids, "stratum"]
     rows = []
     cls_of = {}
     for tag in TAGS:
@@ -313,6 +324,21 @@ def part_c(D, X, T, ids, S, C, hum_off, per):
       f"0.93 needs {0.93 * N:.0f} points, JTN1 has {X.loc[ids, 'JTN1'].sum():.1f} (gap {0.93 * N - X.loc[ids, 'JTN1'].sum():.1f}).")
     p("")
     table(piv, "{:.1f}")
+    # a model that stays when it stands at a red light's line with no lead: the stand-still read (starter) on those windows, against
+    # the windows where the human launches at the (never rendered) green
+    stay = X.loc[ids, "starter"] if "starter" in X else None
+    if stay is not None:
+        red = (C.red_stop.fillna(False).astype(bool) & (C.red_cls.fillna("") == "C")).reindex(ids).fillna(False)
+        grn = (C.red_stop.fillna(False).astype(bool) & (C.red_cls.fillna("") == "G")).reindex(ids).fillna(False)
+        lead = S.lead.fillna(False).astype(bool).reindex(ids)
+        for nm, m in (("stands at red, no lead, static", red & ~lead & (stt == "static")), ("launches at green, no lead", grn & ~lead),
+                      ("launches at green, behind a lead", grn & lead)):
+            i = ids[m.values]
+            p(f"- {nm}: {len(i)} windows; JTN1 {X.loc[i, 'JTN1'].sum():.1f} points, stand-still read (starter) {stay[i].sum():.1f}, RSG {X.loc[i, 'RSG'].sum():.1f}")
+        i1, i2 = ids[(red & ~lead & (stt == "static")).values], ids[(grn & ~lead).values]
+        p(f"- 'stay at a red line without a lead' (perfect on the first group, never launching on the second) against JTN1: "
+          f"{(stay[i1] - X.loc[i1, 'JTN1']).sum():+.1f} {(stay[i2] - X.loc[i2, 'JTN1']).sum():+.1f} = {(stay[i1] - X.loc[i1, 'JTN1']).sum() + (stay[i2] - X.loc[i2, 'JTN1']).sum():+.1f} points")
+        p("")
     ceil = 1 - len(set(hum_off) & set(ids)) / N
     p(f"Ceiling: {len(set(hum_off) & set(ids))} human-track offroad windows -> {ceil:.4f}.")
     p("")
@@ -330,6 +356,8 @@ def main():
     ids = common(W, C, S)
     X = W.pivot_table(index="id", columns="tag", values="score")
     T = W.pivot_table(index="id", columns="tag", values="type", aggfunc="first")
+    R0 = pd.read_csv(src / "rows_valid.csv.gz")
+    X["starter"] = R0[R0.tag == "starter"].drop_duplicates("id").set_index("id").score.reindex(X.index)
     G = pd.read_parquet(src / "offroad_stop3.parquet")
     hum_off = set(G.index[G.off_pre | G.h_off_any])
     p("# NATIVE-GAP tables (native_gap_report.py)")
