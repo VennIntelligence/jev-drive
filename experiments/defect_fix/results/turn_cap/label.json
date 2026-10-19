@@ -1,0 +1,55 @@
+{
+ "pool": "on1_JTX",
+ "rows": 211392,
+ "s_rows": 128798,
+ "labelled": 128798,
+ "sharp_s_rows": 22700,
+ "domain": 13965,
+ "domain_right": 5531,
+ "domain_left": 8434,
+ "domain_share_of_s": 0.10842559667075576,
+ "domain_logs": 26,
+ "blocked": {
+  "ego_below_v_tc": 7847,
+  "human_arc_below_h_tc": 888
+ },
+ "draw_share_jtx00": {
+  "domain": 0.047297063241252615,
+  "s_rows": 0.4571428571428571,
+  "per_batch_70": 3.310794426887683
+ },
+ "served_fire": {
+  "rows": 13965,
+  "fires": 4303,
+  "share": 0.30812746151092013,
+  "draw_share": 0.014537566263760288,
+  "right": 1484,
+  "left": 2819,
+  "plan_over_human_arc_q": [
+   0.571,
+   0.754,
+   0.933,
+   1.099,
+   1.386
+  ]
+ },
+ "by_part": {
+  "rb0": 2389,
+  "rtb1": 2248,
+  "ys": 4843,
+  "y": 2414,
+  "pn0": 298,
+  "pn1": 143,
+  "pn2": 418,
+  "pn3": 346,
+  "pn4": 506,
+  "pn5": 360
+ },
+ "turn_q_domain": [
+  49.389,
+  54.658,
+  69.944,
+  83.179,
+  91.282
+ ]
+}

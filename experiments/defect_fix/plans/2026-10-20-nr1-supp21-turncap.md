@@ -4,6 +4,10 @@
 `STANDFMXH1K-L18-s0`）的存档读数、B2 全长两个 seed 的存档大考场读数（第 391 条）与第 395 条的诊断。主会话转达用户夜间授权：写登记 → 实现与核对 → 离线闸
 → 最多两条 1 000 步剂量 pilot 与读数（池里排队，不指定卡）；第 1 段只读，第 2 段只给过线的臂；**不跑全长**：pilot 过了就报告，早上由用户定是否把 TURN-CAP 与
 STAND-R（补记 20，另一个代理在跑，本线不碰它的文件与作业）合成一条联合全长臂（21.6 先把命令写好）。
+**结果（10-20 01:24 box 时间，登记之后）：离线闸不过，本线停。** G1 0 / 0、G2 36 / 41 = 88 %（9 / 9 窗）过；**G3 不过**：B2 s1 得 1 分的 held 窗里
+5.9 % 的决策、11.7 % 的窗触发（线 1 % / 5 %）。没有训练、没有读数，排队的同一性 / 定标 / 对照转弯集读数已取消，GPU 0 卡时。详见
+[results/turn_cap/](../results/turn_cap/README.md) 与第 396 条；21.6 的联合臂草稿因此不适用（TURN-CAP 没有过线的臂）。
+
 代码：`lib/nr1_free.py`（`turn_range` / `turncap_rows` / `turncap_cap` / `turncap_load` / `turncap_term`）、`lib/nr1_lat.py`、`rm_train --on-turncap W`、
 `scripts/turn_cap.{py,sh}`；结果 `results/turn_cap/`，盒上 `$DATA_DIR/runs/defect_fix/turn_cap/`。
 

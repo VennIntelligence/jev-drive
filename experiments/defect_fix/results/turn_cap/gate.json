@@ -1,0 +1,302 @@
+{
+ "rule": {
+  "v_tc": 2.0,
+  "h_tc": 4.0,
+  "turn_tc": 45.0,
+  "k_tc": 1.05,
+  "window": [
+   -10,
+   20
+  ]
+ },
+ "pool": {
+  "rows": 211392,
+  "s_rows": 128798,
+  "turncap_rows": 13965,
+  "right": 5531,
+  "left": 8434,
+  "v_tc": 2.0,
+  "h_tc": 4.0,
+  "turn_tc": 45.0,
+  "k_tc": 1.05,
+  "window": [
+   -10,
+   20
+  ]
+ },
+ "G1": {
+  "fires": {
+   "fut": 0,
+   "fut_reg": 0
+  },
+  "rows": 13965,
+  "pass_": true
+ },
+ "per_read": {
+  "s1": {
+   "windows": [
+    {
+     "window": "efe356db",
+     "target": true,
+     "t_ev": 3.017,
+     "pre": 4,
+     "domain": 4,
+     "fired": 4,
+     "over_cap": 4,
+     "turn_med": 98.53291788866731,
+     "plan_over_cap_med": 1.1063740870524645
+    },
+    {
+     "window": "202f583c",
+     "target": true,
+     "t_ev": 4.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 88.88157289009261,
+     "plan_over_cap_med": 1.56652594969627
+    },
+    {
+     "window": "9e7c5a46",
+     "target": true,
+     "t_ev": 2.517,
+     "pre": 3,
+     "domain": 3,
+     "fired": 3,
+     "over_cap": 3,
+     "turn_med": 124.66519294860709,
+     "plan_over_cap_med": 1.780415166120532
+    },
+    {
+     "window": "098f5c53",
+     "target": true,
+     "t_ev": 4.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 100.31291263761224,
+     "plan_over_cap_med": 1.0708273467018516
+    },
+    {
+     "window": "3f805a18",
+     "target": true,
+     "t_ev": 3.517,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 128.56123023242327,
+     "plan_over_cap_med": 1.3515039674900102
+    },
+    {
+     "window": "87705868",
+     "target": true,
+     "t_ev": 5.017,
+     "pre": 5,
+     "domain": 4,
+     "fired": 3,
+     "over_cap": 4,
+     "turn_med": 60.67891407136135,
+     "plan_over_cap_med": 1.0972964761791568
+    },
+    {
+     "window": "f2305669",
+     "target": true,
+     "t_ev": 4.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 2,
+     "over_cap": 2,
+     "turn_med": 66.58639503099033,
+     "plan_over_cap_med": 0.8844483923111642
+    },
+    {
+     "window": "6f27563e",
+     "target": true,
+     "t_ev": 5.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 119.24777187304363,
+     "plan_over_cap_med": 1.3117314557715192
+    },
+    {
+     "window": "476b54f9",
+     "target": true,
+     "t_ev": 3.017,
+     "pre": 4,
+     "domain": 4,
+     "fired": 4,
+     "over_cap": 4,
+     "turn_med": 124.00690719690938,
+     "plan_over_cap_med": 1.2300573771643712
+    }
+   ]
+  },
+  "s0": {
+   "windows": [
+    {
+     "window": "efe356db",
+     "target": true,
+     "t_ev": 3.017,
+     "pre": 4,
+     "domain": 4,
+     "fired": 4,
+     "over_cap": 4,
+     "turn_med": 98.5280153777774,
+     "plan_over_cap_med": 1.0995068238035177
+    },
+    {
+     "window": "41a358be",
+     "target": false,
+     "t_ev": 4.517,
+     "pre": 5,
+     "domain": 5,
+     "fired": 1,
+     "over_cap": 1,
+     "turn_med": 71.69994394873946,
+     "plan_over_cap_med": 0.9079863274967213
+    },
+    {
+     "window": "202f583c",
+     "target": true,
+     "t_ev": 4.517,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 82.2254940744715,
+     "plan_over_cap_med": 1.501453999482781
+    },
+    {
+     "window": "9e7c5a46",
+     "target": true,
+     "t_ev": 2.517,
+     "pre": 3,
+     "domain": 3,
+     "fired": 3,
+     "over_cap": 3,
+     "turn_med": 124.68739960635358,
+     "plan_over_cap_med": 1.6499856471543908
+    },
+    {
+     "window": "098f5c53",
+     "target": true,
+     "t_ev": 4.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 2,
+     "over_cap": 2,
+     "turn_med": 100.38449104908551,
+     "plan_over_cap_med": 0.9485610470858218
+    },
+    {
+     "window": "3f805a18",
+     "target": true,
+     "t_ev": 3.517,
+     "pre": 5,
+     "domain": 5,
+     "fired": 5,
+     "over_cap": 5,
+     "turn_med": 128.56019663810065,
+     "plan_over_cap_med": 1.3344512226265288
+    },
+    {
+     "window": "f2305669",
+     "target": true,
+     "t_ev": 4.017,
+     "pre": 5,
+     "domain": 5,
+     "fired": 1,
+     "over_cap": 1,
+     "turn_med": 66.84428945469367,
+     "plan_over_cap_med": 0.8116159732665204
+    },
+    {
+     "window": "6f27563e",
+     "target": true,
+     "t_ev": 5.017,
+     "pre": 5,
+     "domain": 4,
+     "fired": 4,
+     "over_cap": 4,
+     "turn_med": 118.94340277305095,
+     "plan_over_cap_med": 1.3339722286443068
+    },
+    {
+     "window": "476b54f9",
+     "target": true,
+     "t_ev": 3.017,
+     "pre": 4,
+     "domain": 4,
+     "fired": 4,
+     "over_cap": 4,
+     "turn_med": 125.78603523608156,
+     "plan_over_cap_med": 1.2132274621080439
+    }
+   ]
+  }
+ },
+ "G2": {
+  "windows": 9,
+  "windows_fired": 9,
+  "decisions": 41,
+  "fired": 36,
+  "share": 0.8780487804878049,
+  "lines": {
+   "share": 0.5,
+   "windows": 6
+  },
+  "pass_": true
+ },
+ "G3": {
+  "windows": 2034,
+  "decisions": 16272,
+  "fired": 967,
+  "share": 0.05942723697148476,
+  "windows_fired": 238,
+  "windows_fired_share": 0.11701081612586037,
+  "lines": {
+   "share": 0.01,
+   "windows": 0.05
+  },
+  "by_stratum": {
+   "turn": 542,
+   "other": 154,
+   "braking": 144,
+   "launch": 122,
+   "static": 5
+  },
+  "domain_decisions": 1558,
+  "domain_fire_share": 0.6206675224646984,
+  "pass_": false
+ },
+ "describe": {
+  "s1": {
+   "decisions": 17824,
+   "domain": 1858,
+   "fired": 1162,
+   "fired_right": 411,
+   "fired_windows": 283,
+   "fired_windows_outside_turn_set": 145,
+   "turn_set_windows_fired_pass": 116,
+   "turn_set_windows_fired_fail": 22,
+   "below_v_tc": 9360
+  },
+  "s0": {
+   "decisions": 17824,
+   "domain": 1844,
+   "fired": 1111,
+   "fired_right": 394,
+   "fired_windows": 273,
+   "fired_windows_outside_turn_set": 140,
+   "turn_set_windows_fired_pass": 109,
+   "turn_set_windows_fired_fail": 24,
+   "below_v_tc": 9435
+  }
+ },
+ "pass_": false
+}
