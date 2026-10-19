@@ -1,0 +1,47 @@
+== STANDFMX1K-L18-s0 (logged training command) = DRY here: yes
+== STANDFMX1K-L18-s0 -> STANDFMXG1K-L18-s0
+5c5
+< STANDFMX1K-L18-s0
+---
+> STANDFMXG1K-L18-s0
+85a86,87
+> --on-free-clear
+> 15,2
+== STANDFMX1K-L18-s0 -> STANDFMXH1K-L18-s0
+5c5
+< STANDFMX1K-L18-s0
+---
+> STANDFMXH1K-L18-s0
+81c81
+< 0.002
+---
+> 0.001
+== STANDFMX1K-L18-s0 -> STANDFMX-L18-s0
+5c5
+< STANDFMX1K-L18-s0
+---
+> STANDFMX-L18-s0
+67c67
+< 50
+---
+> 500
+73c73
+< 1000
+---
+> 9500
+== JTX1K-L18-s0 -> STANDFMX1K-L18-s0
+5c5
+< JTX1K-L18-s0
+---
+> STANDFMX1K-L18-s0
+75a76,85
+> --on-stand
+> 0.0068
+> --on-stand-margin
+> 1.0
+> --on-free
+> 0.002
+> --on-free-mode
+> move
+> --on-free-frac
+> 0.95

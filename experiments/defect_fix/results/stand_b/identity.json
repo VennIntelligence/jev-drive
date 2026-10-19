@@ -1,0 +1,21 @@
+{
+ "a": "STBGG-old",
+ "b": "STBGG-new",
+ "note": "B's command (on1_JTX, JTX00, STAND W_S 0.0068, FREE-M 0.002 move 0.95) 60 steps eager: code 6fec7b27 vs 5d00f4d0",
+ "scalars": 315,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5468488335609436,
+  0.5468488335609436
+ ],
+ "on_hash_60": [
+  "81d78547676d739f",
+  "81d78547676d739f"
+ ],
+ "want_hash": null,
+ "identical": true
+}
