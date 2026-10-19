@@ -94,7 +94,7 @@ def split_rows(R, recs):
 
 
 def load_arm(o, arm, a0):
-    rolls = {x["scene"]: TX.Roll(x) for x in pickle.load(open(f"{o}/tax/{arm}.pkl", "rb"))["rolls"]}
+    rolls = {x["scene"]: TX.Roll(x) for x in pickle.load(open(f"{o}/tax/{arm}.pkl", "rb"))["rolls"] if "ctrl" in x}   # no trace: infrastructure
     root = a0 if arm == "A0" else f"{o}/{arm}"
     recs, bad = {}, set()
     for f in glob.glob(f"{root}/runs/*/sim/aggregate/results-summary.json"):      # driver RPC errors: infrastructure, not behaviour (d327)
