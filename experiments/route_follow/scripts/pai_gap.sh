@@ -29,6 +29,14 @@ submit)
   h=$(sub pg-exh --after $all --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME exh) || exit 1
   s=$(sub pg-sum --after $h,$x --vram 0.1 --cpu 16 --ram 60 --timeout-h 1 -- bash $ME sum) || exit 1
   echo "$(date '+%F %T') submitted: H c000 $c0, gate $g, H all $all, exasl $x, exh $h, sum $s" | tee -a $O/stages.txt ;;
+resume)  # <c000 job id>: gate after it, then c001..c007, exh, sum (the c000-only restart of 13:10: chunks/ held all 8 lists, so the
+         # first resubmit queued all 8 ungated; c001..c007 were cancelled before starting)
+  c0=$2; rm -f $O/H/submit.*.txt
+  g=$(sub pg-gate --after $c0 --vram 0.1 --cpu 1 --ram 2 --timeout-h 0.2 -- bash $ME gate) || exit 1
+  AFTER=$g read_h $A0/chunks/*.txt; all=$c0,$(ids $O/H/submit.*.txt)
+  h=$(sub pg-exh --after $all --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME exh) || exit 1
+  s=$(sub pg-sum --after $h --vram 0.1 --cpu 16 --ram 60 --timeout-h 1 -- bash $ME sum) || exit 1
+  echo "$(date '+%F %T') resume: c000 $c0, gate $g, H rest $all, exh $h, sum $s" | tee -a $O/stages.txt ;;
 gate)  # H c000: log replay served after the force-GT window, no RPC error, >= 30 rollouts
   python3 - $O/H/runs/ntv0-l18-s0_c000 <<'PY' | tee $O/gate.txt
 import json, sys
