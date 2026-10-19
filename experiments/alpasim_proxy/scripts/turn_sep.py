@@ -46,7 +46,7 @@ A2_S0 = TARGETS + ("41a358be",)
 V_MIN, TURN_MIN, SPAN = 2.0, 15.0, (3.0, 1.0)
 AUC_LINE, FIRE_LINE, TGT_LINE, FAIL_LINE = 0.85, 0.01, 6, 0.5
 MAPFREE = ("ratio", "arc", "out4", "out8", "out_end", "kdef", "alat", "alat_plan", "lag", "lat0")
-GEOM = ("kmax", "turn_deg", "right")
+GEOM = ("kmax", "kmax1m", "turn_deg", "right")
 ORACLE = ("edge",)
 FEATS = MAPFREE + GEOM + ORACLE
 
@@ -75,6 +75,53 @@ def cmd_traces(a):
     T = pd.concat(rows, ignore_index=True)
     T.to_parquet(a.out)
     print(T.groupby("tag").id.nunique().to_dict())
+
+
+def cmd_pool(a):
+    """(box) the draft term's domain in the on-policy pool: S rows, ego >= V_MIN, path heading change >= TURN_MIN over 20 m,
+    kmax_1m >= --k; and how many of the stored served plans sit outward of the logged path at 4 m of arc by > --m."""
+    data = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
+    CR, GI = data / "runs/op_parity/cache", 15
+    rows_dir = {"rb0": "L18RB0", "rtb1": "L18RTB1", "ys": "L18YS", "y": "L18Y", **{f"pn{i}": f"PN{i}" for i in range(7)}}
+    tab = np.load(CR / a.pool / "tab.npz")
+    names = tab["names"].astype(str)
+    S = tab["mode"].astype(str) == "self"
+    part = np.array([n.split(":")[1] for n in names])
+    km, dh, o4 = (np.full(len(names), np.nan) for _ in range(3))
+    for p, d in rows_dir.items():
+        r = np.flatnonzero(S & (part == p))
+        if not len(r):
+            continue
+        z = np.load(data / "runs/onpol_nuplan/rows" / d / "meta.npz", allow_pickle=True)
+        pos = {q: i for i, q in enumerate(z["names"].astype(str).tolist())}
+        mi = np.array([pos["on:" + names[i].split(":", 2)[2]] for i in r])
+        g = z["gpath"][mi].astype(np.float64)
+        km[r] = kmax_1m(g[:, GI - 1:GI + 23], 0, 20)
+        h = np.arctan2(*np.diff(g[:, [GI, GI + 1, GI + 19, GI + 20]], axis=1)[:, [0, 2]].transpose(2, 0, 1)[::-1])
+        dh[r] = np.degrees(np.angle(np.exp(1j * (h[:, 1] - h[:, 0]))))
+        P = z["poses"][mi][:, :, :2].astype(np.float64)                  # ego frame, origin = ego
+        pl = np.concatenate([np.zeros((len(r), 1, 2)), P], 1)
+        ca = np.concatenate([np.zeros((len(r), 1)), np.cumsum(np.hypot(*np.diff(pl, axis=1).transpose(2, 0, 1)), 1)], 1)
+        want = (tab["speed"][r] >= V_MIN) & (np.abs(dh[r]) >= TURN_MIN) & (km[r] >= a.k)
+        for j in np.flatnonzero(want):
+            if ca[j, -1] < 4:
+                continue
+            q = np.array([np.interp(4.0, ca[j], pl[j, :, 0]), np.interp(4.0, ca[j], pl[j, :, 1])])
+            tr = Track(dict(T=np.arange(86) * 1e5, P=g[j], Y=np.zeros(86)))
+            off = tr.proj(np.r_[[[0.0, 0.0]], [q]])[1]
+            o4[r[j]] = -np.sign(dh[r[j]]) * (off[1] - off[0])
+    v = tab["speed"]
+    dom = S & (v >= V_MIN) & (np.abs(dh) >= TURN_MIN) & (km >= a.k)
+    w = np.load(data / "runs/defect_fix/w/JTX00.npz")
+    ww = w["w"].astype(np.float64) / w["w"].sum() if np.array_equal(w["names"].astype(str), names) else None
+    rec = dict(pool=a.pool, s_rows=int(S.sum()), moving_turn=int((S & (v >= V_MIN) & (np.abs(dh) >= TURN_MIN)).sum()), k=a.k, m=a.m,
+               domain=int(dom.sum()), domain_right=int((dom & (dh < 0)).sum()), domain_share_of_s=float(dom.sum() / S.sum()),
+               domain_logs=int(len(np.unique(tab["log"].astype(str)[dom]))), served_out4_fire=int((dom & (o4 > a.m)).sum()),
+               served_out4_q=np.nanquantile(o4[dom], [0.1, 0.25, 0.5, 0.75, 0.9]).round(3).tolist() if dom.any() else [],
+               draw_share_jtx00=float(ww[dom].sum()) if ww is not None else None, kmax_q_moving_turn=np.nanquantile(
+                   km[S & (v >= V_MIN) & (np.abs(dh) >= TURN_MIN)], [0.5, 0.9, 0.99]).round(4).tolist())
+    Path(a.out).write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec, indent=1))
 
 
 # ---------------------------------------------------------------- Mac: candidate states per decision
@@ -110,9 +157,29 @@ class Track:
     def head(self, s):
         return np.interp(s, self.Sk, self.Yk)
 
+    def path1m(self, s_e):
+        """the logged path at 1 m stations over [s_e - 1, s_e + 22] m (clamped at the track ends), as the trainer's gpath."""
+        g = s_e + np.arange(-1.0, 23.0)
+        return np.c_[np.interp(g, self.S, self.P[:, 0]), np.interp(g, self.S, self.P[:, 1])]
+
     def kmax(self, s0, s1):
         m = (self.gk >= s0) & (self.gk <= s1)
         return float(np.abs(self.kap[m]).max()) if m.any() else np.nan
+
+
+def kmax_1m(path, i0, i1):
+    """path (n, m, 2) at 1 m stations -> (n,) max |curvature| (rad/m) over segments i0 .. i1, curvature = heading change between
+    consecutive 1 m segments averaged over 2 m (the trainer's view of the logged path, rows meta `gpath`). Segments < 0.2 m (clamped
+    ends) carry the previous heading."""
+    P = np.asarray(path, np.float64)
+    d = np.diff(P, axis=1)
+    h = np.where(np.hypot(d[..., 0], d[..., 1]) > 0.2, np.arctan2(d[..., 1], d[..., 0]), np.nan)
+    for j in range(1, h.shape[1]):
+        h[:, j] = np.where(np.isnan(h[:, j]), h[:, j - 1], h[:, j])
+    h = np.unwrap(np.nan_to_num(h), axis=1)
+    k = np.diff(h, axis=1)
+    k2 = 0.5 * (k[:, 1:] + k[:, :-1])
+    return np.abs(k2[:, i0:i1]).max(1)
 
 
 def plan_geom(q):
@@ -138,13 +205,15 @@ def decision(q, tr, edge):
     off0 = o[0]
     out = lambda off: float(-sig * (off - off0))  # noqa: E731
     d = dict(dh20=np.degrees(dh20), ratio=q.v / max(q.vh, 0.3), lat0=float(-sig * off0), out_end=out(o[-1]), edge=-edge,
-             kmax=tr.kmax(s_e, s_e + 20), turn_deg=abs(np.degrees(dh20)), right=float(sig < 0), plan4=ca[-1])
+             kmax=tr.kmax(s_e, s_e + 20), kmax1m=float(kmax_1m(tr.path1m(s_e)[None], 0, 20)[0]), turn_deg=abs(np.degrees(dh20)), right=float(sig < 0), plan4=ca[-1])
     for L, nm in ((4.0, "out4"), (8.0, "out8")):
         p = at_arc(pl, ca, L)
         d[nm] = out(tr.proj(p)[1][0]) if p is not None else np.nan
-    # the human's 4 s arc from the time it was at the ego's station
-    sh = np.interp(q.t_h + 4e6, tr.T, tr.S) - np.interp(q.t_h, tr.T, tr.S)
-    d["arc"] = ca[-1] / max(sh, 0.5)
+    # plan arc / the human's arc over the same horizon from the time it was at the ego's station (4 s, or less where the 5.5 s
+    # human track ends; < 1.5 s left -> nan)
+    hz = min(4.0, (tr.T[-1] - q.t_h) / 1e6)
+    sh = np.interp(q.t_h + hz * 1e6, tr.T, tr.S) - np.interp(q.t_h, tr.T, tr.S)
+    d["arc"] = float(np.interp(hz, 0.5 * np.arange(9), ca) / max(sh, 0.5)) if hz >= 1.5 else np.nan
     L8 = min(8.0, ca[-1])
     d["kdef"] = float(sig * ((tr.head(s_e + L8) - tr.head(s_e)) - np.interp(L8, ca, yw))) if L8 >= 1.0 else np.nan
     d["alat"] = q.v ** 2 * d["kmax"]
@@ -424,10 +493,13 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("traces")
     p.add_argument("--out", required=True)
+    p = sp.add_parser("pool")
+    p.add_argument("--pool", default="on1_JTX"), p.add_argument("--k", type=float, default=0.107), p.add_argument("--m", type=float, default=0.2)
+    p.add_argument("--out", required=True)
     p = sp.add_parser("feat")
     p.add_argument("--workers", type=int, default=8)
     sp.add_parser("auc")
     sp.add_parser("garage")
     sp.add_parser("fig")
     a = ap.parse_args()
-    dict(traces=cmd_traces, feat=cmd_feat, auc=cmd_auc, garage=cmd_garage, fig=lambda a: cmd_fig(a))[a.cmd](a)
+    dict(traces=cmd_traces, pool=cmd_pool, feat=cmd_feat, auc=cmd_auc, garage=cmd_garage, fig=lambda a: cmd_fig(a))[a.cmd](a)
