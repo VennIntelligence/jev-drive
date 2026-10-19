@@ -3,6 +3,7 @@
 side or model plan (plans/2026-10-20-pai-partials-sweep-prereg.md, part 1). Box, repo .venv; stored reads are read, never written.
 
   pai_partials.py decomp --out $DATA_DIR/runs/alpasim_proxy/pai_partials/decomp.csv
+  pai_partials.py value --rows tmp/pai_pcs/rows.csv.gz --fits tmp/pai_pcs/out/fits --decomp results/pai_partials/decomp.csv --out results/pai_partials/value.md
 
 Per partial scene (d381's classes, route_follow/pai_gap/scenes.csv) and per inference decision of A0 from the handoff (1.6 s) to the rear
 hit (rear-hit) or the rollout's end (slow):
@@ -97,12 +98,49 @@ def cmd_decomp(a):
     print(json.dumps(out.groupby(["cls", "cause"]).agg(n=("score", "size"), points=("score", lambda x: float((1 - x).sum()))).reset_index().to_dict("records")))
 
 
+def cmd_value(a):
+    """Mac (tmp/pcs_local/.venv): PCS worth of each cause group on the d392 ruler (paimix fit, NTV0-s0 + ACC + GAP's row, items fixed, MAP)."""
+    sys.path[:0] = [str(Path(__file__).resolve().parent)]
+    import pai_pcs_local as PL
+    sc, _, _ = PL.table(a.rows)
+    z = PL.Ruler(dict(np.load(Path(a.fits) / "paimix.npz", allow_pickle=True)), sc)
+    it = np.array(z.items)
+    y0 = sc.loc["NTV0-s0+AG", it].to_numpy(float)
+    base = PL.pcs_of(z, y0)
+    d = pd.read_csv(a.decomp).set_index("scene")
+    d["loss"] = 1 - d.score
+    mg = d[["model-guardstop_m", "model-guardbrake_m", "model-launch_m"]].sum(axis=1)
+    d["mcause"] = np.where(mg >= d["model-cruise_m"], "plan brakes / stops / launches late where the human drives", "plan cruises below the human")
+
+    def worth(new):                                          # new: {scene: score}
+        y = y0.copy()
+        for s, v in new.items():
+            y[it == s] = v
+        return PL.pcs_of(z, y) - base
+    L = ["| group | scenes | points | deficit m | serve-removed m | PCS if -> 1 | PCS of the serve-removed share |", "|---|--:|--:|--:|--:|--:|--:|"]
+    groups = [(f"{c}", x) for c, x in d.groupby("cls")] + [(f"{c}: {m}", x) for (c, m), x in d.groupby(["cls", "mcause"])] + [("all partials", d)]
+    for lab, x in groups:
+        x = x[x.index.isin(it)]
+        sh = {s: r.score + r.loss * r.serve_m / max(r.deficit_m, 1e-9) for s, r in x.iterrows()}
+        L.append(f"| {lab} | {len(x)} | {x.loss.sum():.1f} | {x.deficit_m.sum():.0f} | {x.serve_m.sum():.0f} | {worth({s: 1.0 for s in x.index}):+.0f} | {worth(sh):+.1f} |")
+    t = ["lead-real", "lead-phantom", "curve", "set", "ramp"]
+    L += ["", "Deficit metres by term (rear-hit / slow):", "", "| term | rear-hit m | slow m |", "|---|--:|--:|"]
+    for k in t + ["model-guardstop", "model-guardbrake", "model-launch", "model-cruise", "setlow", "add"]:
+        g = d.groupby("cls")[f"{k}_m"].sum()
+        L.append(f"| {k} | {g.get('partial rear-hit', 0):.0f} | {g.get('partial slow', 0):.0f} |")
+    d.to_csv(a.decomp)
+    Path(a.out).write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     s = p.add_subparsers(dest="cmd", required=True)
     c = s.add_parser("decomp"); c.add_argument("--out", required=True)
+    v = s.add_parser("value"); v.add_argument("--rows", required=True); v.add_argument("--fits", required=True)
+    v.add_argument("--decomp", required=True); v.add_argument("--out", required=True)
     a = p.parse_args()
-    dict(decomp=cmd_decomp)[a.cmd](a)
+    dict(decomp=cmd_decomp, value=cmd_value)[a.cmd](a)
 
 
 if __name__ == "__main__":

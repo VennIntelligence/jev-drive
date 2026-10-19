@@ -65,6 +65,10 @@ model's plan is never changed; only where along it the returned poses sit. Three
                  v_model (the model's profile at 1.5 s), the winning term at 1.5 s (set | curve | model | lead; `ramp` when the profile is still
                  more than 0.3 m/s from it), guard (stop | brake | ''), route cover (m ahead).
 
+  JEV_ACC_ALAT=<m/s^2>, JEV_ACC_REL=<arc m>,<dec m/s^2>, JEV_ACC_VSET=<gain>   (d) parameters, unset = the values below bit for bit
+                 (PAI-PARTIALS sweep, experiments/alpasim_proxy/plans/2026-10-20-pai-partials-sweep-prereg.md): the curve limit's lateral
+                 acceleration, the stop guard's 2 s arc and the brake guard's deceleration, and a gain on the plan's own speed in v_set.
+
   JEV_GAP=<t_follow>[,<stop m>]   (e) the following-gap calibration of (b)'s lead MPC (experiments/route_follow/plans/2026-10-16-acc-gap-prereg.md;
                  needs JEV_LEAD=1): openpilot's T_FOLLOW (1.45 s) and STOP_DISTANCE (6 m) of the desired distance
                  d(v) = v^2 / 5 + T_FOLLOW v + STOP_DISTANCE replaced by the given values (lead_long.LongMpc(t_follow, stop_distance)); unset = the
@@ -130,14 +134,15 @@ def join(vp, v0: float, tau: float):
 # ---------------------------------------------------------------- (d) JEV_ACC
 ACC_T_HAND = 1.6                                          # s since the session's first call: AlpaSim's force-GT ends at 1.7 s (PAI)
 ACC_T_HAND_NUPLAN = 0.5                                   # nuPlan: force-GT 0.5 s at 0.5 s steps; the call at 0.5 s is the handoff step
-ACC_ALAT = 2.4                                            # m/s^2: human median peak lateral acceleration in PAI turns (decision 293)
+ACC_ALAT = float(os.environ.get("JEV_ACC_ALAT") or 2.4)  # m/s^2: human median peak lateral acceleration in PAI turns (decision 293)
 ACC_DCURVE = 1.5                                          # m/s^2: comfortable deceleration into a curve (backward pass)
 ACC_DMAX = 2.5                                            # m/s^2: the profile's own deceleration bound (openpilot COMFORT_BRAKE)
 A_CRUISE_V, A_CRUISE = (0.0, 10.0, 25.0, 40.0), (1.6, 1.2, 0.8, 0.6)   # openpilot longitudinal_planner A_CRUISE_MAX_BP / _VALS
 ACC_HW = 3.0                                              # m: half chord of the route heading
 ACC_KMAX = 0.2                                            # 1/m: curvature clip (openpilot's minimum radius 5 m)
 ACC_OFF = 8.0                                             # m: a route farther than this from the ego is not used
-ACC_REL_ARC, ACC_DEC_REL = 2.0, 1.0                       # vhist.py REL_ARC / DEC_REL (the holdlead releases)
+ACC_REL_ARC, ACC_DEC_REL = (float(x) for x in (os.environ.get("JEV_ACC_REL") or "2.0,1.0").split(","))   # vhist.py REL_ARC / DEC_REL
+ACC_VSET = float(os.environ.get("JEV_ACC_VSET") or 1.0)  # gain on the model plan's 2 .. 4 s speed in v_set (1 = as registered)
 ACC_FAR = 300.0                                           # m: straight extension of the path beyond the plan's end
 T_WIN = 1.5                                               # s: the logged / winning-term time (AlpaSim's MPC tracks 1.0 .. 2.0 s)
 
@@ -189,7 +194,7 @@ class Acc:
         seg = np.hypot(*np.diff(p, axis=0).T) / 0.5
         if self.v_hand is None and (t_s is None or t_s >= self.t_hand):
             self.v_hand = v0
-        vset = max(self.v_hand, float(seg[4:].mean())) if self.v_hand is not None else v0
+        vset = max(self.v_hand, ACC_VSET * float(seg[4:].mean())) if self.v_hand is not None else v0
         guard = "stop" if self.arc < ACC_REL_ARC else "brake" if self.dec >= ACC_DEC_REL else ""
         self.arc, self.dec = float(seg[:4].sum() * 0.5), float((seg[0] - seg[3]) / 1.5)   # read by the next decision
         lim, cover = route_limit(M, vset)
@@ -274,7 +279,9 @@ if LEAD:
     import scipy.optimize  # noqa: F401  (paid at start-up, not inside the first decision)
 
 
-SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "") + (f"-base{BASE}" if BASE else "") + ("-acc" if ACC else "") + (f"-gap{GAP[0]:g}_{GAP[1]:g}" if GAP else "")
+SUFFIX = ((f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "") + (f"-base{BASE}" if BASE else "") + ("-acc" if ACC else "") + (f"-gap{GAP[0]:g}_{GAP[1]:g}" if GAP else "")
+          + (f"-alat{ACC_ALAT:g}" if ACC_ALAT != 2.4 else "") + (f"-rel{ACC_REL_ARC:g}_{ACC_DEC_REL:g}" if (ACC_REL_ARC, ACC_DEC_REL) != (2.0, 1.0) else "")
+          + (f"-vset{ACC_VSET:g}" if ACC_VSET != 1.0 else ""))
 
 
 def cam_to_front(vehicle, cam_x: float) -> float:
