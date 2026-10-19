@@ -239,7 +239,6 @@ def scene_job(job):
 def cmd_diag(a):
     import pandas as pd
     import nx_regress as NR
-    from multiprocessing import Pool
     win, jobs, cfg = [], {}, None
     for pr in a.pair:
         A, Cn = pr.split(":")
@@ -261,9 +260,9 @@ def cmd_diag(a):
             jobs.setdefault(sc, {}).update({A: RA[sc], Cn: RC[sc]})
     W = pd.DataFrame(win)
     print(W.groupby(["pair", "kind"]).size().to_string(), flush=True)
-    with Pool(a.workers) as p:
-        res = p.map(scene_job, [(sc, cfg, labs) for sc, labs in sorted(jobs.items())], chunksize=1)
-    D = pd.DataFrame([d for r in res for d in r])
+    from jevdrive import par                            # non-daemonic workers: the scene loader starts its own processes
+    res = par.pmap(scene_job, [(sc, cfg, labs) for sc, labs in sorted(jobs.items())], workers=a.workers, desc="scenes").values
+    D = pd.DataFrame([d for r in res if r for d in r])
     err = D[D.get("error", pd.Series(dtype=str)).notna()] if "error" in D else D.iloc[:0]
     D = D[D["error"].isna()].drop(columns="error") if "error" in D else D
     out = Path(a.out)
@@ -430,7 +429,7 @@ def cmd_ratchet(a):
         out = p.map(FM._run, jobs, chunksize=1)
     D = pd.DataFrame([d for o in out for d in o])
     for c in ("scored", "moving", "short", "free", "fire"):
-        D[c] = D[c].fillna(False).astype(bool)
+        D[c] = D[c].astype("boolean").fillna(False).astype(bool)
     R = D[(D.stratum != "static") & (D.k >= 2) & (D.v_ego >= 3.0) & D.scored]
     rs = R[R.short]
     St = D[D.stratum == "static"]
