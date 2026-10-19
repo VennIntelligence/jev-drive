@@ -21,6 +21,8 @@ pose). Gradient: each pose moves only along its own heading (nr1_lon.lon_only; n
 NR1FREE-M (prereg supplement 16; rm_train --on-free-mode move --on-free-frac 0.95): the same term, the band FRAC tightened and the rows limited to
 moving states: the ego's t0 speed (tab `speed`) >= V_MOVE and the human neither near a stop nor braking (every 0.5 s segment speed of `fut_reg`
 >= max(V_MOVE, HUM_KEEP x his first segment's)); folded into `ok` at load (no gradient). Default mode "all", FRAC 0.8 = supplement 15 as it was.
+Supplement 19 (rm_train --on-free-clear CMIN,CTH): a stricter free check, the safety distance D_j = max(D0 + TH x v_ref_j, CMIN, CTH x v_ref_j):
+no logged object within max(CMIN m, CTH s x v) ahead of the bumper along the sweep. Default 0,0 = off (no operation added).
 
 NR1STAND (prereg supplement 17; rm_train --on-stand W --on-stand-margin M): the mirror term on standing states. Rows: S rows where the visited
 state stands (tab `speed` < V_STAND) and the human stands all 4 s (arc(fut_reg)_8 < H_STAND); no free check. Cap b_j = max(arc(fut)_j,
@@ -40,6 +42,7 @@ import numpy as np
 
 FRAC, S_MIN, D0, TH, NS, BETA = 0.8, 1.0, 2.0, 0.5, 8, 0.5
 MODE, V_MOVE, HUM_KEEP = "all", 3.0, 0.8
+CLEAR_MIN, CLEAR_TH = 0.0, 0.0                    # supplement 19's stricter free check (0, 0 = off)
 FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the rear axle (= lib/agent_hinge.py)
 DT = 0.5
 V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
@@ -52,11 +55,11 @@ def cum_arc(P):
     return np.cumsum(np.hypot(*np.diff(P, axis=1).transpose(2, 0, 1)), 1)
 
 
-def configure(frac=0.8, mode="all"):
-    global FRAC, MODE
-    assert mode in ("all", "move") and 0 < frac <= 1, (frac, mode)
-    FRAC, MODE = float(frac), str(mode)
-    return dict(frac=FRAC, mode=MODE)
+def configure(frac=0.8, mode="all", clear=(0.0, 0.0)):
+    global FRAC, MODE, CLEAR_MIN, CLEAR_TH
+    assert mode in ("all", "move") and 0 < frac <= 1 and min(clear) >= 0, (frac, mode, clear)
+    FRAC, MODE, (CLEAR_MIN, CLEAR_TH) = float(frac), str(mode), map(float, clear)
+    return dict(frac=FRAC, mode=MODE) | (dict(clear_min=CLEAR_MIN, clear_th=CLEAR_TH) if CLEAR_MIN or CLEAR_TH else {})
 
 
 def seg_speed(P):
@@ -141,7 +144,10 @@ def free(P, s_plan, s_ref, box, val):
     s = (lo[..., None] + (hi - lo)[..., None] * f).reshape(n, 8 * NS)                    # (n, 8 NS), step-major
     x, y, yaw = (q.view(n, 8, NS) for q in _place(P, s))
     v = torch.diff(s_ref, dim=1, prepend=torch.zeros_like(s_ref[:, :1])) / DT
-    D = (D0 + TH * v)[..., None]                                                        # (n, 8, 1)
+    D = D0 + TH * v
+    if CLEAR_MIN or CLEAR_TH:                                                           # supplement 19
+        D = torch.maximum(D, (CLEAR_TH * v).clamp_min(CLEAR_MIN))
+    D = D[..., None]                                                                    # (n, 8, 1)
     c, sn = torch.cos(yaw), torch.sin(yaw)
     off = (FRONT + D - REAR) / 2                                                        # extended box centre ahead of the rear axle
     ex, ey = x + c * off, y + sn * off
@@ -356,7 +362,15 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     assert moving(np.array([8.0, 8.0, 8.0, 3.5, 2.0, 8.0]), vh).tolist() == [True, False, False, True, False, False]   # cruise / brake / stop / slow / ego slow / nan
     configure(0.95, "move")
     assert terms(go(1.85), s_ref, ok, box, val) > 0 and terms(go(1.95), s_ref, ok, box, val) == 0                    # 0.925 x fires at 0.95, 0.975 x not
+    lead20 = lead.clone()
+    lead20[0, :, 0, 0] = 4.049 + 15.0 + 2.25                                           # a standing car 15 m ahead of the bumper
+    assert terms(go(1.85), s_ref, ok, lead20, lv) > 0                                  # 2 m + 0.5 s x v: free, fires
+    configure(0.95, "move", (20.0, 3.0))
+    assert terms(go(1.85), s_ref, ok, lead20, lv) == 0 and terms(go(1.85), s_ref, ok, box, val) > 0   # within 20 m: blocked; empty road fires
+    lead20[0, :, 0, 0] = 4.049 + 8.0 + 30.0                                            # 30 m beyond the 4 s reference position: free
+    assert terms(go(1.85), s_ref, ok, lead20, lv) > 0
     configure()
+    assert (CLEAR_MIN, CLEAR_TH) == (0.0, 0.0)
     capz = torch.full((1, 8), MARGIN)                                                  # the human stands: cap = 1 m at every step
     assert stand_terms(stand, capz, ok) == 0 and stand_terms(go(0.2), capz, ok) == 0  # standing / 0.8 m in 4 s: inside the cap
     assert stand_terms(go(1.0), capz, ok) > 0.5 and stand_terms(go(1.0), capz, ~ok) == 0   # 4 m: fires; not a standing row: 0
