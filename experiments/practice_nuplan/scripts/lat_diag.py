@@ -30,7 +30,8 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
 import numpy as np  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/body1/lib")]
+sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "scripts"), str(REPO / "experiments/body1/lib"), str(REPO / "experiments/op_parity/scripts"),
+                 str(REPO / "experiments/op_adapt_r2/lib")]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 W = DATA / "runs/practice_nuplan/lat_diag"
 POOL = DATA / "runs/op_parity/cache/on1_JTX"

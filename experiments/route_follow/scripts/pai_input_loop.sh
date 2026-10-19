@@ -23,7 +23,7 @@ submit)
   mkdir -p $O/pool; git rev-parse --short HEAD > $O/code.txt
   read_arm N0 "$FIX" "" $CH/*.txt
   read_arm KA "$ACC" 1 $CH/c000.txt; c0=$(ids $O/KA/submit.*.txt); [[ -n $c0 ]] || die "no KA c000 job"
-  g=$(sub pil-gate --after $c0 --vram 0 --cpu 1 --ram 2 --timeout-h 0.2 -- bash $ME gate)
+  g=$(sub pil-gate --after $c0 --vram 0.1 --cpu 1 --ram 2 --timeout-h 0.2 -- bash $ME gate) || exit 1
   AFTER=$g read_arm KA "$ACC" 1 $CH/*.txt
   AFTER=$g read_arm KN "$FIX" 1 $CH/*.txt
   echo "$(date '+%F %T') submitted: N0 $(cat $O/N0/submit.*.txt | ids /dev/stdin), KA c000 $c0, gate $g, KA rest + KN after the gate" | tee -a $O/stages.txt ;;
@@ -41,10 +41,10 @@ PY
   ;;
 post)
   after=$(cat $O/{N0,KA,KN}/submit.*.txt | ids /dev/stdin); e=()
-  for arm in A0 N0 KA KN; do e+=($(sub pil-ex-$arm --after $after --vram 0 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME extract $arm)); done
-  m=$(sub pil-msgs --after $after --vram 0 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME msgs)
+  for arm in A0 N0 KA KN; do e+=($(sub pil-ex-$arm --after $after --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME extract $arm)) || exit 1; done
+  m=$(sub pil-msgs --after $after --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME msgs)
   c=$(sub pil-cf --after ${e[1]},$m --vram 12 --cpu 8 --ram 60 --timeout-h 4 -- bash $ME cf)
-  s=$(sub pil-sum --after $(IFS=,; echo "${e[*]}"),$c --vram 0 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME sum)
+  s=$(sub pil-sum --after $(IFS=,; echo "${e[*]}"),$c --vram 0.1 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME sum)
   echo "$(date '+%F %T') post: extract ${e[*]} msgs $m cf $c sum $s" | tee -a $O/stages.txt ;;
 extract)
   arm=$1; root=$O/$arm; [[ $arm == A0 ]] && root=$A0; mkdir -p $O/tax
