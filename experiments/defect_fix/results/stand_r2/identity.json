@@ -1,0 +1,21 @@
+{
+ "a": "SR2GG-old",
+ "b": "SR2GG-new",
+ "note": "B2 pilot command (STAND 0.0068 + FREE-M 0.001) 60 steps eager: code 4ad8034c vs d7aeb311 without --on-stand-launch",
+ "scalars": 315,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5468162894248962,
+  0.5468162894248962
+ ],
+ "on_hash_60": [
+  "81d78547676d739f",
+  "81d78547676d739f"
+ ],
+ "want_hash": null,
+ "identical": true
+}

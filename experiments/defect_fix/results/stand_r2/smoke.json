@@ -1,0 +1,9 @@
+{
+ "run": "SR2GG-L2",
+ "finite": true,
+ "steps": 3,
+ "roll_pos_max": 0.014285714365541935,
+ "labels": "nr1_lat: lon_stand labels {'rows': 211392, 's_rows': 128798, 'standing': 17837, 'ego_slow': 26098, 'margin': 1.0, 'v_stand': 0.5, 'h_stand': 0.5, 'launch_h': 2.0, 'launch_excl_standing': 1487, 'launch_unknown_standing': 17, 'launch_excl_rolling': 340, 'launch_unknown_rolling': 12, 'rolling': 3228, 'rolling_behind_b8': 454, 'v_roll': 3.0}",
+ "launch_dropped": true,
+ "pass_": true
+}

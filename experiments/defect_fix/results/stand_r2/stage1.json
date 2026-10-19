@@ -1,0 +1,661 @@
+{
+ "subset_windows": 716,
+ "easy": {
+  "STANDFMXH1K-L18-s0": {
+   "windows": 716,
+   "mean": 0.9127045924067954,
+   "zeros": 55,
+   "pcs": 1246.1083686917796,
+   "easy_windows": 525,
+   "easy_miss": 53,
+   "red": 30,
+   "other": 23,
+   "by_class": {
+    "zero: static, red line, no lead": 30,
+    "partial: free-road ratchet / slow": 7,
+    "partial: near-miss 0.98-0.999": 3,
+    "partial: other slow": 3,
+    "zero: static, other cue": 3,
+    "partial: stop / lock": 2,
+    "zero: corridor, moving non-turn": 2,
+    "partial: launch late / not launching": 2,
+    "zero: offroad, non-turn": 1
+   },
+   "red_ids": [
+    "2021.06.03.17.06.58_veh-35_03860_03992-06b884271e715c9c",
+    "2021.06.03.17.06.58_veh-35_03860_03992-1ee7784d5d8e58b8",
+    "2021.06.28.15.02.02_veh-38_02398_02848-1070f1ff6e83558e",
+    "2021.06.28.15.02.02_veh-38_02398_02848-318bd5aab941540a",
+    "2021.06.28.15.02.02_veh-38_02398_02848-8fcfab4aefc4501b",
+    "2021.06.28.15.02.02_veh-38_02398_02848-a75aa226b3ee5a09",
+    "2021.06.28.15.02.02_veh-38_02398_02848-d54aa8a97f495424",
+    "2021.06.28.16.57.59_veh-26_00016_00484-bb8f53903e005bdc",
+    "2021.06.28.16.57.59_veh-26_00016_00484-be2df9fccd545552",
+    "2021.06.28.16.57.59_veh-26_00016_00484-d011a5832ff25388",
+    "2021.09.16.14.39.34_veh-42_00297_00935-70d34287e9ab536a",
+    "2021.09.16.14.39.34_veh-42_00297_00935-9c0653f94b07558a",
+    "2021.09.16.14.39.34_veh-42_00297_00935-b2926d50b9ee5b63",
+    "2021.09.16.14.39.34_veh-42_00297_00935-ebf1934c12465470",
+    "2021.09.16.14.39.34_veh-42_00297_00935-fb3a58c942a95920",
+    "2021.09.16.21.13.37_veh-42_00172_00347-65093cde76695b01",
+    "2021.09.16.21.13.37_veh-42_00172_00347-6eef637c6a7e5aa4",
+    "2021.09.16.21.13.37_veh-42_00172_00347-928aa500bc0856f7",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ed1af3974595711",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ef1b3968ad05dcd",
+    "2021.09.16.21.13.37_veh-42_00172_00347-eefec008ee4f5b09",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fa8b79ae7a975a17",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fb3f2587757f56c2",
+    "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+    "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+    "2021.10.06.08.16.17_veh-52_00922_01296-371c77253f4a546b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7",
+    "2021.10.06.08.16.17_veh-52_00922_01296-85d46a6e78d258fb",
+    "2021.10.06.08.16.17_veh-52_00922_01296-b6421b783edc53ee"
+   ]
+  },
+  "STANDRLH1K-L18-s0": {
+   "windows": 716,
+   "mean": 0.9388569819021845,
+   "zeros": 33,
+   "pcs": 1284.750941042479,
+   "easy_windows": 525,
+   "easy_miss": 36,
+   "red": 15,
+   "other": 21,
+   "by_class": {
+    "zero: static, red line, no lead": 15,
+    "partial: free-road ratchet / slow": 7,
+    "partial: near-miss 0.98-0.999": 3,
+    "partial: other slow": 3,
+    "partial: stop / lock": 2,
+    "partial: launch late / not launching": 2,
+    "zero: corridor, moving non-turn": 2,
+    "zero: offroad, non-turn": 1,
+    "partial: rear-ended": 1
+   },
+   "red_ids": [
+    "2021.06.28.15.02.02_veh-38_02398_02848-318bd5aab941540a",
+    "2021.06.28.15.02.02_veh-38_02398_02848-a75aa226b3ee5a09",
+    "2021.06.28.15.02.02_veh-38_02398_02848-d54aa8a97f495424",
+    "2021.06.28.16.57.59_veh-26_00016_00484-be2df9fccd545552",
+    "2021.06.28.16.57.59_veh-26_00016_00484-d011a5832ff25388",
+    "2021.09.16.14.39.34_veh-42_00297_00935-9c0653f94b07558a",
+    "2021.09.16.21.13.37_veh-42_00172_00347-6eef637c6a7e5aa4",
+    "2021.09.16.21.13.37_veh-42_00172_00347-928aa500bc0856f7",
+    "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+    "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+    "2021.10.06.08.16.17_veh-52_00922_01296-371c77253f4a546b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7",
+    "2021.10.06.08.16.17_veh-52_00922_01296-85d46a6e78d258fb",
+    "2021.10.06.08.16.17_veh-52_00922_01296-b6421b783edc53ee"
+   ]
+  },
+  "STANDRL2H1K-L18-s0": {
+   "windows": 716,
+   "mean": 0.9506114448005842,
+   "zeros": 21,
+   "pcs": 1301.0381039398153,
+   "easy_windows": 525,
+   "easy_miss": 29,
+   "red": 7,
+   "other": 22,
+   "by_class": {
+    "partial: free-road ratchet / slow": 7,
+    "zero: static, red line, no lead": 7,
+    "partial: other slow": 3,
+    "partial: near-miss 0.98-0.999": 2,
+    "partial: stop / lock": 2,
+    "partial: launch late / not launching": 2,
+    "zero: corridor, moving non-turn": 2,
+    "zero: offroad, non-turn": 2,
+    "partial: rear-ended": 1,
+    "zero: turn window, offroad / corridor": 1
+   },
+   "red_ids": [
+    "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+    "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+    "2021.10.06.08.16.17_veh-52_00922_01296-371c77253f4a546b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7",
+    "2021.10.06.08.16.17_veh-52_00922_01296-85d46a6e78d258fb",
+    "2021.10.06.08.16.17_veh-52_00922_01296-b6421b783edc53ee"
+   ]
+  },
+  "STANDRH1K-L18-s0": {
+   "windows": 716,
+   "mean": 0.9390407477882696,
+   "zeros": 32,
+   "pcs": 1281.894014903778,
+   "easy_windows": 525,
+   "easy_miss": 36,
+   "red": 15,
+   "other": 21,
+   "by_class": {
+    "zero: static, red line, no lead": 15,
+    "partial: free-road ratchet / slow": 7,
+    "partial: near-miss 0.98-0.999": 3,
+    "partial: other slow": 3,
+    "partial: stop / lock": 2,
+    "partial: launch late / not launching": 2,
+    "zero: corridor, moving non-turn": 2,
+    "zero: offroad, non-turn": 1,
+    "partial: rear-ended": 1
+   },
+   "red_ids": [
+    "2021.06.28.15.02.02_veh-38_02398_02848-318bd5aab941540a",
+    "2021.06.28.15.02.02_veh-38_02398_02848-a75aa226b3ee5a09",
+    "2021.06.28.15.02.02_veh-38_02398_02848-d54aa8a97f495424",
+    "2021.06.28.16.57.59_veh-26_00016_00484-be2df9fccd545552",
+    "2021.06.28.16.57.59_veh-26_00016_00484-d011a5832ff25388",
+    "2021.09.16.14.39.34_veh-42_00297_00935-9c0653f94b07558a",
+    "2021.09.16.21.13.37_veh-42_00172_00347-6eef637c6a7e5aa4",
+    "2021.09.16.21.13.37_veh-42_00172_00347-928aa500bc0856f7",
+    "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+    "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+    "2021.10.06.08.16.17_veh-52_00922_01296-371c77253f4a546b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7",
+    "2021.10.06.08.16.17_veh-52_00922_01296-85d46a6e78d258fb",
+    "2021.10.06.08.16.17_veh-52_00922_01296-b6421b783edc53ee"
+   ],
+   "subset_windows": 716
+  },
+  "STANDR2H1K-L18-s0": {
+   "windows": 716,
+   "mean": 0.9525000699638285,
+   "zeros": 19,
+   "pcs": 1311.7604491989175,
+   "easy_windows": 525,
+   "easy_miss": 26,
+   "red": 4,
+   "other": 22,
+   "by_class": {
+    "partial: free-road ratchet / slow": 7,
+    "partial: near-miss 0.98-0.999": 4,
+    "zero: static, red line, no lead": 4,
+    "partial: stop / lock": 2,
+    "partial: launch late / not launching": 2,
+    "zero: corridor, moving non-turn": 2,
+    "zero: offroad, non-turn": 2,
+    "partial: rear-ended": 1,
+    "partial: other slow": 1,
+    "zero: turn window, offroad / corridor": 1
+   },
+   "red_ids": [
+    "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+    "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+    "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+    "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7"
+   ],
+   "subset_windows": 716
+  }
+ },
+ "arms": {
+  "L1": {
+   "tag": "STANDRLH1K-L18-s0",
+   "rows": [
+    {
+     "read": "main 1: easy red-line zeros",
+     "control": 30,
+     "arm": 15,
+     "ok": true,
+     "line": "<= control - 6",
+     "stand_r": "15 / 4"
+    },
+    {
+     "read": "main 2: subset PCS (frozen board-mix)",
+     "control": 1246,
+     "arm": 1285,
+     "ok": true,
+     "line": ">= control + 15",
+     "stand_r": "1282 / 1312"
+    },
+    {
+     "read": "guard 1: held 460 zeros",
+     "control": 42,
+     "arm": 37,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "38 / 36"
+    },
+    {
+     "read": "guard 2: held 460 front collisions",
+     "control": 3,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 3"
+    },
+    {
+     "read": "guard 2: subset AF-front windows",
+     "control": 1,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "0 / 0"
+    },
+    {
+     "read": "guard 3: easy misses outside the red line",
+     "control": 23,
+     "arm": 21,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "21 / 22"
+    },
+    {
+     "read": "guard 4: easy partial: free-road ratchet / slow",
+     "control": 7,
+     "arm": 7,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "7 / 7"
+    },
+    {
+     "read": "guard 4: easy partial: launch late / not launching",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy partial: near-miss 0.98-0.999",
+     "control": 3,
+     "arm": 3,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "3 / 4"
+    },
+    {
+     "read": "guard 4: easy partial: other slow",
+     "control": 3,
+     "arm": 3,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "3 / 1"
+    },
+    {
+     "read": "guard 4: easy partial: rear-ended",
+     "control": 0,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 1"
+    },
+    {
+     "read": "guard 4: easy partial: stop / lock",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: corridor, moving non-turn",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: offroad, non-turn",
+     "control": 1,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: static, other cue",
+     "control": 3,
+     "arm": 0,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "0 / 0"
+    },
+    {
+     "read": "guard 5: subset slow partial windows",
+     "control": 36,
+     "arm": 37,
+     "ok": true,
+     "line": "<= control + 3",
+     "stand_r": "37 / 39"
+    },
+    {
+     "read": "guard 5: subset k = 9 speed ratio",
+     "control": 0.9068,
+     "arm": 0.892,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.8883 / 0.8725"
+    },
+    {
+     "read": "guard 6: wait a other_lead",
+     "control": 0.917,
+     "arm": 0.917,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.889 / 0.889"
+    },
+    {
+     "read": "guard 6: wait a red_queue",
+     "control": 0.923,
+     "arm": 0.923,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.923 / 0.949"
+    },
+    {
+     "read": "guard 6: wait b median launch delay other_lead (s)",
+     "control": 0.37,
+     "arm": 0.52,
+     "ok": true,
+     "line": "<= control + 0.15",
+     "stand_r": "0.37 / 0.44"
+    },
+    {
+     "read": "guard 6: wait b median launch delay red_queue (s)",
+     "control": 0.42,
+     "arm": 0.57,
+     "ok": false,
+     "line": "<= control + 0.15",
+     "stand_r": "0.47 / 0.72"
+    },
+    {
+     "read": "guard 6: wait b launched other_lead",
+     "control": 0.812,
+     "arm": 0.729,
+     "ok": false,
+     "line": ">= 0.95 x control",
+     "stand_r": "0.688 / 0.583"
+    },
+    {
+     "read": "guard 6: wait b launched red_queue",
+     "control": 0.657,
+     "arm": 0.629,
+     "ok": true,
+     "line": ">= 0.95 x control",
+     "stand_r": "0.571 / 0.429"
+    },
+    {
+     "read": "guard 7: held 460 right drift, non-turn k 11-17 (arm - control, m)",
+     "control": "",
+     "arm": -0.006,
+     "ok": true,
+     "line": "> -0.05",
+     "stand_r": "-0.01 / -0.004"
+    }
+   ],
+   "pass_": false,
+   "subset_mean": [
+    0.9127045924067954,
+    0.9388569819021845
+   ],
+   "held_mean": [
+    0.8513826216330118,
+    0.8423889818549645
+   ],
+   "red_fixed": [
+    "2021.06.03.17.06.58_veh-35_03860_03992-06b884271e715c9c",
+    "2021.06.03.17.06.58_veh-35_03860_03992-1ee7784d5d8e58b8",
+    "2021.06.28.15.02.02_veh-38_02398_02848-1070f1ff6e83558e",
+    "2021.06.28.15.02.02_veh-38_02398_02848-8fcfab4aefc4501b",
+    "2021.06.28.16.57.59_veh-26_00016_00484-bb8f53903e005bdc",
+    "2021.09.16.14.39.34_veh-42_00297_00935-70d34287e9ab536a",
+    "2021.09.16.14.39.34_veh-42_00297_00935-b2926d50b9ee5b63",
+    "2021.09.16.14.39.34_veh-42_00297_00935-ebf1934c12465470",
+    "2021.09.16.14.39.34_veh-42_00297_00935-fb3a58c942a95920",
+    "2021.09.16.21.13.37_veh-42_00172_00347-65093cde76695b01",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ed1af3974595711",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ef1b3968ad05dcd",
+    "2021.09.16.21.13.37_veh-42_00172_00347-eefec008ee4f5b09",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fa8b79ae7a975a17",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fb3f2587757f56c2"
+   ],
+   "red_new": []
+  },
+  "L2": {
+   "tag": "STANDRL2H1K-L18-s0",
+   "rows": [
+    {
+     "read": "main 1: easy red-line zeros",
+     "control": 30,
+     "arm": 7,
+     "ok": true,
+     "line": "<= control - 6",
+     "stand_r": "15 / 4"
+    },
+    {
+     "read": "main 2: subset PCS (frozen board-mix)",
+     "control": 1246,
+     "arm": 1301,
+     "ok": true,
+     "line": ">= control + 15",
+     "stand_r": "1282 / 1312"
+    },
+    {
+     "read": "guard 1: held 460 zeros",
+     "control": 42,
+     "arm": 38,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "38 / 36"
+    },
+    {
+     "read": "guard 2: held 460 front collisions",
+     "control": 3,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 3"
+    },
+    {
+     "read": "guard 2: subset AF-front windows",
+     "control": 1,
+     "arm": 0,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "0 / 0"
+    },
+    {
+     "read": "guard 3: easy misses outside the red line",
+     "control": 23,
+     "arm": 22,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "21 / 22"
+    },
+    {
+     "read": "guard 4: easy partial: free-road ratchet / slow",
+     "control": 7,
+     "arm": 7,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "7 / 7"
+    },
+    {
+     "read": "guard 4: easy partial: launch late / not launching",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy partial: near-miss 0.98-0.999",
+     "control": 3,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "3 / 4"
+    },
+    {
+     "read": "guard 4: easy partial: other slow",
+     "control": 3,
+     "arm": 3,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "3 / 1"
+    },
+    {
+     "read": "guard 4: easy partial: rear-ended",
+     "control": 0,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 1"
+    },
+    {
+     "read": "guard 4: easy partial: stop / lock",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: corridor, moving non-turn",
+     "control": 2,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "2 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: offroad, non-turn",
+     "control": 1,
+     "arm": 2,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "1 / 2"
+    },
+    {
+     "read": "guard 4: easy zero: static, other cue",
+     "control": 3,
+     "arm": 0,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "0 / 0"
+    },
+    {
+     "read": "guard 4: easy zero: turn window, offroad / corridor",
+     "control": 0,
+     "arm": 1,
+     "ok": true,
+     "line": "<= control + 2",
+     "stand_r": "0 / 1"
+    },
+    {
+     "read": "guard 5: subset slow partial windows",
+     "control": 36,
+     "arm": 40,
+     "ok": false,
+     "line": "<= control + 3",
+     "stand_r": "37 / 39"
+    },
+    {
+     "read": "guard 5: subset k = 9 speed ratio",
+     "control": 0.9068,
+     "arm": 0.8778,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.8883 / 0.8725"
+    },
+    {
+     "read": "guard 6: wait a other_lead",
+     "control": 0.917,
+     "arm": 0.917,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.889 / 0.889"
+    },
+    {
+     "read": "guard 6: wait a red_queue",
+     "control": 0.923,
+     "arm": 0.949,
+     "ok": true,
+     "line": ">= control - 0.03",
+     "stand_r": "0.923 / 0.949"
+    },
+    {
+     "read": "guard 6: wait b median launch delay other_lead (s)",
+     "control": 0.37,
+     "arm": 0.47,
+     "ok": true,
+     "line": "<= control + 0.15",
+     "stand_r": "0.37 / 0.44"
+    },
+    {
+     "read": "guard 6: wait b median launch delay red_queue (s)",
+     "control": 0.42,
+     "arm": 0.67,
+     "ok": false,
+     "line": "<= control + 0.15",
+     "stand_r": "0.47 / 0.72"
+    },
+    {
+     "read": "guard 6: wait b launched other_lead",
+     "control": 0.812,
+     "arm": 0.604,
+     "ok": false,
+     "line": ">= 0.95 x control",
+     "stand_r": "0.688 / 0.583"
+    },
+    {
+     "read": "guard 6: wait b launched red_queue",
+     "control": 0.657,
+     "arm": 0.429,
+     "ok": false,
+     "line": ">= 0.95 x control",
+     "stand_r": "0.571 / 0.429"
+    },
+    {
+     "read": "guard 7: held 460 right drift, non-turn k 11-17 (arm - control, m)",
+     "control": "",
+     "arm": 0.005,
+     "ok": true,
+     "line": "> -0.05",
+     "stand_r": "-0.01 / -0.004"
+    }
+   ],
+   "pass_": false,
+   "subset_mean": [
+    0.9127045924067954,
+    0.9506114448005842
+   ],
+   "held_mean": [
+    0.8513826216330118,
+    0.8098950803405115
+   ],
+   "red_fixed": [
+    "2021.06.03.17.06.58_veh-35_03860_03992-06b884271e715c9c",
+    "2021.06.03.17.06.58_veh-35_03860_03992-1ee7784d5d8e58b8",
+    "2021.06.28.15.02.02_veh-38_02398_02848-1070f1ff6e83558e",
+    "2021.06.28.15.02.02_veh-38_02398_02848-318bd5aab941540a",
+    "2021.06.28.15.02.02_veh-38_02398_02848-8fcfab4aefc4501b",
+    "2021.06.28.15.02.02_veh-38_02398_02848-a75aa226b3ee5a09",
+    "2021.06.28.15.02.02_veh-38_02398_02848-d54aa8a97f495424",
+    "2021.06.28.16.57.59_veh-26_00016_00484-bb8f53903e005bdc",
+    "2021.06.28.16.57.59_veh-26_00016_00484-be2df9fccd545552",
+    "2021.06.28.16.57.59_veh-26_00016_00484-d011a5832ff25388",
+    "2021.09.16.14.39.34_veh-42_00297_00935-70d34287e9ab536a",
+    "2021.09.16.14.39.34_veh-42_00297_00935-9c0653f94b07558a",
+    "2021.09.16.14.39.34_veh-42_00297_00935-b2926d50b9ee5b63",
+    "2021.09.16.14.39.34_veh-42_00297_00935-ebf1934c12465470",
+    "2021.09.16.14.39.34_veh-42_00297_00935-fb3a58c942a95920",
+    "2021.09.16.21.13.37_veh-42_00172_00347-65093cde76695b01",
+    "2021.09.16.21.13.37_veh-42_00172_00347-6eef637c6a7e5aa4",
+    "2021.09.16.21.13.37_veh-42_00172_00347-928aa500bc0856f7",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ed1af3974595711",
+    "2021.09.16.21.13.37_veh-42_00172_00347-9ef1b3968ad05dcd",
+    "2021.09.16.21.13.37_veh-42_00172_00347-eefec008ee4f5b09",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fa8b79ae7a975a17",
+    "2021.09.16.21.13.37_veh-42_00172_00347-fb3f2587757f56c2"
+   ],
+   "red_new": []
+  }
+ }
+}

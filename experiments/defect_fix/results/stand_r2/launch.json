@@ -1,0 +1,55 @@
+{
+ "pool": "on1_JTX",
+ "s_rows": 128798,
+ "s_label_finite_or_inf": 128798,
+ "launch_h": 2.0,
+ "standing": 19324,
+ "standing_dropped": 1487,
+ "standing_unknown": 17,
+ "rolling": 3568,
+ "rolling_dropped": 340,
+ "rolling_unknown": 12,
+ "standing_kept": 17837,
+ "rolling_kept": 3228,
+ "t_l_q_standing": [
+  5.6,
+  8.1,
+  13.6,
+  20.6,
+  26.0
+ ],
+ "t_l_q_rolling": [
+  5.4,
+  7.5,
+  13.1,
+  21.3,
+  25.8
+ ],
+ "rolling_gap_q_kept": [
+  -2.79,
+  -1.68,
+  -0.81,
+  -0.23,
+  3.23
+ ],
+ "rolling_gap_q_dropped": [
+  -2.46,
+  -1.28,
+  -0.39,
+  1.27,
+  5.19
+ ],
+ "rolling_kept_past_him": 2503,
+ "rolling_kept_by_part": {
+  "rb0": 177,
+  "rtb1": 146,
+  "ys": 342,
+  "y": 170,
+  "pn0": 390,
+  "pn1": 266,
+  "pn2": 287,
+  "pn3": 381,
+  "pn4": 600,
+  "pn5": 469
+ }
+}

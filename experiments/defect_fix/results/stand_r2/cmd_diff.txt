@@ -1,0 +1,24 @@
+== STANDFMXH1K-L18-s0 -> STANDRLH1K-L18-s0
+5c5
+< STANDFMXH1K-L18-s0
+---
+> STANDRLH1K-L18-s0
+85a86,89
+> --on-stand-roll
+> 3.0
+> --on-stand-launch
+> 2.0
+== STANDFMXH1K-L18-s0 -> STANDRL2H1K-L18-s0
+5c5
+< STANDFMXH1K-L18-s0
+---
+> STANDRL2H1K-L18-s0
+77c77
+< 0.0068
+---
+> 0.0136
+85a86,89
+> --on-stand-roll
+> 3.0
+> --on-stand-launch
+> 2.0
