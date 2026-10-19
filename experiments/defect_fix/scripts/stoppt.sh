@@ -8,13 +8,15 @@
 #   stoppt.sh pilot <after ids>    STOPPT1K-L18-s0 (A), STOPPTP1K-L18-s0 (B): train (checks gate / identity / smoke first), wait set v2, held 460
 #                                  @18, arena subset (6 chunks); per arm a psub job after its training submits its PAI half, extract, arena,
 #                                  PAI gate and the arm's summary
+#   stoppt.sh pilotc               (supplement 18 addendum) arm C STOPPTF1K-L18-s0 = arm B + the focused draw JTPAIF: weights -> train -> the same
+#                                  reads -> psub C -> sum C (+ held 460 drift against the control, overrun zeros by scene); PRIO 12
 #   job bodies: gate | smoke | train <arm> | rows | cache | clean | tax <tag> <read dir> | psub <arm> | sum <arm>
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; S=$O/stoppt; J=$O/jt; F=$O/free_m; ME=experiments/defect_fix/scripts/stoppt.sh; PY=experiments/defect_fix/scripts/stoppt.py
 FM=experiments/defect_fix/scripts/free_m.py; TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; V=.venv/bin/python
 JT=experiments/defect_fix/scripts/jt.sh; LAT=$O/lat/L18NR1v2; RES=experiments/defect_fix/results/stoppt; CTL=JTNS1K-L18-s0; SUB="0 3 6 9 12 15"; W=${W:-0.004}
 CR=$DATA_DIR/runs/op_parity/cache; AS=$DATA_DIR/third_party/alpasim; RF=experiments/route_follow/scripts
-declare -A TAG=([A]=STOPPT1K-L18-s0 [B]=STOPPTP1K-L18-s0) POOL=([A]=on1_JT [B]=on1_JTPAI) WF=([A]=JT00 [B]=JTPAI00)
+declare -A TAG=([A]=STOPPT1K-L18-s0 [B]=STOPPTP1K-L18-s0 [C]=STOPPTF1K-L18-s0) POOL=([A]=on1_JT [B]=on1_JTPAI [C]=on1_JTPAI) WF=([A]=JT00 [B]=JTPAI00 [C]=JTPAIF)
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both"   # = jt.sh, on1_JT's parts in order
 A0=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0; A0R=$S/a0r; STG=$DATA_DIR/tmp/stoppt_a0r
 REF=$DATA_DIR/runs/route_follow/acc_gap/read/s2; PCH="c000 c002 c004 c006"
@@ -88,6 +90,18 @@ clean)   # the repro read-out first (needs only the summaries), then the rollout
   $V $PY repro || true
   n=$(find $A0R/roll/runs -name rollout.asl | wc -l); find $A0R/roll/runs -name rollout.asl -delete; rm -rf $A0R/roll/runs/*/sim/driver-logs/dump
   echo "removed $n rollout.asl and the frame dumps; $(du -sh $A0R | cut -f1) left" ;;
+pilotc)
+  PRIO=${PRIO:-12}; export PRIO; T=${TAG[C]}; [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"
+  [[ -f $S/tax/$CTL.pkl ]] || die "control extract missing"
+  wj=$(sub stoppt-weightsf --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $AP $PY weightsf) || exit 1
+  t=$(sub stoppt-train-$T --after $wj "${FT[@]}" --timeout-h 2 -- bash $ME train C) || exit 1
+  PR=$((PRIO + 1)); ids=()
+  r=$(PRIO=$PR bash experiments/alpasim_proxy/scripts/wait_set.sh readc $T $t | tail -1); [[ -n $r ]] || die "readc $T"; echo "$r ws-collect-$T" >> $S/jobs.txt; ids+=($r)
+  for i in 0 1 2 3 4 5; do ids+=($(PRIO=$PR TRIES=2 sub stoppt-held-$T-$i --after $t "${RD[@]}" -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+  ar=(); for c in $SUB; do ar+=($(PRIO=$PR TRIES=2 sub stoppt-ar-$T-c$c --after $t "${RD[@]}" -- bash $JT aread $T off $c)) || exit 1; done
+  printf '%s\n' "${ids[*]} ${ar[*]}" "$(csv ${ar[@]})" "$wj" > $S/pilot_C_ids.txt
+  p=$(sub stoppt-psub-$T --after $t --env PRIO=$PRIO --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $ME psub C) || exit 1
+  echo "$(date '+%F %T') pilot arm C $T: weights $wj train $t wait set $r held/arena ${ids[*]:1} ${ar[*]} psub $p" | tee -a $S/stages.txt ;;
 pilot)
   AF=${2:?after ids}; ids=(); mkdir -p $S/chunks4; for c in $PCH; do cp $REF/chunks/$c.txt $S/chunks4/; done
   [[ -e $DATA_DIR/runs/op_parity/runs/$CTL/ckpt-final.pt ]] || die "$CTL missing"
@@ -111,6 +125,7 @@ assert g["gate"]["pass_"], "offline gate failed"
 assert i["identical"], "switch-off identity failed"
 assert s["pass_"], "smoke failed"
 PY
+  [[ $A != C ]] || [[ -f $RES/w_JTPAIF.json && -f $O/w/JTPAIF.npz ]] || die "arm C: no JTPAIF weights"
   CMD="$(arm $A)"; echo "$(date '+%F %T') train $T: $CMD" | tee -a $S/stages.txt
   exec $CMD ;;
 tax)     # tax <tag> <PAI read dir>: rf_tax extract of its rollouts (the overrun count)
@@ -129,8 +144,15 @@ sum)
   A=$2; T=${TAG[$A]}
   $AP $PY overrun --tax $CTL=$S/tax/$CTL.pkl $T=$S/tax/$T.pkl --out $S/overrun_$A.json || die "overrun $A"
   cp $S/arena_$A.json $S/overrun_$A.json $RES/; cp $S/pai_gate_$A/gate.md $RES/pai_half_$A.md
+  DR=(); if [[ $A == C ]]; then         # held 460 right drift against the control (d377), as stand.sh sum
+    runs=(); for t in $CTL:JTNS1K $T:STOPPTF; do
+      d=$($TR -c "import sys; sys.path[:0] = ['experiments/defect_fix/scripts']; import df; print(','.join(sorted(df.read_dirs('${t%%:*}')['held'])))" | tail -1)
+      [[ -n $d ]] || die "no held dirs ${t%%:*}"; runs+=("${t##*:}@18=$d"); done
+    $AP experiments/route_follow/scripts/rf_follow.py --runs "${runs[@]}" --out $S/follow_C --cover none --workers 16 > $S/follow_C.log 2>&1 || die "rf_follow"
+    $AP experiments/defect_fix/scripts/stand.py drift --follow $S/follow_C --a STOPPTF@18 --b JTNS1K@18 --out $S/drift_C.json || die "drift C"
+    cp $S/drift_C.json $RES/; DR=(--drift $S/drift_C.json); fi
   $TR $PY pilot --tag $T --ctl $CTL --arena $S/arena_$A.json --pai $S/pai_gate_$A/gate.json --overrun $S/overrun_$A.json --ext $S/ext_$A \
-      --out $RES/pilot_$A.md | tee $S/pilot_$A.txt || die "summary $A"
+      "${DR[@]}" --pai-dirs $F/pai/$CTL,$S/pai/$T --out $RES/pilot_$A.md | tee $S/pilot_$A.txt || die "summary $A"
   date '+%F %T' > $S/PILOT_${A}_DONE ;;
 *) sed -n 2,13p $0; exit 2 ;;
 esac

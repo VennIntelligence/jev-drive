@@ -279,6 +279,61 @@ def cmd_weights(a):
     print(json.dumps(rec, indent=1))
 
 
+def cmd_weightsf(a):
+    """JTPAIF (supplement 18 addendum, arm C): JTPAI00 with the rows where the stored plans fire (F) drawn ~2 times each in 1 000 steps x 70,
+    the F share capped at 15 % of the S share, every log / scene at <= 5 % of the F draw; the rest of the S share as arm B, trainval as JT00."""
+    z = np.load(S_ / "labels.npz")
+    fp, _ = score(z["poses"], z["rest"], z["v0"], z["ok"])
+    pos = {n: i for i, n in enumerate(z["names"].astype(str).tolist())}
+    tb = np.load(CR / "on1_JTPAI/tab.npz")
+    names, pool, logs = tb["names"].astype(str), tb["pool"].astype(str), tb["log"].astype(str)
+    S = tb["mode"].astype(str) == "self"
+    j = np.array([pos.get(n.replace("on:pai:pai:", "on:pai:", 1), -1) for n in names])
+    held = S & np.array([zlib.crc32(g.encode()) % 100 < 15 for g in logs])        # = rm_train --on-hold-pct 15 (S rows)
+    F = S & (j >= 0) & fp[np.maximum(j, 0)] & ~held
+    w0 = np.load(O / "w/JTPAI00.npz")
+    assert np.array_equal(w0["names"].astype(str), names), "JTPAI00 rows"
+    w0w, grp = w0["w"].astype(np.float64), w0["grp"].astype(str).astype("U12")
+    sS = float(w0w[S].sum())                                                       # the S share (32 / 70)
+    nF = int(F.sum())
+    fshare = min(2.0 * nF / 70000.0, 0.15 * sS)
+    key = np.where(pool == "pai", logs, logs)                                      # nuPlan log / PAI scene (the tab's log = scene for PAI rows)
+    u, inv = np.unique(key[F], return_inverse=True)
+    q = np.ones(nF) / nF                                                           # per F row share of the F draw
+    capped = set()
+    for _ in range(100):
+        g = np.bincount(inv, q)
+        over = g > 0.05 + 1e-12
+        if not over.any():
+            break
+        capped |= set(u[over].tolist())
+        q[over[inv]] *= (0.05 / g[inv])[over[inv]]
+        rest = ~np.isin(u[inv], list(capped))
+        q[rest] *= (1 - np.bincount(inv, q)[np.isin(u, list(capped))].sum()) / q[rest].sum()
+    g0 = np.bincount(inv, np.ones(nF) / nF)
+    g1 = np.bincount(inv, q)
+    w = np.zeros(len(names))
+    w[~S] = w0w[~S]
+    w[F] = fshare * q
+    nuS, paS = S & ~F & (pool != "pai") & ~held, S & ~F & (pool == "pai") & ~held
+    rest_s = sS - fshare
+    w[nuS] = 0.5 * rest_s * w0w[nuS] / w0w[nuS].sum()
+    w[paS] = 0.5 * rest_s / paS.sum()
+    w /= w.sum()
+    grp = np.where(F, "F", grp).astype("U12")
+    np.savez(O / "w/JTPAIF.npz", names=tb["names"], w=w, grp=grp)
+    top = lambda g: [(str(u[i]), round(float(g[i]), 4)) for i in np.argsort(-g)[:10]]  # noqa: E731
+    passes = w[F] * 70000
+    rec = dict(F_rows=nF, F_nu=int((F & (pool != "pai")).sum()), F_pai=int((F & (pool == "pai")).sum()), F_logs_scenes=len(u),
+               F_share_total=float(w[F].sum()), F_share_of_S=float(w[F].sum() / w[S].sum()), F_per_batch=float(w[F].sum() * 70),
+               passes_median=float(np.median(passes)), passes_min=float(passes.min()), passes_max=float(passes.max()),
+               cap=0.05, capped=sorted(capped), top10_before=top(g0), top10_after=top(g1),
+               share={k: float(w[grp == k].sum()) for k in np.unique(grp)}, per_batch_70={k: float(w[grp == k].sum() * 70) for k in np.unique(grp)})
+    (RES / "w_JTPAIF.json").write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec, indent=1))
+    assert 1.0 <= np.median(passes) <= 3.0, "passes per F row out of the registered range"
+
+
 # ---------------------------------------------------------------- closed loop (A0, PAI 281)
 def _a0_job(job):
     import rf_tax as TX
@@ -678,6 +733,18 @@ def cmd_pilot(a):
     except Exception as e:  # noqa: BLE001  description only
         cs = {"error": str(e)}
     oc, oa = Ov[a.ctl], Ov[a.tag]
+    dr_line, sc_lines = [], []
+    if a.drift:
+        dr = next(iter(json.load(open(a.drift)).values()))
+        dr_line = ["- held 460 closed-loop lateral drift (left +, arm - control, log-clustered CI): " + ", ".join(
+            f"{k} {v['mean']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] ({v['n']})" for k, v in dr.items())]
+    if a.pai_dirs:
+        import pai_gap as PG
+        sc_c, sc_a = (PG.summaries(d)[0] for d in a.pai_dirs.split(","))
+        sc_lines = ["", "PAI half overrun zeros (cor_route_end) by scene, score control / arm:", ""] + [
+            f"- {x}: {float(sc_c[x]['score'] or 0):.3f} / {float(sc_a[x]['score'] or 0):.3f}"
+            f"{' (control overrun)' if x in oc['scenes'] else ''}{' (arm overrun)' if x in oa['scenes'] else ''}"
+            for x in sorted(set(oc["scenes"]) | set(oa["scenes"]))]
     L = [f"# NR1STOPPT pilot ({a.tag} against {a.ctl}; NR1 prereg supplement 18; native reads)", "",
          f"| | {a.ctl} (control) | {a.tag} | line |", "|:--|--:|--:|:--|",
          f"| held 460 zeros | {H[a.ctl]['zeros']} | {H[a.tag]['zeros']} | <= control + 2: {yn(g['held_zeros'])} |",
@@ -701,6 +768,7 @@ def cmd_pilot(a):
          "- arena subset by cue (arm - control): " + "; ".join(f"{k} ({v['windows']}) {v['b']:.3f} -> {v['a']:.3f}, {v['diff']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}]"
                                                               for k, v in cs.items() if isinstance(v, dict)),
          "- arena subset zero types (control / arm): " + json.dumps(Ar["types"]["b"]) + " / " + json.dumps(Ar["types"]["a"]),
+         *dr_line, *sc_lines,
          "", "Gates: " + ", ".join(f"{k} {yn(v)}" for k, v in g.items()), "", f"**Verdict: {verdict}**", ""]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text("\n".join(L))
@@ -732,6 +800,8 @@ if __name__ == "__main__":
     p = sp.add_parser("pilot")
     for k in ("tag", "ctl", "arena", "pai", "overrun", "ext", "out"):
         p.add_argument(f"--{k}", required=True)
+    p.add_argument("--drift", default=""), p.add_argument("--pai-dirs", default="")
+    sp.add_parser("weightsf")
     a = ap.parse_args()
     dict(labels=cmd_labels, assemble=cmd_assemble, weights=cmd_weights, gate=cmd_gate, pfeats=cmd_pfeats, probe=cmd_probe, report=cmd_report,
-         overrun=cmd_overrun, pilot=cmd_pilot, smoke=cmd_smoke, repro=cmd_repro)[a.cmd](a)
+         overrun=cmd_overrun, pilot=cmd_pilot, smoke=cmd_smoke, repro=cmd_repro, weightsf=cmd_weightsf)[a.cmd](a)
