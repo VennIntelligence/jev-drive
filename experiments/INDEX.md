@@ -109,7 +109,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **other**
 
-- [best_of_n](best_of_n/README.md): best-of-4 self-imitation fails: arena native -0.020 vs control, static -0.059 [d378]
+- [best_of_n](best_of_n/README.md): best-of-4 self-imitation fails: arena native -0.020 vs control, static -0.059 [d379]
 - [critic_pilot](critic_pilot/README.md): learned critic fails L1-L3: any-zero 2 s AUC 0.85 vs hand rule 0.83 [dpending]
 - [eyes_vs_head](eyes_vs_head/README.md): eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported [d272]
 - [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
