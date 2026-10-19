@@ -1,0 +1,18 @@
+== STANDFMX-L18-s0 -> STANDFMXH-L18-s0 (full length; only the tag and the FREE-M dose may differ)
+5c5
+< STANDFMX-L18-s0
+---
+> STANDFMXH-L18-s0
+81c81
+< 0.002
+---
+> 0.001
+== STANDFMX1K-L18-s0 -> STANDFMXH1K-L18-s0 (pilot B2; the FREE-M flags must match FH's)
+5c5
+< STANDFMX1K-L18-s0
+---
+> STANDFMXH1K-L18-s0
+81c81
+< 0.002
+---
+> 0.001
