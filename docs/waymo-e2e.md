@@ -1,7 +1,8 @@
 # Waymo Open Dataset E2E (WOD-E2E v1.0.0)
 
-**Summary.** WOD-E2E v1.0.0 lives in `$DATA_DIR/datasets/waymo_e2e/` as front3-only slim shards (FRONT, FRONT_LEFT,
-FRONT_RIGHT; raw 1.65 TB bucket `gs://waymo_open_dataset_end_to_end_camera_v_1_0_0/`, slim ~0.73 TB). Splits: val 93
+**Summary.** WOD-E2E v1.0.0 lives in `$DATA_DIR/datasets/waymo_e2e/` as FRONT-only slim shards in `front1/` (FRONT_LEFT
+and FRONT_RIGHT were dropped on 2026-10-20 to free disk; raw 1.65 TB bucket `gs://waymo_open_dataset_end_to_end_camera_v_1_0_0/`,
+slim ~0.23 TB). Side-camera readers (openpilot road / wide rendering) no longer run, see "Where it lives". Splits: val 93
 shards, training 263, test 266 (test futures hidden); frame index step is 0.1000 s (measured, timing fields are zeroed).
 Download: `scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh`; idempotent, resumable, default
 `--route proxy --streams 32` at ~15 MB/s (box link ~18 MB/s; full run ~30 h, train alone ~17.5 h); the `status` ETA is a
@@ -10,7 +11,7 @@ cumulative average and lags. Prepared data (index, targets, features, RFS, submi
 locally on one frame per val sequence (12 s mark).
 
 **Sections.**
-- Where it lives - dataset directory layout and why only front3
+- Where it lives - dataset directory layout, why only FRONT, which readers lost their side cameras
 - Bucket and sizes - splits, shard counts, raw/slim sizes
 - Data facts (checked on val, training and test shards) - E2EDFrame fields, cameras, states, intent, rater data
 - Download - script, resume, disk guard, logs, tooling
@@ -30,12 +31,31 @@ Read this when you need the Waymo end-to-end driving data on the box, or need to
 
 | Path | Content |
 |---|---|
-| `front3/<shard name>` | slim shards, same file names and `E2EDFrame` TFRecord format as the bucket, but only the FRONT, FRONT_LEFT and FRONT_RIGHT images (original JPEG bytes). Every other field is unchanged. Also the three small json/txt files, as-is |
-| `manifest.csv` | one row per finished file: raw vs slim bytes, frames, download and slim seconds |
+| `front1/<shard name>` | slim shards, same file names and `E2EDFrame` TFRecord format as the bucket, but only the FRONT image (original JPEG bytes). Every other field is unchanged (calibrations of all cameras included). Also the three small json/txt files, as-is |
+| `manifest.csv` | one row per downloaded file: raw vs front3 bytes, frames, download and slim seconds (the download step) |
+| `manifest_front1.csv` | one row per shard of the 2026-10-20 reslim: front3 vs front1 bytes, frames, seconds |
 | `raw/` | transient: full shards waiting to be slimmed, deleted once the slim copy is verified |
 
-We keep only the front three cameras because the disk cannot hold the raw 1.65 TB next to NAVSIM.
-The full data (all 8 cameras) can always be re-fetched from the bucket.
+We keep only the FRONT camera because the disk cannot hold the raw 1.65 TB (or the 0.68 TB front3 copy) next to the
+other datasets. Until 2026-10-20 the shards were `front3/` (FRONT, FRONT_LEFT, FRONT_RIGHT, 676 GB); that day
+`scripts/download_waymo_e2e.sh reslim` rewrote them shard by shard into `front1/` (each copy verified: both CRCs, proto
+parse, same frames, FRONT JPEG bytes identical by crc32c) and deleted `front3/`, freeing 490 GB for PAI scene fetching
+(user decision; the WOD line was not active). Byte offsets changed, so `processed/waymo_e2e/index.parquet` was rebuilt
+(`index --force`; same rows and order, the `front_left_*` / `front_right_*` span columns are now 0) and the frozen spans in
+`processed/wod_zeroshot/sets.json` were remapped to the new FRONT offsets (side-camera spans 0; the front3 copies are in
+`$DATA_DIR/tmp/wod_reslim/`). Already extracted features (`qwen_front3*`) are unaffected.
+
+**Readers that need the side cameras no longer run** and were left as they are: everything that renders the
+openpilot road / wide frames from FRONT + FRONT_LEFT + FRONT_RIGHT (`scripts/wod_zeroshot_openpilot.py` and every user of
+its `_init` / `model_frames`: `scripts/drive_backbones_openpilot.py`, `experiments/model_smoke/lib/wod_openpilot_rigs.py`,
+`op_adapt_h`, `op_adapt_r1`, `op_adapt_r2`, `op_common_cause`, `op_openloop/lib/op_interp.py` (WOD path), `op_parity`
+WOD scripts, `leaderboard_audit` `sc_wod_run` / `ng_sheet` / `lbx_wod_clip` / `bv_dump`, `op_adapt_l/wod_review_export`,
+`driving_backbones/lib/drive_backbones_alpamayo.py`), and `jevdrive.waymo` features with `--cams front3` (use `--cams front`).
+They still point at `front3/`. To run one again, re-fetch the three front cameras from the bucket: the plain download
+(`scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh`) writes `front3/` again (it needs ~0.68 TB free and its
+`manifest.csv` resume treats every shard as missing), then `scripts/waymo_prepare.sh index --force` against a
+`shard_dir()` pointed back at `front3/`. FRONT-only readers (`jevdrive.waymo`, `jevdrive.wod_zeroshot`, the submission
+writer, `leaderboard_audit/scripts/ng_lum.py`) read `front1/`.
 
 ## Bucket and sizes
 
@@ -48,7 +68,8 @@ The full data (all 8 cameras) can always be re-fetched from the bucket.
 | `test_202504211836-202504220845.tfrecord-*` | 266 | 464 GB (1.7 GB/shard) | future states empty (hidden) |
 | `test_sequence_frames_for_submission.json`, `..._as_list.txt`, `val_sequence_name_to_scenario_cluster.json` | | small | |
 
-Slim/raw ratio: 0.44, so front3 is ~0.73 TB in total (val shard 0: 2.62 GB -> 1.15 GB, 1150 frames). See `manifest.csv` for all shards.
+Slim/raw ratio was 0.44 for front3 (~0.68 TB on disk; val shard 0: 2.62 GB -> 1.15 GB, 1150 frames, `manifest.csv`);
+front1 is 0.32 of front3, 235 GB in total (`manifest_front1.csv`).
 
 ## Data facts (checked on val, training and test shards)
 
@@ -141,7 +162,7 @@ landed: every step is incremental.
 ```bash
 scripts/tmux_run.sh waymo-prep scripts/waymo_prepare.sh                # index -> check -> report
 scripts/waymo_prepare.sh index --workers 8                             # only shards that have no cache
-scripts/waymo_prepare.sh features --cams front3 --batch-size 4         # frozen Qwen3-VL features
+scripts/waymo_prepare.sh features --cams front --batch-size 4          # frozen Qwen3-VL features (front3 needs side cams)
 scripts/waymo_prepare.sh bench --limit 256                             # cost of each input choice
 ```
 
@@ -644,7 +665,7 @@ The test quota is 6 submissions per 30 days, so nothing here ever uploads: it on
 `wod_submit_chain.sh` on the box (stop-gated bias of the 1 505 submission frames, WLG-full-s0 / s1 served through the pool with `--set test`, then
 `predict`: seed-mean trajectory, val check, test / val statistics, BEV thumbnails -> `$DATA_DIR/runs/op_parity/wod/submit/`). Copy `traj.npz` and
 `params.json` to the Mac and run `wod_submit.py package --traj ... --out tmp/wod_submit/lpa-v1.tar.gz --reference <accepted tar.gz>` with the
-compiled proto (`WAYMO_PROTO_GEN`) and a `DATA_DIR` that holds `datasets/waymo_e2e/front3/test_sequence_frames_for_submission.json`. Identity comes only
+compiled proto (`WAYMO_PROTO_GEN`) and a `DATA_DIR` that holds `datasets/waymo_e2e/front1/test_sequence_frames_for_submission.json`. Identity comes only
 from arguments (`--name`, default `LPA-v1`; the account from `--account`, `$WOD_ACCOUNT_NAME`, the gitignored `.env`, or `--account-from-reference`);
 authors / affiliation are "Anonymous". The account name is never printed or committed; the package stays under `tmp/`. The old
 `experiments/zeroshot_openloop/archive/wod_test_submission.py` still hardcodes a personal identity in `COMMON_META` (and sets
