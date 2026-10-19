@@ -249,6 +249,8 @@ def cmd_pilot(a):
              **{f"launched_{c}": P[c]["launched"] >= 0.95 * C[c]["launched"] for c in LEAD},
              held_front=H[a.tag]["coll"]["front"] <= H[a.ctl]["coll"]["front"] + 2, arena_af_front=Ar["af_front_a"] <= Ar["af_front_b"] + 2,
              static=st["a"] - st["b"] >= 0, arena_win=Ar["diff"] >= 0.01)
+    if a.drift_guard:                                                 # addendum 5 (on1_JTX): d377's right drift, arm - control > -0.05 m
+        g["drift"] = next(iter(Dr.values()))["k11_17"]["mean"] > -0.05
     verdict = "PASS" if all(g.values()) else "FAIL"
     hp = H[a.tag]["pair"].get(a.ctl, {})
     k9 = Ar["k9"]
@@ -305,5 +307,6 @@ if __name__ == "__main__":
     p = sp.add_parser("pilot")
     for k in ("tag", "ctl", "arena", "drift", "ext", "out"):
         p.add_argument(f"--{k}", required=True)
+    p.add_argument("--drift-guard", action="store_true")
     a = ap.parse_args()
     dict(gate=cmd_gate, dose=cmd_dose, drift=cmd_drift, pilot=cmd_pilot)[a.cmd](a)
