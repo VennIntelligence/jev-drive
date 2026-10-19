@@ -271,6 +271,36 @@ def cmd_report(a):
                 q = q.to_numpy()
                 d2, d4 = Y[A][q, 3, 1] - Y[B][q, 3, 1], Y[A][q, 7, 1] - Y[B][q, 7, 1]
                 print(f"| {A} - {B} | {c} | {q.sum()} | {f3(*_boot(d2, R.log[q]))} | {f3(*_boot(d4, R.log[q]))} | {np.abs(d4).mean():.3f} |")
+        # restoring gain: the plan's lateral y(4 s) against the ego's own signed offset to the human track (left +), moving non-turn decisions
+        import pickle
+        hum = pickle.load(open(DATA / "runs/defect_fix/native_gap/hum.pkl", "rb"))
+        xy = pd.read_parquet(DATA / "runs/defect_fix/native_gap/dec.parquet", columns=["tag", "id", "k", "x", "y", "yaw"]).rename(columns={"tag": "src"})
+        R2 = R.merge(xy, on=["src", "id", "k"], how="left")
+
+        def slat(i, x, y, yaw):
+            if i not in hum or not np.isfinite(x):
+                return np.nan, np.nan
+            P = np.asarray(hum[i]["P"], float)
+            q, a_, b_ = np.array([x, y]), P[:-1], P[1:]
+            ab = b_ - a_
+            L2 = np.maximum((ab ** 2).sum(1), 1e-9)
+            u = np.clip(((q - a_) * ab).sum(1) / L2, 0, 1)
+            j = np.hypot(*(a_ + u[:, None] * ab - q).T).argmin()
+            t = ab[j] / np.sqrt(L2[j])
+            v = q - a_[j]
+            return float(t[0] * v[1] - t[1] * v[0]), float(np.arctan2(np.sin(yaw - np.arctan2(t[1], t[0])), np.cos(yaw - np.arctan2(t[1], t[0]))))
+        e = np.array([slat(i, x, y, w) for i, x, y, w in zip(R2.id, R2.x, R2.y, R2.yaw)])
+        R2["e"], R2["epsi"] = e[:, 0], e[:, 1]
+        q = ((R2.k >= 2) & (R2.ctx == "moving") & R2.e.notna() & (R2.e.abs() < 1.5)).to_numpy()
+        print("\nRestoring gain (moving decisions, k >= 2, |offset| < 1.5 m): least squares y_plan(4 s) = b0 + b1 e + b2 psi_e, e = the ego's signed offset to "
+              "the human track (left +), psi_e its heading error; b1 = -1 re-centres fully within 4 s\n")
+        print("| tag | decisions | b0 (m) | b1 | b2 (m / rad) | mean y(4 s) at e in [-0.3, 0.3] m |")
+        print("|---|--:|--:|--:|--:|--:|")
+        X = np.c_[np.ones(q.sum()), R2.e[q], R2.epsi[q]]
+        for t in tags:
+            b = np.linalg.lstsq(X, Y[t][q, 7, 1], rcond=None)[0]
+            c0 = q & (R2.e.abs() < 0.3).to_numpy()
+            print(f"| {t} | {q.sum()} | {b[0]:+.3f} | {b[1]:+.3f} | {b[2]:+.2f} | {Y[t][c0, 7, 1].mean():+.3f} |")
 
 
 if __name__ == "__main__":
