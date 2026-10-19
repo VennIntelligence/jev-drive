@@ -297,8 +297,8 @@ def resnet():
 def fit(m, ds, epochs, lr, bs, workers, run, pos_weight=1.0, max_steps=None):
     import torch
     from torch.utils.data import DataLoader
-    dl = DataLoader(ds, bs, shuffle=True, num_workers=workers, drop_last=True, persistent_workers=True, pin_memory=True)
-    steps = min(epochs * len(dl), max_steps or 10**9)
+    dl = DataLoader(ds, bs, shuffle=True, num_workers=workers, drop_last=len(ds) > bs, persistent_workers=True, pin_memory=True)
+    steps = max(1, min(epochs * len(dl), max_steps or 10**9))
     opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
     sch = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=steps, pct_start=0.05)
     pw = torch.tensor(pos_weight, device="cuda")
@@ -314,7 +314,7 @@ def fit(m, ds, epochs, lr, bs, workers, run, pos_weight=1.0, max_steps=None):
             loss.backward()
             opt.step()
             sch.step()
-            tot += float(loss)
+            tot += loss.item()
             t += 1
             if t % 200 == 0:
                 run.info(f"epoch {ep} step {t} / {steps} loss {tot / max(1, t - ep * len(dl)):.4f}")
@@ -459,7 +459,7 @@ def cmd_tok(a):
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-            run.info(f"tok probe epoch {ep} loss {float(loss):.4f}")
+            run.info(f"tok probe epoch {ep} loss {loss.item():.4f}")
         pr.eval()
 
         def sc(H):
