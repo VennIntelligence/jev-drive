@@ -1,0 +1,265 @@
+{
+ "gate": {
+  "rollouts": 58,
+  "pairs": 98648,
+  "share_005": 1.0,
+  "p99": 1.4675836125904635e-05,
+  "passed": true
+ },
+ "1/class/zero corridor": {
+  "n": 44.0,
+  "lost": 44.0,
+  "h": 0.0,
+  "rec": 5.479977498657493,
+  "n0ok": 4.0,
+  "gain": 44.0
+ },
+ "1/class/zero offroad": {
+  "n": 12.0,
+  "lost": 12.0,
+  "h": 0.0,
+  "rec": 1.0,
+  "n0ok": 1.0,
+  "gain": 12.0
+ },
+ "1/class/partial rear-hit": {
+  "n": 26.0,
+  "lost": 10.438748808935355,
+  "h": 0.0,
+  "rec": 2.8827234034003113,
+  "n0ok": 2.0,
+  "gain": 10.438748808935355
+ },
+ "1/class/zero AF-front": {
+  "n": 3.0,
+  "lost": 3.0,
+  "h": 0.0,
+  "rec": 1.0,
+  "n0ok": 1.0,
+  "gain": 3.0
+ },
+ "1/class/partial slow": {
+  "n": 11.0,
+  "lost": 2.163644753371403,
+  "h": 0.0,
+  "rec": 0.5858475322717399,
+  "n0ok": 0.0,
+  "gain": 2.163644753371403
+ },
+ "1/class/scored": {
+  "n": 184.0,
+  "lost": 0.0,
+  "h": 0.0,
+  "rec": 0.0,
+  "n0ok": 96.0,
+  "gain": 0.0
+ },
+ "1/sub/cor_drift": {
+  "n": 5,
+  "h_zero": 0
+ },
+ "1/sub/cor_lane_change": {
+  "n": 1,
+  "h_zero": 0
+ },
+ "1/sub/cor_route_end": {
+  "n": 23,
+  "h_zero": 0
+ },
+ "1/sub/cor_straight_at_turn": {
+  "n": 11,
+  "h_zero": 0
+ },
+ "1/sub/cor_turn_over": {
+  "n": 1,
+  "h_zero": 0
+ },
+ "1/sub/cor_turn_under": {
+  "n": 3,
+  "h_zero": 0
+ },
+ "1/sub/off_curve_inside": {
+  "n": 1,
+  "h_zero": 0
+ },
+ "1/sub/off_junc_inside": {
+  "n": 2,
+  "h_zero": 0
+ },
+ "1/sub/off_junc_outside": {
+  "n": 3,
+  "h_zero": 0
+ },
+ "1/sub/off_junc_straight": {
+  "n": 2,
+  "h_zero": 0
+ },
+ "1/sub/off_straight": {
+  "n": 4,
+  "h_zero": 0
+ },
+ "1/route_end": {
+  "n": 23,
+  "queue": 3,
+  "wl": {
+   "STOP": 10,
+   "STOP+UNKNOWN": 6,
+   "": 6,
+   "UNKNOWN": 1
+  }
+ },
+ "1/stratum/launch": {
+  "n": 37,
+  "mean": 0.7737577179451803,
+  "lost": 8.370964436028329
+ },
+ "1/stratum/static": {
+  "n": 2,
+  "mean": 0.5,
+  "lost": 1.0
+ },
+ "1/stratum/stop/lead": {
+  "n": 128,
+  "mean": 0.6753206431546332,
+  "lost": 41.55895767620695
+ },
+ "1/stratum/straight": {
+  "n": 77,
+  "mean": 0.9236417818887307,
+  "lost": 5.879582794567752
+ },
+ "1/stratum/turn": {
+  "n": 36,
+  "mean": 0.5890864262360077,
+  "lost": 14.792888655503724
+ },
+ "2/cut > 0": {
+  "n": 28485,
+  "real": 14215,
+  "no_lead": 13651,
+  "adjacent": 429,
+  "nothing": 190,
+  "phantom": 0.5009654203967,
+  "phantom_m": 0.08522263334177614
+ },
+ "2/cut >= 0.5 m": {
+  "n": 7800,
+  "real": 7195,
+  "adjacent": 252,
+  "no_lead": 218,
+  "nothing": 135,
+  "phantom": 0.07756410256410257,
+  "phantom_m": 0.0777650535984958
+ },
+ "2/cut > 0, before the first event": {
+  "n": 24235,
+  "real": 12819,
+  "no_lead": 11088,
+  "adjacent": 263,
+  "nothing": 65,
+  "phantom": 0.47105426036723747,
+  "phantom_m": 0.06353930871397068
+ },
+ "2/cut > 0, ACC won = lead": {
+  "n": 9526,
+  "real": 8798,
+  "adjacent": 316,
+  "no_lead": 255,
+  "nothing": 157,
+  "phantom": 0.07642242284274617,
+  "phantom_m": 0.077619209820528
+ },
+ "2/worth": {
+  "lon_points": 12.602393562306757,
+  "strict": 5.476020732938868,
+  "loose": 0.8007473750903656,
+  "share": 0.06353930871397068,
+  "n_scenes_strict": 16
+ },
+ "3/clock": {
+  "n": 277,
+  "max_abs_us": 0.0
+ },
+ "3x/onset/A0 other loss": {
+  "n": 2,
+  "plan_log": 1.1584073336724314,
+  "plan_v": 0.6726027696674333,
+  "log_v": 0.5814607555852693
+ },
+ "3x/onset/A0 passes the rest point (cor_route_end)": {
+  "n": 20,
+  "plan_log": 1.1740220749439738,
+  "plan_v": 0.695813774126803,
+  "log_v": 0.5846765581965992
+ },
+ "3x/onset/A0 scores >= 0.98": {
+  "n": 20,
+  "plan_log": 1.1697642819218068,
+  "plan_v": 0.6483415964646768,
+  "log_v": 0.5826097848544676
+ },
+ "3/partial rear-hit": {
+  "n": 26,
+  "points": 10.438748808935353,
+  "i": 2.4820625599004664,
+  "i-cl": 0.0,
+  "ii": 3.772852599633833,
+  "iii": 0.0,
+  "mixed": 4.183833649401055,
+  "lat4": 0.22910377523839298,
+  "arc2": 0.9314965471275589
+ },
+ "3/partial slow": {
+  "n": 11,
+  "points": 2.1636447533714036,
+  "i": 1.0121571496938961,
+  "i-cl": 0.0,
+  "ii": 0.680837017185257,
+  "iii": 0.0,
+  "mixed": 0.4706505864922501,
+  "lat4": 0.3314567871109128,
+  "arc2": 0.9225784668295566
+ },
+ "3/zero AF-front": {
+  "n": 3,
+  "points": 3.0,
+  "i": 0.0,
+  "i-cl": 0.0,
+  "ii": 0.0,
+  "iii": 0.0,
+  "mixed": 3.0,
+  "lat4": 0.5804141332080903,
+  "arc2": 1.0297924721549174
+ },
+ "3/zero corridor": {
+  "n": 44,
+  "points": 44.0,
+  "i": 17.0,
+  "i-cl": 26.0,
+  "ii": 1.0,
+  "iii": 0.0,
+  "mixed": 0.0,
+  "lat4": 0.36741452996483487,
+  "arc2": 1.0961546140011322
+ },
+ "3/zero offroad": {
+  "n": 12,
+  "points": 12.0,
+  "i": 5.0,
+  "i-cl": 7.0,
+  "ii": 0.0,
+  "iii": 0.0,
+  "mixed": 0.0,
+  "lat4": 0.9394723948975064,
+  "arc2": 1.048095508689225
+ },
+ "2/H": {
+  "n": 29162,
+  "no_lead": 16061,
+  "real": 12909,
+  "adjacent": 135,
+  "nothing": 57,
+  "phantom": 0.5573348878677731,
+  "phantom_m": 0.03637124377051884
+ }
+}

@@ -453,3 +453,5 @@ and `labels/{held,zero}.parquet` (decision 275).
 
 [results/](results/) 668 result files · [figs/](figs/) 79 figures · [plans/](plans/) 30 live plans · [scripts/](scripts/) 94 entry points
 <!-- files:end -->
+
+PAI-GAP (2026-10-19, decision 381): no training; where NTV0-L18-s0 + ACC + GAP loses its 71.6 points on PAI 281, with a log-replay read (H, the model run at the human's states; the human scores 1.000 on all 277 scenes, so nothing is unattainable). Passing the human's rest point at a stop line without a lead 23 points (the plan stops on the human's state and not on its own, 18 of 23; not ACC), turns / junctions 23 (the plan already ~2 m off on the human's state, 15), rear-hit partials 10.4. JEV_LEAD cuts are real leads: phantoms 8.5 % of the cut metres, ceiling +0.003 pooled. See [results/pai_gap.md](results/pai_gap.md), prereg `plans/2026-10-19-pai-gap-prereg.md`, chain `scripts/pai_gap.{sh,py}`.
