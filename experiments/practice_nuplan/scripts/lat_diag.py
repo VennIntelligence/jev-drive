@@ -89,7 +89,7 @@ def cmd_rows(a):
                    off_t0=off0.numpy())
 
         def score(P, key, rows_mask=None):
-            av, rv, ga, gr, gs = (np.zeros(len(sel), np.float32) for _ in range(5))
+            av, rv, ga, gr, gs, gsa = (np.zeros(len(sel), np.float32) for _ in range(6))
             ok = np.isfinite(P).all((1, 2)) if rows_mask is None else rows_mask & np.isfinite(P).all((1, 2))
             for i in range(0, len(sel), a.bs):
                 r = np.arange(i, min(i + a.bs, len(sel)))
@@ -110,8 +110,9 @@ def cmd_rows(a):
                 lr = -(g2[0] * n[..., 0] + g2[1] * n[..., 1])
                 av[r], rv[r] = va.detach().numpy(), vr.detach().numpy()
                 ga[r], gr[r] = la.norm(dim=1).numpy(), lr.norm(dim=1).numpy()
-                gs[r] = (la + lr).sum(1).numpy()
-            out.update({f"{key}_agent": av, f"{key}_road": rv, f"{key}_gagent": ga, f"{key}_groad": gr, f"{key}_gleft": gs, f"{key}_ok": ok})
+                gs[r], gsa[r] = (la + lr).sum(1).numpy(), la.sum(1).numpy()
+            out.update({f"{key}_agent": av, f"{key}_road": rv, f"{key}_gagent": ga, f"{key}_groad": gr, f"{key}_gleft": gs, f"{key}_gleft_agent": gsa,
+                        f"{key}_ok": ok})
 
         score(plan, "plan")
         score(fut, "fut")
