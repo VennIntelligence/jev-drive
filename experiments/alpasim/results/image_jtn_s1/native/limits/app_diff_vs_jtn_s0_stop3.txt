@@ -1,0 +1,10 @@
+8,9c8,9
+< 10f84006d2f5152494d5ea5155dee23b635ddc78eacf965182f66fb9f7a73a46  ./data/runs/op_parity/runs/JTN-L18-s0/ckpt-final.pt
+< b9ef092253646893bfbe857205e4cd4f08f97b9f31183d2d16beb398df595b72  ./data/runs/op_parity/runs/JTN-L18-s0/route_mem.json
+---
+> d9c134bfdc692548aa4c9d3b1f5b5a065a1eaa7fa0c3704a1e06e2ebb062b2dc  ./data/runs/op_parity/runs/JTN-L18-s1/ckpt-final.pt
+> c2dbdd307593d528069a3063357bd87783e4b19f393ae6e85d40b94649d1bd44  ./data/runs/op_parity/runs/JTN-L18-s1/route_mem.json
+11c11
+< b2b4162990699e41fec37aec42e4587db5f514b7127258acbfc70b2c45259f40  ./data/runs/op_parity/runs/tags.json
+---
+> e467dac0bd5501c25ae2210f30cd36f33c0c44f0dd90c5ca2bc4e2247be17df4  ./data/runs/op_parity/runs/tags.json
