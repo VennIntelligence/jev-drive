@@ -313,11 +313,11 @@ def cmd_stage1(a):
                   for k in cls if k != RED],
                 ("guard 5: subset slow partial windows", t["partials"][CTL]["slow"], t["partials"][T]["slow"], t["partials"][T]["slow"] <= t["partials"][CTL]["slow"] + 3, "<= control + 3"),
                 ("guard 5: subset k = 9 speed ratio", round(Ar["k9"]["b"], 4), round(Ar["k9"]["a"], 4), Ar["k9"]["a"] >= Ar["k9"]["b"] - 0.03, ">= control - 0.03"),
-                *[(f"guard 6: wait a {k}", round(Wt[CTL][k]["wait"], 3), round(Wt[T][k]["wait"], 3), Wt[T][k]["wait"] >= Wt[CTL][k]["wait"] - 0.03, ">= control - 0.03") for k in Wt[T]],
+                *[(f"guard 6: wait a {k}", round(Wt[CTL][k]["wait"], 3), round(Wt[T][k]["wait"], 3), Wt[T][k]["wait"] >= Wt[CTL][k]["wait"] - 0.03, ">= control - 0.03") for k in ("other_lead", "red_queue")],
                 *[(f"guard 6: wait b median launch delay {k} (s)", round(Wt[CTL][k]["delay_med"], 2), round(Wt[T][k]["delay_med"], 2),
-                   Wt[T][k]["delay_med"] <= Wt[CTL][k]["delay_med"] + 0.15, "<= control + 0.15") for k in Wt[T]],
+                   Wt[T][k]["delay_med"] <= Wt[CTL][k]["delay_med"] + 0.15, "<= control + 0.15") for k in ("other_lead", "red_queue")],
                 *[(f"guard 6: wait b launched {k}", round(Wt[CTL][k]["launched"], 3), round(Wt[T][k]["launched"], 3),
-                   Wt[T][k]["launched"] >= 0.95 * Wt[CTL][k]["launched"], ">= 0.95 x control") for k in Wt[T]],
+                   Wt[T][k]["launched"] >= 0.95 * Wt[CTL][k]["launched"], ">= 0.95 x control") for k in ("other_lead", "red_queue")],
                 ("guard 7: held 460 right drift, non-turn k 11-17 (arm - control, m)", "", round(Dr["k11_17"]["mean"], 3), Dr["k11_17"]["mean"] > -0.05, "> -0.05")]
         ok = all(r[3] for r in rows)
         J["arms"][A] = dict(tag=T, rows=[dict(read=r[0], control=r[1], arm=r[2], ok=bool(r[3]), line=r[4]) for r in rows], pass_=ok,

@@ -1,0 +1,10 @@
+{
+ "run": "STRGG-R2",
+ "finite": true,
+ "steps": 3,
+ "roll_pos_max": 0.014285714365541935,
+ "roll_pos_steps_gt0": 3,
+ "stand_pos_mean": 0.053333334444711604,
+ "labels": "nr1_lat: lon_stand labels {'rows': 211392, 's_rows': 128798, 'standing': 19324, 'ego_slow': 26098, 'margin': 1.0, 'v_stand': 0.5, 'h_stand': 0.5, 'rolling': 3568, 'rolling_behind_b8': 541, 'v_roll': 3.0}",
+ "pass_": true
+}

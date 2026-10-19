@@ -1,0 +1,78 @@
+{
+ "pool": {
+  "rows": 211392,
+  "s_rows": 128798,
+  "standing": 19324,
+  "ego_slow": 26098,
+  "margin": 1.0,
+  "v_stand": 0.5,
+  "h_stand": 0.5,
+  "rolling": 3568,
+  "rolling_behind_b8": 541,
+  "v_roll": 3.0
+ },
+ "G1": {
+  "fires": {
+   "fut": 0,
+   "fut_reg": 0
+  },
+  "rows": 22892,
+  "rolling": 3568,
+  "pass_": true
+ },
+ "per_read": {
+  "STANDFMXH-L18-s0": {
+   "red_windows": 10,
+   "red_rolling": 38,
+   "red_rolling_fire": 38,
+   "red_standing": 30,
+   "red_standing_fire": 30,
+   "red_windows_with_rolling": 10,
+   "one_windows": 2026,
+   "one_decisions": 16167,
+   "one_rolling": 146,
+   "one_rolling_fire": 106,
+   "one_rolling_fire_windows": 40,
+   "one_standing_fire": 2225,
+   "one_rolling_fire_by_stratum": {
+    "static": 52,
+    "braking": 37,
+    "other": 17
+   }
+  },
+  "STANDFMXH-L18-s1": {
+   "red_windows": 9,
+   "red_rolling": 38,
+   "red_rolling_fire": 38,
+   "red_standing": 22,
+   "red_standing_fire": 22,
+   "red_windows_with_rolling": 9,
+   "one_windows": 2034,
+   "one_decisions": 16229,
+   "one_rolling": 157,
+   "one_rolling_fire": 118,
+   "one_rolling_fire_windows": 48,
+   "one_standing_fire": 2294,
+   "one_rolling_fire_by_stratum": {
+    "static": 70,
+    "braking": 38,
+    "other": 10
+   }
+  }
+ },
+ "G2": {
+  "decisions": 76,
+  "fired": 76,
+  "share": 1.0,
+  "line": 0.8,
+  "pass_": true
+ },
+ "G3": {
+  "decisions": 32396,
+  "rolling": 303,
+  "share": 0.00935300654401778,
+  "line": 0.01,
+  "pass_": true
+ },
+ "pass_": true
+}

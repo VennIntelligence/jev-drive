@@ -1,0 +1,60 @@
+{
+ "STANDFMXH-L18-s1": {
+  "windows": 2106,
+  "mean": 0.9364727673414008,
+  "zeros": 96,
+  "pcs": 1397.9104248905683,
+  "easy_windows": 1564,
+  "easy_miss": 47,
+  "red": 9,
+  "other": 38,
+  "by_class": {
+   "zero: static, red line, no lead": 9,
+   "zero: turn window, offroad / corridor": 8,
+   "zero: corridor, moving non-turn": 7,
+   "zero: offroad, non-turn": 5,
+   "partial: launch late / not launching": 5,
+   "partial: near-miss 0.98-0.999": 4,
+   "partial: free-road ratchet / slow": 3,
+   "partial: stop / lock": 2,
+   "zero: static, other cue": 1,
+   "zero: AF-side collision": 1,
+   "partial: rear-ended": 1,
+   "partial: following a lead": 1
+  },
+  "red_ids": [
+   "2021.09.09.18.04.06_veh-40_00743_01071-0eb8a2ff8c8457a6",
+   "2021.09.09.18.04.06_veh-40_00743_01071-da27a4d1af6a5c2e",
+   "2021.09.16.21.13.37_veh-42_00172_00347-6eef637c6a7e5aa4",
+   "2021.09.16.21.13.37_veh-42_00172_00347-928aa500bc0856f7",
+   "2021.09.16.21.13.37_veh-42_00172_00347-eefec008ee4f5b09",
+   "2021.10.06.08.16.17_veh-52_00181_00574-2e01acf04eca5732",
+   "2021.10.06.08.16.17_veh-52_00922_01296-1380c1ac94ba568b",
+   "2021.10.06.08.16.17_veh-52_00922_01296-346694fbcd3a5132",
+   "2021.10.06.08.16.17_veh-52_00922_01296-7adcb61744735fa7"
+  ]
+ },
+ "STANDFMXH-L18-s1+stop3": {
+  "windows": 2106,
+  "mean": 0.9449030063633777,
+  "zeros": 58,
+  "pcs": 1409.020429304675,
+  "easy_windows": 1564,
+  "easy_miss": 39,
+  "red": 0,
+  "other": 39,
+  "by_class": {
+   "partial: launch late / not launching": 9,
+   "partial: stop / lock": 7,
+   "zero: turn window, offroad / corridor": 7,
+   "zero: offroad, non-turn": 4,
+   "partial: near-miss 0.98-0.999": 3,
+   "partial: free-road ratchet / slow": 3,
+   "partial: rear-ended": 2,
+   "zero: corridor, moving non-turn": 2,
+   "zero: AF-side collision": 1,
+   "partial: following a lead": 1
+  },
+  "red_ids": []
+ }
+}

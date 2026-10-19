@@ -1,0 +1,329 @@
+{
+ "tag": "STANDRH1K-L18-s0",
+ "ctl": "STANDFMXH1K-L18-s0",
+ "wait": {
+  "STANDRH1K-L18-s0": {
+   "other_lead": {
+    "n_a": 36,
+    "wait": 0.8888888888888888,
+    "n_b": 48,
+    "launched": 0.6875,
+    "delay_med": 0.367,
+    "b_score": 0.7219382114119486
+   },
+   "red_queue": {
+    "n_a": 39,
+    "wait": 0.9230769230769231,
+    "n_b": 35,
+    "launched": 0.5714285714285714,
+    "delay_med": 0.4670000000000001,
+    "b_score": 0.6144936341075314
+   },
+   "a_zeros": 2,
+   "b_score": 0.541784898078788
+  },
+  "STANDFMXH1K-L18-s0": {
+   "other_lead": {
+    "n_a": 36,
+    "wait": 0.9166666666666666,
+    "n_b": 48,
+    "launched": 0.8125,
+    "delay_med": 0.367,
+    "b_score": 0.7585730188333112
+   },
+   "red_queue": {
+    "n_a": 39,
+    "wait": 0.9230769230769231,
+    "n_b": 35,
+    "launched": 0.6571428571428571,
+    "delay_med": 0.4169999999999998,
+    "b_score": 0.6703362875566335
+   },
+   "a_zeros": 2,
+   "b_score": 0.605365632752683
+  }
+ },
+ "held": {
+  "STANDRH1K-L18-s0": {
+   "scenes": 460,
+   "zeros": 38,
+   "mean": 0.8395848497948298,
+   "progress_rel": 0.7991407495314764,
+   "at_fault": 2,
+   "offroad": 18,
+   "coll": {
+    "front": 1,
+    "lateral": 1,
+    "rear": 30
+   },
+   "creep": 28,
+   "no_launch": 7,
+   "lat_zeros": 29,
+   "pair": {
+    "STANDFMXH1K-L18-s0": {
+     "n": 460,
+     "mean": -0.011797771838182036,
+     "lo": -0.021700070707344917,
+     "hi": 0.0023572360147646907,
+     "zeros": 38,
+     "zeros_ref": 42,
+     "scenes": 460
+    },
+    "RSG-L18-s0": {
+     "n": 460,
+     "mean": -0.025985460954919364,
+     "lo": -0.04894404813449052,
+     "hi": -0.005361069781751298,
+     "zeros": 38,
+     "zeros_ref": 34,
+     "scenes": 460
+    }
+   }
+  },
+  "STANDFMXH1K-L18-s0": {
+   "scenes": 460,
+   "zeros": 42,
+   "mean": 0.8513826216330118,
+   "progress_rel": 0.8156874864098029,
+   "at_fault": 4,
+   "offroad": 16,
+   "coll": {
+    "front": 3,
+    "lateral": 1,
+    "rear": 24
+   },
+   "creep": 19,
+   "no_launch": 5,
+   "lat_zeros": 31,
+   "pair": {
+    "RSG-L18-s0": {
+     "n": 460,
+     "mean": -0.01418768911673733,
+     "lo": -0.04246843161277985,
+     "hi": 0.009454407220595042,
+     "zeros": 42,
+     "zeros_ref": 34,
+     "scenes": 460
+    }
+   }
+  }
+ },
+ "arena": {
+  "windows": 753,
+  "mean_a": 0.9406177568095303,
+  "mean_b": 0.914396470034281,
+  "diff": 0.026221286775249448,
+  "lo": 0.005070399630696015,
+  "hi": 0.05206247240908199,
+  "zeros_a": 32,
+  "zeros_b": 56,
+  "af_front_a": 0,
+  "af_front_b": 1,
+  "ratio_by_k": {
+   "STANDFMXH1K-L18-s0": {
+    "2": 0.9888,
+    "3": 0.9737,
+    "4": 0.9591,
+    "5": 0.9458,
+    "6": 0.9262,
+    "7": 0.9085,
+    "8": 0.9089,
+    "9": 0.9068
+   },
+   "STANDRH1K-L18-s0": {
+    "2": 0.9887,
+    "3": 0.9715,
+    "4": 0.9596,
+    "5": 0.9399,
+    "6": 0.9144,
+    "7": 0.9075,
+    "8": 0.898,
+    "9": 0.8883
+   }
+  },
+  "k9": {
+   "n_a": 317,
+   "n_b": 319,
+   "a": 0.888279051750923,
+   "b": 0.9068153236433995,
+   "diff": -0.01853627189247642,
+   "ci": [
+    -0.027194226261778816,
+    -0.0028251553600578336
+   ]
+  },
+  "strata": {
+   "braking": {
+    "windows": 141,
+    "a": 0.9576738099278516,
+    "b": 0.9654681279113257,
+    "zeros_a": 5,
+    "zeros_b": 4
+   },
+   "cruise": {
+    "windows": 23,
+    "a": 0.9880567334954083,
+    "b": 0.9881586657300471,
+    "zeros_a": 0,
+    "zeros_b": 0
+   },
+   "launch": {
+    "windows": 66,
+    "a": 0.7960078749408327,
+    "b": 0.8631385405266031,
+    "zeros_a": 4,
+    "zeros_b": 3
+   },
+   "other": {
+    "windows": 122,
+    "a": 0.9542748695515474,
+    "b": 0.959346991101942,
+    "zeros_a": 4,
+    "zeros_b": 4
+   },
+   "static": {
+    "windows": 331,
+    "a": 0.9486404833836858,
+    "b": 0.8700906344410876,
+    "zeros_a": 17,
+    "zeros_b": 43
+   },
+   "turn": {
+    "windows": 70,
+    "a": 0.9652829282281598,
+    "b": 0.9667772857047544,
+    "zeros_a": 2,
+    "zeros_b": 2
+   }
+  },
+  "types": {
+   "a": {
+    "ok": 676,
+    "slow": 37,
+    "corridor": 24,
+    "offroad": 8,
+    "no-launch": 5,
+    "rear-hit": 2,
+    "creep": 1
+   },
+   "b": {
+    "ok": 656,
+    "corridor": 48,
+    "slow": 36,
+    "offroad": 7,
+    "no-launch": 4,
+    "rear-hit": 1,
+    "AF-front+corridor": 1
+   }
+  }
+ },
+ "drift": {
+  "STANDFMXH@18": {
+   "k5_10": {
+    "n": 2519,
+    "mean": -0.00443046791200149,
+    "lo": -0.009041061101216906,
+    "hi": 4.362826903615529e-06
+   },
+   "k11_17": {
+    "n": 2704,
+    "mean": -0.009684540604479252,
+    "lo": -0.021973761383612664,
+    "hi": 0.003468005401840958
+   },
+   "turn_k11_17": {
+    "n": 144,
+    "mean": -0.06893890740464939,
+    "lo": -0.12223996058005104,
+    "hi": -0.012974228637219996
+   }
+  }
+ },
+ "cue": {
+  "static: red light at the line, no lead": {
+   "windows": 96,
+   "a": 0.8333333333333334,
+   "b": 0.6145833333333334,
+   "diff": 0.21875,
+   "lo": 0.0847457627118644,
+   "hi": 0.30158730158730157,
+   "zeros_a": 16,
+   "zeros_b": 37
+  },
+  "static: light of unknown state, no lead": {
+   "windows": 34,
+   "a": 0.9705882352941176,
+   "b": 0.9411764705882353,
+   "diff": 0.029411764705882353,
+   "lo": 0.0,
+   "hi": 0.06382978723404255,
+   "zeros_a": 1,
+   "zeros_b": 2
+  },
+  "static: lead <= 8 m": {
+   "windows": 188,
+   "a": 1.0,
+   "b": 0.9946808510638298,
+   "diff": 0.005319148936170213,
+   "lo": 0.0,
+   "hi": 0.02,
+   "zeros_a": 0,
+   "zeros_b": 1
+  },
+  "static: lead 8-30 m": {
+   "windows": 12,
+   "a": 1.0,
+   "b": 0.75,
+   "diff": 0.25,
+   "lo": 0.0,
+   "hi": 0.5454545454545454,
+   "zeros_a": 0,
+   "zeros_b": 3
+  },
+  "static: no light, no lead": {
+   "windows": 1,
+   "a": 1.0,
+   "b": 1.0,
+   "diff": 0.0,
+   "lo": NaN,
+   "hi": NaN,
+   "zeros_a": 0,
+   "zeros_b": 0
+  },
+  "red-line launch (render-red per d380)": {
+   "windows": 59,
+   "a": 0.9064855987982425,
+   "b": 0.9425592907418708,
+   "diff": -0.03607369194362834,
+   "lo": -0.06631849839611666,
+   "hi": -0.0060749411593885696,
+   "zeros_a": 0,
+   "zeros_b": 0
+  }
+ },
+ "partials": {
+  "STANDRH1K-L18-s0": {
+   "slow": 37,
+   "near1": 8
+  },
+  "STANDFMXH1K-L18-s0": {
+   "slow": 36,
+   "near1": 7
+  }
+ },
+ "gates": {
+  "held_zeros": true,
+  "wait_other_lead": true,
+  "wait_red_queue": true,
+  "delay_other_lead": true,
+  "delay_red_queue": true,
+  "launched_other_lead": false,
+  "launched_red_queue": false,
+  "held_front": true,
+  "arena_af_front": true,
+  "static": true,
+  "arena_win": true,
+  "drift": true
+ },
+ "verdict": "FAIL"
+}

@@ -1,0 +1,35 @@
+{
+ "pool": "on1_JTX",
+ "rows": 211392,
+ "s_rows": 128798,
+ "s_gap_finite": 128798,
+ "standing": 19324,
+ "rolling": 3568,
+ "rolling_gap_q": [
+  -2.74,
+  -1.65,
+  -0.77,
+  -0.11,
+  3.41
+ ],
+ "rolling_gap_neg": 2705,
+ "rolling_behind_beyond_b8": 541,
+ "rolling_by_part": {
+  "rb0": 209,
+  "rtb1": 168,
+  "ys": 395,
+  "y": 204,
+  "pn0": 415,
+  "pn1": 284,
+  "pn2": 318,
+  "pn3": 413,
+  "pn4": 643,
+  "pn5": 519
+ },
+ "code_check": {
+  "rows": 169606,
+  "names_equal": true,
+  "compared": 87012,
+  "max_abs_diff_m": 0.0
+ }
+}
