@@ -287,8 +287,9 @@ def cmd_replay(a):
                     continue
                 byscene.setdefault(sc, []).append(dict(k=k, t0=int(z["t0"]), now=int(z["now"]), cur=z["cur"], ego=z["ego"].astype(np.float32),
                                                        cam_t=z["cam_t"], jpeg=z["jpeg"].tobytes(), rec=r))
-        if a.limit:
-            byscene = {k: byscene[k] for k in sorted(byscene)[:a.limit]}
+        have = lambda c: (SAMPLE / "camera" / f"{c}.{CAM}.mp4").exists()  # noqa: E731
+        if a.limit:                                         # smoke: the first scenes whose video is on disk
+            byscene = {k: byscene[k] for k in [k for k in sorted(byscene) if have(k.removeprefix("clipgt-"))][:a.limit]}
         run.info(f"{len(dumps)} dumps, {sum(map(len, byscene.values()))} usable decisions in {len(byscene)} scenes")
         meta = S.set_index("scene_id")
         rows, tok, calrows, figs = [], {"render": [], "real": [], "realN": []}, [], {}
@@ -358,7 +359,9 @@ def cmd_replay(a):
                     rows.append(row)
             run.info(f"exam: {len(rows)} decisions")
             # non-exam: real tokens only (PAI-AV calibration), clip t0 = 2 .. 19 s
-            ne_s = S[S.group == "nonexam"].iloc[: a.limit or None]
+            ne_s = S[S.group == "nonexam"]
+            if a.limit:
+                ne_s = ne_s[ne_s.clip_id.map(have)].iloc[:a.limit]
 
             def prep_ne(m):
                 vid, cal = Video(m.clip_id), pav_calib(m.clip_id, int(m.chunk))
