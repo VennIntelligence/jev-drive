@@ -188,6 +188,10 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             on the S rows: the plan's 4 s arc below 0.8 x the human's (the smaller of his logged and his reachable arc) with no logged object in
             the plan's extended sweep -> the per-step deficit, gradient only along each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit.
             0 (default) = off: nothing loaded, no operation added.
+  --on-stand W [--on-stand-margin M]   (NR1STAND, NR1 prereg supplement 17) the mirror term of nr1_free.py on the standing S rows (the visited
+            state below 0.5 m/s, the human's logged 4 s arc below 0.5 m): the plan's arc beyond max(his two arcs) + M (1.0 m) per step, gradient
+            only along each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit. 0 (default) = off. With --diag: grad/lon_free and
+            grad/lon_stand (monitoring) when those terms are on.
   --on-arc-rows brake   (JTB / JTN, NR1 prereg supplement 10) the arc term's rows: also the rows where the human stops in the horizon; only
             the rows where he stays below 0.5 m/s all 4 s are excluded (nr1_lon.labels). Loads the labels even at --on-arc 0 (monitoring) and adds
             to the held / fitted slices the 4 s arc bias per row kind (cruise / brake / stop / launch / still) -> pool_*/arc4_bias_<kind>,
@@ -1005,6 +1009,9 @@ def cmd_train(a):
             parts = dict(imit=[(1.0, g0("imit"))], nav_hinge=[(cfg.hinge_lam, g0("hinge"))],
                          pool_hinge=[(hw * cfg.agent_lam, g0("agent_ho")), (hw * LS.road_lam, g0("road_ho"))],
                          lat=[(hw * ll, g0(f"on/lat_{q}_ho")) for q in ("onc", "soft", "side")], lon=[(hw * ll, g0("on/lon_arc_ho"))])
+            for q in ("free", "stand"):                               # NR1STAND dose (supplement 17): only when the term is on
+                if g0(f"on/lon_{q}_ho") is not None:
+                    parts[f"lon_{q}"] = [(hw * ll, g0(f"on/lon_{q}_ho"))]
             sc, out, G = float(scaler.get_scale()), {}, {}
             for k, lst in parts.items():
                 v = [w * t for w, t in lst if t is not None]
@@ -1565,6 +1572,8 @@ if __name__ == "__main__":
         p.add_argument("--on-free-frac", type=float, default=0.8, help="NR1FREE-M: the term's band (plan 4 s arc below FRAC x the reference fires)")
         p.add_argument("--on-free-mode", default="all", choices=("all", "move"), help="NR1FREE-M: rows that may fire (move = ego >= 3 m/s, the "
                        "human neither stopping nor braking; prereg supplement 16)")
+        p.add_argument("--on-stand", type=float, default=0.0, help="NR1STAND: weight of the standing-row mirror term (defect_fix lib/nr1_free.py; 0 = off)")
+        p.add_argument("--on-stand-margin", type=float, default=1.0, help="NR1STAND: the cap's margin (m) over the standing human's 4 s arc")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
         p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
@@ -1643,13 +1652,13 @@ if __name__ == "__main__":
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
     assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc) > 0, "--on-arc-rows: needs nr1_lat"
-    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
+    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0), getattr(a, "on_stand", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

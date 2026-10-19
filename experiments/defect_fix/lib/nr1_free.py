@@ -21,6 +21,11 @@ pose). Gradient: each pose moves only along its own heading (nr1_lon.lon_only; n
 NR1FREE-M (prereg supplement 16; rm_train --on-free-mode move --on-free-frac 0.95): the same term, the band FRAC tightened and the rows limited to
 moving states: the ego's t0 speed (tab `speed`) >= V_MOVE and the human neither near a stop nor braking (every 0.5 s segment speed of `fut_reg`
 >= max(V_MOVE, HUM_KEEP x his first segment's)); folded into `ok` at load (no gradient). Default mode "all", FRAC 0.8 = supplement 15 as it was.
+
+NR1STAND (prereg supplement 17; rm_train --on-stand W --on-stand-margin M): the mirror term on standing states. Rows: S rows where the visited
+state stands (tab `speed` < V_STAND) and the human stands all 4 s (arc(fut_reg)_8 < H_STAND); no free check. Cap b_j = max(arc(fut)_j,
+arc(fut_reg)_j) + M (the larger human path, so neither of his paths fires). Fire: s_plan_8 > b_8. Value: sum over the 8 steps of smooth L1
+(beta 0.5) of relu(s_plan_j - b_j); gradient only along each pose's heading. No target speed, nothing inside the cap.
 """
 from __future__ import annotations
 
@@ -30,6 +35,7 @@ FRAC, S_MIN, D0, TH, NS, BETA = 0.8, 1.0, 2.0, 0.5, 8, 0.5
 MODE, V_MOVE, HUM_KEEP = "all", 3.0, 0.8
 FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the rear axle (= lib/agent_hinge.py)
 DT = 0.5
+V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
 
 
 def cum_arc(P):
@@ -165,6 +171,59 @@ def term(poses, rows, pack, ah):
     return terms(poses, pack["s_ref"][rows], pack["ok"][rows], ah.box[rows], ah.val[rows])
 
 
+def configure_stand(margin=1.0):
+    global MARGIN
+    assert margin > 0, margin
+    MARGIN = float(margin)
+    return dict(stand_margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND)
+
+
+def standing(v0, hum4):
+    """visited-state t0 speed (N,), the human's logged 4 s arc (N,) -> (N,) bool: the rows supplement 17 lets fire."""
+    return np.isfinite(hum4) & (np.asarray(v0) < V_STAND) & (np.nan_to_num(hum4, nan=1e9) < H_STAND)
+
+
+def stand_cap(fut, fut_reg):
+    """-> cap (N, 8) = max of the two cumulative human arcs + MARGIN, ok (N,) finite."""
+    a, b = cum_arc(fut), cum_arc(fut_reg)
+    ok = np.isfinite(a).all(1) & np.isfinite(b).all(1)
+    return (np.nan_to_num(np.maximum(a, b)) + MARGIN).astype(np.float32), ok
+
+
+def stand_load(pool_dir, names, dev):
+    """-> pack: cap (N, 8), ok (N,) on dev for the pool's standing S rows."""
+    import torch
+    from pathlib import Path
+    z = np.load(Path(pool_dir) / "tab.npz")
+    assert np.array_equal(z["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: tab rows != the pool's"
+    cap, fin = stand_cap(z["fut"], z["fut_reg"])
+    S = z["mode"].astype(str) == "self" if "mode" in z.files else np.ones(len(fin), bool)
+    st = standing(z["speed"], cum_arc(z["fut_reg"])[:, -1])
+    ok = fin & S & st
+    rec = dict(rows=int(len(ok)), s_rows=int(S.sum()), standing=int(ok.sum()), ego_slow=int((S & fin & (z["speed"] < V_STAND)).sum()),
+               margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND)
+    return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+
+
+def stand_terms(poses, cap, ok, parts=False):
+    """poses (n, 8, 3) -> (n,) raw STAND term (module docstring); parts: also the fire mask and s_plan_8."""
+    import torch
+    import torch.nn.functional as F
+    import nr1_lon
+    p = poses.float()
+    xl, yl = nr1_lon.lon_only(p[..., 0], p[..., 1], p[..., 2])
+    sp = nr1_lon.arc(xl, yl)
+    with torch.no_grad():
+        fire = ok & (sp[:, -1] > cap[:, -1])
+    d = torch.relu(sp - cap)
+    v = F.smooth_l1_loss(d, torch.zeros_like(d), beta=BETA, reduction="none").sum(1) * fire.to(d.dtype)
+    return (v, dict(fire=fire, s_plan=sp[:, -1].detach())) if parts else v
+
+
+def stand_term(poses, rows, pack):
+    return stand_terms(poses, pack["cap"][rows], pack["ok"][rows])
+
+
 if __name__ == "__main__":                     # known-answer check (CPU)
     import sys
     import torch
@@ -211,4 +270,18 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     configure(0.95, "move")
     assert terms(go(1.85), s_ref, ok, box, val) > 0 and terms(go(1.95), s_ref, ok, box, val) == 0                    # 0.925 x fires at 0.95, 0.975 x not
     configure()
+    capz = torch.full((1, 8), MARGIN)                                                  # the human stands: cap = 1 m at every step
+    assert stand_terms(stand, capz, ok) == 0 and stand_terms(go(0.2), capz, ok) == 0  # standing / 0.8 m in 4 s: inside the cap
+    assert stand_terms(go(1.0), capz, ok) > 0.5 and stand_terms(go(1.0), capz, ~ok) == 0   # 4 m: fires; not a standing row: 0
+    q = torch.stack([1.0 * t * torch.cos(th), 1.0 * t * torch.sin(th), th + 0.05], -1)[None].requires_grad_(True)
+    stand_terms(q, capz, ok).sum().backward()
+    g = q.grad[0]
+    across = -torch.sin(q[0, :, 2].detach()) * g[:, 0] + torch.cos(q[0, :, 2].detach()) * g[:, 1]
+    assert g[:, 2].abs().max() == 0 and across.abs().max() < 1e-6 and g[:, :2].abs().max() > 0, g
+    along = torch.cos(q[0, :, 2].detach()) * g[:, 0] + torch.sin(q[0, :, 2].detach()) * g[:, 1]
+    assert (along >= 0).all()                                                          # descent pulls the poses back (shorter)
+    hum = np.array([[0.0] * 8, [0.0] * 7 + [0.3]])
+    c_, o_ = stand_cap(hum[:, :, None].repeat(2, 2) * [1, 0], hum[:, :, None].repeat(2, 2) * [1, 0])
+    assert o_.all() and np.allclose(c_[:, -1], [1.0, 1.3])
+    assert standing(np.array([0.1, 0.1, 0.8, 0.1]), np.array([0.2, 0.7, 0.2, np.nan])).tolist() == [True, False, False, False]
     print("nr1_free known-answer ok", float(vs))

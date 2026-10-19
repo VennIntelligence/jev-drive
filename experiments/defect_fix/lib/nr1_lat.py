@@ -24,6 +24,8 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
         --on-lon module: logged as lon_arc, 10 x W x nr1_lon.term; it moves the poses only along their own heading. W = 0: nothing loaded or added.
   free  (NR1FREE, rm_train --on-free W; prereg supplement 15) the one-sided longitudinal consequence term of nr1_free.py (plan slower than 0.8 x
         the human with the way ahead free): logged as lon_free, 10 x W x nr1_free.term, on the agent hinge's boxes. W = 0: nothing loaded or added.
+  stand (NR1STAND, rm_train --on-stand W [--on-stand-margin M]; prereg supplement 17) nr1_free's mirror term on standing rows (the plan's 4 s
+        arc beyond the standing human's + M): logged as lon_stand, 10 x W x nr1_free.stand_term. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -35,11 +37,21 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all"):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
                arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
+    CFG["stand"] = float(stand)
+    assert stand > 0 or stand_margin == 1.0, "--on-stand-margin: needs --on-stand"
+    if CFG["stand"] > 0:                                                       # NR1STAND (supplement 17)
+        import nr1_free
+        st = dict(stand=CFG["stand"], **nr1_free.configure_stand(stand_margin))
+        if CFG["free"] > 0:
+            return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode).items()}, **st)
+        assert free_frac == 0.8 and free_mode == "all", "--on-free-frac / --on-free-mode: need --on-free"
+        return dict({k: v for k, v in CFG.items() if k not in ("free", "stand")}, **st)
+    del CFG["stand"]
     if CFG["free"] > 0:                                                        # NR1FREE-M (supplement 16): band and rows of nr1_free
         import nr1_free
         return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode).items()})
@@ -96,6 +108,10 @@ def load(pool_dir, names, dev, file=None):
             pack["ah"] = AgentHinge(Path(pool_dir) / "agent.npz", names, dev, 0.0, None)
         pack["free"] = nr1_free.load(pool_dir, names, dev, pack["ah"])
         print(f"nr1_lat: lon_free labels {pack['free']['rec']}", flush=True)
+    if CFG.get("stand", 0.0) > 0:                                              # NR1STAND: the standing rows' caps
+        import nr1_free
+        pack["stand"] = nr1_free.stand_load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_stand labels {pack['stand']['rec']}", flush=True)
     return pack
 
 
@@ -192,4 +208,7 @@ def loss(poses, rows, pack):
     if CFG["free"] > 0:
         import nr1_free
         out["lon_free"] = 10.0 * CFG["free"] * nr1_free.term(poses, rows, pack["free"], pack["ah"])
+    if CFG.get("stand", 0.0) > 0:
+        import nr1_free
+        out["lon_stand"] = 10.0 * CFG["stand"] * nr1_free.stand_term(poses, rows, pack["stand"])
     return out
