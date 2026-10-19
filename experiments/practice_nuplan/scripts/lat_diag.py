@@ -20,6 +20,9 @@ held 460 than NTV0. Diagnosis on stored data, no training. Box, repo root.
         (rm_train.py executed unedited up to its dispatch, then its build() with the checkpoint TAG loaded as `rely` does): TAG's eval-mode
         plans on every S row of on1_JTX and, on them, the pool terms exactly as the loss sees them (agent and road hinge shape-only x ho_w x
         lam, the nr1_lat terms x ho_w) with the signed sideways push of each term per row -> $W/trainee_<TAG>.parquet
+  $TR lat_diag.py wns       (CPU) prereg supplement 2's draw JTX00SNS = JTX00S with the new start-state S rows (pool pn*) at tab speed
+        < 0.5 m/s set to weight 0, the rest renormalised -> runs/defect_fix/w/JTX00SNS.npz (+ .json)
+  $TR lat_diag.py confirm   (CPU) supplement 2's readout on $W/replay_ld.parquet -> results/lateral_confirm.{json,md}
   $TR lat_diag.py report    (CPU) the tables of results/lateral_diag.md from rows.parquet, follow*/ and replay.parquet -> stdout (markdown)
 """
 from __future__ import annotations
@@ -195,7 +198,7 @@ def cmd_replay(a):
             if i % 500 == 0:
                 run.info(f"{i} / {len(recs)}")
         df = pd.DataFrame(out)
-        df.to_parquet(W / "replay.parquet")
+        df.to_parquet(W / a.out)
         gate = {t: float(np.abs(np.stack(df[t]).reshape(-1, 8, 3)[..., :2] - np.stack(df.served).reshape(-1, 8, 3)[..., :2]).max(axis=(1, 2)).mean())
                 for t in a.tags}
         run.summary.update(decisions=len(df), served_gap=gate)
@@ -262,6 +265,67 @@ def cmd_trainee(a):
     W.mkdir(parents=True, exist_ok=True)
     df.to_parquet(W / f"trainee_{a.ckpt}.parquet")
     print(json.dumps(dict(ckpt=a.ckpt, rows=len(df), weights=dict(agent=wA, road=wR, lat=wL), terms=[q for q in cols if not q.endswith(("_left", "_abs"))])))
+
+
+def contexts(R):
+    """Decision contexts of the replay rows (native-gap decision table of the dumped closed loop): standing, slow lead <= 15 m, turning, moving."""
+    import pandas as pd
+    A_ = pd.read_csv(DATA / "runs/alpasim_proxy/arena/set/set.csv.gz").set_index("id")
+    R = R.assign(stratum=R.id.map(A_.stratum), log=R.id.map(A_.log))
+    ng = pd.read_parquet(DATA / "runs/defect_fix/native_gap/dec.parquet")
+    ng = ng.assign(src=ng.tag)[["src", "id", "k", "lead_gap", "lead_v", "turn20"]]
+    R = R.merge(ng, on=["src", "id", "k"], how="left")
+    R["ctx"] = np.select([R.v < 0.5, (R.lead_gap < 15) & (R.lead_v < 1.0), R.turn20.abs() > 20], ["standing", "slow lead <= 15 m", "turning"], "moving")
+    return R
+
+
+def cmd_wns(a):
+    z, tb = np.load(WFILE), np.load(POOL / "tab.npz")
+    assert np.array_equal(z["names"], tb["names"])
+    w, grp = z["w"].astype(np.float64).copy(), z["grp"].astype("U12").copy()
+    drop = np.char.startswith(tb["pool"].astype(str), "pn") & (tb["speed"] < 0.5) & (grp == "S")
+    s0 = w[grp == "S"].sum()
+    w[drop], grp[drop] = 0.0, "S_static0"
+    w[grp == "S"] *= s0 / w[grp == "S"].sum()
+    w /= w.sum()
+    out = DATA / "runs/defect_fix/w/JTX00SNS.npz"
+    assert not out.exists(), f"{out} exists"
+    np.savez(out, names=z["names"], w=w, grp=grp)
+    rec = dict(src=str(WFILE), dropped=int(drop.sum()), s_rows_left=int((grp == "S").sum()), held=int((grp == "S_held").sum()),
+               share={g: float(w[grp == g].sum()) for g in np.unique(grp)})
+    out.with_suffix(".json").write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec))
+
+
+def cmd_confirm(a):
+    import pandas as pd
+    R = contexts(pd.read_parquet(W / "replay_ld.parquet"))
+    Y = {t: np.stack(R[t]).reshape(-1, 8, 3) for t in ("LDC-L18-s0", "LDX-L18-s0", "LDXS-L18-s0")}
+    out, L = {}, ["# LATERAL-DIAG confirmatory run (PN prereg supplement 2)", "",
+                  "Open-loop plans on the 5 400 arena held dumps; y = plan lateral (left +), arm minus LDC on the same decision, log-clustered 95 % CI.", "",
+                  "| arm - LDC | context | decisions | y(2 s) | y(4 s) |", "|---|---|--:|--:|--:|"]
+    for t in ("LDX-L18-s0", "LDXS-L18-s0"):
+        for c in ("moving", "turning", "slow lead <= 15 m", "standing"):
+            q = ((R.k >= 2) & (R.ctx == c)).to_numpy()
+            d2, d4 = _boot(Y[t][q, 3, 1] - Y["LDC-L18-s0"][q, 3, 1], R.log[q]), _boot(Y[t][q, 7, 1] - Y["LDC-L18-s0"][q, 7, 1], R.log[q])
+            out[f"{t}|{c}"] = dict(n=int(q.sum()), y2=d2, y4=d4)
+            L.append(f"| {t} | {c} | {q.sum()} | {d2[0]:+.4f} [{d2[1]:+.4f}, {d2[2]:+.4f}] | {d4[0]:+.4f} [{d4[1]:+.4f}, {d4[2]:+.4f}] |")
+    x, xs = out["LDX-L18-s0|moving"]["y4"], out["LDXS-L18-s0|moving"]["y4"]
+    rep = x[0] <= -0.010 and x[2] < 0
+    if not rep:
+        verdict = "not decidable: the 1 000-step continuation does not reproduce the right bias"
+    elif (xs[1] <= 0 <= xs[2]) or abs(xs[0]) <= 0.5 * abs(x[0]):
+        verdict = "the new static rows are the cause"
+    elif xs[0] <= -0.010 and xs[2] < 0 and abs(xs[0]) > 0.5 * abs(x[0]):
+        verdict = "not the static rows (new moving rows / dilution)"
+    else:
+        verdict = "not decidable by the registered rule"
+    L += ["", f"Registered rule (moving, y(4 s)): LDX - LDC {x[0]:+.4f} [{x[1]:+.4f}, {x[2]:+.4f}], LDXS - LDC {xs[0]:+.4f} [{xs[1]:+.4f}, {xs[2]:+.4f}] "
+          f"-> **{verdict}**."]
+    res = REPO / "experiments/practice_nuplan/results"
+    (res / "lateral_confirm.json").write_text(json.dumps(dict(cells=out, verdict=verdict), indent=1))
+    (res / "lateral_confirm.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
 
 
 def _boot(x, g, n=2000, seed=0):
@@ -377,8 +441,10 @@ if __name__ == "__main__":
     p = sp.add_parser("replay")
     p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "NTVX-L18-s0", "RSG-L18-s0", "JTN-L18-s1"])
     p.add_argument("--src", nargs="+", default=["JTN1", "RSG"]), p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--out", default="replay.parquet")
     sp.add_parser("report")
+    sp.add_parser("wns"), sp.add_parser("confirm")
     p = sp.add_parser("trainee")
     p.add_argument("--ckpt", required=True), p.add_argument("--bs", type=int, default=256)
     a = ap.parse_args()
-    dict(rows=cmd_rows, replay=cmd_replay, report=cmd_report, trainee=cmd_trainee)[a.cmd](a)
+    dict(rows=cmd_rows, replay=cmd_replay, report=cmd_report, trainee=cmd_trainee, wns=cmd_wns, confirm=cmd_confirm)[a.cmd](a)
