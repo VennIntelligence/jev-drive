@@ -26,6 +26,8 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
         the human with the way ahead free): logged as lon_free, 10 x W x nr1_free.term, on the agent hinge's boxes. W = 0: nothing loaded or added.
   stand (NR1STAND, rm_train --on-stand W [--on-stand-margin M]; prereg supplement 17) nr1_free's mirror term on standing rows (the plan's 4 s
         arc beyond the standing human's + M): logged as lon_stand, 10 x W x nr1_free.stand_term. W = 0: nothing loaded or added.
+        --on-stand-roll V (STAND-R, supplement 20): also the rolling rows (V_STAND <= v0 < V; labels <pool>/stand_gap.npz); their part is
+        logged apart as lon_standr (lon_stand + lon_standr = the term). V = 0: as supplement 17, nothing loaded or added.
   stoppt (NR1STOPPT, rm_train --on-stoppt W; prereg supplement 18) nr1_free's "do not pass the human's stop point" term on approach rows
         (labels <pool>/stoppt.npz): logged as lon_stoppt, 10 x W x nr1_free.stoppt_term. W = 0: nothing loaded or added.
 """
@@ -39,12 +41,14 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0)):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
                arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
     CFG["stand"] = float(stand)
+    CFG["_roll"] = float(stand_roll)                                       # NR1 supplement 20 (popped below)
+    assert CFG["stand"] > 0 or not CFG["_roll"], "--on-stand-roll: needs --on-stand"
     CFG["_clear"] = tuple(float(x) for x in free_clear)                     # NR1 supplement 19: FREE-M's stricter free check (popped below)
     assert CFG["free"] > 0 or not any(CFG["_clear"]), "--on-free-clear: needs --on-free"
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
@@ -54,11 +58,11 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
 
 
 def _configure_rest(free_frac, free_mode, stand_margin):
-    clear = CFG.pop("_clear")
+    clear, roll = CFG.pop("_clear"), CFG.pop("_roll")
     assert CFG["stand"] > 0 or stand_margin == 1.0, "--on-stand-margin: needs --on-stand"
     if CFG["stand"] > 0:                                                       # NR1STAND (supplement 17)
         import nr1_free
-        st = dict(stand=CFG["stand"], **nr1_free.configure_stand(stand_margin))
+        st = dict(stand=CFG["stand"], **nr1_free.configure_stand(stand_margin, roll))
         if CFG["free"] > 0:
             return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode, clear).items()}, **st)
         assert free_frac == 0.8 and free_mode == "all", "--on-free-frac / --on-free-mode: need --on-free"
@@ -226,7 +230,11 @@ def loss(poses, rows, pack):
         out["lon_free"] = 10.0 * CFG["free"] * nr1_free.term(poses, rows, pack["free"], pack["ah"])
     if CFG.get("stand", 0.0) > 0:
         import nr1_free
-        out["lon_stand"] = 10.0 * CFG["stand"] * nr1_free.stand_term(poses, rows, pack["stand"])
+        if "roll" in pack["stand"]:                                            # STAND-R: the rolling rows' part logged apart
+            vs, vr = nr1_free.stand_term_split(poses, rows, pack["stand"])
+            out["lon_stand"], out["lon_standr"] = 10.0 * CFG["stand"] * vs, 10.0 * CFG["stand"] * vr
+        else:
+            out["lon_stand"] = 10.0 * CFG["stand"] * nr1_free.stand_term(poses, rows, pack["stand"])
     if CFG.get("stoppt", 0.0) > 0:
         import nr1_free
         out["lon_stoppt"] = 10.0 * CFG["stoppt"] * nr1_free.stoppt_term(poses, rows, pack["stoppt"])

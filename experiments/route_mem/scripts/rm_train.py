@@ -192,6 +192,9 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             state below 0.5 m/s, the human's logged 4 s arc below 0.5 m): the plan's arc beyond max(his two arcs) + M (1.0 m) per step, gradient
             only along each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit. 0 (default) = off. With --diag: grad/lon_free and
             grad/lon_stand (monitoring) when those terms are on.
+  --on-stand-roll V   (STAND-R, NR1 prereg supplement 20) STAND also on rolling S rows (0.5 <= ego t0 speed < V m/s, the human standing all
+            4 s) with the cap max(b_j, max(g, 0) + M), g = the human's standing station minus the ego's (<pool>/stand_gap.npz); their part is
+            logged as on/lon_standr. 0 (default) = off: nothing loaded, no operation added.
   --on-free-clear CMIN,CTH   (NR1 prereg supplement 19) FREE's free check made stricter: the safety distance ahead of the bumper is
             max(2 m + 0.5 s x v, CMIN m, CTH s x v) (v = the reference speed of each 0.5 s step). 0,0 (default) = off.
   --on-stoppt W     (NR1STOPPT, NR1 prereg supplement 18) nr1_free.py's "do not pass the human's stop point" term on the approach S rows of
@@ -1014,7 +1017,7 @@ def cmd_train(a):
             parts = dict(imit=[(1.0, g0("imit"))], nav_hinge=[(cfg.hinge_lam, g0("hinge"))],
                          pool_hinge=[(hw * cfg.agent_lam, g0("agent_ho")), (hw * LS.road_lam, g0("road_ho"))],
                          lat=[(hw * ll, g0(f"on/lat_{q}_ho")) for q in ("onc", "soft", "side")], lon=[(hw * ll, g0("on/lon_arc_ho"))])
-            for q in ("free", "stand", "stoppt"):                     # NR1STAND dose (supplement 17) / NR1STOPPT: only when the term is on
+            for q in ("free", "stand", "standr", "stoppt"):           # NR1STAND dose (supplement 17) / STAND-R / NR1STOPPT: only when the term is on
                 if g0(f"on/lon_{q}_ho") is not None:
                     parts[f"lon_{q}"] = [(hw * ll, g0(f"on/lon_{q}_ho"))]
             sc, out, G = float(scaler.get_scale()), {}, {}
@@ -1581,6 +1584,8 @@ if __name__ == "__main__":
                        "max(CMIN m, CTH s x v) ahead of the bumper along the sweep; 0,0 = off)")
         p.add_argument("--on-stand", type=float, default=0.0, help="NR1STAND: weight of the standing-row mirror term (defect_fix lib/nr1_free.py; 0 = off)")
         p.add_argument("--on-stand-margin", type=float, default=1.0, help="NR1STAND: the cap's margin (m) over the standing human's 4 s arc")
+        p.add_argument("--on-stand-roll", type=float, default=0.0, help="STAND-R (NR1 prereg supplement 20): STAND also on rolling rows with ego "
+                       "speed in [0.5, V) m/s, cap aligned to the human's standing station (labels <pool>/stand_gap.npz; 0 = off)")
         p.add_argument("--on-stoppt", type=float, default=0.0, help="NR1STOPPT: weight of the approach-row stop-point term (defect_fix lib/nr1_free.py; "
                        "labels <pool>/stoppt.npz; 0 = off)")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
@@ -1667,7 +1672,7 @@ if __name__ == "__main__":
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stoppt=getattr(a, 'on_stoppt', 0.0), free_clear=tuple(float(x) for x in getattr(a, 'on_free_clear', '0,0').split(',')))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stand_roll=getattr(a, 'on_stand_roll', 0.0), stoppt=getattr(a, 'on_stoppt', 0.0), free_clear=tuple(float(x) for x in getattr(a, 'on_free_clear', '0,0').split(',')))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

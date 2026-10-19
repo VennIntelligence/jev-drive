@@ -28,6 +28,11 @@ NR1STAND (prereg supplement 17; rm_train --on-stand W --on-stand-margin M): the 
 state stands (tab `speed` < V_STAND) and the human stands all 4 s (arc(fut_reg)_8 < H_STAND); no free check. Cap b_j = max(arc(fut)_j,
 arc(fut_reg)_j) + M (the larger human path, so neither of his paths fires). Fire: s_plan_8 > b_8. Value: sum over the 8 steps of smooth L1
 (beta 0.5) of relu(s_plan_j - b_j); gradient only along each pose's heading. No target speed, nothing inside the cap.
+STAND-R (prereg supplement 20; rm_train --on-stand-roll V): the same term also on rolling rows, V_STAND <= ego t0 speed < V_ROLL, the human
+standing all 4 s and a finite station gap g = s_h(t + 4 s) - s_e (the human's standing station minus the visited state's, from
+<pool>/stand_gap.npz, scripts/stand_r.py gap = stop_label's h4c). Cap c_j = max(b_j, max(g, 0) + M): a rolling ego behind the human may
+roll up to his standing station + M, one level with or past it gets b_j (stop within what `fut`'s 2 s blend reaches). V_ROLL = 0 (default):
+nothing loaded, the pack and the term exactly as supplement 17. nr1_lat logs the rolling rows' part apart as lon_standr.
 
 NR1STOPPT (prereg supplement 18; rm_train --on-stoppt W): "do not pass the human's stop point" on approach states. Labels from the log
 (stop_label, built offline into <pool>/stoppt.npz by scripts/stoppt.py labels): rest = the human's station, relative to the ego's, at the first
@@ -46,6 +51,7 @@ CLEAR_MIN, CLEAR_TH = 0.0, 0.0                    # supplement 19's stricter fre
 FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the rear axle (= lib/agent_hinge.py)
 DT = 0.5
 V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
+V_ROLL = 0.0                                      # supplement 20: upper ego speed of the rolling STAND rows (0 = off)
 V_REST, V_APP, M_STOP, A_MAX, H_FUT, LOOK = 0.5, 0.5, 1.0, 4.0, 4.0, 30.0
 
 
@@ -185,11 +191,22 @@ def term(poses, rows, pack, ah):
     return terms(poses, pack["s_ref"][rows], pack["ok"][rows], ah.box[rows], ah.val[rows])
 
 
-def configure_stand(margin=1.0):
-    global MARGIN
-    assert margin > 0, margin
-    MARGIN = float(margin)
-    return dict(stand_margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND)
+def configure_stand(margin=1.0, roll=0.0):
+    global MARGIN, V_ROLL
+    assert margin > 0 and (roll == 0 or roll > V_STAND), (margin, roll)
+    MARGIN, V_ROLL = float(margin), float(roll)
+    return dict(stand_margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND) | (dict(v_roll=V_ROLL) if V_ROLL else {})
+
+
+def rolling(v0, hum4, gap):
+    """supplement 20 rows: the human stands all 4 s, the ego rolls at V_STAND <= v0 < V_ROLL, the station gap is finite."""
+    v0 = np.asarray(v0)
+    return np.isfinite(hum4) & (np.nan_to_num(hum4, nan=1e9) < H_STAND) & (v0 >= V_STAND) & (v0 < V_ROLL) & np.isfinite(gap)
+
+
+def roll_cap(cap, gap):
+    """cap (n, 8) = b_j, gap (n,) -> c_j = max(b_j, max(g, 0) + MARGIN)."""
+    return np.maximum(cap, (np.maximum(np.asarray(gap, np.float64), 0.0) + MARGIN)[:, None]).astype(np.float32)
 
 
 def standing(v0, hum4):
@@ -212,11 +229,19 @@ def stand_load(pool_dir, names, dev):
     assert np.array_equal(z["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: tab rows != the pool's"
     cap, fin = stand_cap(z["fut"], z["fut_reg"])
     S = z["mode"].astype(str) == "self" if "mode" in z.files else np.ones(len(fin), bool)
-    st = standing(z["speed"], cum_arc(z["fut_reg"])[:, -1])
+    hum4 = cum_arc(z["fut_reg"])[:, -1]
+    st = standing(z["speed"], hum4)
     ok = fin & S & st
     rec = dict(rows=int(len(ok)), s_rows=int(S.sum()), standing=int(ok.sum()), ego_slow=int((S & fin & (z["speed"] < V_STAND)).sum()),
                margin=MARGIN, v_stand=V_STAND, h_stand=H_STAND)
-    return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+    if not V_ROLL:
+        return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+    g = np.load(Path(pool_dir) / "stand_gap.npz")                       # supplement 20: scripts/stand_r.py gap
+    assert np.array_equal(g["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: stand_gap rows != the pool's"
+    roll = fin & S & rolling(z["speed"], hum4, g["gap"]) & ~st
+    cap[roll] = roll_cap(cap[roll], g["gap"][roll])
+    rec |= dict(rolling=int(roll.sum()), rolling_behind_b8=int((roll & (g["gap"] + MARGIN > cap[:, -1] - 1e-6)).sum()), v_roll=V_ROLL)
+    return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok | roll, device=dev), roll=torch.as_tensor(roll, device=dev), rec=rec)
 
 
 def stand_terms(poses, cap, ok, parts=False):
@@ -236,6 +261,13 @@ def stand_terms(poses, cap, ok, parts=False):
 
 def stand_term(poses, rows, pack):
     return stand_terms(poses, pack["cap"][rows], pack["ok"][rows])
+
+
+def stand_term_split(poses, rows, pack):
+    """supplement 20: the STAND term -> (standing rows' part, rolling rows' part); their sum is stand_term."""
+    v = stand_term(poses, rows, pack)
+    r = pack["roll"][rows].to(v.dtype)
+    return v * (1 - r), v * r
 
 
 def stop_label(t, s_e, T, S, look=LOOK):
@@ -410,4 +442,22 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     across = -torch.sin(q[0, :, 2].detach()) * g[:, 0] + torch.cos(q[0, :, 2].detach()) * g[:, 1]
     along = torch.cos(q[0, :, 2].detach()) * g[:, 0] + torch.sin(q[0, :, 2].detach()) * g[:, 1]
     assert g[:, 2].abs().max() == 0 and across.abs().max() < 1e-6 and (along >= 0).all() and along.max() > 0, g
+    # STAND-R (supplement 20): rolling rows' caps
+    assert configure_stand(1.0) == dict(stand_margin=1.0, v_stand=V_STAND, h_stand=H_STAND) and V_ROLL == 0
+    configure_stand(1.0, 3.0)
+    assert rolling(np.array([0.3, 0.5, 2.9, 3.0, 2.0, 2.0]), np.array([0.1, 0.1, 0.1, 0.1, 0.6, 0.1]),
+                   np.array([0.0, 0.0, 0.0, 0.0, 0.0, np.nan])).tolist() == [False, True, True, False, False, False]
+    v0 = 2.0                                                                           # fut: 2 m/s blended to 0 over 2 s -> 2 m, cap b ~ 3 m
+    tt = np.arange(41) * 0.1
+    vv = np.maximum(v0 + (0.0 - v0) * np.minimum(tt / 2.0, 1.0), 0.0)
+    D = np.r_[0.0, np.cumsum((vv[1:] + vv[:-1]) * 0.05)][5::5]
+    fut = np.stack([D, np.zeros(8), np.zeros(8)], -1)[None]
+    b, _ = stand_cap(fut, np.zeros_like(fut))
+    assert abs(b[0, -1] - 3.0) < 0.01, b
+    ok1 = torch.tensor([True])
+    for g_, lo, hi in ((0.0, 2.5, 8.0), (10.0, 9.0, 12.0), (-3.0, 2.5, 8.0)):          # g = 0: b; g = 10 m: 11 m; g = -3 (past him): b
+        c = torch.as_tensor(roll_cap(b, [g_]))
+        assert stand_terms(go(lo / 4.0), c, ok1) == 0 and stand_terms(go(hi / 4.0), c, ok1) > 0, (g_, c)
+    assert np.allclose(roll_cap(b, [-3.0]), b) and np.allclose(roll_cap(b, [10.0])[0, 0], 11.0)
+    configure_stand(1.0)
     print("nr1_free known-answer ok", float(vs))

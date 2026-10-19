@@ -81,5 +81,5 @@ the same pricer and the per-window class files.
 ## Next
 
 The arm aimed at the red-line class is drafted, not launched, in
-[NR1 prereg supplement 20 DRAFT](../../defect_fix/plans/2026-10-20-nr1-supp20-standr-DRAFT.md): STAND-R extends STAND's rows to a rolling
+[NR1 prereg supplement 20](../../defect_fix/plans/2026-10-20-nr1-supp20-standr.md) (registered 10-20 00:45 CST): STAND-R extends STAND's rows to a rolling
 ego (0.5 to 3 m/s) while the human stands, with a station-aligned cap, and can double the dose.
