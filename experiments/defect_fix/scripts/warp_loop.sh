@@ -4,6 +4,7 @@
 #   warp_loop.sh cf            stage 1: NTV0-L18-s0 native dumps of native_gap's 270 windows (native_gap.sh dump) -> warp_loop.py cf per
 #                              dump run (JTN1 / RSG / NTV0 native_gap dumps, JTN1 redline_probe static dumps) -> report
 #   warp_loop.sh aread <chunk> stage 2 job body: JTN-L18-s1 native arena held chunk with SH30_WARP=${WARP:-const} (jt.sh aread off's command)
+#   warp_loop.sh sdump         JTN1 static windows re-dumped with every decision (redline_probe's lists) -> cf -> report
 #   warp_loop.sh ident         stage 2 identity: 12 chunk-0 windows, switch off (WARP=none) and on (const), against the stored native read
 #   warp_loop.sh s2            stage 2: the 18 chunks -> $O/arena/JTN-L18-s1@warp-$WARP/c<chunk>/run
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -41,6 +42,20 @@ s2)
   x=$(sub wl-s2x --after $(csv ${ids[@]}) --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- $DATA_DIR/third_party/alpasim/.venv/bin/python $PY s2x --warp $W) || exit 1
   r=$(sub wl-s2r --after $x --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- .venv/bin/python $PY s2report) || exit 1
   echo "$(date '+%F %T') stage 2 ($W): reads ${ids[*]} extract $x report $r" | tee -a $O/stages.txt ;;
+sdump)   # static windows: redline_probe's dumps kept k = 0 / 3 only, so JTN1's native loop re-dumped on its lists, every decision
+  ids=()
+  for f in $RP/lists/*.txt; do L=$(basename $f .txt)
+    d=$(TRIES=2 sub wl-sdump-$L --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $ME sdumpjob $L) || exit 1
+    ids+=($(sub wl-cf-sd-$L --after $d --vram 10 --cpu 8 --ram 24 --timeout-h 3 -- $TR $PY cf --tag JTN1 --run $O/sdump/$L/run)) || exit 1; done
+  r=$(sub wl-report2 --after $(csv ${ids[@]}) --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- .venv/bin/python $PY report) || exit 1
+  echo "$(date '+%F %T') static dumps + cf ${ids[*]}, report $r" | tee -a $O/stages.txt ;;
+sdumpjob)
+  L=$2; k=${L#s}; k=${k%%_*}; D=$O/sdump/$L/run
+  [[ -f $D/aggregate/results-summary.json ]] && { echo "$D already read"; exit 0; }
+  source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
+  rm -rf $D; mkdir -p $D
+  env -u JEV_HOLD SH30_TAG=JTN-L18-s1 SH30_DUMP=1000000 bash experiments/alpasim/scripts/run.sh $D sh30hold --scene-list $RP/lists/$L.txt "${BASE[@]}" \
+    "$KEY.cache_location=$AC/s$k" || die "run.sh rc $? ($D)" ;;
 ident)
   mkdir -p $O/ident; head -12 $AH/lists/c0.txt > $O/ident/c0.txt
   for W in none const; do sub wl-id-$W --vram 20 --cpu 6 --ram 40 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 -- env WARP=$W LIST=$O/ident/c0.txt bash $ME aread 0 || exit 1; done ;;
