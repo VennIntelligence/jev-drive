@@ -190,7 +190,8 @@ def cmd_extract(a):
         st.insert(0, "tag", tag)
         ST.append(st)
     print(f"reads {len(jobs)}, held windows with decisions {len(D)}", flush=True)
-    with Pool(a.workers) as p:
+    from concurrent.futures import ProcessPoolExecutor
+    with ProcessPoolExecutor(a.workers) as p:                              # the loader starts its own workers: not a daemonic Pool
         out = p.map(_window, [(i, cfg[i], D[i]) for i in sorted(D)[:a.limit_win or None]], chunksize=4)
     rows = [r for o, _, _ in out for r in o]
     errs = [e for _, _, e in out if e]
