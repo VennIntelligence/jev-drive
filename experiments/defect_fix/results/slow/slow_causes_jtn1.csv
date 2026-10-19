@@ -1,0 +1,143 @@
+id,stratum,score,type,cause,ratio_first,ratio_last,lead_share,n_dec,turn
+2021.05.25.17.54.41_veh-35_01654_01850-6c30e8e7695c5b0e,launch,0.0642,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.05.25.17.54.41_veh-35_01654_01850-ccde6fa10f615c52,braking,0.7997,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9380,0.4757,0.0000,4,False
+2021.05.25.17.54.41_veh-35_01654_01850-e40d06ebefaa5c14,turn,0.9701,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9666,0.8032,0.0000,8,True
+2021.05.25.17.54.41_veh-35_01654_01850-e768624d4d945b24,cruise,0.9605,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9802,0.4167,0.0000,8,False
+2021.05.25.17.54.41_veh-35_01654_01850-f5171119481d5ab1,braking,0.8170,slow,stop / lock (ego < 0.3 m/s where the human moves >= 2),0.9751,0.0004,0.0000,8,True
+2021.05.25.17.54.41_veh-35_01905_02121-84eaa967609e5aa1,other,0.9529,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9796,0.3902,0.0000,8,False
+2021.05.25.17.54.41_veh-35_01905_02121-f27873005c165d4d,braking,0.9650,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9831,0.3695,0.2500,8,False
+2021.05.25.17.54.41_veh-35_02723_02902-48270164ced256f9,launch,0.9215,slow,late launch (human starts < 1 m/s),0.8684,0.7501,0.1667,6,False
+2021.05.25.17.54.41_veh-35_02723_02902-48e84a676a1350a6,braking,0.9657,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9668,0.8425,0.0000,2,False
+2021.05.25.17.54.41_veh-35_02723_02902-b7746b1362c25465,launch,0.9477,slow,late launch (human starts < 1 m/s),0.6373,0.7910,0.0000,3,True
+2021.05.25.17.54.41_veh-35_04111_04288-ba200f552c9a562f,other,0.9210,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.8867,0.5160,0.0000,8,False
+2021.05.25.17.54.41_veh-35_04111_04288-fb8d6b0a064d536a,other,0.8823,slow,"moving ratchet (free / turn, last ratio < 0.9)",1.0239,0.4089,0.0000,5,False
+2021.05.25.17.54.41_veh-35_04967_05098-8b39a69b34bb512b,launch,0.9219,slow,late launch (human starts < 1 m/s),,,,0,False
+2021.05.25.18.38.25_veh-25_04058_04186-1400397e7051589b,other,0.9200,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9259,0.7708,0.0000,8,False
+2021.05.25.18.38.25_veh-25_04058_04186-959fb8cd0cdd589d,launch,0.9011,slow,late launch (human starts < 1 m/s),,,,0,False
+2021.09.16.14.39.34_veh-42_01111_01448-1b1f6d672daa5482,launch,0.5400,slow,late launch (human starts < 1 m/s),0.7589,0.8449,0.3333,3,False
+2021.09.16.14.39.34_veh-42_01111_01448-3a2ca839033056e5,turn,0.8948,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9722,0.7651,0.0000,8,True
+2021.09.16.14.39.34_veh-42_01111_01448-a5863aa58ba95afe,braking,0.7878,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9365,0.3233,0.0000,8,True
+2021.09.16.14.39.34_veh-42_01609_01687-c337563ba46052b2,cruise,0.9700,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9634,0.5495,0.0000,8,False
+2021.09.16.15.47.30_veh-45_01199_01391-bf397a245a1d5984,launch,0.8408,slow,late launch (human starts < 1 m/s),0.7082,0.6413,0.0000,2,False
+2021.09.16.17.40.09_veh-45_02539_02745-9399b378754e56bf,launch,0.8763,slow,late launch (human starts < 1 m/s),0.7596,0.8195,0.0000,4,False
+2021.09.16.17.40.09_veh-45_02539_02745-0262450391f5565a,cruise,0.9091,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9815,0.3847,0.1250,8,False
+2021.09.16.17.40.09_veh-45_02539_02745-acc12f7f37765878,launch,0.0020,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.09.16.19.49.00_veh-42_00990_01609-2f2492d45e875551,other,0.7487,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9860,0.0685,0.0000,8,False
+2021.09.16.19.49.00_veh-42_00990_01609-a57e9cfe8ff15f2d,launch,0.8312,slow,late launch (human starts < 1 m/s),0.9099,1.0683,0.0000,3,False
+2021.09.16.19.49.00_veh-42_00990_01609-cdca4cd1e195518f,launch,0.8338,slow,late launch (human starts < 1 m/s),0.6412,0.6412,0.0000,1,False
+2021.09.16.19.49.00_veh-42_00990_01609-0532d91bc3b85fa5,launch,0.9637,slow,late launch (human starts < 1 m/s),0.5672,0.8042,0.0000,5,False
+2021.09.16.19.49.00_veh-42_00990_01609-44f391bdbdd25a49,other,0.9666,slow,following a lead (lead < 25 m on >= half the decisions),0.9501,0.6913,0.6250,8,False
+2021.09.16.19.49.00_veh-42_00990_01609-52e44413540a58ef,launch,0.8575,slow,late launch (human starts < 1 m/s),0.7568,0.8735,0.0000,5,False
+2021.09.16.19.49.00_veh-42_00990_01609-57a84e7e9fd257a6,other,0.6163,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.3813,0.5146,0.0000,4,False
+2021.09.16.19.49.00_veh-42_00990_01609-8e138fb6f21159f5,launch,0.3002,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.09.16.21.13.37_veh-42_00172_00347-862ca192b71f5d93,launch,0.7461,slow,late launch (human starts < 1 m/s),0.7741,1.0080,0.0000,4,True
+2021.09.29.15.23.04_veh-28_00601_00802-12a887205f185438,cruise,0.8504,slow,following a lead (lead < 25 m on >= half the decisions),0.9732,0.2171,1.0000,8,False
+2021.09.29.15.23.04_veh-28_00601_00802-3e96578a903d59d8,other,0.2996,creep,other (ratio >= 0.9 or no valid moving decision),,,,0,False
+2021.09.29.15.23.04_veh-28_00601_00802-81d2881060de5e27,other,0.8189,slow,following a lead (lead < 25 m on >= half the decisions),0.9409,0.9409,1.0000,1,False
+2021.09.29.15.23.04_veh-28_00601_00802-d64415163a915a1e,other,0.8353,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9758,0.2424,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00601_00802-e648d47ac63d5467,launch,0.2341,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.09.29.15.23.04_veh-28_00814_01101-119279f091105ff5,other,0.5837,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9276,0.1937,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-1c56ce9eb5055ac2,other,0.8323,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9468,0.2279,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-26710ebfab6d528c,other,0.8581,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9835,0.2077,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-4a7e961add7f51e6,other,0.8687,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9631,0.3597,0.1250,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-56f76aa1e23b5204,launch,0.9597,slow,late launch (human starts < 1 m/s),1.0092,1.0092,0.0000,1,False
+2021.09.29.15.23.04_veh-28_00814_01101-5b1ef0493a205862,braking,0.9482,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9706,0.3655,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-624602ce65455c07,other,0.7256,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9608,0.0968,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-89a75f5c518a5410,cruise,0.7918,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9680,0.1993,0.2500,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-8e00c08f68af5357,other,0.9349,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9803,0.3823,0.1250,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-9bf749f63e925f42,cruise,0.9481,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9756,0.3711,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-a46fd0c071c85cc7,other,0.6581,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9733,0.1323,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-ab063f0f5e115582,launch,0.8256,slow,late launch (human starts < 1 m/s),0.8869,0.5332,0.0000,7,False
+2021.09.29.15.23.04_veh-28_00814_01101-bc09a64a52ec5ec9,cruise,0.8769,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9776,0.3180,0.0000,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-c082e29b0ed55cb5,cruise,0.8027,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9763,0.2337,0.2500,8,False
+2021.09.29.15.23.04_veh-28_00814_01101-d0bb224af7645118,other,0.7143,slow,other (ratio >= 0.9 or no valid moving decision),,,,0,False
+2021.10.06.08.16.17_veh-52_00032_00170-2638cdfa752b5d7c,launch,0.6891,slow,late launch (human starts < 1 m/s),,,,0,False
+2021.10.06.08.16.17_veh-52_00032_00170-d62e03059a2152f1,braking,0.9557,slow,stop / lock (ego < 0.3 m/s where the human moves >= 2),0.9493,0.0000,0.0000,8,False
+2021.10.06.08.16.17_veh-52_00032_00170-eb22bd5283495d31,braking,0.9716,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9478,0.4647,0.0000,8,False
+2021.10.06.08.16.17_veh-52_00181_00574-2407739834c454a5,turn,0.8476,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9545,0.8192,0.0000,8,True
+2021.10.06.08.16.17_veh-52_00181_00574-3c20aea69a3657d9,other,0.8287,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9874,0.1655,0.0000,8,False
+2021.10.06.08.16.17_veh-52_00181_00574-5396af8f09455852,turn,0.8669,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9654,0.4439,0.0000,8,True
+2021.10.06.08.16.17_veh-52_00181_00574-932a890132e65e06,turn,0.5779,slow,other (ratio >= 0.9 or no valid moving decision),,,,0,False
+2021.10.06.08.16.17_veh-52_00922_01296-71ae69a9499e559c,other,0.7491,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9730,0.1051,0.0000,8,False
+2021.10.06.08.16.17_veh-52_00922_01296-cfcdc66fe6a856af,braking,0.7690,slow,stop / lock (ego < 0.3 m/s where the human moves >= 2),0.9639,0.0120,0.0000,8,False
+2021.10.06.08.16.17_veh-52_00922_01296-26ae7801ef2d5ff9,turn,0.9755,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9665,0.7604,0.0000,8,True
+2021.10.06.08.16.17_veh-52_00922_01296-73f2ce543024548e,launch,0.9281,slow,late launch (human starts < 1 m/s),0.8968,0.9401,0.0000,3,True
+2021.10.06.08.16.17_veh-52_00922_01296-b160472da1895235,turn,0.9339,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9598,0.4808,0.0000,8,True
+2021.10.06.08.16.17_veh-52_00922_01296-c1c1d24bf4345db3,launch,0.2996,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.10.06.08.16.17_veh-52_01430_01579-735587b14e39568c,other,0.9683,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9883,0.3808,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01430_01579-ad0beea498f15978,other,0.8597,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9648,0.3746,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01430_01579-c39df8b835525d97,other,0.9748,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9597,0.6166,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01430_01579-e25db6ae678a5313,other,0.9040,slow,"moving ratchet (free / turn, last ratio < 0.9)",1.0122,0.3720,0.2500,8,False
+2021.10.06.08.16.17_veh-52_01430_01579-e7bed06bb6665fc3,other,0.8381,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9545,0.3017,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01590_01725-b26b69030eb75be2,other,0.9227,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9732,0.4576,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-611b66f4a35b563d,braking,0.9393,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9523,0.1209,0.0000,8,True
+2021.10.06.08.16.17_veh-52_01949_02501-be844839cc3556d4,turn,0.8816,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9672,0.3031,0.0000,8,True
+2021.10.06.08.16.17_veh-52_01949_02501-01885cf1909b532a,turn,0.6913,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9599,0.1063,0.0000,8,True
+2021.10.06.08.16.17_veh-52_01949_02501-280d6fa3846756b5,cruise,0.9342,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9759,0.3983,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-5e82ad0d004b550a,other,0.9574,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9717,0.4034,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-60ebca2fc6695f98,launch,0.6479,slow,late launch (human starts < 1 m/s),,,,0,False
+2021.10.06.08.16.17_veh-52_01949_02501-632457c41f065254,other,0.9774,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9764,0.5466,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-6c1c187a44f159d6,other,0.7258,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9606,0.1032,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-7b92f2134eb75c81,other,0.9723,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9578,0.5905,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-830f7e6a8efe51d3,braking,0.8726,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9775,0.1067,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-aae1fdaf3b135907,other,0.8539,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9733,0.2717,0.0000,8,False
+2021.10.06.08.16.17_veh-52_01949_02501-b79a2f8224be5552,launch,0.1348,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.10.06.08.16.17_veh-52_01949_02501-dac6d1a2db715279,other,0.7137,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9456,0.1774,0.0000,8,False
+2021.06.03.12.02.06_veh-35_00233_00609-1955179d60b25a0c,other,0.9641,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9725,0.4589,0.3750,8,False
+2021.06.03.12.02.06_veh-35_00233_00609-1f31e0158a3c56c3,other,0.7999,slow,following a lead (lead < 25 m on >= half the decisions),0.9216,0.5519,0.7500,8,False
+2021.06.03.12.02.06_veh-35_00233_00609-49f32209f6f25015,other,0.8345,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9985,0.3137,0.3750,8,False
+2021.06.03.12.02.06_veh-35_00233_00609-665b287de1b05ed1,other,0.8662,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9789,0.2465,0.3750,8,True
+2021.06.03.12.02.06_veh-35_00233_00609-afbf6893df6d5055,other,0.9074,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9848,0.4917,0.3750,8,False
+2021.06.03.12.02.06_veh-35_00233_00609-d64a18e9f40c5f45,launch,0.5862,slow,late launch (human starts < 1 m/s),0.7243,0.8287,0.0000,3,False
+2021.06.03.12.02.06_veh-35_00233_00609-ffe5ffdb34695fcd,turn,0.8825,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9770,0.3335,0.0000,8,True
+2021.06.03.12.02.06_veh-35_01100_01227-5ac1338585035cf7,other,0.9367,slow,following a lead (lead < 25 m on >= half the decisions),0.9238,0.7159,0.5000,8,False
+2021.06.03.12.02.06_veh-35_01100_01227-69f110a4677456e7,braking,0.9731,slow,"moving ratchet (free / turn, last ratio < 0.9)",1.0007,0.3088,0.0000,5,False
+2021.06.03.17.06.58_veh-35_00712_00855-cf4e91f657c35298,braking,0.9025,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9597,0.1774,0.0000,8,False
+2021.06.03.17.06.58_veh-35_02571_02742-5ca6c598318855b7,launch,0.9541,slow,late launch (human starts < 1 m/s),,,,0,False
+2021.06.03.17.06.58_veh-35_02571_02742-943b3e1e79f75985,other,0.9003,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.8321,0.6842,0.0000,5,False
+2021.06.03.17.06.58_veh-35_02943_03220-62188bafe8f75dbb,launch,0.9591,slow,late launch (human starts < 1 m/s),0.8864,0.9507,0.0000,5,False
+2021.06.03.17.06.58_veh-35_02943_03220-e9515c20664a5fd5,braking,0.9683,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9856,0.1343,0.0000,8,False
+2021.06.03.17.06.58_veh-35_02943_03220-f54f535d315959c2,other,0.8408,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9416,0.3884,0.2500,8,False
+2021.06.03.17.06.58_veh-35_03860_03992-9744e6e20d075cee,other,0.9605,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9460,0.5052,0.0000,4,False
+2021.06.28.15.02.02_veh-38_02398_02848-27209d511a785510,braking,0.9508,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9625,0.2895,0.1250,8,False
+2021.06.28.15.02.02_veh-38_02398_02848-fbd2f61f79b55e3b,braking,0.9247,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9552,0.3174,0.0000,8,False
+2021.06.28.15.02.02_veh-38_02398_02848-29143e2319415eec,launch,0.3448,creep,late launch (human starts < 1 m/s),0.6738,0.7546,0.0000,2,False
+2021.06.28.15.10.57_veh-16_02438_02580-2ef805dcf6885f2c,launch,0.1642,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.06.28.15.10.57_veh-16_02438_02580-6219faf7ab6e52bb,launch,0.7348,slow,late launch (human starts < 1 m/s),0.8213,0.8432,0.0000,2,False
+2021.06.28.16.29.11_veh-38_00022_00368-3f39d899c44a5da9,launch,0.3622,creep,late launch (human starts < 1 m/s),0.5476,0.6324,0.0000,3,True
+2021.06.28.16.29.11_veh-38_00022_00368-f3f26ca6861f5031,launch,0.8161,slow,late launch (human starts < 1 m/s),0.6879,0.7502,0.0000,2,False
+2021.06.28.16.29.11_veh-38_01415_01821-1d8f90f4a1065fac,launch,0.8299,slow,late launch (human starts < 1 m/s),0.8235,0.7352,1.0000,7,False
+2021.06.28.16.29.11_veh-38_01415_01821-3fa883cbd7405ad0,launch,0.2827,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.06.28.16.29.11_veh-38_01415_01821-a55f2da8e11c513c,launch,0.5513,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.06.28.16.29.11_veh-38_03263_03766-3cc615ab7a8650e2,turn,0.9486,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9810,0.5604,0.3750,8,True
+2021.06.28.16.29.11_veh-38_03263_03766-7f9ba7214fa65fa8,launch,0.8116,slow,late launch (human starts < 1 m/s),0.8141,0.8500,0.0000,3,False
+2021.06.28.16.29.11_veh-38_03263_03766-a6efc718ee815492,braking,0.9526,slow,stop / lock (ego < 0.3 m/s where the human moves >= 2),0.9515,0.0663,0.0000,8,False
+2021.06.28.16.29.11_veh-38_03263_03766-6ef587e0e0265659,cruise,0.9029,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9829,0.4872,0.0000,8,False
+2021.06.28.16.29.11_veh-38_03263_03766-85c740c25f775366,launch,0.6690,slow,late launch (human starts < 1 m/s),0.7420,1.0423,0.0000,3,False
+2021.06.28.16.57.59_veh-26_00016_00484-16a20233c2715abc,other,0.9457,slow,following a lead (lead < 25 m on >= half the decisions),0.9689,0.4770,0.7500,8,False
+2021.06.28.16.57.59_veh-26_00016_00484-257a9b5670325663,other,0.9280,slow,following a lead (lead < 25 m on >= half the decisions),0.9510,0.6816,0.6250,8,True
+2021.06.28.16.57.59_veh-26_00016_00484-4c8c7501a56252b4,launch,0.7721,slow,late launch (human starts < 1 m/s),1.3138,1.3138,0.0000,1,False
+2021.06.28.16.57.59_veh-26_00016_00484-4fb0010f2aef581f,launch,0.6913,slow,late launch (human starts < 1 m/s),0.7042,0.7042,0.0000,1,False
+2021.06.28.16.57.59_veh-26_00016_00484-939fb1e11943585e,other,0.7560,slow,following a lead (lead < 25 m on >= half the decisions),0.9437,0.3340,0.6250,8,False
+2021.06.28.16.57.59_veh-26_00016_00484-bcc2aadc857957f8,braking,0.9155,slow,following a lead (lead < 25 m on >= half the decisions),0.9660,0.2259,0.5000,8,False
+2021.06.28.16.57.59_veh-26_00016_00484-e53a28dd1a615620,cruise,0.7851,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9591,0.2384,0.1250,8,False
+2021.09.09.18.04.06_veh-40_00555_00731-1710771d3db85c47,launch,0.6925,slow,late launch (human starts < 1 m/s),0.8130,0.8729,0.0000,3,False
+2021.09.09.18.04.06_veh-40_00555_00731-3d1c050a111f5106,braking,0.9158,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9878,0.3202,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00555_00731-a7808c405c1e55bc,other,0.9218,slow,following a lead (lead < 25 m on >= half the decisions),0.9434,0.5956,0.6250,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-21c2140f77315572,other,0.9224,slow,following a lead (lead < 25 m on >= half the decisions),0.9617,0.5161,0.5000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-256b43d39dee5fb2,turn,0.6800,slow,following a lead (lead < 25 m on >= half the decisions),0.9147,0.1965,0.6250,8,True
+2021.09.09.18.04.06_veh-40_00743_01071-2c63713b030c5946,launch,0.4583,slow,late launch (human starts < 1 m/s),0.6419,0.6553,0.0000,2,False
+2021.09.09.18.04.06_veh-40_00743_01071-43fc1576414c5a24,other,0.9049,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9811,0.3422,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-44995ec884e457c6,other,0.8313,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9788,0.1807,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-578dfda84a135d31,other,0.9772,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9681,0.5641,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-77f64a2509835e51,braking,0.9517,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9674,0.2910,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-845997ed384c55e9,braking,0.8772,slow,stop / lock (ego < 0.3 m/s where the human moves >= 2),0.9691,0.0357,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-8e7db626b4a65bbd,launch,0.0012,no-launch,late launch (human starts < 1 m/s),,,,0,False
+2021.09.09.18.04.06_veh-40_00743_01071-e553e8e7b3bc5256,braking,0.8799,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9605,0.2543,0.0000,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-f14a2dc13d785798,other,0.9301,slow,following a lead (lead < 25 m on >= half the decisions),1.0019,0.4714,0.6250,8,False
+2021.09.09.18.04.06_veh-40_00743_01071-7d632f88ca0351cd,launch,0.6001,slow,late launch (human starts < 1 m/s),0.8198,0.8600,1.0000,3,False
+2021.09.16.14.39.34_veh-42_00032_00186-635dbd5e9a015ad2,turn,0.7129,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.8838,0.4516,0.0000,8,True
+2021.09.16.14.39.34_veh-42_00297_00935-30deddcfe91656e6,turn,0.9339,slow,"moving ratchet (free / turn, last ratio < 0.9)",0.9659,0.8134,0.0000,4,True
+2021.09.16.14.39.34_veh-42_00297_00935-42a2f97800ac58a7,other,0.9118,slow,other (ratio >= 0.9 or no valid moving decision),,,,0,False
+2021.09.16.14.39.34_veh-42_00297_00935-777c5faaffb05df9,launch,0.9106,slow,late launch (human starts < 1 m/s),0.7052,0.9338,0.0000,6,False
+2021.09.16.14.39.34_veh-42_00297_00935-d6761304630955b0,launch,0.7541,slow,late launch (human starts < 1 m/s),0.7817,0.7817,0.0000,1,False
