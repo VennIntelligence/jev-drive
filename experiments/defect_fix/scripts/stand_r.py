@@ -12,6 +12,8 @@
 Gate (decision-level, CPU, on B2's stored full-length reads STANDFMXH-L18-s0 / s1, ext_full_H / ext_full_H_s1 dec.parquet + hum.pkl):
   per decision, from the human's logged track: fut_reg arc = his station travel over 0.5 .. 4 s, fut arc = the ego's fed speed blended into his
   over 2 s (on_rows.progress), g = s_h(t0 + 4 s) - s_e; rows: human 4 s arc < 0.5 m and ego < 0.5 m/s (standing) or 0.5 <= v < 3 (rolling);
+  the stored track covers only the 5.5 s window, so its station is held at the last sample past the end (the human assumed to keep standing)
+  and a decision needs >= 1 s of track after t0 (supplement 20, final amendment 6);
   cap and fire = nr1_free.stand_cap / roll_cap / stand_terms on the stored plan poses.
   G1  on the pool's standing + rolling rows, the human's two 4 s paths used as the plan fire 0 times.
   G2  rolling decisions (valid, k >= 2) of B2's easy red-line zero windows (easy_items misses, both seeds): fire share >= 0.80.
@@ -117,7 +119,7 @@ def cmd_gap(a):
 def track_arcs(tr, t0, s_e, v0):
     """-> fut arc (8,), fut_reg arc (8,), g, ok for one decision (t0 us on the track's clock)."""
     T, S = tr["T"], tr["S"]
-    if t0 + 4.05e6 > T[-1] or t0 < T[0]:
+    if t0 + 1e6 > T[-1] or t0 < T[0]:                  # the stored track ends with the 5.5 s window: >= 1 s of it, held standing past the end
         return None
     sh = lambda t: np.interp(t, T, S)  # noqa: E731
     j = 0.5e6 * np.arange(1, 9)
