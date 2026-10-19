@@ -203,14 +203,6 @@ def cmd_ext(a):
     NG.cmd_extract(a)
 
 
-def _boot_logs(fn, logs, B=2000, seed=0):
-    rng = np.random.default_rng(seed)
-    u = np.unique(logs)
-    idx = {x: np.flatnonzero(logs == x) for x in u}
-    v = [fn(np.concatenate([idx[x] for x in rng.choice(u, len(u))])) for _ in range(B)]
-    return np.quantile(v, [0.025, 0.975]).tolist()
-
-
 def cmd_arena(a):
     import pandas as pd
     import native_gap_report as NR
@@ -231,13 +223,20 @@ def cmd_arena(a):
         M = D[D.id.isin(ids) & D.valid & (D.k >= 2) & (D.vh >= 2) & D.tag.isin([a.a, other])].copy()
         M["r"] = M.v / M.vh
         r["ratio_by_k"] = M.pivot_table(index="k", columns="tag", values="r", aggfunc="median").round(4).to_dict()
-        m9 = M[M.k == 9]
-        ga, gb = m9[m9.tag == a.a].set_index("id").r, m9[m9.tag == other].set_index("id").r
-        both = sorted(set(ga.index) & set(gb.index))
-        ga, gb = ga.reindex(both).values, gb.reindex(both).values
-        lw = S.log.reindex(both).values
-        r["k9"] = dict(n=len(both), a=float(np.median(ga)), b=float(np.median(gb)), diff=float(np.median(ga) - np.median(gb)),
-                       ci=_boot_logs(lambda i: np.median(ga[i]) - np.median(gb[i]), lw) if len(both) else None)
+        m9 = M[M.k == 9]                                                   # s2report's rule: the median over each tag's valid k = 9 decisions
+        ma, mb = m9[m9.tag == a.a], m9[m9.tag == other]
+        la, lb = S.log.reindex(ma.id).values, S.log.reindex(mb.id).values
+        ra, rb = ma.r.values, mb.r.values
+        rng = np.random.default_rng(0)
+        u = np.unique(S.log.reindex(ids).values)
+        ia, ib = {x: np.flatnonzero(la == x) for x in u}, {x: np.flatnonzero(lb == x) for x in u}
+        bs = []
+        for _ in range(2000):                                              # one log resample for both tags
+            q = rng.choice(u, len(u))
+            xa, xb = np.concatenate([ra[ia[x]] for x in q]), np.concatenate([rb[ib[x]] for x in q])
+            bs.append(np.median(xa) - np.median(xb) if len(xa) and len(xb) else np.nan)
+        r["k9"] = dict(n_a=len(ra), n_b=len(rb), a=float(np.median(ra)), b=float(np.median(rb)), diff=float(np.median(ra) - np.median(rb)),
+                       ci=np.nanquantile(bs, [0.025, 0.975]).tolist())
         st = S.stratum.reindex(ids)
         r["strata"] = {s_: dict(windows=int((st == s_).sum()), a=float(x[(st == s_).values].mean()), b=float(y[(st == s_).values].mean()),
                                 zeros_a=int(((st == s_).values & (x == 0)).sum()), zeros_b=int(((st == s_).values & (y == 0)).sum()))
