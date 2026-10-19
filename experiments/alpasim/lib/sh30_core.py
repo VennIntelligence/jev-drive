@@ -142,6 +142,30 @@ def damp_history(P, V, gain: float):
     return gain * P + (1 - gain) * Ps, gain * V + (1 - gain) * Vs
 
 
+WARP = os.environ.get("SH30_WARP", "")                # DIAGNOSTIC only (WARP-LOOP stage 2, experiments/defect_fix): "" = off, as served
+
+
+def warp_track(P, V, mode: str):
+    """DIAGNOSTIC (experiments/defect_fix/plans/2026-10-19-warp-loop-prereg.md): the warp track of the synthesised slots decorrelated
+    from the ego's own speed history. mode "const": the history poses re-spaced along the ego's own history polyline at the current
+    measured speed (no trend), body velocity directions kept at that speed; below 0.5 m/s all poses at t0 with speed 0 (each synthesised
+    slot = its nearest keyframe). The ego row is not touched."""
+    assert mode == "const", mode
+    v0 = float(np.hypot(*V[-1]))
+    if v0 < 0.5:
+        return np.zeros((4, 3)), np.zeros((4, 2))
+    Q = P[::-1]
+    dd = Q[1:, :2] - Q[:-1, :2]
+    L = np.linalg.norm(dd, axis=1)
+    u = dd[-1] / L[-1] if L[-1] > 1e-4 else np.array([-np.cos(Q[-1, 2]), -np.sin(Q[-1, 2])])
+    Qe = np.r_[Q, [[*(Q[-1, :2] + 100.0 * u), Q[-1, 2]]]]
+    cc = np.r_[0.0, np.cumsum(L), L.sum() + 100.0]
+    P2 = np.array(P, np.float64)
+    P2[:3] = np.stack([np.interp(v0 * np.array([0.5, 1.0, 1.5]), cc, Qe[:, j]) for j in range(3)], 1)[::-1]
+    sp = np.linalg.norm(V, axis=1)
+    return P2, np.where(sp[:, None] >= 0.5, V / np.maximum(sp, 1e-9)[:, None], [1.0, 0.0]) * v0
+
+
 _POOL = None
 
 
@@ -293,7 +317,8 @@ class Core:
         P, V = fill_history(pose, vel, yaw_rate)
         K = stack_keys(keys)
         cam_t = np.asarray(cam_t, np.float64)
-        track, gpu = I.track_navsim(*damp_history(P, V, self.motion if motion is None else motion)), self.synth == "gpu"
+        Pw, Vw = damp_history(P, V, self.motion if motion is None else motion)
+        track, gpu = I.track_navsim(*(warp_track(Pw, Vw, WARP) if WARP else (Pw, Vw))), self.synth == "gpu"
         cur, valid = lattice_gpu(K, e, track, cam_t, self.cold, self.dev) if gpu else lattice(K, e, track, cam_t, self.cold)
         prev = torch.cat([torch.zeros_like(cur[:1]), cur[:-1]]) if gpu else np.concatenate([np.zeros((1,) + FRAME, np.uint8), cur[:-1]])
         ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
