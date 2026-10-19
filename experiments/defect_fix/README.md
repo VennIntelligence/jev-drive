@@ -41,6 +41,12 @@ states, 0 / 251 JT front-collision windows. In the 1 000-step pilot it fixes the
 held mean +0.038 over its control. It fails the guards: the wait collapses (0.86 -> 0.58 / 0.49), held zeros 37 -> 47, front collisions
 5 -> 12. The line stops (decision 365).
 
+**NR1FREE-M (10-19; [results/free_m/](results/free_m/README.md), supplement 16).** The same term, limited to moving states (ego >= 3 m/s,
+human neither stopping nor braking) with a 0.95 band, aimed at the speed ratchet of decisions 372 / 375. The offline gate passes: ratchet
+decisions fire 65 %, AF-front 0 / 264, static 0 / 8 780. In the 1 000-step pilot against JTNS1K the ratchet is gone (k = 9 ratio 0.84 ->
+1.03), but the guards fail: static zeros on the arena subset 79 -> 108, wait 0.92 -> 0.80, held zeros 42 -> 56, AF-front 2 -> 8, PAI half
+-0.006. The line stops (decision 378).
+
 ## Handoff (2026-10-17 17:05 CST; NR1FB10 chain added 17:45; dose-response arms NR1FB05 / NR1FBALL added 18:17)
 
 - Full chain (launched 17:03 CST): trainings `NR1F-L18-s0` 1017-170326-7b4a, `NR1F-L18-s1` 1017-170335-9107 (RTB1AR-F-s0, 2 500 steps,

@@ -12,7 +12,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; PAI high-speed spins = force-GT handoff, MPC gain 20 fixes in replay; slowness = speed-history loop (CF +83 %) [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
 - [cap_ledger](cap_ledger/README.md): live; P2-F lost only see-and-brake: wait, stop behind car, yield [d331]
-- [defect_fix](defect_fix/README.md): live; base doses W 0.84-0.97 but dev ADE +0.028-0.041 (all fail); lateral v2 arm held zeros 42 vs 47; full chain running [dpending]
+- [defect_fix](defect_fix/README.md): live; NR1FREE (d365) and NR1FREE-M (d378): one-sided arc floor fixes the late launch / speed ratchet (k9 ratio 0.84 -> 1.03) but leaks into static windows and waiting (both stop) [d378]
 - [desire_cap](desire_cap/README.md): closed; P0 laneChange 1.04 m at 4 s (partial); P2-F cuts 69 %, left 97 % [d332]; driver-side route desire D0 does not carry lane changes, costs collisions [d334]
 - [others_turn](others_turn/README.md): live; held 24 turns: RSG 16, rule expert 22, WA-JEPA 7, garage 1, LTF 0, DD 0 [dnone]
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
