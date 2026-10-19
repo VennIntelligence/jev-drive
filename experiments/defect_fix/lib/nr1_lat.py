@@ -39,12 +39,14 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0)):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
                arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
     CFG["stand"] = float(stand)
+    CFG["_clear"] = tuple(float(x) for x in free_clear)                     # NR1 supplement 19: FREE-M's stricter free check (popped below)
+    assert CFG["free"] > 0 or not any(CFG["_clear"]), "--on-free-clear: needs --on-free"
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
         CFG["stoppt"] = float(stoppt)
         return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
@@ -52,18 +54,19 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
 
 
 def _configure_rest(free_frac, free_mode, stand_margin):
+    clear = CFG.pop("_clear")
     assert CFG["stand"] > 0 or stand_margin == 1.0, "--on-stand-margin: needs --on-stand"
     if CFG["stand"] > 0:                                                       # NR1STAND (supplement 17)
         import nr1_free
         st = dict(stand=CFG["stand"], **nr1_free.configure_stand(stand_margin))
         if CFG["free"] > 0:
-            return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode).items()}, **st)
+            return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode, clear).items()}, **st)
         assert free_frac == 0.8 and free_mode == "all", "--on-free-frac / --on-free-mode: need --on-free"
         return dict({k: v for k, v in CFG.items() if k not in ("free", "stand")}, **st)
     del CFG["stand"]
     if CFG["free"] > 0:                                                        # NR1FREE-M (supplement 16): band and rows of nr1_free
         import nr1_free
-        return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode).items()})
+        return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode, clear).items()})
     assert free_frac == 0.8 and free_mode == "all", "--on-free-frac / --on-free-mode: need --on-free"
     return {k: v for k, v in CFG.items() if k != "free"}
 

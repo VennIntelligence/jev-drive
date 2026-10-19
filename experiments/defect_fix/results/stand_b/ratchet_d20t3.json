@@ -1,0 +1,16 @@
+{
+ "clear": [
+  20.0,
+  3.0
+ ],
+ "moving_decisions": 7275,
+ "short": 3559,
+ "fires": 1770,
+ "rate": 0.49733071087384095,
+ "fire_share_of_moving": 0.24329896907216494,
+ "blocked_not_free": 675,
+ "blocked_human": 1114,
+ "windows_with_fire": 397,
+ "static_fires": 0,
+ "pass_": false
+}

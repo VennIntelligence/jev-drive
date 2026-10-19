@@ -8,6 +8,9 @@ zeros and front collisions than its control JTX1K-L18-s0, and what a stricter FR
         candidate stricter ones -> DIR/dec.parquet, DIR/win.csv, DIR/diag.json
   $AP stand_b.py pool --out DIR      on1_JTX's FREE-M rows (S rows, moving), the plan = the human's `fut` path cut at RB0-F-s0's own 4 s arc
         (lat_diag trainee): which rows fire, the lead state on the firing rows, how much each candidate check removes -> DIR/pool.json
+  $TR stand_b.py smoke --b TAG --b1 TAG --out JSON   the 60-step smoke: B1's logged scalars finite, its FREE-M fire share at the first
+        logged step (same weights, same draw) <= B's and its mean over the run <= B's -> JSON; exit 0 pass, 2 fail
+  $TR stand_b.py full --tag T --refs R .. --arena JSON --out MD   the full arm's summary (held 460 against the refs, arena 18 chunks native)
   $AP stand_b.py ratchet --clear CMIN,CTH --out JSON   free_m.py's ratchet set (JTN-L18-s1 native arena held) with the stricter check:
         the share of the short moving decisions that still fire (supplement 16 line >= 50 %) -> JSON; exit 0 pass, 2 fail
 
@@ -443,6 +446,50 @@ def cmd_ratchet(a):
     raise SystemExit(0 if res["pass_"] else 2)
 
 
+def _scalars(tag):
+    d = sorted(glob.glob(f"{DATA}/runs/route_mem/train-{tag}/*/"))[-1]
+    sc = {}
+    for line in open(d + "events.jsonl"):
+        e = json.loads(line)
+        if e["kind"] == "scalar":
+            sc.setdefault(e["tag"], {})[e["step"]] = e["value"]
+    return sc
+
+
+def cmd_smoke(a):
+    b, b1 = _scalars(a.b), _scalars(a.b1)
+    k = "loss/on/lon_free_pos"
+    fin = all(np.isfinite(v) for t, x in b1.items() if t.startswith("loss/") and "grad/" not in t for v in x.values())
+    st = sorted(set(b.get(k, {})) & set(b1.get(k, {})))
+    r = dict(b=a.b, b1=a.b1, finite=bool(fin), steps=len(st), first=[b[k][st[0]], b1[k][st[0]]] if st else None,
+             mean=[float(np.mean([b[k][i] for i in st])), float(np.mean([b1[k][i] for i in st]))] if st else None)
+    r["pass_"] = bool(fin and st and r["first"][1] <= r["first"][0] and r["mean"][1] <= r["mean"][0])
+    Path(a.out).write_text(json.dumps(r, indent=1))
+    print(json.dumps(r, indent=1))
+    raise SystemExit(0 if r["pass_"] else 2)
+
+
+def cmd_full(a):
+    import df
+    H = df.cl_read(a.tag, a.refs)["held"]
+    Ar = json.load(open(a.arena))
+    L = [f"# STAND-B full-length arm {a.tag} (NR1 prereg supplement 19; native reads; a read, not an adoption gate)", "",
+         "## held 460 @18", "", "| ref | zeros (arm / ref) | front collisions (arm) | paired mean [CI] |", "|:--|--:|--:|--:|"]
+    for r, p in H["pair"].items():
+        L.append(f"| {r} | {p['zeros']} / {p['zeros_ref']} | {H['coll']['front']} | {p['mean']:+.4f} [{p['lo']:+.4f}, {p['hi']:+.4f}] |")
+    L += ["", f"arm: mean {H['mean']:.4f}, zeros {H['zeros']}, front / side / rear {H['coll']['front']} / {H['coll']['lateral']} / {H['coll']['rear']}", "",
+          "## arena held, 18 chunks, native", "", "| ref | windows | mean arm / ref | paired [CI] | zeros arm / ref | AF-front arm / ref | k9 speed ratio arm / ref |",
+          "|:--|--:|--:|--:|--:|--:|--:|"]
+    for r in [Ar["b"], *[k for k in Ar if k not in ("a", "b", Ar["b"])]]:
+        x = Ar[r]
+        L.append(f"| {r} | {x['windows']} | {x['mean_a']:.4f} / {x['mean_b']:.4f} | {x['diff']:+.4f} [{x['lo']:+.4f}, {x['hi']:+.4f}] | {x['zeros_a']} / {x['zeros_b']} | "
+                 f"{x['af_front_a']} / {x['af_front_b']} | {x['k9']['a']:.3f} / {x['k9']['b']:.3f} |")
+    L += ["", "PAI 281 (ACC + GAP): pai281_accgap.md. Frozen-pool PCS: pcs_local.py score on arena_windows_full.csv.gz (Mac).", ""]
+    Path(a.out).write_text("\n".join(L))
+    Path(a.out).with_suffix(".json").write_text(json.dumps(dict(held=H, arena=Ar), indent=1, default=str))
+    print("\n".join(L))
+
+
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -456,8 +503,17 @@ def main():
     q.add_argument("--clear", required=True)
     q.add_argument("--out", required=True)
     q.add_argument("--workers", type=int, default=24)
+    q = sp.add_parser("smoke")
+    q.add_argument("--b", required=True)
+    q.add_argument("--b1", required=True)
+    q.add_argument("--out", required=True)
+    q = sp.add_parser("full")
+    q.add_argument("--tag", required=True)
+    q.add_argument("--refs", nargs="+", required=True)
+    q.add_argument("--arena", required=True)
+    q.add_argument("--out", required=True)
     a = p.parse_args()
-    dict(diag=cmd_diag, pool=cmd_pool, ratchet=cmd_ratchet)[a.cmd](a)
+    dict(diag=cmd_diag, pool=cmd_pool, ratchet=cmd_ratchet, smoke=cmd_smoke, full=cmd_full)[a.cmd](a)
 
 
 if __name__ == "__main__":

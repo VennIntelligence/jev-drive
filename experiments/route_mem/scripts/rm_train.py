@@ -192,6 +192,8 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             state below 0.5 m/s, the human's logged 4 s arc below 0.5 m): the plan's arc beyond max(his two arcs) + M (1.0 m) per step, gradient
             only along each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit. 0 (default) = off. With --diag: grad/lon_free and
             grad/lon_stand (monitoring) when those terms are on.
+  --on-free-clear CMIN,CTH   (NR1 prereg supplement 19) FREE's free check made stricter: the safety distance ahead of the bumper is
+            max(2 m + 0.5 s x v, CMIN m, CTH s x v) (v = the reference speed of each 0.5 s step). 0,0 (default) = off.
   --on-stoppt W     (NR1STOPPT, NR1 prereg supplement 18) nr1_free.py's "do not pass the human's stop point" term on the approach S rows of
             <pool>/stoppt.npz (defect_fix scripts/stoppt.py labels): the plan's arc beyond max(rest + 1 m, v0^2 / 8) per step, gradient only along
             each pose's heading; through nr1_lat: 10 W x ho_w x sum / n_imit. 0 (default) = off. With --diag: grad/lon_stoppt.
@@ -1575,6 +1577,8 @@ if __name__ == "__main__":
         p.add_argument("--on-free-frac", type=float, default=0.8, help="NR1FREE-M: the term's band (plan 4 s arc below FRAC x the reference fires)")
         p.add_argument("--on-free-mode", default="all", choices=("all", "move"), help="NR1FREE-M: rows that may fire (move = ego >= 3 m/s, the "
                        "human neither stopping nor braking; prereg supplement 16)")
+        p.add_argument("--on-free-clear", default="0,0", help="NR1 supplement 19: FREE's stricter free check CMIN,CTH (no logged object within "
+                       "max(CMIN m, CTH s x v) ahead of the bumper along the sweep; 0,0 = off)")
         p.add_argument("--on-stand", type=float, default=0.0, help="NR1STAND: weight of the standing-row mirror term (defect_fix lib/nr1_free.py; 0 = off)")
         p.add_argument("--on-stand-margin", type=float, default=1.0, help="NR1STAND: the cap's margin (m) over the standing human's 4 s arc")
         p.add_argument("--on-stoppt", type=float, default=0.0, help="NR1STOPPT: weight of the approach-row stop-point term (defect_fix lib/nr1_free.py; "
@@ -1663,7 +1667,7 @@ if __name__ == "__main__":
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stoppt=getattr(a, 'on_stoppt', 0.0))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stoppt=getattr(a, 'on_stoppt', 0.0), free_clear=tuple(float(x) for x in getattr(a, 'on_free_clear', '0,0').split(',')))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

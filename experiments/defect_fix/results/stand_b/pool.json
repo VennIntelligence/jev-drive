@@ -1,0 +1,41 @@
+{
+ "rows": 52610,
+ "s_rows": 128798,
+ "moving_rows": 52610,
+ "short": 33460,
+ "fire_cur": {
+  "fires": 31036,
+  "share_of_moving": 0.5899258696065387,
+  "of_short": 0.9275552898983861
+ },
+ "fire_d20t3": {
+  "fires": 22043,
+  "share_of_moving": 0.41898878540201484,
+  "of_short": 0.6587866108786611
+ },
+ "fire_d15t2": {
+  "fires": 25872,
+  "share_of_moving": 0.4917696255464741,
+  "of_short": 0.7732217573221757
+ },
+ "fire_d30t4": {
+  "fires": 17938,
+  "share_of_moving": 0.34096179433567764,
+  "of_short": 0.5361028093245667
+ },
+ "cur_fires_by_lead": {
+  "no_lead": 16649,
+  "lead_within_d20t3": 5854,
+  "lead_ttc_lt4": 473,
+  "lead_gap_lt30": 8168,
+  "gap_quartiles_of_fires_with_lead": [
+   10.921087645691593,
+   15.98680016947883,
+   26.35862137458163,
+   42.16193536424834,
+   57.72820776486629
+  ],
+  "closing_median_of_fires_with_lead": -0.5760359764099121
+ },
+ "rows_with_near_lead_share": 0.2007793195210036
+}
