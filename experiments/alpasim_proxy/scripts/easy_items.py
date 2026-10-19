@@ -88,26 +88,22 @@ def per_window(st):
     g = k.groupby("id")
     out = pd.DataFrame(dict(prog=g.progress_rel_to_total.last(), trav=g.dist_traveled_m.last(), gtlen=g.gt_dist_traveled_m.last(),
                             lat_med=g.lateral_dist_to_gt_trajectory.median(), lat_max=g.lateral_dist_to_gt_trajectory.max(),
+                            gtd=g.dist_to_gt_trajectory.max(),
                             dloc_end=g.dist_to_gt_location.last(), lane_min=g.min_distance_to_lane_boundary_m.min(),
                             obst_min=g.min_distance_to_obstacle_m.min(), rear=g.collision_rear.max(), n=g.size(),
                             t_end=g.t_us.last(), t0=g.t_us.first()))
     return out
 
 
-def speed_profile(st, ids, nb=10):
-    """ego speed along normalised time, from dist_traveled_m (median over windows) -> list of nb values."""
-    import pandas as pd
-    st = st[st.id.isin(ids)].sort_values(["id", "t_us"])
-    st = st[st.eval_relevant > 0]
+def speed_profile(st, ids, grid=np.arange(0.25, 3.76, 0.5)):
+    """median ego speed (m/s) at fixed times after the first scored step, from dist_traveled_m (0.5 s steps, kept steps only)."""
+    st = st[st.id.isin(ids) & (st.eval_relevant > 0)].sort_values(["id", "t_us"])
     rows = []
-    for i, g in st.groupby("id"):
+    for _, g in st.groupby("id"):
         t = (g.t_us.values - g.t_us.values[0]) / 1e6
-        if len(t) < 5 or t[-1] <= 0:
-            continue
-        v = np.gradient(g.dist_traveled_m.values, t)
-        b = np.minimum((t / t[-1] * nb).astype(int), nb - 1)
-        rows.append(pd.Series(v).groupby(b).median().reindex(range(nb)).values)
-    return np.nanmedian(np.array(rows), 0) if rows else np.full(nb, np.nan)
+        v = np.diff(g.dist_traveled_m.values) / np.maximum(np.diff(t), 1e-3)
+        rows.append(np.interp(grid, 0.5 * (t[1:] + t[:-1]), v, right=np.nan) if len(v) else np.full(len(grid), np.nan))
+    return np.nanmedian(np.array(rows), 0) if rows else np.full(len(grid), np.nan)
 
 
 def cmd_report(a):
@@ -156,7 +152,7 @@ def cmd_report(a):
     if ex is not None:
         PW |= {t: per_window(g) for t, g in ex.groupby("tag")}
     D, _, _, _ = NG.load(Path(a.native_gap))
-    causes = {}
+    causes, natsub = {}, {}
     for tag in ["JTN1", "JTN1S3"]:
         subj = SUBJ[tag]
         rt = rows[rows.tag == {"JTN1": "JTN-L18-s1@off", "JTN1S3": "JTN-L18-s1@stop3"}[tag]].drop_duplicates("id").set_index("id")
@@ -178,8 +174,8 @@ def cmd_report(a):
                 last = (mv.v / mv.vh).iloc[-1] if len(mv) else np.nan
                 sub = ("late launch" if S.loc[i, "v0"] < 1.0 else "stop / lock" if stop else "following a lead" if len(mv) and lead >= 0.5
                        else "free-road ratchet" if len(mv) and last < 0.9 else "other (ratio >= 0.9 or no moving decision)")
-            elif not zero(v):
-                sub = "late launch" if S.loc[i, "v0"] < 1.0 else "progress short (no decision table)"
+            elif not zero(v):                                  # stop3: same model, same frames until the hold engages -> native's sub-cause
+                sub = natsub.get(i, "stop3 hold, native = 1")
             if zero(v):
                 c = {"corridor": "zero: corridor, static window" if stt == "static" else "zero: corridor, moving window", "offroad": "zero: offroad"}.get(
                     typ, "zero: at-fault collision" if typ.startswith("AF") else f"zero: {typ}")
@@ -194,6 +190,8 @@ def cmd_report(a):
                           gtlen=float(p.gtlen) if p is not None else np.nan, lat_med=float(p.lat_med) if p is not None else np.nan,
                           lat_max=float(p.lat_max) if p is not None else np.nan))
         C = pd.DataFrame(C)
+        if tag == "JTN1":
+            natsub = C.set_index("id")["sub"].dropna().to_dict()
         C.to_csv(out / f"misses_{tag}.csv.gz", index=False, float_format="%.4f")
         causes[tag] = pcs_table(C, y.to_numpy(float), items, FZ, S, subj)
     J["causes"] = causes
@@ -228,7 +226,24 @@ def cmd_report(a):
                             trav_ours=float((pj.trav / pj.gtlen).median()), trav_garage=float((g_.trav / g_.gtlen).median()),
                             lat_med_ours=float(pj.lat_med.median()), lat_med_garage=float(g_.lat_med.median()),
                             share_lat_over_1m=float((pj.lat_max > 1.0).mean()), share_lat_over_1m_garage=float((g_.lat_max > 1.0).mean()))
-        # board-style GT distance (mean over all windows of dist_to_gt... at end): use arena 'gt' column? report per-window median dloc_end
+        # board GT distance = per-scene MAX of dist_to_gt_trajectory (distance to the whole logged path; past the path end it is the
+        # Euclidean distance to the end point, while lateral_dist_to_gt_trajectory keeps only the part across the final heading)
+        gd = {}
+        for tag in ["JTN1", "JTN1S3", "RSG", "garage", "LTF"]:
+            q = PW[tag].reindex(items)
+            gd[tag] = dict(mean=float(q.gtd.mean()), lateral=float(q.lat_max.mean()), overrun=float((q.gtd - q.lat_max).mean()),
+                           mean_easy=float(q.gtd.reindex(easy).mean()), mean_other=float(q.gtd.drop(easy).mean()))
+        cj = Cj.set_index("id").cause
+        for tag in ["JTN1", "JTN1S3"]:
+            q, g_ = PW[tag].reindex(items), PW["garage"].reindex(items)
+            cls = pd.Series("garage not 1", index=items)
+            cls[easy] = "easy, ours = 1"
+            cls[cj.index] = cj.where(~cj.str.startswith("partial"), "partial (any)")
+            d = (q.gtd - g_.gtd) / len(items)
+            dl = (q.lat_max - g_.lat_max) / len(items)
+            gd[f"{tag}-garage by JTN1 outcome"] = {k: dict(n=int((cls == k).sum()), d_gtd=float(d[cls == k].sum()), d_lateral=float(dl[cls == k].sum()))
+                                                    for k in cls.unique()}
+        J["gt_distance"] = gd
     json.dump(J, open(res / "easy_items.json", "w"), indent=1, default=float)
     print(json.dumps(J, indent=1, default=float)[:20000])
 
@@ -244,7 +259,11 @@ def pcs_table(C, y, items, FZ, S, subj):
     W = cnt[codes].astype(float)
     groups = [(c, C.id[C.cause == c]) for c in C.cause.value_counts().index]
     groups += [("all partials", C.id[~C.cause.str.startswith("zero")]), ("all zeros", C.id[C.cause.str.startswith("zero")]),
-               ("all misses", C.id)]
+               ("all misses", C.id),
+               ("union: free-road ratchet incl. its near-1s", C.id[(C["sub"] == "free-road ratchet") & ~C.cause.str.startswith("zero") & ~C.rear]),
+               ("union: every moving-window progress partial (not rear-hit)", C.id[~C.cause.str.startswith("zero") & ~C.rear]),
+               ("union: lateral zeros (offroad, moving corridor)", C.id[C.cause.isin(["zero: offroad", "zero: corridor, moving window",
+                                                                                     "zero: offroad+corridor"])])]
     res = []
     for k, fz in FZ.items():
         L0 = fz.L(y)
@@ -263,6 +282,26 @@ def pcs_table(C, y, items, FZ, S, subj):
 SR_NB = 2000
 
 
+def cmd_pai(a):
+    """PAI 281 proxy: no strong-model local PAI read exists, so 'easy' = scenes the other two family candidates (RSG-s0, JTN-s1, both
+    + ACC + GAP) both score exactly 1; A0 (NTV0-s0 + ACC + GAP) losses by d381 class inside / outside that set. Points only (no PCS pool)."""
+    import pandas as pd
+    s = pd.read_csv(a.scenes)
+    one = lambda x: x >= 1 - 1e-4  # noqa: E731
+    s["fam"] = np.where(one(s["RSG-s0"]) & one(s["JTN-s1"]), "easy (RSG and JTN-s1 = 1)",
+                        np.where(one(s["RSG-s0"]) | one(s["JTN-s1"]), "one of RSG / JTN-s1 = 1", "neither = 1"))
+    s["all3"] = one(s["RSG-s0"]) & one(s["JTN-s1"]) & one(s["NTV0-s0"])
+    s["klass"] = np.where(s.cls == "zero corridor", "zero corridor: " + s["sub"].fillna("?"), s.cls)
+    t = s[s.loss > 0].groupby(["klass", "fam"]).loss.agg(["size", "sum"]).unstack("fam").fillna(0)
+    out = dict(n=len(s), all3=int(s.all3.sum()), fam=s.fam.value_counts().to_dict(),
+               loss_by_fam=s.groupby("fam").loss.sum().round(2).to_dict(),
+               table=[dict(klass=k, **{f"{f}|{c}": float(t.loc[k, (c, f)]) for c, f in t.columns}) for k in t.index])
+    res = REPO / "experiments/alpasim_proxy/results"
+    J = json.load(open(res / "easy_items.json")); J["pai"] = out
+    json.dump(J, open(res / "easy_items.json", "w"), indent=1, default=float)
+    print(json.dumps(out, indent=1, default=float))
+
+
 def _Lsub(fz, y2, m):
     """per-item log-likelihood columns for the changed items only, at the frozen items."""
     full = np.full(len(y2), np.nan); full[m] = y2[m]
@@ -277,5 +316,7 @@ if __name__ == "__main__":
     r = sp.add_parser("report")
     r.add_argument("--native-gap", default=str(REPO / "tmp/native_gap"))
     r.add_argument("--extra", default=str(REPO / "tmp/easy_items/steps_extra.parquet"))
+    q = sp.add_parser("pai")
+    q.add_argument("--scenes", default=str(REPO / "tmp/easy_items/pai/scenes.csv"))
     a = ap.parse_args()
-    {"extract": cmd_extract, "report": cmd_report}[a.cmd](a)
+    {"extract": cmd_extract, "report": cmd_report, "pai": cmd_pai}[a.cmd](a)

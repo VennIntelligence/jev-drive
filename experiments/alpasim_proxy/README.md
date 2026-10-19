@@ -57,6 +57,15 @@ strong subject's partial score on a window the strong pool aces costs more than 
 the human on moving windows, 0.008 of mean) cost about 145-220 PCS, all its zeros 23-40, launch hold partials 18-27, static windows 0. Selector:
 keep the arena mean, add the frozen board-mix PCS (`pcs_local.py score`) as the tie-break and PCS readout.
 
+## EASY-ITEMS: what we lose on the windows the garage aces (2026-10-19, d387)
+
+[results/easy_items.md](results/easy_items.md); code `scripts/easy_items.py` (box `extract` of per-step metrics, Mac `report` / `pai`).
+1 564 of the 2 106 frozen items have garage 0014 = 1; JTN-s1 native misses 181 (105 zeros, 76 partials). The scorer has no sub-score but
+progress (0.8 saturation) and the hard fails, so near-1s are the ratchet just short of 0.8. Ranked by frozen PCS (board-mix / g15): static
+red-line roll-out 82 windows +79 / +112, free-road ratchet incl. near-1 58 windows +36 / +38 (+101 / +139 on stop3), lateral zeros 20
+windows +16 / +21, rest <= +3 each. The shortfall against the garage is longitudinal (arc 0.68 vs 0.87 of the human, laterally closer than
+the garage). PAI: no strong-model local read; on our family 94 % of A0's lost points are scenes all three candidates fail.
+
 ## WAIT-SET: a closed-loop set where the human waits at standstill
 
 [results/wait_set.md](results/wait_set.md); code `scripts/wait_set.py` (definitions in the docstring), `scripts/wait_set.sh`; the set

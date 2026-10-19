@@ -1,0 +1,1555 @@
+{
+ "main": {
+  "n_items": 2106,
+  "n_easy": 1564,
+  "n_easy_hi": 848,
+  "easy_all3": 923,
+  "a_median_easy": 2.21601115,
+  "a_median_other": 0.10377107499999999
+ },
+ "scores": [
+  {
+   "subject": "JTN-s1",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.9266628562539254,
+   "ones": 1383,
+   "zeros": 105,
+   "partial": 76,
+   "near1": 13
+  },
+  {
+   "subject": "JTN-s1",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 1.0,
+   "ones": 848,
+   "zeros": 0,
+   "partial": 0,
+   "near1": 0
+  },
+  {
+   "subject": "JTN-s1",
+   "set": "other",
+   "n": 542,
+   "mean": 0.7970832503235492,
+   "ones": 365,
+   "zeros": 88,
+   "partial": 89,
+   "near1": 5
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.9826594347170542,
+   "ones": 1467,
+   "zeros": 12,
+   "partial": 85,
+   "near1": 11
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 1.0,
+   "ones": 848,
+   "zeros": 0,
+   "partial": 0,
+   "near1": 0
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "other",
+   "n": 542,
+   "mean": 0.8342610537240688,
+   "ones": 378,
+   "zeros": 45,
+   "partial": 119,
+   "near1": 6
+  },
+  {
+   "subject": "RSG",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.7977191522662932,
+   "ones": 1148,
+   "zeros": 307,
+   "partial": 109,
+   "near1": 11
+  },
+  {
+   "subject": "RSG",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 0.9667938321774261,
+   "ones": 793,
+   "zeros": 27,
+   "partial": 28,
+   "near1": 7
+  },
+  {
+   "subject": "RSG",
+   "set": "other",
+   "n": 542,
+   "mean": 0.7595065977390283,
+   "ones": 340,
+   "zeros": 121,
+   "partial": 81,
+   "near1": 17
+  },
+  {
+   "subject": "RSG+stop3",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.9774313138522174,
+   "ones": 1423,
+   "zeros": 19,
+   "partial": 122,
+   "near1": 12
+  },
+  {
+   "subject": "RSG+stop3",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 0.9974500054793555,
+   "ones": 819,
+   "zeros": 1,
+   "partial": 28,
+   "near1": 7
+  },
+  {
+   "subject": "RSG+stop3",
+   "set": "other",
+   "n": 542,
+   "mean": 0.850813233612277,
+   "ones": 369,
+   "zeros": 42,
+   "partial": 131,
+   "near1": 17
+  },
+  {
+   "subject": "NTV0-s0",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.783099544063767,
+   "ones": 1143,
+   "zeros": 331,
+   "partial": 90,
+   "near1": 21
+  },
+  {
+   "subject": "NTV0-s0",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 0.9641732463636216,
+   "ones": 802,
+   "zeros": 30,
+   "partial": 16,
+   "near1": 11
+  },
+  {
+   "subject": "NTV0-s0",
+   "set": "other",
+   "n": 542,
+   "mean": 0.7400445599321847,
+   "ones": 339,
+   "zeros": 131,
+   "partial": 72,
+   "near1": 5
+  },
+  {
+   "subject": "garage",
+   "set": "easy",
+   "n": 1564,
+   "mean": 1.0,
+   "ones": 1564,
+   "zeros": 0,
+   "partial": 0,
+   "near1": 0
+  },
+  {
+   "subject": "garage",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 1.0,
+   "ones": 848,
+   "zeros": 0,
+   "partial": 0,
+   "near1": 0
+  },
+  {
+   "subject": "garage",
+   "set": "other",
+   "n": 542,
+   "mean": 0.23386628721967676,
+   "ones": 0,
+   "zeros": 345,
+   "partial": 197,
+   "near1": 13
+  },
+  {
+   "subject": "LTF",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.6762303175089429,
+   "ones": 1008,
+   "zeros": 497,
+   "partial": 59,
+   "near1": 7
+  },
+  {
+   "subject": "LTF",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 0.9913045912201053,
+   "ones": 800,
+   "zeros": 0,
+   "partial": 48,
+   "near1": 6
+  },
+  {
+   "subject": "LTF",
+   "set": "other",
+   "n": 542,
+   "mean": 0.6235952244749511,
+   "ones": 269,
+   "zeros": 184,
+   "partial": 89,
+   "near1": 3
+  },
+  {
+   "subject": "DD",
+   "set": "easy",
+   "n": 1564,
+   "mean": 0.6858569907956077,
+   "ones": 1021,
+   "zeros": 482,
+   "partial": 61,
+   "near1": 4
+  },
+  {
+   "subject": "DD",
+   "set": "easy-hi",
+   "n": 848,
+   "mean": 0.9885443762653173,
+   "ones": 800,
+   "zeros": 4,
+   "partial": 44,
+   "near1": 4
+  },
+  {
+   "subject": "DD",
+   "set": "other",
+   "n": 542,
+   "mean": 0.5992098108640272,
+   "ones": 268,
+   "zeros": 199,
+   "partial": 75,
+   "near1": 2
+  }
+ ],
+ "cells": [
+  {
+   "cell": "braking",
+   "n": 226,
+   "jtn1_miss": 22,
+   "jtn1s3_miss": 19
+  },
+  {
+   "cell": "cruise",
+   "n": 102,
+   "jtn1_miss": 16,
+   "jtn1s3_miss": 16
+  },
+  {
+   "cell": "launch",
+   "n": 72,
+   "jtn1_miss": 6,
+   "jtn1s3_miss": 9
+  },
+  {
+   "cell": "other",
+   "n": 328,
+   "jtn1_miss": 42,
+   "jtn1s3_miss": 41
+  },
+  {
+   "cell": "static-free",
+   "n": 314,
+   "jtn1_miss": 83,
+   "jtn1s3_miss": 0
+  },
+  {
+   "cell": "static-lead",
+   "n": 428,
+   "jtn1_miss": 2,
+   "jtn1s3_miss": 0
+  },
+  {
+   "cell": "turn",
+   "n": 94,
+   "jtn1_miss": 10,
+   "jtn1s3_miss": 12
+  }
+ ],
+ "causes": {
+  "JTN1": [
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "zero: corridor, static window",
+    "windows": 82,
+    "points": 82.0,
+    "pcs": 79.05948399806675,
+    "lo": 37.46866146559651,
+    "hi": 125.95844580909284
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: free-road ratchet",
+    "windows": 47,
+    "points": 5.218582528480883,
+    "pcs": 29.30864019333353,
+    "lo": 14.760957225541109,
+    "hi": 53.62769859638663
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: near-1 (0.98-0.999)",
+    "windows": 13,
+    "points": 0.12548697456477487,
+    "pcs": 5.123627125214398,
+    "lo": 1.9736952305720479,
+    "hi": 9.577464177959238
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "zero: offroad",
+    "windows": 13,
+    "points": 13.0,
+    "pcs": 9.89713440770447,
+    "lo": 4.199925266961435,
+    "hi": 18.558001128904877
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "zero: corridor, moving window",
+    "windows": 6,
+    "points": 6.0,
+    "pcs": 4.85543932265864,
+    "lo": 2.026640152983532,
+    "hi": 7.876558950267245
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: struck from behind",
+    "windows": 5,
+    "points": 1.179023668228957,
+    "pcs": 2.464244147104864,
+    "lo": 0.0,
+    "hi": 6.157340563566437
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: stop / lock",
+    "windows": 4,
+    "points": 0.5841800750046953,
+    "pcs": 2.860913769115541,
+    "lo": 0.47617980919374076,
+    "hi": 7.264251141256144
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: late launch",
+    "windows": 4,
+    "points": 1.6877629156731073,
+    "pcs": 1.2761575443355468,
+    "lo": 0.23636526757567253,
+    "hi": 2.945367376077587
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "zero: at-fault collision",
+    "windows": 3,
+    "points": 3.0,
+    "pcs": 2.0080543886376745,
+    "lo": 0.0,
+    "hi": 5.438058497885407
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: following a lead",
+    "windows": 2,
+    "points": 0.20387584454448848,
+    "pcs": 1.1650629243940784,
+    "lo": 0.0,
+    "hi": 3.2264292428677033
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "partial: other (ratio >= 0.9 or no moving decision)",
+    "windows": 1,
+    "points": 0.7003808123637005,
+    "pcs": 1.5292228114326463,
+    "lo": 0.0,
+    "hi": 5.3329365481368916
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "zero: offroad+corridor",
+    "windows": 1,
+    "points": 1.0,
+    "pcs": 0.8124733023544195,
+    "lo": 0.0,
+    "hi": 2.968783989210128
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "all partials",
+    "windows": 76,
+    "points": 9.699292818860604,
+    "pcs": 54.14735406834052,
+    "lo": 28.10249189123548,
+    "hi": 113.70421814800157
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "all zeros",
+    "windows": 105,
+    "points": 105.0,
+    "pcs": 113.39054101790998,
+    "lo": 63.473773119208346,
+    "hi": 176.9171462740983
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "all misses",
+    "windows": 181,
+    "points": 114.69929281886061,
+    "pcs": 1479.5462271075548,
+    "lo": 1153.2773777721857,
+    "hi": 1860.5093372483727
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "union: free-road ratchet incl. its near-1s",
+    "windows": 58,
+    "points": 5.318008313088803,
+    "pcs": 36.47643343424238,
+    "lo": 19.28176205153366,
+    "hi": 66.58735224666907
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "union: every moving-window progress partial (not rear-hit)",
+    "windows": 71,
+    "points": 8.520269150631648,
+    "pcs": 49.2759485055135,
+    "lo": 26.5592668002733,
+    "hi": 96.96964194248218
+   },
+   {
+    "fit": "boardmix",
+    "base": 1246.5502000099123,
+    "cause": "union: lateral zeros (offroad, moving corridor)",
+    "windows": 20,
+    "points": 20.0,
+    "pcs": 16.00206950913207,
+    "lo": 8.790012226412552,
+    "hi": 27.590964893638883
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "zero: corridor, static window",
+    "windows": 82,
+    "points": 82.0,
+    "pcs": 112.05990666463094,
+    "lo": 55.864817074299026,
+    "hi": 170.97406896920933
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: free-road ratchet",
+    "windows": 47,
+    "points": 5.218582528480883,
+    "pcs": 30.446845455028324,
+    "lo": 14.99794598392449,
+    "hi": 59.2278460500825
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: near-1 (0.98-0.999)",
+    "windows": 13,
+    "points": 0.12548697456477487,
+    "pcs": 5.723336379108787,
+    "lo": 2.1326680671781104,
+    "hi": 11.487841442211938
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "zero: offroad",
+    "windows": 13,
+    "points": 13.0,
+    "pcs": 12.545792683014497,
+    "lo": 5.390642191306779,
+    "hi": 24.24512715648824
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "zero: corridor, moving window",
+    "windows": 6,
+    "points": 6.0,
+    "pcs": 6.945746067962773,
+    "lo": 2.9567636357468245,
+    "hi": 11.337948387987852
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: struck from behind",
+    "windows": 5,
+    "points": 1.179023668228957,
+    "pcs": 2.6542668790616517,
+    "lo": 0.0,
+    "hi": 6.977693614738821
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: stop / lock",
+    "windows": 4,
+    "points": 0.5841800750046953,
+    "pcs": 3.0739637283047614,
+    "lo": 0.4671618418219225,
+    "hi": 8.22333836250814
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: late launch",
+    "windows": 4,
+    "points": 1.6877629156731073,
+    "pcs": 1.0448840402109454,
+    "lo": 0.23788637248344457,
+    "hi": 2.466920956004179
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "zero: at-fault collision",
+    "windows": 3,
+    "points": 3.0,
+    "pcs": 2.6226603703003093,
+    "lo": 0.0,
+    "hi": 7.470548761025254
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: following a lead",
+    "windows": 2,
+    "points": 0.20387584454448848,
+    "pcs": 1.1794934513873159,
+    "lo": 0.0,
+    "hi": 3.396623883808887
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "partial: other (ratio >= 0.9 or no moving decision)",
+    "windows": 1,
+    "points": 0.7003808123637005,
+    "pcs": 1.282745102237186,
+    "lo": 0.0,
+    "hi": 4.65507489144623
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "zero: offroad+corridor",
+    "windows": 1,
+    "points": 1.0,
+    "pcs": 1.1063762966539343,
+    "lo": 0.0,
+    "hi": 4.07348661168469
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "all partials",
+    "windows": 76,
+    "points": 9.699292818860604,
+    "pcs": 53.68822629641909,
+    "lo": 27.217793514735142,
+    "hi": 121.30179911073074
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "all zeros",
+    "windows": 105,
+    "points": 105.0,
+    "pcs": 166.1923015660468,
+    "lo": 96.39450620996071,
+    "hi": 257.5453885694828
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "all misses",
+    "windows": 181,
+    "points": 114.69929281886061,
+    "pcs": 1255.5618020080146,
+    "lo": 1024.0553087017804,
+    "hi": 1497.1695249751008
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "union: free-road ratchet incl. its near-1s",
+    "windows": 58,
+    "points": 5.318008313088803,
+    "pcs": 37.953506243234415,
+    "lo": 19.331353087006143,
+    "hi": 75.03435121037649
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "union: every moving-window progress partial (not rear-hit)",
+    "windows": 71,
+    "points": 8.520269150631648,
+    "pcs": 49.09452284094482,
+    "lo": 25.7006802379262,
+    "hi": 104.53522308026942
+   },
+   {
+    "fit": "g15",
+    "base": 1317.3555100100157,
+    "cause": "union: lateral zeros (offroad, moving corridor)",
+    "windows": 20,
+    "points": 20.0,
+    "pcs": 21.2847102655046,
+    "lo": 11.926583294899837,
+    "hi": 37.47904776624309
+   }
+  ],
+  "JTN1S3": [
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: free-road ratchet",
+    "windows": 48,
+    "points": 5.617270038182545,
+    "pcs": 77.07117908411101,
+    "lo": 51.85470232437501,
+    "hi": 120.19876622226461
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: near-1 (0.98-0.999)",
+    "windows": 11,
+    "points": 0.09490261890806306,
+    "pcs": 10.46326604017645,
+    "lo": 3.7910658385720524,
+    "hi": 18.935993626633113
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "zero: offroad",
+    "windows": 11,
+    "points": 11.0,
+    "pcs": 14.986199183613053,
+    "lo": 7.0903199806739226,
+    "hi": 24.96410334119529
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: stop3 hold, native = 1",
+    "windows": 8,
+    "points": 2.986528153432874,
+    "pcs": 10.399367681973672,
+    "lo": 0.0,
+    "hi": 27.146755577476455
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: struck from behind",
+    "windows": 7,
+    "points": 2.5159005508749015,
+    "pcs": 11.825221050364917,
+    "lo": 2.1379808207028304,
+    "hi": 24.522054722391207
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: stop / lock",
+    "windows": 4,
+    "points": 0.5776530545395867,
+    "pcs": 6.0812987819058435,
+    "lo": 0.8871019971357783,
+    "hi": 15.289201356237134
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: late launch",
+    "windows": 3,
+    "points": 1.7321616926564096,
+    "pcs": 2.4377092792535677,
+    "lo": 0.0,
+    "hi": 5.961352449229001
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: following a lead",
+    "windows": 2,
+    "points": 0.20387584454448848,
+    "pcs": 2.3830778566368735,
+    "lo": 0.0,
+    "hi": 6.741715919184433
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "partial: other (ratio >= 0.9 or no moving decision)",
+    "windows": 2,
+    "points": 1.3923521493883089,
+    "pcs": 4.344244254867135,
+    "lo": 0.0,
+    "hi": 13.35964291212256
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "zero: at-fault collision",
+    "windows": 1,
+    "points": 1.0,
+    "pcs": 0.6482039147749674,
+    "lo": 0.0,
+    "hi": 2.3759850840849834
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "all partials",
+    "windows": 85,
+    "points": 15.120644102527176,
+    "pcs": 769.5439697435236,
+    "lo": 457.6237907296732,
+    "hi": 1131.6635865699454
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "all zeros",
+    "windows": 12,
+    "points": 12.0,
+    "pcs": 15.70870441363786,
+    "lo": 7.443074142953748,
+    "hi": 26.131145422232184
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "all misses",
+    "windows": 97,
+    "points": 27.120644102527176,
+    "pcs": 1294.8178258109938,
+    "lo": 958.5540335015091,
+    "hi": 1721.3941646985222
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "union: free-road ratchet incl. its near-1s",
+    "windows": 58,
+    "points": 5.70572001222691,
+    "pcs": 100.62221412715712,
+    "lo": 68.71424962405771,
+    "hi": 162.00961766885115
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "union: every moving-window progress partial (not rear-hit)",
+    "windows": 78,
+    "points": 12.604743551652275,
+    "pcs": 252.80835965580582,
+    "lo": 148.87745465797732,
+    "hi": 666.1050322700676
+   },
+   {
+    "fit": "boardmix",
+    "base": 1324.0523182189454,
+    "cause": "union: lateral zeros (offroad, moving corridor)",
+    "windows": 11,
+    "points": 11.0,
+    "pcs": 14.986199183613053,
+    "lo": 7.0903199806739226,
+    "hi": 24.96410334119529
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: free-road ratchet",
+    "windows": 48,
+    "points": 5.617270038182545,
+    "pcs": 103.68624035892572,
+    "lo": 68.95649868406889,
+    "hi": 171.3936926792933
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: near-1 (0.98-0.999)",
+    "windows": 11,
+    "points": 0.09490261890806306,
+    "pcs": 14.503402656004255,
+    "lo": 5.113587838249702,
+    "hi": 27.142581586013122
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "zero: offroad",
+    "windows": 11,
+    "points": 11.0,
+    "pcs": 23.319418779855596,
+    "lo": 11.290103547755308,
+    "hi": 40.22181765404699
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: stop3 hold, native = 1",
+    "windows": 8,
+    "points": 2.986528153432874,
+    "pcs": 14.847840378458386,
+    "lo": 0.0,
+    "hi": 40.30530736138195
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: struck from behind",
+    "windows": 7,
+    "points": 2.5159005508749015,
+    "pcs": 13.802371350036765,
+    "lo": 2.2897464942604246,
+    "hi": 27.7183027891979
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: stop / lock",
+    "windows": 4,
+    "points": 0.5776530545395867,
+    "pcs": 8.028220619843978,
+    "lo": 1.0571617950251835,
+    "hi": 20.525842670230816
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: late launch",
+    "windows": 3,
+    "points": 1.7321616926564096,
+    "pcs": 2.747521702357517,
+    "lo": 0.0,
+    "hi": 6.424913769162087
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: following a lead",
+    "windows": 2,
+    "points": 0.20387584454448848,
+    "pcs": 2.929992689986875,
+    "lo": 0.0,
+    "hi": 8.512664222435767
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "partial: other (ratio >= 0.9 or no moving decision)",
+    "windows": 2,
+    "points": 1.3923521493883089,
+    "pcs": 4.533316036654014,
+    "lo": 0.0,
+    "hi": 13.989339183016755
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "zero: at-fault collision",
+    "windows": 1,
+    "points": 1.0,
+    "pcs": 0.8530216938497688,
+    "lo": 0.0,
+    "hi": 3.1603253829244404
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "all partials",
+    "windows": 85,
+    "points": 15.120644102527176,
+    "pcs": 711.2579508641516,
+    "lo": 457.4679753576798,
+    "hi": 971.7752749003953
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "all zeros",
+    "windows": 12,
+    "points": 12.0,
+    "pcs": 24.303062275121647,
+    "lo": 11.628411941082287,
+    "hi": 42.01342578507156
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "all misses",
+    "windows": 97,
+    "points": 27.120644102527176,
+    "pcs": 1120.9917191343757,
+    "lo": 854.9880764515057,
+    "hi": 1405.6988969776426
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "union: free-road ratchet incl. its near-1s",
+    "windows": 58,
+    "points": 5.70572001222691,
+    "pcs": 139.1092306238179,
+    "lo": 92.87742360759542,
+    "hi": 231.67484888736251
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "union: every moving-window progress partial (not rear-hit)",
+    "windows": 78,
+    "points": 12.604743551652275,
+    "pcs": 361.89115815761215,
+    "lo": 200.46638545173676,
+    "hi": 722.6465891046246
+   },
+   {
+    "fit": "g15",
+    "base": 1433.4074349835332,
+    "cause": "union: lateral zeros (offroad, moving corridor)",
+    "windows": 11,
+    "points": 11.0,
+    "pcs": 23.319418779855596,
+    "lo": 11.290103547755308,
+    "hi": 40.22181765404699
+   }
+  ]
+ },
+ "garage_cmp": [
+  {
+   "subject": "JTN-s1",
+   "set": "all easy",
+   "n": 1564,
+   "prog_ours": 0.8512053096560079,
+   "prog_garage": 0.863555716602152,
+   "trav_ratio_ours": 0.9311064108408047,
+   "trav_ratio_garage": 0.882630202033541,
+   "lat_med_ours": 0.08003017969360512,
+   "lat_med_garage": 0.04222497869484675,
+   "lat_max_ours": 0.18543217174790896,
+   "lat_max_garage": 0.09061801860913474,
+   "dloc_end_ours": 1.232171997842048,
+   "dloc_end_garage": 0.7992741224509932,
+   "lane_min_ours": 0.15961553855373045,
+   "lane_min_garage": 0.23144131025061965,
+   "v_ours": [
+    0.36,
+    0.34,
+    0.48,
+    0.69,
+    1.01,
+    1.28,
+    1.51,
+    1.46
+   ],
+   "v_garage": [
+    0.4,
+    0.42,
+    0.46,
+    0.47,
+    0.47,
+    0.46,
+    0.39,
+    0.36
+   ]
+  },
+  {
+   "subject": "JTN-s1",
+   "set": "JTN miss, partial",
+   "n": 76,
+   "prog_ours": 0.7394816277512064,
+   "prog_garage": 0.9421865946510202,
+   "trav_ratio_ours": 0.679774144231243,
+   "trav_ratio_garage": 0.865689436547056,
+   "lat_med_ours": 0.08924060002223401,
+   "lat_med_garage": 0.11160441952473146,
+   "lat_max_ours": 0.20152285486028332,
+   "lat_max_garage": 0.2660868969928726,
+   "dloc_end_ours": 8.125669145904928,
+   "dloc_end_garage": 2.67277005108924,
+   "lane_min_ours": 0.0,
+   "lane_min_garage": 0.0,
+   "v_ours": [
+    5.66,
+    5.09,
+    4.49,
+    3.75,
+    3.23,
+    2.8,
+    2.37,
+    1.99
+   ],
+   "v_garage": [
+    5.91,
+    5.69,
+    5.45,
+    5.22,
+    5.21,
+    5.17,
+    5.18,
+    5.09
+   ]
+  },
+  {
+   "subject": "JTN-s1",
+   "set": "JTN = 1",
+   "n": 1383,
+   "prog_ours": 0.8824397272851994,
+   "prog_garage": 0.8609281380143753,
+   "trav_ratio_ours": 0.9303965864424767,
+   "trav_ratio_garage": 0.8767609711082459,
+   "lat_med_ours": 0.06428060813050634,
+   "lat_med_garage": 0.0371581513970626,
+   "lat_max_ours": 0.1578094237491578,
+   "lat_max_garage": 0.0819775365878384,
+   "dloc_end_ours": 0.8312704950885108,
+   "dloc_end_garage": 0.7605328770083043,
+   "lane_min_ours": 0.23126431986289847,
+   "lane_min_garage": 0.23867815311234628,
+   "v_ours": [
+    0.31,
+    0.2,
+    0.26,
+    0.33,
+    0.45,
+    0.6,
+    0.83,
+    0.93
+   ],
+   "v_garage": [
+    0.33,
+    0.36,
+    0.39,
+    0.42,
+    0.44,
+    0.41,
+    0.38,
+    0.32
+   ]
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "all easy",
+   "n": 1564,
+   "prog_ours": 0.8467620707940314,
+   "prog_garage": 0.863555716602152,
+   "trav_ratio_ours": 0.929364302153459,
+   "trav_ratio_garage": 0.882630202033541,
+   "lat_med_ours": 0.08003017969360512,
+   "lat_med_garage": 0.04222497869484675,
+   "lat_max_ours": 0.18054136794863013,
+   "lat_max_garage": 0.09061801860913474,
+   "dloc_end_ours": 1.2093242292995323,
+   "dloc_end_garage": 0.7992741224509932,
+   "lane_min_ours": 0.1859724841584684,
+   "lane_min_garage": 0.23144131025061965,
+   "v_ours": [
+    0.36,
+    0.34,
+    0.48,
+    0.69,
+    0.95,
+    1.0,
+    0.86,
+    0.73
+   ],
+   "v_garage": [
+    0.4,
+    0.42,
+    0.46,
+    0.47,
+    0.47,
+    0.46,
+    0.39,
+    0.36
+   ]
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "JTN miss, partial",
+   "n": 85,
+   "prog_ours": 0.7231873536251544,
+   "prog_garage": 0.9537176918590771,
+   "trav_ratio_ours": 0.6661453980239158,
+   "trav_ratio_garage": 0.865975219174302,
+   "lat_med_ours": 0.09097422689801288,
+   "lat_med_garage": 0.12342471540343496,
+   "lat_max_ours": 0.15381600641965312,
+   "lat_max_garage": 0.27567753913523,
+   "dloc_end_ours": 8.161708130091865,
+   "dloc_end_garage": 2.771326713112033,
+   "lane_min_ours": 0.0,
+   "lane_min_garage": 0.0,
+   "v_ours": [
+    4.65,
+    4.37,
+    3.75,
+    3.44,
+    2.71,
+    2.28,
+    1.75,
+    1.36
+   ],
+   "v_garage": [
+    5.01,
+    5.02,
+    5.16,
+    5.12,
+    5.03,
+    5.08,
+    5.08,
+    5.04
+   ]
+  },
+  {
+   "subject": "JTN-s1+stop3",
+   "set": "JTN = 1",
+   "n": 1467,
+   "prog_ours": 0.872577363973287,
+   "prog_garage": 0.8518107016338332,
+   "trav_ratio_ours": 0.9436437426922477,
+   "trav_ratio_garage": 0.8837892324779446,
+   "lat_med_ours": 0.07819769850571803,
+   "lat_med_garage": 0.034566380886903614,
+   "lat_max_ours": 0.1789669904152448,
+   "lat_max_garage": 0.07559575059599863,
+   "dloc_end_ours": 1.033249988096957,
+   "dloc_end_garage": 0.6341452529979057,
+   "lane_min_ours": 0.2057360507551642,
+   "lane_min_garage": 0.27026477463368187,
+   "v_ours": [
+    0.18,
+    0.19,
+    0.32,
+    0.52,
+    0.71,
+    0.85,
+    0.76,
+    0.65
+   ],
+   "v_garage": [
+    0.2,
+    0.2,
+    0.18,
+    0.16,
+    0.12,
+    0.1,
+    0.09,
+    0.08
+   ]
+  },
+  {
+   "subject": "RSG",
+   "set": "all easy",
+   "n": 1564,
+   "prog_ours": 0.8452785585980749,
+   "prog_garage": 0.863555716602152,
+   "trav_ratio_ours": 1.5226451977171203,
+   "trav_ratio_garage": 0.882630202033541,
+   "lat_med_ours": 0.2683170198063626,
+   "lat_med_garage": 0.04222497869484675,
+   "lat_max_ours": 0.5780763847912753,
+   "lat_max_garage": 0.09061801860913474,
+   "dloc_end_ours": 2.4877343081723744,
+   "dloc_end_garage": 0.7992741224509932,
+   "lane_min_ours": 0.0,
+   "lane_min_garage": 0.23144131025061965,
+   "v_ours": [
+    0.48,
+    0.73,
+    1.2,
+    1.88,
+    2.6,
+    2.98,
+    3.22,
+    3.26
+   ],
+   "v_garage": [
+    0.4,
+    0.42,
+    0.46,
+    0.47,
+    0.47,
+    0.46,
+    0.39,
+    0.36
+   ]
+  },
+  {
+   "subject": "RSG",
+   "set": "JTN miss, partial",
+   "n": 109,
+   "prog_ours": 0.7508091464604735,
+   "prog_garage": 0.9391225806803914,
+   "trav_ratio_ours": 0.6909462648638677,
+   "trav_ratio_garage": 0.865975219174302,
+   "lat_med_ours": 0.11705391127959427,
+   "lat_med_garage": 0.1381804688709766,
+   "lat_max_ours": 0.2135189370867713,
+   "lat_max_garage": 0.3106176164914068,
+   "dloc_end_ours": 8.177198239296338,
+   "dloc_end_garage": 2.6575571677350247,
+   "lane_min_ours": 0.0,
+   "lane_min_garage": 0.0,
+   "v_ours": [
+    6.35,
+    5.83,
+    5.04,
+    4.32,
+    3.65,
+    3.15,
+    2.46,
+    1.97
+   ],
+   "v_garage": [
+    6.51,
+    6.22,
+    5.81,
+    5.56,
+    5.59,
+    5.35,
+    5.39,
+    5.21
+   ]
+  },
+  {
+   "subject": "RSG",
+   "set": "JTN = 1",
+   "n": 1148,
+   "prog_ours": 0.9038918213434395,
+   "prog_garage": 0.8867915866097777,
+   "trav_ratio_ours": 0.976686419702683,
+   "trav_ratio_garage": 0.8798411781961122,
+   "lat_med_ours": 0.19611976079759447,
+   "lat_med_garage": 0.05100470868549607,
+   "lat_max_ours": 0.4359925393062366,
+   "lat_max_garage": 0.12238767645921986,
+   "dloc_end_ours": 1.4191186511307836,
+   "dloc_end_garage": 1.0826918932563876,
+   "lane_min_ours": 0.10159660233892438,
+   "lane_min_garage": 0.28163000771332664,
+   "v_ours": [
+    2.18,
+    1.94,
+    1.96,
+    1.96,
+    2.21,
+    2.05,
+    1.86,
+    1.85
+   ],
+   "v_garage": [
+    2.39,
+    2.04,
+    1.98,
+    1.82,
+    1.75,
+    1.62,
+    1.34,
+    1.3
+   ]
+  }
+ ],
+ "lon_lat": {
+  "n": 76,
+  "prog_ours": 0.7395,
+  "prog_garage": 0.9421865946510202,
+  "trav_ours": 0.6797737690055667,
+  "trav_garage": 0.865689436547056,
+  "lat_med_ours": 0.08925,
+  "lat_med_garage": 0.11160441952473146,
+  "share_lat_over_1m": 0.06578947368421052,
+  "share_lat_over_1m_garage": 0.19736842105263158
+ },
+ "gt_distance": {
+  "JTN1": {
+   "mean": 1.128324690303377,
+   "lateral": 0.9197172381178936,
+   "overrun": 0.20860745218548343,
+   "mean_easy": 0.9440846601116888,
+   "mean_other": 1.6599693530705366
+  },
+  "JTN1S3": {
+   "mean": 0.785005437600793,
+   "lateral": 0.6395057508501811,
+   "overrun": 0.1454996867506119,
+   "mean_easy": 0.6502936621283268,
+   "mean_other": 1.1737309299235552
+  },
+  "RSG": {
+   "mean": 2.426564472162979,
+   "lateral": 2.125877172046781,
+   "overrun": 0.3006873001161978,
+   "mean_easy": 2.441978754408629,
+   "mean_other": 2.382084882804682
+  },
+  "garage": {
+   "mean": 0.9290702298982464,
+   "lateral": 0.8172424059459781,
+   "overrun": 0.11182782395226845,
+   "mean_easy": 0.5664452673067881,
+   "mean_other": 1.9754640333909412
+  },
+  "LTF": {
+   "mean": 3.9234552044404287,
+   "lateral": 3.0735189745159834,
+   "overrun": 0.8499362299244445,
+   "mean_easy": 4.004522856861054,
+   "mean_other": 3.689525668673163
+  },
+  "JTN1-garage by JTN1 outcome": {
+   "easy, ours = 1": {
+    "n": 1383,
+    "d_gtd": 0.02799708609120921,
+    "d_lateral": 0.018398633082077207
+   },
+   "garage not 1": {
+    "n": 542,
+    "d_gtd": -0.08119568695805296,
+    "d_lateral": -0.17313715489256132
+   },
+   "partial (any)": {
+    "n": 76,
+    "d_gtd": -0.013942410544805214,
+    "d_lateral": -0.009191995443955134
+   },
+   "zero: corridor, static window": {
+    "n": 82,
+    "d_gtd": 0.24444787936820403,
+    "d_lateral": 0.24444787936820403
+   },
+   "zero: offroad": {
+    "n": 13,
+    "d_gtd": 0.0013926244823681804,
+    "d_lateral": 0.0014025020919434942
+   },
+   "zero: corridor, moving window": {
+    "n": 6,
+    "d_gtd": 0.016664279645835174,
+    "d_lateral": 0.016664279645835174
+   },
+   "zero: at-fault collision": {
+    "n": 3,
+    "d_gtd": 0.002001013317296443,
+    "d_lateral": 0.002001013317296443
+   },
+   "zero: offroad+corridor": {
+    "n": 1,
+    "d_gtd": 0.0018896750030756647,
+    "d_lateral": 0.0018896750030756647
+   }
+  },
+  "JTN1S3-garage by JTN1 outcome": {
+   "easy, ours = 1": {
+    "n": 1383,
+    "d_gtd": -0.029272236652152697,
+    "d_lateral": -0.005777184486459055
+   },
+   "garage not 1": {
+    "n": 542,
+    "d_gtd": -0.20633397059796935,
+    "d_lateral": -0.2692080339525347
+   },
+   "partial (any)": {
+    "n": 76,
+    "d_gtd": -0.014391691053080868,
+    "d_lateral": -0.009641275952230789
+   },
+   "zero: corridor, static window": {
+    "n": 82,
+    "d_gtd": 0.1010340844240525,
+    "d_lateral": 0.1010340844240525
+   },
+   "zero: offroad": {
+    "n": 13,
+    "d_gtd": -0.0004353178249590978,
+    "d_lateral": 0.0005214154647190476
+   },
+   "zero: corridor, moving window": {
+    "n": 6,
+    "d_gtd": 0.003612576355582825,
+    "d_lateral": 0.003612576355582825
+   },
+   "zero: at-fault collision": {
+    "n": 3,
+    "d_gtd": 0.000975851513934213,
+    "d_lateral": 0.000975851513934213
+   },
+   "zero: offroad+corridor": {
+    "n": 1,
+    "d_gtd": 0.0007459115371390289,
+    "d_lateral": 0.0007459115371390289
+   }
+  }
+ },
+ "pai": {
+  "n": 280,
+  "all3": 155,
+  "fam": {
+   "easy (RSG and JTN-s1 = 1)": 156,
+   "neither = 1": 98,
+   "one of RSG / JTN-s1 = 1": 26
+  },
+  "loss_by_fam": {
+   "easy (RSG and JTN-s1 = 1)": 1.0,
+   "neither = 1": 67.58,
+   "one of RSG / JTN-s1 = 1": 3.02
+  },
+  "table": [
+   {
+    "klass": "partial rear-hit",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 26.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 10.438748808935353,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "partial slow",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 10.0,
+    "one of RSG / JTN-s1 = 1|size": 1.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 2.1425036669260695,
+    "one of RSG / JTN-s1 = 1|sum": 0.0211410864453336
+   },
+   {
+    "klass": "zero AF-front",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 3.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 3.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "zero corridor: cor_drift",
+    "easy (RSG and JTN-s1 = 1)|size": 1.0,
+    "neither = 1|size": 4.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 1.0,
+    "neither = 1|sum": 4.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "zero corridor: cor_lane_change",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 1.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 1.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "zero corridor: cor_route_end",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 21.0,
+    "one of RSG / JTN-s1 = 1|size": 2.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 21.0,
+    "one of RSG / JTN-s1 = 1|sum": 2.0
+   },
+   {
+    "klass": "zero corridor: cor_straight_at_turn",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 11.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 11.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "zero corridor: cor_turn_over",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 1.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 1.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   },
+   {
+    "klass": "zero corridor: cor_turn_under",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 2.0,
+    "one of RSG / JTN-s1 = 1|size": 1.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 2.0,
+    "one of RSG / JTN-s1 = 1|sum": 1.0
+   },
+   {
+    "klass": "zero offroad",
+    "easy (RSG and JTN-s1 = 1)|size": 0.0,
+    "neither = 1|size": 12.0,
+    "one of RSG / JTN-s1 = 1|size": 0.0,
+    "easy (RSG and JTN-s1 = 1)|sum": 0.0,
+    "neither = 1|sum": 12.0,
+    "one of RSG / JTN-s1 = 1|sum": 0.0
+   }
+  ]
+ }
+}
