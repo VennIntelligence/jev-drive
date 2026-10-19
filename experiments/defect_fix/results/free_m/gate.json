@@ -1,0 +1,137 @@
+{
+ "frac": 0.95,
+ "mode": "move",
+ "v_move": 3.0,
+ "hum_keep": 0.8,
+ "s_min": 1.0,
+ "d0": 2.0,
+ "th": 0.5,
+ "human": {
+  "s_rows": 87012,
+  "moving_rows": 44881,
+  "moving_share": 0.5158024180572794,
+  "ego_ge_3": 62363,
+  "fut|ref_min": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut|ref_fut": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut|ref_reg": {
+   "fires": 10911,
+   "rate": 0.24310955638243353
+  },
+  "fut_reg|ref_min": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut_reg|ref_fut": {
+   "fires": 1621,
+   "rate": 0.036117733562086404
+  },
+  "fut_reg|ref_reg": {
+   "fires": 0,
+   "rate": 0.0
+  }
+ },
+ "ratchet": {
+  "moving_decisions": 7275,
+  "windows": 1125,
+  "short": 3559,
+  "fires": 2317,
+  "rate": 0.6510255689800506,
+  "fire_share_of_moving": 0.31848797250859107,
+  "ratio_median": 0.9532127762587546,
+  "short_share": 0.4892096219931272,
+  "blocked_human": 1114,
+  "blocked_not_free": 128,
+  "windows_with_fire": 495
+ },
+ "front": {
+  "per_read": {
+   "JT00-L18-s0@leash3": {
+    "windows": 52,
+    "decisions": 332,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 27,
+    "short_moving": 0
+   },
+   "JT00-L18-s0@off": {
+    "windows": 77,
+    "decisions": 491,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 61,
+    "short_moving": 0
+   },
+   "JT10-L18-s0@leash3": {
+    "windows": 51,
+    "decisions": 335,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 24,
+    "short_moving": 0
+   },
+   "JT10-L18-s0@off": {
+    "windows": 71,
+    "decisions": 466,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 59,
+    "short_moving": 0
+   },
+   "JTN-L18-s0@off": {
+    "windows": 6,
+    "decisions": 34,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 7,
+    "short_moving": 0
+   },
+   "JTN-L18-s1@off": {
+    "windows": 7,
+    "decisions": 40,
+    "windows_fired": 0,
+    "decisions_fired": 0,
+    "moving_decisions": 8,
+    "short_moving": 0
+   }
+  },
+  "windows": 264,
+  "windows_fired": 0,
+  "rate": 0.0
+ },
+ "static": {
+  "windows": 878,
+  "decisions": 8780,
+  "fires": 0,
+  "rate": 0.0,
+  "ego_ge_3": 148
+ },
+ "late": {
+  "per_tag": {
+   "JTN-L18-s0": {
+    "decisions": 830,
+    "fires": 1
+   },
+   "RTJA0-L18-s0": {
+    "decisions": 830,
+    "fires": 1
+   }
+  },
+  "decisions": 1660,
+  "fires": 2,
+  "rate": 0.0012048192771084338
+ },
+ "gate": {
+  "human": true,
+  "ratchet": true,
+  "front": true,
+  "static": true,
+  "late": true,
+  "pass_": true
+ }
+}
