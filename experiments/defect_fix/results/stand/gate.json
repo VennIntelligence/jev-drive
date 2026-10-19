@@ -1,0 +1,143 @@
+{
+ "margin": 1.0,
+ "v_stand": 0.5,
+ "h_stand": 0.5,
+ "human": {
+  "s_rows": 87012,
+  "standing_rows": 469,
+  "standing_share_of_s": 0.005390061140992047,
+  "draw_weight_standing": 0.002539719379244176,
+  "draw_weight_s": 0.457142857142857,
+  "ego_slow_rows": 4183,
+  "fut": {
+   "fires": 0,
+   "rate": 0.0
+  },
+  "fut_reg": {
+   "fires": 0,
+   "rate": 0.0
+  }
+ },
+ "valid_matched": {
+  "decisions": 22199,
+  "with_native_gap_key": 22199
+ },
+ "creep": {
+  "windows": 134,
+  "valid_decisions": 1217,
+  "n": 1217,
+  "fires": 647,
+  "rate": 0.5316351684470009,
+  "blocked_ego_moving": 567,
+  "blocked_human_moves": 3,
+  "k_le_3": {
+   "n": 530,
+   "fires": 497,
+   "rate": 0.9377358490566038
+  },
+  "red_line": {
+   "n": 782,
+   "fires": 415,
+   "rate": 0.530690537084399
+  },
+  "by_cue": {
+   "lead 8-30 m": {
+    "n": 110,
+    "fires": 60,
+    "rate": 0.5454545454545454
+   },
+   "lead <= 8 m": {
+    "n": 41,
+    "fires": 24,
+    "rate": 0.5853658536585366
+   },
+   "light of unknown state, no lead": {
+    "n": 276,
+    "fires": 145,
+    "rate": 0.5253623188405797
+   },
+   "no light, no lead": {
+    "n": 8,
+    "fires": 3,
+    "rate": 0.375
+   },
+   "red light at the line, no lead": {
+    "n": 782,
+    "fires": 415,
+    "rate": 0.530690537084399
+   }
+  },
+  "windows_fired": 133,
+  "plan4_median": 8.588504791259766,
+  "cap4_median": 1.4350597858428955
+ },
+ "static_success": {
+  "windows": 744,
+  "decisions": 7412,
+  "fires": 6596,
+  "rate": 0.8899082568807339,
+  "windows_fired": 744
+ },
+ "launch": {
+  "per_source": {
+   "arena:JTN-L18-s1@off": {
+    "decisions": 858,
+    "fires": 5,
+    "rate": 0.005827505827505828,
+    "in_domain": 0.006993006993006993,
+    "fires_by_delay": {
+     "0-1s": 0,
+     "1-2s": 0,
+     "2-3s": 0,
+     "3-4s": 5
+    }
+   },
+   "dump:JTN-L18-s0": {
+    "decisions": 467,
+    "fires": 0,
+    "rate": 0.0,
+    "in_domain": 0.0,
+    "fires_by_delay": {
+     "0-1s": 0,
+     "1-2s": 0,
+     "2-3s": 0,
+     "3-4s": 0
+    }
+   },
+   "dump:RTB1ARO-L18-s0": {
+    "decisions": 425,
+    "fires": 0,
+    "rate": 0.0,
+    "in_domain": 0.0,
+    "fires_by_delay": {
+     "0-1s": 0,
+     "1-2s": 0,
+     "2-3s": 0,
+     "3-4s": 0
+    }
+   },
+   "dump:RTJA0-L18-s0": {
+    "decisions": 472,
+    "fires": 0,
+    "rate": 0.0,
+    "in_domain": 0.0,
+    "fires_by_delay": {
+     "0-1s": 0,
+     "1-2s": 0,
+     "2-3s": 0,
+     "3-4s": 0
+    }
+   }
+  },
+  "decisions": 2222,
+  "fires": 5,
+  "rate": 0.0022502250225022503,
+  "in_domain": 0.0027002700270027003
+ },
+ "gate": {
+  "human": true,
+  "creep": true,
+  "launch": true,
+  "pass_": true
+ }
+}

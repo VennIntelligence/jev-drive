@@ -1,0 +1,38 @@
+== JTNS1K-L18-s0 -> STANDFM1K-L18-s0 (W_S 0.001)
+5c5
+< JTNS1K-L18-s0
+---
+> STANDFM1K-L18-s0
+75a76,85
+> --on-stand
+> 0.001
+> --on-stand-margin
+> 1.0
+> --on-free
+> 0.002
+> --on-free-mode
+> move
+> --on-free-frac
+> 0.95
+== JTNS1K-L18-s0 -> STANDFR1K-L18-s0 (W_S 0.001)
+5c5
+< JTNS1K-L18-s0
+---
+> STANDFR1K-L18-s0
+75a76,81
+> --on-stand
+> 0.001
+> --on-stand-margin
+> 1.0
+> --on-free
+> 0.004
+== JTNS1K-L18-s0 -> STAND1K-L18-s0 (W_S 0.001)
+5c5
+< JTNS1K-L18-s0
+---
+> STAND1K-L18-s0
+75a76,79
+> --on-stand
+> 0.001
+> --on-stand-margin
+> 1.0

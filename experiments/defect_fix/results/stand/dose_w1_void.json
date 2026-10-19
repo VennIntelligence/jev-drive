@@ -1,0 +1,15 @@
+{
+ "run": "STANDDOSE-L18-s0",
+ "grad_free_w0004": 2.7744514083862306,
+ "grad_stand_w1": Infinity,
+ "n": [
+  2,
+  2
+ ],
+ "W_S": 0.0,
+ "W_S_raw": 0.0,
+ "in_range": false,
+ "fire_share_free": 0.1345714331418276,
+ "fire_share_stand": 0.002857142873108387,
+ "grad_imit": NaN
+}

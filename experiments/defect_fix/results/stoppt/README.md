@@ -73,3 +73,36 @@ point on the training rows. Files: [pilot_A.md](pilot_A.md), [pilot_B.md](pilot_
 - G2 / G3 use stored plans of other policies.
 - The probe's heads are route-off forwards.
 - PAI rows come only from the 160 old scenes.
+
+## Arm C (focused draw JTPAIF; prereg supplement 18 addendum) - FAIL, line closed
+
+Arm C draws only the rows where stored plans fire (about 2 passes each, 5 % cap per log / scene). Files: [pilot_C.md](pilot_C.md), [pai_half_C.md](pai_half_C.md),
+[overrun_C.json](overrun_C.json), [arena_C.json](arena_C.json), [drift_C.json](drift_C.json), [w_JTPAIF.json](w_JTPAIF.json).
+
+| | control JTNS1K | C STOPPTF1K | line |
+|:--|--:|--:|:--|
+| PAI half paired | 0.6733 (40 zeros) | 0.6236 (42): **-0.0497 [-0.104, +0.002]** | >= +0.01: FAIL |
+| overrun zeros (d381 cor_route_end) | 11 | 11, the same scenes | description |
+| held 460 mean | 0.8268 | 0.7949: -0.032 [-0.040, -0.021] | description |
+| held 460 zeros / front collisions | 42 / 7 | 33 / 2 | ok |
+| launched other_lead / red_queue | 0.729 / 0.657 | 0.688 / 0.600 | >= 0.95x: FAIL |
+| arena subset paired | | +0.0072 [-0.008, +0.021] | ok |
+| arena k = 9 speed ratio | 0.841 | 0.770 | description |
+
+Overrun scenes (unchanged, none fixed, none new): clipgt-054b5901, 095cf563, 127c4f85, 3fe2bac8, 44df49fe, 47db2eb6, 4ecc114d, 68c3be44, 7750265d, 7d994ed3, fc9fde87.
+Concentrating the dose on firing rows does not fix the overrun states the pool lacks and slows the car overall. The STOPPT line closes (decision 386).
+
+## Disk cleanup (2026-10-19, box `$DATA_DIR/runs`)
+
+Checked before deleting: no reference to these paths in `defect_fix/stand`, `defect_fix/stand_x`, `practice_nuplan/pnx` (and the rest of `practice_nuplan`), `best_of_n`,
+nor in any `w_*.json` in the repo (only the STOPPT scripts and `labels_on1_JTPAI.json` mention `JTPAI`). No running job used them.
+
+| deleted | size |
+|:--|--:|
+| `defect_fix/stoppt/a0r` (A0 rerun rows / cache) | 26 GB |
+| `defect_fix/stoppt/pai` (pilot PAI half rollouts) | 9.4 GB |
+| `defect_fix/stoppt/probe` (probe features) | 3.2 GB |
+| `op_parity/cache/on1_JTPAI@warp` (merged pool) | 49 GB |
+
+Free space on the data disk 514 GB -> 601 GB. Kept: small results, `labels.npz` (169 MB), `ext_*`, `tax`, `pool`, `gate`; and `op_parity/cache/on1_JTPAI` (11 GB, un-warped
+source cache) and `route_mem/feat/on1_JTPAI.npz` (127 MB), both outside the requested targets.
