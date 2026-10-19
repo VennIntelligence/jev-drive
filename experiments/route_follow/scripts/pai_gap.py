@@ -158,7 +158,8 @@ def human(R):
     gt = float((R.o["metrics"] or {}).get("gt_dist_traveled_m") or 0.0)
     stratum = ("static" if gt < 1.0 else "launch" if v_hand < 1.0 else "stop/lead" if stop or (mov and lead / mov >= 0.3)
                else "turn" if turn > 30 else "straight")
-    return dict(stratum=stratum, v_hand=v_hand, h_stop=stop, lead_share=lead / mov if mov else np.nan, turn_deg=turn)
+    end_still = bool(len(T) > 10 and np.hypot(*(P[-1] - P[np.searchsorted(T, T[-1] - 1e6)])) < 0.5)
+    return dict(stratum=stratum, v_hand=v_hand, h_stop=stop, h_end_still=end_still, lead_share=lead / mov if mov else np.nan, turn_deg=turn)
 
 
 def rest_cue(R, wl):
@@ -235,6 +236,28 @@ def onlog(recs, t_lo, t_hi):
         over.append(m4 - l4)
     md = lambda x: float(np.median(x)) if x else np.nan  # noqa: E731
     return dict(n_h=len(lat), lat4=md(lat), arc2=md(arc), off=md(off), over4=md(over))
+
+
+def onset(recs):
+    """Exploratory (not in the prereg lines): the first H decisions where the human is >= 3 m/s and its next 4 s cover < 0.6 x v x 4 s
+    (it is braking to a stop ahead): median plan 4 s arc / log 4 s arc and plan 4 s arc / (v x 4 s) over the first 3 such decisions."""
+    q = []
+    for r in recs:
+        if r.get("log_poses") is None or int(r.get("log_valid") or 0) < 8 or r.get("k", 0) < 17:
+            continue
+        v = r["ego"][4] * 10
+        L, M = np.asarray(r["log_poses"], float), np.asarray(r["poses_model"] or r["poses"], float)
+        l0 = np.asarray(r.get("log_now") or [0, 0, 0], float)
+        la = float(np.hypot(*(L[0, :2] - l0[:2])) + np.hypot(*np.diff(L[:, :2], axis=0).T).sum())
+        ma = float(np.hypot(*M[0, :2]) + np.hypot(*np.diff(M[:, :2], axis=0).T).sum())
+        if v >= 3 and la < 0.6 * v * 4:
+            q.append((ma / max(la, 0.5), ma / (4 * v), la / (4 * v)))
+            if len(q) == 3:
+                break
+    if not q:
+        return dict(on_n=0, on_plan_log=np.nan, on_plan_v=np.nan, on_log_v=np.nan)
+    q = np.median(np.array(q), 0)
+    return dict(on_n=1, on_plan_log=float(q[0]), on_plan_v=float(q[1]), on_log_v=float(q[2]))
 
 
 def a0_window(R, recs, t_lo, t_hi):
@@ -422,6 +445,18 @@ def main():
             rows.append(dict(scene=s, cls=x.cls, sub=x["sub"], loss=x.loss, H=x.H, H_type=x.H_type, N0=x.N0, attr=at, **hw,
                              served_model=aw["served_model"], served_human=aw["served_human"], **{f"won_{k}": v for k, v in aw["won"].items()}))
         AT = pd.DataFrame(rows)
+        # exploratory: stop onset on the human's state, scenes where the human ends still, A0 passing (cor_route_end) vs A0 scored
+        OS = pd.DataFrame([dict(scene=s, grp="A0 passes the rest point (cor_route_end)" if T.loc[s, "sub"] == "cor_route_end" else
+                                "A0 scores >= 0.98" if T.loc[s, "score"] >= OK else "A0 other loss", **onset(HR.get(s, [])))
+                           for s in T.index[T.h_end_still & (T.stratum != "static")]])
+        if len(OS):
+            OS = OS[OS.on_n > 0]
+            L += ["", "## Exploratory: stop onset on the human's own state (H; human ends still; first 3 decisions with the human >= 3 m/s braking to a stop within 4 s)", "",
+                  "| A0 outcome | scenes | plan 4 s arc / log 4 s arc | plan 4 s arc / (v x 4 s) | log 4 s arc / (v x 4 s) |", "|---|--:|--:|--:|--:|"]
+            for k, x in OS.groupby("grp"):
+                L.append(f"| {k} | {len(x)} | {x.on_plan_log.median():.2f} | {x.on_plan_v.median():.2f} | {x.on_log_v.median():.2f} |")
+                NUM[f"3x/onset/{k}"] = dict(n=len(x), plan_log=x.on_plan_log.median(), plan_v=x.on_plan_v.median(), log_v=x.on_log_v.median())
+            OS.to_csv(f"{a.o}/onset.csv", index=False)
         AT.to_csv(f"{a.o}/attr.csv", index=False)
         L += ["", f"## Item 3: attribution (H decisions in the 4 s before A0's event station; slow / creep / no-launch: the whole rollout). "
               f"Clock check A0 vs H first t0: max |diff| {NUM['3/clock']['max_abs_us']:.0f} us over {len(t0d)} scenes; "
