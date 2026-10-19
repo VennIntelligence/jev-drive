@@ -1,0 +1,152 @@
+{
+ "STANDFMXH-L18-s1": {
+  "domain": {
+   "pass_dec": 1.03,
+   "pass_win": 2.1,
+   "fail": "15/19",
+   "tgt": "6/8",
+   "fail_dec": 75.4
+  },
+  "lat: out4>0.2": {
+   "pass_dec": 0.37,
+   "pass_win": 1.4,
+   "fail": "13/19",
+   "tgt": "6/8",
+   "fail_dec": 56.5
+  },
+  "arc>1.05": {
+   "pass_dec": 0.62,
+   "pass_win": 1.7,
+   "fail": "15/19",
+   "tgt": "6/8",
+   "fail_dec": 60.9
+  },
+  "union": {
+   "pass_dec": 0.77,
+   "pass_win": 2.0,
+   "fail": "15/19",
+   "tgt": "6/8",
+   "fail_dec": 72.5
+  }
+ },
+ "STANDFMXH-L18-s0": {
+  "domain": {
+   "pass_dec": 0.89,
+   "pass_win": 1.9,
+   "fail": "19/21",
+   "tgt": "6/7",
+   "fail_dec": 80.5
+  },
+  "lat: out4>0.2": {
+   "pass_dec": 0.4,
+   "pass_win": 1.3,
+   "fail": "14/21",
+   "tgt": "6/7",
+   "fail_dec": 49.4
+  },
+  "arc>1.05": {
+   "pass_dec": 0.54,
+   "pass_win": 1.5,
+   "fail": "17/21",
+   "tgt": "6/7",
+   "fail_dec": 61.0
+  },
+  "union": {
+   "pass_dec": 0.72,
+   "pass_win": 1.8,
+   "fail": "18/21",
+   "tgt": "6/7",
+   "fail_dec": 67.5
+  }
+ },
+ "JTN-L18-s1": {
+  "domain": {
+   "pass_dec": 1.08,
+   "pass_win": 2.2,
+   "fail": "16/20",
+   "tgt": "6/7",
+   "fail_dec": 76.5
+  },
+  "lat: out4>0.2": {
+   "pass_dec": 0.48,
+   "pass_win": 1.5,
+   "fail": "12/20",
+   "tgt": "6/7",
+   "fail_dec": 42.6
+  },
+  "arc>1.05": {
+   "pass_dec": 0.63,
+   "pass_win": 1.7,
+   "fail": "14/20",
+   "tgt": "6/7",
+   "fail_dec": 55.9
+  },
+  "union": {
+   "pass_dec": 0.86,
+   "pass_win": 2.2,
+   "fail": "15/20",
+   "tgt": "6/7",
+   "fail_dec": 64.7
+  }
+ },
+ "JTN-L18-s0": {
+  "domain": {
+   "pass_dec": 1.15,
+   "pass_win": 2.4,
+   "fail": "14/18",
+   "tgt": "5/6",
+   "fail_dec": 74.2
+  },
+  "lat: out4>0.2": {
+   "pass_dec": 0.5,
+   "pass_win": 1.7,
+   "fail": "10/18",
+   "tgt": "5/6",
+   "fail_dec": 45.2
+  },
+  "arc>1.05": {
+   "pass_dec": 0.69,
+   "pass_win": 1.8,
+   "fail": "11/18",
+   "tgt": "5/6",
+   "fail_dec": 46.8
+  },
+  "union": {
+   "pass_dec": 0.9,
+   "pass_win": 2.3,
+   "fail": "13/18",
+   "tgt": "5/6",
+   "fail_dec": 59.7
+  }
+ },
+ "RSG-L18-s0": {
+  "domain": {
+   "pass_dec": 1.41,
+   "pass_win": 2.9,
+   "fail": "15/16",
+   "tgt": "4/4",
+   "fail_dec": 87.3
+  },
+  "lat: out4>0.2": {
+   "pass_dec": 0.49,
+   "pass_win": 1.7,
+   "fail": "11/16",
+   "tgt": "4/4",
+   "fail_dec": 56.4
+  },
+  "arc>1.05": {
+   "pass_dec": 0.77,
+   "pass_win": 2.2,
+   "fail": "12/16",
+   "tgt": "4/4",
+   "fail_dec": 63.6
+  },
+  "union": {
+   "pass_dec": 0.97,
+   "pass_win": 2.5,
+   "fail": "13/16",
+   "tgt": "4/4",
+   "fail_dec": 78.2
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "pool": "on1_JTX",
+ "s_rows": 128798,
+ "moving_turn": 19125,
+ "k": 0.108,
+ "m": 0.2,
+ "domain": 3502,
+ "domain_right": 2066,
+ "domain_share_of_s": 0.02718986319663349,
+ "domain_logs": 24,
+ "served_out4_fire": 1273,
+ "served_out4_q": [
+  -0.491,
+  -0.114,
+  0.074,
+  0.38,
+  1.024
+ ],
+ "draw_share_jtx00": 0.01178905764201811,
+ "kmax_q_moving_turn": [
+  0.0684,
+  0.1273,
+  0.1758
+ ]
+}

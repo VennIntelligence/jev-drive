@@ -487,6 +487,82 @@ def cmd_garage(a):
             q = R[(R.seed == sd) & (R.b2_latzero == lz) & ((R.b2_score >= 1 - 1e-4) | lz)]
             print(sd, "B2 fails" if lz else "B2 passes", q.groupby("who")[["r_in", "r_apex", "turnin_lag", "out_apex", "out_max"]].median().round(2).to_dict(orient="index"))
 
+# ---------------------------------------------------------------- Mac: figure
+def cmd_fig(a):
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, str(REPO / "research"))
+    import plot_style as PS
+    PS.apply()
+    C = PS.PALETTE
+    A = pd.read_csv(RES / "turn_sep/auc.csv")
+    F = pd.read_parquet(OUT / "feat.parquet")
+    H = pickle.load(open(TMP / "lat_zero/hum.pkl", "rb"))
+    Tr = pd.read_parquet(OUT / "traces.parquet")
+    R = pd.read_csv(RES / "turn_sep/garage.csv")
+    fig, ax = plt.subplots(1, 4, figsize=(PS.DOUBLE_COLUMN_IN * 1.6, 3.6), gridspec_kw=dict(width_ratios=[1.15, 1.1, 0.9, 1.1]))
+    # (a) window AUC per candidate, B2 s1 / s0 and the three other reads
+    A = A[~A.feature.isin(["combo_x", "right"])].reset_index(drop=True)
+    y = np.arange(len(A))[::-1]
+    for c, col, m, nm in (("JTN-L18-s1_auc_win", "#BBBBBB", "o", "JTN s1"), ("JTN-L18-s0_auc_win", "#BBBBBB", "s", "JTN s0"),
+                          ("RSG-L18-s0_auc_win", "#BBBBBB", "^", "RSG s0"), ("s0_auc_win", C["sky_blue"], "D", "B2 s0"), ("s1_auc_win", C["vermillion"], "o", "B2 s1")):
+        ax[0].scatter(A[c], y, s=16, color=col, marker=m, label=nm, zorder=3)
+    ax[0].axvline(AUC_LINE, color="k", lw=0.8, ls="--")
+    ax[0].axvline(0.5, color="#999999", lw=0.6)
+    ax[0].set_yticks(y, [f"{f} ({k[:3]})" for f, k in zip(A.feature, A.kind)], fontsize=7)
+    ax[0].set_xlabel("window AUC, failing vs passing sharp turns")
+    ax[0].legend(fontsize=6, loc="center right", bbox_to_anchor=(1.0, 0.55), framealpha=0.95)
+    PS.panel(ax[0], "(a) candidate states (line 0.85)")
+    # (b) window max speed ratio vs the path's max curvature ahead, B2 s1 + s0
+    for sd, mk in (("s1", "o"), ("s0", "D")):
+        G = frame(F, B2[sd])
+        x = G[["kmax1m", "ratio"]].where(G.dom, np.nan)
+        for role, col, nm in (("pdec", "#AAAAAA", "passes"), ("pre", C["vermillion"], "lateral zero")):
+            w = x[G[role]].groupby(G.id[G[role]]).max()
+            ax[1].scatter(w.kmax1m, w.ratio, s=12 if role == "pdec" else 20, color=col, marker=mk, alpha=0.8 if role == "pre" else 0.6,
+                          label=f"B2 {sd} {nm}", zorder=3 if role == "pre" else 2)
+    ax[1].axvline(0.108, color="k", lw=0.8, ls="--")
+    ax[1].axhline(1.05, color="#999999", lw=0.6, ls=":")
+    ax[1].set_xlabel("max curvature of the human path, next 20 m (1/m)")
+    ax[1].set_ylabel("ego / human speed (window max)")
+    ax[1].legend(fontsize=6, loc="upper right")
+    PS.panel(ax[1], "(b) tight turns fail, at any speed ratio")
+    # (c) BEV of one target: human, B2 s1, garage
+    i = [k for k in H if k.endswith("3f805a18")][0]
+    tr = Track(H[i])
+    ax[2].plot(tr.P[:, 0], tr.P[:, 1], color="#222222", lw=3.2, alpha=0.3, label="human (log)")
+    for who, col, nm in ((B2["s1"], C["vermillion"], "B2 s1"), ("garage", C["blue"], "garage 0014")):
+        g = Tr[(Tr.tag == who) & (Tr.id == i)].sort_values("t")
+        ax[2].plot(g.x, g.y, color=col, lw=1.4, label=nm)
+    te = F[(F.tag == B2["s1"]) & (F.id == i)].t_ev.iloc[0] / 1e6
+    g = Tr[(Tr.tag == B2["s1"]) & (Tr.id == i)]
+    j = (g.t - te).abs().idxmin()
+    ax[2].plot(g.x[j], g.y[j], "x", color="k", ms=7, mew=1.5, label="B2 exit (scored)")
+    ax[2].plot(tr.P[0, 0], tr.P[0, 1], "o", color="k", ms=4, label="start")
+    ax[2].set_aspect("equal", adjustable="datalim")
+    ax[2].set_xticks([]), ax[2].set_yticks([])
+    ax[2].legend(fontsize=6, loc="best")
+    PS.panel(ax[2], "(c) 3f805a18, 99 deg right turn")
+    # (d) executed turn: turn-in lag and outward offset, medians with IQR
+    grp = [("B2, B2 fails", (R.who == "B2") & R.b2_latzero), ("garage, B2 fails", (R.who == "garage") & R.b2_latzero),
+           ("B2, B2 passes", (R.who == "B2") & ~R.b2_latzero & (R.b2_score >= 1 - 1e-4)),
+           ("garage, B2 passes", (R.who == "garage") & ~R.b2_latzero & (R.b2_score >= 1 - 1e-4))]
+    cols = [C["vermillion"], C["blue"], "#E8A27A", C["sky_blue"]]
+    for k, (met, nm) in enumerate((("turnin_lag", "turn-in lag (m)"), ("out_apex", "outward at apex (m)"), ("out_max", "max outward (m)"))):
+        for j, ((lab, m), col) in enumerate(zip(grp, cols)):
+            q = R.loc[m, met].quantile([0.25, 0.5, 0.75])
+            xx = k + (j - 1.5) * 0.2
+            ax[3].bar(xx, q[0.5], 0.18, color=col, label=lab if k == 0 else None)
+            ax[3].errorbar(xx, q[0.5], yerr=[[q[0.5] - q[0.25]], [q[0.75] - q[0.5]]], color="k", lw=0.7, capsize=1.5)
+        ax[3].text(k, ax[3].get_ylim()[0], "", ha="center")
+    ax[3].set_xticks(range(3), ["turn-in lag\n(m, + = late)", "outward at\napex (m)", "max outward\n(m)"], fontsize=7)
+    PS.zero_line(ax[3])
+    PS.bars(ax[3])
+    ax[3].set_ylim(-3.6, 3.6)
+    ax[3].legend(fontsize=6, loc="upper right", ncol=2, framealpha=0.95)
+    PS.panel(ax[3], "(d) executed sharp turns, B2 s1 + s0\nwindows vs garage (median, IQR)")
+    fig.tight_layout(w_pad=0.8)
+    print(PS.save(fig, RES / "figs/turn_sep"))
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -502,4 +578,4 @@ if __name__ == "__main__":
     sp.add_parser("garage")
     sp.add_parser("fig")
     a = ap.parse_args()
-    dict(traces=cmd_traces, pool=cmd_pool, feat=cmd_feat, auc=cmd_auc, garage=cmd_garage, fig=lambda a: cmd_fig(a))[a.cmd](a)
+    dict(traces=cmd_traces, pool=cmd_pool, feat=cmd_feat, auc=cmd_auc, garage=cmd_garage, fig=cmd_fig)[a.cmd](a)
