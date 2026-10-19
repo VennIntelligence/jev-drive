@@ -51,16 +51,43 @@ Chosen: **`--on-free-clear 15,2`**. A 2 s headway is the usual following rule. 2
   gate.
 - Command diffs: [cmd_diff.txt](cmd_diff.txt) (B's DRY command = its logged training command; B1 / B2 / full differ only in the stated tokens).
 
-## Status (submitted 2026-10-19 17:55 box time; nothing read yet)
+## Pilot results (1 000 steps against JTX1K-L18-s0; [pilot_B1.md](pilot_B1.md), [pilot_B2.md](pilot_B2.md), [arena_windows.csv.gz](arena_windows.csv.gz))
 
-- Smoke passed before the chain: B's command, 60 steps eager, is bit-identical on 6fec7b27 and this code ([identity.json](identity.json)).
-  B1's smoke is finite, and its FREE-M fire share is 0.095 -> 0.083 at step 0 and 0.102 -> 0.084 over the run ([smoke.json](smoke.json)).
-- Trains: B1 `1019-175426-1cbe`, B2 `1019-175439-9a03`, full B `1019-175451-43de`. Training priority 12, reads 13. Every id is in box
-  `runs/defect_fix/stand_b/jobs.txt` / `stages.txt`.
-- **Summary jobs** (`runs/defect_fix/stand_b/summary_ids.txt`):
-  - `stb-psum` **1019-175450-6192**: B1 / B2 pilot. It writes `pilot_B1.md`, `pilot_B2.md`, `arena_B*.json`, `drift_B*.json`,
-    `arena_windows.csv.gz`, `diag_pilot.json` and `diag_pilot_windows.csv` here, and `runs/defect_fix/stand_b/PILOT_DONE`.
-  - `stb-fsum` **1019-175506-bf15**: full B. It writes `full.md` / `full.json`, `arena_full.json`, `arena_windows_full.csv.gz` and
-    `pai281_accgap.md` here, and `runs/defect_fix/stand_b/FULL_DONE`.
-- Expected finish if the pool stays free: psum around 18:40, fsum around 20:00 (box time).
-- Still to do in the write-up: the frozen-pool subset PCS on the Mac for both summaries, the pass / fail per supplement 19, and a decision row.
+| | control JTX1K | B (W 0.002) | B1 (gate 15 m / 2 s) | B2 (W 0.001) | line |
+|:--|--:|--:|--:|--:|:--|
+| frozen-pool PCS, 716-window subset (Mac) | 1173 | 1259 | 1260 | 1246 | arm >= control + 30 |
+| held 460 zeros | 37 | 45 | 45: FAIL | 42: FAIL | <= control + 2 (= 39) |
+| held 460 front collisions | 2 | 7 | 5: FAIL (line 4) | 3: ok | <= control + 2 |
+| arena subset (753) paired mean | | +0.043 | +0.0455 [+0.0046, +0.1103] | +0.0444 [+0.0036, +0.1093] | >= +0.01 |
+| k = 9 speed ratio | 0.845 | 0.948 | 0.937 | 0.907 | descriptive |
+| turn drift k11-17 (m, descriptive) | | | -0.070 (CI spans 0) | **-0.176** [-0.296, -0.032] | drift guard (all k11-17, > -0.05): ok in both |
+
+- B1 and B2 both keep the static gain (static zeros 74 -> 43, red light at the line, no lead 62 -> 37). Neither passes: B1 leaves the held
+  zeros and front collisions where B had them, B2 cuts front collisions 7 -> 3 but still has held zeros 42 (line 39).
+- B2 drifts right in turns (-0.18 m), only in turns; the drift guard itself (all k11-17: B1 -0.020, B2 -0.025) passes in both.
+
+## Full-length B (`STANDFMX-L18-s0`, 9 500 steps; [full.md](full.md), [pai281_accgap.md](pai281_accgap.md), [arena_windows_full.csv.gz](arena_windows_full.csv.gz))
+
+| read | STANDFMX-L18-s0 | reference |
+|:--|--:|--:|
+| frozen-pool PCS, all 2 106 items (Mac) | **1368** (mean 0.9368) | JTN-L18-s1 1247 (0.8933), JTN-L18-s0 1198, RSG 1106 |
+| native arena held (18 chunks), mean / paired vs JTN-L18-s1 | 0.9350 / **+0.0441 [+0.0203, +0.0715]** | JTN-L18-s1 0.8909 |
+| arena zeros | 100 | 210 (JTN-L18-s1) |
+| arena AF-front | 3 | 7 |
+| k = 9 speed ratio | **1.129** (overshoot) | 0.912 |
+| held 460 zeros / front collisions | 53 / 11 | 36 (JTN-L18-s1) |
+| held 460 paired vs JTN-L18-s1 | -0.0436 [-0.068, -0.023] | |
+| PAI 281 ACC + GAP paired vs NTV0 + ACC + GAP | -0.0472 [-0.078, -0.018], zeros +12 | NTV0 0.7434, 59 zeros |
+| PAI AF-front | 9 | 3 (NTV0) |
+
+Reading (supplement 19.4 rules): the arena gain and PCS hold at full length (best of any model so far, stop3-level, without a hold), but
+held 460 and PAI are worse than the references (overspeed and front collisions), so the guard leak persists at full length. 1 seed; a read,
+not an adoption gate.
+
+## Status
+
+- Pilots and full-length B were read on 2026-10-19 (summaries `stb-psum`, `stb-fsum`). The nuPlan native arena and PCS are the best of any
+  model so far, but held 460 and PAI are worse. Neither B1 nor B2 passes the pilot rule.
+- Full-length B2 `STANDFMXH-L18-s0` (supplement 19.7; FREE-M W 0.001, everything else the same command as the full B, diff in
+  [cmd_diff_H.txt](cmd_diff_H.txt), smoke in [smoke_H.json](smoke_H.json)) is running to test whether the lower dose keeps the static hold and
+  the PCS while removing the overshoot. Outputs when done: `full_H.md`, `arena_windows_full_H.csv.gz`, `pai281_accgap_H.md`, `arena_full_H.json`.

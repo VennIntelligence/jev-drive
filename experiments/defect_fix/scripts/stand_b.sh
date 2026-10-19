@@ -77,7 +77,7 @@ smokeh)
   [[ ! -e $DATA_DIR/runs/op_parity/runs/STBGG-H/ckpt-final.pt ]] || die "STBGG-H exists"
   FE=("${TRN[@]}" --env JEV_RM_EAGER=1 --timeout-h 1)
   c=$(sub stb-gg-h "${FE[@]}" -- bash -c "$(cmd FH STBGG-H 60 50)") || exit 1
-  e=$(sub stb-smokecheck-h --after $c --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $SB smoke --b STBGG-new --b1 STBGG-H --out $RES/smoke_H.json") || exit 1
+  e=$(sub stb-smokecheck-h --after $c --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $SB smoke --b STBGG-new --b1 STBGG-H --finite-only --out $RES/smoke_H.json") || exit 1
   echo "$(date '+%F %T') smokeh: run $c check $e" | tee -a $S/stages.txt; echo "$e" ;;
 chainh)
   AF=${2:-}; [[ ! -e $DATA_DIR/runs/op_parity/runs/$TH/ckpt-final.pt ]] || die "$TH exists"

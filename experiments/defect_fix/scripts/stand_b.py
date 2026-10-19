@@ -464,6 +464,9 @@ def cmd_smoke(a):
     r = dict(b=a.b, b1=a.b1, finite=bool(fin), steps=len(st), first=[b[k][st[0]], b1[k][st[0]]] if st else None,
              mean=[float(np.mean([b[k][i] for i in st])), float(np.mean([b1[k][i] for i in st]))] if st else None)
     r["pass_"] = bool(fin and st and r["first"][1] <= r["first"][0] and r["mean"][1] <= r["mean"][0])
+    if a.finite_only:  # a dose change (B2 at full length) has no fire-share criterion: finite loss on the common steps is the whole check
+        r["criterion"] = "finite only (fire share is not expected to fall under a lower dose)"
+        r["pass_"] = bool(fin and st)
     Path(a.out).write_text(json.dumps(r, indent=1))
     print(json.dumps(r, indent=1))
     raise SystemExit(0 if r["pass_"] else 2)
@@ -506,6 +509,7 @@ def main():
     q = sp.add_parser("smoke")
     q.add_argument("--b", required=True)
     q.add_argument("--b1", required=True)
+    q.add_argument("--finite-only", action="store_true")
     q.add_argument("--out", required=True)
     q = sp.add_parser("full")
     q.add_argument("--tag", required=True)
