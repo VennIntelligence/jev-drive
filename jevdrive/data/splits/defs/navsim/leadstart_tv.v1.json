@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "leadstart_tv",
+ "version": 1,
+ "unit": "token",
+ "n": 12900,
+ "sha256": "32a56286398aa1fac3be57acfb6b1c0ff8e21a9d289ce228b429ea9e202276d0",
+ "origin": "LEADSTART-PROBE tvsel (experiments/defect_fix/scripts/leadstart_probe.py): trainval frames of navsim/tv-clean-train-logs where the ego stands and a stopped lead <= 15 m starts (3 s before to 2 s after its 0.3 m onset); rows $DATA_DIR/runs/defect_fix/leadstart_probe/tv/rows.npz",
+ "status": "frozen",
+ "used_by": [
+  "experiments/defect_fix"
+ ],
+ "notes": "probe frames only; never trained, never an evaluation set",
+ "members_file": "leadstart_tv.v1.txt.gz"
+}

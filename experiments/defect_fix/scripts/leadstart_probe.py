@@ -479,6 +479,9 @@ def cmd_probe(a):
                 sc, tau = np.full(n, np.nan), []
                 for k in range(FOLDS):
                     tr, te = fold != k, fold == k
+                    if not te.any():                                   # a fold without logs of this source (R2: 27 logs)
+                        tau.append(np.nan)
+                        continue
                     if kind == "lin":
                         s_tr, s_te = RS.fit_lin(X[tr], y[tr], X[te])
                     else:
