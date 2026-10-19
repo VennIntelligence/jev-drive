@@ -4,8 +4,8 @@
 #   bn.sh select                 job body: bn.py select (windows, split, lists)
 #   bn.sh smoke                  staged launch 1: the 10-window smoke list x 4 models -> pick (no gap) -> geo -> tok -> route / anchor / strip ->
 #                                target (pool BNSM<k>, never merged) -> $W/smoke_done
-#   bn.sh launch                 staged launch 2 + the control: control BNC2K-L18-s1 (JTN-L18-s1 + 2 000 steps of JTN's recipe, on1_JT / JT00)
-#                                -> its reads; the first two roll chunks x 4 models -> stage2 checklist (bn.py stage2; on pass it runs `bn.sh rest`)
+#   bn.sh control                the control BNC2K-L18-s1 (JTN-L18-s1 + 2 000 steps of JTN's recipe, on1_JT / JT00) -> its reads
+#   bn.sh launch                 staged launch 2 (+ the control if not yet in): the first two roll chunks x 4 models -> stage2 checklist (bn.py stage2; on pass it runs `bn.sh rest`)
 #   bn.sh rest                   the remaining roll chunks -> pick (gap 0.2), which runs `bn.sh post`
 #   bn.sh post                   per shard geo -> tok -> route / anchor / strip; merge (target, on1_BNX, .a, weights BNX, command diff) ->
 #                                BNX2K-L18-s1 -> its reads -> gate (bn.py gate) -> $W/DONE
@@ -61,16 +61,22 @@ smoke)
   echo "$(date '+%F %T') smoke: rolls ${rr[*]} pick $p tok/anchor/strip ${ids[*]} target $t" | tee -a $W/stages.txt ;;
 launch)
   [[ -f $S/meta.json && -f $W/smoke_ok ]] || die "select + an inspected smoke first ($W/smoke_ok)"
-  for x in $ARM $CTRL; do [[ ! -e $CK/$x/ckpt-final.pt ]] || die "$x exists"; done
-  traincmd $CTRL on1_JT JT00
-  c=$(sub bn-train-$CTRL "${FT[@]}" -- bash $ME train $CTRL) || exit 1
-  cr=($(reads $CTRL $c)) || exit 1
+  [[ ! -e $CK/$ARM/ckpt-final.pt ]] || die "$ARM exists"
+  [[ -f $W/ctrl_reads.txt ]] || bash $ME control || exit 1
+  cr=($(cat $W/ctrl_reads.txt)); c=$(awk -v n=bn-train-$CTRL '$2 == n {print $1}' $W/jobs.txt)
   rr=($(rolls c0 c1)) || exit 1
   n=$(python3 -c "import json; print(json.load(open('$S/meta.json'))['kept'] * 4)")
   runs=$(for x in c0 c1; do for t in $TAGS; do echo -n "$W/roll/$t/$x/run "; done; done)
   g=$(sub bn-stage2 --after $(csv ${rr[@]}) --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 --env CTRL_READS=$(csv ${cr[@]}) -- \
       bash -c "$AP $PY stage2 --runs $runs --total-rollouts $n > $W/stage2.json && bash $ME rest") || exit 1
   echo "$(date '+%F %T') launch: control $c reads ${cr[*]}; stage-2 rolls ${rr[*]}; stage2 + rest $g" | tee -a $W/stages.txt ;;
+control)  # the control arm (independent of the new rows): training -> its reads; ids in $W/ctrl_reads.txt
+  [[ ! -e $CK/$CTRL/ckpt-final.pt && ! -f $W/ctrl_reads.txt ]] || die "$CTRL exists"
+  traincmd $CTRL on1_JT JT00
+  c=$(sub bn-train-$CTRL "${FT[@]}" -- bash $ME train $CTRL) || exit 1
+  cr=($(reads $CTRL $c)) || exit 1
+  echo "${cr[*]}" > $W/ctrl_reads.txt
+  echo "$(date '+%F %T') control: train $c reads ${cr[*]}" | tee -a $W/stages.txt ;;
 rest)     # run by the stage2 job (CTRL_READS: the control's read ids)
   ch=(); for j in $(seq 2 $(($(nchunks) - 1))); do ch+=(c$j); done
   rr=($(rolls ${ch[@]})) || exit 1
@@ -173,5 +179,5 @@ PY
     [[ -n $f ]] && { echo "FAILED: $f"; exit 1; }
     sleep 120
   done ;;
-*) sed -n 2,14p $0; exit 2 ;;
+*) sed -n 2,15p $0; exit 2 ;;
 esac
