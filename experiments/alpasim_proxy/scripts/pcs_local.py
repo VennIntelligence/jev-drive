@@ -7,7 +7,8 @@ Inputs: `arena.py collect` tables of every arena read root on the box (rows_*.cs
 
   pcs_local.py build --rows DIR --out DIR          held valid windows x subjects -> DIR/{scores.csv.gz, types.csv.gz, windows.csv.gz}
   pcs_local.py fit --data DIR --out DIR            official-setting fits (pool variants, 1PL, seeds) -> DIR/fits/<variant>.npz + fits.csv
-  pcs_local.py score --rows ROWS.csv.gz            a new arena held read (arena.py collect) scored against the frozen board-mix items
+  pcs_local.py score --rows ROWS.csv.gz [--subset] a new arena held read (arena.py collect) scored against the frozen board-mix items
+                                                   (--subset: MAP on the windows every tag has, e.g. a 6-chunk read; also slow / near-1 counts)
   pcs_local.py report --data DIR --out DIR [--primary POOL]  calibration against the board, item parameters by stratum, deficit decomposition,
                                                    counterfactuals, subject-count curve -> DIR/report.md + tables
 
@@ -415,10 +416,19 @@ def cmd_score(a):
     sc, _, _ = load(HERE.parent / "results/pcs_local")
     z = Scored(dict(np.load(a.fit, allow_pickle=True)), sc)
     R = pd.read_csv(a.rows)
+    keep = None
+    if a.subset:                                                     # NR1STAND: only the windows every tag of the table has (a chunk subset)
+        keep = set.intersection(*(set(g.id[g.score.notna()]) for _, g in R.groupby("tag"))) & set(z.items)
     for t, g in R.groupby("tag"):
         y = g.drop_duplicates("id").set_index("id").score.reindex(z.items).to_numpy(float)
+        if keep is not None:
+            y = np.where(np.isin(z.items, list(keep)), y, np.nan)
         miss = int(np.isnan(y).sum())
-        print(f"{t}: windows {len(z.items) - miss} / {len(z.items)}, mean {np.nanmean(y):.4f}, " + ("incomplete (needs every held arena window)" if miss else f"PCS {z.pcs_of(y):.0f}"))
+        cnt = f", slow {int((g.type == 'slow').sum())}, near-1 {int(((g.score >= 0.98) & (g.score <= 0.999)).sum())}" if "type" in g else ""
+        if keep is not None:                                         # fixed items, MAP on the subset's items only (NaN = not observed)
+            print(f"{t}: subset windows {len(z.items) - miss} / {len(z.items)}, mean {np.nanmean(y):.4f}{cnt}, subset PCS {z.pcs_of(y):.0f}")
+        else:
+            print(f"{t}: windows {len(z.items) - miss} / {len(z.items)}, mean {np.nanmean(y):.4f}, " + ("incomplete (needs every held arena window)" if miss else f"PCS {z.pcs_of(y):.0f}"))
 
 
 def main():
@@ -429,6 +439,7 @@ def main():
     r = s.add_parser("report"); r.add_argument("--data", required=True); r.add_argument("--out", required=True); r.add_argument("--primary", default="boardmix")
     c = s.add_parser("subcurve"); c.add_argument("--data", required=True); c.add_argument("--out", required=True); c.add_argument("--reps", type=int, default=1)
     k = s.add_parser("score"); k.add_argument("--rows", required=True); k.add_argument("--fit", default=str(HERE.parent / "results/pcs_local/boardmix.npz"))
+    k.add_argument("--subset", action="store_true", help="score on the windows every tag has (a chunk subset); not the board's complete set")
     a = p.parse_args()
     dict(build=cmd_build, fit=cmd_fit, report=cmd_report, subcurve=cmd_subcurve, score=cmd_score)[a.cmd](a)
 

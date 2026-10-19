@@ -217,6 +217,8 @@ def cue_strata(src, tag, ctl):
     C_ = Cn.reindex(ids)
     groups = {f"static: {c}": S_.index[(S_.stratum == "static") & (NR.cue(S_, Cn) == c)] for c in
               ("red light at the line, no lead", "light of unknown state, no lead", "lead <= 8 m", "lead 8-30 m", "no light, no lead")}
+    out_cnt = {t: dict(slow=int((T.loc[ids, t] == "slow").sum()), near1=int(((X.loc[ids, t] >= 0.98) & (X.loc[ids, t] <= 0.999)).sum()))
+               for t in (tag, ctl)}
     groups["red-line launch (render-red per d380)"] = ids[C_.red_go_t.notna().values & (S_.stratum != "static").values]
     out = {}
     for k, g in groups.items():
@@ -226,7 +228,7 @@ def cue_strata(src, tag, ctl):
         p = stats.paired(x, y, groups=Sx.log.reindex(g).values) if len(g) > 1 else dict(mean=float(x[0] - y[0]), lo=np.nan, hi=np.nan)
         out[k] = dict(windows=len(g), a=float(x.mean()), b=float(y.mean()), diff=p["mean"], lo=p["lo"], hi=p["hi"], zeros_a=int((x == 0).sum()),
                       zeros_b=int((y == 0).sum()))
-    return out
+    return out, out_cnt
 
 
 def cmd_pilot(a):
@@ -250,7 +252,7 @@ def cmd_pilot(a):
     k9 = Ar["k9"]
     dr = next(iter(Dr.values()))
     yn = lambda x: "ok" if x else "FAIL"  # noqa: E731
-    cs = cue_strata(a.ext, a.tag, a.ctl)
+    cs, cnt = cue_strata(a.ext, a.tag, a.ctl)
     L = [f"# NR1STAND pilot ({a.tag} against {a.ctl}; NR1 prereg supplement 17; native reads)", "",
          f"| | {a.ctl} (control) | {a.tag} | line |", "|:--|--:|--:|:--|",
          f"| held 460 zeros | {H[a.ctl]['zeros']} | {H[a.tag]['zeros']} | <= control + 2: {yn(g['held_zeros'])} |",
@@ -264,6 +266,8 @@ def cmd_pilot(a):
          f"| arena subset ({Ar['windows']} windows) mean / zeros | {Ar['mean_b']:.4f} / {Ar['zeros_b']} | {Ar['mean_a']:.4f} / {Ar['zeros_a']} | "
          f"paired {Ar['diff']:+.4f} [{Ar['lo']:+.4f}, {Ar['hi']:+.4f}] >= +0.01: {yn(g['arena_win'])} |",
          "", "Description:", "",
+         f"- arena subset partials (control -> arm; d382): slow (progress < 0.8) {cnt[a.ctl]['slow']} -> {cnt[a.tag]['slow']}, "
+         f"near-1 (0.98-0.999) {cnt[a.ctl]['near1']} -> {cnt[a.tag]['near1']}; frozen-pool PCS: pcs_local.py score --subset on arena_windows.csv.gz (Mac)",
          f"- arena subset k = 9 speed ratio (median v / v_h): {k9['b']:.4f} -> {k9['a']:.4f}, diff {k9['diff']:+.4f} [{k9['ci'][0]:+.4f}, {k9['ci'][1]:+.4f}]",
          "- held 460 closed-loop lateral drift (left +, arm - control, log-clustered CI): " + ", ".join(
              f"{k} {v['mean']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}] ({v['n']})" for k, v in dr.items()),
@@ -280,7 +284,7 @@ def cmd_pilot(a):
          "", "Gates: " + ", ".join(f"{k} {yn(v)}" for k, v in g.items()), "", f"**Verdict: {verdict}**", ""]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text("\n".join(L))
-    Path(a.out).with_suffix(".json").write_text(json.dumps(dict(tag=a.tag, ctl=a.ctl, wait=W, held=H, arena=Ar, drift=Dr, cue=cs, gates=g, verdict=verdict),
+    Path(a.out).with_suffix(".json").write_text(json.dumps(dict(tag=a.tag, ctl=a.ctl, wait=W, held=H, arena=Ar, drift=Dr, cue=cs, partials=cnt, gates=g, verdict=verdict),
                                                            indent=1, default=str))
     print("\n".join(L))
     print("VERDICT", verdict)

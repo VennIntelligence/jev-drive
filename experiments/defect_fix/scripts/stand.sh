@@ -4,7 +4,7 @@
 #   stand.sh check                 the DRY commands of both arms against JTNS1K-L18-s0's -> $S/cmd_*.txt, results/stand/cmd_diff.txt
 #   stand.sh pre <old rev>         offline gate (CPU), switch-off identity (60 steps eager, <old rev> vs this code), dose (frozen init, 50 steps)
 #                                  -> results/stand/{gate,identity,dose}.json; prints the three ids
-#   stand.sh pilot <after ids>     STANDFR1K-L18-s0 (C, + d365's FREE at 0.004 / 0.8), STAND1K-L18-s0 (A), STANDFM1K-L18-s0 (B; env
+#   stand.sh pilot <after ids>     STANDFM1K-L18-s0 (B), STANDFR1K-L18-s0 (C, + d365's FREE at 0.004 / 0.8), STAND1K-L18-s0 (A; env
 #                                  ARMS_RUN picks a subset, order = priority): train (checks gate / identity / dose first), wait set v2, held 460
 #                                  @18, arena subset (6 chunks); then extract, arena, drift, per-arm summary
 #   job bodies: gate | dose | train <arm> | sum
@@ -12,8 +12,8 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 O=$DATA_DIR/runs/defect_fix; S=$O/stand; J=$O/jt; ME=experiments/defect_fix/scripts/stand.sh; PY=experiments/defect_fix/scripts/stand.py
 FM=experiments/defect_fix/scripts/free_m.py; TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; V=.venv/bin/python
 JT=experiments/defect_fix/scripts/jt.sh; LAT=$O/lat/L18NR1v2; RES=experiments/defect_fix/results/stand; CTL=JTNS1K-L18-s0; SUB="0 3 6 9 12 15"
-declare -A TAG=([A]=STAND1K-L18-s0 [B]=STANDFM1K-L18-s0 [C]=STANDFR1K-L18-s0) LAB=([A]=STAND [B]=STANDFM [C]=STANDFR) TPR=([A]=10 [B]=11 [C]=10)
-ARMS="C A B"
+declare -A TAG=([A]=STAND1K-L18-s0 [B]=STANDFM1K-L18-s0 [C]=STANDFR1K-L18-s0) LAB=([A]=STAND [B]=STANDFM [C]=STANDFR) TPR=([A]=11 [B]=10 [C]=10)
+ARMS="B C A"
 FREEB="--on-free 0.002 --on-free-mode move --on-free-frac 0.95"; FREEC="--on-free 0.004"
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)
 mkdir -p $S/pool $RES
@@ -92,6 +92,8 @@ sum)     # after every read: extract (control + both arms), arena per arm, drift
     $AP $PY drift --follow $S/follow --a ${LAB[$A]}@18 --b JTNS1K@18 --out $S/drift_$A.json || die "drift $A"
     cp $S/arena_$A.json $S/drift_$A.json $RES/
     $TR $PY pilot --tag $T --ctl $CTL --arena $S/arena_$A.json --drift $S/drift_$A.json --ext $S/ext --out $RES/pilot_$A.md | tee $S/pilot_$A.txt || die "summary $A"; done
+  $V -c "import pandas as pd; w = pd.read_parquet('$S/ext/win.parquet'); w[['tag', 'id', 'score', 'type']].to_csv('$RES/arena_windows.csv.gz', index=False)" \
+    || die "window export"   # the frozen-pool PCS (pcs_local.py score --subset) runs on the Mac from this
   date '+%F %T' > $S/PILOT_DONE ;;
 *) sed -n 2,9p $0; exit 2 ;;
 esac
