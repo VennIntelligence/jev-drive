@@ -165,7 +165,7 @@ def cmd_fetch(a):
         jobs.append((f"labels/egomotion/egomotion.chunk_{ch:04d}.zip", [f"{c}.egomotion.parquet" for c in cl], SAMPLE / "egomotion"))
     with ThreadPoolExecutor(a.workers) as ex:
         nb = sum(ex.map(lambda j: retry(fetch_zip_members, *j, budget), jobs))
-        cal = list(ex.map(lambda k: calib_file(*k, budget), [(k, int(c)) for c in s.chunk.unique() for k in ("camera_intrinsics", "sensor_extrinsics")]))
+        cal = list(ex.map(lambda k: retry(calib_file, *k, budget), [(k, int(c)) for c in s.chunk.unique() for k in ("camera_intrinsics", "sensor_extrinsics")]))
     miss = [c for c in s.clip_id if not (SAMPLE / "camera" / f"{c}.{CAM}.mp4").exists()]
     rep = dict(clips=len(s), chunks=int(s.chunk.nunique()), bytes_transferred=int(nb), budget_counted=int(budget.n), calib_files=len(cal),
                missing_video=miss, disk_bytes=int(sum(f.stat().st_size for f in SAMPLE.rglob("*") if f.is_file())), seconds=round(time.time() - t0))
