@@ -3,7 +3,7 @@
 # and the speed loop. Box, repo root; every GPU job goes through the pool (priority $PRIO, 12).
 #   pai_input_loop.sh submit   N0 (8 chunks, at once), KA c000 -> gate -> KA c001..c007 + KN (8 chunks)
 #   pai_input_loop.sh post     after the reads: rf_tax extract of the four arms, N0's driver messages, then cf (GPU) and sum
-#   pai_input_loop.sh gate | extract <arm> | msgs | cf | sum      job bodies
+#   pai_input_loop.sh gate | extract <arm> | msgs | cf <i/n> | sum      job bodies
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 T=NTV0-L18-s0; O=$DATA_DIR/runs/route_follow/pai_input_loop; ME=experiments/route_follow/scripts/pai_input_loop.sh; PRIO=${PRIO:-12}
 A0=$DATA_DIR/runs/defect_fix/pai_accgap/$T; CH=$A0/chunks; RF=experiments/route_follow/scripts; R=experiments/route_follow/results/pai_input_loop
@@ -43,9 +43,9 @@ post)
   after=$(cat $O/{N0,KA,KN}/submit.*.txt | ids /dev/stdin); e=()
   for arm in A0 N0 KA KN; do e+=($(sub pil-ex-$arm --after $after --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME extract $arm)) || exit 1; done
   m=$(sub pil-msgs --after $after --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME msgs)
-  c=$(sub pil-cf --after ${e[1]},$m --vram 12 --cpu 8 --ram 60 --timeout-h 4 -- bash $ME cf)
-  s=$(sub pil-sum --after $(IFS=,; echo "${e[*]}"),$c --vram 0.1 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME sum)
-  echo "$(date '+%F %T') post: extract ${e[*]} msgs $m cf $c sum $s" | tee -a $O/stages.txt ;;
+  c=(); for i in 0 1 2 3 4 5 6 7; do c+=($(sub pil-cf-$i --after ${e[1]},$m --vram 12 --cpu 6 --ram 40 --timeout-h 2 -- bash $ME cf $i/8)) || exit 1; done
+  s=$(sub pil-sum --after $(IFS=,; echo "${e[*]},${c[*]}") --vram 0.1 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME sum)
+  echo "$(date '+%F %T') post: extract ${e[*]} msgs $m cf ${c[*]} sum $s" | tee -a $O/stages.txt ;;
 extract)
   arm=$1; root=$O/$arm; [[ $arm == A0 ]] && root=$A0; mkdir -p $O/tax
   $AP $RF/rf_tax.py extract --runs $(ls -d $root/runs/*/sim) --out $O/tax/$arm.pkl --workers 16 > $O/tax/$arm.log 2>&1 || die "extract $arm" ;;
@@ -64,8 +64,9 @@ with ProcessPoolExecutor(16) as ex:
     print(len(list(ex.map(E.one_msgs, J))), "scenes ->", f"{O}/msgs", flush=True)
 PY
   ;;
-cf)
-  $OP $RF/pil_cf.py --msgs $O/msgs --tax $O/tax/N0.pkl --drive "$O/N0/runs/*/driver/drive.jsonl" --tag $T --out $O/cf.pkl || die "cf" ;;
+cf)    # shard i/n of N0's scenes
+  mkdir -p $O/cf; $OP $RF/pil_cf.py --msgs $O/msgs --tax $O/tax/N0.pkl --drive "$O/N0/runs/*/driver/drive.jsonl" --tag $T --serve "$FIX" \
+    --shard $1 --out $O/cf/s${1%/*}.pkl || die "cf $1" ;;
 sum)
   mkdir -p $R
   .venv/bin/python experiments/defect_fix/scripts/pai281.py --j $O/KA --jl "KW+ACC+GAP" --ref $A0 --rl "ACC+GAP" --out $R/pai281_KA_vs_A0.md || die "pai281 KA"
