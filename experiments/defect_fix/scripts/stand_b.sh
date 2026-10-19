@@ -71,7 +71,7 @@ checkh)
     echo "== ${TAG[B]} -> ${TAG[B2]} (pilot B2; the FREE-M flags must match FH's)"; diff <(tr ' ' '\n' < $S/cmd_B.txt) <(tr ' ' '\n' < $S/cmd_B2.txt); } > $RES/cmd_diff_H.txt
   cat $RES/cmd_diff_H.txt
   n=$(diff <(tr ' ' '\n' < $S/cmd_F.txt) <(tr ' ' '\n' < $S/cmd_FH.txt) | grep -c '^>'); [[ $n == 2 ]] || die "FH: $n new tokens, want 2 (tag, dose)"
-  diff <(tr ' ' '\n' < $S/cmd_F.txt) <(tr ' ' '\n' < $S/cmd_FH.txt) | grep '^>' | tr -d '> ' | sort | tr '\n' ' ' | grep -q "0.001 $TH" || die "FH diff is not tag + 0.001"
+  [[ "$(diff <(tr ' ' '\n' < $S/cmd_F.txt) <(tr ' ' '\n' < $S/cmd_FH.txt) | grep '^>' | cut -c3- | paste -sd' ')" == "$TH 0.001" ]] || die "FH diff is not tag + 0.001"
   echo "diff ok" ;;
 smokeh)
   [[ ! -e $DATA_DIR/runs/op_parity/runs/STBGG-H/ckpt-final.pt ]] || die "STBGG-H exists"
