@@ -114,7 +114,8 @@ def nu_rows(tab, agent):
     pre = np.array([n.split(":")[1] for n in names])
     jobs, poses = defaultdict(list), np.full((len(names), 8, 3), np.nan, np.float32)
     for p, d in NU_ROWS.items():
-        z = np.load(DATA / "runs/onpol_nuplan/rows" / d / "meta.npz", allow_pickle=True)
+        zz = np.load(DATA / "runs/onpol_nuplan/rows" / d / "meta.npz", allow_pickle=True)
+        z = {k: zz[k] for k in ("names", "speed", "poses", "log", "t_log_us", "lead", "gpath")}     # once: npz members are re-read per access
         pos = {n: i for i, n in enumerate(z["names"].astype(str).tolist())}
         rows = np.flatnonzero(S & (pre == p))
         mi = np.array([pos["on:" + names[i].split(":", 2)[2]] for i in rows])
@@ -414,7 +415,8 @@ def probe_rows():
     # PAI: the two caches, labels from the row files
     L = []
     for nm, p in PCACHE.items():
-        z = np.load(p / "tab.npz")
+        zz = np.load(p / "tab.npz")
+        z = {k: zz[k] for k in ("scenes", "sid", "v0", "usable", "after_event", "after_end", "e0", "k", "t0_us", "ego_in")}
         sc = z["scenes"][z["sid"]].astype(str)
         v0 = z["v0"].astype(np.float64)
         inc = z["usable"] & ~z["after_event"] & ~z["after_end"] & (v0 >= V_PROBE) & (np.abs(np.nan_to_num(z["e0"], nan=99)) <= 3.0)
@@ -466,8 +468,9 @@ def cmd_pfeats(a):
         for d, x in rows.items():
             n = len(x["row"])
             if d == "pai":
-                srcs = [(nm, np.load(PCACHE[nm] / "tab.npz"), np.load(PCACHE[nm] / "tok.npy", mmap_mode="r")) for nm in PCACHE]
-                get = lambda i: next((tok[tab["tix"][x["row"][i]]], tab["lht"][x["row"][i]]) for nm, tab, tok in srcs if nm == x["src"][i])  # noqa: E731
+                srcs = {nm: (np.load(PCACHE[nm] / "tab.npz")["tix"], np.load(PCACHE[nm] / "tab.npz")["lht"], np.load(PCACHE[nm] / "tok.npy", mmap_mode="r"))
+                        for nm in PCACHE}
+                get = lambda i: (lambda tx, lh, tok: (tok[tx[x["row"][i]]], bool(lh[x["row"][i]])))(*srcs[str(x["src"][i])])  # noqa: E731
             else:
                 fr = np.load(CR / "on1_JT@warp/front.npy", mmap_mode="r")
                 get = lambda i: (fr[x["row"][i]], False)  # noqa: E731
