@@ -126,6 +126,20 @@ def fetch_zip_members(path: str, members: list[str], dst: Path, budget: Budget) 
     return rf.nbytes
 
 
+def retry(f, *args, tries: int = 6):
+    """f(*args), retried on network errors (the box's name resolution drops out now and then); a budget error is not retried."""
+    import time
+    for k in range(tries):
+        try:
+            return f(*args)
+        except RuntimeError:
+            raise
+        except Exception:
+            if k == tries - 1:
+                raise
+            time.sleep(15 * (k + 1))
+
+
 def calib_file(kind: str, chunk: int, budget: Budget) -> Path:
     """calibration/<kind>/<kind>.chunk_NNNN.parquet: the downloader's copy or the hub cache if present, else fetched (small)."""
     from jevdrive.hfdl import download, hf_url
@@ -150,7 +164,7 @@ def cmd_fetch(a):
         jobs.append((f"camera/{CAM}/{CAM}.chunk_{ch:04d}.zip", [f"{c}.{CAM}.{x}" for c in cl for x in ("mp4", "timestamps.parquet")], SAMPLE / "camera"))
         jobs.append((f"labels/egomotion/egomotion.chunk_{ch:04d}.zip", [f"{c}.egomotion.parquet" for c in cl], SAMPLE / "egomotion"))
     with ThreadPoolExecutor(a.workers) as ex:
-        nb = sum(ex.map(lambda j: fetch_zip_members(*j, budget), jobs))
+        nb = sum(ex.map(lambda j: retry(fetch_zip_members, *j, budget), jobs))
         cal = list(ex.map(lambda k: calib_file(*k, budget), [(k, int(c)) for c in s.chunk.unique() for k in ("camera_intrinsics", "sensor_extrinsics")]))
     miss = [c for c in s.clip_id if not (SAMPLE / "camera" / f"{c}.{CAM}.mp4").exists()]
     rep = dict(clips=len(s), chunks=int(s.chunk.nunique()), bytes_transferred=int(nb), budget_counted=int(budget.n), calib_files=len(cal),
@@ -564,6 +578,9 @@ def cmd_fig(a):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from PIL import Image
+    sys.path.insert(0, str(R_ / "research"))
+    import plot_style as PS
+    PS.apply()
     F = pickle.load(open(RUN / "replay/figs.pkl", "rb"))
     S = pd.read_csv(TOPIC / "results/real_sample.csv").set_index("scene_id")
     keys = sorted(F)
@@ -574,25 +591,26 @@ def cmd_fig(a):
             if S.at[sc, "stratum"] == want and sc not in seen and int(k.split("|")[1]) >= 100:
                 pick.append(k), seen.add(sc)
                 break
-    cols = ("render (source JPEG)", "real (PAI-AV video)", "render: openpilot road frame", "real: road frame, PAI-AV calibration",
-            "real: road frame, NuRec CameraSpec", "|render - real| road frame")
-    fig, ax = plt.subplots(len(pick), len(cols), figsize=(3.2 * len(cols), 1.9 * len(pick)))
+    cols = ("render (source JPEG)", "real (PAI-AV video)", "render: road frame", "real: road frame, PAI-AV calib.",
+            "real: road frame, NuRec spec", "|render - real| road frame")
+    fig, ax = plt.subplots(len(pick), len(cols), figsize=(PS.DOUBLE_COLUMN_IN, 0.62 * len(pick) + 0.3))
     for r, k in enumerate(pick):
         f = F[k]
         src = np.asarray(Image.open(io.BytesIO(f["render_jpeg"])).convert("L"))[::4, ::4] if len(f["render_jpeg"]) else np.zeros_like(f["real"])
         ims = (src, f["real"], f["lumaR"], f["lumaP"], f["lumaN"], np.abs(f["lumaR"].astype(int) - f["lumaP"]))
         for c, im in enumerate(ims):
             ax[r, c].imshow(im, cmap="gray" if c < 5 else "magma", vmin=0, vmax=255 if c < 5 else 120)
-            ax[r, c].set_xticks([]), ax[r, c].set_yticks([])
+            ax[r, c].set_xticks([]), ax[r, c].set_yticks([]), ax[r, c].grid(False)
             if r == 0:
-                ax[r, c].set_title(cols[c], fontsize=8)
+                ax[r, c].set_title(cols[c], fontsize=6)
         sc, kk = k.split("|")
-        ax[r, 0].set_ylabel(f"{S.at[sc, 'stratum']}\n{sc[7:15]} k={kk}", fontsize=7)
-    fig.tight_layout()
-    p = TOPIC / "figs/realgap_frames.png"
+        ax[r, 0].set_ylabel(f"{S.at[sc, 'stratum']}\n{sc[7:15]} k={kk}", fontsize=5.5)
+    fig.subplots_adjust(left=0.05, right=0.995, top=0.95, bottom=0.01, wspace=0.03, hspace=0.06)
+    p = TOPIC / "figs/realgap_frames"
     p.parent.mkdir(exist_ok=True)
-    fig.savefig(p, dpi=110)
-    print(p)
+    fig.savefig(str(p) + ".png", dpi=220, pil_kwargs={"optimize": True})
+    fig.savefig(RUN / "realgap_frames.pdf")                 # the PDF stays on the box
+    print(p, (p.with_suffix(".png")).stat().st_size)
 
 
 def main():
