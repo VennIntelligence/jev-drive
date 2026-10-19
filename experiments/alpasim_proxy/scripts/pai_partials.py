@@ -3,6 +3,7 @@
 side or model plan (plans/2026-10-20-pai-partials-sweep-prereg.md, part 1). Box, repo .venv; stored reads are read, never written.
 
   pai_partials.py decomp --out $DATA_DIR/runs/alpasim_proxy/pai_partials/decomp.csv
+  pai_partials.py sweep --rows rows.csv.gz --fits <dir with fits/, boot_*.csv> --out results/pai_partials/sweep.md   (Mac)
   pai_partials.py value --rows tmp/pai_pcs/rows.csv.gz --fits tmp/pai_pcs/out/fits --decomp results/pai_partials/decomp.csv --out results/pai_partials/value.md
 
 Per partial scene (d381's classes, route_follow/pai_gap/scenes.csv) and per inference decision of A0 from the handoff (1.6 s) to the rear
@@ -133,14 +134,61 @@ def cmd_value(a):
     print("\n".join(L))
 
 
+ARMS = {"NTV0-s0+AG": "A0 (ref)", "PP-R0": "R0 (re-read)", "NTV0-s0+AG+hl": "HL (stored)", "PP-V1": "V1 HL+vset1.1",
+        "PP-V1b": "V1b HL+vset1.2", "PP-V2": "V2 HL+rel2,2", "PP-V3": "V3 HL+gap0.5,2+alat3", "PP-J": "J joint"}
+
+
+def cmd_sweep(a):
+    """Mac: the sweep table on the d392 ruler (paimix + pool variants; boot_*.csv = the 100-draw scene bootstrap rerun with the arms)."""
+    sys.path[:0] = [str(Path(__file__).resolve().parent)]
+    import pai_pcs_local as PL
+    sc, ty, _ = PL.table(a.rows)
+    F = Path(a.fits)
+    Z = {v: PL.Ruler(dict(np.load(F / f"fits/{v}.npz", allow_pickle=True)), sc) for v in PL.VARIANTS if (F / f"fits/{v}.npz").exists()}
+    z = Z["paimix"]
+    bf = sorted(F.glob("boot_*.csv"))
+    B = pd.concat([pd.read_csv(f) for f in bf], ignore_index=True) if bf else None
+    ref = "NTV0-s0+AG"
+    rn = abs(z.pcs["PP-R0"] - z.pcs[ref]) if "PP-R0" in z.pcs else np.nan
+    L = [f"Ruler: d392 paimix ({len(z.items)} items), arms out of pool (MAP). Read noise N = |PCS(R0) - PCS(A0)| = {rn:.0f}. "
+         f"Bootstrap draws: {0 if B is None else len(B)}.", "",
+         "| arm | mean | zeros | AF-front | AF-side | corridor | offroad | rear-hit partials | slow partials | PCS paimix | 95 % CI | pool variants | PCS - A0 (paired, 95 % CI) | PCS - HL |",
+         "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|---|---|--:|"]
+    J = {}
+    for s, lab in ARMS.items():
+        if s not in z.pcs:
+            continue
+        t = ty.loc[s].value_counts()
+        y = sc.loc[s]
+        vv = [Zv.pcs[s] for Zv in Z.values() if s in Zv.pcs]
+        ci = d = ""
+        if B is not None and s in B:
+            ci = f"[{B[s].quantile(.025):.0f}, {B[s].quantile(.975):.0f}]"
+            x = B[s] - B[ref]
+            d = f"{z.pcs[s] - z.pcs[ref]:+.0f} [{x.quantile(.025):+.0f}, {x.quantile(.975):+.0f}]"
+        hl = z.pcs[s] - z.pcs["NTV0-s0+AG+hl"]
+        L.append(f"| {lab} | {y.mean():.4f} | {int((y <= 1e-4).sum())} | {t.get('AF-front', 0)} | {t.get('AF-side', 0)} | {t.get('corridor', 0)} | {t.get('offroad', 0)} | "
+                 f"{t.get('rear-hit', 0)} | {t.get('slow', 0)} | **{z.pcs[s]:.0f}** | {ci} | {min(vv):.0f}-{max(vv):.0f} | {d} | {hl:+.0f} |")
+        J[s] = dict(label=lab, mean=float(y.mean()), pcs=z.pcs[s], variants={v: Zv.pcs.get(s) for v, Zv in Z.items()},
+                    af=int(t.get("AF-front", 0) + t.get("AF-side", 0)), types=t.to_dict())
+    L += ["", "Rank per pool variant (arms only):", "", "| variant | order (best first) |", "|---|---|"]
+    for v, Zv in Z.items():
+        L.append(f"| {v} | " + " > ".join(f"{ARMS[s].split(' ')[0]} {Zv.pcs[s]:.0f}" for s in sorted([s for s in ARMS if s in Zv.pcs], key=lambda s: -Zv.pcs[s])) + " |")
+    Path(a.out).write_text("\n".join(L) + "\n")
+    Path(a.out).with_suffix(".json").write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     s = p.add_subparsers(dest="cmd", required=True)
     c = s.add_parser("decomp"); c.add_argument("--out", required=True)
     v = s.add_parser("value"); v.add_argument("--rows", required=True); v.add_argument("--fits", required=True)
     v.add_argument("--decomp", required=True); v.add_argument("--out", required=True)
+    w = s.add_parser("sweep"); w.add_argument("--rows", required=True); w.add_argument("--fits", required=True, help="dir with fits/ and boot_*.csv")
+    w.add_argument("--out", required=True)
     a = p.parse_args()
-    dict(decomp=cmd_decomp, value=cmd_value)[a.cmd](a)
+    dict(decomp=cmd_decomp, value=cmd_value, sweep=cmd_sweep)[a.cmd](a)
 
 
 if __name__ == "__main__":
