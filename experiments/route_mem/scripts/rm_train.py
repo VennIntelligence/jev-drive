@@ -1562,6 +1562,9 @@ if __name__ == "__main__":
                        "every row but the still-all-horizon ones) and the per-kind arc bias monitoring")
         p.add_argument("--on-free", type=float, default=0.0, help="NR1FREE: weight of the one-sided longitudinal consequence term on the S rows "
                        "(defect_fix lib/nr1_free.py; 0 = off)")
+        p.add_argument("--on-free-frac", type=float, default=0.8, help="NR1FREE-M: the term's band (plan 4 s arc below FRAC x the reference fires)")
+        p.add_argument("--on-free-mode", default="all", choices=("all", "move"), help="NR1FREE-M: rows that may fire (move = ego >= 3 m/s, the "
+                       "human neither stopping nor braking; prereg supplement 16)")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
         p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
@@ -1646,7 +1649,7 @@ if __name__ == "__main__":
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

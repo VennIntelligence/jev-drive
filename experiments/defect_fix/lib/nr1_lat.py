@@ -34,12 +34,17 @@ BIN_DEG = 30.0
 CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0)
 
 
-def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0):
+def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
+              free_frac=0.8, free_mode="all"):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
                arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
-    return dict(CFG) if CFG["free"] > 0 else {k: v for k, v in CFG.items() if k != "free"}
+    if CFG["free"] > 0:                                                        # NR1FREE-M (supplement 16): band and rows of nr1_free
+        import nr1_free
+        return dict(CFG, **{f"free_{k}": v for k, v in nr1_free.configure(free_frac, free_mode).items()})
+    assert free_frac == 0.8 and free_mode == "all", "--on-free-frac / --on-free-mode: need --on-free"
+    return {k: v for k, v in CFG.items() if k != "free"}
 
 
 def shape_only(x, y, psi):

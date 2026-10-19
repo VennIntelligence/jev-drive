@@ -17,12 +17,17 @@ valid at j, centre ahead of the placed plain box's centre) overlaps any placed b
 Fire (the trigger is the 4 s arc): free & s_ref_8 >= S_MIN & s_plan_8 < FRAC x s_ref_8. Value on fire rows only: the sum over the 8 steps of
 smooth L1 (beta 0.5) of relu(FRAC x s_ref_j - s_plan_j) (per step, as nr1_lon sums over the poses: the 4 s arc alone would move only the last
 pose). Gradient: each pose moves only along its own heading (nr1_lon.lon_only; none across it, none on the yaw), as nr1_lon.
+
+NR1FREE-M (prereg supplement 16; rm_train --on-free-mode move --on-free-frac 0.95): the same term, the band FRAC tightened and the rows limited to
+moving states: the ego's t0 speed (tab `speed`) >= V_MOVE and the human neither near a stop nor braking (every 0.5 s segment speed of `fut_reg`
+>= max(V_MOVE, HUM_KEEP x his first segment's)); folded into `ok` at load (no gradient). Default mode "all", FRAC 0.8 = supplement 15 as it was.
 """
 from __future__ import annotations
 
 import numpy as np
 
 FRAC, S_MIN, D0, TH, NS, BETA = 0.8, 1.0, 2.0, 0.5, 8, 0.5
+MODE, V_MOVE, HUM_KEEP = "all", 3.0, 0.8
 FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the rear axle (= lib/agent_hinge.py)
 DT = 0.5
 
@@ -31,6 +36,26 @@ def cum_arc(P):
     """(N, 8, >=2) -> (N, 8) cumulative polyline arc from the origin (numpy; = nr1_lon.human_arc)."""
     P = np.concatenate([np.zeros((len(P), 1, 2)), np.asarray(P, np.float64)[..., :2]], 1)
     return np.cumsum(np.hypot(*np.diff(P, axis=1).transpose(2, 0, 1)), 1)
+
+
+def configure(frac=0.8, mode="all"):
+    global FRAC, MODE
+    assert mode in ("all", "move") and 0 < frac <= 1, (frac, mode)
+    FRAC, MODE = float(frac), str(mode)
+    return dict(frac=FRAC, mode=MODE)
+
+
+def seg_speed(P):
+    """(N, 8, >=2) -> (N, 8) speed on each 0.5 s segment of the polyline from the origin."""
+    return np.diff(cum_arc(P), axis=1, prepend=0.0) / DT
+
+
+def moving(v0, v_hum):
+    """ego t0 speed (N,), the human's segment speeds (N, 8) -> (N,) bool: the rows supplement 16 lets fire (module docstring)."""
+    v_hum = np.asarray(v_hum, np.float64)
+    fin = np.isfinite(v_hum).all(1)
+    vh = np.nan_to_num(v_hum)
+    return fin & (np.asarray(v0) >= V_MOVE) & (vh.min(1) >= np.maximum(V_MOVE, HUM_KEEP * vh[:, 0]))
 
 
 def ref_arc(fut, fut_reg):
@@ -49,7 +74,10 @@ def load(pool_dir, names, dev, ah):
     s_ref, fin = ref_arc(z["fut"], z["fut_reg"])
     S = z["mode"].astype(str) == "self" if "mode" in z.files else np.ones(len(fin), bool)
     ok = fin & S & ah.ok.cpu().numpy()
-    rec = dict(rows=int(len(ok)), s_rows=int(S.sum()), labelled=int(ok.sum()), ref_below_smin=int((ok & (s_ref[:, -1] < S_MIN)).sum()),
+    mv = moving(z["speed"], seg_speed(z["fut_reg"])) if MODE == "move" else np.ones(len(ok), bool)
+    ok_all, ok = ok, ok & mv
+    rec = dict(mode=MODE, moving_of_labelled=int(ok.sum()), labelled_all=int(ok_all.sum()),
+               rows=int(len(ok)), s_rows=int(S.sum()), labelled=int(ok.sum()), ref_below_smin=int((ok & (s_ref[:, -1] < S_MIN)).sum()),
                ref_is_reg=int((ok & (cum_arc(z["fut_reg"])[:, -1] < cum_arc(z["fut"])[:, -1])).sum()), frac=FRAC, d0=D0, th=TH)
     return dict(s_ref=torch.as_tensor(s_ref, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
 
@@ -178,4 +206,9 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     g = q.grad[0]
     across = -torch.sin(q[0, :, 2].detach()) * g[:, 0] + torch.cos(q[0, :, 2].detach()) * g[:, 1]
     assert g[:, 2].abs().max() == 0 and across.abs().max() < 1e-6 and g[:, :2].abs().max() > 0, g
+    vh = np.array([[8.0] * 8, [8.0] * 7 + [6.0], [8.0] * 7 + [2.5], [3.5] * 8, [8.0] * 8, [np.nan] * 8])
+    assert moving(np.array([8.0, 8.0, 8.0, 3.5, 2.0, 8.0]), vh).tolist() == [True, False, False, True, False, False]   # cruise / brake / stop / slow / ego slow / nan
+    configure(0.95, "move")
+    assert terms(go(1.85), s_ref, ok, box, val) > 0 and terms(go(1.95), s_ref, ok, box, val) == 0                    # 0.925 x fires at 0.95, 0.975 x not
+    configure()
     print("nr1_free known-answer ok", float(vs))
