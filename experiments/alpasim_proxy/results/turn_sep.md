@@ -102,7 +102,7 @@ What remains is a lever restricted to tight turns. It is honest about what it is
 its passing-window decisions fire too). The ≤ 1 % budget holds because tight turns are rare, about 1 % of passing decisions, not
 because the term finds the failures. Garage shows which way the term should push: toward an earlier, inside line, not mainly toward a lower speed.
 
-**Draft (not launched):** NR1 supplement 22 DRAFT, [TIGHT-IN](../../defect_fix/plans/2026-10-20-nr1-supp22-tightin-DRAFT.md). It acts on moving S rows whose logged
+**Registered as NR1 supplement 22** ([TIGHT-IN](../../defect_fix/plans/2026-10-20-nr1-supp22-tightin.md), 2026-10-20). It acts on moving S rows whose logged
 path has a max curvature of at least 0.108 /m within 20 m. It has two one-sided parts: a penalty on the plan running outward of the logged path by more than 0.2 m, and d396's arc cap at K 1.05.
 
 Its estimated fire rate on passing decisions, on stored plans ([turn_sep/term_fire.json](turn_sep/term_fire.json)), is:

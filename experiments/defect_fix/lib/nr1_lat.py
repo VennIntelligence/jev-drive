@@ -33,6 +33,9 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
   turncap (TURN-CAP, rm_train --on-turncap W; prereg supplement 21) nr1_free's one-sided upper limit on moving S rows in sharp turns (the plan's
         arc beyond 1.05 x the larger human arc; labels <pool>/turn_cap.npz): logged as lon_turncap, 10 x W x nr1_free.turncap_term. W = 0:
         nothing loaded or added.
+  tightin (TIGHT-IN, rm_train --on-tightin W; prereg supplement 22) nr1_tight's two parts on moving S rows in tight turns (labels
+        <pool>/tight_in.npz): the plan outside the human's logged line beyond 0.2 m (lon_tightin, across the heading) and TURN-CAP's arc cap
+        (lon_tightina, along the heading), each 10 x W x its part. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -44,7 +47,7 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0, tightin=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
@@ -56,6 +59,8 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
     assert CFG["free"] > 0 or not any(CFG["_clear"]), "--on-free-clear: needs --on-free"
     if turncap > 0:                                                            # TURN-CAP (supplement 21): only the weight, labels from the file
         CFG["turncap"] = float(turncap)
+    if tightin > 0:                                                            # TIGHT-IN (supplement 22): only the weight, labels from the file
+        CFG["tightin"] = float(tightin)
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
         CFG["stoppt"] = float(stoppt)
         return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
@@ -141,6 +146,10 @@ def load(pool_dir, names, dev, file=None):
         import nr1_free
         pack["turncap"] = nr1_free.turncap_load(pool_dir, names, dev)
         print(f"nr1_lat: lon_turncap labels {pack['turncap']['rec']}", flush=True)
+    if CFG.get("tightin", 0.0) > 0:                                            # TIGHT-IN: the tight-turn rows' paths and caps
+        import nr1_tight
+        pack["tightin"] = nr1_tight.load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_tightin labels {pack['tightin']['rec']}", flush=True)
     return pack
 
 
@@ -250,4 +259,8 @@ def loss(poses, rows, pack):
     if CFG.get("turncap", 0.0) > 0:
         import nr1_free
         out["lon_turncap"] = 10.0 * CFG["turncap"] * nr1_free.turncap_term(poses, rows, pack["turncap"])
+    if CFG.get("tightin", 0.0) > 0:
+        import nr1_tight
+        vl, va = nr1_tight.term(poses, rows, pack["tightin"])
+        out["lon_tightin"], out["lon_tightina"] = 10.0 * CFG["tightin"] * vl, 10.0 * CFG["tightin"] * va
     return out
