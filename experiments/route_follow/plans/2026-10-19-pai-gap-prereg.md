@@ -89,7 +89,7 @@ Anything about the private board beyond direction; one seed (NTV0-L18-s0; s1 is 
 tracking the log is not the log itself: small deviations are reported, H's own zeros are typed); item 2's worth is a ceiling, not a serve
 change.
 
-## Amendment 1 (13:20, after the A0-only dry run of items 1-2, before H has any rollout)
+## Amendment 1 (13:08, after the A0-only dry run of items 1-2, before H has any rollout)
 
 The dry run (H absent) shows 23 of the 44 corridor zeros are rf_tax `cor_route_end`: the human ends the 20 s still and the ego passes
 its rest point (decision 357's class C, a 4 m disc). That zero is longitudinal in mechanism, so the lateral test of item 3 does not fit it.

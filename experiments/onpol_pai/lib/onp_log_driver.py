@@ -91,6 +91,7 @@ for _d in (_HERE, os.path.normpath(os.path.join(_HERE, "..", "..", "alpasim", "l
 import pai_driver as P  # noqa: E402
 from pai_driver import common_pb2, egodriver_pb2, grpc, S
 
+CAM = os.environ.get("PAI_CAM", "camera_front_wide_120fov")   # = pai_driver.CAM; read by lib/sim_fast.py (ALPASIM_FAST) from this file
 HORIZON_S, TAIL_US = float(os.environ.get("ONP_HORIZON", "4.0")), 500_000
 
 
