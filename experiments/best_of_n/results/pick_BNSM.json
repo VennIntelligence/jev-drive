@@ -1,0 +1,230 @@
+{
+ "label": "BNSM",
+ "gap": 0.0,
+ "chunks": [
+  "smoke"
+ ],
+ "windows": 10,
+ "complete": 10,
+ "incomplete_by_tag": {},
+ "informative": 10,
+ "shards": [
+  5
+ ],
+ "winners": {
+  "JTN-L18-s1": 9,
+  "NTV0-L18-s0": 0,
+  "RSG-L18-s0": 1,
+  "NR1FB10-L18-s0": 0
+ },
+ "ties_informative": 8,
+ "by_stratum": {
+  "static": {
+   "windows": 3,
+   "informative": 3,
+   "wins": {
+    "JTN-L18-s1": 3,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 0,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.5833333333333334,
+    "NTV0-L18-s0": 0.08333333333333333,
+    "RSG-L18-s0": 0.08333333333333333,
+    "NR1FB10-L18-s0": 0.25
+   }
+  },
+  "launch": {
+   "windows": 3,
+   "informative": 3,
+   "wins": {
+    "JTN-L18-s1": 2,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 1,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.16666666666666666,
+    "NTV0-L18-s0": 0.16666666666666666,
+    "RSG-L18-s0": 0.5,
+    "NR1FB10-L18-s0": 0.16666666666666666
+   }
+  },
+  "braking": {
+   "windows": 2,
+   "informative": 2,
+   "wins": {
+    "JTN-L18-s1": 2,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 0,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.25,
+    "NTV0-L18-s0": 0.25,
+    "RSG-L18-s0": 0.25,
+    "NR1FB10-L18-s0": 0.25
+   }
+  },
+  "turn": {
+   "windows": 1,
+   "informative": 1,
+   "wins": {
+    "JTN-L18-s1": 1,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 0,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.25,
+    "NTV0-L18-s0": 0.25,
+    "RSG-L18-s0": 0.25,
+    "NR1FB10-L18-s0": 0.25
+   }
+  },
+  "cruise": {
+   "windows": 0,
+   "informative": 0,
+   "wins": {
+    "JTN-L18-s1": 0,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 0,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.0,
+    "NTV0-L18-s0": 0.0,
+    "RSG-L18-s0": 0.0,
+    "NR1FB10-L18-s0": 0.0
+   }
+  },
+  "other": {
+   "windows": 1,
+   "informative": 1,
+   "wins": {
+    "JTN-L18-s1": 1,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 0,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.25,
+    "NTV0-L18-s0": 0.25,
+    "RSG-L18-s0": 0.25,
+    "NR1FB10-L18-s0": 0.25
+   }
+  },
+  "all": {
+   "windows": 10,
+   "informative": 10,
+   "wins": {
+    "JTN-L18-s1": 9,
+    "NTV0-L18-s0": 0,
+    "RSG-L18-s0": 1,
+    "NR1FB10-L18-s0": 0
+   },
+   "best_share_all": {
+    "JTN-L18-s1": 0.325,
+    "NTV0-L18-s0": 0.175,
+    "RSG-L18-s0": 0.275,
+    "NR1FB10-L18-s0": 0.225
+   }
+  }
+ },
+ "mean": {
+  "static": {
+   "JTN-L18-s1": 1.0,
+   "NTV0-L18-s0": 0.3333333333333333,
+   "RSG-L18-s0": 0.3333333333333333,
+   "NR1FB10-L18-s0": 0.6666666666666666,
+   "best": 1.0
+  },
+  "launch": {
+   "JTN-L18-s1": 0.8158939790718535,
+   "NTV0-L18-s0": 0.8372279651189231,
+   "RSG-L18-s0": 0.8592227969533734,
+   "NR1FB10-L18-s0": 0.8398813660365242,
+   "best": 0.8592227969533734
+  },
+  "braking": {
+   "JTN-L18-s1": 1.0,
+   "NTV0-L18-s0": 1.0,
+   "RSG-L18-s0": 1.0,
+   "NR1FB10-L18-s0": 1.0,
+   "best": 1.0
+  },
+  "turn": {
+   "JTN-L18-s1": 1.0,
+   "NTV0-L18-s0": 1.0,
+   "RSG-L18-s0": 1.0,
+   "NR1FB10-L18-s0": 1.0,
+   "best": 1.0
+  },
+  "cruise": {
+   "JTN-L18-s1": null,
+   "NTV0-L18-s0": null,
+   "RSG-L18-s0": null,
+   "NR1FB10-L18-s0": null,
+   "best": null
+  },
+  "other": {
+   "JTN-L18-s1": 1.0,
+   "NTV0-L18-s0": 1.0,
+   "RSG-L18-s0": 1.0,
+   "NR1FB10-L18-s0": 1.0,
+   "best": 1.0
+  },
+  "all": {
+   "JTN-L18-s1": 0.944768193721556,
+   "NTV0-L18-s0": 0.751168389535677,
+   "RSG-L18-s0": 0.7577668390860121,
+   "NR1FB10-L18-s0": 0.8519644098109573,
+   "best": 0.957766839086012
+  }
+ },
+ "zeros": {
+  "static": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 2,
+   "RSG-L18-s0": 2,
+   "NR1FB10-L18-s0": 1
+  },
+  "launch": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 0,
+   "RSG-L18-s0": 0,
+   "NR1FB10-L18-s0": 0
+  },
+  "braking": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 0,
+   "RSG-L18-s0": 0,
+   "NR1FB10-L18-s0": 0
+  },
+  "turn": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 0,
+   "RSG-L18-s0": 0,
+   "NR1FB10-L18-s0": 0
+  },
+  "cruise": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 0,
+   "RSG-L18-s0": 0,
+   "NR1FB10-L18-s0": 0
+  },
+  "other": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 0,
+   "RSG-L18-s0": 0,
+   "NR1FB10-L18-s0": 0
+  },
+  "all": {
+   "JTN-L18-s1": 0,
+   "NTV0-L18-s0": 2,
+   "RSG-L18-s0": 2,
+   "NR1FB10-L18-s0": 1
+  }
+ }
+}

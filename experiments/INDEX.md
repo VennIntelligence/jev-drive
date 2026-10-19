@@ -7,7 +7,6 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [alpasim_human](alpasim_human/README.md): live; user drove PAI stage 1 at real time: 0.275 vs P2H10 0.154, alpamayo1 0.438 [dnone]
 - [awr_onpol](awr_onpol/README.md): live; prepared, not launched: 2 688 train rows with advantage >= 0.1 vs near-identical peers; filtered-cloning pilot awaits the user [dnone,yet]
 - [b2d_monitor](b2d_monitor/README.md) (Tokyo B2D monitor, first-person viewer, op_arb_viz_agent, RSG on B2D, FIX1 B2D port, route picker): live; Tokyo B2D monitor; RSG memory moves left-turn onset, L/R flip is the lever [d288]
-- [best_of_n](best_of_n/README.md): live; 4 own models roll 1 200 practice starts; best rollout's own plan as target; JTN-s1 2k-step pilot [d(pending)]
 - [route_follow](route_follow/README.md) (ROUTE-FOLLOW, PAI-INPUT-LOOP, PAI keywarp NTV0, PAI speed loop, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF, lr x steps, ON-K, on-k, on-policy rows per batch, TTS, test-time candidate selection, JEV_TTS, PAI gains 10, g10, g5, JEV_ACC, PAI ACC, RSG-ACC, rsgacc, on1_RSGACC, ACC on-policy rows): live; route-memory base relied on; RSG-L18 held zeros 34 vs 59, public ties YS2G; RSG-ACC pilot stopped at G4 [d284,286,333,376]
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; PAI high-speed spins = force-GT handoff, MPC gain 20 fixes in replay; slowness = speed-history loop (CF +83 %) [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
@@ -110,6 +109,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **other**
 
+- [best_of_n](best_of_n/README.md): best-of-4 self-imitation fails: arena native -0.020 vs control, static -0.059 [d378]
 - [critic_pilot](critic_pilot/README.md): learned critic fails L1-L3: any-zero 2 s AUC 0.85 vs hand rule 0.83 [dpending]
 - [eyes_vs_head](eyes_vs_head/README.md): eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported [d272]
 - [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
