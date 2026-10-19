@@ -1,0 +1,10 @@
+{
+ "run": "STOPPTSM-L18-s0",
+ "dir": "/root/autodl-tmp/ujs/runs/route_mem/train-STOPPTSM-L18-s0/20261019-152658/",
+ "steps": 0,
+ "finite": true,
+ "fire_share_mean": 0.011142857242375612,
+ "fire_share_max": 0.01314285721629858,
+ "term_mean": 0.012161785052776394,
+ "pass_": true
+}

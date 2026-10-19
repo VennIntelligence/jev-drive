@@ -1,0 +1,11 @@
+{
+ "scenes_a0": 281,
+ "scenes_rerun": 281,
+ "common": 281,
+ "identical": 280,
+ "differ": [
+  "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66"
+ ],
+ "mean_a0": 0.7416284926608301,
+ "mean_rerun": 0.74518721152204
+}

@@ -1,0 +1,36 @@
+{
+ "JTNS1K-L18-s0": {
+  "rollouts": 144,
+  "overrun": 11,
+  "scenes": [
+   "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02",
+   "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560",
+   "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb",
+   "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+   "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09",
+   "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0",
+   "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb",
+   "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc",
+   "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55",
+   "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726",
+   "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034"
+  ]
+ },
+ "STOPPT1K-L18-s0": {
+  "rollouts": 144,
+  "overrun": 11,
+  "scenes": [
+   "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02",
+   "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560",
+   "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb",
+   "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+   "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09",
+   "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0",
+   "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb",
+   "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc",
+   "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55",
+   "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726",
+   "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034"
+  ]
+ }
+}

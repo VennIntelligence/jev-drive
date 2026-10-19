@@ -1,0 +1,422 @@
+{
+ "pool_stored_plans": {
+  "nu": {
+   "qualifying": {
+    "n": 87012,
+    "fires": 26851,
+    "share": 0.30858961982255323
+   },
+   "fire": {
+    "n": 87012,
+    "fires": 959,
+    "share": 0.011021468303222544
+   },
+   "fire_ahead_of_human": {
+    "n": 26052,
+    "fires": 494,
+    "share": 0.018962075848303395
+   },
+   "fire_behind": {
+    "n": 60960,
+    "fires": 465,
+    "share": 0.007627952755905512
+   },
+   "cap_raised": 35
+  },
+  "pai": {
+   "qualifying": {
+    "n": 25634,
+    "fires": 3138,
+    "share": 0.12241554185846922
+   },
+   "fire": {
+    "n": 25634,
+    "fires": 848,
+    "share": 0.03308106421159398
+   },
+   "fire_ahead_of_human": {
+    "n": 14207,
+    "fires": 627,
+    "share": 0.04413317378756951
+   },
+   "fire_behind": {
+    "n": 11427,
+    "fires": 221,
+    "share": 0.019340159271899887
+   },
+   "cap_raised": 173
+  }
+ },
+ "G1": {
+  "pass_": true,
+  "nu_station": {
+   "n": 26851,
+   "fires": 0,
+   "share": 0.0
+  },
+  "pai_station": {
+   "n": 3138,
+   "fires": 0,
+   "share": 0.0
+  },
+  "nu_clock": {
+   "n": 26851,
+   "fires": 0,
+   "share": 0.0
+  },
+  "pai_clock": {
+   "n": 3138,
+   "fires": 0,
+   "share": 0.0
+  },
+  "nu_fut_describe": {
+   "n": 26851,
+   "fires": 414,
+   "share": 0.01541842017057093
+  },
+  "pai_fut_describe": {
+   "n": 3138,
+   "fires": 289,
+   "share": 0.09209687699171447
+  },
+  "nu_fut_reg_describe": {
+   "n": 26851,
+   "fires": 209,
+   "share": 0.0077836952068824255
+  },
+  "pai_fut_reg_describe": {
+   "n": 0,
+   "fires": 0,
+   "share": 0.0
+  },
+  "a0_station": {
+   "n": 7578,
+   "fires": 0,
+   "share": 0.0
+  },
+  "a0_clock": {
+   "n": 7578,
+   "fires": 0,
+   "share": 0.0
+  }
+ },
+ "G2": {
+  "n": 2684,
+  "fires": 2559,
+  "share": 0.9534277198211625,
+  "stop_line": {
+   "n": 2093,
+   "fires": 2028,
+   "share": 0.968944099378882
+  },
+  "scenes": 23,
+  "scenes_fired": 21,
+  "scenes_in_time_3": 20,
+  "why_not": {
+   "no_rest": 84,
+   "lead": 22,
+   "": 19
+  },
+  "per_scene": [
+   {
+    "scene": "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02",
+    "decisions": 145,
+    "fires": 144,
+    "wl": "STOP",
+    "first_fire_dist": 51.20963281643674,
+    "first_fire_v": 14.712599515914917,
+    "in_time_3": true,
+    "why": {
+     "": 1
+    }
+   },
+   {
+    "scene": "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560",
+    "decisions": 47,
+    "fires": 0,
+    "wl": "UNKNOWN",
+    "first_fire_dist": null,
+    "first_fire_v": null,
+    "in_time_3": false,
+    "why": {
+     "no_rest": 47
+    }
+   },
+   {
+    "scene": "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb",
+    "decisions": 84,
+    "fires": 84,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 34.79575221904098,
+    "first_fire_v": 10.369800329208374,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-2466266e-73bd-4eb4-b881-4e56ab62e0a7",
+    "decisions": 114,
+    "fires": 114,
+    "wl": "STOP",
+    "first_fire_dist": 30.066230773287742,
+    "first_fire_v": 8.454800248146057,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-2d10a08d-2f60-49fe-94e8-9d2797a289d2",
+    "decisions": 113,
+    "fires": 113,
+    "wl": "",
+    "first_fire_dist": 57.91297736404496,
+    "first_fire_v": 14.934899806976318,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-35e082a4-8543-4fce-ac06-006b2da0f144",
+    "decisions": 132,
+    "fires": 131,
+    "wl": "",
+    "first_fire_dist": 15.896674298594856,
+    "first_fire_v": 6.927499771118164,
+    "in_time_3": true,
+    "why": {
+     "": 1
+    }
+   },
+   {
+    "scene": "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+    "decisions": 150,
+    "fires": 150,
+    "wl": "",
+    "first_fire_dist": 0.05678532750376608,
+    "first_fire_v": 0.5045000091195107,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18",
+    "decisions": 109,
+    "fires": 108,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 26.212933402413597,
+    "first_fire_v": 8.859699964523315,
+    "in_time_3": true,
+    "why": {
+     "": 1
+    }
+   },
+   {
+    "scene": "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09",
+    "decisions": 127,
+    "fires": 127,
+    "wl": "STOP",
+    "first_fire_dist": 37.14426255210247,
+    "first_fire_v": 10.755000114440918,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0",
+    "decisions": 87,
+    "fires": 87,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 26.819751376979212,
+    "first_fire_v": 8.76259982585907,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-4cb7f7ac-edf4-4857-b841-2d0f46eb43f7",
+    "decisions": 133,
+    "fires": 133,
+    "wl": "STOP",
+    "first_fire_dist": 36.56668672564399,
+    "first_fire_v": 10.660799741744995,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8",
+    "decisions": 37,
+    "fires": 0,
+    "wl": "",
+    "first_fire_dist": null,
+    "first_fire_v": null,
+    "in_time_3": false,
+    "why": {
+     "no_rest": 37
+    }
+   },
+   {
+    "scene": "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb",
+    "decisions": 74,
+    "fires": 52,
+    "wl": "",
+    "first_fire_dist": 23.370714254760657,
+    "first_fire_v": 14.668799638748169,
+    "in_time_3": false,
+    "why": {
+     "lead": 22
+    }
+   },
+   {
+    "scene": "clipgt-559d4ad6-aed7-4065-b25c-cff64aba28c0",
+    "decisions": 169,
+    "fires": 169,
+    "wl": "STOP",
+    "first_fire_dist": 39.7464004623088,
+    "first_fire_v": 12.00029969215393,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839",
+    "decisions": 91,
+    "fires": 91,
+    "wl": "STOP",
+    "first_fire_dist": 22.98758619432914,
+    "first_fire_v": 8.097400069236755,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc",
+    "decisions": 158,
+    "fires": 142,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 50.25220648578617,
+    "first_fire_v": 11.981099843978882,
+    "in_time_3": true,
+    "why": {
+     "": 16
+    }
+   },
+   {
+    "scene": "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55",
+    "decisions": 85,
+    "fires": 85,
+    "wl": "",
+    "first_fire_dist": 34.11263587624336,
+    "first_fire_v": 10.433100461959839,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726",
+    "decisions": 147,
+    "fires": 147,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 41.00801895848848,
+    "first_fire_v": 10.926100015640259,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-9b6c68b4-1f13-46ec-a2cd-5023a8e9341d",
+    "decisions": 119,
+    "fires": 119,
+    "wl": "STOP",
+    "first_fire_dist": 20.315850182827802,
+    "first_fire_v": 5.2382999658584595,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-9f8acd00-e8f5-467a-867d-b205f8d4d75d",
+    "decisions": 125,
+    "fires": 125,
+    "wl": "STOP+UNKNOWN",
+    "first_fire_dist": 59.05203953632022,
+    "first_fire_v": 15.42739987373352,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd",
+    "decisions": 167,
+    "fires": 167,
+    "wl": "STOP",
+    "first_fire_dist": 33.88918467976778,
+    "first_fire_v": 10.610400438308716,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-bc309fd6-f660-43eb-84aa-c514bffa305e",
+    "decisions": 182,
+    "fires": 182,
+    "wl": "STOP",
+    "first_fire_dist": 26.260957708467867,
+    "first_fire_v": 10.230300426483154,
+    "in_time_3": true,
+    "why": {}
+   },
+   {
+    "scene": "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034",
+    "decisions": 89,
+    "fires": 89,
+    "wl": "STOP",
+    "first_fire_dist": 24.49640941591457,
+    "first_fire_v": 9.228799939155579,
+    "in_time_3": true,
+    "why": {}
+   }
+  ],
+  "pass_": true
+ },
+ "G3": {
+  "pass_": true,
+  "a0": {
+   "n": 22917,
+   "fires": 11,
+   "share": 0.00047999301828337043
+  },
+  "a0_rolling": {
+   "n": 3743,
+   "fires": 11,
+   "share": 0.002938819129040876
+  },
+  "a0_turning": {
+   "n": 3654,
+   "fires": 0,
+   "share": 0.0
+  },
+  "nu": {
+   "n": 68009,
+   "fires": 4,
+   "share": 5.8815744974929786e-05
+  },
+  "nu_rolling": {
+   "n": 17839,
+   "fires": 4,
+   "share": 0.00022422781546050787
+  },
+  "nu_turning": {
+   "n": 15631,
+   "fires": 0,
+   "share": 0.0
+  },
+  "pai_pool": {
+   "n": 15227,
+   "fires": 61,
+   "share": 0.004006041899257897
+  }
+ },
+ "a0_all": {
+  "decisions": 47511,
+  "qualifying": 7578,
+  "fire": 3921,
+  "why": {
+   "no_rest": 38503,
+   "": 7578,
+   "lead": 1256,
+   "leaves_clock": 129,
+   "leaves_station": 45
+  }
+ },
+ "gate": {
+  "pass_": true,
+  "G4": "results/stoppt/identity.json (separate job)"
+ }
+}

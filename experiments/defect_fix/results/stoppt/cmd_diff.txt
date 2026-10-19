@@ -1,0 +1,24 @@
+== JTNS1K-L18-s0 -> STOPPT1K-L18-s0
+5c5
+< JTNS1K-L18-s0
+---
+> STOPPT1K-L18-s0
+75a76,77
+> --on-stoppt
+> 0.004
+== JTNS1K-L18-s0 -> STOPPTP1K-L18-s0
+5c5
+< JTNS1K-L18-s0
+---
+> STOPPTP1K-L18-s0
+33c33
+< on1_JT
+---
+> on1_JTPAI
+41c41
+< runs/defect_fix/w/JT00.npz
+---
+> runs/defect_fix/w/JTPAI00.npz
+75a76,77
+> --on-stoppt
+> 0.004

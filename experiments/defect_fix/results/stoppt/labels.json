@@ -1,0 +1,106 @@
+{
+ "on1_JT": {
+  "rows": 87012,
+  "ok": 26851,
+  "why": {
+   "no_rest": 39438,
+   "ok": 26851,
+   "lead": 16798,
+   "ego_slow": 3319,
+   "leaves_clock": 553,
+   "leaves_station": 53
+  },
+  "rest_q": [
+   24.01,
+   102.73,
+   199.49
+  ]
+ },
+ "on1_PPAI160": {
+  "rows": 25634,
+  "ok": 3138,
+  "why": {
+   "no_rest": 21289,
+   "ok": 3138,
+   "ego_slow": 788,
+   "lead": 377,
+   "leaves_clock": 33,
+   "leaves_station": 9
+  },
+  "rest_q": [
+   3.6,
+   33.64,
+   112.16
+  ]
+ },
+ "nu_by_part": {
+  "rb0": {
+   "rows": 17429,
+   "ok": 5393,
+   "why": {
+    "no_rest": 7912,
+    "ok": 5393,
+    "lead": 3359,
+    "ego_slow": 645,
+    "leaves_clock": 110,
+    "leaves_station": 10
+   },
+   "rest_q": [
+    24.22,
+    103.2,
+    199.59
+   ]
+  },
+  "rtb1": {
+   "rows": 17489,
+   "ok": 5234,
+   "why": {
+    "no_rest": 7832,
+    "ok": 5234,
+    "lead": 3372,
+    "ego_slow": 934,
+    "leaves_clock": 111,
+    "leaves_station": 6
+   },
+   "rest_q": [
+    23.83,
+    102.42,
+    199.47
+   ]
+  },
+  "ys": {
+   "rows": 34788,
+   "ok": 10861,
+   "why": {
+    "no_rest": 15812,
+    "ok": 10861,
+    "lead": 6715,
+    "ego_slow": 1148,
+    "leaves_clock": 224,
+    "leaves_station": 28
+   },
+   "rest_q": [
+    23.76,
+    102.7,
+    199.42
+   ]
+  },
+  "y": {
+   "rows": 17306,
+   "ok": 5363,
+   "why": {
+    "no_rest": 7882,
+    "ok": 5363,
+    "lead": 3352,
+    "ego_slow": 592,
+    "leaves_clock": 108,
+    "leaves_station": 9
+   },
+   "rest_q": [
+    24.24,
+    103.16,
+    199.49
+   ]
+  }
+ }
+}
