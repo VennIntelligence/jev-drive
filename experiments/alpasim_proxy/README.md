@@ -1,15 +1,17 @@
 # alpasim_proxy: a local selection set that orders like private
 
 status: live
-decisions: 262, 325, 374
-index: PCS-LOCAL: board-mix zoib refit gives JTN-s1 1251 / stop3 1333 vs garage 1553 (board 1325 / 1463 / 1543); slow-progress partials cost stop3 ~145 PCS; ARENA running (7 741 uniform windows over the reconstructions, RSG / NR1F + 6 anchors); no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
+decisions: 262, 325, 344, 349, 355, 374, 382, 387, 390, 392, 393
+index: ARENA held split orders all six private anchors (tau-b +1.00, d355) and is the selector, on native reads (d371); PCS-LOCAL: frozen board-mix zoib refit, B2 STANDFMXH-L18-s1 1398 vs JTN-s1 1247 / + stop3 1324 (d391); EASY-ITEMS: B2's largest easy-item loss is the static red-line roll-out (d393); PAI-PCS-LOCAL: NTV0 + ACC + GAP predicted 2195 [2138, 2299], top 3 undecidable (d392); no public reweighting orders the private anchors (d262); WAIT-SET (d344)
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
 
 **Conclusion.** No stratification or reweighting of the public scenes is a valid stand-in for the private suite: proxies fitted on the two submissions alone order none of the three new anchors right (0 of 84 frozen proxies pass), and refits on all five anchors pass only with 20-70 effective scenes and fail leave-one-anchor-out (at most 3 of 5). The gap is driver-specific, not scene-mix: the shipped LTF and DiffusionDrive samples keep their public numbers on private (score -0.09 / -0.03, at-fault km x0.92 / x1.10), the garage 0014 checkpoint gains (+0.11), our openpilot students lose (-0.13 / -0.30); of all public statistics only GT distance (and the share of clips leaving the path by 4 m) ranks the anchors like the private score (Kendall tau 0.6, one discordant family pair) and the private GT distance (tau 0.6, the one real discordance is APY against DD), while public scene score and at-fault distance rank them backwards (tau -0.6) (decision 262).
 
-**Next.** The last slot is chosen by the rule in research/next-round/plan.md section 2.3 (public GT distance within the openpilot family, a warm-up read by the user, the long-horizon read when it lands). Untested hypothesis for the family-specific loss: the openpilot input path (calibration-driven warp) on private rigs; the samples and the garage read raw images.
+**Current state (2026-10-20).** The paragraph above is the 10-12 public-scene result and still holds. It is no longer how probes are chosen. The ARENA (7 741 uniform windows over every public reconstruction, below) orders all six private anchors exactly (decision 355). Its held split, read natively without a serve hold (decision 371), is the selector. The frozen board-mix PCS (`pcs_local.py score`, decision 382) and the easy-item table (`easy_items.py`, decisions 387 / 390 / 393) are reported beside it. The PAI equivalent is `pai_pcs_local.py` (decision 392). Candidates and submissions: research/decisions.md "现状".
+
+**Next (written 2026-10-12, superseded by the ARENA on 10-18).** The last slot is chosen by the rule in research/next-round/plan.md section 2.3 (public GT distance within the openpilot family, a warm-up read by the user, the long-horizon read when it lands). Untested hypothesis for the family-specific loss: the openpilot input path (calibration-driven warp) on private rigs; the samples and the garage read raw images.
 
 **Read more.** Pre-registration and Amendment 1: [plans/2026-10-12-proxy-prereg.md](plans/2026-10-12-proxy-prereg.md). Context: the AUD1
 audits in [../alpasim/results/](../alpasim/results/) (`aud1_private_gap.md`, `aud1_drift_by_decision.md`). Scene length is owned by the
@@ -27,7 +29,7 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 - `wait_set.py` (scripts): a local closed-loop set where the …
 - `wait_set.sh` (scripts): the local closed-loop set where the …
 
-[results/](results/) 71 result files · [plans/](plans/) 3 live plans · [scripts/](scripts/) 18 entry points
+[results/](results/) 98 result files · [plans/](plans/) 5 live plans · [scripts/](scripts/) 22 entry points
 <!-- files:end -->
 
 ## SCENE-MIX: the private suite is rich in scenes where the human waits (decision 325)
@@ -124,7 +126,7 @@ way: `wait_set.py collect` stops on the 3 variant-b windows without a human laun
 complete runs and the report job failed on the dependency; the tables came from `experiments/defect_fix/scripts/df_wscollect.py`, the report was run by hand), and the AP2 driver died at every
 drive since JEV_ACC gave sh30_driver's session `t_first = None` (the first APY read scored 0 on all 312 windows; `experiments/alpasim/lib/ap2_driver.py`, re-read 1017-172558-8b65).
 
-## ARENA: uniform windows over every public reconstruction (running, 2026-10-17)
+## ARENA: uniform windows over every public reconstruction (2026-10-17; read out 10-18, decisions 349 / 355)
 
 Prereg [plans/2026-10-17-arena-prereg.md](plans/2026-10-17-arena-prereg.md) (Chinese); code `scripts/arena.py` (definitions in its header), `scripts/arena.sh`;
 the set `results/arena/{set.csv.gz, meta.json}`; box `$DATA_DIR/runs/alpasim_proxy/arena/`, caches `$DATA_DIR/datasets/alpasim_nuplan_arena/v1/s0..s6`.
