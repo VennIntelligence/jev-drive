@@ -95,3 +95,7 @@ not an adoption gate.
   + 8 PAI 281 jobs (priority 13), summary `stb-fsum-H` **1019-191850-d1a3** (writes the H files here and `runs/defect_fix/stand_b/FULL_H_DONE`).
   Expected finish about 21:30-22:00 box time. The smoke's first criterion (fire share not above B, meant for the B1 gate) failed on the dose arm
   (0.0966 vs 0.0949 at the first step), so it was changed to finite-only before the chain; see supplement 19.7.
+- Seed-1 replicates (supplement 19.8; read of full B's and full B2's seed variance, not an adoption gate) submitted 2026-10-19 19:39 box time:
+  `STANDFMX-L18-s1` (summary `stb-fsum-STANDFMX-L18-s1` 1019-193926-303d) and `STANDFMXH-L18-s1` (summary 1019-193942-31b7), commands equal to s0's
+  except tag and `--seed` ([cmd_diff_s1.txt](cmd_diff_s1.txt), [cmd_diff_s1_H.txt](cmd_diff_s1_H.txt)); smokes [smoke_s1.json](smoke_s1.json),
+  [smoke_s1_H.json](smoke_s1_H.json). Outputs when done: `full_s1.md`, `pai281_accgap_s1.md`, `arena_full_s1.json` and the `_H_s1` set.

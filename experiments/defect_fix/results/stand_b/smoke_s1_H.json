@@ -1,0 +1,16 @@
+{
+ "b": "STBGG-new",
+ "b1": "STBGG-HS1",
+ "finite": true,
+ "steps": 3,
+ "first": [
+  0.0948571452498436,
+  0.10400000274181366
+ ],
+ "mean": [
+  0.10219047881662846,
+  0.10000000223517418
+ ],
+ "pass_": true,
+ "criterion": "finite only (fire share is not expected to fall under a lower dose)"
+}

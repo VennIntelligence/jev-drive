@@ -1,0 +1,9 @@
+== STANDFMX-L18-s0 -> STANDFMX-L18-s1 (seed replicate; only the tag and --seed 0 -> --seed 1 may differ; --init is the same)
+5c5
+< STANDFMX-L18-s0
+---
+> STANDFMX-L18-s1
+75c75
+< 0
+---
+> 1

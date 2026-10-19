@@ -1,0 +1,9 @@
+== STANDFMXH-L18-s0 -> STANDFMXH-L18-s1 (seed replicate; only the tag and --seed 0 -> --seed 1 may differ; --init is the same)
+5c5
+< STANDFMXH-L18-s0
+---
+> STANDFMXH-L18-s1
+75c75
+< 0
+---
+> 1
