@@ -608,7 +608,7 @@ def cmd_fig(a):
     fig.subplots_adjust(left=0.05, right=0.995, top=0.95, bottom=0.01, wspace=0.03, hspace=0.06)
     p = TOPIC / "figs/realgap_frames"
     p.parent.mkdir(exist_ok=True)
-    fig.savefig(str(p) + ".png", dpi=220, pil_kwargs={"optimize": True})
+    fig.savefig(str(p) + ".png", dpi=140, pil_kwargs={"optimize": True})
     fig.savefig(RUN / "realgap_frames.pdf")                 # the PDF stays on the box
     print(p, (p.with_suffix(".png")).stat().st_size)
 
