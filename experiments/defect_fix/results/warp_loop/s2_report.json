@@ -1,0 +1,269 @@
+{
+ "windows": 2228,
+ "mean_native": 0.8909173997126617,
+ "mean_warp": 0.8818243667522413,
+ "diff": -0.009093032960420296,
+ "ci": [
+  -0.01619649564928318,
+  -0.002417101768049972
+ ],
+ "zeros_native": 210,
+ "zeros_warp": 228,
+ "fixed": 22,
+ "broken": 40,
+ "ratio_by_k": {
+  "JTN1": {
+   "2": 0.9872,
+   "3": 0.968,
+   "4": 0.9543,
+   "5": 0.9426,
+   "6": 0.934,
+   "7": 0.9218,
+   "8": 0.918,
+   "9": 0.9123
+  },
+  "JTN1W": {
+   "2": 0.9922,
+   "3": 0.9789,
+   "4": 0.9645,
+   "5": 0.9535,
+   "6": 0.9381,
+   "7": 0.9272,
+   "8": 0.9199,
+   "9": 0.9219
+  }
+ },
+ "ratio_by_stratum": {
+  "JTN1": {
+   "after-stop": 1.0003,
+   "free": 0.9559,
+   "lead": 0.956,
+   "turn": 0.9841
+  },
+  "JTN1W": {
+   "after-stop": 0.9647,
+   "free": 0.9692,
+   "lead": 0.9566,
+   "turn": 0.9934
+  }
+ },
+ "static": {
+  "F far lead static": {
+   "windows": 49,
+   "zeros_native": 12,
+   "zeros_warp": 10
+  },
+  "N1 close lead": {
+   "windows": 477,
+   "zeros_native": 5,
+   "zeros_warp": 5
+  },
+  "N2 no light no lead": {
+   "windows": 38,
+   "zeros_native": 1,
+   "zeros_warp": 2
+  },
+  "P red line no lead": {
+   "windows": 239,
+   "zeros_native": 87,
+   "zeros_warp": 83
+  },
+  "U unknown light static": {
+   "windows": 75,
+   "zeros_native": 29,
+   "zeros_warp": 30
+  }
+ },
+ "strata": {
+  "braking": {
+   "windows": 372,
+   "native": 0.9219184044091564,
+   "warp": 0.9170609379352302,
+   "zeros_native": 27,
+   "zeros_warp": 29
+  },
+  "cruise": {
+   "windows": 116,
+   "native": 0.9836403179519104,
+   "warp": 0.9850285069256234,
+   "zeros_native": 0,
+   "zeros_warp": 0
+  },
+  "launch": {
+   "windows": 200,
+   "native": 0.8563593557840099,
+   "warp": 0.7903274689177997,
+   "zeros_native": 11,
+   "zeros_warp": 22
+  },
+  "other": {
+   "windows": 449,
+   "native": 0.9382916439433598,
+   "warp": 0.928296761153719,
+   "zeros_native": 19,
+   "zeros_warp": 24
+  },
+  "static": {
+   "windows": 878,
+   "native": 0.8473804100227791,
+   "warp": 0.8519362186788155,
+   "zeros_native": 134,
+   "zeros_warp": 130
+  },
+  "turn": {
+   "windows": 213,
+   "native": 0.8983249950695383,
+   "warp": 0.875229924258854,
+   "zeros_native": 19,
+   "zeros_warp": 23
+  }
+ },
+ "types": {
+  "AF-front": {
+   "AF-front": 3,
+   "AF-front+corridor": 0,
+   "corridor": 0,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 1,
+   "rear-hit": 0,
+   "slow": 0
+  },
+  "AF-front+corridor": {
+   "AF-front": 0,
+   "AF-front+corridor": 1,
+   "corridor": 0,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 0,
+   "rear-hit": 0,
+   "slow": 0
+  },
+  "corridor": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 125,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 21,
+   "rear-hit": 0,
+   "slow": 0
+  },
+  "creep": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 0,
+   "creep": 2,
+   "no-launch": 2,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 0,
+   "rear-hit": 0,
+   "slow": 0
+  },
+  "no-launch": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 0,
+   "creep": 1,
+   "no-launch": 8,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 0,
+   "rear-hit": 0,
+   "slow": 2
+  },
+  "offroad": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 1,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 53,
+   "offroad+corridor": 2,
+   "ok": 16,
+   "rear-hit": 0,
+   "slow": 1
+  },
+  "offroad+corridor": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 2,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 1,
+   "ok": 1,
+   "rear-hit": 0,
+   "slow": 0
+  },
+  "ok": {
+   "AF-front": 1,
+   "AF-front+corridor": 2,
+   "corridor": 17,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 2,
+   "offroad+corridor": 0,
+   "ok": 1798,
+   "rear-hit": 0,
+   "slow": 22
+  },
+  "rear-hit": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 0,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 1,
+   "rear-hit": 9,
+   "slow": 1
+  },
+  "slow": {
+   "AF-front": 0,
+   "AF-front+corridor": 0,
+   "corridor": 0,
+   "creep": 0,
+   "no-launch": 0,
+   "offroad": 0,
+   "offroad+corridor": 0,
+   "ok": 27,
+   "rear-hit": 2,
+   "slow": 103
+  }
+ },
+ "static_arc_by_k": {
+  "JTN1": {
+   "0": 2.142,
+   "1": 2.186,
+   "2": 2.274,
+   "3": 2.342,
+   "4": 2.367,
+   "5": 2.385,
+   "6": 2.404,
+   "7": 2.443,
+   "8": 2.465,
+   "9": 2.494
+  },
+  "JTN1W": {
+   "0": 2.074,
+   "1": 2.188,
+   "2": 2.262,
+   "3": 2.335,
+   "4": 2.376,
+   "5": 2.436,
+   "6": 2.457,
+   "7": 2.459,
+   "8": 2.482,
+   "9": 2.494
+  }
+ }
+}
