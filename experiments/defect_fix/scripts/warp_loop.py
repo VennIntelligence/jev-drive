@@ -44,6 +44,7 @@ import native_gap as NG  # noqa: E402
 DATA = NG.DATA
 O = DATA / "runs/defect_fix/warp_loop"
 PROF = ("hum", "const", "stand", "s08", "s12")
+MINN = 20
 VARS = ("F",) + tuple(f"{x}_{p}" for p in PROF for x in "WRB")
 
 
@@ -246,7 +247,7 @@ def cmd_report(a):
     rows = []
     for tag, g0 in mov.groupby("tag"):
         for st, g in [("all", g0)] + list(g0.groupby("dstrat")) + [(f"win {s}", x) for s, x in g0.groupby("stratum")]:
-            if len(g) < 20:
+            if len(g) < MINN:
                 continue
             ids = g.id.values
             r = dict(tag=tag, stratum=st, n=len(g), windows=g.id.nunique())
@@ -257,7 +258,7 @@ def cmd_report(a):
             r["G_W-G_R"] = boot(lambda i: num("W")[i].sum() / den[i].sum() - num("R")[i].sum() / den[i].sum(), ids)
             # human swap (A3): plan speed = 2 s arc / 2 against the human at the ego's station
             h = g[(g.vh >= 2) & g.A_W_hum.notna()]
-            if len(h) >= 20:
+            if len(h) >= MINN:
                 vpf = np.array([arc4(np.asarray(p).reshape(8, 3)[:4]) / 2 for p in h.P_F])
                 for X in "WRB":
                     vpx = np.array([arc4(np.asarray(p).reshape(8, 3)[:4]) / 2 for p in h[f"P_{X}_hum"]])
@@ -283,6 +284,9 @@ def cmd_report(a):
                               lt25_F=float((gk.A_F < 2.5).mean()), lt25_Wst=float((gk.A_W_stand < 2.5).mean())))
     SR = pd.DataFrame(srows)
     J["static"] = srows
+    if not len(SR):
+        json.dump(J, open(O / "report.json", "w"), indent=1, default=str)
+        return
     for cls, g in SR.groupby("cls"):
         print(f"\nstatic {cls}\n" + g.round(3).to_string(index=False))
     # creep growth: mean over k = 5..9 of the median A(k) - A(0)
