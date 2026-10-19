@@ -1,0 +1,16 @@
+== STANDFMXH1K-L18-s0 -> TINA1K-L18-s0
+5c5
+< STANDFMXH1K-L18-s0
+---
+> TINA1K-L18-s0
+85a86,87
+> --on-tightin
+> W_T1
+== STANDFMXH1K-L18-s0 -> TINB1K-L18-s0
+5c5
+< STANDFMXH1K-L18-s0
+---
+> TINB1K-L18-s0
+85a86,87
+> --on-tightin
+> W_T3

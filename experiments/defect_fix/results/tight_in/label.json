@@ -1,0 +1,71 @@
+{
+ "pool": "on1_JTX",
+ "rows": 211392,
+ "s_rows": 128798,
+ "labelled": 128798,
+ "moving_turn": 19125,
+ "tight_moving_turn": 3502,
+ "blocked_human_arc": 452,
+ "domain": 3050,
+ "domain_right": 1905,
+ "domain_left": 1145,
+ "domain_share_of_s": 0.02368049193310455,
+ "domain_logs": 24,
+ "draw_share_jtx00": {
+  "domain": 0.010194468342461903,
+  "s_rows": 0.4571428571428571,
+  "per_batch_70": 0.7136127839723332
+ },
+ "served_fire": {
+  "rows": 3050,
+  "fires": 2402,
+  "share": 0.7875409836065573,
+  "lat": 2001,
+  "arc": 1413,
+  "both": 1012,
+  "draw_share": 0.00824552586522654,
+  "outward_q": [
+   -0.096,
+   0.057,
+   0.695,
+   2.171,
+   3.944
+  ]
+ },
+ "by_part": {
+  "rb0": 482,
+  "rtb1": 442,
+  "ys": 975,
+  "y": 484,
+  "pn0": 30,
+  "pn1": 21,
+  "pn2": 105,
+  "pn3": 160,
+  "pn4": 233,
+  "pn5": 118
+ },
+ "kmax_q_domain": [
+  0.114,
+  0.118,
+  0.129,
+  0.146,
+  0.168
+ ],
+ "rec": {
+  "rows": 211392,
+  "s_rows": 128798,
+  "tightin_rows": 3050,
+  "right": 1905,
+  "left": 1145,
+  "v_ti": 2.0,
+  "h_ti": 4.0,
+  "turn_ti": 15.0,
+  "k_ti": 0.108,
+  "m_ti": 0.2,
+  "k_arc": 1.05,
+  "stations": [
+   -1,
+   25
+  ]
+ }
+}
