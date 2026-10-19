@@ -452,7 +452,7 @@ def cmd_report(a):
     night = E.stratum.str.endswith("night").to_numpy()
     out, md = {}, ["# REAL-GAP: real PAI-AV footage vs the NuRec render, same clips and times", "",
                    f"{E.scene.nunique()} test281 clips, {len(E)} decisions (log replay, 1 Hz dumps with 8 rendered slots, k >= 20); "
-                   f"{N["clip"].nunique()} non-exam clips, {len(N)} real decisions. CIs: scene-cluster bootstrap (jevdrive.stats). "
+                   f"{N['clip'].nunique()} non-exam clips, {len(N)} real decisions. CIs: scene-cluster bootstrap (jevdrive.stats). "
                    "Measurement only: no test281 real frame is in any training row or cache.", ""]
     q = lambda x: f"{np.nanmedian(x):.3g} [{np.nanquantile(x, 0.1):.3g}, {np.nanquantile(x, 0.9):.3g}]"  # noqa: E731
     fmt = lambda r, f=".3f": f"{stats.fmt(r, f)}"  # noqa: E731
