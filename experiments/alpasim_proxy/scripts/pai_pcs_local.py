@@ -67,6 +67,8 @@ SRC = {
     "RCVRL-g20": ("route_follow/recovery_envelope/pai/RCVRL-L18-s0", "other"),
     "RCVLF-g20": ("route_follow/recovery_envelope/pai/RCVLF-L18-s0", "other"),
     "RCVRLF-g20": ("route_follow/recovery_envelope/pai/RCVRLF-L18-s0", "other"),
+    # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
+    **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
 ANCHORS = {"garage": 1819, "go-straight": 1446, "RSG+AG": 2089}          # private PAI PCS, board 2026-10-19 13:49 UTC
 BOARD_MEAN = {"garage": 0.436, "go-straight": 0.140, "RSG+AG": 0.632}
