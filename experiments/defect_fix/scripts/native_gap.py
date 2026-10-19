@@ -256,11 +256,11 @@ def cmd_cf(a):
                 sess[r["session"]] = (r["n"], Path(f).parent / "dump")
             elif r["kind"] == "drive":
                 n, d = sess[r["session"]]
-                recs[(r["scene"], int(r["k"]))] = (d / f"s{n:02d}_k{r['k']}.npz", r["anchor"], int(r["t0"]))
+                recs[(r["scene"], int(r["k"]))] = (d / f"s{n:02d}_k{r['k']}.npz", r["anchor"], int(r["t0"]), r.get("rmem"))
     core = SC.Core(CKPT[a.tag], "cuda", "backwarp")
     tracks = {i: Track(h["T"], h["P"], h["Y"]) for i, h in hum.items()}
     out = []
-    for (sc, k), (f, anc, t0) in sorted(recs.items()):
+    for (sc, k), (f, anc, t0, rmem) in sorted(recs.items()):
         if not f.exists() or sc not in tracks:
             continue
         d = np.load(f)
@@ -292,7 +292,7 @@ def cmd_cf(a):
             pp, cu = (torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
             Hf = core.model.net.run_batched(core.A.vision_feeds(pp, cu), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *core.A.H_SHAPE)
             for mode, row in (("F", ego), ("H", H)):
-                r_ = np.r_[row, np.zeros(core.rm_dim, np.float32)] if core.rm else row
+                r_ = np.r_[row, np.asarray(rmem, np.float32)] if core.rm else row          # the run's own route memory (logged rmem)
                 o = core.model(Hf, torch.from_numpy(r_[None].astype(np.float32)).to(core.dev), torch.tensor([[1.0, 0.0]], device=core.dev))
                 o = (o[0] if isinstance(o, tuple) else o).float()
                 mu = o[0, core.pi].reshape(33, 15).cpu().numpy()
