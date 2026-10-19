@@ -35,3 +35,11 @@ Held 460 @18:
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|:--|:--|
 | BNX2K-L18-s1 | 36 | 0.8655 | 6 | 14 | 23 | 5 / 1 / 31 | 0.797 | 14 / 3 | +0.0023 [-0.0115, +0.0207] | -0.0010 [-0.0184, +0.0219] |
 | BNC2K-L18-s1 | 33 | 0.8632 | 4 | 16 | 22 | 3 / 1 / 37 | 0.788 | 16 / 4 |  | -0.0033 [-0.0224, +0.0193] |
+
+## Disk cleanup (10-19, after the gate; decision 379)
+
+Deleted the rollout dumps (`$DATA_DIR/runs/best_of_n/roll/<tag>/c*/run/driver-logs/dump/*.npz`) that no pool row refers to: 45 277 files, 93.7 GB
+(JTN-L18-s1 20.8, NTV0-L18-s0 24.1, RSG-L18-s0 24.4, NR1FB10-L18-s0 24.4 GB). Free space on the data disk 587 -> 674 GB.
+Checked first: the referenced set = realpaths of `dump` in every `runs/*/rows/*/meta.npz` (BN0-6, BNSM5 and all other pools; no other pool points into `best_of_n/roll`);
+the built pools, `stage/*/manifest.json`, `pick/`, `select/`, `cmd/` and `w_BNX.json` hold no path inside a deleted file (only pool job logs mention the directory). Kept: the 2 543
+picked / stripped dumps the pools reference (1.5 GB with the smoke dumps), the smoke rolls, every rows file, `onpol_sim.pkl`, results summaries and rollouts.
