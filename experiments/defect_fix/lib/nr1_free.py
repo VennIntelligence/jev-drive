@@ -26,6 +26,13 @@ NR1STAND (prereg supplement 17; rm_train --on-stand W --on-stand-margin M): the 
 state stands (tab `speed` < V_STAND) and the human stands all 4 s (arc(fut_reg)_8 < H_STAND); no free check. Cap b_j = max(arc(fut)_j,
 arc(fut_reg)_j) + M (the larger human path, so neither of his paths fires). Fire: s_plan_8 > b_8. Value: sum over the 8 steps of smooth L1
 (beta 0.5) of relu(s_plan_j - b_j); gradient only along each pose's heading. No target speed, nothing inside the cap.
+
+NR1STOPPT (prereg supplement 18; rm_train --on-stoppt W): "do not pass the human's stop point" on approach states. Labels from the log
+(stop_label, built offline into <pool>/stoppt.npz by scripts/stoppt.py labels): rest = the human's station, relative to the ego's, at the first
+log time tau >= t with v_h(tau) < V_REST and s_h(tau) >= s_e (clock-consistent: a point he left before t does not count); rows: S rows, ego t0
+speed >= V_APP, the human has not passed rest + M_STOP at t + 4 s nor 4 s after he was where the ego is, no logged object at the stop (label
+file). Cap = max(rest + M_STOP, v0^2 / (2 A_MAX)), the same at every step. Fire: s_plan_8 > cap. Value: sum over the 8 steps of smooth L1
+(beta 0.5) of relu(s_plan_j - cap); gradient only along each pose's heading. No target speed, nothing below the cap.
 """
 from __future__ import annotations
 
@@ -36,6 +43,7 @@ MODE, V_MOVE, HUM_KEEP = "all", 3.0, 0.8
 FRONT, REAR, HALF_W = 4.049, 1.127, 1.1485        # nuPlan Pacifica about the rear axle (= lib/agent_hinge.py)
 DT = 0.5
 V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
+V_REST, V_APP, M_STOP, A_MAX, H_FUT, LOOK = 0.5, 0.5, 1.0, 4.0, 4.0, 30.0
 
 
 def cum_arc(P):
@@ -224,6 +232,85 @@ def stand_term(poses, rows, pack):
     return stand_terms(poses, pack["cap"][rows], pack["ok"][rows])
 
 
+def stop_label(t, s_e, T, S, look=LOOK):
+    """One state: log time t (s), the ego's station s_e on the logged path; the human's log times T (s, increasing) and stations S
+    (non-decreasing) -> dict(rest (m from s_e, inf: none), t_rest, t_h (when he was at s_e), h4c = s_h(t + 4) - s_e, h4s = s_h(t_h + 4) - s_e,
+    vmin8 (his lowest speed over the 8 s after t_h), path_ok)."""
+    T, S = np.asarray(T, np.float64), np.maximum.accumulate(np.asarray(S, np.float64))
+    sh = lambda tau: np.interp(tau, T, S)  # noqa: E731
+    ok = len(T) >= 2 and T[0] <= t <= T[-1] and S[0] - 1.0 <= s_e
+    i = int(np.searchsorted(S, s_e, "left"))                          # the first log sample at or past s_e (S has flat standing runs)
+    if s_e > S[-1]:
+        th = np.inf
+    elif i == 0:
+        th = float(T[0])
+    else:
+        th = float(T[i - 1] + (T[i] - T[i - 1]) * (s_e - S[i - 1]) / max(S[i] - S[i - 1], 1e-9))
+    g = np.arange(t, min(t + look, T[-1]) + 1e-9, 0.1)
+    v = (sh(g + 0.05) - sh(g - 0.05)) / 0.1
+    hit = np.flatnonzero((v < V_REST) & (sh(g) >= s_e) & (g <= T[-1] - 0.05))
+    rest, tr = (float(sh(g[hit[0]]) - s_e), float(g[hit[0]])) if len(hit) else (np.inf, np.nan)
+    gs = np.arange(th, th + 8.0 + 1e-9, 0.1) if np.isfinite(th) else np.zeros(0)
+    gs = gs[gs <= T[-1] - 0.05]
+    vmin8 = float(((sh(gs + 0.05) - sh(gs - 0.05)) / 0.1).min()) if len(gs) and th + 8.0 <= T[-1] else np.nan
+    return dict(rest=rest, t_rest=tr, t_h=th, h4c=float(sh(t + H_FUT) - s_e), h4s=float(sh(th + H_FUT) - s_e) if np.isfinite(th) else np.nan,
+                vmin8=vmin8, path_ok=bool(ok))
+
+
+def stoppt_ok(lab, v0, lead):
+    """Label dict of stop_label + the ego's t0 speed + the lead flag -> (ok, reason): the rows supplement 18 lets fire."""
+    if not lab["path_ok"]:
+        return False, "no_path"
+    if not np.isfinite(lab["rest"]):
+        return False, "no_rest"
+    if v0 < V_APP:
+        return False, "ego_slow"
+    lim = lab["rest"] + M_STOP
+    if lab["h4c"] > lim:
+        return False, "leaves_clock"
+    if not np.isfinite(lab["h4s"]) or lab["h4s"] > lim:
+        return False, "leaves_station"
+    if lead:
+        return False, "lead"
+    return True, ""
+
+
+def stoppt_cap(rest, v0):
+    rest, v0 = np.asarray(rest, np.float64), np.asarray(v0, np.float64)
+    return np.maximum(np.nan_to_num(rest, posinf=1e6) + M_STOP, v0 ** 2 / (2 * A_MAX)).astype(np.float32)
+
+
+def stoppt_load(pool_dir, names, dev):
+    """-> pack: cap (N,), ok (N,) on dev from <pool_dir>/stoppt.npz (scripts/stoppt.py labels; names = the pool's tab names in order)."""
+    import torch
+    from pathlib import Path
+    z = np.load(Path(pool_dir) / "stoppt.npz")
+    assert np.array_equal(z["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: stoppt.npz rows != the pool's"
+    ok, cap = z["ok"].astype(bool), stoppt_cap(z["rest"], z["v0"])
+    rec = dict(rows=int(len(ok)), stoppt_rows=int(ok.sum()), cap_raised=int((ok & (cap > np.nan_to_num(z["rest"], posinf=1e6) + M_STOP + 1e-4)).sum()),
+               m_stop=M_STOP, a_max=A_MAX, v_app=V_APP, v_rest=V_REST)
+    return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+
+
+def stoppt_terms(poses, cap, ok, parts=False):
+    """poses (n, 8, 3), cap (n,), ok (n,) -> (n,) raw STOPPT term (module docstring); parts: also the fire mask and s_plan_8."""
+    import torch
+    import torch.nn.functional as F
+    import nr1_lon
+    p = poses.float()
+    xl, yl = nr1_lon.lon_only(p[..., 0], p[..., 1], p[..., 2])
+    sp = nr1_lon.arc(xl, yl)
+    with torch.no_grad():
+        fire = ok & (sp[:, -1] > cap)
+    d = torch.relu(sp - cap[:, None])
+    v = F.smooth_l1_loss(d, torch.zeros_like(d), beta=BETA, reduction="none").sum(1) * fire.to(d.dtype)
+    return (v, dict(fire=fire, s_plan=sp[:, -1].detach())) if parts else v
+
+
+def stoppt_term(poses, rows, pack):
+    return stoppt_terms(poses, pack["cap"][rows], pack["ok"][rows])
+
+
 if __name__ == "__main__":                     # known-answer check (CPU)
     import sys
     import torch
@@ -284,4 +371,29 @@ if __name__ == "__main__":                     # known-answer check (CPU)
     c_, o_ = stand_cap(hum[:, :, None].repeat(2, 2) * [1, 0], hum[:, :, None].repeat(2, 2) * [1, 0])
     assert o_.all() and np.allclose(c_[:, -1], [1.0, 1.3])
     assert standing(np.array([0.1, 0.1, 0.8, 0.1]), np.array([0.2, 0.7, 0.2, np.nan])).tolist() == [True, False, False, False]
+    # STOPPT: a human who stops 20 m ahead at 2 s and stays; an ego at his station-matched state
+    T_ = np.arange(0, 20.01, 0.1)
+    S_ = np.where(T_ < 2, 10.0 * T_ - 2.5 * T_ ** 2, 10.0)                             # 10 m/s braking at 5 m/s^2 to rest at 10 m, t = 2 s
+    lab = stop_label(0.0, 0.0, T_, S_)
+    assert abs(lab["rest"] - 10.0) < 0.2 and abs(lab["t_rest"] - 2.0) < 0.15 and lab["h4c"] <= 10.0 + 1e-6 and stoppt_ok(lab, 10.0, False)[0], lab
+    assert stoppt_ok(lab, 0.2, False) == (False, "ego_slow") and stoppt_ok(lab, 10.0, True) == (False, "lead")
+    lab_go = stop_label(0.0, 0.0, T_, np.where(T_ < 3, S_, 10.0 + 5.0 * (T_ - 3)))      # he leaves at 3 s: 15 m at 4 s > 11 m
+    assert stoppt_ok(lab_go, 10.0, False) == (False, "leaves_clock"), lab_go
+    lab_past = stop_label(5.0, 15.0, T_, np.where(T_ < 3, S_, 10.0 + 5.0 * (T_ - 3)))   # at t = 5 he is moving; the point he left is behind
+    assert not np.isfinite(lab_past["rest"]), lab_past
+    lab_early = stop_label(0.0, 6.0, T_, S_)                                            # the ego ahead of him: rest 4 m ahead of the ego
+    assert abs(lab_early["rest"] - 4.0) < 0.2 and stoppt_ok(lab_early, 10.0, False)[0], lab_early
+    cap = torch.as_tensor(stoppt_cap([10.0, 10.0, 2.0], [5.0, 5.0, 10.0]))               # third: 2 m ahead at 10 m/s -> 12.5 m (A_MAX)
+    assert abs(float(cap[2]) - 12.5) < 1e-4 and abs(float(cap[0]) - 11.0) < 1e-6
+    ok3 = torch.tensor([True, False, True])
+    P3 = torch.cat([go(2.0), go(5.0), go(2.0)])                                          # 8 m, 20 m, 8 m in 4 s
+    v3, pr = stoppt_terms(P3, cap, ok3, parts=True)
+    assert v3[0] == 0 and v3[1] == 0 and v3[2] == 0 and not pr["fire"].any()             # under the cap / not a row / under the raised cap
+    assert stoppt_terms(go(5.0), cap[:1], ok3[:1]) > 1.0                                  # 20 m against 11 m: fires
+    q = torch.stack([4.0 * t * torch.cos(th), 4.0 * t * torch.sin(th), th + 0.05], -1)[None].requires_grad_(True)
+    stoppt_terms(q, cap[:1], ok3[:1]).sum().backward()
+    g = q.grad[0]
+    across = -torch.sin(q[0, :, 2].detach()) * g[:, 0] + torch.cos(q[0, :, 2].detach()) * g[:, 1]
+    along = torch.cos(q[0, :, 2].detach()) * g[:, 0] + torch.sin(q[0, :, 2].detach()) * g[:, 1]
+    assert g[:, 2].abs().max() == 0 and across.abs().max() < 1e-6 and (along >= 0).all() and along.max() > 0, g
     print("nr1_free known-answer ok", float(vs))

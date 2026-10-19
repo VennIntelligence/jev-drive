@@ -26,6 +26,8 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
         the human with the way ahead free): logged as lon_free, 10 x W x nr1_free.term, on the agent hinge's boxes. W = 0: nothing loaded or added.
   stand (NR1STAND, rm_train --on-stand W [--on-stand-margin M]; prereg supplement 17) nr1_free's mirror term on standing rows (the plan's 4 s
         arc beyond the standing human's + M): logged as lon_stand, 10 x W x nr1_free.stand_term. W = 0: nothing loaded or added.
+  stoppt (NR1STOPPT, rm_train --on-stoppt W; prereg supplement 18) nr1_free's "do not pass the human's stop point" term on approach rows
+        (labels <pool>/stoppt.npz): logged as lon_stoppt, 10 x W x nr1_free.stoppt_term. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -37,13 +39,20 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
                arc=float(arc), host=bool(host), arc_rows=str(arc_rows), free=float(free))
     CFG["stand"] = float(stand)
-    assert stand > 0 or stand_margin == 1.0, "--on-stand-margin: needs --on-stand"
+    if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
+        CFG["stoppt"] = float(stoppt)
+        return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
+    return _configure_rest(free_frac, free_mode, stand_margin)
+
+
+def _configure_rest(free_frac, free_mode, stand_margin):
+    assert CFG["stand"] > 0 or stand_margin == 1.0, "--on-stand-margin: needs --on-stand"
     if CFG["stand"] > 0:                                                       # NR1STAND (supplement 17)
         import nr1_free
         st = dict(stand=CFG["stand"], **nr1_free.configure_stand(stand_margin))
@@ -112,6 +121,10 @@ def load(pool_dir, names, dev, file=None):
         import nr1_free
         pack["stand"] = nr1_free.stand_load(pool_dir, names, dev)
         print(f"nr1_lat: lon_stand labels {pack['stand']['rec']}", flush=True)
+    if CFG.get("stoppt", 0.0) > 0:                                             # NR1STOPPT: the approach rows' caps
+        import nr1_free
+        pack["stoppt"] = nr1_free.stoppt_load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_stoppt labels {pack['stoppt']['rec']}", flush=True)
     return pack
 
 
@@ -211,4 +224,7 @@ def loss(poses, rows, pack):
     if CFG.get("stand", 0.0) > 0:
         import nr1_free
         out["lon_stand"] = 10.0 * CFG["stand"] * nr1_free.stand_term(poses, rows, pack["stand"])
+    if CFG.get("stoppt", 0.0) > 0:
+        import nr1_free
+        out["lon_stoppt"] = 10.0 * CFG["stoppt"] * nr1_free.stoppt_term(poses, rows, pack["stoppt"])
     return out
