@@ -1,0 +1,101 @@
+clip_id,group,scene_id,uuid,chunk,split,country,hour_of_day,platform_class,stratum
+cbb22323-0b4b-4364-8fc5-4a47357d4df8,test281,clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8,369eb1bd-5d6a-4ae4-8a6f-12b6ba22cad9,3134,test,United States,17.0,hyperion_8.1,US/day
+37d660b1-8abc-4a24-8778-94ca50a268c2,test281,clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2,a620616f-3224-4953-b574-af685970129b,2275,test,United States,6.0,hyperion_8.1,US/day
+65907a2b-e934-4920-9580-c8f14fee5164,test281,clipgt-65907a2b-e934-4920-9580-c8f14fee5164,cae6e567-5782-4731-a14d-348e6a768b20,2991,test,United States,7.0,hyperion_8.1,US/day
+3232fdb7-2b72-4e25-8726-4d9b28281e1e,test281,clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e,7c62d679-9bfb-4492-bf6c-8c20be776ee2,3103,test,United States,9.0,hyperion_8.1,US/day
+82f505c9-6a41-4984-b72e-1d71254c4bd9,test281,clipgt-82f505c9-6a41-4984-b72e-1d71254c4bd9,b5eb1918-79e5-498d-b193-c9ce95404a1a,1311,test,United States,17.0,hyperion_8.1,US/day
+a1f07c94-7556-4041-9d0c-da629a219ebd,test281,clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd,da92b23a-00b4-451d-91a3-dfe9fbc1dfe6,1289,test,United States,9.0,hyperion_8.1,US/day
+1e31b2ad-e61b-42b9-8c13-d40630d50172,test281,clipgt-1e31b2ad-e61b-42b9-8c13-d40630d50172,534ba420-039c-4da4-aec9-b1ce3ba6a8c8,1042,val,United States,9.0,hyperion_8.1,US/day
+ca173de1-7cc2-4bf9-865a-57c9af85bb8c,test281,clipgt-ca173de1-7cc2-4bf9-865a-57c9af85bb8c,f609db7f-4566-4aad-9b17-597dfe537b7a,419,train,United States,10.0,hyperion_8.1,US/day
+c8641276-c887-465d-b88e-df70bd7214b6,test281,clipgt-c8641276-c887-465d-b88e-df70bd7214b6,b385a0ca-d2cb-4b5e-b100-65dae387de3a,408,train,United States,8.0,hyperion_8.1,US/day
+a1b166cc-b0a6-491b-98eb-2880a57e8677,test281,clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677,4b03ad7e-7134-4b84-9d35-bed1ec0739f9,442,train,United States,14.0,hyperion_8.1,US/day
+c8cab401-90c0-4e8c-809d-28d7411119de,test281,clipgt-c8cab401-90c0-4e8c-809d-28d7411119de,2f596a7b-a0e6-4ada-99b1-1d96a63b4930,3134,test,United States,17.0,hyperion_8.1,US/day
+b40f4729-29c4-4846-a04b-72c78832a062,test281,clipgt-b40f4729-29c4-4846-a04b-72c78832a062,11e6e3b1-3f8a-4d59-8585-02a4fdc72d34,381,train,United States,18.0,hyperion_8.1,US/night
+b727530b-d0d4-4ad0-885c-15d14d3a871e,test281,clipgt-b727530b-d0d4-4ad0-885c-15d14d3a871e,365e45e0-543e-4d86-a387-2c7d05326fd9,978,val,United States,18.0,hyperion_8.1,US/night
+ffe5b17d-92bd-4f55-bf77-ad4b0b6e31a3,test281,clipgt-ffe5b17d-92bd-4f55-bf77-ad4b0b6e31a3,c315705b-6ab1-4143-9709-eb612dd18146,1261,test,United States,4.0,hyperion_8.1,US/night
+9d9e7f39-0435-41ad-bd7e-6a672119183c,test281,clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c,a7ab8143-5aed-473c-8fb1-e75d4fecfeff,501,train,United States,21.0,hyperion_8.1,US/night
+baabc57d-5255-43f9-a0b8-74490fb77494,test281,clipgt-baabc57d-5255-43f9-a0b8-74490fb77494,42ee77ec-4258-491d-be8b-05dfdca0bb4f,1784,train,United States,23.0,hyperion_8.1,US/night
+88bbf0c9-9ba5-45b4-bc15-9dca85ca84b9,test281,clipgt-88bbf0c9-9ba5-45b4-bc15-9dca85ca84b9,a5ee0d3c-121e-4070-aeda-f15dc36af1c3,1915,val,United States,22.0,hyperion_8.1,US/night
+dc222bc3-c7bc-47f8-8106-778b3059c53e,test281,clipgt-dc222bc3-c7bc-47f8-8106-778b3059c53e,7137e87d-9156-4827-81f3-75ed804c2a37,2399,train,United States,18.0,hyperion_8.1,US/night
+4176f31d-dfb3-4af2-93f3-2ac1e41092cf,test281,clipgt-4176f31d-dfb3-4af2-93f3-2ac1e41092cf,4099ffe7-1129-4c29-90fd-18c45ef48200,2388,train,United States,18.0,hyperion_8.1,US/night
+bbc1699d-be16-42e4-9723-14a45c9c5f59,test281,clipgt-bbc1699d-be16-42e4-9723-14a45c9c5f59,ea738e26-a8fc-4acb-ace4-10e47aadfaf0,1916,val,United States,20.0,hyperion_8.1,US/night
+a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d,test281,clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d,498ae85e-45cd-46ff-9eb3-28eb483eb773,938,val,United States,20.0,hyperion_8.1,US/night
+788c4ad9-54b1-45fe-9b41-9e7dff82b0cd,test281,clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd,1c92e23e-c7d9-4d70-8801-b06334831eda,95,train,United States,22.0,hyperion_8.1,US/night
+a68ad579-8a04-45b9-89f9-89ec3c1893bb,test281,clipgt-a68ad579-8a04-45b9-89f9-89ec3c1893bb,ce3a81ab-bf18-4cd7-a2d4-8199a106e713,1103,val,Germany,17.0,hyperion_8.1,DE/day
+e9990bdd-c70a-4078-9f56-a406d8c43f98,test281,clipgt-e9990bdd-c70a-4078-9f56-a406d8c43f98,b64d31af-2ce8-4c33-9214-e7d3bb14e14e,2286,test,Germany,8.0,hyperion_8.1,DE/day
+2a882d89-eadc-42a4-a15c-5977361845f6,test281,clipgt-2a882d89-eadc-42a4-a15c-5977361845f6,9d2a250f-56ac-4c85-beb8-337d7c194d78,2797,train,Germany,16.0,hyperion_8.1,DE/day
+0e05cb0c-9cfc-4e81-b801-0216fde5cd20,test281,clipgt-0e05cb0c-9cfc-4e81-b801-0216fde5cd20,52d526ec-90ca-4f4d-a389-195b29b18a99,1366,test,Germany,7.0,hyperion_8.1,DE/day
+abd45a30-146a-40c0-9f78-9ce697ac3ade,test281,clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade,4722b294-5360-43bc-8bd3-f3b3df41c706,1076,val,Germany,16.0,hyperion_8.1,DE/day
+1a050ead-6fcd-4676-ac5a-2355300a909c,test281,clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c,a1f6997e-389f-4604-a7e0-27ba7904632f,3110,test,Germany,16.0,hyperion_8.1,DE/day
+f1575120-c0b8-45f3-9bc7-c7bcd76703f1,test281,clipgt-f1575120-c0b8-45f3-9bc7-c7bcd76703f1,4f4c9dc4-5d74-425b-a4d5-f4485148ab7a,2112,val,Germany,8.0,hyperion_8.1,DE/day
+ca481583-5812-4288-ad42-82643cfb7097,test281,clipgt-ca481583-5812-4288-ad42-82643cfb7097,bd877dfb-4bf1-4fbb-a711-c117cb10d52b,1087,val,Germany,9.0,hyperion_8.1,DE/day
+b44a4a44-0d00-4795-8a66-7acb0fdf46a2,test281,clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2,ff71489a-2829-4dab-819d-12ff4cae035b,3111,test,Germany,18.0,hyperion_8.1,DE/night
+c4100c5d-aa42-4e68-a7e8-1704768a453d,test281,clipgt-c4100c5d-aa42-4e68-a7e8-1704768a453d,21f2367a-8d3a-4bb2-b9ca-6baf5d64e75c,1793,train,Germany,4.0,hyperion_8.1,DE/night
+2a0efada-f32d-4757-9901-88fb8bfb501e,test281,clipgt-2a0efada-f32d-4757-9901-88fb8bfb501e,f69602b6-fb65-4142-8091-bf39af0d142c,1077,val,Germany,23.0,hyperion_8.1,DE/night
+62cfe9d3-df92-4395-9faf-897ee20ef839,test281,clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839,552f8bd0-eb5b-4f27-8830-804539662aa1,2408,train,Germany,19.0,hyperion_8.1,DE/night
+074e5ee3-d209-438e-8de4-40032539c331,test281,clipgt-074e5ee3-d209-438e-8de4-40032539c331,8aef8a3c-25c5-4cc3-bbd1-0b451022cd3e,673,train,Germany,22.0,hyperion_8.1,DE/night
+a686c7d0-8de6-47dc-90e6-be4c918a4e76,test281,clipgt-a686c7d0-8de6-47dc-90e6-be4c918a4e76,9f6c7725-0c26-4a89-a821-1d7a98077bbb,671,train,Germany,1.0,hyperion_8.1,DE/night
+2f227f2c-95e9-4098-a9b1-01d64c697226,test281,clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226,845e9dc8-1435-4adb-93bb-f4847a8e601e,1084,val,Germany,19.0,hyperion_8.1,DE/night
+3ce13eed-f97b-4c37-8716-a590569fab77,test281,clipgt-3ce13eed-f97b-4c37-8716-a590569fab77,75f9418c-8fae-48bc-97ab-71b9ba30c822,1867,train,Spain,14.0,hyperion_8.1,other/day
+009c69f0-6e5d-4716-b623-fb45f378fae4,test281,clipgt-009c69f0-6e5d-4716-b623-fb45f378fae4,a5347491-e341-41be-b28a-099ca50c805a,1120,val,Italy,9.0,hyperion_8.1,other/day
+4a863a41-f6b3-4323-9a54-848d8c3d15a9,test281,clipgt-4a863a41-f6b3-4323-9a54-848d8c3d15a9,01def748-e4d8-4a49-ba60-dc73ee22692a,706,train,Italy,9.0,hyperion_8.1,other/day
+9f393c8a-4e24-4b04-b98a-099a28bde89a,test281,clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a,00441730-70c7-47f8-a42d-1b40568732a7,813,train,Finland,16.0,hyperion_8.1,other/day
+b4a3c975-340a-4a0d-9d28-d96b4bc7dc23,test281,clipgt-b4a3c975-340a-4a0d-9d28-d96b4bc7dc23,fb69fb40-f44f-4b7b-8ed4-eec2344f2b19,2310,test,Italy,12.0,hyperion_8.1,other/day
+268949d2-3e20-4972-8785-c15e4fcb5fde,test281,clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde,43f03d34-3301-4544-b354-e581cdf76365,1419,test,Austria,15.0,hyperion_8.1,other/day
+4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8,test281,clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8,fd99c276-808b-44f1-acf2-a66863e6f455,711,train,Sweden,16.0,hyperion_8.1,other/day
+a9c7f2c7-b1b6-4aa5-85b8-5daf04b6e94a,test281,clipgt-a9c7f2c7-b1b6-4aa5-85b8-5daf04b6e94a,df7603ea-5511-4a15-918f-665210c72548,1421,test,Austria,18.0,hyperion_8.1,other/night
+be0d3628-098d-4ac7-a52c-36b71c50e293,test281,clipgt-be0d3628-098d-4ac7-a52c-36b71c50e293,17541bd9-0797-4133-a311-a8e640502cde,2869,train,Belgium,21.0,hyperion_8.1,other/night
+e5e47fd2-e934-42a6-802a-45c3a4a1a3cf,test281,clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf,baa4971c-4249-40d5-b111-349b8da681b3,1391,test,Italy,21.0,hyperion_8.1,other/night
+49bcab6f-d6a9-48de-a7c3-47f91059fc66,test281,clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66,b0c496b3-6eda-488c-a252-c9dd9a2dcb53,682,train,France,19.0,hyperion_8.1,other/night
+00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3,test281,clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3,ab7ed774-bf6c-4b83-9ad2-04c905763e71,2667,test,France,19.0,hyperion_8.1,other/night
+1bfad87c-4f52-4353-9f42-763a6ab8fbf5,test281,clipgt-1bfad87c-4f52-4353-9f42-763a6ab8fbf5,508f8a69-5f8a-412e-bebb-fafd95d20bc2,3032,test,Italy,0.0,hyperion_8.1,other/night
+1ed2b351-a590-40c2-ae9a-2ace1f7f40d8,nonexam,,,2744,train,United States,9.0,hyperion_8.1,US/day
+3dcc0827-ca74-4c72-a99d-07c3bd0c90cb,nonexam,,,465,train,United States,11.0,hyperion_8.1,US/day
+e2f9d4d6-0fbc-44f1-bd91-0957d0e60bfa,nonexam,,,1536,train,United States,13.0,hyperion_8,US/day
+064ee247-4998-48b2-aecb-084fa1710c84,nonexam,,,1565,train,United States,12.0,hyperion_8,US/day
+bb01bae2-a9a8-4445-a170-e9f01d205717,nonexam,,,1529,train,United States,9.0,hyperion_8,US/day
+a8fa261e-0b16-4391-84c0-32c00eb7970b,nonexam,,,518,train,United States,12.0,hyperion_8.1,US/day
+99482547-b02e-415f-954f-a54ab3a8de14,nonexam,,,9,train,United States,9.0,hyperion_8,US/day
+8c1e3e53-b6c7-48d4-8cee-d7f25187c98b,nonexam,,,1749,train,United States,12.0,hyperion_8,US/day
+d4ecb466-1c5b-4cdb-b9cd-17f4cd4d1052,nonexam,,,2727,train,United States,6.0,hyperion_8.1,US/day
+6f93b734-9cc9-4c8d-9dca-d59ffc018ddc,nonexam,,,2395,train,United States,17.0,hyperion_8.1,US/day
+3999c943-1abb-4e65-b38b-8a0da2e64d41,nonexam,,,11,train,United States,8.0,hyperion_8,US/day
+94a1c10b-f5d3-4d3d-8f72-fb0533748603,nonexam,,,1901,train,Poland,8.0,hyperion_8,other/day
+be3f8da3-c73f-4c79-a6aa-44d966815d99,nonexam,,,892,train,Belgium,12.0,hyperion_8.1,other/day
+dbe1350b-fa5c-402b-8b3f-53ffe1dfbf7f,nonexam,,,172,train,Austria,8.0,hyperion_8.1,other/day
+7f65180f-d1e6-44d2-a69f-ea59f598bd36,nonexam,,,167,train,Poland,11.0,hyperion_8,other/day
+395e88e6-b2ae-48f9-8fff-7bdc3f6b0584,nonexam,,,2824,train,Portugal,13.0,hyperion_8.1,other/day
+b45803f6-b72f-4f5e-923d-690fc76fe7d0,nonexam,,,2805,train,France,9.0,hyperion_8.1,other/day
+b4609855-8614-4dc3-a4a1-e36c1216997e,nonexam,,,2496,train,Czechia,10.0,hyperion_8.1,other/day
+ca68c358-5d98-4ca5-843d-2368f162e13a,nonexam,,,2476,train,Netherlands,8.0,hyperion_8.1,other/day
+0ddca8c2-23f7-4314-aad2-f342e3113ab8,nonexam,,,687,train,France,7.0,hyperion_8.1,other/day
+937f724e-29c0-4968-800a-5b28d8e91b13,nonexam,,,1698,train,United States,19.0,hyperion_8,US/night
+d0624c2b-1884-45a3-8fc3-c35b66ce1878,nonexam,,,516,train,United States,18.0,hyperion_8.1,US/night
+3668c88c-922d-4c91-b49c-18a9ff16f327,nonexam,,,390,train,United States,20.0,hyperion_8.1,US/night
+22165f99-1999-473d-927e-5ba2cf145fb5,nonexam,,,1604,train,United States,22.0,hyperion_8,US/night
+b3e0feaf-249c-4791-86cd-3689c35a068a,nonexam,,,434,train,United States,20.0,hyperion_8.1,US/night
+1037538d-3963-4fcc-8dcb-d8206e6edd0b,nonexam,,,2335,train,United States,3.0,hyperion_8.1,US/night
+d5ef6f82-af7c-49d2-9df3-3adf9196c735,nonexam,,,486,train,United States,20.0,hyperion_8.1,US/night
+11830f79-fb88-4a5d-9a2e-fb5df6dbed03,nonexam,,,445,train,United States,18.0,hyperion_8.1,US/night
+45b92af2-3eb1-4a01-9bf4-c698028f6d56,nonexam,,,2372,train,United States,19.0,hyperion_8.1,US/night
+2719211b-1370-4e0d-bc4c-4fcd0ef3cee8,nonexam,,,2848,train,Slovenia,2.0,hyperion_8.1,other/night
+c1e57eaa-0b2a-47a5-ab7c-1284f16aa85c,nonexam,,,903,train,Romania,21.0,hyperion_8.1,other/night
+6c435d10-d1c3-4742-a7c2-f51acf64032b,nonexam,,,799,train,Croatia,22.0,hyperion_8.1,other/night
+2bdb5df8-96b2-4886-8de2-8f1b9c3891d1,nonexam,,,742,train,Greece,0.0,hyperion_8.1,other/night
+3dedcad7-be87-413c-a08e-d9b53538eaeb,nonexam,,,793,train,Croatia,3.0,hyperion_8.1,other/night
+37b96a3d-f619-4861-b06a-6190310c012c,nonexam,,,2844,train,Finland,21.0,hyperion_8.1,other/night
+a0fd2cca-e7bf-47b2-8687-8b4020dc35c1,nonexam,,,778,train,Austria,23.0,hyperion_8.1,other/night
+49ee1e73-3ab3-4ccd-ae6e-ec6b379984e9,nonexam,,,765,train,Spain,5.0,hyperion_8.1,other/night
+3e8006f8-58bf-496c-9f52-191b7aca0e9d,nonexam,,,2798,train,Germany,14.0,hyperion_8.1,DE/day
+11ccaf48-a05c-4afa-8f46-51957bb8c4fa,nonexam,,,650,train,Germany,12.0,hyperion_8.1,DE/day
+6c1cfd04-3143-4b0f-9e1f-dff838c66108,nonexam,,,112,train,Germany,12.0,hyperion_8,DE/day
+90413c8b-5c44-441b-84b3-873e9e6b2f2c,nonexam,,,2423,train,Germany,15.0,hyperion_8.1,DE/day
+c88b7554-2d91-4a76-b433-6e2fbe995905,nonexam,,,110,train,Germany,10.0,hyperion_8,DE/day
+c6fc6431-7b40-4030-9fc4-f620742e120f,nonexam,,,2777,train,Germany,14.0,hyperion_8.1,DE/day
+56ce3f56-0ff9-48f9-823d-f798b036a453,nonexam,,,674,train,Germany,13.0,hyperion_8.1,DE/day
+0c9a6929-6273-4b6f-b484-09fb46f65fb0,nonexam,,,588,train,Germany,19.0,hyperion_8.1,DE/night
+aed0db9f-38d2-4e41-a3b8-2d17a3b7d031,nonexam,,,3082,train,Germany,21.0,hyperion_8,DE/night
+8275fa27-aa4e-41c3-aae4-38253f4696d2,nonexam,,,1787,train,Germany,2.0,hyperion_8.1,DE/night
+2c7867aa-bbd3-4c1d-9875-313f8af0cf20,nonexam,,,2421,train,Germany,19.0,hyperion_8.1,DE/night
+d3e3e8e5-8397-484f-ac67-9b70564ed77c,nonexam,,,626,train,Germany,20.0,hyperion_8.1,DE/night
+9ff34af3-2b3f-4d52-906e-7695f110814c,nonexam,,,127,train,Germany,2.0,hyperion_8.1,DE/night
