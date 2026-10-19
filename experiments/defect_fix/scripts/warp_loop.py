@@ -169,7 +169,11 @@ def cmd_cf(a):
                 vh, _ = tracks[sc].v_at_station(tracks[sc].station(xy)[0])
             prof = profiles(P, V, float(ego[6]) * 3.0, vh)
             jobs = {"N": (P, V)} | {p: (q[0], q[1]) for p, q in prof.items()}
-            lat = dict(zip(jobs, outer.map(lambda pv: SC.lattice(K, e, I.track_navsim(*pv), cam_t, "backwarp"), jobs.values())))
+            if a.synth == "gpu":                                  # the serve default (sh30_driver SH30_SYNTH=gpu)
+                lat = {q: (lambda c_v: (c_v[0].cpu().numpy(), c_v[1]))(SC.lattice_gpu(K, e, I.track_navsim(*pv), cam_t, "backwarp", core.dev))
+                       for q, pv in jobs.items()}
+            else:
+                lat = dict(zip(jobs, outer.map(lambda pv: SC.lattice(K, e, I.track_navsim(*pv), cam_t, "backwarp"), jobs.values())))
             curN, validN = lat["N"]
             byte_diff = int((curN != z["cur"]).sum()) if np.array_equal(validN, z["valid"]) else -1
             res = {}
@@ -307,6 +311,7 @@ if __name__ == "__main__":
     p = sp.add_parser("cf")
     p.add_argument("--tag", required=True), p.add_argument("--run", required=True), p.add_argument("--threads", type=int, default=12)
     p.add_argument("--limit", type=int, default=0), p.add_argument("--out", default="")
+    p.add_argument("--synth", choices=("gpu", "cpu"), default="gpu")
     sp.add_parser("report")
     a = ap.parse_args()
     dict(cf=cmd_cf, report=cmd_report)[a.cmd](a)
