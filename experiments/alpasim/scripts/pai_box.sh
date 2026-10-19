@@ -12,7 +12,8 @@
 #   default: a read of 147 scenes is then ~10 GB instead of ~60 GB), ALPASIM_FAST (default 1 since 2026-10-16: every camera kept, the
 #   driver's as the preset asks, the others 64 px and one frame per rollout, eval video off; bit-identical to the official set at 2.5x the speed;
 #   0 = the official camera set and eval video, solo = the driver's camera alone; lib/sim_fast.py, docs/alpasim.md "Fast local reads"),
-#   VRAM / RAM (per job: 22 / 30 GB, ALPASIM_FAST=0: 28 / 40).
+#   VRAM / RAM (per job: 22 / 30 GB, ALPASIM_FAST=0: 28 / 40), DRV (run.sh driver, default pai; any other, e.g. garage or starter, needs no
+#   checkpoint under op_parity and takes its own env through SERVE, e.g. DRV=garage SERVE=GARAGE_RIG=sensor_rig_2.yaml ALPASIM_FAST=0).
 # Layout as pai_eval.sh, so pai_eval_report.py reads it unchanged: <out>/{chunks/cNNN.txt, jobs.txt, runs/<lowercase tag>_cNNN/{sim/, driver ->
 #   sim/driver-logs, pool/, SUBMITTED, DONE | ERROR}}. A second submit skips finished and pending chunks and resubmits failed ones (resume);
 #   a chunk with a scene not yet in the scene cache is left out until a later submit.
@@ -21,10 +22,10 @@ here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
 FAST=${ALPASIM_FAST:-${PAI_FAST:-1}}
 if [[ $FAST == 0 ]]; then VRAM=${VRAM:-28} RAM=${RAM:-40}; else VRAM=${VRAM:-22} RAM=${RAM:-30}; fi
 mode=$1 O=$(mkdir -p "$2" && cd "$2" && pwd) T=$3; shift 3
-C=$DATA_DIR/runs/op_parity/runs/$T; L=${T,,}
+C=$DATA_DIR/runs/op_parity/runs/$T; L=${T,,}; DRV=${DRV:-pai}
 case $mode in
 submit)
-  [[ $T == P0 || -f $C/ckpt-final.pt || -n ${AFTER:-} ]] || { echo "no checkpoint $C" >&2; exit 1; }   # P0 = shipped Cinque; with AFTER the
+  [[ $T == P0 || $DRV != pai || -f $C/ckpt-final.pt || -n ${AFTER:-} ]] || { echo "no checkpoint $C" >&2; exit 1; }   # P0 = shipped Cinque; with AFTER the
                                                                                                          # checkpoint may still be training
   mkdir -p "$O"/{chunks,runs}
   if ! ls "$O"/chunks/*.txt >/dev/null 2>&1; then              # written once: a resubmit keeps its chunks
@@ -32,7 +33,7 @@ submit)
     else for f in "$@"; do if head -1 "$f" | grep -q '^scene_id'; then awk -F'\t' 'NR > 1 && $8 <= 1 {print $1}' "$f"; else grep . "$f"; fi; done \
            | awk '!seen[$0]++' | split -l "${CHUNK:-25}" -d -a 3 --additional-suffix=.txt - "$O/chunks/c"; fi
   fi
-  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "KEEP_ASL=${KEEP_ASL:-0}" "ALPASIM_FAST=$FAST" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
+  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "KEEP_ASL=${KEEP_ASL:-0}" "ALPASIM_FAST=$FAST" "DRV=$DRV" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
   X=(); for kv in ${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}; do X+=(--env "$kv"); done
   miss=$(python3 - "$DATA_DIR/third_party/alpasim/data/scenes" "${NUREC:-$DATA_DIR/datasets/nurec}/all-usdzs" "$O"/chunks/*.txt <<'PY'
 import csv, os, sys                 # chunks with a scene whose usdz is not in the cache yet (a copy still running): left for a later submit
@@ -50,7 +51,7 @@ PY
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram "$VRAM" --cpu 6 --ram "$RAM" --timeout-h 3 \
            --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env "CL_HIST_KEY=pai-$(case $FAST in 0) echo read ;; solo) echo solo ;; *) echo fast ;; esac)${CONC:-4}" --env "CONC=${CONC:-4}" \
-           --env "WIZ=${WIZ:-}" --env "ALPASIM_FAST=$FAST" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
+           --env "WIZ=${WIZ:-}" --env "ALPASIM_FAST=$FAST" --env "DRV=$DRV" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
   done ;;
@@ -58,7 +59,7 @@ run)
   c=$1; r=$O/runs/${L}_$c; R=$r/sim
   rm -rf "$R" "$r"/{DONE,ERROR}; mkdir -p "$r"; ln -sfn sim/driver-logs "$r/driver"
   # shellcheck disable=SC2086
-  env SH30_TAG="$T" CONC="${CONC:-4}" ALPASIM_FAST="$FAST" ALPASIM_VIDEO="${KEEP_VIDEO:-0}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" ${WIZ:-}; rc=$?
+  env SH30_TAG="$T" PAI_DRV="$DRV" CONC="${CONC:-4}" ALPASIM_FAST="$FAST" ALPASIM_VIDEO="${KEEP_VIDEO:-0}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" ${WIZ:-}; rc=$?
   rm -rf "$R/nre-cache" "$R/driver-tmp"; [[ ${KEEP_VIDEO:-0} == 1 ]] || find "$R/rollouts" -name '*.mp4' -delete 2>/dev/null
   [[ ${KEEP_ASL:-0} == 1 || ! -f $R/aggregate/results-summary.json ]] || python3 - "$R" <<'PY'
 import glob, json, os, sys                  # rollout.asl (~0.4 GB a scene) is kept for zero-score rollouts only, as the nuPlan reads do

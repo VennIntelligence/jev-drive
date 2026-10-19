@@ -7,6 +7,7 @@
 # Env: CONC (concurrent rollouts, default 4), STAGE (rows of the tsv with stage <= this, default 1), SH30_TAG (checkpoint, default P2H10-F-s0),
 #   NUREC (scene cache, default $DATA_DIR/datasets/nurec), NRE_ROOT (default $DATA_DIR/tools/nre-rootfs), JEV_VCONT / JEV_LEAD / PAI_* (drivers/pai.sh).
 #   ALPASIM_FAST (default 1: lib/sim_fast.py through run_native.py; 0 = the official camera set and eval video).
+#   PAI_DRV (run.sh driver, default pai = our driver; e.g. garage with GARAGE_RIG=sensor_rig_2.yaml, or starter = the go-straight kit).
 # The pool sets CUDA_VISIBLE_DEVICES: the card is index 0 inside the run.
 set -euo pipefail
 export ALPASIM_FAST=${ALPASIM_FAST:-1}
@@ -16,7 +17,7 @@ SRC=${ALPASIM_SRC:-$DATA_DIR/third_party/alpasim}; NUREC=${NUREC:-$DATA_DIR/data
 mkdir -p "$OUT"
 if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1}" 'NR > 1 && $8 <= s {print $1}' "$LIST"); else ids=$(grep . "$LIST"); fi
 echo "$ids" > "$OUT/scene_ids.txt"
-exec bash "$here/run.sh" "$OUT" pai --scene-list "$OUT/scene_ids.txt" --rewrite-configs \
+exec bash "$here/run.sh" "$OUT" "${PAI_DRV:-pai}" --scene-list "$OUT/scene_ids.txt" --rewrite-configs \
   --sub "/app=$ROOT/app" --sub " --enable-harmonizer=" --sub "/tmp/nre-cache-dir=$OUT/nre-cache" \
   +e2e_challenge=dev scenes.scene_cache="$NUREC" "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" \
   "services.renderer.gpus=[0]" "services.physics.gpus=[0]" \
