@@ -1,6 +1,6 @@
 # nuPlan submission images: JTN-L18-s1, native and with serve-side hold `JEV_HOLD=stop3` (2026-10-19)
 
-Status: built and tested; **independent audit pending**. Nothing was pushed or submitted. Two images with the same build code and the same
+Status: built and tested; independent audit: **GO for both images** ([image_jtn_s1_audit.md](image_jtn_s1_audit.md)), commands below corrected by it. Nothing was pushed or submitted. Two images with the same build code and the same
 checkpoint (JTN-L18-s1), differing only in `JEV_HOLD`. The procedure is that of [image_jtn_stop3.md](image_jtn_stop3.md) (JTN-L18-s0 + stop3) and
 [image_rsg_stop3.md](image_rsg_stop3.md) (audited GO): same frozen clean clone at `ba3ef44d` on Tokyo
 (`/data/runs/alpasim/tokyo_image/code-rsg-stop3/`, no `-dirty`), only the checkpoint and `HOLD` swapped. No code change: `build.sh` already maps an empty
@@ -103,37 +103,45 @@ Files left in place on Tokyo: `/data/runs/alpasim/tokyo_image/JTN-L18-s1-{native
 
 ## What the user runs (not run by an agent; after the audit)
 
-On the Tokyo box, account profile `ujs-iv`. `~/bin/ap <profile> ...` exports that profile's `ALPASIM_CONFIG_DIR` and `DOCKER_CONFIG`, so the ECR login is the profile's own
-(all teams share one registry host; check that the team printed by `ecr-login` is the one you mean, the Tokyo store also holds images pushed to other teams). Quota: 3 official submissions per UTC month
-shared with PAI; only the code layer and the layers above it upload (about 230 MB for the first image, the second one only its metadata layer).
+Corrected by the audit ([image_jtn_s1_audit.md](image_jtn_s1_audit.md), item 5): the team repository is taken from what `ecr-login` prints instead of a
+hard-coded guess, the local tag is made from the image **id** (so a re-tagged or rebuilt `jev-alpasim:...` name cannot be pushed by mistake), the push
+retries a bounded number of times, and the remote digest is checked against the push before submitting.
+
+On the Tokyo box, account profile `ujs-iv`. `~/bin/ap <profile> ...` exports that profile's `ALPASIM_CONFIG_DIR` and `DOCKER_CONFIG`, so the token and the
+ECR login are the profile's own (`ap <profile> submit` also resolves the image with that login). All teams share one registry host. Evidence for the team
+id: this account's PAI image was pushed on 2026-10-16 to `teams/ujs-iv` (`teams/ujs-iv:rsg-l18-s0-acc-v1`, digest `9b19cc9d...`, still in the Tokyo store);
+`ecr-login` prints the authoritative value. Quota: 3 official submissions per UTC month shared with PAI; on 2026-10-19 neither public board lists a
+`ujs-iv` submission, so the two images would be two of the account's three October slots (`limits` gives the exact count after sign-in).
 
 ```bash
 P=ujs-iv
-~/bin/ap $P me; ~/bin/ap $P limits                    # token valid 12 h; if expired: ap $P auth-url; ap $P configure-token
-~/bin/ap $P ecr-login                                 # prints the team repository URI (used below as $REPO)
-REPO=696254625193.dkr.ecr.us-east-1.amazonaws.com/teams/ujs-iv   # replace with the URI ecr-login printed
+~/bin/ap $P me                                        # token valid 12 h; if expired: ~/bin/ap $P auth-url, sign in, ~/bin/ap $P configure-token
+~/bin/ap $P limits                                    # remaining official nuplan slots this UTC month: must be >= 2
+REPO=$(~/bin/ap $P ecr-login | tee /dev/stderr | sed -n 's/^Team repository: //p'); echo "REPO=$REPO"
+[[ -n $REPO ]] || echo "STOP: ecr-login printed no team repository (terms not accepted? run: ~/bin/ap $P terms status)"
+# expected: 696254625193.dkr.ecr.us-east-1.amazonaws.com/teams/ujs-iv; any other team -> stop, wrong profile
 
-# image 1: native (no hold)
-IMG=jev-alpasim:jtn-l18-s1-ba3ef44d
-docker image inspect "$IMG" --format '{{.Id}}'        # must print sha256:1b68246103ec1fd106482eeec04c3e9b9fddb11a9f896148bde7b1a8f03dea22
-URI=$REPO:jtn-l18-s1-native
-docker tag "$IMG" "$URI"
-until ~/bin/ap $P docker push "$URI"; do sleep 10; done     # note the digest it prints
-~/bin/ap $P submit --track nuplan-warmup "$URI"       # optional warm-up: 32 private scenes, status only
-~/bin/ap $P submit --track nuplan "$URI"              # official
-~/bin/ap $P status <submission_id>; ~/bin/ap $P submissions --track nuplan
+push() {   # push <image id> <remote tag>: tag by id, push (bounded retries), print the remote digest
+  docker image inspect "$1" >/dev/null || return 1
+  docker tag "$1" "$REPO:$2" || return 1
+  for i in 1 2 3 4 5; do ~/bin/ap $P docker push "$REPO:$2" && break; [[ $i == 5 ]] && return 1; sleep 15; done
+  ~/bin/ap $P docker manifest inspect "$REPO:$2" >/dev/null && docker image inspect "$REPO:$2" --format '{{.Id}} {{join .RepoDigests " "}}'
+}
 
-# image 2: hold stop3
-IMG=jev-alpasim:jtn-l18-s1-ba3ef44d-holdstop3
-docker image inspect "$IMG" --format '{{.Id}}'        # must print sha256:b547cca3bbec62899785c618eea9b9d0241de88a032a2b2aa02f523b5f8d2440
-URI=$REPO:jtn-l18-s1-holdstop3
-docker tag "$IMG" "$URI"
-until ~/bin/ap $P docker push "$URI"; do sleep 10; done
-~/bin/ap $P submit --track nuplan-warmup "$URI"
-~/bin/ap $P submit --track nuplan "$URI"
+# image 1: native (no hold), version jev-JTN-L18-s1-backwarp
+push sha256:1b68246103ec1fd106482eeec04c3e9b9fddb11a9f896148bde7b1a8f03dea22 jtn-l18-s1-native
+#   must print sha256:1b682461... and $REPO@sha256:<digest the push printed>
+~/bin/ap $P submit --track nuplan "$REPO:jtn-l18-s1-native"          # official (optional first: --track nuplan-warmup, own quota, status only)
+
+# image 2: hold stop3, version jev-JTN-L18-s1-backwarp-holdstop3
+push sha256:b547cca3bbec62899785c618eea9b9d0241de88a032a2b2aa02f523b5f8d2440 jtn-l18-s1-holdstop3
+~/bin/ap $P submit --track nuplan "$REPO:jtn-l18-s1-holdstop3"
+
+~/bin/ap $P submissions --track nuplan; ~/bin/ap $P status SUBMISSION_ID          # id printed by submit; the first rollout's version must be the one named above
 ```
 
-The `until ... push` loop retries forever on a persistent error (for example an expired ECR login); stop it by hand if it does not converge. Remote tags are public on the leaderboard
-(`latest` is refused). Counting the quota, the two images are two of the three official submissions of the month.
+Submitting by tag is the path of every earlier successful submission; the tag points at the digest printed by `push` (nobody else pushes to this
+repository). The CLI also accepts `$REPO@sha256:<digest>` (it refuses only `latest`), but the board labels a submission by its tag, so the tag form is
+kept. The second push uploads only the image config: the two images share all 18 rootfs layers. Remote tags are public on the leaderboard.
 
 Last verified: 2026-10-19
