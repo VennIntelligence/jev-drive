@@ -1,8 +1,8 @@
 # practice_nuplan: new nuPlan start states for on-policy rows
 
-status: live
-decisions: 368, 369, 377
-index: new start-state S rows; NTVX's held lateral loss = static rows' sideways hinge push (-3.3 cm)
+status: closed
+decisions: 368, 369, 377, 385
+index: new start-state S rows; static rows cause the right bias (d377); full-length arms without them not adopted (d385)
 
 **Question.** Do S rows from new start states on the 28 train logs (arena train-split windows >= 1.5 s from every public start point,
 rolled by JTN-L18-s0 with the default serve) leave held-460 zeros no worse than on1_JT alone in a 1 000-step JTN pilot (zeros <= control + 2)?
@@ -19,8 +19,17 @@ rolled by JTN-L18-s0 with the default serve) leave held-460 zeros no worse than 
   [-1.2, +0.6].
 - Labels and rasters are not the cause ([results/lateral_diag.md](results/lateral_diag.md)).
 
-**Next.** Use on1_JTX only with the new static rows dropped (draw `JTX00SNS`), or with the agent hinge on standing rows replaced. Whether
-the new moving start states help needs one full-length NTV0-recipe arm on JTX00SNS (not run).
+**Full-length arms without the static rows (supplement 3, decision 385).** On1_JTX with the 16 732 new standing rows dropped, one change
+against each parent ([results/adoption.md](results/adoption.md), PCS secondary [results/pcs.md](results/pcs.md)).
+- NTVXS-L18-s0 (NTV0 command, draw `JTX00SNS`): native arena held vs NTV0 +0.0103 [+0.0034, +0.0188], held zeros 33 vs 32, drift +0.047 m
+  (the right bias is gone); PAI 281 ACC+GAP vs NTV0 -0.0221 [-0.0424, -0.0034], zeros 66 vs 59. Passes the nuPlan line only against the weak
+  parent (vs JTN-L18-s1 native -0.111).
+- JTXS-L18-s1 (JTN-L18-s1 command, draw `JTX00NS` = JTX00 without the static rows): native vs JTN-L18-s1 +0.0016 [-0.0130, +0.0200], held
+  zeros 38 vs 36, drift +0.045 m; PAI vs NTV0 -0.0393 [-0.0625, -0.0187].
+- Frozen board-mix PCS: NTVXS - NTV0 +5 [-2, +14], JTXS - JTN-L18-s1 -9 [-33, +10].
+
+**Status.** Not adopted: the new moving start states give no usable gain at full length. nuPlan native stays JTN-L18-s1, the PAI
+candidate stays NTV0 + ACC + GAP; the on1_JTX line is closed.
 
 **Read more.** [plans/2026-10-19-pn-prereg.md](plans/2026-10-19-pn-prereg.md) (prereg, Chinese working note).
 

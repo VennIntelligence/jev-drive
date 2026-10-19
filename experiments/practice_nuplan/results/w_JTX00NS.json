@@ -1,0 +1,23 @@
+{
+ "src": "/root/autodl-tmp/ujs/runs/defect_fix/w/JTX00.npz",
+ "rule": "lat_diag.py wns (reproduces JTX00SNS from JTX00S bit for bit)",
+ "dropped": 16732,
+ "s_rows_left": 83894,
+ "held": 28172,
+ "s_mass": 0.4571428571428572,
+ "s_mass_src": 0.4571428571428571,
+ "tv_mass": 0.5428571428571429,
+ "share": {
+  "S": 0.4571428571428572,
+  "S_held": 0.0,
+  "S_static0": 0.0,
+  "c_braking": 0.17903891704004635,
+  "c_cruising": 0.15324616659455736,
+  "c_starting": 0.07494276474513631,
+  "c_stopped": 0.0003288185558089568,
+  "c_turning": 0.1353004759215939,
+  "launch": 0.0,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ }
+}

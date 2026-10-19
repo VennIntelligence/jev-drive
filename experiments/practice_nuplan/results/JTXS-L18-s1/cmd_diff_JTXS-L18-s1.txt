@@ -1,0 +1,12 @@
+5c5
+< JTN-L18-s1
+---
+> JTXS-L18-s1
+33c33
+< on1_JT
+---
+> on1_JTX
+41c41
+< runs/defect_fix/w/JT00.npz
+---
+> runs/defect_fix/w/JTX00NS.npz
