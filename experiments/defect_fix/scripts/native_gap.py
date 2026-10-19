@@ -194,6 +194,7 @@ def cmd_extract(a):
         out = p.map(_window, [(i, cfg[i], D[i]) for i in sorted(D)[:a.limit_win or None]], chunksize=4)
     rows = [r for o, _, _ in out for r in o]
     errs = [e for _, _, e in out if e]
+    print(errs[:3], flush=True)
     dec = pd.DataFrame(rows)
     dec["poses"] = dec.poses.map(lambda x: np.asarray(x, np.float32).tolist())
     dec.to_parquet(O / "dec.parquet")
