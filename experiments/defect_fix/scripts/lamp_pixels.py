@@ -500,8 +500,8 @@ def sauc(s, y, strata, grp, seed=0, C=None):
         npair += int(yy.sum() * (~yy).sum())
     if npair == 0:
         return None, None, 0
-    a = num / np.maximum(den, 1e-12)
-    return (float(a[0]), float(np.quantile(a[1:], 0.025)), float(np.quantile(a[1:], 0.975))), a[1:], npair
+    a = np.where(den > 0, num / np.maximum(den, 1e-12), np.nan)                 # a draw without any pair has no AUC
+    return (float(a[0]), float(np.nanquantile(a[1:], 0.025)), float(np.nanquantile(a[1:], 0.975))), a[1:], npair
 
 
 def cmd_eval(a):
@@ -538,7 +538,7 @@ def cmd_eval(a):
     def diff(dr, res, a_, b_):
         if a_ in dr and b_ in dr:
             d = dr[a_] - dr[b_]
-            return f3((res[a_]["auc"][0] - res[b_]["auc"][0], float(np.quantile(d, 0.025)), float(np.quantile(d, 0.975))))
+            return f3((res[a_]["auc"][0] - res[b_]["auc"][0], float(np.nanquantile(d, 0.025)), float(np.nanquantile(d, 0.975))))
         return None
 
     # TV hold
