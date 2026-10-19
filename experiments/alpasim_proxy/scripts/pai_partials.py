@@ -12,7 +12,8 @@ hit (rear-hit) or the rollout's end (slow):
          by the binding term at 1.5 s (fix.acc.near: lead real / lead phantom (pai_gap.cut_class) / curve / set / ramp); model part = the rest
   serve add = max(min(v15, v_h) - v_model, 0) (ACC serving faster than the plan, up to the human)
 Integrated over the window x 0.1 s -> metres. Lag = the human's log station minus ours at the window's end (time-matched).
-Model part split: during the ACC stop / brake guard (the plan itself brakes), launch (handoff speed < 1 m/s, ego < 3 m/s), cruise (rest);
+Model part split: during the ACC stop guard (the plan's 2 s arc < 2 m) / brake guard (the plan
+  brakes >= 1 m/s^2), launch (handoff speed < 1 m/s, ego < 3 m/s), cruise (rest);
 setlow = model metres with the ACC set speed below the human's speed.
 Scene cause: serve if serve metres >= model metres (sub-cause = the term with the most serve metres), else model.
 """
@@ -60,7 +61,7 @@ def scene_job(job):
         sv = float(np.clip(min(vm, h) - v15, 0.0, d))
         acc_m["deficit"] += d * DT
         acc_m["model"] += (d - sv) * DT
-        g = "guard" if a.get("guard") else "launch" if float(r["fix"]["v0"]) < 3.0 and R.speed(th) < 1.0 else "cruise"
+        g = f"guard{a['guard']}" if a.get("guard") else "launch" if float(r["fix"]["v0"]) < 3.0 and R.speed(th) < 1.0 else "cruise"
         acc_m[f"model-{g}"] += (d - sv) * DT                      # model part: the plan brakes (ACC stop / brake guard), launch, cruise
         acc_m["setlow"] += (d - sv) * DT * (float(a.get("v_set") or 0.0) < h)
         acc_m["add"] += max(min(v15, h) - vm, 0.0) * DT
@@ -76,7 +77,7 @@ def scene_job(job):
     serve = sum(acc_m[k] for k in TERMS)
     sub = max(TERMS, key=lambda k: acc_m[k]) if serve > 0 else ""
     return dict(scene=s, cls=cls, n_dec=n, lag_m=lag, deficit_m=acc_m["deficit"], model_m=acc_m["model"], serve_m=serve, add_m=acc_m["add"],
-                **{f"{k}_m": acc_m[k] for k in TERMS + ("model-guard", "model-launch", "model-cruise", "setlow")}, cause=(f"serve:{sub}" if serve >= acc_m["model"] and serve > 0 else "model"))
+                **{f"{k}_m": acc_m[k] for k in TERMS + ("model-guardstop", "model-guardbrake", "model-launch", "model-cruise", "setlow")}, cause=(f"serve:{sub}" if serve >= acc_m["model"] and serve > 0 else "model"))
 
 
 def cmd_decomp(a):
