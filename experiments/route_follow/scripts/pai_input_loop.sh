@@ -47,7 +47,7 @@ post)
   s=$(sub pil-sum --after $(IFS=,; echo "${e[*]},${c[*]}") --vram 0.1 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME sum)
   echo "$(date '+%F %T') post: extract ${e[*]} msgs $m cf ${c[*]} sum $s" | tee -a $O/stages.txt ;;
 extract)
-  arm=$1; root=$O/$arm; [[ $arm == A0 ]] && root=$A0; mkdir -p $O/tax
+  arm=$2; root=$O/$arm; [[ $arm == A0 ]] && root=$A0; mkdir -p $O/tax
   $AP $RF/rf_tax.py extract --runs $(ls -d $root/runs/*/sim) --out $O/tax/$arm.pkl --workers 16 > $O/tax/$arm.log 2>&1 || die "extract $arm" ;;
 msgs)  # N0's driver-side messages per scene (front wide camera only), then the rollout.asl files are no longer needed
   mkdir -p $O/msgs; cd experiments/alpasim/scripts
@@ -66,7 +66,7 @@ PY
   ;;
 cf)    # shard i/n of N0's scenes
   mkdir -p $O/cf; $OP $RF/pil_cf.py --msgs $O/msgs --tax $O/tax/N0.pkl --drive "$O/N0/runs/*/driver/drive.jsonl" --tag $T --serve "$FIX" \
-    --shard $1 --out $O/cf/s${1%/*}.pkl || die "cf $1" ;;
+    --shard $2 --out $O/cf/s${2%/*}.pkl || die "cf $2" ;;
 sum)
   mkdir -p $R
   .venv/bin/python experiments/defect_fix/scripts/pai281.py --j $O/KA --jl "KW+ACC+GAP" --ref $A0 --rl "ACC+GAP" --out $R/pai281_KA_vs_A0.md || die "pai281 KA"
