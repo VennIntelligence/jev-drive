@@ -11,7 +11,24 @@ replay_ld.parquet. Pool jobs, all priority 11:
 - trainee 1019-111330-addf / 1019-111331-02ff / 1019-113422-1b7f
 - supplement 2: 1019-121846-e2f5 .. 1019-121849-657d
 
-__ANSWER__
+**Answer.** The cause is the new start-state rows taken **at standstill**, not the label pipeline.
+- **What they are.** 16 732 trainable S rows with the ego at < 0.5 m/s. They are 53 % of the new rows and 16.6 % of NTVX's S draws.
+- **What the hinge does on them.** On these rows the human stands, but the trainee's plan creeps about 4 m into a stopped vehicle ahead.
+  The agent hinge fires on 33 % of them (7 % on the old moving rows). It is shape-only, so it cannot shorten the plan; it can only push the
+  plan sideways.
+- **Which way.** The push points right on average: -0.40 / -0.43 per row with the init's / NTV0's weights. That flips the net sideways
+  push of an S draw from +0.048 / -0.007 (NTV0's draw) to -0.020 / -0.073 (NTVX's draw).
+- **What the policy learns.** A constant right bias of the plan, with re-centring unchanged. On the same 3 567 moving held inputs, NTVX
+  plans 3.2 cm [1.8, 4.7] further right at 4 s than NTV0. In the 18-decision closed loop this becomes a drift of 0.11 m [0.09, 0.13] by
+  decisions 11-17. Seed noise on the drift is 0.01-0.05 m, and all 16 logs drift the same way. 12 of the 14 new lateral zeros end right of
+  NTV0, and 5 of them go wide on left turns.
+- **Confirmed by the registered run** (supplement 2). From NTV0's weights, 1 000 steps on NTVX's draw reproduce the bias: -3.3 cm
+  [-4.3, -2.6] against the NTV0-draw control. The same draw without the new static rows gives -0.2 cm [-1.2, +0.6].
+- **Not the cause.** Interpolated boxes and rasters (b), raster coverage (c) and the 31 % fewer passes over old rows (d) are not supported.
+- **Why only held 460.** Arena windows are too short (5.5 s) for the drift to reach the road edge. NTVX's arena offroad zeros are not
+  above NTV0's.
+- **d372 is a different mechanism.** JTN's arena non-turn offroad excess is the JT family's line through bends (shared by JTN-s0 / s1
+  and NTV0, no constant offset). It is not this.
 
 ## 0. The new zeros (held 460 @18, NTVX against NTV0)
 
@@ -153,7 +170,32 @@ Reading:
 | (d) per-row passes of the old rows fell 31 % | Taking the old rows alone, their per-row net push is near 0 (old moving -0.011 at NTV0's weights). Fewer passes over them does not produce a right bias. The bias comes from what the new static rows add. | not the mechanism (dilution of corrections is at most second order) |
 | (e) which zeros, which mechanism | Global right drift (16 / 16 logs). It is largest in long, narrow-margin logs (veh-52 -0.17 m, veh-42 -0.14 m), where 10 of the 17 new zeros are. 5 are wide on left turns. 5 of the 17 are shared with RSG or JTN. | right offset, not a turn or straight-road skill |
 
-__CONFIRM__
+## 5. Confirmatory run (PN prereg supplement 2, registered before any job)
+
+Three arms, each 1 000 steps from NTV0-L18-s0's final weights. They use NTV0's command and differ only in `--tag` / `--on` / `--on-wfile`
+(DRY diff checked in the job):
+- LDC: on1_JT + JT00S.
+- LDX: on1_JTX + JTX00S.
+- LDXS: on1_JTX + JTX00SNS, i.e. JTX00S with the 16 732 new static rows at weight 0.
+
+Readout: open-loop y(4 s) on the moving decisions of the same 5 400 dumps, arm minus LDC
+([lateral_confirm.md](lateral_confirm.md), [lateral_confirm.json](lateral_confirm.json)).
+
+| arm - LDC | context | decisions | y(2 s) | y(4 s) |
+|---|---|--:|--:|--:|
+| LDX (NTVX's draw) | moving | 3567 | -0.020 [-0.024, -0.017] | **-0.033 [-0.043, -0.026]** |
+| LDX | turning | 632 | -0.040 [-0.066, -0.023] | -0.113 [-0.192, -0.061] |
+| LDXS (without the new static rows) | moving | 3567 | -0.001 [-0.004, +0.002] | **-0.002 [-0.012, +0.006]** |
+| LDXS | turning | 632 | -0.009 [-0.018, -0.001] | -0.022 [-0.052, +0.004] |
+
+- **Registered rule:** "the new static rows are the cause". LDX - LDC is <= -0.010 with CI upper < 0. LDXS - LDC has a CI that contains 0.
+- LDX reproduces the full-length NTVX - NTV0 offset (-3.2 cm) within 1 000 steps.
+- Training logs of the arms (steps >= 200), loss/act/pool_agent: LDC 0.066, LDX 0.112, LDXS 0.066. The new moving rows add no hinge
+  activity beyond the old rows'.
+- Not read: closed loop of these arms. One seed. The arms continue from NTV0, so they test the push at NTV0's state; they do not repeat the
+  9 500-step run.
+- Open: the 1 000-step pilot from RB0 with trainval rows (JTX1K) moved the plan 3.9 cm LEFT. At RB0's weights the static rows also push
+  right (section 3), so the trainval rows' own pushes, which this diagnosis did not measure, are the likely difference. Not tested.
 
 ## 6. d372: JTN's extra non-turn offroad on the native arena
 
