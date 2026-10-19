@@ -95,14 +95,22 @@ class Track:
         self.V = np.r_[v[0], 0.5 * (v[1:] + v[:-1]), v[-1]] if len(v) > 1 else np.zeros(len(T))
 
     def station(self, xy):
-        d = np.hypot(*(self.P[None] - np.asarray(xy, float)[:, None]).transpose(2, 0, 1))
+        """projection on the polyline's segments -> station, lateral distance, index of the segment's start vertex."""
+        q = np.asarray(xy, float)[:, None]
+        a, b = self.P[None, :-1], self.P[None, 1:]
+        ab = b - a
+        L2 = np.maximum((ab ** 2).sum(-1), 1e-9)
+        u = np.clip(((q - a) * ab).sum(-1) / L2, 0, 1)
+        d = np.hypot(*(a + u[..., None] * ab - q).transpose(2, 0, 1))
         i = d.argmin(1)
-        return self.S[i], d[np.arange(len(i)), i], i
+        r = np.arange(len(i))
+        return self.S[i] + u[r, i] * np.sqrt(L2[0, i]), d[r, i], i
 
     def v_at_station(self, s):
         """speed and time at the first passage of station s (still parts: the first index reaching s)."""
-        i = np.clip(np.searchsorted(self.S, s, side="left"), 0, len(self.S) - 1)
-        return self.V[i], self.T[i]
+        i = np.clip(np.searchsorted(self.S, s - 1e-6, side="left"), 1, len(self.S) - 1)
+        f = np.clip((s - self.S[i - 1]) / np.maximum(self.S[i] - self.S[i - 1], 1e-6), 0, 1)
+        return self.V[i - 1] + f * (self.V[i] - self.V[i - 1]), self.T[i - 1] + f * (self.T[i] - self.T[i - 1])
 
     def v_at_time(self, t):
         return np.interp(t, self.T, self.V)
@@ -214,6 +222,19 @@ def cmd_extract(a):
 
 
 # ---------------------------------------------------------------- GPU: dump + counterfactual
+def cmd_cflist(a):
+    """the counterfactual windows: held, not static, the human travels >= 10 m in the window (the slow-down population), at most
+    --per-shard per cache shard (seed 0) -> $O/lists/s<shard>.txt (shard = the arena's trajdata cache the read needs)."""
+    import pandas as pd
+    S = pd.read_csv(AR / "set/set.csv.gz")
+    S = S[(S.split == "held") & (S.stratum != "static") & (S.path >= 10)]
+    (O / "lists").mkdir(parents=True, exist_ok=True)
+    for k, g in S.groupby("shard"):
+        g = g.sample(min(len(g), a.per_shard), random_state=0)
+        (O / "lists" / f"s{k}.txt").write_text("\n".join(g.id) + "\n")
+        print(f"shard {k}: {len(g)} windows")
+
+
 def cmd_cf(a):
     """open-loop counterfactual on the dumped inputs of <tag>'s own closed loop (cfdump): F = as served (gate: = the dumped plan), H = the
     speed-history entries rewritten to the human's speed at the ego's station at each history key."""
@@ -292,5 +313,7 @@ if __name__ == "__main__":
     p.add_argument("--out", default=str(O))
     p = sp.add_parser("cf")
     p.add_argument("--tag", required=True)
+    p = sp.add_parser("cflist")
+    p.add_argument("--per-shard", type=int, default=45)
     a = ap.parse_args()
-    dict(extract=cmd_extract, cf=cmd_cf)[a.cmd](a)
+    dict(extract=cmd_extract, cf=cmd_cf, cflist=cmd_cflist)[a.cmd](a)
