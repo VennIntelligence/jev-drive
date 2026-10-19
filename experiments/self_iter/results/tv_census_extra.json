@@ -1,0 +1,29 @@
+{
+ "logs_eligible": 1250,
+ "logs_with_navtrain": 1190,
+ "train_new_frames": 493955,
+ "train_new_frames_in_logs_without_navtrain": 10354,
+ "train_new_dist_to_navtrain_frames": {
+  "<=2 (1 s)": 55260,
+  "3-8 (1.5-4 s)": 104724,
+  ">8 (> 4 s)": 333971
+ },
+ "navtrain_lead_moving_ego_standing": {
+  "frames": 2690,
+  "events": 1361
+ },
+ "navtrain_lead_moving_ego_standing_human_holds_4s": 0,
+ "train_new_lead_moving_ego_standing": {
+  "frames": 8429,
+  "events": 4447
+ },
+ "train_new_lead_moving_ego_standing_human_holds_4s": 5317,
+ "red_nolead_events_train": {
+  "n": 314,
+  "launch_after": 0,
+  "dur_s_p50": 22.0,
+  "dur_s_p90": 82.74999999999997,
+  "logs": 196,
+  "drives": 94
+ }
+}

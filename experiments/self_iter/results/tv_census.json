@@ -1,0 +1,700 @@
+{
+ "frames": 658206,
+ "logs": 1250,
+ "cam4": 658206,
+ "navtrain_labelled": 102373,
+ "table": {
+  "navtrain tokens": {
+   "all eligible": {
+    "frames": 102373,
+    "events": 17883,
+    "logs": 1190
+   },
+   "class stopped": {
+    "frames": 82,
+    "events": 67,
+    "logs": 49
+   },
+   "class starting": {
+    "frames": 19053,
+    "events": 4906,
+    "logs": 1064
+   },
+   "class turning": {
+    "frames": 24065,
+    "events": 4892,
+    "logs": 885
+   },
+   "class braking": {
+    "frames": 31810,
+    "events": 5029,
+    "logs": 1038
+   },
+   "class cruising": {
+    "frames": 27363,
+    "events": 9337,
+    "logs": 1122
+   },
+   "standing (v0 < 0.3, 4 s < 1 m)": {
+    "frames": 23,
+    "events": 20,
+    "logs": 16
+   },
+   "standing, reason visible (stopped lead <= 15 m | stop sign | red light, line -2..10 m)": {
+    "frames": 9,
+    "events": 9,
+    "logs": 7
+   },
+   "standing, no visible reason": {
+    "frames": 14,
+    "events": 11,
+    "logs": 11
+   },
+   "standing, stopped lead <= 15 m (W_L)": {
+    "frames": 8,
+    "events": 8,
+    "logs": 6
+   },
+   "standing at red line (-2..10 m), any lead": {
+    "frames": 1,
+    "events": 1,
+    "logs": 1
+   },
+   "standing at red line, no stopped lead <= 15 m": {
+    "frames": 1,
+    "events": 1,
+    "logs": 1
+   },
+   "standing at red line, no vehicle before the line (d372 cue 1)": {
+    "frames": 1,
+    "events": 1,
+    "logs": 1
+   },
+   "standing at red line, no vehicle before the line, line 0..5 m": {
+    "frames": 1,
+    "events": 1,
+    "logs": 1
+   },
+   "standing at stop sign line": {
+    "frames": 0,
+    "events": 0,
+    "logs": 0
+   },
+   "launch (G_L | G_N)": {
+    "frames": 5181,
+    "events": 2660,
+    "logs": 908
+   },
+   "lead start (G_L: human launches, lead <= 15 m, v < 3; d372 cue 2)": {
+    "frames": 2225,
+    "events": 1272,
+    "logs": 558
+   },
+   "lead start, lead stopped at t0 (G_L, lead v < 0.5)": {
+    "frames": 126,
+    "events": 94,
+    "logs": 81
+   },
+   "launch, no lead (G_N)": {
+    "frames": 2956,
+    "events": 1393,
+    "logs": 642
+   },
+   "launch at a light line (G_* with a light line -2..10 m)": {
+    "frames": 661,
+    "events": 395,
+    "logs": 267
+   },
+   "stop behind lead (S_L)": {
+    "frames": 3912,
+    "events": 1211,
+    "logs": 566
+   },
+   "stop at red (d331 S_R)": {
+    "frames": 971,
+    "events": 379,
+    "logs": 241
+   },
+   "go on green (d331 GO_G)": {
+    "frames": 208,
+    "events": 87,
+    "logs": 71
+   },
+   "yield pedestrian (Y_P)": {
+    "frames": 577,
+    "events": 196,
+    "logs": 138
+   },
+   "yield vehicle (Y_V)": {
+    "frames": 203,
+    "events": 108,
+    "logs": 87
+   },
+   "follow moving lead (F_L)": {
+    "frames": 10483,
+    "events": 3154,
+    "logs": 742
+   },
+   "junction": {
+    "frames": 67775,
+    "events": 13974,
+    "logs": 1162
+   }
+  },
+  "trainval clean train logs, not navtrain, CAM_F0 history": {
+   "all eligible": {
+    "frames": 493955,
+    "events": 17254,
+    "logs": 1100
+   },
+   "class stopped": {
+    "frames": 191414,
+    "events": 3947,
+    "logs": 961
+   },
+   "class starting": {
+    "frames": 22971,
+    "events": 6656,
+    "logs": 1017
+   },
+   "class turning": {
+    "frames": 23600,
+    "events": 5098,
+    "logs": 839
+   },
+   "class braking": {
+    "frames": 55590,
+    "events": 8644,
+    "logs": 1051
+   },
+   "class cruising": {
+    "frames": 200380,
+    "events": 17728,
+    "logs": 1093
+   },
+   "standing (v0 < 0.3, 4 s < 1 m)": {
+    "frames": 188697,
+    "events": 3985,
+    "logs": 961
+   },
+   "standing, reason visible (stopped lead <= 15 m | stop sign | red light, line -2..10 m)": {
+    "frames": 120373,
+    "events": 2565,
+    "logs": 730
+   },
+   "standing, no visible reason": {
+    "frames": 68324,
+    "events": 1938,
+    "logs": 742
+   },
+   "standing, stopped lead <= 15 m (W_L)": {
+    "frames": 99732,
+    "events": 2271,
+    "logs": 670
+   },
+   "standing at red line (-2..10 m), any lead": {
+    "frames": 45233,
+    "events": 716,
+    "logs": 385
+   },
+   "standing at red line, no stopped lead <= 15 m": {
+    "frames": 20432,
+    "events": 307,
+    "logs": 193
+   },
+   "standing at red line, no vehicle before the line (d372 cue 1)": {
+    "frames": 20990,
+    "events": 314,
+    "logs": 196
+   },
+   "standing at red line, no vehicle before the line, line 0..5 m": {
+    "frames": 15925,
+    "events": 228,
+    "logs": 147
+   },
+   "standing at stop sign line": {
+    "frames": 216,
+    "events": 24,
+    "logs": 21
+   },
+   "launch (G_L | G_N)": {
+    "frames": 5397,
+    "events": 2631,
+    "logs": 847
+   },
+   "lead start (G_L: human launches, lead <= 15 m, v < 3; d372 cue 2)": {
+    "frames": 2734,
+    "events": 1403,
+    "logs": 557
+   },
+   "lead start, lead stopped at t0 (G_L, lead v < 0.5)": {
+    "frames": 1152,
+    "events": 712,
+    "logs": 380
+   },
+   "launch, no lead (G_N)": {
+    "frames": 2663,
+    "events": 1239,
+    "logs": 593
+   },
+   "launch at a light line (G_* with a light line -2..10 m)": {
+    "frames": 870,
+    "events": 443,
+    "logs": 298
+   },
+   "stop behind lead (S_L)": {
+    "frames": 773,
+    "events": 393,
+    "logs": 284
+   },
+   "stop at red (d331 S_R)": {
+    "frames": 2347,
+    "events": 578,
+    "logs": 323
+   },
+   "go on green (d331 GO_G)": {
+    "frames": 4524,
+    "events": 1330,
+    "logs": 441
+   },
+   "yield pedestrian (Y_P)": {
+    "frames": 1423,
+    "events": 455,
+    "logs": 256
+   },
+   "yield vehicle (Y_V)": {
+    "frames": 1073,
+    "events": 436,
+    "logs": 267
+   },
+   "follow moving lead (F_L)": {
+    "frames": 66340,
+    "events": 5293,
+    "logs": 837
+   },
+   "junction": {
+    "frames": 251957,
+    "events": 16960,
+    "logs": 1083
+   }
+  },
+  "  of which already in selfiter_tv (NR1TV / JT rows)": {
+   "all eligible": {
+    "frames": 82594,
+    "events": 5415,
+    "logs": 847
+   },
+   "class stopped": {
+    "frames": 34053,
+    "events": 631,
+    "logs": 147
+   },
+   "class starting": {
+    "frames": 3883,
+    "events": 1379,
+    "logs": 403
+   },
+   "class turning": {
+    "frames": 4891,
+    "events": 1711,
+    "logs": 536
+   },
+   "class braking": {
+    "frames": 8614,
+    "events": 1771,
+    "logs": 480
+   },
+   "class cruising": {
+    "frames": 31153,
+    "events": 3807,
+    "logs": 680
+   },
+   "standing (v0 < 0.3, 4 s < 1 m)": {
+    "frames": 33597,
+    "events": 637,
+    "logs": 147
+   },
+   "standing, reason visible (stopped lead <= 15 m | stop sign | red light, line -2..10 m)": {
+    "frames": 21909,
+    "events": 429,
+    "logs": 107
+   },
+   "standing, no visible reason": {
+    "frames": 11688,
+    "events": 295,
+    "logs": 117
+   },
+   "standing, stopped lead <= 15 m (W_L)": {
+    "frames": 19528,
+    "events": 391,
+    "logs": 99
+   },
+   "standing at red line (-2..10 m), any lead": {
+    "frames": 5582,
+    "events": 92,
+    "logs": 49
+   },
+   "standing at red line, no stopped lead <= 15 m": {
+    "frames": 2356,
+    "events": 39,
+    "logs": 25
+   },
+   "standing at red line, no vehicle before the line (d372 cue 1)": {
+    "frames": 2451,
+    "events": 46,
+    "logs": 29
+   },
+   "standing at red line, no vehicle before the line, line 0..5 m": {
+    "frames": 1647,
+    "events": 34,
+    "logs": 22
+   },
+   "standing at stop sign line": {
+    "frames": 26,
+    "events": 2,
+    "logs": 2
+   },
+   "launch (G_L | G_N)": {
+    "frames": 876,
+    "events": 438,
+    "logs": 156
+   },
+   "lead start (G_L: human launches, lead <= 15 m, v < 3; d372 cue 2)": {
+    "frames": 459,
+    "events": 236,
+    "logs": 87
+   },
+   "lead start, lead stopped at t0 (G_L, lead v < 0.5)": {
+    "frames": 199,
+    "events": 115,
+    "logs": 53
+   },
+   "launch, no lead (G_N)": {
+    "frames": 417,
+    "events": 203,
+    "logs": 112
+   },
+   "launch at a light line (G_* with a light line -2..10 m)": {
+    "frames": 119,
+    "events": 61,
+    "logs": 39
+   },
+   "stop behind lead (S_L)": {
+    "frames": 219,
+    "events": 141,
+    "logs": 104
+   },
+   "stop at red (d331 S_R)": {
+    "frames": 355,
+    "events": 103,
+    "logs": 74
+   },
+   "go on green (d331 GO_G)": {
+    "frames": 626,
+    "events": 186,
+    "logs": 68
+   },
+   "yield pedestrian (Y_P)": {
+    "frames": 255,
+    "events": 93,
+    "logs": 59
+   },
+   "yield vehicle (Y_V)": {
+    "frames": 149,
+    "events": 67,
+    "logs": 47
+   },
+   "follow moving lead (F_L)": {
+    "frames": 10858,
+    "events": 1301,
+    "logs": 394
+   },
+   "junction": {
+    "frames": 42294,
+    "events": 4672,
+    "logs": 799
+   }
+  },
+  "  of which new": {
+   "all eligible": {
+    "frames": 411361,
+    "events": 11839,
+    "logs": 932
+   },
+   "class stopped": {
+    "frames": 157361,
+    "events": 3316,
+    "logs": 816
+   },
+   "class starting": {
+    "frames": 19088,
+    "events": 5277,
+    "logs": 861
+   },
+   "class turning": {
+    "frames": 18709,
+    "events": 3387,
+    "logs": 702
+   },
+   "class braking": {
+    "frames": 46976,
+    "events": 6873,
+    "logs": 890
+   },
+   "class cruising": {
+    "frames": 169227,
+    "events": 13921,
+    "logs": 926
+   },
+   "standing (v0 < 0.3, 4 s < 1 m)": {
+    "frames": 155100,
+    "events": 3348,
+    "logs": 816
+   },
+   "standing, reason visible (stopped lead <= 15 m | stop sign | red light, line -2..10 m)": {
+    "frames": 98464,
+    "events": 2136,
+    "logs": 624
+   },
+   "standing, no visible reason": {
+    "frames": 56636,
+    "events": 1643,
+    "logs": 626
+   },
+   "standing, stopped lead <= 15 m (W_L)": {
+    "frames": 80204,
+    "events": 1880,
+    "logs": 572
+   },
+   "standing at red line (-2..10 m), any lead": {
+    "frames": 39651,
+    "events": 624,
+    "logs": 336
+   },
+   "standing at red line, no stopped lead <= 15 m": {
+    "frames": 18076,
+    "events": 268,
+    "logs": 168
+   },
+   "standing at red line, no vehicle before the line (d372 cue 1)": {
+    "frames": 18539,
+    "events": 268,
+    "logs": 167
+   },
+   "standing at red line, no vehicle before the line, line 0..5 m": {
+    "frames": 14278,
+    "events": 194,
+    "logs": 125
+   },
+   "standing at stop sign line": {
+    "frames": 190,
+    "events": 22,
+    "logs": 19
+   },
+   "launch (G_L | G_N)": {
+    "frames": 4521,
+    "events": 2193,
+    "logs": 713
+   },
+   "lead start (G_L: human launches, lead <= 15 m, v < 3; d372 cue 2)": {
+    "frames": 2275,
+    "events": 1167,
+    "logs": 475
+   },
+   "lead start, lead stopped at t0 (G_L, lead v < 0.5)": {
+    "frames": 953,
+    "events": 597,
+    "logs": 327
+   },
+   "launch, no lead (G_N)": {
+    "frames": 2246,
+    "events": 1036,
+    "logs": 498
+   },
+   "launch at a light line (G_* with a light line -2..10 m)": {
+    "frames": 751,
+    "events": 382,
+    "logs": 260
+   },
+   "stop behind lead (S_L)": {
+    "frames": 554,
+    "events": 252,
+    "logs": 203
+   },
+   "stop at red (d331 S_R)": {
+    "frames": 1992,
+    "events": 475,
+    "logs": 269
+   },
+   "go on green (d331 GO_G)": {
+    "frames": 3898,
+    "events": 1144,
+    "logs": 375
+   },
+   "yield pedestrian (Y_P)": {
+    "frames": 1168,
+    "events": 362,
+    "logs": 210
+   },
+   "yield vehicle (Y_V)": {
+    "frames": 924,
+    "events": 369,
+    "logs": 229
+   },
+   "follow moving lead (F_L)": {
+    "frames": 55482,
+    "events": 3992,
+    "logs": 714
+   },
+   "junction": {
+    "frames": 209663,
+    "events": 12288,
+    "logs": 919
+   }
+  },
+  "trainval clean hold logs, not navtrain, CAM_F0 history": {
+   "all eligible": {
+    "frames": 51454,
+    "events": 1765,
+    "logs": 118
+   },
+   "class stopped": {
+    "frames": 18244,
+    "events": 414,
+    "logs": 108
+   },
+   "class starting": {
+    "frames": 2445,
+    "events": 729,
+    "logs": 114
+   },
+   "class turning": {
+    "frames": 2561,
+    "events": 534,
+    "logs": 90
+   },
+   "class braking": {
+    "frames": 6355,
+    "events": 985,
+    "logs": 116
+   },
+   "class cruising": {
+    "frames": 21849,
+    "events": 1939,
+    "logs": 118
+   },
+   "standing (v0 < 0.3, 4 s < 1 m)": {
+    "frames": 17932,
+    "events": 418,
+    "logs": 108
+   },
+   "standing, reason visible (stopped lead <= 15 m | stop sign | red light, line -2..10 m)": {
+    "frames": 13124,
+    "events": 265,
+    "logs": 86
+   },
+   "standing, no visible reason": {
+    "frames": 4808,
+    "events": 191,
+    "logs": 71
+   },
+   "standing, stopped lead <= 15 m (W_L)": {
+    "frames": 10070,
+    "events": 235,
+    "logs": 82
+   },
+   "standing at red line (-2..10 m), any lead": {
+    "frames": 5025,
+    "events": 80,
+    "logs": 37
+   },
+   "standing at red line, no stopped lead <= 15 m": {
+    "frames": 3045,
+    "events": 32,
+    "logs": 16
+   },
+   "standing at red line, no vehicle before the line (d372 cue 1)": {
+    "frames": 3078,
+    "events": 31,
+    "logs": 16
+   },
+   "standing at red line, no vehicle before the line, line 0..5 m": {
+    "frames": 2465,
+    "events": 26,
+    "logs": 13
+   },
+   "standing at stop sign line": {
+    "frames": 10,
+    "events": 2,
+    "logs": 2
+   },
+   "launch (G_L | G_N)": {
+    "frames": 560,
+    "events": 275,
+    "logs": 92
+   },
+   "lead start (G_L: human launches, lead <= 15 m, v < 3; d372 cue 2)": {
+    "frames": 263,
+    "events": 142,
+    "logs": 69
+   },
+   "lead start, lead stopped at t0 (G_L, lead v < 0.5)": {
+    "frames": 112,
+    "events": 75,
+    "logs": 45
+   },
+   "launch, no lead (G_N)": {
+    "frames": 297,
+    "events": 133,
+    "logs": 57
+   },
+   "launch at a light line (G_* with a light line -2..10 m)": {
+    "frames": 107,
+    "events": 52,
+    "logs": 31
+   },
+   "stop behind lead (S_L)": {
+    "frames": 95,
+    "events": 48,
+    "logs": 27
+   },
+   "stop at red (d331 S_R)": {
+    "frames": 246,
+    "events": 56,
+    "logs": 33
+   },
+   "go on green (d331 GO_G)": {
+    "frames": 508,
+    "events": 152,
+    "logs": 45
+   },
+   "yield pedestrian (Y_P)": {
+    "frames": 131,
+    "events": 44,
+    "logs": 24
+   },
+   "yield vehicle (Y_V)": {
+    "frames": 108,
+    "events": 46,
+    "logs": 31
+   },
+   "follow moving lead (F_L)": {
+    "frames": 7751,
+    "events": 610,
+    "logs": 96
+   },
+   "junction": {
+    "frames": 27687,
+    "events": 1780,
+    "logs": 117
+   }
+  }
+ },
+ "rules": {
+  "stand": "v0 < 0.3 and 4 s displacement < 1.0 m",
+  "line": "first stop line ahead on the hindsight route, front bumper -2.0..10.0 m",
+  "red": "light line, red at t0, on the route connector",
+  "no_vehicle_before_line": "lead_any > line distance + 2 m",
+  "events": "runs of consecutive 2 Hz frames of one log"
+ }
+}

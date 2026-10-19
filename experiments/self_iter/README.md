@@ -12,7 +12,7 @@ without losing anything else, on navtrain plus the trainval logs on disk?
 **Next.** For the user to decide: a navtrain-only mining pilot (no trainval rows), or trainval rows rebalanced to navtrain's class mix, before any
 full-scale rerun (`SFX=2 si.sh launch-full`) or round 2.
 
-**Read more.** [plans/2026-10-17-self-iter-prereg.md](plans/2026-10-17-self-iter-prereg.md)
+**Read more.** [plans/2026-10-17-self-iter-prereg.md](plans/2026-10-17-self-iter-prereg.md); the full trainval download audit (integrity, leakage, class census, safe uses): [research/next-round/trainval-use.md](../../research/next-round/trainval-use.md), `scripts/tv_audit.py`
 
 <!-- files:begin -->
 ## Files
@@ -23,7 +23,7 @@ full-scale rerun (`SFX=2 si.sh launch-full`) or round 2.
 - `self_iter.py` (lib): SELF-ITER hard-example mining
 - `rm_train.py` (experiments/route_mem/scripts): onpol_nuplan's on_train.py `train` (its …
 
-[results/](results/) 9 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
+[archive/](archive/) 1 one-off code · [results/](results/) 16 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 3 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

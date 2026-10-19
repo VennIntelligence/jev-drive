@@ -1,0 +1,20 @@
+{
+ "logs": 1310,
+ "blob_dirs": 1310,
+ "dirs_without_pickle": [],
+ "pickles_without_dir": [],
+ "archives_done": 200,
+ "archive_numbers_missing": [],
+ "stale_part_dirs": 35,
+ "frames": 723019,
+ "missing": 0,
+ "empty": 0,
+ "bad_marker": 0,
+ "decode_tried": 29536,
+ "decode_bad": 0,
+ "files_on_disk": 723019,
+ "orphans": 0,
+ "bytes": 148706712001,
+ "logs_incomplete": [],
+ "bad_sample": []
+}

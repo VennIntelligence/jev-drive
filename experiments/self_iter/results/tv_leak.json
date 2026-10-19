@@ -1,0 +1,83 @@
+{
+ "tv_logs": 1310,
+ "tv_drives": 171,
+ "tv_tokens": 723019,
+ "sets": {
+  "navtest (navsim test logs)": {
+   "segments": 147,
+   "drives": 46,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "navhard_two_stage": {
+   "segments": 76,
+   "drives": 34,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "held460": {
+   "segments": 39,
+   "drives": 16,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "public1491": {
+   "segments": 136,
+   "drives": 44,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "arena (all windows)": {
+   "segments": 136,
+   "drives": 44,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "arena held windows": {
+   "segments": 39,
+   "drives": 16,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "waitset v2": {
+   "segments": 91,
+   "drives": 40,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  },
+  "waitcap_test": {
+   "segments": 130,
+   "drives": 43,
+   "seg_overlap": [],
+   "drive_overlap": [],
+   "n_seg_overlap": 0,
+   "n_drive_overlap": 0
+  }
+ },
+ "token_overlap": {
+  "navtest": 0,
+  "navhard_two_stage": 0,
+  "navhard original scene tokens": 0
+ },
+ "pai281_scenes": 281,
+ "clean": true,
+ "navtrain_dev_logs": 32,
+ "split_train": "navsim/tv-clean-train-logs@v1:816f0ad017ee",
+ "split_hold": "navsim/tv-clean-hold-logs@v1:1b0767f6cabc",
+ "n_train_logs": 1154,
+ "n_hold_logs": 124
+}
