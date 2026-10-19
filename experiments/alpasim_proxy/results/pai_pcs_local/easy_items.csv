@@ -1,0 +1,25 @@
+scene,score,cls,a,stratum
+clipgt-074e5ee3-d209-438e-8de4-40032539c331,0.436969477792086,partial rear-hit,0.18167368,turn
+clipgt-2a47ea01-3cd8-4282-b834-76430b013c4c,0.8239413486362903,partial rear-hit,0.5156092,launch
+clipgt-2b577fc2-dbfb-4d08-8093-6c48a3d372f9,0.829254133715956,partial rear-hit,0.30087087,launch
+clipgt-404541da-5297-4c32-b0af-21740de150b0,0.7570224878792355,partial rear-hit,0.13990037,stop/lead
+clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18,0.0,zero corridor / cor_route_end,0.09220399,stop/lead
+clipgt-478d6ec4-f02b-4c82-97af-ddc0fbe5027f,0.9028123556964084,partial slow,0.22305094,straight
+clipgt-4b5a7c8b-40d7-4fd4-bc6e-b22b5f7ace44,0.4313002247311615,partial rear-hit,0.07535237,straight
+clipgt-4f7cb072-89c6-40f5-b6a5-d8c775784c2a,0.0,zero offroad / off_straight,0.092565924,stop/lead
+clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e,0.6148452725049445,partial rear-hit,0.11993278,stop/lead
+clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7,0.6939839471885486,partial rear-hit,0.36861223,turn
+clipgt-6250146a-7f9f-4508-851e-e25b7d9dc36a,0.9398205386666608,partial rear-hit,0.23472446,stop/lead
+clipgt-7c346fd5-4223-40da-8785-c49fe69f06a1,0.8479219692120499,partial rear-hit,0.18335947,straight
+clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99,0.0,zero corridor / cor_drift,0.062398873,stop/lead
+clipgt-98f88a4e-6b92-4f69-9ef8-58641f5c9e1f,0.5645775822825909,partial rear-hit,0.13791712,turn
+clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c,0.6710542466980388,partial slow,0.20114805,turn
+clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd,0.9788589135546664,partial slow,0.54945457,launch
+clipgt-a2c5ae46-0d99-4b7f-b1f2-e7443fd457e2,0.8191013223674977,partial slow,0.21063575,straight
+clipgt-a686c7d0-8de6-47dc-90e6-be4c918a4e76,0.171696548418077,partial rear-hit,0.13750339,launch
+clipgt-b65e55e9-f3d5-4445-bdbd-325b07a5c493,0.4804721287641076,partial rear-hit,0.05468247,straight
+clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd,0.0,zero corridor / cor_route_end,0.09368464,stop/lead
+clipgt-bc309fd6-f660-43eb-84aa-c514bffa305e,0.0,zero corridor / cor_route_end,0.0929422,stop/lead
+clipgt-c8641276-c887-465d-b88e-df70bd7214b6,0.8886319642701518,partial slow,0.5238459,launch
+clipgt-ddb6a43a-f63e-477d-9fa8-bb282fed7454,0.6882430445970991,partial slow,0.20311186,turn
+clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4,0.8371401357748262,partial slow,0.28007188,turn

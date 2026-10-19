@@ -137,7 +137,7 @@ VARIANTS = {"paimix": 42, "paimix-s1": 1, "paimix-s2": 2, "garagex0.5": 42, "gar
 
 def items_of(sc, subs):
     """Complete-matrix rule (evaluate.py): scenes every pool subject scored without an RPC error."""
-    return sc.columns[sc.loc[sorted(set(subs))].notna().all(0)]
+    return sc.columns[sc.loc[sorted(set(subs))].notna().all(axis=0)]
 
 
 def cmd_fit(a):
@@ -157,9 +157,9 @@ def cmd_fit(a):
     if a.boot:                                                           # scene bootstrap of the whole pipeline (items resampled, refit)
         subs = pool(sc, fam, "paimix", nb)
         cols = np.array(items_of(sc, subs))
-        rng = np.random.default_rng(0)
         B = []
-        for b in range(a.boot):
+        for b in range(a.boot0, a.boot0 + a.boot):
+            rng = np.random.default_rng(b)
             pick = cols[rng.integers(0, len(cols), len(cols))]
             sb = sc[pick]; sb.columns = [f"{c}#{i}" for i, c in enumerate(pick)]
             M, names = matrix(sb, subs, sb.columns)
@@ -167,25 +167,28 @@ def cmd_fit(a):
             z = Ruler(dict(f, subjects=np.array(names), items=np.array(sb.columns)), sb)
             B.append(z.pcs)
             print("boot", b, flush=True)
-        pd.DataFrame(B).to_csv(Path(a.out) / "boot.csv", index=False)
+        pd.DataFrame(B).to_csv(Path(a.out) / f"boot_{a.boot0:03d}.csv", index=False)
 
 
 class Ruler:
     """Fixed items; ability of a pool subject = its fitted posterior mean, of any other = MAP under the items; PCS = least squares of
     ability on the three anchors' private PCS (`drop`: leave that anchor out of the map)."""
 
-    def __init__(self, f, sc, drop=None):
+    def __init__(self, f, sc, drop=None, mapall=False):
         from pcs_local import theta_map
         self.f, self.items = f, [str(c) for c in f["items"]]
         names = [str(s) for s in f["subjects"]]
         mu, sd = float(np.mean(f["theta"])), float(np.std(f["theta"]))
         fitted = {s: float(t) for s, t in zip(names, f["theta"]) if "#" not in s}
-        self.theta, self.sd = {}, {}
+        self.theta, self.check = {}, {}
         for s in sc.index:
             y = sc.loc[s, self.items].to_numpy(float)
             if np.isnan(y).mean() > 0.05:
                 continue
-            self.theta[s] = fitted[s] if s in fitted else float(theta_map(y, f, mu, sd))
+            m = float(theta_map(y, f, mu, sd)) if (mapall or s not in fitted or drop is None) else None
+            if s in fitted and m is not None:
+                self.check[s] = m - fitted[s]                            # MAP under the fitted items minus the VI posterior mean
+            self.theta[s] = m if (mapall or s not in fitted) else fitted[s]
         self.sd = {s: float(d) for s, d in zip(names, f["theta_sd"]) if "#" not in s}
         an = [k for k in ANCHORS if k != drop]
         self.A = np.polyfit([self.theta[k] for k in an], [ANCHORS[k] for k in an], 1)
@@ -200,6 +203,7 @@ def cmd_report(a):
     out = Path(a.out)
     Z = {v: Ruler(dict(np.load(out / f"fits/{v}.npz", allow_pickle=True)), sc) for v in VARIANTS if (out / f"fits/{v}.npz").exists()}
     z = Z["paimix"]
+    Z["paimix, MAP for all"] = Ruler(dict(z.f), sc, mapall=True)
     L, J = [], {"bands": nb, "anchors": ANCHORS}
     P = L.append
     mean = sc.mean(1)
@@ -215,10 +219,14 @@ def cmd_report(a):
         lo = Ruler(dict(np.load(out / "fits/paimix.npz", allow_pickle=True)), sc, drop=k).pcs[k]
         P(f"| {k} | {ANCHORS[k]} ({BOARD_MEAN[k]:.3f}) | {mean[k]:.3f} | {z.theta[k]:+.2f} | {z.pcs[k]:.0f} | {z.pcs[k] - ANCHORS[k]:+.0f} | {lo:.0f} ({lo - ANCHORS[k]:+.0f}) |")
         J["anchor_fit"][k] = dict(fit=z.pcs[k], loo=lo)
-    P(f"\nMap: PCS = {z.A[0]:.1f} x ability + {z.A[1]:.0f}. RSG + ACC + GAP is the highest anchor; ability above it is extrapolated.\n")
+    P(f"\nMap: PCS = {z.A[0]:.1f} x ability + {z.A[1]:.0f}. RSG + ACC + GAP is the highest anchor; ability above it is extrapolated.")
+    ck = pd.Series(z.check)
+    P(f"Out-of-pool scoring check (pool subjects: MAP under the fitted items minus the fitted posterior mean): median {ck.median():+.2f}, "
+      f"max |diff| {ck.abs().max():.2f} ({ck.abs().idxmax()}), = {ck.abs().max() * z.A[0]:.0f} PCS.\n")
 
     # predictions
-    boot = pd.read_csv(out / "boot.csv") if (out / "boot.csv").exists() else None
+    bf = sorted(out.glob("boot_*.csv"))
+    boot = pd.concat([pd.read_csv(f) for f in bf], ignore_index=True) if bf else None
     P("## Predicted private PAI PCS\n")
     P("CI: scene bootstrap of the whole pipeline (281 scenes resampled, pool refit, anchors re-mapped; "
       f"{len(boot) if boot is not None else 0} draws), 2.5-97.5 %. 'beyond 2089' = extrapolation above the top anchor.\n")
@@ -298,6 +306,7 @@ def main():
     c = s.add_parser("collect"); c.add_argument("--out", required=True)
     f = s.add_parser("fit"); f.add_argument("--rows", required=True); f.add_argument("--out", required=True)
     f.add_argument("--variants", default=""); f.add_argument("--boot", type=int, default=0)
+    f.add_argument("--boot0", type=int, default=0, help="first bootstrap draw (seed), for parallel shards")
     r = s.add_parser("report"); r.add_argument("--rows", required=True); r.add_argument("--out", required=True); r.add_argument("--gap", default="")
     a = p.parse_args()
     dict(collect=cmd_collect, fit=cmd_fit, report=cmd_report)[a.cmd](a)

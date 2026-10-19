@@ -57,6 +57,8 @@ strong subject's partial score on a window the strong pool aces costs more than 
 the human on moving windows, 0.008 of mean) cost about 145-220 PCS, all its zeros 23-40, launch hold partials 18-27, static windows 0. Selector:
 keep the arena mean, add the frozen board-mix PCS (`pcs_local.py score`) as the tie-break and PCS readout.
 
+PAI-PCS-LOCAL (d392): [results/pai_pcs_local.md](results/pai_pcs_local.md), `scripts/pai_pcs_local.py`: local garage 0014 / go-straight PAI 281 reads + zoib ruler with board-band weights and 3 private anchors (RMSE 25); NTV0-s0 + ACC + GAP predicted 2195 [2138, 2299] (extrapolated above the 2089 anchor), full B 2150.
+
 ## EASY-ITEMS: what we lose on the windows the garage aces (2026-10-19, d387)
 
 [results/easy_items.md](results/easy_items.md); code `scripts/easy_items.py` (box `extract` of per-step metrics, Mac `report` / `pai`).
