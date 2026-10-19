@@ -9,7 +9,7 @@ import numpy as np, pandas as pd
 from PIL import Image
 
 D = Path(os.environ["DATA_DIR"])
-SH = D / "datasets/waymo_e2e/front3"
+SH = D / "datasets/waymo_e2e/front1"
 
 
 def work(args):

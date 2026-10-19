@@ -1,8 +1,8 @@
 """Waymo Open Dataset E2E (WOD-E2E) data path: frame index, image history, targets, ego baselines,
 frozen features and the challenge submission writer (docs/waymo-e2e.md).
 
-Input is the slim front-3-camera shards written by scripts/download_waymo_e2e.sh
-($DATA_DIR/datasets/waymo_e2e/front3/*.tfrecord-*), outputs go to $DATA_DIR/processed/waymo_e2e/.
+Input is the slim FRONT-camera shards ($DATA_DIR/datasets/waymo_e2e/front1/*.tfrecord-*; FRONT_LEFT /
+FRONT_RIGHT were dropped on 2026-10-20, docs/waymo-e2e.md), outputs go to $DATA_DIR/processed/waymo_e2e/.
 
   index      scan new shards -> shards/<shard>.parquet, then merge to index.parquet + past.npy + future.npy
   report     sequence / gap / history-completeness stats and the ego-only baseline table
@@ -42,7 +42,8 @@ FRAME_DT = 0.1                 # seconds per context.name index step, MEASURED f
 #                                (10.00 Hz, IQR ~0 over 22 464 frame pairs) -- see docs/waymo-e2e.md.
 #                                Every timing field in WOD-E2E is zeroed, so this cannot be read off a frame.
 INTENTS = ("UNKNOWN", "GO_STRAIGHT", "GO_LEFT", "GO_RIGHT")
-CAMS = ("front", "front_left", "front_right")   # CameraName 1, 2, 3 -- the three kept by the slim step
+CAMS = ("front", "front_left", "front_right")   # CameraName 1, 2, 3; since front1 (2026-10-20) only front is on
+#                                                 disk: the side-camera span columns stay in the index as 0
 CAM_IDS = dict(zip((1, 2, 3), CAMS))
 PAST_FIELDS = ("pos_x", "pos_y", "vel_x", "vel_y", "accel_x", "accel_y")
 # Rater Feedback Score, verbatim from waymo_open_dataset/metrics/python/rater_feedback_utils.py
@@ -68,7 +69,7 @@ SCALAR_COLS = (["sequence", "frame", "split", "shard", "rec_off", "rec_len"] + S
 # ---------------------------------------------------------------- paths and protos
 
 def shard_dir() -> Path:
-    return data_dir() / "datasets" / "waymo_e2e" / "front3"
+    return data_dir() / "datasets" / "waymo_e2e" / "front1"
 
 
 def out_dir(*parts: str) -> Path:
@@ -1262,7 +1263,7 @@ def check(n: int = 64) -> None:
             fr = E2EDFrame.FromString(f.read(r.rec_len))
             assert fr.frame.context.name == f"{r.sequence}-{r.frame:03d}", fr.frame.context.name
             by_cam = {CAM_IDS[im.name]: im.image for im in fr.frame.images}
-            for c in CAMS:
+            for c in by_cam:                                    # the cameras on disk (front only since front1)
                 f.seek(r[f"{c}_off"])
                 blob = f.read(r[f"{c}_len"])
                 assert blob == by_cam[c], f"{c} bytes differ at row {i}"
