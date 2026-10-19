@@ -139,7 +139,7 @@ def lead_at(tr, objs, t, s_ego):
 
 
 def _window(job):
-    sys.path.insert(0, str(REPO / "experiments/route_follow/scripts"))
+    sys.path[:0] = [str(REPO / "experiments/route_follow/scripts"), str(REPO / "experiments/anchor_offset/scripts")]
     from ao_e1 import loader
     from rf_tax import logged_objects
     wid, cfg, D = job
