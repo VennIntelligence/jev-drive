@@ -72,6 +72,8 @@ def cmd_rows(a):
             run.info(f"{p}: {len(idx)} rows joined")
         assert (k_ >= 0).all()
         fut = tab["fut"][sel].astype(np.float32)
+        for P in (plan, logf, fut):                                              # meta logfut keeps the log's unwrapped yaw (2 pi offsets)
+            P[..., 2] = (P[..., 2] + np.pi) % (2 * np.pi) - np.pi
         dev = torch.device("cpu")
         rows_all = torch.arange(len(sel))
         ah = AgentHinge(POOL / "agent.npz", names, dev, 0.3, 0.0)
