@@ -1,7 +1,7 @@
 # NR1STAND: "do not walk farther than the human when the human stands" (2026-10-19)
 
 Prereg: NR1 prereg supplement 17 + addenda 1-5 ([../../plans/2026-10-17-nr1-prereg.md](../../plans/2026-10-17-nr1-prereg.md)).
-Decision 387. One seed, 1 000 steps, all arms against the on-disk control JTX1K-L18-s0, native reads. Box: `$DATA_DIR/runs/defect_fix/stand*`.
+Decision 388. One seed, 1 000 steps, all arms against the on-disk control JTX1K-L18-s0, native reads. Box: `$DATA_DIR/runs/defect_fix/stand*`.
 
 Arms (command diffs in [jtx/cmd_diff.txt](jtx/cmd_diff.txt) and [cmd_diff.txt](cmd_diff.txt); dose and gate in [dose.json](dose.json), [gate.json](gate.json), [identity.json](identity.json)):
 - **A STANDX1K**: STAND term only (W_S 0.001, margin 1.0 m).
