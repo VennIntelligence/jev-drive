@@ -40,6 +40,13 @@ log time tau >= t with v_h(tau) < V_REST and s_h(tau) >= s_e (clock-consistent: 
 speed >= V_APP, the human has not passed rest + M_STOP at t + 4 s nor 4 s after he was where the ego is, no logged object at the stop (label
 file). Cap = max(rest + M_STOP, v0^2 / (2 A_MAX)), the same at every step. Fire: s_plan_8 > cap. Value: sum over the 8 steps of smooth L1
 (beta 0.5) of relu(s_plan_j - cap); gradient only along each pose's heading. No target speed, nothing below the cap.
+
+TURN-CAP (prereg supplement 21; rm_train --on-turncap W): a one-sided upper limit on moving S rows in sharp turns (decision 395: the base
+model accelerates out of tight turns and plans wider when fast). Rows: S rows, ego t0 speed (tab `speed`) >= V_TC, the human moving (logged
+4 s arc of `fut_reg` >= H_TC) and his logged path turning: the heading range of the path over [s_e - TC_BACK, s_e + TC_AHEAD] (1 m samples,
+<pool>/turn_cap.npz from scripts/turn_cap.py label, the rows meta `gpath`) >= TURN_TC deg. Cap c_j = K_TC x max(arc(fut)_j, arc(fut_reg)_j):
+never below either human arc (`fut` gives the ego 2 s to blend from its own speed to the human's). Fire: s_plan_8 > c_8. Value: sum over the
+8 steps of smooth L1 (beta 0.5) of relu(s_plan_j - c_j) (= stand_terms with this cap); gradient only along each pose's heading.
 """
 from __future__ import annotations
 
@@ -53,6 +60,7 @@ DT = 0.5
 V_STAND, H_STAND, MARGIN = 0.5, 0.5, 1.0
 V_ROLL = 0.0                                      # supplement 20: upper ego speed of the rolling STAND rows (0 = off)
 V_REST, V_APP, M_STOP, A_MAX, H_FUT, LOOK = 0.5, 0.5, 1.0, 4.0, 4.0, 30.0
+V_TC, H_TC, TURN_TC, K_TC, TC_BACK, TC_AHEAD = 2.0, 4.0, 45.0, 1.05, 10, 20     # supplement 21 (TURN-CAP)
 
 
 def cum_arc(P):
@@ -349,6 +357,57 @@ def stoppt_term(poses, rows, pack):
     return stoppt_terms(poses, pack["cap"][rows], pack["ok"][rows])
 
 
+def turn_range(path):
+    """path (n, m, 2): the human's logged path at 1 m spacing over [s_e - TC_BACK, s_e + TC_AHEAD] -> (n,) heading range (deg, max - min of
+    the unwrapped segment headings) and (n,) net heading change (deg, last - first segment; left +). Segments shorter than 0.2 m (a clamped
+    path end) carry the previous heading; NaN rows stay NaN."""
+    P = np.asarray(path, np.float64)
+    d = np.diff(P, axis=1)
+    sl = np.hypot(d[..., 0], d[..., 1])
+    h = np.where(sl > 0.2, np.arctan2(d[..., 1], d[..., 0]), np.nan)
+    for j in range(1, h.shape[1]):
+        h[:, j] = np.where(np.isnan(h[:, j]), h[:, j - 1], h[:, j])
+    for j in range(h.shape[1] - 2, -1, -1):                            # a clamped start: take the first real heading
+        h[:, j] = np.where(np.isnan(h[:, j]), h[:, j + 1], h[:, j])
+    bad = np.isnan(h).any(1) | ~np.isfinite(P).all((1, 2))
+    h = np.degrees(np.unwrap(np.nan_to_num(h), axis=1))
+    rng, net = h.max(1) - h.min(1), h[:, -1] - h[:, 0]
+    return np.where(bad, np.nan, rng), np.where(bad, np.nan, net)
+
+
+def turncap_rows(v0, hum4, turn):
+    """ego t0 speed (N,), the human's logged 4 s arc (N,), the path's heading range (N, deg) -> (N,) bool: the rows supplement 21 lets fire."""
+    hum4, turn = np.nan_to_num(np.asarray(hum4, np.float64), nan=-1.0), np.nan_to_num(np.asarray(turn, np.float64), nan=-1.0)
+    return (np.asarray(v0) >= V_TC) & (hum4 >= H_TC) & (turn >= TURN_TC)
+
+
+def turncap_cap(fut, fut_reg):
+    """-> cap (N, 8) = K_TC x max of the two cumulative human arcs, ok (N,) finite."""
+    a, b = cum_arc(fut), cum_arc(fut_reg)
+    ok = np.isfinite(a).all(1) & np.isfinite(b).all(1)
+    return (K_TC * np.nan_to_num(np.maximum(a, b))).astype(np.float32), ok
+
+
+def turncap_load(pool_dir, names, dev):
+    """-> pack: cap (N, 8), ok (N,) on dev for the pool's moving S rows in sharp turns (labels <pool_dir>/turn_cap.npz)."""
+    import torch
+    from pathlib import Path
+    z = np.load(Path(pool_dir) / "tab.npz")
+    assert np.array_equal(z["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: tab rows != the pool's"
+    g = np.load(Path(pool_dir) / "turn_cap.npz")                       # scripts/turn_cap.py label
+    assert np.array_equal(g["names"].astype(str), np.asarray(names).astype(str)), "nr1_free: turn_cap rows != the pool's"
+    cap, fin = turncap_cap(z["fut"], z["fut_reg"])
+    S = z["mode"].astype(str) == "self" if "mode" in z.files else np.ones(len(fin), bool)
+    ok = fin & S & turncap_rows(z["speed"], cum_arc(z["fut_reg"])[:, -1], g["turn"])
+    rec = dict(rows=int(len(ok)), s_rows=int(S.sum()), turncap_rows=int(ok.sum()), right=int((ok & (g["net"] < 0)).sum()),
+               left=int((ok & (g["net"] >= 0)).sum()), v_tc=V_TC, h_tc=H_TC, turn_tc=TURN_TC, k_tc=K_TC, window=[-TC_BACK, TC_AHEAD])
+    return dict(cap=torch.as_tensor(cap, device=dev), ok=torch.as_tensor(ok, device=dev), rec=rec)
+
+
+def turncap_term(poses, rows, pack):
+    return stand_terms(poses, pack["cap"][rows], pack["ok"][rows])
+
+
 if __name__ == "__main__":                     # known-answer check (CPU)
     import sys
     import torch
@@ -460,4 +519,33 @@ if __name__ == "__main__":                     # known-answer check (CPU)
         assert stand_terms(go(lo / 4.0), c, ok1) == 0 and stand_terms(go(hi / 4.0), c, ok1) > 0, (g_, c)
     assert np.allclose(roll_cap(b, [-3.0]), b) and np.allclose(roll_cap(b, [10.0])[0, 0], 11.0)
     configure_stand(1.0)
+    # TURN-CAP (supplement 21): turn label on a 1 m path, rows, cap and fire
+    s_ = np.arange(-TC_BACK, TC_AHEAD + 1, dtype=np.float64)              # 31 samples, the ego at index TC_BACK
+    straight = np.stack([s_, 0 * s_], -1)
+    R_ = 8.0                                                             # a 90 deg right turn of radius 8 m starting 2 m ahead
+    th_ = np.clip((s_ - 2.0) / R_, 0, np.pi / 2)
+    xr = np.where(s_ < 2, s_, 2 + R_ * np.sin(th_) + np.maximum(s_ - 2 - R_ * np.pi / 2, 0) * np.cos(th_))
+    yr = np.where(s_ < 2, 0.0, -R_ * (1 - np.cos(th_)) - np.maximum(s_ - 2 - R_ * np.pi / 2, 0) * np.sin(th_))
+    clamp = straight.copy()
+    clamp[:4] = clamp[4]                                                 # the log starts 6 m behind the ego: clamped samples
+    rg, nt = turn_range(np.stack([straight, np.stack([xr, yr], -1), np.stack([xr, -yr], -1), clamp]))
+    assert abs(rg[0]) < 1e-6 and abs(rg[1] - 90) < 2 and nt[1] < -85 and nt[2] > 85 and abs(rg[3]) < 1e-6, (rg, nt)
+    assert turncap_rows(np.array([3.0, 1.5, 3.0, 3.0, 3.0]), np.array([10.0, 10.0, 3.0, 10.0, np.nan]),
+                        np.array([90.0, 90.0, 90.0, 40.0, 90.0])).tolist() == [True, False, False, False, False]   # row / ego slow / human slow / mild / nan
+    vv = np.maximum(4.0 + (3.0 - 4.0) * np.minimum(tt / 2.0, 1.0), 0.0)  # ego 4 m/s, the human 3 m/s: fut = 4 -> 3 over 2 s = 13 m in 4 s
+    Dt = np.r_[0.0, np.cumsum((vv[1:] + vv[:-1]) * 0.05)][5::5]
+    futt = np.stack([Dt, np.zeros(8), np.zeros(8)], -1)[None]
+    regt = np.stack([3.0 * t.numpy(), np.zeros(8), np.zeros(8)], -1)[None]  # his own 3 m/s: 12 m
+    ct, okc = turncap_cap(futt, regt)
+    assert okc.all() and abs(ct[0, -1] - 1.05 * 13.0) < 0.02 and np.allclose(ct[0], 1.05 * np.maximum(Dt, regt[0, :, 0]), atol=1e-4), ct
+    ct = torch.as_tensor(ct)
+    assert stand_terms(go(4.0), ct, ok1) > 0 and stand_terms(go(3.25), ct, ok1) == 0      # 16 m against 13.65 m fires; 13 m (his reach) not
+    assert stand_terms(torch.as_tensor(futt, dtype=torch.float32), ct, ok1) == 0 and stand_terms(torch.as_tensor(regt, dtype=torch.float32), ct, ok1) == 0
+    assert stand_terms(go(4.0), ct, ~ok1) == 0                                          # not a row: 0
+    q = torch.stack([4.0 * t * torch.cos(th), 4.0 * t * torch.sin(th), th + 0.05], -1)[None].requires_grad_(True)
+    stand_terms(q, ct, ok1).sum().backward()
+    g = q.grad[0]
+    across = -torch.sin(q[0, :, 2].detach()) * g[:, 0] + torch.cos(q[0, :, 2].detach()) * g[:, 1]
+    along = torch.cos(q[0, :, 2].detach()) * g[:, 0] + torch.sin(q[0, :, 2].detach()) * g[:, 1]
+    assert g[:, 2].abs().max() == 0 and across.abs().max() < 1e-6 and (along >= 0).all() and along.max() > 0, g   # shorter, shape untouched
     print("nr1_free known-answer ok", float(vs))

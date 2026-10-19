@@ -30,6 +30,9 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
         logged apart as lon_standr (lon_stand + lon_standr = the term). V = 0: as supplement 17, nothing loaded or added.
   stoppt (NR1STOPPT, rm_train --on-stoppt W; prereg supplement 18) nr1_free's "do not pass the human's stop point" term on approach rows
         (labels <pool>/stoppt.npz): logged as lon_stoppt, 10 x W x nr1_free.stoppt_term. W = 0: nothing loaded or added.
+  turncap (TURN-CAP, rm_train --on-turncap W; prereg supplement 21) nr1_free's one-sided upper limit on moving S rows in sharp turns (the plan's
+        arc beyond 1.05 x the larger human arc; labels <pool>/turn_cap.npz): logged as lon_turncap, 10 x W x nr1_free.turncap_term. W = 0:
+        nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -41,7 +44,7 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
@@ -51,6 +54,8 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
     assert CFG["stand"] > 0 or not CFG["_roll"], "--on-stand-roll: needs --on-stand"
     CFG["_clear"] = tuple(float(x) for x in free_clear)                     # NR1 supplement 19: FREE-M's stricter free check (popped below)
     assert CFG["free"] > 0 or not any(CFG["_clear"]), "--on-free-clear: needs --on-free"
+    if turncap > 0:                                                            # TURN-CAP (supplement 21): only the weight, labels from the file
+        CFG["turncap"] = float(turncap)
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
         CFG["stoppt"] = float(stoppt)
         return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
@@ -132,6 +137,10 @@ def load(pool_dir, names, dev, file=None):
         import nr1_free
         pack["stoppt"] = nr1_free.stoppt_load(pool_dir, names, dev)
         print(f"nr1_lat: lon_stoppt labels {pack['stoppt']['rec']}", flush=True)
+    if CFG.get("turncap", 0.0) > 0:                                            # TURN-CAP: the sharp-turn rows' caps
+        import nr1_free
+        pack["turncap"] = nr1_free.turncap_load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_turncap labels {pack['turncap']['rec']}", flush=True)
     return pack
 
 
@@ -238,4 +247,7 @@ def loss(poses, rows, pack):
     if CFG.get("stoppt", 0.0) > 0:
         import nr1_free
         out["lon_stoppt"] = 10.0 * CFG["stoppt"] * nr1_free.stoppt_term(poses, rows, pack["stoppt"])
+    if CFG.get("turncap", 0.0) > 0:
+        import nr1_free
+        out["lon_turncap"] = 10.0 * CFG["turncap"] * nr1_free.turncap_term(poses, rows, pack["turncap"])
     return out
