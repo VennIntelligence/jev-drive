@@ -1,0 +1,366 @@
+{
+ "counts": {
+  "s1": {
+   "a: overspeed at curvature / slow-down": {
+    "zero: corridor, moving non-turn": 6,
+    "zero: offroad, non-turn": 2,
+    "zero: turn window, offroad / corridor": 8
+   },
+   "b: path error at normal speed": {
+    "zero: corridor, moving non-turn": 0,
+    "zero: offroad, non-turn": 1,
+    "zero: turn window, offroad / corridor": 0
+   },
+   "c: early / no policy decision": {
+    "zero: corridor, moving non-turn": 1,
+    "zero: offroad, non-turn": 0,
+    "zero: turn window, offroad / corridor": 0
+   },
+   "c: human track marginal (on track at exit)": {
+    "zero: corridor, moving non-turn": 0,
+    "zero: offroad, non-turn": 2,
+    "zero: turn window, offroad / corridor": 0
+   }
+  },
+  "s0": {
+   "a: overspeed at curvature / slow-down": {
+    "zero: corridor, moving non-turn": 5,
+    "zero: offroad, non-turn": 2,
+    "zero: turn window, offroad / corridor": 8
+   },
+   "b: path error at normal speed": {
+    "zero: corridor, moving non-turn": 0,
+    "zero: offroad, non-turn": 1,
+    "zero: turn window, offroad / corridor": 0
+   },
+   "c: early / no policy decision": {
+    "zero: corridor, moving non-turn": 1,
+    "zero: offroad, non-turn": 0,
+    "zero: turn window, offroad / corridor": 0
+   },
+   "c: human track marginal (on track at exit)": {
+    "zero: corridor, moving non-turn": 0,
+    "zero: offroad, non-turn": 2,
+    "zero: turn window, offroad / corridor": 0
+   }
+  }
+ },
+ "totals": {
+  "s1": {
+   "a: overspeed at curvature / slow-down": 16,
+   "c: human track marginal (on track at exit)": 2,
+   "c: early / no policy decision": 1,
+   "b: path error at normal speed": 1
+  },
+  "s0": {
+   "a: overspeed at curvature / slow-down": 15,
+   "c: human track marginal (on track at exit)": 2,
+   "c: early / no policy decision": 1,
+   "b: path error at normal speed": 1
+  }
+ },
+ "bsub": {
+  "s1": {
+   "drift": 1
+  },
+  "s0": {
+   "under-turn": 1
+  }
+ },
+ "price": {
+  "s1": {
+   "all 20-window lateral group": {
+    "windows": 20,
+    "boardmix": [
+     79.53845164903464,
+     30.247017592188808,
+     234.34443576971026
+    ],
+    "g15": [
+     177.9395672897749,
+     63.60381843005659,
+     409.29856071485074
+    ]
+   },
+   "a (all)": {
+    "windows": 16,
+    "boardmix": [
+     58.547154967315464,
+     22.27656048558501,
+     157.67310121483098
+    ],
+    "g15": [
+     123.21333417608867,
+     46.7607947521719,
+     296.6288226559759
+    ]
+   },
+   "a1: stop overrun (human brakes to a stop, no lead)": {
+    "windows": 6,
+    "boardmix": [
+     19.432897587304524,
+     6.966886190318855,
+     46.54853298949425
+    ],
+    "g15": [
+     37.474494652909925,
+     13.068975009559272,
+     92.50942089210352
+    ]
+   },
+   "a2: speed in a sharp turn": {
+    "windows": 9,
+    "boardmix": [
+     27.35238935347934,
+     5.700961400476831,
+     70.23631165348998
+    ],
+    "g15": [
+     49.42028905793177,
+     12.178167072975048,
+     115.88158852110249
+    ]
+   },
+   "a3: other slow-down / mild bend": {
+    "windows": 1,
+    "boardmix": [
+     4.97322474547218,
+     0.0,
+     19.113956506825765
+    ],
+    "g15": [
+     11.137222280159449,
+     0.0,
+     41.666096556556084
+    ]
+   },
+   "b": {
+    "windows": 1,
+    "boardmix": [
+     6.164803542083973,
+     0.0,
+     22.288994584011487
+    ],
+    "g15": [
+     14.213189532412798,
+     0.0,
+     46.053861541972154
+    ]
+   },
+   "c": {
+    "windows": 3,
+    "boardmix": [
+     7.332690912388671,
+     0.0,
+     26.208960256812414
+    ],
+    "g15": [
+     10.748083749541138,
+     0.0,
+     39.10081739436925
+    ]
+   },
+   "lever STAND-R: a1 + easy static red-line zeros": {
+    "windows": 15,
+    "boardmix": [
+     53.363784543832935,
+     27.06312711964002,
+     106.79745059587404
+    ],
+    "g15": [
+     108.53377921930792,
+     50.954814559760315,
+     205.38376908116305
+    ]
+   },
+   "lever TURN-CAP: a2": {
+    "windows": 9,
+    "boardmix": [
+     27.35238935347934,
+     5.700961400476831,
+     70.23631165348998
+    ],
+    "g15": [
+     49.42028905793177,
+     12.178167072975048,
+     115.88158852110249
+    ]
+   },
+   "lever TURN-CAP: a2, expected (fix prob. from the zero-rate ratio)": {
+    "windows": 5.878463203463204,
+    "boardmix": [
+     17.20685786466228,
+     11.468934178703057,
+     23.023107022944032
+    ],
+    "g15": [
+     30.45288597648676,
+     20.1136044419688,
+     41.5007484981229
+    ]
+   },
+   "base": {
+    "boardmix": 1397.9122906070374,
+    "g15": 1526.3667127281428
+   }
+  },
+  "s0": {
+   "all 20-window lateral group": {
+    "windows": 19,
+    "boardmix": [
+     54.45471611351354,
+     23.601794365736165,
+     122.82684020797268
+    ],
+    "g15": [
+     99.52754365884175,
+     39.568011645738366,
+     229.19622312215523
+    ]
+   },
+   "a (all)": {
+    "windows": 15,
+    "boardmix": [
+     42.9508137228338,
+     16.623793545458163,
+     95.35561248231978
+    ],
+    "g15": [
+     79.10124520552858,
+     29.05366934254185,
+     183.5833847509161
+    ]
+   },
+   "a1: stop overrun (human brakes to a stop, no lead)": {
+    "windows": 4,
+    "boardmix": [
+     9.170899964361752,
+     1.8903092701845368,
+     20.820267876869035
+    ],
+    "g15": [
+     15.200716343374097,
+     2.6558727114590566,
+     37.23310973740756
+    ]
+   },
+   "a2: speed in a sharp turn": {
+    "windows": 9,
+    "boardmix": [
+     20.901167467712412,
+     6.424964246949133,
+     45.03845819752275
+    ],
+    "g15": [
+     33.99878667879466,
+     10.595134517207072,
+     73.18587691404733
+    ]
+   },
+   "a3: other slow-down / mild bend": {
+    "windows": 2,
+    "boardmix": [
+     8.78901580448587,
+     0.0,
+     23.830291857915483
+    ],
+    "g15": [
+     17.95559552136615,
+     0.0,
+     50.704553222970446
+    ]
+   },
+   "b": {
+    "windows": 1,
+    "boardmix": [
+     2.568756117274006,
+     0.0,
+     10.47479628597788
+    ],
+    "g15": [
+     4.500315821029517,
+     0.0,
+     18.37163122227978
+    ]
+   },
+   "c": {
+    "windows": 3,
+    "boardmix": [
+     5.704476719473632,
+     0.0,
+     17.096939093648412
+    ],
+    "g15": [
+     7.597855059078029,
+     0.0,
+     22.908809907875423
+    ]
+   },
+   "lever STAND-R: a1 + easy static red-line zeros": {
+    "windows": 14,
+    "boardmix": [
+     35.70842492213251,
+     10.066562100304917,
+     70.06427869908981
+    ],
+    "g15": [
+     61.04216647747489,
+     16.96030719394501,
+     116.12549743496348
+    ]
+   },
+   "lever TURN-CAP: a2": {
+    "windows": 9,
+    "boardmix": [
+     20.901167467712412,
+     6.424964246949133,
+     45.03845819752275
+    ],
+    "g15": [
+     33.99878667879466,
+     10.595134517207072,
+     73.18587691404733
+    ]
+   },
+   "lever TURN-CAP: a2, expected (fix prob. from the zero-rate ratio)": {
+    "windows": 5.878463203463204,
+    "boardmix": [
+     13.221721772676258,
+     8.752804041315585,
+     17.682384410685927
+    ],
+    "g15": [
+     21.28264876195124,
+     13.919809855938183,
+     28.200802841335303
+    ]
+   },
+   "base": {
+    "boardmix": 1369.2502855670152,
+    "g15": 1481.664755559847
+   }
+  }
+ },
+ "sub_counts": {
+  "s1": {
+   "a2: speed in a sharp turn": 9,
+   "a1: stop overrun (human brakes to a stop, no lead)": 6,
+   "c": 3,
+   "b": 1,
+   "a3: other slow-down / mild bend": 1
+  },
+  "s0": {
+   "a2: speed in a sharp turn": 9,
+   "a1: stop overrun (human brakes to a stop, no lead)": 4,
+   "c": 3,
+   "a3: other slow-down / mild bend": 2,
+   "b": 1
+  }
+ },
+ "turn_zero_rate_by_ratio": {
+  "(0.0, 1.05]": 0.0659090909090909,
+  "(1.05, 1.2]": 0.12244897959183673,
+  "(1.2, 1.4]": 0.31868131868131866,
+  "(1.4, 9.0]": 0.4666666666666667
+ }
+}

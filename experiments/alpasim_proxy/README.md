@@ -70,6 +70,7 @@ the garage). PAI: no strong-model local read; on our family 94 % of A0's lost po
 Full-length B (`STANDFMX-L18-s0`, PCS 1368): [results/easy_items_B.md](results/easy_items_B.md) (`easy_items.py subject` / `fig`, d390):
 its remaining PCS is the 48 easy misses (+882 / +742 = cap); its 464 wins over garage are worth -51 / -98 if given back.
 Half-dose B2 (`STANDFMXH-L18-s1` / s0, B s1 alongside): [results/easy_items_B2.md](results/easy_items_B2.md) (d393).
+Lateral zeros of B2 split into overspeed / path error / other (stop overrun 6 / 4, sharp right turns 9 / 9, path error 1 / 1; levers STAND-R and TURN-CAP priced): [results/lat_zero.md](results/lat_zero.md) (d395, figure `results/figs/lat_zero.png`).
 - Easy misses: 47 / 54, against B's 48 / 48.
 - Lateral zeros: 19 / 20 easy windows, against B's 25 / 28.
 - The red-line class does not move (9-10 windows). It is the largest single class, worth +29 / +54 on s1.
