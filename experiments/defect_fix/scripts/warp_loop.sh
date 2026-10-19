@@ -38,7 +38,9 @@ s2)
   W=${WARP:-const}; ids=()
   for c in $(python3 -c "import json; print(' '.join(str(x['chunk']) for x in json.load(open('$AH/meta.json'))['chunks']))"); do
     ids+=($(PRIO=$((${PRIO:-12} + 1)) TRIES=2 sub wl-ar-$W-c$c --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- env WARP=$W bash $ME aread $c)) || exit 1; done
-  echo "$(date '+%F %T') stage 2 ($W): ${ids[*]}" | tee -a $O/stages.txt ;;
+  x=$(sub wl-s2x --after $(csv ${ids[@]}) --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- $DATA_DIR/third_party/alpasim/.venv/bin/python $PY s2x --warp $W) || exit 1
+  r=$(sub wl-s2r --after $x --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- .venv/bin/python $PY s2report) || exit 1
+  echo "$(date '+%F %T') stage 2 ($W): reads ${ids[*]} extract $x report $r" | tee -a $O/stages.txt ;;
 ident)
   mkdir -p $O/ident; head -12 $AH/lists/c0.txt > $O/ident/c0.txt
   for W in none const; do sub wl-id-$W --vram 20 --cpu 6 --ram 40 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 -- env WARP=$W LIST=$O/ident/c0.txt bash $ME aread 0 || exit 1; done ;;

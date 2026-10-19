@@ -309,6 +309,51 @@ def cmd_report(a):
     json.dump(J, open(O / "report.json", "w"), indent=1, default=str)
 
 
+# ---------------------------------------------------------------- stage 2: the closed-loop read with SH30_WARP
+def cmd_s2x(a):
+    """native_gap extract on the stored native JTN-L18-s1 read and the SH30_WARP read -> $O/s2/{dec,win,steps,set_census}.parquet"""
+    NG.READS = {"JTN1": NG.READS["JTN1"], "JTN1W": O / f"arena/JTN-L18-s1@warp-{a.warp}"}
+    a.out, a.limit, a.limit_win = str(O / "s2"), 0, 0
+    NG.cmd_extract(a)
+
+
+def cmd_s2report(a):
+    """stage-2 tables: speed ratio by k (native_gap A1 rule), static zeros by class, launch, means and the paired difference."""
+    import pandas as pd
+    import native_gap_report as NR
+    src = O / "s2"
+    D, Wn, St, C = NR.load(src)
+    S = pd.read_csv(NG.AR / "set/set.csv.gz").set_index("id")
+    X = Wn.pivot_table(index="id", columns="tag", values="score")
+    T = Wn.pivot_table(index="id", columns="tag", values="type", aggfunc="first")
+    ids = X.index[X[["JTN1", "JTN1W"]].notna().all(axis=1) & ~(T[["JTN1", "JTN1W"]] == "route-fail").any(axis=1) & X.index.isin(S.index[S.split == "held"])]
+    X = X.loc[ids]
+    d = (X.JTN1W - X.JTN1).values
+    rng = np.random.default_rng(0)
+    bs = [d[rng.integers(0, len(d), len(d))].mean() for _ in range(2000)]
+    J = dict(windows=len(ids), mean_native=float(X.JTN1.mean()), mean_warp=float(X.JTN1W.mean()), diff=float(d.mean()),
+             ci=np.quantile(bs, [0.025, 0.975]).tolist(), zeros_native=int((X.JTN1 == 0).sum()), zeros_warp=int((X.JTN1W == 0).sum()),
+             fixed=int(((X.JTN1 == 0) & (X.JTN1W > 0)).sum()), broken=int(((X.JTN1 > 0) & (X.JTN1W == 0)).sum()))
+    M = D[D.id.isin(ids) & D.valid & (D.k >= 2) & (D.vh >= 2)].copy()
+    M["r"] = M.v / M.vh
+    J["ratio_by_k"] = M.pivot_table(index="k", columns="tag", values="r", aggfunc="median").round(4).to_dict()
+    M["st"] = NR.stratum_dec(M)
+    J["ratio_by_stratum"] = M.pivot_table(index="st", columns="tag", values="r", aggfunc="median").round(4).to_dict()
+    st = S.stratum.reindex(ids)
+    W = pd.read_csv(DATA / "runs/defect_fix/redline_probe/windows.csv").set_index("id")
+    cls = W.cls.reindex(ids).where(st == "static")
+    J["static"] = {c: dict(windows=int((cls == c).sum()), zeros_native=int(((cls == c) & (X.JTN1 == 0)).sum()),
+                           zeros_warp=int(((cls == c) & (X.JTN1W == 0)).sum())) for c in sorted(cls.dropna().unique())}
+    J["strata"] = {s_: dict(windows=int((st == s_).sum()), native=float(X.JTN1[st == s_].mean()), warp=float(X.JTN1W[st == s_].mean()),
+                            zeros_native=int(((st == s_) & (X.JTN1 == 0)).sum()), zeros_warp=int(((st == s_) & (X.JTN1W == 0)).sum()))
+                   for s_ in sorted(st.dropna().unique())}
+    J["types"] = pd.crosstab(T.loc[ids, "JTN1"], T.loc[ids, "JTN1W"]).to_dict()
+    sv = D[D.id.isin(ids) & (st.reindex(D.id).values == "static")]
+    J["static_arc_by_k"] = sv.pivot_table(index="k", columns="tag", values="arc4", aggfunc="median").round(3).to_dict()
+    json.dump(J, open(O / "s2_report.json", "w"), indent=1, default=str)
+    print(json.dumps(J, indent=1, default=str))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -317,5 +362,8 @@ if __name__ == "__main__":
     p.add_argument("--limit", type=int, default=0), p.add_argument("--out", default="")
     p.add_argument("--synth", choices=("gpu", "cpu"), default="gpu")
     sp.add_parser("report")
+    p = sp.add_parser("s2x")
+    p.add_argument("--warp", default="const"), p.add_argument("--workers", type=int, default=32)
+    p = sp.add_parser("s2report")
     a = ap.parse_args()
-    dict(cf=cmd_cf, report=cmd_report)[a.cmd](a)
+    dict(cf=cmd_cf, report=cmd_report, s2x=cmd_s2x, s2report=cmd_s2report)[a.cmd](a)
