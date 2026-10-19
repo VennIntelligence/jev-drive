@@ -359,6 +359,24 @@ def cmd_report(a):
         print(f"\nagent-active rows, {'new' if c else 'old'}: {len(g)}; ego static {g.static.mean():.3f}; object in the corridor {g.obj_corridor.mean():.3f}; "
               f"object moves < 0.5 m in 4 s {(g.obj_move4 < 0.5).mean():.3f}; imitation target also active {(g.fut_agent > 0).mean():.3f}")
     print(f"\nrows off the road raster at t0 (drivable fallback): old {d[~d.new].off_t0.mean():.4f}, new {d[d.new].off_t0.mean():.4f}")
+    # ---- 1b. the trainee's own plans (lat_diag.py trainee): the pool terms as the loss sees them
+    wz = np.load(WFILE)
+    gmap = dict(zip(wz["names"].tolist(), wz["grp"].astype(str).tolist()))
+    for tag in ("RB0-F-s0", "NTV0-L18-s0", "NTVX-L18-s0"):
+        f = W / f"trainee_{tag}.parquet"
+        if not f.exists():
+            continue
+        t = pd.read_parquet(f)
+        t = t[t.name.map(gmap) == "S"]
+        t["cls"] = np.where(t.pool.str.startswith("pn"), "new", "old") + np.where(t.speed < 0.5, " static", " moving")
+        terms = [c[:-5] for c in t.columns if c.endswith("_left")]
+        print(f"\n### Trainee plans of {tag} on the trainable S rows: signed sideways push per row (+ left) of each pool term, x its loss weight\n")
+        print("| rows | n | share of NTVX's draw | plan 4 s arc (med) | agent active | " + " | ".join(f"push {q}" for q in terms) + " | push, all terms | |push|, all |")
+        print("|---|--:|--:|--:|--:|" + "--:|" * (len(terms) + 2))
+        for c, g in [*t.groupby("cls"), ("NTV0 draw (old)", t[~t.pool.str.startswith("pn")]), ("NTVX draw (all)", t)]:
+            tot, ab = sum(g[f"{q}_left"] for q in terms), sum(g[f"{q}_abs"] for q in terms)
+            print(f"| {c} | {len(g)} | {len(g) / len(t):.3f} | {g.arc4.median():.2f} | {(g.agent > 0).mean():.3f} | "
+                  + " | ".join(f"{g[f'{q}_left'].mean():+.4f}" for q in terms) + f" | {tot.mean():+.4f} | {ab.mean():.3f} |")
     # ---- 2. closed-loop lateral drift on held 460 @18
     D = pd.concat([pd.read_parquet(W / f / "decisions.parquet") for f in ("follow", "follow1k")])
     S = pd.concat([pd.read_csv(W / f / "scenes.csv") for f in ("follow", "follow1k")])
