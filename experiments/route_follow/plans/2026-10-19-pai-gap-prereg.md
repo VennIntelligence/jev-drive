@@ -88,3 +88,13 @@ lines (decisions 352 / 353 / 365: no two-sided speed target; waiting and launchi
 Anything about the private board beyond direction; one seed (NTV0-L18-s0; s1 is used only inside best-of-reads); H is one read (the MPC
 tracking the log is not the log itself: small deviations are reported, H's own zeros are typed); item 2's worth is a ceiling, not a serve
 change.
+
+## Amendment 1 (13:20, after the A0-only dry run of items 1-2, before H has any rollout)
+
+The dry run (H absent) shows 23 of the 44 corridor zeros are rf_tax `cor_route_end`: the human ends the 20 s still and the ego passes
+its rest point (decision 357's class C, a 4 m disc). That zero is longitudinal in mechanism, so the lateral test of item 3 does not fit it.
+For `cor_route_end` zeros only: the H window is the human's last 4 s before it reaches the station of A0's event (= its approach to the
+rest point); **(i)** = on H the model plan's 4 s arc exceeds the log's 4 s arc by >= 4 m (median over the window: the plan on the
+human's own state does not stop where the human stops); otherwise **(i-cl)**. (ii) / (iii) unchanged. Added descriptions (not lines):
+for `cor_route_end`, a logged vehicle in the human's path within 15 m at the rest point (queue stop) or not, and the map wait lines
+within 12 m (rf_tax `waitlines`); for real-lead cuts, the served 1.5 s speed against the human's speed at the ego's station.

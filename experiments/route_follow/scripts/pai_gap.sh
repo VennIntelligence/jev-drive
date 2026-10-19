@@ -2,7 +2,8 @@
 # PAI-GAP (plans/2026-10-19-pai-gap-prereg.md): where NTV0-L18-s0 + ACC + GAP loses points on PAI 281. Box, repo root; GPU jobs only via the pool.
 #   pai_gap.sh submit     H (log-replay read, onp_log_driver.py, A0's serve and chunk lists): c000 -> gate -> c001..c007; then the CPU jobs
 #                         (rf_tax extract of H, rf_tax --asl-actors extract of A0, read-out) chained with --after
-#   pai_gap.sh gate | exh | exasl | sum      job bodies
+#   pai_gap.sh wl         (amendment 1) map wait lines of A0's scenes, a CPU pool job (rf_tax waitlines)
+#   pai_gap.sh gate | exh | exasl | waitl | sum      job bodies
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 T=NTV0-L18-s0; O=$DATA_DIR/runs/route_follow/pai_gap; ME=experiments/route_follow/scripts/pai_gap.sh; PRIO=${PRIO:-12}
 A0=$DATA_DIR/runs/defect_fix/pai_accgap/$T; RF=experiments/route_follow/scripts; R=experiments/route_follow/results/pai_gap
@@ -44,6 +45,10 @@ exh)
   mkdir -p $O/tax; $AP $RF/rf_tax.py extract --runs $(ls -d $O/H/runs/*/sim) --out $O/tax/H.pkl --workers 16 > $O/tax/H.log 2>&1 || die "extract H" ;;
 exasl)  # A0 rollouts that kept a rollout.asl: their actor poses, for the logged-traffic gate
   mkdir -p $O/tax; $AP $RF/rf_tax.py extract --runs $(ls -d $A0/runs/*/sim) --out $O/tax/A0asl.pkl --workers 16 --asl-actors > $O/tax/A0asl.log 2>&1 || die "extract A0 asl" ;;
+wl)
+  sub pg-waitl --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME waitl ;;
+waitl)
+  mkdir -p $O/tax; $AP $RF/rf_tax.py waitlines --runs $(ls -d $A0/runs/*/sim) --out $O/tax/wl.pkl --workers 16 > $O/tax/wl.log 2>&1 || die "waitlines" ;;
 sum)
   mkdir -p $R; .venv/bin/python $RF/pai_gap.py all --o $O --out $R > $O/sum.log 2>&1 || die "pai_gap.py"; date '+%F %T' > $O/DONE ;;
 *) sed -n 2,5p $0; exit 2 ;;

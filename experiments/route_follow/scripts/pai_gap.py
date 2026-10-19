@@ -161,15 +161,32 @@ def human(R):
     return dict(stratum=stratum, v_hand=v_hand, h_stop=stop, lead_share=lead / mov if mov else np.nan, turn_deg=turn)
 
 
+def rest_cue(R, wl):
+    """Where the human ends the rollout still: a logged vehicle in its path within 15 m at the rest point, map wait lines within 12 m ahead."""
+    T, P, Y = (np.asarray(R.o["log"][k], float) for k in ("T", "P", "Y"))
+    a = np.array([P[-1, 0], P[-1, 1], Y[-1]])
+    j = len(R.tg) - 1
+    st = R.tr[j]
+    veh = [x for x in ahead(R, a, np.zeros((1, 3)), st, 15.0) if x[1] <= 0 and x[0] >= -0.5 and TX.cgroup(str(st["cls"][x[2]])) == "vehicle"]
+    c, sn = np.cos(a[2]), np.sin(a[2])
+    wls = []
+    for w in wl or []:
+        q = w["pts"].mean(0) - a[:2]
+        ex, ey = c * q[0] + sn * q[1], -sn * q[0] + c * q[1]
+        if -3.0 <= ex - R.front <= 12.0 and abs(ey) <= 4.0:
+            wls.append(w["kind"].split(".")[-1])
+    return dict(rest_lead=bool(veh), rest_lead_gap=min(x[0] for x in veh) if veh else np.nan, rest_wl="+".join(sorted(set(wls))))
+
+
 def scene_job(job):
-    s, o, recs = job
+    s, o, recs, wl = job
     R = TX.Roll(o)
     row, _, _ = TX.classify(o)
     sc = float(o["score"] or 0.0)
     pt = ptype(dict(score=sc, metrics=o["metrics"], failure_reason=""))
     out = dict(scene=s, score=sc, loss=1 - sc, ptype=pt, zclass=zclass(pt) if sc == 0 else "", primary=row.get("primary", ""),
                secondary=row.get("secondary", ""), t_ev_s=row.get("t_ev_s", np.nan), rear_t_s=row.get("rear_t_s", np.nan),
-               speed_ratio=row.get("speed_ratio", np.nan), **human(R))
+               speed_ratio=row.get("speed_ratio", np.nan), **human(R), **rest_cue(R, wl))
     t_tr = np.nanmin([R.t0 + 1e6 * x for x in (out["t_ev_s"], out["rear_t_s"]) if np.isfinite(x)] + [R.t[-1]])
     cuts = []
     for r in recs:
@@ -178,7 +195,9 @@ def scene_job(job):
         if v < 1 or (ld.get("cut") or 0) <= 0:
             continue
         c = cut_class(R, r)
-        cuts.append(dict(scene=s, t_s=(r["t0"] - R.t0) / 1e6, cut=float(ld["cut"]), v=v, before_event=bool(r["t0"] <= t_tr),
+        acc = (r.get("fix") or {}).get("acc") or {}
+        vh = R.vlog_at(float(R.log_station(R.pose(r["t0"])[None, :2])[0]))
+        cuts.append(dict(scene=s, t_s=(r["t0"] - R.t0) / 1e6, cut=float(ld["cut"]), v=v, before_event=bool(r["t0"] <= t_tr), v15=acc.get("v15", np.nan), v_h=vh,
                          won=((r.get("fix") or {}).get("acc") or {}).get("won", ""), src=ld.get("src", ""), **c))
     out["n_dec"] = sum(r["ego"][4] * 10 >= 1 for r in recs)
     return out, cuts
@@ -193,7 +212,7 @@ def window(R, t_ev_us):
 
 def onlog(recs, t_lo, t_hi):
     """H records in [t_lo, t_hi]: median |lateral error at 4 s| of the model plan against the log, median 2 s arc ratio model / log."""
-    lat, arc, off = [], [], []
+    lat, arc, off, over = [], [], [], []
     for r in recs:
         if not (t_lo <= r["t0"] <= t_hi) or r.get("log_poses") is None:
             continue
@@ -211,8 +230,11 @@ def onlog(recs, t_lo, t_hi):
             ma = float(np.hypot(*M[0, :2]) + np.hypot(*np.diff(M[:4, :2], axis=0).T).sum())
             if la >= 2.0:
                 arc.append(ma / la)
+        l4 = float(np.hypot(*(L[0, :2] - np.asarray(r.get("log_now") or [0, 0, 0], float)[:2])) + np.hypot(*np.diff(L[:n + 1, :2], axis=0).T).sum())
+        m4 = float(np.hypot(*M[0, :2]) + np.hypot(*np.diff(M[:n + 1, :2], axis=0).T).sum())
+        over.append(m4 - l4)
     md = lambda x: float(np.median(x)) if x else np.nan  # noqa: E731
-    return dict(n_h=len(lat), lat4=md(lat), arc2=md(arc), off=md(off))
+    return dict(n_h=len(lat), lat4=md(lat), arc2=md(arc), off=md(off), over4=md(over))
 
 
 def a0_window(R, recs, t_lo, t_hi):
@@ -271,7 +293,8 @@ def main():
     S0, bad = summaries(A0)
     A = rolls(f"{PIL}/tax/A0.pkl")
     DR = drive(A0)
-    jobs = [(s, A[s], DR.get(s, [])) for s in sorted(A) if s not in bad]
+    WL = pickle.load(open(f"{a.o}/tax/wl.pkl", "rb")) if Path(f"{a.o}/tax/wl.pkl").exists() else {}
+    jobs = [(s, A[s], DR.get(s, []), WL.get(s)) for s in sorted(A) if s not in bad]
     with ProcessPoolExecutor(a.workers) as ex:
         res = list(ex.map(scene_job, jobs, chunksize=4))
     T = pd.DataFrame([x for x, _ in res]).set_index("scene")
@@ -305,6 +328,13 @@ def main():
     for k, x in T[T["sub"] != ""].groupby("sub"):
         L.append(f"| {k} | {len(x)} | {int((x.H < OK).sum())} | {int((x.best >= OK).sum())} |")
         NUM[f"1/sub/{k}"] = dict(n=len(x), h_zero=int((x.H < OK).sum()))
+    re_ = T[T["sub"] == "cor_route_end"]
+    if len(re_):
+        L += ["", f"cor_route_end ({len(re_)}): human ends still with a logged vehicle within 15 m ahead (queue) {int(re_.rest_lead.sum())}, "
+              f"without {int((~re_.rest_lead).sum())}; map wait line within 12 m ahead of the rest point: "
+              + ", ".join(f"{k or 'none'} {v}" for k, v in re_.rest_wl.value_counts().items())
+              + f"; strata " + ", ".join(f"{k} {v}" for k, v in re_.stratum.value_counts().items())]
+        NUM["1/route_end"] = dict(n=len(re_), queue=int(re_.rest_lead.sum()), wl=re_.rest_wl.value_counts().to_dict())
     L += ["", "Partial primaries (rf_tax):", "", "| partial | primary | scenes | points lost |", "|---|---|--:|--:|"]
     for (p, q), x in T[(T.score > 0) & (T.score < OK)].groupby(["ptype", "primary"]):
         L.append(f"| {p} | {q} | {len(x)} | {x.loss.sum():.1f} |")
@@ -334,7 +364,9 @@ def main():
         R_ = C[C.cls == "real"]
         if len(R_):
             L += ["", f"Real leads: gap - reported d median {R_.err.median():+.2f} m (IQR {R_.err.quantile(0.25):+.2f} .. {R_.err.quantile(0.75):+.2f}), "
-                  f"static {R_.static.mean():.2f}, object speed median {R_.v_obj.median():.2f} m/s, vehicle {(R_.grp == 'vehicle').mean():.2f}."]
+                  f"static {R_.static.mean():.2f}, object speed median {R_.v_obj.median():.2f} m/s, vehicle {(R_.grp == 'vehicle').mean():.2f}. "
+              f"Served 1.5 s speed / the human's speed at the ego's station (human >= 2 m/s): median {(R_.v15 / R_.v_h)[R_.v_h >= 2].median():.3f}, "
+              f"share < 0.9 {((R_.v15 / R_.v_h)[R_.v_h >= 2] < 0.9).mean():.3f} (cut >= 0.5 m: {(R_.v15 / R_.v_h)[(R_.v_h >= 2) & (R_.cut >= 0.5)].median():.3f})."]
         pre = C[C.before_event]
         ph = pre.groupby("scene").apply(lambda x: x[x.phantom].cut.sum() / max(x.cut.sum(), 1e-9))
         T["phantom_m_share"] = ph.reindex(T.index)
@@ -379,6 +411,8 @@ def main():
                 at = "ii"
             elif lon_ and (aw["won"].get("lead", 0) + aw["won"].get("curve", 0)) >= 0.5:
                 at = "ii"
+            elif x["sub"] == "cor_route_end" and np.isfinite(hw["over4"]):         # amendment 1: passing the human's rest point
+                at = "i" if hw["over4"] >= 4.0 else "i-cl"
             elif lat and np.isfinite(hw["lat4"]):
                 at = "i" if hw["lat4"] >= 1.0 else "i-cl"
             elif lon_ and np.isfinite(hw["arc2"]) and hw["arc2"] < 0.9:
