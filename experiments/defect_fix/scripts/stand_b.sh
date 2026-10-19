@@ -10,7 +10,11 @@
 #   stand_b.sh smokeh              (addendum) 60 steps eager of the full-B2 command (FH) -> results/stand_b/smoke_H.json; prints the check job id
 #   stand_b.sh checkh              DRY diff of FH against F (only tag and FREE-M dose) -> results/stand_b/cmd_diff_H.txt
 #   stand_b.sh chainh [after ids]  the one submission of full-length B2: train -> held 18 chunks + held 460 + PAI 281 -> fsumh
-#   job bodies: train <arm> | psum | fsum | fsumh
+#   stand_b.sh checks1             (addendum 2) DRY diff of the seed-1 arms (FS, FHS) against their s0 arms: only the tag and `--seed 0` -> `--seed 1`
+#                                  -> results/stand_b/cmd_diff_s1.txt, cmd_diff_s1_H.txt
+#   stand_b.sh smokes1             60 steps eager of both seed-1 commands -> results/stand_b/smoke_s1.json, smoke_s1_H.json; prints the check job ids
+#   stand_b.sh chains1 [after ids] the one submission: both seed-1 trains -> held 18 chunks + held 460 + PAI 281 -> fsums1 / fsums1h
+#   job bodies: train <arm> | psum | fsum | fsumh | fsums1 | fsums1h
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; S=$O/stand_b; J=$O/jt; ME=experiments/defect_fix/scripts/stand_b.sh; SB=experiments/defect_fix/scripts/stand_b.py
 SP=experiments/defect_fix/scripts/stand.py; FM=experiments/defect_fix/scripts/free_m.py; JT=experiments/defect_fix/scripts/jt.sh
@@ -18,8 +22,8 @@ TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bi
 LAT=$O/lat/L18NR1v2; RES=experiments/defect_fix/results/stand_b; POOL=on1_JTX; DRAW=JTX00; CTL=JTX1K-L18-s0; CL=JTX1K; SUB="0 3 6 9 12 15"
 WS=$(python3 -c "import json; d = json.load(open('experiments/defect_fix/results/stand/jtx/dose.json')); assert d['in_range']; print(d['W_S'])") || exit 1
 CLEAR=15,2
-declare -A TAG=([B]=STANDFMX1K-L18-s0 [B1]=STANDFMXG1K-L18-s0 [B2]=STANDFMXH1K-L18-s0 [F]=STANDFMX-L18-s0 [FH]=STANDFMXH-L18-s0) LAB=([B]=STANDFMX [B1]=STANDFMXG [B2]=STANDFMXH)
-declare -A WF=([B]=0.002 [B1]=0.002 [B2]=0.001 [F]=0.002 [FH]=0.001)
+declare -A TAG=([B]=STANDFMX1K-L18-s0 [B1]=STANDFMXG1K-L18-s0 [B2]=STANDFMXH1K-L18-s0 [F]=STANDFMX-L18-s0 [FH]=STANDFMXH-L18-s0 [FS]=STANDFMX-L18-s1 [FHS]=STANDFMXH-L18-s1) LAB=([B]=STANDFMX [B1]=STANDFMXG [B2]=STANDFMXH)
+declare -A WF=([B]=0.002 [B1]=0.002 [B2]=0.001 [F]=0.002 [FH]=0.001 [FS]=0.002 [FHS]=0.001)
 TF=${TAG[F]}; TH=${TAG[FH]}; NREF=JTN-L18-s1; PREF=NTV0-L18-s0; REF=$DATA_DIR/runs/route_follow/acc_gap/read/s2
 PAISERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
 AH=$DATA_DIR/runs/alpasim_proxy/arena/hold; RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)
@@ -36,10 +40,13 @@ base() {  # base <tag> <steps> <warm>: JTX1K-L18-s0's recipe (jt.sh train DRY, A
 term() {  # term <arm>: B's switches (STAND W_S, FREE-M) with the arm's FREE-M weight; B1 adds the stricter free check
   local t="--on-stand $WS --on-stand-margin 1.0 --on-free ${WF[$1]} --on-free-mode move --on-free-frac 0.95"; [[ $1 == B1 ]] && t="$t --on-free-clear $CLEAR"; echo "$t"; }
 cmd() {  # cmd <arm> [tag] [steps warm]
-  local T=${2:-${TAG[$1]}}; echo "$(base $T ${3:-1000} ${4:-50}) $(term $1)"; }
+  local T=${2:-${TAG[$1]}} C; C="$(base $T ${3:-1000} ${4:-50}) $(term $1)"
+  if [[ $1 == FS || $1 == FHS ]]; then [[ $C == *" --seed 0 "* ]] || die "no --seed 0 in the command"; C=${C/ --seed 0 / --seed 1 }; fi   # seed replicate: same init, same everything else
+  echo "$C"; }
 pai() {  # pai <tag> <out> <after>: PAI 281 with the d366 serve on NTV0 + ACC + GAP's chunk lists -> prints the job ids
   CHUNKS_FROM=$O/pai_accgap/$PREF/chunks SERVE="$PAISERVE" WIZ=$WIZ CONC=4 PRIO=$((${PRIO:-12} + 1)) AFTER=$3 bash experiments/alpasim/scripts/pai_box.sh submit $2 $1 \
     > $S/pai_$1.submit.txt || die "pai submit $1"; awk '$2 ~ /^pai-/' $S/pai_$1.submit.txt >> $S/jobs.txt; awk '$2 ~ /^pai-/ {print $1}' $S/pai_$1.submit.txt | paste -sd,; }
+TS=${TAG[FS]}; THS=${TAG[FHS]}
 case ${1:-} in
 check)
   base $CTL 1000 50 > $S/cmd_ctl.txt || exit 1
@@ -79,6 +86,32 @@ smokeh)
   c=$(sub stb-gg-h "${FE[@]}" -- bash -c "$(cmd FH STBGG-H 60 50)") || exit 1
   e=$(sub stb-smokecheck-h --after $c --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $SB smoke --b STBGG-new --b1 STBGG-H --finite-only --out $RES/smoke_H.json") || exit 1
   echo "$(date '+%F %T') smokeh: run $c check $e" | tee -a $S/stages.txt; echo "$e" ;;
+checks1)
+  cmd F $TF 9500 500 > $S/cmd_F.txt; cmd FH $TH 9500 500 > $S/cmd_FH.txt; cmd FS $TS 9500 500 > $S/cmd_FS.txt; cmd FHS $THS 9500 500 > $S/cmd_FHS.txt
+  for P in "F FS $TF $TS $RES/cmd_diff_s1.txt" "FH FHS $TH $THS $RES/cmd_diff_s1_H.txt"; do set -- $P
+    { echo "== $3 -> $4 (seed replicate; only the tag and --seed 0 -> --seed 1 may differ; --init is the same)"; diff <(tr ' ' '\n' < $S/cmd_$1.txt) <(tr ' ' '\n' < $S/cmd_$2.txt); } > $5
+    cat $5; n=$(diff <(tr ' ' '\n' < $S/cmd_$1.txt) <(tr ' ' '\n' < $S/cmd_$2.txt) | grep -c '^>')
+    [[ $n == 2 && "$(diff <(tr ' ' '\n' < $S/cmd_$1.txt) <(tr ' ' '\n' < $S/cmd_$2.txt) | grep '^>' | cut -c3- | paste -sd' ')" == "$4 1" ]] || die "$2: not tag + seed only"
+    [[ $(cat $S/cmd_$2.txt) == *"--init RB0-F-s0 "* ]] || die "$2: init changed"; done
+  echo "diff ok" ;;
+smokes1)
+  for X in STBGG-S1 STBGG-HS1; do [[ ! -e $DATA_DIR/runs/op_parity/runs/$X/ckpt-final.pt ]] || die "$X exists"; done
+  FE=("${TRN[@]}" --env JEV_RM_EAGER=1 --timeout-h 1)
+  a=$(sub stb-gg-s1 "${FE[@]}" -- bash -c "$(cmd FS STBGG-S1 60 50)") || exit 1
+  b=$(sub stb-gg-hs1 "${FE[@]}" -- bash -c "$(cmd FHS STBGG-HS1 60 50)") || exit 1
+  e1=$(sub stb-smokecheck-s1 --after $a --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $SB smoke --b STBGG-new --b1 STBGG-S1 --finite-only --out $RES/smoke_s1.json") || exit 1
+  e2=$(sub stb-smokecheck-hs1 --after $b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$TR $SB smoke --b STBGG-new --b1 STBGG-HS1 --finite-only --out $RES/smoke_s1_H.json") || exit 1
+  echo "$(date '+%F %T') smokes1: runs $a $b checks $e1 $e2" | tee -a $S/stages.txt; echo "$e1 $e2" ;;
+chains1)
+  AF=${2:-}; PR=$((${PRIO:-12} + 1)); nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))")
+  for A in FS FHS; do T=${TAG[$A]}; [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"
+    t=$(sub stb-train-$T ${AF:+--after $AF} "${TRN[@]}" --timeout-h 6 -- bash $ME train $A) || exit 1
+    fr=(); for c in $(seq 0 $((nch - 1))); do fr+=($(PRIO=$PR TRIES=2 sub stb-ar-$T-c$c --after $t "${RD[@]}" -- bash $JT aread $T off $c)) || exit 1; done
+    for i in 0 1 2 3 4 5; do fr+=($(PRIO=$PR TRIES=2 sub stb-held-$T-$i --after $t "${RD[@]}" -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done
+    q=$(pai $T $S/pai281/$T $t); [[ -n $q ]] || die "$A PAI"
+    f=$(sub stb-fsum-$T --after $(csv ${fr[@]}),$q --vram 0.1 --cpu 32 --ram 96 --timeout-h 4 -- bash $ME fsums1$([[ $A == FHS ]] && echo h)) || exit 1
+    printf 'fsum_%s %s\n' $T $f >> $S/summary_ids.txt
+    echo "$(date '+%F %T') chains1 $A: train $t reads ${fr[*]} PAI $q fsum $f" | tee -a $S/stages.txt; echo "fsum_$T $f"; done ;;
 chainh)
   AF=${2:-}; [[ ! -e $DATA_DIR/runs/op_parity/runs/$TH/ckpt-final.pt ]] || die "$TH exists"
   PR=$((${PRIO:-12} + 1))
@@ -120,8 +153,10 @@ assert s["pass_"], "B1 smoke failed"
 assert c["pass_"] and c["clear"] == [15.0, 2.0], "ratchet coverage of the stricter check"
 if sys.argv[2] == "FH":
     assert json.load(open(f"{r}/smoke_H.json"))["pass_"], "FH smoke failed"
+if sys.argv[2] in ("FS", "FHS"):
+    assert json.load(open(f"{r}/smoke_s1{'_H' if sys.argv[2] == 'FHS' else ''}.json"))["pass_"], "seed-1 smoke failed"
 PY
-  if [[ $A == F ]]; then CMD=$(cmd F $TF 9500 500); elif [[ $A == FH ]]; then CMD=$(cmd FH $TH 9500 500); else CMD=$(cmd $A); fi
+  if [[ $A == F ]]; then CMD=$(cmd F $TF 9500 500); elif [[ $A == FH ]]; then CMD=$(cmd FH $TH 9500 500); elif [[ $A == FS || $A == FHS ]]; then CMD=$(cmd $A ${TAG[$A]} 9500 500); else CMD=$(cmd $A); fi
   echo "$(date '+%F %T') train ${TAG[$A]}: $CMD" | tee -a $S/stages.txt; exec $CMD ;;
 psum)    # B1 / B2 against the control: extract, arena, drift, the supplement 17 rule per arm (+ the supplement 19 PCS line on the Mac), diag
   X="$CTL=$J/arena/$CTL@off ${TAG[B]}=$J/arena/${TAG[B]}@off ${TAG[B1]}=$J/arena/${TAG[B1]}@off ${TAG[B2]}=$J/arena/${TAG[B2]}@off"
@@ -157,5 +192,15 @@ fsumh)   # full-length B2: the fsum reads with an H suffix on every output
     --ref $O/pai_accgap/$PREF --rl "$PREF+ACC+GAP" --out $RES/pai281_accgap_H.md || die "pai281 H"
   $TR $SB full --tag $TH --refs $NREF JTN-L18-s0 RSG-L18-s0 $CTL --arena $RES/arena_full_H.json --out $RES/full_H.md || die "full summary H"
   date '+%F %T' > $S/FULL_H_DONE ;;
-*) sed -n 2,14p $0; exit 2 ;;
+fsums1|fsums1h)   # seed-1 replicate: the fsum / fsumh reads, s0 arm listed beside it, outputs suffixed _s1 / _H_s1
+  if [[ $1 == fsums1 ]]; then T=$TS; T0=$TF; X=s1; else T=$THS; T0=$TH; X=H_s1; fi
+  $AP $FM ext --read $T=$J/arena/$T@off $T0=$J/arena/$T0@off $NREF=$J/arena/$NREF@off JTN-L18-s0=$J/arena/JTN-L18-s0@off \
+    RSG-L18-s0=$DATA_DIR/runs/alpasim_proxy/arena/reads/RSG-L18-s0 --out $S/ext_full_$X || die "extract $X"
+  $V $FM arena --src $S/ext_full_$X --a $T --b $NREF --ref $T0 JTN-L18-s0 RSG-L18-s0 --out $RES/arena_full_$X.json || die "arena $X"
+  $V -c "import pandas as pd; w = pd.read_parquet('$S/ext_full_$X/win.parquet'); w[['tag', 'id', 'score', 'type']].to_csv('$RES/arena_windows_full_$X.csv.gz', index=False)" || die "windows $X"
+  $V experiments/defect_fix/scripts/pai281.py --j $S/pai281/$T --jl "$T+ACC+GAP" --j2 $O/pai_accgap/JTN-L18-s0 --j2l "JTN-L18-s0+ACC+GAP" \
+    --ref $O/pai_accgap/$PREF --rl "$PREF+ACC+GAP" --out $RES/pai281_accgap_$X.md || die "pai281 $X"
+  $TR $SB full --tag $T --refs $NREF $T0 JTN-L18-s0 RSG-L18-s0 $CTL --arena $RES/arena_full_$X.json --out $RES/full_$X.md || die "full summary $X"
+  X=${X^^}; date '+%F %T' > $S/FULL_${X}_DONE ;;
+*) sed -n 2,19p $0; exit 2 ;;
 esac
