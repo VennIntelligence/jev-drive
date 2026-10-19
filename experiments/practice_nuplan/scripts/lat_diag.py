@@ -13,9 +13,10 @@ held 460 than NTV0. Diagnosis on stored data, no training. Box, repo root.
   $TR lat_diag.py replay --tags T .. (GPU pool job, op-train) open-loop plans of each checkpoint on the stored native-gap dumps (arena held
         windows, RSG and JTN-L18-s1 closed loops: the same frames, ego row and route memory for every checkpoint; sh30_core.Core, imported
         unchanged) -> $W/replay.parquet (one row per dump x tag: plan poses (8, 3) rear axle, row frame)
-  $AP lat_diag.py held      (CPU, AlpaSim venv) held 460 @18 zero scenes of NTVX / NTV0 / RSG / JTN with failure type and, from the
-        driver's anchors (2 Hz) against the route of rf_follow (its own functions), the lateral offset at the zero event and whether the
-        route turns near it -> $W/held.parquet
+  closed-loop paths: experiments/route_follow/scripts/rf_follow.py (unchanged, AlpaSim venv, --cover none) on the stored held 460 @18 reads
+        -> $W/follow (NTVX, NTV0, RSG, JTN-s0 @18) and $W/follow1k (JTX1K, JTNC1K, NTV0-s1, JTN-s1, RSG-s1 @18): per decision the anchor's
+        signed lateral offset to AlpaSim's own route (left +), the first zero-score event k_z, turns >= 60 deg.
+  $TR lat_diag.py report    (CPU) the tables of results/lateral_diag.md from rows.parquet, follow*/ and replay.parquet -> stdout (markdown)
 """
 from __future__ import annotations
 
@@ -197,6 +198,81 @@ def cmd_replay(a):
         print(json.dumps(dict(decisions=len(df), mean_max_gap_to_served=gate)))
 
 
+def _boot(x, g, n=2000, seed=0):
+    """mean of x and its 95 % CI, bootstrap clustered by g (log)."""
+    L, inv = np.unique(np.asarray(g), return_inverse=True)
+    rng, x = np.random.default_rng(seed), np.asarray(x, float)
+    b = [(w * x).sum() / w.sum() for w in (np.bincount(rng.integers(0, len(L), len(L)), minlength=len(L))[inv] for _ in range(n))]
+    return float(x.mean()), float(np.quantile(b, 0.025)), float(np.quantile(b, 0.975))
+
+
+def cmd_report(a):
+    import pandas as pd
+    f3 = lambda m, lo, hi: f"{m:+.3f} [{lo:+.3f}, {hi:+.3f}]"  # noqa: E731
+    # ---- 1. the S rows the two draws see (stored plans of the rolling policies)
+    d = pd.read_parquet(W / "rows.parquet")
+    d = d[d.grp == "S"].assign(static=lambda x: x.speed < 0.5)
+    d["cls"] = np.where(d.new, "new", "old") + np.where(d.static, " static", " moving")
+    d["gl_road"] = d.plan_gleft - d.plan_gleft_agent
+    print("## 1. S rows (trainable, JTX00S): hinges on the stored own plan, the imitation target and the log's own future\n")
+    print("| rows | n | share of NTVX's S draw | plan 4 s arc (med, m) | human 4 s arc (med) | agent hinge active: plan / fut / log (k <= 1) | "
+          "road hinge active: plan / fut / log | lateral push per row, signed (+ left): agent / road | |push| agent / road |")
+    print("|---|--:|--:|--:|--:|--:|--:|--:|--:|")
+    for c, g in [*d.groupby("cls"), ("NTV0 draw (old)", d[~d.new]), ("NTVX draw (all)", d)]:
+        lg = g[g.log_ok]
+        print(f"| {c} | {len(g)} | {len(g) / len(d):.3f} | {g.plan_arc4.median():.2f} | {g.fut_arc4.median():.2f} | "
+              f"{(g.plan_agent > 0).mean():.3f} / {(g.fut_agent > 0).mean():.3f} / {(lg.log_agent > 0).mean():.4f} | "
+              f"{(g.plan_road > 0).mean():.3f} / {(g.fut_road > 0).mean():.3f} / {(lg.log_road > 0).mean():.3f} | "
+              f"{g.plan_gleft_agent.mean():+.4f} / {g.gl_road.mean():+.4f} | {g.plan_gagent.mean():.3f} / {g.plan_groad.mean():.3f} |")
+    a_ = d[(d.plan_agent > 0)]
+    for c, g in a_.groupby("new"):
+        print(f"\nagent-active rows, {'new' if c else 'old'}: {len(g)}; ego static {g.static.mean():.3f}; object in the corridor {g.obj_corridor.mean():.3f}; "
+              f"object moves < 0.5 m in 4 s {(g.obj_move4 < 0.5).mean():.3f}; imitation target also active {(g.fut_agent > 0).mean():.3f}")
+    print(f"\nrows off the road raster at t0 (drivable fallback): old {d[~d.new].off_t0.mean():.4f}, new {d[d.new].off_t0.mean():.4f}")
+    # ---- 2. closed-loop lateral drift on held 460 @18
+    D = pd.concat([pd.read_parquet(W / f / "decisions.parquet") for f in ("follow", "follow1k")])
+    S = pd.concat([pd.read_csv(W / f / "scenes.csv") for f in ("follow", "follow1k")])
+    P = D.pivot_table(index=["scene", "k"], columns="label", values="lat").reset_index()
+    KZ = S.pivot_table(index="scene", columns="label", values="kz")
+    turn = set(S[S.turn == True].scene)  # noqa: E712
+    print("\n## 2. Held 460 @18 closed loop: signed lateral offset to the route (left +), A - B on the same (scene, decision), "
+          "both before their first zero event; log-clustered 95 % CI\n")
+    print("| A - B | non-turn, k 5-10 | non-turn, k 11-17 | turn scenes, k 11-17 |")
+    print("|---|--:|--:|--:|")
+    for A, B in [("NTVX@18", "NTV0@18"), ("NTV0s1@18", "NTV0@18"), ("JTNs1@18", "JTN@18"), ("RSGs1@18", "RSG@18"), ("NTV0@18", "RSG@18"),
+                 ("NTV0s1@18", "RSG@18"), ("JTN@18", "RSG@18"), ("NTVX@18", "RSG@18"), ("JTX1K@18", "JTNC1K@18")]:
+        m = P.merge(KZ[[A, B]].rename(columns={A: "za", B: "zb"}).reset_index(), on="scene")
+        m = m[((m.za < 0) | (m.k < m.za)) & ((m.zb < 0) | (m.k < m.zb))].dropna(subset=[A, B])
+        cells = []
+        for ks, tr in ((range(5, 11), False), (range(11, 18), False), (range(11, 18), True)):
+            q = m[m.k.isin(ks) & (m.scene.isin(turn) == tr)]
+            cells.append(f3(*_boot(q[A] - q[B], q.scene.str.rsplit("-", n=1).str[0])) + f" ({len(q)})")
+        print(f"| {A} - {B} | " + " | ".join(cells) + " |")
+    # ---- 3. open-loop replay on the arena held dumps
+    if (W / "replay.parquet").exists():
+        R = pd.read_parquet(W / "replay.parquet")
+        tags = [c for c in R.columns if c.endswith(("-s0", "-s1"))]
+        Y = {t: np.stack(R[t]).reshape(-1, 8, 3) for t in tags}
+        A_ = pd.read_csv(DATA / "runs/alpasim_proxy/arena/set/set.csv.gz").set_index("id")
+        R["stratum"] = R.id.map(A_.stratum)
+        R["log"] = R.id.map(A_.log)
+        ng = pd.read_parquet(DATA / "runs/defect_fix/native_gap/dec.parquet")
+        ng = ng.assign(src=ng.tag)[["src", "id", "k", "lead_gap", "lead_v", "turn20"]]
+        R = R.merge(ng, on=["src", "id", "k"], how="left")
+        R["ctx"] = np.select([R.v < 0.5, (R.lead_gap < 15) & (R.lead_v < 1.0), R.turn20.abs() > 20], ["standing", "slow lead <= 15 m", "turning"], "moving")
+        print("\n## 3. Open loop on the same inputs (arena held dumps of RSG and JTN-L18-s1, k >= 2): plan lateral y at 2 s / 4 s (left +), A - B\n")
+        print("| A - B | context | decisions | y(2 s) [CI] | y(4 s) [CI] | |y(4 s) diff| mean |")
+        print("|---|---|--:|--:|--:|--:|")
+        for A, B in [("NTVX-L18-s0", "NTV0-L18-s0"), ("NTV0-L18-s0", "RSG-L18-s0"), ("JTN-L18-s1", "RSG-L18-s0"), ("JTX1K-L18-s0", "JTNC1K-L18-s0")]:
+            if A not in Y or B not in Y:
+                continue
+            for c in ["all", "moving", "turning", "slow lead <= 15 m", "standing"]:
+                q = (R.k >= 2) & ((R.ctx == c) if c != "all" else True)
+                q = q.to_numpy()
+                d2, d4 = Y[A][q, 3, 1] - Y[B][q, 3, 1], Y[A][q, 7, 1] - Y[B][q, 7, 1]
+                print(f"| {A} - {B} | {c} | {q.sum()} | {f3(*_boot(d2, R.log[q]))} | {f3(*_boot(d4, R.log[q]))} | {np.abs(d4).mean():.3f} |")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -205,5 +281,6 @@ if __name__ == "__main__":
     p = sp.add_parser("replay")
     p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "NTVX-L18-s0", "RSG-L18-s0", "JTN-L18-s1"])
     p.add_argument("--src", nargs="+", default=["JTN1", "RSG"]), p.add_argument("--limit", type=int, default=0)
+    sp.add_parser("report")
     a = ap.parse_args()
-    dict(rows=cmd_rows, replay=cmd_replay)[a.cmd](a)
+    dict(rows=cmd_rows, replay=cmd_replay, report=cmd_report)[a.cmd](a)
