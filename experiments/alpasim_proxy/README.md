@@ -65,6 +65,8 @@ progress (0.8 saturation) and the hard fails, so near-1s are the ratchet just sh
 red-line roll-out 82 windows +79 / +112, free-road ratchet incl. near-1 58 windows +36 / +38 (+101 / +139 on stop3), lateral zeros 20
 windows +16 / +21, rest <= +3 each. The shortfall against the garage is longitudinal (arc 0.68 vs 0.87 of the human, laterally closer than
 the garage). PAI: no strong-model local read; on our family 94 % of A0's lost points are scenes all three candidates fail.
+Full-length B (`STANDFMX-L18-s0`, PCS 1368): [results/easy_items_B.md](results/easy_items_B.md) (`easy_items.py subject` / `fig`, d390):
+its remaining PCS is the 48 easy misses (+882 / +742 = cap); its 464 wins over garage are worth -51 / -98 if given back.
 
 ## WAIT-SET: a closed-loop set where the human waits at standstill
 

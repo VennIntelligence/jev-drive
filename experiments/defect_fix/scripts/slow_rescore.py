@@ -74,7 +74,7 @@ class Frozen:
         else:
             c = np.arange(tot.shape[1]); y0, y1, y2 = tot[j - 1, c], tot[j, c], tot[j + 1, c]
         den = y0 - 2 * y1 + y2
-        off = np.where(den < 0, 0.5 * (y0 - y2) / np.where(den < 0, den, -1), 0)
+        off = np.clip(np.where(den < 0, 0.5 * (y0 - y2) / np.where(den < 0, den, -1), 0), -1, 1)   # at the grid edge (MAP >= 8) the vertex is outside: cap at one step
         th = self.grid[j] + off * 0.01
         return np.polyval(self.A, th)
 
