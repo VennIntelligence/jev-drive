@@ -170,7 +170,8 @@ def cmd_gate(a):
 
 
 def cmd_dose(a):
-    """grad/lon_free (W 0.004) and grad/lon_stand (W 1) over the frozen-init steps -> W_S = 0.004 x mean free / mean stand (2 significant)."""
+    """grad/lon_free and grad/lon_stand, both at W 0.004 (supplement 17 addendum 4), over the frozen-init steps -> W_S = 0.004 x mean free /
+    mean stand (2 significant); any non-finite logged value voids the dose (exit 2)."""
     d = sorted(glob.glob(f"{DATA}/runs/route_mem/train-{a.run}/*/"))[-1]
     sc = {}
     for line in open(d + "events.jsonl"):
@@ -181,10 +182,11 @@ def cmd_dose(a):
     pf, ps = sc.get("loss/on/lon_free_pos", []), sc.get("loss/on/lon_stand_pos", [])
     assert len(gf) and len(gs), f"no grad/lon_free or grad/lon_stand in {a.run}: {sorted(k for k in sc if 'grad' in k)}"
     mf, ms = float(np.mean(gf)), float(np.mean(gs))
-    w = W_FREE * mf / ms
+    fin = bool(np.isfinite(gf).all() and np.isfinite(gs).all())
+    w = W_FREE * mf / ms if fin else float("nan")
     w2 = float(f"{w:.2g}")
-    ok = W_RANGE[0] <= w2 <= W_RANGE[1]
-    out = dict(run=a.run, grad_free_w0004=mf, grad_stand_w1=ms, n=[len(gf), len(gs)], W_S=w2, W_S_raw=w, in_range=ok,
+    ok = fin and W_RANGE[0] <= w2 <= W_RANGE[1]
+    out = dict(run=a.run, grad_free_w0004=mf, grad_stand_w0004=ms, finite=fin, per_log=dict(free=gf, stand=gs), n=[len(gf), len(gs)], W_S=w2, W_S_raw=w, in_range=ok,
                fire_share_free=float(np.mean(pf)) if len(pf) else None, fire_share_stand=float(np.mean(ps)) if len(ps) else None,
                grad_imit=float(np.mean(sc["loss/grad/imit"])) if "loss/grad/imit" in sc else None)
     Path(a.out).write_text(json.dumps(out, indent=1))

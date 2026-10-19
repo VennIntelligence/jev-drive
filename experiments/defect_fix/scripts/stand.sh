@@ -38,7 +38,7 @@ check)
     [[ $n == "$want" ]] || die "arm $A: $n new tokens, want $want (--tag + the switches)"; done; echo "diff ok" ;;
 pre)
   rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
-  for X in STANDGG-old STANDGG-new STANDDOSE-L18-s0; do [[ ! -e $DATA_DIR/runs/op_parity/runs/$X/ckpt-final.pt ]] || die "$X exists"; done
+  for X in STANDGG-old STANDGG-new STANDDOSE2-L18-s0; do [[ ! -e $DATA_DIR/runs/op_parity/runs/$X/ckpt-final.pt ]] || die "$X exists"; done
   g=$(sub stand-gate --vram 0.1 --cpu 24 --ram 96 --timeout-h 3 -- bash $ME gate) || exit 1
   FE=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1 --env ARCROWS=brake); h=$(git rev-parse --short HEAD)
   a=$(sub stand-gg-old "${FE[@]}" --timeout-h 1 -- bash $WT/$JT train STANDGG-old on1_JT $LAT JT00 60 0) || exit 1
@@ -50,11 +50,14 @@ pre)
 gate)
   $AP $PY gate --out $S/gate; rc=$?; cp $S/gate/gate.json $RES/gate.json; exit $rc ;;
 dose)    # frozen init (lr 0), both terms on, per-term trunk gradients every step -> W_S
-  X=STANDDOSE-L18-s0; CMD="$(base $X 50 50) --on-free 0.004 --on-free-mode move --on-free-frac 0.95 --on-stand 1.0 --diag-every 1 --diag-freeze"
+  X=STANDDOSE2-L18-s0; CMD="$(base $X 100 50) --on-free 0.004 --on-free-mode move --on-free-frac 0.95 --on-stand 0.004 --diag-every 1 --diag-freeze"
   echo "$(date '+%F %T') dose: $CMD" | tee -a $S/stages.txt
   $CMD > $S/dose_train.log 2>&1 || die "dose run (log $S/dose_train.log)"
   $TR $PY dose --run $X --out $S/dose.json; rc=$?; cp $S/dose.json $RES/dose.json
   rm -rf $DATA_DIR/runs/op_parity/runs/$X; exit $rc ;;
+dose2)   # supplement 17 addendum 4: the dose again, both terms measured at W 0.004
+  d=$(sub stand-dose2 --train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME dose) || exit 1
+  echo "$(date '+%F %T') dose2: $d" | tee -a $S/stages.txt; echo "$d" ;;
 pilot)
   AF=${2:?after ids}; ids=(); ar=()
   for A in ${ARMS_RUN:-$ARMS}; do T=${TAG[$A]}; [[ ! -e $DATA_DIR/runs/op_parity/runs/$T/ckpt-final.pt ]] || die "$T exists"
