@@ -1,8 +1,8 @@
 # alpasim_proxy: a local selection set that orders like private
 
 status: live
-decisions: 262, 325
-index: ARENA running (7 741 uniform windows over the reconstructions, RSG / NR1F + 6 anchors); no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
+decisions: 262, 325, 374
+index: PCS-LOCAL: board-mix zoib refit gives JTN-s1 1251 / stop3 1333 vs garage 1553 (board 1325 / 1463 / 1543); slow-progress partials cost stop3 ~145 PCS; ARENA running (7 741 uniform windows over the reconstructions, RSG / NR1F + 6 anchors); no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6); SCENE-MIX: go-straight public 0.52 vs private 0.80, private is waiting-rich; WAIT-SET: 312 windows where the human waits, any tag in one pool job; it separates APY (28 / 146 static zeros, others 1-7) but public + the zero rate does not order the 6 anchors like private (tau -0.47 public, +0.20 best fit, LOO -0.33)
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -27,7 +27,7 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 - `wait_set.py` (scripts): a local closed-loop set where the …
 - `wait_set.sh` (scripts): the local closed-loop set where the …
 
-[results/](results/) 41 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 8 entry points
+[results/](results/) 71 result files · [plans/](plans/) 3 live plans · [scripts/](scripts/) 18 entry points
 <!-- files:end -->
 
 ## SCENE-MIX: the private suite is rich in scenes where the human waits (decision 325)
@@ -46,6 +46,16 @@ Pre-registration and amendments 1-3: [plans/2026-10-16-scene-mix-prereg.md](plan
 - **Reading.** Drivers that hold at standstill gain on private (go-straight +0.28, garage +0.11), drivers that launch lose (DD -0.03, LTF
   -0.09, YR -0.125, APY -0.295). Size is not measurable from public (the static stratum has one scene); LTF / DD losing only a little bounds
   how static-rich private can be. This narrows decision 262's "driver-specific, not scene mix" to an interaction of mix and launch behaviour.
+
+## PCS-LOCAL: the leaderboard's Policy Capability Score on the arena held split (2026-10-19)
+
+[results/pcs_local.md](results/pcs_local.md); code `scripts/pcs_local.py`; artifacts `results/pcs_local/`. Drive-irt 82ddd5a `BetaIrt`
+(zoib 2PL) with evaluate.py's settings, on 33 complete subjects x 2106 held windows. Fitted on our own reads (29 of 33 are our family),
+it inverts the board (tau +0.29 over 8 subjects with a private PCS); a pool with the board's composition (garage x30, LTF x10, DD x5,
+go-straight x2 + our 4 board entries) reproduces garage 1553 > JTN-s1 + stop3 1333 > native 1251 (board 1543 / 1463 / 1325). Under zoib, a
+strong subject's partial score on a window the strong pool aces costs more than a zero: stop3's 105 slow-progress partials (progress < 0.8 of
+the human on moving windows, 0.008 of mean) cost about 145-220 PCS, all its zeros 23-40, launch hold partials 18-27, static windows 0. Selector:
+keep the arena mean, add the frozen board-mix PCS (`pcs_local.py score`) as the tie-break and PCS readout.
 
 ## WAIT-SET: a closed-loop set where the human waits at standstill
 
