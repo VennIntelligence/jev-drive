@@ -5,6 +5,16 @@ frame-stretched variants, the scene table / halves, and the gates. Lane script: 
   scenes   (Mac, repo root) results/usdz_<date>.txt (box `stat -c "%n %s"` of datasets/nurec/all-usdzs) + pai_av nurec_select.csv + the exam
            exclusions -> results/scenes.tsv (scene_id, cls, d402, half, held, uuid, size_gb) and results/scenes.md; --register defines the
            splits physical_ai_av/pai-rows@v1 (all) and physical_ai_av/pai-rows-half-a@v1 (half A)
+  scenes-n (Mac, repo root) the second batch (results/download_queue_v2.csv: 64 NuRec scenes, each on the same drive as a PAI test281 scene)
+           -> results/scenes_n.tsv (scenes.tsv's columns + t281, t281_gap_s, t281_why; --partner FILE adds the test281 partner) and, with
+           --register, the splits physical_ai_av/pai-rows-n@v1 (the 64) and physical_ai_av/pai-rows-x@v1 (pai-rows@v1 + the 64)
+  partner  --scenes TSV --meta DIR --out TSV   (box, CPU) the test281 scene each new scene shares a drive with and the clock gap: the rule of
+           pai_av's nurecsel (pose_record epoch or log-session clock within 600 s and the start-to-start distance drivable in that time)
+  tag      --pool P [--scenes TSV]   (CPU) tab.npz of on1_<P> gets t281 (U8: first 8 characters of the partner test281 scene's id after
+           "clipgt-", "" = none) per row, keyed by the row's scene (`log`); stretch pools inherit it from their plain pool
+  xfix     --pool P --ref R --parts a,b  (CPU) after a zero-copy merge: the first rows of P equal R (every file), agent ok of those rows from R,
+           ok False on the rows of the --parts (the PAI human rows are imitation rows, as round2's r2.py fix)
+  mcheck   --pool P --ref R [--skip-names]   (CPU) the first rows of P equal R (tab, agent / road / route, feat, teacher, token sample)
   check    --root R --n N --min-ok K [--log] --out FILE   (box) roll stage check: >= K of the N listed scenes scored without an RPC error,
            frame dumps and rollout.asl present; --log: every drive record from k = 20 on returned the log with log_poses (pai_gap.sh's gate)
   stretch  --pool P --rows DIR --f F --name OUT [--limit n]   (GPU pool job) the frame-stretched variant of the human-state pool on1_<P>:
@@ -342,7 +352,12 @@ def cmd_gate1(a):
 
 # ---------------------------------------------------------------- feas / report (CPU)
 def scene_table():
-    return {r["scene_id"]: r for r in csv.DictReader(open(RES / "scenes.tsv"), delimiter="\t")}
+    """Scene -> row of results/scenes.tsv (the 853) and results/scenes_n.tsv (the second batch of 64, when present)."""
+    S = {}
+    for f in ("scenes.tsv", "scenes_n.tsv"):
+        if (RES / f).exists():
+            S |= {r["scene_id"]: r for r in csv.DictReader(open(RES / f), delimiter="\t")}
+    return S
 
 
 def cmd_feas(a):
@@ -409,14 +424,196 @@ def cmd_report(a):
         rec[p] = dict(scenes=int(len(set(lg))), rows=int(len(lg)), drawn=int((~hd).sum()), by_cls={c: int((cls == c).sum()) for c in CLASSES},
                       by_cls_scenes={c: int(len(set(lg[cls == c]))) for c in CLASSES}, half={h: dict(rows=int((hf == h).sum()), drawn=int(((hf == h) & ~hd).sum()),
                       scenes=int(len(set(lg[hf == h])))) for h in "AB"}, unknown=int((cls == "?").sum()), gb=round(gb, 1))
+        if "t281" in t.files:                                   # second batch: rows whose scene shares a drive with a PAI test281 scene
+            rec[p]["t281_rows"], rec[p]["t281_scenes"] = int((t["t281"] != "").sum()), int(len(set(lg[t["t281"] != ""])))
         r = rec[p]
         md.append(f"| {p} | {r['scenes']} | {r['rows']} | {r['drawn']} | " + " | ".join(f"{r['by_cls'][c]} ({r['by_cls_scenes'][c]})" for c in CLASSES)
                   + f" | {r['half']['A']['rows']} ({r['half']['A']['drawn']}) | {r['half']['B']['rows']} ({r['half']['B']['drawn']}) | {r['gb']} |\n")
     md.append("\nClass cells: rows (scenes).\n")
+    if any("t281_rows" in r for r in rec.values()):
+        md.append("\nRows tagged t281 (scene on the same drive as a PAI test281 scene): " + ", ".join(
+            f"{p} {r['t281_rows']} rows / {r['t281_scenes']} scenes" for p, r in rec.items() if "t281_rows" in r) + "\n")
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / "rows.json").write_text(json.dumps(rec, indent=1))
     (Path(a.out) / "rows.md").write_text("".join(md))
     print("".join(md))
+
+
+# ---------------------------------------------------------------- second batch: scenes, test281 partner, tag, merge checks
+POSE_LEAD_S = 4.95                                              # pai_av pav.py: pose_record starts ~4.95 s before the scene's 20 s
+NCOLS = ("scene_id", "cls", "d402", "half", "held", "uuid", "size_gb", "t281", "t281_gap_s", "t281_why")
+
+
+def cmd_scenes_n(a):
+    from jevdrive.data import splits
+    q = list(csv.DictReader(open(RES / "download_queue_v2.csv")))
+    ids = [r["scene_id"] for r in q]
+    assert len(ids) == len(set(ids)), "duplicate scenes in the queue"
+    par = {r["scene_id"]: r for r in csv.DictReader(open(a.partner), delimiter="\t")} if a.partner else {}
+    tr, va, te, full = (set(splits.load(f"{DS}/{n}")) for n in ("curated-train", "curated-val", "test281", "pai-rows"))
+    F = R_ / "experiments/pai_fix/scenes"
+    bad = set(open(F / "exam_scenes.txt").read().split()) | {r["scene_id"] for f in ("train_exclude.csv", "drives_val160.csv")
+                                                             for r in csv.DictReader(open(F / f))}
+    s = set(ids)
+    assert s <= tr and not s & (va | te | full | bad), f"not curated-train {len(s - tr)}, in val / test281 / pai-rows / excluded {len(s & (va | te | full | bad))}"
+    rows = []
+    for r in q:
+        x = par.get(r["scene_id"], {})
+        rows.append(dict(scene_id=r["scene_id"], cls=r["cls"], d402=False, half="N", held=held(r["scene_id"]), uuid=r["uuid"], size_gb=r["size_gb"],
+                         t281=x.get("t281", ""), t281_gap_s=x.get("t281_gap_s", ""), t281_why=x.get("t281_why", "")))
+    with open(RES / "scenes_n.tsv", "w", newline="") as f:
+        w = csv.DictWriter(f, NCOLS, delimiter="\t")
+        w.writeheader()
+        w.writerows(rows)
+    c = Counter(r["cls"] for r in rows)
+    print(f"{len(rows)} scenes {dict(c)}; held {sum(r['held'] for r in rows)}; with a test281 partner {sum(bool(r['t281']) for r in rows)}")
+    if a.register:
+        assert par and all(r["t281"] for r in rows), "register after the partner table (every scene shares a drive with a test281 scene)"
+        common = dict(status="frozen", used_by=["experiments/pai_rows"])
+        n = splits.define(DS, "pai-rows-n", ids, "scene", "experiments/pai_rows/results/scenes_n.tsv: the 64 curated-train NuRec scenes of "
+                          "download_queue_v2.csv (stop_nolead / turn_sharp / launch, each on the same drive 2-10 min from a PAI test281 scene), "
+                          "complete on the GPU box 2026-10-21; disjoint from curated-val, test281, pai-rows@v1 and the pai_fix exclusions",
+                          notes="PAI-ROWS second batch (human-state rows on1_PAIHN*)", **common)
+        x = splits.define(DS, "pai-rows-x", sorted(full | s), "scene", "physical_ai_av/pai-rows@v1 + pai-rows-n@v1 (853 + 64)",
+                          notes="PAI-ROWS all training-eligible scenes with human-state rows", **common)
+        for y in ("curated-val", "test281"):
+            splits.check_disjoint(n, splits.load(f"{DS}/{y}"))
+            splits.check_disjoint(x, splits.load(f"{DS}/{y}"))
+        print(n.id, x.id)
+
+
+def _km(la1, lo1, la2, lo2):
+    return 6371 * np.hypot(np.radians(la2 - la1), np.radians(lo2 - lo1) * np.cos(np.radians(la1)))
+
+
+def _clock(meta, scene):
+    """(lat0, lon0, epoch0 s, session_start s) of a scene from its nurec_meta json, as pai_av's nurecsel reads them."""
+    m = json.loads((Path(meta) / f"{scene}.json").read_text())
+    t = np.array(m["t_us"], np.int64)
+    k = (((t - t[0]) * 1e-6 - POSE_LEAD_S >= 0) & ((t - t[0]) * 1e-6 - POSE_LEAD_S <= 20))
+    ep = t[0] * 1e-6 if t[0] > 1e14 else np.nan
+    return float(np.array(m["lat"])[k][0]), float(np.array(m["lon"])[k][0]), ep, float((m.get("time_range") or {}).get("start", np.nan)) * 1e-6
+
+
+def cmd_partner(a):
+    """For every scene of --scenes: the nearest (smallest clock gap) test281 scene on the same drive by pai_av's rule, and the same for
+    val160 as a check (none expected: those links were removed); --queue's exam_gap_s must equal the smaller of the two."""
+    from jevdrive.data import splits
+    S = [r["scene_id"] for r in csv.DictReader(open(a.scenes), delimiter="\t")]
+    gap_q = {r["scene_id"]: float(r["exam_gap_s"]) for r in csv.DictReader(open(a.queue))}
+    E = {n: sorted(splits.load(f"{DS}/{n}")) for n in ("test281", "curated-val")}
+    X = {g: {s: _clock(a.meta, s) for s in ss} for g, ss in E.items()}
+
+    def best(c, grp):
+        la, lo, ep, ss = c
+        out = (np.inf, "", "")
+        for s, (la2, lo2, ep2, ss2) in X[grp].items():
+            d = _km(la, lo, la2, lo2)
+            w, g = [], np.inf
+            de, ds = abs(ep2 - ep), abs(ss2 - ss)
+            if np.isfinite(ep) and np.isfinite(ep2) and de < 600 and d < 0.3 + 0.03 * de:
+                w.append("epoch")
+                g = min(g, de)
+            if np.isfinite(ss) and np.isfinite(ss2) and ds < 600 and d < 0.3 + 0.03 * ds:
+                w.append("session")
+                g = min(g, ds)
+            if w and g < out[0]:
+                out = (g, s, "+".join(w))
+        return out
+    rows, mism = [], []
+    for s in S:
+        c = _clock(a.meta, s)
+        g1, p1, w1 = best(c, "test281")
+        g2, p2, w2 = best(c, "curated-val")
+        rows.append(dict(scene_id=s, t281=p1[7:15], t281_scene=p1, t281_gap_s=round(g1, 1), t281_why=w1, val160_gap_s=round(g2, 1) if np.isfinite(g2) else "",
+                         val160_scene=p2, csv_exam_gap_s=round(gap_q[s], 1)))
+        if abs(min(g1, g2) - gap_q[s]) > 0.5:
+            mism.append(s)
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    with open(a.out, "w", newline="") as f:
+        w = csv.DictWriter(f, rows[0].keys(), delimiter="\t")
+        w.writeheader()
+        w.writerows(rows)
+    gg = np.array([r["t281_gap_s"] for r in rows], float)
+    print(f"{len(rows)} scenes; test281 partner found {int(np.isfinite(gg).sum())}; gap s min {gg.min():.0f} median {np.median(gg):.0f} max {gg.max():.0f}; "
+          f"also a val160 partner {sum(r['val160_gap_s'] != '' for r in rows)}; queue exam_gap_s differs from min(test281, val160) on {len(mism)} {mism[:5]}")
+    raise SystemExit(0 if np.isfinite(gg).all() and not mism else 2)
+
+
+def cmd_tag(a):
+    """Per-row t281 tag in the tab of a pool built from the second batch: the first 8 characters of the partner test281 scene (after clipgt-)."""
+    T = CR / f"on1_{a.pool}" / "tab.npz"
+    tb = dict(np.load(T))
+    sc = {r["scene_id"]: r["t281"] for r in csv.DictReader(open(a.scenes), delimiter="\t")}
+    lg = tb["log"].astype(str)
+    assert set(lg) <= set(sc) and all(sc[x] for x in set(lg)), "a row of a scene without a test281 partner"
+    tb["t281"] = np.array([sc[x] for x in lg], "U8")
+    np.savez(T, **tb)
+    print(json.dumps(dict(pool=a.pool, rows=len(lg), scenes=len(set(lg)), tagged=int((tb["t281"] != "").sum()))))
+
+
+def _same(x, y):
+    x, y = np.asarray(x), np.asarray(y)
+    return x.shape == y.shape and x.dtype == y.dtype and np.array_equal(x, y, equal_nan=x.dtype.kind in "fc")
+
+
+def _prefix_diff(P, R, skip_names, tmp=None):
+    """Mismatching items between the first len(R) rows of pool P and pool R: tab keys, agent / road / drivable / route files, route feat, teacher,
+    4000 sampled token rows. Items of P beyond that (new rows) are not looked at."""
+    tp, tr = dict(np.load(CR / f"on1_{P}" / "tab.npz")), np.load(CR / f"on1_{R}" / "tab.npz")
+    n = len(tr["names"])
+    bad = [f"tab.{k} missing" for k in tr.files if k not in tp]
+    bad += [f"tab.{k}" for k in tr.files if k in tp and not (skip_names and k == "names") and not _same(tp[k][:n], tr[k])]
+    for f in ("agent.npz", "road.npz", "drivable.npz", "route.npz"):
+        if not (CR / f"on1_{R}" / f).exists():
+            continue
+        zp, zr = np.load(CR / f"on1_{P}" / f), np.load(CR / f"on1_{R}" / f)
+        bad += [f"{f}.{k}" for k in zr.files if not (skip_names and k == "tokens") and zr[k].ndim and len(zr[k]) == n and not _same(zp[k][:n], zr[k])
+                and not (f == "agent.npz" and k == "ok")]
+    fp, fr = np.load(FEAT / f"on1_{P}.npz"), np.load(FEAT / f"on1_{R}.npz")
+    bad += [f"feat.{k}" for k in fr.files if not (skip_names and k == "names") and not _same(fp[k][:n], fr[k])]
+    zp, zr = np.load(CR / f"on1_{P}@warp" / "teacher.npz"), np.load(CR / f"on1_{R}@warp" / "teacher.npz")
+    bad += [f"teacher.{k}" for k in zr.files if not _same(zp[k][:n] if zr[k].ndim and len(zr[k]) == n else zp[k], zr[k])]
+    i = np.sort(np.random.default_rng(0).choice(n, min(4000, n), replace=False))
+    if not _same(np.asarray(open_front(CR / f"on1_{P}@warp" / "front.npy")[i]), np.asarray(open_front(CR / f"on1_{R}@warp" / "front.npy")[i])):
+        bad.append("front sample")
+    return n, tp, bad
+
+
+def cmd_mcheck(a):
+    n, tp, bad = _prefix_diff(a.pool, a.ref, a.skip_names)
+    ag, ar = np.load(CR / f"on1_{a.pool}" / "agent.npz"), np.load(CR / f"on1_{a.ref}" / "agent.npz")
+    ag_ok = _same(ag["ok"][:n], ar["ok"])
+    nt = np.load(CR / f"on1_{a.pool}" / "tab.npz")
+    rec = dict(pool=a.pool, ref=a.ref, ref_rows=n, rows=len(nt["names"]), parts={p: int((nt["pool"] == p).sum()) for p in np.unique(nt["pool"])},
+               agent_ok_prefix_equal=ag_ok, mismatch=bad, pass_=not bad and ag_ok)
+    out = Path(a.out) / f"mcheck_{a.pool}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec))
+    raise SystemExit(0 if rec["pass_"] else 2)
+
+
+def cmd_xfix(a):
+    """JTPH-style merge of the new human rows: prefix = --ref (every file), agent ok of the prefix as in --ref, ok False on --parts (as r2.py fix)."""
+    n, tp, bad = _prefix_diff(a.pool, a.ref, False)
+    P = CR / f"on1_{a.pool}"
+    ag, ar = dict(np.load(P / "agent.npz")), np.load(CR / f"on1_{a.ref}" / "agent.npz")
+    part = tp["pool"].astype(str)
+    m = np.isin(part, a.parts.split(","))
+    assert m[n:].all() and not m[:n].any(), "the new parts must be exactly the rows after the reference"
+    before = int((ag["ok"][:n] != ar["ok"]).sum()), int(ag["ok"][n:].sum())
+    ag["ok"] = np.concatenate([ar["ok"], np.zeros(len(part) - n, bool)])
+    np.savez(P / "agent.npz", **ag)
+    rd = np.load(P / "road.npz")
+    rec = dict(pool=a.pool, ref=a.ref, ref_rows=n, rows=len(part), parts={p: int((part == p).sum()) for p in np.unique(part)}, agent_ok_prefix_fixed=before[0],
+               agent_ok_new_before=before[1], agent_ok_new_after=int(ag["ok"][n:].sum()), road_ok_new=int(rd["ok"][n:].sum()),
+               new_rows_mode=sorted(set(tp["mode"][n:].astype(str).tolist())), mismatch=bad, pass_=not bad and not rd["ok"][n:].any())
+    out = Path(a.out) / f"xfix_{a.pool}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(rec, indent=1))
+    print(json.dumps(rec))
+    raise SystemExit(0 if rec["pass_"] else 2)
 
 
 if __name__ == "__main__":
@@ -425,6 +622,27 @@ if __name__ == "__main__":
     p = sp.add_parser("scenes")
     p.add_argument("--usdz", default=str(RES / "usdz_20261020.txt"))
     p.add_argument("--register", action="store_true")
+    p = sp.add_parser("scenes-n")
+    p.add_argument("--partner", default="")
+    p.add_argument("--register", action="store_true")
+    p = sp.add_parser("partner")
+    p.add_argument("--scenes", required=True)
+    p.add_argument("--queue", default=str(RES / "download_queue_v2.csv"))
+    p.add_argument("--meta", default=str(D / "runs/pai_av/nurec_meta"))
+    p.add_argument("--out", required=True)
+    p = sp.add_parser("tag")
+    p.add_argument("--pool", required=True)
+    p.add_argument("--scenes", default=str(RES / "scenes_n.tsv"))
+    p = sp.add_parser("xfix")
+    p.add_argument("--pool", required=True)
+    p.add_argument("--ref", required=True)
+    p.add_argument("--parts", required=True)
+    p.add_argument("--out", required=True)
+    p = sp.add_parser("mcheck")
+    p.add_argument("--pool", required=True)
+    p.add_argument("--ref", required=True)
+    p.add_argument("--skip-names", action="store_true")
+    p.add_argument("--out", required=True)
     p = sp.add_parser("check")
     p.add_argument("--root", required=True)
     p.add_argument("--n", type=int, required=True)
@@ -451,4 +669,4 @@ if __name__ == "__main__":
     p.add_argument("--pools", nargs="+", required=True)
     p.add_argument("--out", required=True)
     a = ap.parse_args()
-    dict(scenes=cmd_scenes, check=cmd_check, stretch=cmd_stretch, gate1=cmd_gate1, feas=cmd_feas, report=cmd_report)[a.cmd](a)
+    dict(scenes=cmd_scenes, **{"scenes-n": cmd_scenes_n}, partner=cmd_partner, tag=cmd_tag, xfix=cmd_xfix, mcheck=cmd_mcheck, check=cmd_check, stretch=cmd_stretch, gate1=cmd_gate1, feas=cmd_feas, report=cmd_report)[a.cmd](a)
