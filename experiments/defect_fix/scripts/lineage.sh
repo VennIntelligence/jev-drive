@@ -6,6 +6,7 @@
 # rf_tax extracts (corridor sub-split) are CPU pool jobs, one per read; one summary job --after all.
 #   lineage.sh first     the staged first arm (P0-VL, 8 chunks)
 #   lineage.sh submit    every other arm, the extracts (new reads --after their chunks, stored reads at once), the summary --after all
+#   lineage.sh add <arm>  one more arm (2026-10-20: RB0-NAT), its extract, the summary --after both
 #   lineage.sh ex <label> <root> | sum      job bodies
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 D=$DATA_DIR/runs; O=$D/defect_fix/lineage; ME=experiments/defect_fix/scripts/lineage.sh; PY=experiments/defect_fix/scripts/lineage_pai281.py
@@ -35,6 +36,11 @@ submit)
   while read -r k r; do all+=($(sub lin-ex-$k --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME ex $k $r)); done < <(.venv/bin/python $PY stored)
   s=$(IFS=,; sub lin-sum --after "${all[*]}" --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME sum) || exit 1
   echo "$(date '+%F %T') submit: ${#all[@]} jobs, summary $s" | tee -a $O/stages.txt ;;
+add)
+  ids=$(read_arm $2); [[ -n $ids ]] || die "no $2 job"
+  x=$(sub lin-ex-$2 --after $ids --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME ex $2 $O/read/$2) || exit 1
+  rm -f $O/DONE; s=$(sub lin-sum --after $x --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME sum) || exit 1
+  echo "$(date '+%F %T') add $2: $ids extract $x summary $s" | tee -a $O/stages.txt ;;
 ex)
   mkdir -p $O/tax; $AP $RF/rf_tax.py extract --runs $(ls -d $3/runs/*/sim) --out $O/tax/$2.tmp --workers 16 > $O/tax/$2.log 2>&1 && mv $O/tax/$2.tmp $O/tax/$2.pkl \
     || die "extract $2" ;;

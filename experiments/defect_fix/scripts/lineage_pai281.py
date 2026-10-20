@@ -31,7 +31,7 @@ from pai281 import load, ptype, zclass  # noqa: E402
 
 D = os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs") + "/runs"
 L = f"{D}/defect_fix/lineage/read"
-NEW = [("P0-NAT", "P0, native"), ("P0-VL", "P0, VC+LEAD"), ("P0-AG", "P0, +ACC+GAP"), ("RB0-VL", "RB0-F-s0, VC+LEAD"),
+NEW = [("P0-NAT", "P0, native"), ("P0-VL", "P0, VC+LEAD"), ("P0-AG", "P0, +ACC+GAP"), ("RB0-NAT", "RB0-F-s0, native"), ("RB0-VL", "RB0-F-s0, VC+LEAD"),
        ("NTV0-NAT", "NTV0-L18-s0, native")]
 STORED = [("NTV0-VL", "NTV0-L18-s0, VC+LEAD (stored N0)", "route_follow/pai_input_loop/N0"),
           ("NTV0-AG", "NTV0-L18-s0, +ACC+GAP (stored)", "defect_fix/pai_accgap/NTV0-L18-s0"),
@@ -46,10 +46,10 @@ STORED = [("NTV0-VL", "NTV0-L18-s0, VC+LEAD (stored N0)", "route_follow/pai_inpu
           ("Bs1-AG", "B STANDFMX-L18-s1, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s1"),
           ("B2s0-AG", "B2 STANDFMXH-L18-s0, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s0"),
           ("B2s1-AG", "B2 STANDFMXH-L18-s1, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s1")]
-ORDER = ["P0-NAT", "P0-VL", "P0-AG", "RB0-VL", "NTV0-NAT", "NTV0-VL", "NTV0-AG"]
+ORDER = ["P0-NAT", "P0-VL", "P0-AG", "RB0-NAT", "RB0-VL", "NTV0-NAT", "NTV0-VL", "NTV0-AG"]
 ROWS = [(k, lab, f"{L}/{k}") for k, lab in NEW] + [(k, lab, f"{D}/{r}") for k, lab, r in STORED]
 ROWS = sorted(ROWS, key=lambda r: ORDER.index(r[0]) if r[0] in ORDER else len(ORDER) + [s[0] for s in STORED].index(r[0]))
-STEPS = [("RB0-VL", "P0-VL"), ("NTV0-VL", "RB0-VL"), ("NTV0-VL", "P0-VL"), ("NTV0-AG", "P0-AG"), ("NTV0-NAT", "P0-NAT"), ("RSG-VL", "RB0-VL"),
+STEPS = [("RB0-NAT", "P0-NAT"), ("NTV0-NAT", "RB0-NAT"), ("RB0-VL", "RB0-NAT"), ("RB0-VL", "P0-VL"), ("NTV0-VL", "RB0-VL"), ("NTV0-VL", "P0-VL"), ("NTV0-AG", "P0-AG"), ("NTV0-NAT", "P0-NAT"), ("RSG-VL", "RB0-VL"),
          ("P0-VL", "P0-NAT"), ("P0-AG", "P0-VL"), ("NTV0-VL", "NTV0-NAT"), ("NTV0-AG", "NTV0-VL"),
          ("RSG-ACC", "RSG-VL"), ("RSG-AG", "RSG-ACC")]
 COR = {"cor_route_end": "overshoot", "cor_straight_at_turn": "turn", "cor_turn_under": "turn", "cor_turn_over": "turn", "cor_wrong_exit": "turn",
