@@ -1,8 +1,25 @@
 # defect_fix: NR1 joint arm against the user's defects
 
 status: live
-decisions: pending
-index: base doses W 0.84-0.97 but dev ADE +0.028-0.041 (all fail); lateral v2 arm held zeros 42 vs 47; full chain running
+decisions: 345-348, 352, 353, 363, 365, 366, 370, 372, 373, 375, 378, 380, 383, 384, 386, 388, 389, 391, 393
+index: STAND-B (d391): half-dose B2 STANDFMXH-L18-s1 is the nuPlan native candidate (arena held native 0.936, frozen PCS 1398 vs JTN-s1 1247, held 460 zeros 41 vs 36); NTV (d366): NTV0-L18-s0 + ACC + GAP is the PAI candidate (+0.054 vs RSG + ACC + GAP, 2 seeds); next arm STAND-R registered 10-20, pilots only, no full-length arm (d393, supplement 20); FREE / FREE-M / STOPPT / arc-term lines closed (d353, 365, 378, 386)
+
+**Current state (2026-10-20; the sections below run oldest first and the newest lines are at the bottom).**
+- nuPlan candidate: **B2 `STANDFMXH-L18-s1`** (s0 the alternative), decision 391, [results/stand_b/](results/stand_b/README.md). Recipe: the JTN recipe from RB0-F-s0 on pool
+  on1_JTX + STAND (W_S 0.0068) + FREE-M moving-only (W 0.001, band 0.95), 9 500 steps, native serve (no `JEV_HOLD`). It is chosen on native reads (decision 371).
+  It is still worse than JTN-L18-s1 on held 460 (41 vs 36 zeros) and on PAI. No image yet.
+- PAI candidate: **NTV0-L18-s0 + ACC + GAP** (g10), decisions 366 / 370 / 392, [results/ntv/](results/ntv/). Every nuPlan-trained improvement so far hurt PAI
+  (decisions 367, 385, 391), so PAI keeps its own model.
+- Next arm: STAND-R, the STAND rows extended to a rolling ego while the human stands (decision 393). It was registered 2026-10-20
+  00:45 CST: [plans/2026-10-20-nr1-supp20-standr.md](plans/2026-10-20-nr1-supp20-standr.md), supplement 20. Approved scope: the offline
+  gate and two 1 000-step pilots only. No full-length arm, whatever the pilots show. Results go to `results/stand_r/`.
+- Lines closed since 10-18: the arc term (JT, decision 353), FREE (365), FREE-M (378), STOPPT (386; [results/stoppt/](results/stoppt/)), and full-length B
+  (389; overspeed and front collisions). STAND pilot: decision 388, [results/stand/](results/stand/README.md).
+- INERTIA (10-20, diagnosis; [results/inertia/](results/inertia/README.md)): the plan's stop and turn speed follow the ego's input speed (0.89 / 0.92 of
+  the free-road response). About 90 % of that comes through the frames; the ego row carries 5-9 % for NTV0. RB0 is the same, so it comes from the base.
+  On A0's overrun approaches the plan never holds a stop: its 4 s end point moves with the ego.
+- The "Conclusion" and "Result 19:00" paragraphs below are the 10-17 NR1 state. RSG-L18-s0 was still the pick then; the two candidates
+  above replace it.
 
 **Question.** On top of V2 (RTB1AR base -> RTB1ARO-L18), does one joint arm aimed at the defects the user saw in the zero-score videos (slow
 launches and waiting: trainval rows with a visible reason to stand, balanced by launch rows; creep: history-speed noise; lateral failures: a
@@ -107,7 +124,7 @@ decisions fire 65 %, AF-front 0 / 264, static 0 / 8 780. In the 1 000-step pilot
 - `explore_g.md` (experiments/wait_cap/results/next): does the retain line track turns worse …
 - `wait_set.md` (experiments/alpasim_proxy/results): a local closed-loop set where the …
 
-[results/](results/) 112 result files · [figs/](figs/) 1 figures · [plans/](plans/) 6 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 37 entry points
+[results/](results/) 212 result files · [figs/](figs/) 1 figures · [plans/](plans/) 7 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 45 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
