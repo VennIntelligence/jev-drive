@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ROUND5 v1 recipe (plans/2026-10-21-r5-prereg.md). Stage R: R5-R = R3MV-L18-s0's recorded command (draw R3MV: PAI human rows fed >= 2 m/s, three
 # pools, no flattening; from NTV0-L18-s0, 9 500 steps, --save-at 2500,5000,7500) + --on-road-pai road_on1_JTPH.npz (rule d, W 1 = the nuPlan pool
-# rows' road hinge weight: road_lam 10 x ho_w 3). Stage A: R5-A = R5-R + S3 outcome rows (pool on1_JTPHO = on1_JTPH + on1_PAIO, the S3 lane's
+# rows' road hinge weight: road_lam 10 x ho_w 3). Stage A (prereg addendum 1: no road hinge): R5-A = R3MV's argv + S3 outcome rows (pool on1_JTPHO = on1_JTPH + on1_PAIO, the S3 lane's
 # zero-copy merge) as 9 extra rows a batch (--on-k 73, --batch 137, --yr-mass 0.095: 51 navtrain + 13 yaw-rate + 64 pool rows unchanged; draw R5A),
 # seeds 0 and 1 from NTV0-L18-s0. Each stage: PAI-FIX native read (vl, "v t") -> report + gate (r5.py gate: round 3's lines + class guard) ->
 # per passing tag PAI 281 ACC + GAP (PRIO 30) paired vs stored NTV0 / R2C + ACC + GAP; inertia cf + report beside it. Control R2C-L18-s0 (stored).
@@ -9,8 +9,8 @@
 #   r5.sh dry <R|A>         the training command(s) and the diff against R3MV's recorded argv
 #   r5.sh smoke R           R5-R 60 steps (--diag-every 20 --save-at 20,40) -> r5.py smoke -> results/smoke_R.json; identity: R3MV's argv 60 steps
 #                           eager vs the same + --on-road-pai ... --on-road-pai-w 0 -> df.py bitcmp -> results/identity_r5r.json
-#   r5.sh smoke A           (S3 DONE) road index on1_JTPHO -> R5A draw file -> R5-A s0 60 steps -> r5.py smoke; identity: R5-R's argv vs R5-R on
-#                           on1_JTPHO / R3MV extended with S3 rows at weight 0 (road_on1_JTPHO) 60 steps eager -> results/identity_r5a.json
+#   r5.sh smoke A           (S3 DONE) R5A draw file -> R5-A s0 60 steps -> r5.py smoke; identity: R3MV's argv vs the same on on1_JTPHO /
+#                           R3MV extended with S3 rows at weight 0 (R5R0) 60 steps eager -> results/identity_r5a.json
 #   r5.sh launch <R|A>      (smoke + identity passed) trainings -> PAI-FIX -> paifix (report, gate, 281 for passing tags) -> PAIDONE;
 #                           trainings -> inertia cf -> inreport -> INDONE; DONE when both
 #   r5.sh wait <R|A>        blocks until $O/<stage>/DONE or a failed job of this stage (one run_in_background waiter); swait: every job ended
@@ -27,7 +27,7 @@ sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner ro
      --no-check --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 csv() { local IFS=,; echo "$*"; }
 argv() {  # argv <variant> <steps> <tag> [seed]: one argument a line. Variants: mv = R3MV's recorded argv (no --save-at); r = mv + the road hinge;
-          # r0 = mv + the road hinge at W 0; ro = r on on1_JTPHO / R3MV + S3 rows at weight 0 (R5R0) / road_on1_JTPHO; a = ro with the R5A draw, 9 extra rows
+          # r0 = mv + the road hinge at W 0; ro = mv on on1_JTPHO / R3MV + S3 rows at weight 0 (R5R0), no road hinge; a = ro with the R5A draw, 9 extra rows
   local M; M=$(ls -d $DATA_DIR/runs/route_mem/train-$MV/*/ | tail -1)meta.json; [[ -f $M ]] || die "no $M"
   python3 - "$M" "$@" "$RPD" "$R5/w" <<'PY'
 import json, sys
@@ -40,12 +40,11 @@ assert a[last("--on") + 1] == "on1_JTPH" and a[last("--on-k") + 1] == "64" and a
 a[a.index("--tag") + 1] = tag
 a[last("--steps") + 1] = steps
 i = a.index("--save-at"); del a[i:i + 2]
-if var != "mv":
+if var in ("r", "r0"):
     a += ["--on-road-pai", f"{rpd}/road_on1_JTPH.npz"] + (["--on-road-pai-w", "0"] if var == "r0" else [])
-if var in ("ro", "a"):
+if var in ("ro", "a"):                                                   # stage A (addendum 1): R3MV's argv, no road hinge
     a[last("--on") + 1] = "on1_JTPHO"
     a[last("--on-wfile") + 1] = f"{w5}/{'R5A' if var == 'a' else 'R5R0'}.npz"
-    a[last("--on-road-pai") + 1] = f"{rpd}/road_on1_JTPHO.npz"
 if var == "a":
     a[last("--on-k") + 1] = "73"
     a[last("--yr-mass") + 1] = "0.095"
@@ -84,8 +83,8 @@ PY
 case ${1:-} in
 dry)
   if [[ $ST == R ]]; then echo "R5-R: $(argv r $N $RT | xargs) --save-at 2500,5000,7500"; echo "== R3MV -> R5-R"; diff <(argv mv $N $MV) <(argv r $N $RT)
-  else for s in 0 1; do echo "R5-A s$s: $(argv a $N R5A-L18-s$s $s | xargs) --save-at 2500,5000,7500"; echo "== R5-R -> R5-A s$s"
-    diff <(argv r $N $RT) <(argv a $N R5A-L18-s$s $s); done; fi; true ;;
+  else for s in 0 1; do echo "R5-A s$s: $(argv a $N R5A-L18-s$s $s | xargs) --save-at 2500,5000,7500"; echo "== R3MV -> R5-A s$s"
+    diff <(argv mv $N $MV) <(argv a $N R5A-L18-s$s $s); done; fi; true ;;
 smoke)
   h=$(git rev-parse --short HEAD); echo "$h smoke $ST" >> $O/code.txt
   if [[ $ST == R ]]; then
@@ -95,24 +94,23 @@ smoke)
     b=$(sub r5-ident-w0 "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun R r0) || exit 1
   else
     [[ -f $S3O/DONE && ! -f $S3O/VERDICT ]] || die "S3 not done (or VERDICT)"
-    for X in R5SMA-L18-s0 R5IDR-L18-s0 R5IDRO-L18-s0; do [[ ! -e $RUNS/$X ]] || die "$X exists"; done
+    for X in R5SMA-L18-s0 R5IDMV-L18-s0 R5IDRO-L18-s0; do [[ ! -e $RUNS/$X ]] || die "$X exists"; done
     p=$(sub r5-prepA --vram 0.1 --cpu 16 --ram 64 --timeout-h 1 -- bash $ME prepA A) || exit 1
     s=$(sub r5-smoke-A --after $p "${FT[@]}" --timeout-h 1 -- bash $ME smoketrain A) || exit 1
-    a=$(sub r5-ident-r --after $p "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun A r) || exit 1
+    a=$(sub r5-ident-mv --after $p "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun A mv) || exit 1
     b=$(sub r5-ident-ro --after $p "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun A ro) || exit 1
   fi
   c=$(sub r5-ident-$ST --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident $ST) || exit 1
   echo "$(date '+%F %T') smoke $ST (code $h): smoke $s identity $a $b bitcmp $c" | tee -a $O/stages.txt ;;
-prepA)  # S3 pool checks -> road index of the merged pool -> R5R0 (R3MV + S3 rows at weight 0) and R5A draw files
+prepA)  # R5R0 (R3MV + S3 rows at weight 0) and R5A draw files
   [[ -s $DATA_DIR/runs/op_parity/cache/on1_JTPHO/tab.npz ]] || die "no on1_JTPHO"
-  [[ -f $RPD/road_on1_JTPHO.npz ]] || $TR experiments/round5/scripts/road_pai.py index --pool on1_JTPHO > $O/index_JTPHO.log 2>&1 || die "road index on1_JTPHO"
   $TR $PY weights --k-s3 0 --out R5R0 > $O/w_R5R0.log 2>&1 || die "R5R0 weights"
   $TR $PY weights --k-s3 9 --out R5A > $O/w_R5A.log 2>&1 || die "R5A weights" ;;
 smoketrain)
   X=R5SM$ST-L18-s0; if [[ $ST == R ]]; then run r 60 $X; else run a 60 $X 0; fi
   echo "$(date '+%F %T') smoke $ST: ${A[*]} --diag-every 20 --save-at 20,40" | tee -a $O/stages.txt
   $TR "${A[@]}" --diag-every 20 --save-at 20,40 > $O/smoke.log 2>&1 || die "smoke run $ST (log $O/smoke.log)"
-  if [[ $ST == R ]]; then $TR $PY smoke --tag $X --arm R; else $TR $PY smoke --tag $X --arm A --wfile R5A --index road_on1_JTPHO.npz --k-s3 9; fi; r=$?
+  if [[ $ST == R ]]; then $TR $PY smoke --tag $X --arm R; else $TR $PY smoke --tag $X --arm A --wfile R5A --k-s3 9; fi; r=$?
   for k in 20 40; do [[ -s $RUNS/R5SM${ST}x$k-L18-s0/ckpt-final.pt ]] || { echo "$(date '+%F %T') ERROR smoke $ST: no snapshot x$k" | tee -a $O/stages.txt; r=3; }; done
   rm -rf $RUNS/$X $RUNS/R5SM${ST}x20-L18-s0 $RUNS/R5SM${ST}x40-L18-s0; exit $r ;;
 identrun)  # identrun <stage> <variant>: 60 steps eager (pool --env JEV_RM_EAGER=1), this code
@@ -120,7 +118,7 @@ identrun)  # identrun <stage> <variant>: 60 steps eager (pool --env JEV_RM_EAGER
   echo "$(date '+%F %T') identity $3: ${A[*]}" | tee -a $O/stages.txt; $TR "${A[@]}" > $O/ident_$3.log 2>&1 || die "identity run $3 (log $O/ident_$3.log)" ;;
 ident)
   if [[ $ST == R ]]; then a=R5IDMV-L18-s0 b=R5IDW0-L18-s0 n="R3MV-L18-s0 argv 60 steps eager: without vs with --on-road-pai road_on1_JTPH.npz --on-road-pai-w 0"
-  else a=R5IDR-L18-s0 b=R5IDRO-L18-s0 n="R5-R argv 60 steps eager: on1_JTPH / R3MV / road_on1_JTPH vs on1_JTPHO / R5R0 (S3 rows weight 0) / road_on1_JTPHO"; fi
+  else a=R5IDMV-L18-s0 b=R5IDRO-L18-s0 n="R3MV-L18-s0 argv 60 steps eager: on1_JTPH / R3MV vs on1_JTPHO / R5R0 (S3 rows weight 0)"; fi
   $TR experiments/defect_fix/scripts/df.py bitcmp --a $a --b $b --out round5_identity_$ST --note "$n"; r=$?
   cp $DFR/round5_identity_$ST.json $RES/identity_r5${ST,,}.json || r=4
   rm -rf $RUNS/$a $RUNS/$b; exit $r ;;
@@ -129,7 +127,6 @@ launch)
   python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/smoke_$([[ $ST == R ]] && echo R || echo R5A).json'))['pass_'] and json.load(open('$RES/identity_r5${ST,,}.json'))['identical'] else 1)" \
     || die "smoke / identity not passed"
   for f in $F_/$CTRL-vl.csv $F_/$MV-vl.csv $F_/NTV0-L18-s0-281ag.csv $F_/$CTRL-281ag.csv; do [[ -s $f ]] || die "no stored $f"; done
-  [[ $ST == R ]] || [[ -s $F_/$RT-vl.csv ]] || die "no R5-R read"
   rm -f $O/DONE $O/PAIDONE $O/INDONE; h=$(git rev-parse --short HEAD); echo "$h launch" >> $O/code.txt
   t_=(); x=()
   for T in ${TAGS[$ST]}; do t_+=($(sub r5-train-$T "${FT[@]}" --timeout-h 4 -- bash $ME train $ST $T)) || exit 1
@@ -146,7 +143,7 @@ train)
 paifix)  # reports vs CTRL and vs the stage's reference (R: R3MV, A: R5-R); the gate; every passing tag's PAI 281 ACC + GAP (PRIO 30) -> r281 -> PAIDONE
   rd=(NTV0-L18-s0-vl=$F_/NTV0-L18-s0-vl.csv $CTRL-vl=$F_/$CTRL-vl.csv R2J-L18-s0-vl=$F_/R2J-L18-s0-vl.csv $MV-vl=$F_/$MV-vl.csv)
   [[ $ST == A ]] && rd+=($RT-vl=$F_/$RT-vl.csv); for T in ${TAGS[$ST]}; do rd+=($T-vl=$F_/$T-vl.csv); done
-  REF=$([[ $ST == R ]] && echo $MV || echo $RT); s=${ST,,}
+  REF=$MV; s=${ST,,}                                              # both stages pair against R3MV (addendum 1)
   $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $CTRL-vl --out $RES/paifix_r5${s}_vl_vs_ctrl.md --scores $RES/paifix_r5${s}_vl.csv > /dev/null \
     || die "pai_fix report vs CTRL"
   $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $REF-vl --out $RES/paifix_r5${s}_vl_vs_${REF%%-*}.md > /dev/null || die "pai_fix report vs $REF"
@@ -160,14 +157,13 @@ paifix)  # reports vs CTRL and vs the stage's reference (R: R3MV, A: R5-R); the 
   PRIO=30 sub r5-paidone-$ST --after $(csv ${r[@]}) --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/PAIDONE && bash $ME fin $ST" > /dev/null ;;
 r281)
   T=$3; rd=(NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R2C-ag=$F_/$CTRL-281ag.csv R2J-ag=$F_/R2J-L18-s0-281ag.csv); pr=($T-ag:NTV0-ag $T-ag:R2C-ag $T-ag:R2J-ag)
-  [[ $ST == A && -s $F_/$RT-281ag.csv ]] && { rd+=(R5R-ag=$F_/$RT-281ag.csv); pr+=($T-ag:R5R-ag); }
   $TR $R2PY r281 --read "${rd[@]}" $T-ag=$F_/$T-281ag.csv --pairs "${pr[@]}" --out $RES/pai281_${T%-L18-*}${T##*-L18}_ag.md \
-      --title "PAI 281, ACC + GAP: $T vs stored NTV0-L18-s0 and R2C-L18-s0 (and R2J$([[ $ST == A ]] && echo ', R5R'))" || die "r281 $T" ;;
-cf)  $TR $IN cf --tags NTV0-L18-s0,$CTRL,$([[ $ST == R ]] && echo $MV || echo $RT),$(csv ${TAGS[$ST]}),RSG-L18-s0 --gate-tag RSG-L18-s0 --name ${NAME[$ST]} ;;
+      --title "PAI 281, ACC + GAP: $T vs stored NTV0-L18-s0 and R2C-L18-s0 (and R2J)" || die "r281 $T" ;;
+cf)  $TR $IN cf --tags NTV0-L18-s0,$CTRL,$MV,$([[ $ST == A ]] && echo $RT,)$(csv ${TAGS[$ST]}),RSG-L18-s0 --gate-tag RSG-L18-s0 --name ${NAME[$ST]} ;;
 inreport)
   n=${NAME[$ST]}; $TR $IN report --name $n > $O/inertia_report.log 2>&1 || die "inertia report"
   cp $DFR/inertia/report_$n.md $DFR/inertia/report_$n.json $RES/ || die "no inertia report"
-  $TR $LA inertia --name $n --ctl $CTRL --arms ${TAGS[$ST]} $([[ $ST == R ]] && echo $MV || echo $RT) --out-stem ${n}_inertia || die "inertia read-out"
+  $TR $LA inertia --name $n --ctl $CTRL --arms ${TAGS[$ST]} $MV $([[ $ST == A ]] && echo $RT) --out-stem ${n}_inertia || die "inertia read-out"
   cp $DFR/lon_anchor/${n}_inertia.md $RES/inertia_r5${ST,,}.md && cp $DFR/lon_anchor/${n}_inertia.json $RES/inertia_r5${ST,,}.json || die "copy inertia"
   date '+%F %T' > $O/INDONE; bash $ME fin $ST ;;
 fin) [[ -f $O/PAIDONE && -f $O/INDONE ]] && date '+%F %T' > $O/DONE; true ;;

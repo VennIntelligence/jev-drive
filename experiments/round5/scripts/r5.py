@@ -78,21 +78,26 @@ def cmd_smoke(a):
     done = json.loads((d / "DONE").read_text()) if (d / "DONE").exists() else {}
     ds = done.get("draw_shares") or {}
     m = re.search(r'"road_pai_rows": (\d+), "road_pai_w": ([0-9.]+)', (d / "log.txt").read_text())
-    pool = "on1_JTPH" if a.arm == "R" else a.pool
-    ex = expected_share(pool, a.wfile, a.index)
-    k_pai = round(r3.K_ON * ex["pai_mass"]) if a.arm == "R" else ex["pai_mass"] * (r3.K_ON + a.k_s3)
-    k_both = k_pai + (a.k_s3 if a.arm == "A" else 0)
     mean = lambda k: float(np.mean(S[k])) if k in S else float("nan")  # noqa: E731
-    sh = mean("loss/on/n_hinge") / max(mean("loss/on/n_imit"), 1e-9)
-    exp_sh = ex["share"] * k_pai / k_both + (a.s3_hinged if a.arm == "A" else 0.0) * (k_both - k_pai) / k_both
     ck = dict(done=(bool(done), True, bool(done)), finite=(None, None, all(np.isfinite(v).all() for v in S.values())),
-              pool_imit_rows=(mean("loss/on/n_imit"), k_both, 0.75 * k_both <= mean("loss/on/n_imit") <= 1.25 * k_both),
-              road_hinge_share=(sh, exp_sh, abs(sh - exp_sh) <= 0.05),
-              road_fires=(mean("loss/on/road_pos"), "> 0", mean("loss/on/road_pos") > 0 and mean("loss/on/road_ho") > 0),
-              road_pai_rows=(int(m.group(1)) if m else None, ex["index_ok_rows"], bool(m) and int(m.group(1)) == ex["index_ok_rows"]),
-              road_pai_w=(float(m.group(2)) if m else None, 1.0, bool(m) and float(m.group(2)) == 1.0),
               no_flat=(mean("loss/flat/rows"), 0, np.nan_to_num(mean("loss/flat/rows")) == 0 and not done.get("flat_brk")),
               wfile=(ds.get("on_wfile"), a.wfile, f"/{a.wfile}.npz" in str(ds.get("on_wfile"))))
+    if a.arm == "R":                                               # R5-R: the PAI road hinge
+        ex = expected_share("on1_JTPH", a.wfile, a.index)
+        k_both = round(r3.K_ON * ex["pai_mass"])
+        sh = mean("loss/on/n_hinge") / max(mean("loss/on/n_imit"), 1e-9)
+        ck |= dict(road_hinge_share=(sh, ex["share"], abs(sh - ex["share"]) <= 0.05),
+                   road_fires=(mean("loss/on/road_pos"), "> 0", mean("loss/on/road_pos") > 0 and mean("loss/on/road_ho") > 0),
+                   road_pai_rows=(int(m.group(1)) if m else None, ex["index_ok_rows"], bool(m) and int(m.group(1)) == ex["index_ok_rows"]),
+                   road_pai_w=(float(m.group(2)) if m else None, 1.0, bool(m) and float(m.group(2)) == 1.0))
+    else:                                                          # R5-A (addendum 1): R3MV's argv + S3 rows, no road hinge
+        ex = json.loads((RES / f"w_{a.wfile}.json").read_text())
+        k_both = 32 + a.k_s3                                       # the 32 PAI human rows (64 x 0.5) + the S3 rows, all imitation rows (mode both)
+        ck |= dict(no_road_pai=(m is not None, False, m is None),
+                   k_on=(ex.get("k_all"), r3.K_ON + a.k_s3, ex.get("k_all") == r3.K_ON + a.k_s3))
+        b = re.search(r"per batch (\d+) normal, (\d+) yaw-rate, (\d+) on-policy", (d / "log.txt").read_text())
+        ck["batch_rows"] = (b.groups() if b else None, ("51", "13", str(r3.K_ON + a.k_s3)), bool(b) and b.groups() == ("51", "13", str(r3.K_ON + a.k_s3)))
+    ck["pool_imit_rows"] = (mean("loss/on/n_imit"), k_both, 0.75 * k_both <= mean("loss/on/n_imit") <= 1.25 * k_both)
     gs = ds.get("group_share", {})
     want = r3.SHARES["R3MV"] if a.arm == "R" else json.loads((RES / f"w_{a.wfile}.json").read_text())["group_share"]
     ck |= {f"share_{p}": (gs.get(p), v, abs(gs.get(p, -1) - v) < 1e-6) for p, v in want.items()}
