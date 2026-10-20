@@ -393,12 +393,18 @@ def r1in(a):
 
 
 # ---------------------------------------------------------------- R3: the merged pool and its draw file
+def same(x, y):
+    """Bit-equal arrays, NaN equal to NaN where the dtype has one."""
+    x, y = np.asarray(x), np.asarray(y)
+    return x.shape == y.shape and x.dtype == y.dtype and np.array_equal(x, y, equal_nan=x.dtype.kind in "fc")
+
+
 def mfix(a):
     from jevdrive.tokens import open_front
     P, R = CR / a.pool, CR / a.ref
     tp, tr = dict(np.load(P / "tab.npz")), np.load(R / "tab.npz")
     n = len(tr["names"])
-    bad = [k for k in tr.files if k in tp and not np.array_equal(tp[k][:n], tr[k])]
+    bad = [k for k in tr.files if k in tp and not same(tp[k][:n], tr[k])]
     bad += [f"tab.{k} missing" for k in tr.files if k not in tp]
     for f in ("agent.npz", "road.npz", "drivable.npz", "route.npz"):
         if not (R / f).exists():
@@ -407,16 +413,16 @@ def mfix(a):
         for k in zr.files:
             if k == "ok" and f == "agent.npz":
                 continue
-            if zr[k].ndim and len(zr[k]) == n and not np.array_equal(zp[k][:n], zr[k]):
+            if zr[k].ndim and len(zr[k]) == n and not same(zp[k][:n], zr[k]):
                 bad.append(f"{f}.{k}")
     feat = DATA / "runs/route_mem/feat"
     fp, fr = np.load(feat / f"{a.pool}.npz"), np.load(feat / f"{a.ref}.npz")
-    bad += [f"feat.{k}" for k in fr.files if not np.array_equal(fp[k][:n], fr[k])]
+    bad += [f"feat.{k}" for k in fr.files if not same(fp[k][:n], fr[k])]
     zp, zr = np.load(CR / f"{a.pool}@warp/teacher.npz"), np.load(CR / f"{a.ref}@warp/teacher.npz")
-    bad += [f"teacher.{k}" for k in zr.files if not np.array_equal(zp[k][:n] if zr[k].ndim and len(zr[k]) == n else zp[k], zr[k])]
+    bad += [f"teacher.{k}" for k in zr.files if not same(zp[k][:n] if zr[k].ndim and len(zr[k]) == n else zp[k], zr[k])]
     i = np.sort(np.random.default_rng(0).choice(n, 4000, replace=False))
     Fp, Fr = open_front(CR / f"{a.pool}@warp/front.npy"), open_front(CR / f"{a.ref}@warp/front.npy")
-    if not np.array_equal(np.asarray(Fp[i]), np.asarray(Fr[i])):
+    if not same(Fp[i], Fr[i]):
         bad.append("front sample")
     ag, agr = dict(np.load(P / "agent.npz")), np.load(R / "agent.npz")
     before = int((ag["ok"][:n] != agr["ok"]).sum())
