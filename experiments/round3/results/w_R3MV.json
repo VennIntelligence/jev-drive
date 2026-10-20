@@ -1,0 +1,54 @@
+{
+ "base": "R2JF",
+ "rule": "PAI human rows (plain and stretch) whose fed ego speed is < 2.0 m/s -> weight 0; each part renormalised to its base share",
+ "rule_key": "mv",
+ "parts": {
+  "ph": {
+   "share": 0.24999999999999994,
+   "share_after": 0.25,
+   "drawable_before": 114453,
+   "dropped": 23822,
+   "drawable_after": 90631,
+   "dropped_by_state": {
+    "standing": 9216,
+    "creeping": 779,
+    "launching": 8924,
+    "stopping": 1529,
+    "moving": 3374
+   },
+   "dropped_share": 0.20813783823927726
+  },
+  "ph05": {
+   "share": 0.12500000000000003,
+   "share_after": 0.12500000000000006,
+   "drawable_before": 104415,
+   "dropped": 30165,
+   "drawable_after": 74250,
+   "dropped_by_state": {
+    "standing": 11371,
+    "creeping": 407,
+    "launching": 9707,
+    "stopping": 1549,
+    "moving": 7131
+   },
+   "dropped_share": 0.2888952736675765
+  },
+  "ph15": {
+   "share": 0.125,
+   "share_after": 0.12499999999999997,
+   "drawable_before": 83671,
+   "dropped": 14576,
+   "drawable_after": 69095,
+   "dropped_by_state": {
+    "standing": 3956,
+    "creeping": 534,
+    "launching": 7218,
+    "stopping": 816,
+    "moving": 2052
+   },
+   "dropped_share": 0.17420611681466697
+  }
+ },
+ "pai_drawable_rows": 233976,
+ "out": "R3MV"
+}

@@ -1,0 +1,54 @@
+{
+ "base": "R2JF",
+ "rule": "both stretch parts (ph05, ph15) -> weight 0; the plain part scaled to the base's whole PAI human share (rows within it unchanged)",
+ "rule_key": "ns",
+ "parts": {
+  "ph": {
+   "share": 0.24999999999999994,
+   "share_after": 0.5,
+   "drawable_before": 114453,
+   "dropped": 0,
+   "drawable_after": 114453,
+   "dropped_by_state": {
+    "standing": 0,
+    "creeping": 0,
+    "launching": 0,
+    "stopping": 0,
+    "moving": 0
+   },
+   "dropped_share": 0.0
+  },
+  "ph05": {
+   "share": 0.12500000000000003,
+   "share_after": 0.0,
+   "drawable_before": 104415,
+   "dropped": 104415,
+   "drawable_after": 0,
+   "dropped_by_state": {
+    "standing": 11371,
+    "creeping": 407,
+    "launching": 9707,
+    "stopping": 1829,
+    "moving": 81101
+   },
+   "dropped_share": 1.0
+  },
+  "ph15": {
+   "share": 0.125,
+   "share_after": 0.0,
+   "drawable_before": 83671,
+   "dropped": 83671,
+   "drawable_after": 0,
+   "dropped_by_state": {
+    "standing": 3956,
+    "creeping": 534,
+    "launching": 7218,
+    "stopping": 5866,
+    "moving": 66097
+   },
+   "dropped_share": 1.0
+  }
+ },
+ "pai_drawable_rows": 114453,
+ "out": "R3NS"
+}
