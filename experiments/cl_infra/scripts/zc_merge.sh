@@ -20,7 +20,7 @@ launch)
   [[ ! -e $CR/$Z && ! -e $CR/$Z@warp ]] || die "$Z exists"
   for A in A B; do [[ ! -e $RUNS/${TAG[$A]} ]] || die "${TAG[$A]} exists"; done
   : > $O/jobs.txt
-  m=$(sub zc-merge --vram 0.1 --cpu 4 --ram 96 --timeout-h 1 -- bash $ME merge) || exit 1
+  m=$(sub zc-merge --vram 0.1 --cpu 4 --ram 40 --timeout-h 1 -- bash $ME merge) || exit 1
   r=$(sub zc-rows --after $m --vram 0.1 --cpu 8 --ram 24 --timeout-h 2 -- bash $ME rows) || exit 1
   p=$(sub zc-pinned --after $m --vram 4 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME pinned) || exit 1
   a=$(sub zc-train-A --after $m --train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME train A) || exit 1
