@@ -1,0 +1,233 @@
+{
+ "rule": {
+  "text": "lead = an object (box length >= 1.5 m) whose centre lies within half the ego width + half its width + 0.3 m of the human's 4 s future path (extended along the last heading), heading within 60 deg of the path, gap (path station - L/2 - front bumper) in [-1, max(40 m, 4 s x v0)]; plain rows: their own t0 boxes, label and fed speed; stretched rows: their base plain row's flag",
+  "FRONT": 4.071,
+  "HW": 1.0785,
+  "LEAD_G": 40.0,
+  "LEAD_T": 4.0,
+  "LEAD_PSI_deg": 59.99999999999999,
+  "LEAD_LAT": 0.3,
+  "LEAD_MINL": 1.5
+ },
+ "parts": {
+  "ph": {
+   "rows": 135793,
+   "drawable": 90631,
+   "lead_drawable": 36073,
+   "lead_share": 0.39802054484668603,
+   "lead_share_drawweighted": 0.398020544846686,
+   "no_path": 0,
+   "lead_all_rows": 57613,
+   "lead_share_all_rows": 0.4242707650615275,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stop-approach": {
+     "drawable": 4564,
+     "removed": 1955,
+     "kept": 2609
+    },
+    "turn": {
+     "drawable": 18092,
+     "removed": 5161,
+     "kept": 12931
+    },
+    "cruise": {
+     "drawable": 67975,
+     "removed": 28957,
+     "kept": 39018
+    }
+   },
+   "gap_q": [
+    7.849855376998424,
+    12.330582464710693,
+    20.120328605452357,
+    32.31610727757608,
+    49.96122583361261
+   ],
+   "v0_q_removed": [
+    3.4170282363891604,
+    8.641825675964355,
+    26.163373565673826
+   ],
+   "v0_q_kept": [
+    4.463918828964234,
+    10.024414539337158,
+    22.724845695495606
+   ],
+   "gap_le15": 12309,
+   "scenes_with_kept": 524,
+   "scenes_drawable": 705
+  },
+  "ph05": {
+   "rows": 123879,
+   "drawable": 74250,
+   "lead_drawable": 28602,
+   "lead_share": 0.38521212121212123,
+   "lead_share_drawweighted": 0.38521212121212123,
+   "no_path": 0,
+   "lead_all_rows": 52847,
+   "lead_share_all_rows": 0.4266017646251584,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stop-approach": {
+     "drawable": 376,
+     "removed": 93,
+     "kept": 283
+    },
+    "turn": {
+     "drawable": 9369,
+     "removed": 2811,
+     "kept": 6558
+    },
+    "cruise": {
+     "drawable": 64505,
+     "removed": 25698,
+     "kept": 38807
+    }
+   },
+   "gap_q": [
+    9.585938170490383,
+    14.38261058515064,
+    22.22437802936333,
+    34.26715660040114,
+    54.37096566341338
+   ],
+   "v0_q_removed": [
+    2.587429141998291,
+    4.991317510604858,
+    13.438558483123781
+   ],
+   "v0_q_kept": [
+    2.763258719444275,
+    5.255825519561768,
+    11.953799152374273
+   ],
+   "gap_le15": 7706,
+   "scenes_with_kept": 497,
+   "scenes_drawable": 680
+  },
+  "ph15": {
+   "rows": 99269,
+   "drawable": 69095,
+   "lead_drawable": 28478,
+   "lead_share": 0.4121571749041175,
+   "lead_share_drawweighted": 0.41215717490411746,
+   "no_path": 0,
+   "lead_all_rows": 42409,
+   "lead_share_all_rows": 0.42721292649266135,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0,
+     "kept": 0
+    },
+    "stop-approach": {
+     "drawable": 6749,
+     "removed": 3069,
+     "kept": 3680
+    },
+    "turn": {
+     "drawable": 18367,
+     "removed": 5607,
+     "kept": 12760
+    },
+    "cruise": {
+     "drawable": 43979,
+     "removed": 19802,
+     "kept": 24177
+    }
+   },
+   "gap_q": [
+    7.091321840362903,
+    11.059537813398293,
+    19.02049705844573,
+    30.72581374034965,
+    46.41346800878287
+   ],
+   "v0_q_removed": [
+    3.9697867870330814,
+    11.729382038116455,
+    38.40997657775879
+   ],
+   "v0_q_kept": [
+    5.711556339263916,
+    14.50561237335205,
+    33.56876983642578
+   ],
+   "gap_le15": 10795,
+   "scenes_with_kept": 490,
+   "scenes_drawable": 707
+  }
+ },
+ "R5N": {
+  "base": "R3MV",
+  "out": "R5N",
+  "rule": "R3MV, every PAI human row with a lead (LEAD rule) -> 0, each part renormalised to its R3MV share",
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.2500000000003314,
+   "ph05": 0.12499999999992532,
+   "ph15": 0.12499999999994517
+  },
+  "pai_drawable": 140823
+ },
+ "R5NI": {
+  "base": "R3MV",
+  "out": "R5NI",
+  "rule": "identity: R5N's code with no row dropped (bit-equal to R3MV)",
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.24999999999968056,
+   "ph05": 0.12500000000005737,
+   "ph15": 0.12500000000017902
+  },
+  "pai_drawable": 233976
+ },
+ "per_batch": {
+  "R3MV": {
+   "pai": 31.999999999999996,
+   "by_class": {
+    "launch": 0.0,
+    "stand": 0.0,
+    "stop-approach": 1.6276573984684322,
+    "turn": 6.32999622349986,
+    "cruise": 24.042346378031706
+   },
+   "unique_pai_rows": 233976
+  },
+  "R5N": {
+   "pai": 32.0,
+   "by_class": {
+    "launch": 0.0,
+    "stand": 0.0,
+    "stop-approach": 1.5395472589302148,
+    "turn": 7.454771006600854,
+    "cruise": 23.005681734468936
+   },
+   "unique_pai_rows": 140823
+  }
+ }
+}

@@ -407,6 +407,17 @@ def cmd_lead281(a):
         x = ovd[ovd[f"ov_{k}"]]
         L.append(f"| {k} | {len(x)} | {int(x.lead.sum())} | {int(x.lead_m4.sum())} | {int(x.lead_any.sum())} | {int((~x.lead_any).sum())} |")
     L += ["", f"4 s before rest outside the rollout's traffic snapshots: {int(ovd.nan_m4.sum())} of {len(ovd)} scenes (counted no lead)."]
+    fx = TM / "tax/NTV0-L18-s0-vl.pkl"
+    if fx.exists():                                                # PAI-FIX G-LAUNCH (6 scenes), the same rule on NTV0's native read
+        AV = {o["scene"]: o for o in pickle.load(open(fx, "rb"))["rolls"] if "ctrl" in o}
+        df = pd.read_csv(RES / "d1_launch.csv")
+        df = df[(df.read == "NTV0") & (df.set == "fix") & df.g_launch].set_index("scene")
+        g = []
+        for s, r in df.iterrows():
+            o = AV[s]
+            gg, v = human_lead(o, float(o["ctrl"]["t"][0]) + D1.HAND + float(r.t_L) * 1e6)
+            g.append(f"{s[7:15]} {'lead ' + format(gg, '.1f') + ' m' if np.isfinite(gg) else 'no lead'}")
+        L += ["", f"PAI-FIX G-LAUNCH ({len(df)} scenes, NTV0 native read, the human's state at t_L): " + "; ".join(g) + "."]
     (RES / "lead_281.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

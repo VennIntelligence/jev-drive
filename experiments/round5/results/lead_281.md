@@ -17,3 +17,5 @@ Launch scenes: 37; lead at t_L 26, at the handoff 28; NTV0's serve chose the LEA
 | R2J | 21 | 4 | 4 | 4 | 17 |
 
 4 s before rest outside the rollout's traffic snapshots: 1 of 25 scenes (counted no lead).
+
+PAI-FIX G-LAUNCH (6 scenes, NTV0 native read, the human's state at t_L): 071d15c4 lead 9.1 m; 0e3771c0 lead 4.6 m; 2ffb6b0f lead 5.7 m; 4ec84bcf lead 14.6 m; 5ab1d9cb lead 3.7 m; 909a2801 lead 11.3 m.
