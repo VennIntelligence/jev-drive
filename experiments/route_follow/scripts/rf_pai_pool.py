@@ -19,6 +19,8 @@ so route_mem/scripts/rm_train.py can train on it (--on on1_<name> --on-mode self
 
   --fut log_fut --prefix paih --src human (experiments/pai_rows, human-state rows of a log-following read): fut = the log's own future
             poses log_fut (rows need all 8 inside the log), names on:<prefix>:<scene>:<k>, tab `src`; defaults (imit, pai, none) = as before
+  --fut poses --prefix paio --src outcome (experiments/round5 S3, outcome rows): fut = the decision's served plan (drive.jsonl `poses`, after
+            ACC / TTS), i.e. fut = served
 
   rf_pai_pool.py --name PAIRB0 --rows /data/runs/route_night/rows/pol --cache /data/runs/route_night/cache/pol \
       --runs '/data/runs/route_night/roll/*/runs/*' --split experiments/onpol_pai/results/split/train160.tsv
@@ -64,7 +66,7 @@ def main():
     ap.add_argument("--cache", required=True)
     ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--split", required=True)
-    ap.add_argument("--fut", default="imit", choices=("imit", "log_fut"))
+    ap.add_argument("--fut", default="imit", choices=("imit", "log_fut", "poses"))
     ap.add_argument("--prefix", default="pai")
     ap.add_argument("--src", default="")
     a = ap.parse_args()
