@@ -168,6 +168,9 @@ SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) =
 NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every flag off = the recipe above operation for operation:
   --on-wfile FILE   per-row draw weights of the --on pool rows from FILE (npz: `names` = the pool's tab names in order, `w`; defect_fix df.py
             weights): numpy's weighted choice on the pool stream [seed, 0, 53], as --on-weight; refused with --on-weight / --on-cap-scene / --si-scan.
+            ROUND3c (experiments/round3/plans/2026-10-21-round3c-prereg.md): a file that also holds `nav_names` / `nav_w` gives the nN normal
+            (navtrain) rows per-row draw weights too (rows not in the file weigh 1; numpy's weighted choice on rm_train's own stream, as
+            SELF-ITER's normal-row draw); a file without them changes nothing.
   --on-normal       the pool rows are imitation rows like the normal rows for --rm-drop (their memory dropped at the same share, the drop stream
             unchanged) and --ego-scale-speed (SELF-ITER's rule for its trainval rows): the base stage's trainval imitation pool (--on-mode imit).
   --lat-onc W --lat-soft W --lat-side W [--lat-file F --lat-depth 0 --lat-soft-depth 0 --lat-buf 0.4]   the hard / soft lateral terms of
@@ -845,6 +848,16 @@ def cmd_train(a):
         nw, pw_si, si_free, sirec = SI.draws(a, ns, S, tr_o)
         if pw_si is not None:
             pw, upre = pw_si, 0
+    if a.on_wfile and "nav_w" in wz.files:                           # ROUND3c: normal-row draw weights from the same file (docstring)
+        nwm_ = dict(zip(wz["nav_names"].astype(str).tolist(), wz["nav_w"].astype(np.float64).tolist()))
+        wv_ = np.array([nwm_.get(x, np.nan) for x in S.tab["names"][tr_o].astype(str).tolist()])
+        hit_ = np.isfinite(wv_)
+        assert hit_.mean() >= 0.99 and (wv_[hit_] >= 0).all(), f"--on-wfile nav_w: {hit_.mean():.4f} of the normal train rows listed"
+        wv_ = np.where(hit_, wv_, 1.0)
+        nw = wv_ / wv_.sum()
+        up_ = wv_ > 1
+        caprec |= dict(nav_rows=int(len(tr_o)), nav_listed=int(hit_.sum()), nav_up_rows=int(up_.sum()), nav_up_w=sorted(set(wv_[up_].tolist())),
+                       nav_up_share=float(nw[up_].sum()), nav_up_per_batch=float(nw[up_].sum() * nN))
     onx, hrec = None, {}
     if a.on_hold_res >= 0 or a.on_hold_pct:                          # NR1HVR: held-out pool logs (docstring); off: no operation is added
         from jevdrive.common import data_dir as _dd

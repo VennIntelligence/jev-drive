@@ -13,6 +13,14 @@ Box, repo root (op-train env for the pool rows, .venv for the read stores; both 
         renormalised to its R2JF share -> $DATA_DIR/runs/defect_fix/w/R3JW.npz + results/w_R3JW.json
   r3.py weights --rule ns --out R3NS   round 3b NS: R2JF with both stretch parts at weight 0, the plain part scaled to the PAI human share (32 a batch)
   r3.py weights --rule mv --out R3MV   round 3b MV: R2JF with every PAI human row whose fed speed is < 2 m/s at weight 0, each part renormalised
+  r3.py weights --rule mve --out R3MVE  round 3c MVE: R3MV restricted to PAI human rows with an exam event ahead (route turn: heading change
+        >= 15 deg along the human's path over 4 s or the next 20 m, whichever reaches further; stop: the human < 0.5 m/s within the label or
+        the next 4 s; stretch rows on their own clock, from their base row's stitched log future), each part renormalised to its share
+  r3.py weights --rule mvl --out R3MVL  round 3c MVL: R3MV's pool weights unchanged + `nav_names` / `nav_w`: navtrain launch rows (fed < 0.5 m/s,
+        the 4 s label leaves 0.5 m) at draw weight 3, every other navtrain row 1 (rm_train renormalises inside the normal rows)
+  r3.py classes                   (round 3c, offline) expected rows a batch by class (launch / stand / stop-approach / turn / cruise, label-only
+        rules) per arm (R2C, MV, MVL, MVE), the MVE event split of the PAI rows, and the 4 s label distance of moving rows by speed bin, PAI vs
+        navtrain -> results/classes3c.{md,json}
   r3.py launchrows                (round 3b, offline) launch rows (fed speed < 0.5 m/s, the label leaves 0.5 m) per PAI part and in navtrain: share,
         4 s label distance, stretch / base-row distance ratio, expected rows per batch under R2JF / R3NS / R3MV -> results/launch_rows.{md,json}
   r3.py steps                     results/steps.json (both arms 9 500 steps = round 2's J and CTRL) -> $O/steps.json
@@ -44,6 +52,8 @@ PARTS = {"ph": "on1_PAIH", "ph05": "on1_PAIH05", "ph15": "on1_PAIH15"}
 V_STAND, L_STAND, V_LAUNCH = 0.3, 0.5, 1.0                     # the registered row-state rule (prereg)
 V_LROW, V_MV = 0.5, 2.0                                        # round 3b: launch row = fed speed < 0.5 m/s and the label leaves 0.5 m; MV drops < 2 m/s
 SHARES = dict(R2JF=dict(ph=0.25, ph05=0.125, ph15=0.125), R3NS=dict(ph=0.5, ph05=0.0, ph15=0.0), R3MV=dict(ph=0.25, ph05=0.125, ph15=0.125))
+SHARES3C = dict(R3MVL=SHARES["R3MV"], R3MVE=SHARES["R3MV"])
+TURN_DEG, TURN_M, T_LAB, V_STOP, NAV_UP = 15.0, 20.0, 4.0, 0.5, 3.0  # round 3c: event rule (prereg addendum); MVL's navtrain launch-row weight
 K_ON, K_S = 64, 32                                             # J: on-k 64 (w sums to 1 over S + PAI rows); expected S rows per batch 32
 
 
@@ -120,6 +130,118 @@ def pai_states():
         out[p] = dict(names=np.array([f"on:{p}:{x[3:]}" for x in nm]), log=t["log"].astype(str), state=st, L=L, wait=w,  # merged-pool names
                       speed=t["speed"], fut=t["fut"])
     return out
+
+
+def _compose(P, d):
+    """P (3,) pose (x, y, yaw) ∘ d (n, 3) poses in P's frame -> (n, 3) in the outer frame."""
+    c, s = np.cos(P[2]), np.sin(P[2])
+    return np.stack([P[0] + c * d[:, 0] - s * d[:, 1], P[1] + s * d[:, 0] + c * d[:, 1], P[2] + d[:, 2]], 1)
+
+
+def _scene_events(job):
+    """One scene's plain rows (k sorted; fut (n, 8, 3), fed speed (n,)) -> per row and clock factor f: route turn ahead (max |heading change|
+    >= TURN_DEG over the stitched human path up to 4 f s of log or TURN_M m, whichever reaches further) and stop ahead (the human below
+    V_STOP / f m/s within 8 f s of log: label segment speeds and the later rows' fed speeds). The path is stitched from the row's label and the
+    labels of the rows 4 s on (two hops, up to 12 s; a missing row: the latest row on the 0.5 s grid before it)."""
+    k, fut, v, fs = job
+    pos = {int(x): i for i, x in enumerate(k)}
+    n = len(k)
+    out = {f: (np.zeros(n, bool), np.zeros(n, bool), np.zeros(n)) for f in fs}
+    tl = np.arange(1, 9) * 0.5
+    for i in range(n):
+        T, Pq = [tl], [fut[i]]
+        j, Pj, tj = i, np.zeros(3), 0.0
+        for _ in range(2):
+            m = next((m for m in range(40, 0, -5) if int(k[j]) + m in pos), None)
+            if m is None:
+                break
+            nx = pos[int(k[j]) + m]
+            Pj, tj, j = _compose(Pj, fut[j][m // 5 - 1:m // 5])[0], tj + m / 10, nx
+            T.append(tj + tl), Pq.append(_compose(Pj, fut[j]))
+        T, Pq = np.concatenate(T), np.concatenate(Pq)
+        o = np.argsort(T, kind="stable")
+        T, Pq = T[o], Pq[o]
+        keep = np.r_[True, np.diff(T) > 1e-6]
+        T, Pq = T[keep], Pq[keep]
+        XY = np.concatenate([[[0.0, 0.0]], Pq[:, :2]])
+        seg = np.linalg.norm(np.diff(XY, axis=0), axis=1)
+        arc = np.cumsum(seg)
+        sv = seg / np.diff(np.r_[0.0, T])                                  # segment speeds, at the segment's end time
+        dh = np.abs((Pq[:, 2] + np.pi) % (2 * np.pi) - np.pi)
+        later = np.array([pos[x] for x in range(int(k[i]) + 1, int(k[i]) + 121) if x in pos], int)
+        tv, vv = (k[later] - k[i]) / 10.0, v[later]
+        for f in fs:
+            win = (T <= T_LAB * f + 1e-6) | (arc <= TURN_M)
+            mx = float(dh[win].max()) if win.any() else 0.0
+            stop = bool(((sv < V_STOP / f) & (T <= 2 * T_LAB * f + 1e-6)).any() or ((vv < V_STOP / f) & (tv <= 2 * T_LAB * f + 1e-6)).any())
+            out[f][0][i], out[f][1][i], out[f][2][i] = mx >= np.radians(TURN_DEG), stop, np.degrees(mx)
+    return out
+
+
+def pai_events():
+    """-> {part: dict(turn, stop, dhead)} for every row of the three PAI parts (merged-pool order of pai_states); stretch rows take their base
+    plain row's stitched log future on their own clock (windows x f, stop speed / f)."""
+    from concurrent.futures import ProcessPoolExecutor
+    from jevdrive.common import n_cpus
+    T = {p: load_part(p) for p in PARTS}
+    P = T["ph"]
+    names, log = P["names"].astype(str), P["log"].astype(str)
+    k = np.array([int(x.rsplit(":", 1)[1]) for x in names])
+    fs = sorted({1.0} | {round(float(x), 3) for p in ("ph05", "ph15") for x in np.unique(T[p]["f"])})
+    by = defaultdict(list)
+    for i, s in enumerate(log):
+        by[s].append(i)
+    idx = [np.array(ix)[np.argsort(k[ix], kind="stable")] for ix in by.values()]
+    with ProcessPoolExecutor(max(1, min(n_cpus(), 32))) as px:
+        res = list(px.map(_scene_events, [(k[ix], P["fut"][ix].astype(np.float64), P["speed"][ix].astype(np.float64), fs) for ix in idx],
+                          chunksize=4))
+    ev = {f: (np.zeros(len(names), bool), np.zeros(len(names), bool), np.zeros(len(names))) for f in fs}
+    for ix, r in zip(idx, res):
+        for f in fs:
+            for q in range(3):
+                ev[f][q][ix] = r[f][q]
+    out = {"ph": dict(turn=ev[1.0][0], stop=ev[1.0][1], dhead=ev[1.0][2])}
+    row = {x: i for i, x in enumerate(names)}
+    for p in ("ph05", "ph15"):
+        b = np.array([row.get(x, -1) for x in T[p]["base"].astype(str)])
+        assert (b >= 0).all(), f"{p}: base rows missing"
+        f_ = np.array([round(float(x), 3) for x in T[p]["f"]])
+        o = {q: np.zeros(len(b), bool) for q in ("turn", "stop")} | dict(dhead=np.zeros(len(b)))
+        for f in np.unique(f_):
+            m = f_ == f
+            o["turn"][m], o["stop"][m], o["dhead"][m] = ev[f][0][b[m]], ev[f][1][b[m]], ev[f][2][b[m]]
+        out[p] = o
+    return out
+
+
+def label_class(v0, fut):
+    """Label-only row classes (every pool comparable): launch (v0 < 0.5, 4 s path >= 0.5 m), stand (v0 < 0.5, path < 0.5), stop-approach
+    (v0 >= 0.5, some 0.5 s label segment below V_STOP m/s), turn (else, |heading| >= TURN_DEG at some label pose), cruise (else)."""
+    P = np.concatenate([np.zeros((len(fut), 1, 2)), fut[:, :, :2]], 1)
+    seg = np.linalg.norm(np.diff(P, axis=1), axis=-1)
+    L = seg.sum(1)
+    dh = np.abs((fut[:, :, 2] + np.pi) % (2 * np.pi) - np.pi).max(1)
+    c = np.full(len(v0), "cruise", dtype="U13")
+    c[dh >= np.radians(TURN_DEG)] = "turn"
+    c[(seg / 0.5 < V_STOP).any(1)] = "stop-approach"
+    c[(v0 < V_LROW) & (L < L_STAND)] = "stand"
+    c[(v0 < V_LROW) & (L >= L_STAND)] = "launch"
+    return c, L
+
+
+def navtrain_rows():
+    """navtrain_full, all 12 shards: names, fed speed, 4 s label path, label class, launch-row mask (rows with a full label)."""
+    nm, v, Ls, cl, ok = [], [], [], [], []
+    for i in range(12):
+        t = np.load(CR / f"navtrain_full.s{i}of12/tab.npz")
+        o = ~np.isnan(t["fut"]).any((1, 2))
+        c = np.full(len(o), "nolabel", dtype="U13")
+        L = np.full(len(o), np.nan)
+        c[o], L[o] = label_class(t["speed"][o].astype(np.float64), t["fut"][o].astype(np.float64))
+        nm.append(t["names"].astype(str)), v.append(t["speed"].astype(np.float64)), Ls.append(L), cl.append(c), ok.append(o)
+    nm, v, L, c, ok = map(np.concatenate, (nm, v, Ls, cl, ok))
+    assert len(set(nm.tolist())) == len(nm), "navtrain names not unique"
+    return dict(names=nm, v0=v, L=L, cls=c, ok=ok, launch=ok & (v < V_LROW) & (np.nan_to_num(L) >= L_STAND))
 
 
 STATES = ("standing", "creeping", "launching", "stopping", "moving")
@@ -352,7 +474,14 @@ def cmd_weights(a):
     rule = dict(stand=f"PAI human rows (plain and stretch) whose own 4 s label path is < {L_STAND} m (standing + creeping) -> weight 0; "
                       "each part renormalised to its base share",
                 ns="both stretch parts (ph05, ph15) -> weight 0; the plain part scaled to the base's whole PAI human share (rows within it unchanged)",
-                mv=f"PAI human rows (plain and stretch) whose fed ego speed is < {V_MV} m/s -> weight 0; each part renormalised to its base share")[a.rule]
+                mv=f"PAI human rows (plain and stretch) whose fed ego speed is < {V_MV} m/s -> weight 0; each part renormalised to its base share",
+                mve=f"MV (fed < {V_MV} m/s -> 0) and every PAI human row without an exam event ahead -> weight 0 (route turn: max heading change >= "
+                    f"{TURN_DEG} deg over the human's path to 4 s or {TURN_M} m, whichever reaches further; stop: the human < {V_STOP} m/s within "
+                    "the label or the next 4 s; stretch rows on their own clock from the base row's log future); each part renormalised to its base share",
+                mvl=f"MV's pool weights (fed < {V_MV} m/s -> 0, renormalised) + navtrain draw weights: launch rows (fed < {V_LROW} m/s, 4 s label "
+                    f">= {L_STAND} m) {NAV_UP}, every other navtrain row 1 (rm_train renormalises inside the normal rows)")[a.rule]
+    assert a.rule not in ("mve", "mvl") or a.base == "R2JF", "round 3c rules start from R2JF (MV's base)"
+    EV = pai_events() if a.rule == "mve" else None
     rec = dict(base=a.base, rule=rule, rule_key=a.rule, parts={})
     pai_share = sum(w[[idx[x] for x in d["names"]]].sum() for d in S.values())
     for p, d in S.items():
@@ -361,7 +490,8 @@ def cmd_weights(a):
         sh = w[ix].sum()
         drop = {"stand": d["L"] < L_STAND,                         # the label stands throughout, whatever the fed speed (standing + creeping)
                 "ns": np.full(len(ix), p != "ph"),
-                "mv": d["speed"].astype(np.float64) < V_MV}[a.rule] & (w[ix] > 0)
+                "mv": d["speed"].astype(np.float64) < V_MV, "mvl": d["speed"].astype(np.float64) < V_MV,
+                "mve": (d["speed"].astype(np.float64) < V_MV) | ~(EV[p]["turn"] | EV[p]["stop"]) if EV else None}[a.rule] & (w[ix] > 0)
         keep = (w[ix] > 0) & ~drop
         w[ix[drop]] = 0.0
         to = pai_share if (a.rule == "ns" and p == "ph") else (0.0 if a.rule == "ns" else sh)
@@ -371,11 +501,24 @@ def cmd_weights(a):
                                drawable_after=int(keep.sum()),
                                dropped_by_state={st: int((drop & (d["state"] == st)).sum()) for st in STATES},
                                dropped_share=float(drop.sum() / max((drop | keep).sum(), 1)))
+        if EV:
+            tu, sp = EV[p]["turn"][keep], EV[p]["stop"][keep]
+            rec["parts"][p] |= dict(kept_turn_only=int((tu & ~sp).sum()), kept_stop_only=int((sp & ~tu).sum()), kept_both=int((tu & sp).sum()),
+                                    moving_rows=int((((w[ix] > 0) | drop) & (d["speed"] >= V_MV)).sum()))
     assert abs(w.sum() - 1) < 1e-9 and abs(B["w"].sum() - 1) < 1e-9, (w.sum(), B["w"].sum())
     nonpai = ~np.isin(np.arange(len(w)), np.concatenate([[idx[x] for x in d["names"]] for d in S.values()]))
     assert np.array_equal(w[nonpai], B["w"][nonpai]), "non-PAI weights changed"
     rec |= dict(pai_drawable_rows=int(sum(v["drawable_after"] for v in rec["parts"].values())), out=a.out)
-    np.savez(W / f"{a.out}.npz", names=B["names"], w=w, grp=grp)
+    extra = {}
+    if a.rule == "mvl":                                            # pool weights must be R3MV's bit for bit; the navtrain weights ride along
+        assert np.array_equal(w, np.load(W / "R3MV.npz")["w"]), "mvl: pool weights != R3MV"
+        N = navtrain_rows()
+        nwt = np.where(N["launch"], NAV_UP, 1.0)
+        extra = dict(nav_names=N["names"], nav_w=nwt)
+        sh = float(nwt[N["launch"] & N["ok"]].sum() / nwt[N["ok"]].sum())
+        rec |= dict(nav_rows=int(len(nwt)), nav_rows_label=int(N["ok"].sum()), nav_launch_rows=int(N["launch"].sum()), nav_up_w=NAV_UP,
+                    nav_launch_share_before=float(N["launch"].sum() / N["ok"].sum()), nav_launch_share_after=sh, nav_launch_per_batch_51=51 * sh)
+    np.savez(W / f"{a.out}.npz", names=B["names"], w=w, grp=grp, **extra)
     dump(RES / f"w_{a.out}.json", rec)
     print(json.dumps(rec, indent=1))
 
@@ -440,6 +583,100 @@ def cmd_launchrows(a):
     print("\n".join(L))
 
 
+CLASSES = ("launch", "stand", "stop-approach", "turn", "cruise")
+VBINS = (0.5, 2, 4, 6, 8, 10, 13, 16, 99)
+
+
+def cmd_classes(a):
+    """Round 3c offline table (before training): expected rows a batch by label-only class per arm, the PAI rows' MVE events, and the 4 s
+    label distance of moving rows by fed-speed bin, PAI vs navtrain."""
+    S, EV, N = pai_states(), pai_events(), navtrain_rows()
+    M = np.load(CR / "on1_JTPH/tab.npz")
+    pn = M["names"].astype(str)
+    pc, pL = label_class(M["speed"].astype(np.float64), M["fut"].astype(np.float64))
+    part = np.full(len(pn), "S", dtype="U5")
+    evt = np.full(len(pn), "", dtype="U9")
+    idx = {x: i for i, x in enumerate(pn)}
+    for p, d in S.items():
+        ix = np.array([idx[x] for x in d["names"]])
+        part[ix] = p
+        e = EV[p]
+        evt[ix] = np.select([e["turn"] & e["stop"], e["turn"], e["stop"]], ["turn+stop", "turn", "stop"], "none")
+    Wf = {k: np.load(W / f"{k}.npz") for k in ("R3MV", "R3MVL", "R3MVE")}
+    for k, z in Wf.items():
+        assert np.array_equal(z["names"].astype(str), pn), k
+    T0 = np.load(CR / "on1_JT/tab.npz")
+    c0, _ = label_class(T0["speed"].astype(np.float64), T0["fut"].astype(np.float64))
+    w0 = np.load(W / "JT00S.npz")["w"].astype(np.float64)
+    w0 = w0 / w0.sum()
+    okn = N["ok"]
+    nav_u = {c: float((N["cls"][okn] == c).mean()) for c in CLASSES}
+    nwl = np.where(N["launch"], NAV_UP, 1.0)[okn]
+    nav_l = {c: float(nwl[N["cls"][okn] == c].sum() / nwl.sum()) for c in CLASSES}
+    arms = {"R2C (CTRL)": (83, nav_u, None), "MV": (51, nav_u, "R3MV"), "MVL": (51, nav_l, "R3MVL"), "MVE": (51, nav_u, "R3MVE")}
+    rec, md = dict(rules=dict(classes=label_class.__doc__.split("->")[0].strip(), events=_scene_events.__doc__.split("->")[1].strip()), arms={}), []
+    md += ["# ROUND3c: rows a batch by class (offline, before training)", "",
+           "Label-only classes (each row's fed speed v0 and its own 4 s label, every pool alike): **launch** v0 < 0.5 m/s and the 4 s path >= 0.5 m; "
+           "**stand** v0 < 0.5, path < 0.5 m; **stop-approach** v0 >= 0.5 and some 0.5 s label segment below 0.5 m/s; **turn** else and |heading| >= "
+           "15 deg at some label pose; **cruise** else. Batch = navtrain rows (83 CTRL / 51 the PAI arms) + pool rows (CTRL: 32 S rows, JT00S; PAI "
+           "arms: 64 = 32 S + 32 PAI human rows, the arm's draw file); the 13 yaw-rate rows are not counted. MVL's navtrain draw: launch rows x 3, "
+           "renormalised inside navtrain.", "",
+           "| arm | " + " | ".join(CLASSES) + " | of which PAI: launch / stand / stop / turn / cruise | PAI rows with MVE event (turn / stop / both / none) |",
+           "|:--|" + "--:|" * len(CLASSES) + ":--|:--|"]
+    for arm, (nN, nv, wf) in arms.items():
+        nav = {c: nN * nv[c] for c in CLASSES}
+        if wf is None:
+            pool = {c: 32 * float(w0[c0 == c].sum()) for c in CLASSES}
+            pai, ev = {c: 0.0 for c in CLASSES}, {}
+        else:
+            w = Wf[wf]["w"].astype(np.float64)
+            w = w / w.sum()
+            pool = {c: 64 * float(w[pc == c].sum()) for c in CLASSES}
+            pm = part != "S"
+            pai = {c: 64 * float(w[pm & (pc == c)].sum()) for c in CLASSES}
+            ev = {e: 64 * float(w[pm & (evt == e)].sum()) for e in ("turn", "stop", "turn+stop", "none")}
+        tot = {c: nav[c] + pool[c] for c in CLASSES}
+        rec["arms"][arm] = dict(nav_rows=nN, draw=wf, total=tot, navtrain=nav, pool=pool, pai=pai, pai_events=ev)
+        md.append(f"| {arm} | " + " | ".join(f"{tot[c]:.2f}" for c in CLASSES) + " | " + " / ".join(f"{pai[c]:.2f}" for c in CLASSES) + " | "
+                  + (" / ".join(f"{ev[e]:.2f}" for e in ("turn", "stop", "turn+stop", "none")) if ev else "-") + " |")
+    md += ["", "Navtrain alone (rows a batch): " + "; ".join(f"{k} " + ", ".join(f"{c} {v['navtrain'][c]:.2f}" for c in CLASSES)
+                                                    for k, v in rec["arms"].items() if k in ("R2C (CTRL)", "MV", "MVL")), ""]
+    # MVE event split of the moving PAI rows (fed >= 2 m/s; MV's drawable rows)
+    md += ["## PAI human rows fed >= 2 m/s (MV's rows): exam events ahead (MVE keeps turn / stop / both)", "",
+           "| part | MV rows | turn only | stop only | both | none (dropped by MVE) | kept share |", "|:--|--:|--:|--:|--:|--:|--:|"]
+    wmv = Wf["R3MV"]["w"]
+    rec["events"] = {}
+    for p in PARTS:
+        m = (part == p) & (wmv > 0)
+        c = {e: int((m & (evt == e)).sum()) for e in ("turn", "stop", "turn+stop", "none")}
+        rec["events"][p] = c
+        md.append(f"| {p} | {int(m.sum())} | {c['turn']} | {c['stop']} | {c['turn+stop']} | {c['none']} | {1 - c['none'] / max(m.sum(), 1):.1%} |")
+    # 4 s label distance of moving rows by fed-speed bin
+    w2 = np.load(W / "R2JF.npz")["w"]
+    sets = {"navtrain": (N["v0"][okn], N["L"][okn])}
+    for p in PARTS:
+        m = (part == p) & (w2 > 0)
+        sets[f"PAI {p}"] = (M["speed"][m].astype(np.float64), pL[m])
+    m = (part == "ph") & (Wf["R3MVE"]["w"] > 0)
+    sets["PAI ph, MVE rows"] = (M["speed"][m].astype(np.float64), pL[m])
+    md += ["", "## Moving rows: 4 s label distance by fed speed (median m; in brackets median distance / (4 s x v0); n)", "",
+           "Drawable rows (navtrain: full labels; PAI: R2JF weight > 0, i.e. before MV's < 2 m/s cut; last row: MVE's plain rows).", "",
+           "| v0 bin (m/s) | " + " | ".join(sets) + " |", "|:--|" + ":--|" * len(sets)]
+    rec["dist_by_speed"] = {}
+    for lo, hi in zip(VBINS[:-1], VBINS[1:]):
+        cells = []
+        for k_, (v0, L) in sets.items():
+            m = (v0 >= lo) & (v0 < hi)
+            r = dict(n=int(m.sum()), med=float(np.median(L[m])) if m.any() else float("nan"),
+                     ratio=float(np.median(L[m] / (4 * v0[m]))) if m.any() else float("nan"))
+            rec["dist_by_speed"].setdefault(f"{lo}-{hi}", {})[k_] = r
+            cells.append(f"{r['med']:.1f} ({r['ratio']:.2f}; {r['n']})" if r["n"] else "-")
+        md.append(f"| {lo}-{hi if hi < 99 else ''} | " + " | ".join(cells) + " |")
+    dump(RES / "classes3c.json", rec)
+    (RES / "classes3c.md").write_text("\n".join(md) + "\n")
+    print("\n".join(md))
+
+
 def cmd_steps(a):
     out = dict(rule="both arms take round 2's J / CTRL steps (prereg)", JW=dict(steps=a.n), JNF=dict(steps=a.n), CTRL=dict(steps=a.n, tag="R2C-L18-s0"))
     dump(O / "steps.json", out)
@@ -472,10 +709,19 @@ def cmd_smoke(a):
         ck |= dict(flat_rows=(mean("loss/flat/rows"), exp, 0.6 * exp <= mean("loss/flat/rows") <= 1.4 * exp), flat_p=(fl.get("p"), 0.5, fl.get("p") == 0.5))
     else:
         ck |= dict(no_flat=(mean("loss/flat/rows"), 0, not fl and np.nan_to_num(mean("loss/flat/rows")) == 0))
-    if a.arm in ("NS", "MV"):
-        gs, want = (done.get("draw_shares") or {}).get("group_share", {}), SHARES[f"R3{a.arm}"]
+    if a.arm in ("NS", "MV", "MVL", "MVE"):
+        gs, want = (done.get("draw_shares") or {}).get("group_share", {}), (SHARES | SHARES3C)[f"R3{a.arm}"]
         ck |= {f"share_{p}": (gs.get(p), v, abs(gs.get(p, -1) - v) < 1e-6) for p, v in want.items()}
         ck |= dict(wfile=((done.get("draw_shares") or {}).get("on_wfile"), f"R3{a.arm}", f"w/R3{a.arm}.npz" in str((done.get("draw_shares") or {}).get("on_wfile"))))
+    if a.arm in ("MVL", "MVE"):                                    # round 3c: the navtrain draw weights are on in MVL only
+        ds, wj = done.get("draw_shares") or {}, json.loads((RES / "w_R3MVL.json").read_text())
+        if a.arm == "MVL":
+            ck |= dict(nav_listed=(ds.get("nav_listed"), ds.get("nav_rows"), ds.get("nav_listed", 0) >= 0.99 * ds.get("nav_rows", 1)),
+                       nav_up_w=(ds.get("nav_up_w"), [NAV_UP], ds.get("nav_up_w") == [NAV_UP]),
+                       nav_up_share=(ds.get("nav_up_share"), wj["nav_launch_share_after"],
+                                     abs(ds.get("nav_up_share", -1) - wj["nav_launch_share_after"]) < 0.1 * wj["nav_launch_share_after"]))
+        else:
+            ck |= dict(no_nav_w=(ds.get("nav_up_share"), None, "nav_rows" not in ds))
     ok = bool(all(v[2] for v in ck.values()))
     res = dict(tag=a.tag, arm=a.arm, run=str(d), pass_=ok, checks=ck, steps=len(S.get("loss/total", [])), draw_shares=done.get("draw_shares"))
     dump(RES / f"smoke_{a.arm}.json", res)
@@ -531,16 +777,17 @@ def main():
     sub.add_parser("launch")
     p = sub.add_parser("weights")
     p.add_argument("--base", default="R2JF"), p.add_argument("--out", default="R3JW"), p.add_argument("--pool", default="on1_JTPH")
-    p.add_argument("--rule", choices=("stand", "ns", "mv"), default="stand")
+    p.add_argument("--rule", choices=("stand", "ns", "mv", "mve", "mvl"), default="stand")
     sub.add_parser("launchrows")
+    sub.add_parser("classes")
     p = sub.add_parser("steps")
     p.add_argument("--n", type=int, default=9500)
     p = sub.add_parser("smoke")
-    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("JW", "JNF", "NS", "MV"), required=True)
+    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("JW", "JNF", "NS", "MV", "MVL", "MVE"), required=True)
     p = sub.add_parser("gate")
     p.add_argument("--arms", nargs="+", required=True), p.add_argument("--ctrl", default="R2C-L18-s0"), p.add_argument("--stem", default="gate")
     a = ap.parse_args()
-    dict(rows=cmd_rows, launch=cmd_launch, launchrows=cmd_launchrows, weights=cmd_weights, steps=cmd_steps, smoke=cmd_smoke, gate=cmd_gate)[a.cmd](a)
+    dict(rows=cmd_rows, launch=cmd_launch, launchrows=cmd_launchrows, classes=cmd_classes, weights=cmd_weights, steps=cmd_steps, smoke=cmd_smoke, gate=cmd_gate)[a.cmd](a)
 
 
 if __name__ == "__main__":
