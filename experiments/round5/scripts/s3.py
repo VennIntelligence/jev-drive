@@ -16,6 +16,10 @@ s3.sh runs the chain; this file holds the selection, the checks and the tags.
   s3.py mfix --pool on1_JTPHO --ref on1_JTPH        box: after the zero-copy merge: the prefix equals --ref (every file), agent ok of the prefix from --ref
   s3.py weights --pool on1_JTPHO --base R2JF --out R2JFO   box: --base's draw + weight 0 on the PAIO rows (R3)
   s3.py report --root O --pool on1_PAIO             box: rows by outcome type x class, disk, card-hours -> O/report/rows.{md,json}
+  s3.py relabel --root O --pool on1_PAIO --out PAIOR   box (plan addendum 1): hindsight relabel, fut = the winner rollout's realised 4 s rig poses
+                                                    (NaN where incomplete), gates L0 + self-checks -> results/s3/relabel.{md,json}; then pool on1_PAIOR
+                                                    (same rows / files, tokens zero-copy, relabel.npz); exit 1 = stop (O/VERDICT.relabel)
+  s3.py rcheck --pool on1_JTPHOR --ref on1_JTPHO --src on1_PAIOR   box: the relabelled merge equals the original except tab.fut's tail
 """
 from __future__ import annotations
 
@@ -450,6 +454,176 @@ def weights(a):
     print(json.dumps(dict(out=a.out, rows=len(names), base_rows=n, w0_new=len(names) - n)))
 
 
+# ---------------------------------------------------------------- hindsight relabel (plan addendum 1): on1_PAIOR, label = the realised future
+T_FUT = np.arange(1, 9) * 500_000                                                # onp_geom.T_FUT
+L_LAUNCH, V_LAUNCH, L0_LINE = 0.5, 0.5, 4.2
+
+
+def rig_n(p, A):
+    """onp_rows.rig_n: local poses (N, m, 3) -> the rig frames at A (N, 3)."""
+    c, s = np.cos(A[:, 2])[:, None], np.sin(A[:, 2])[:, None]
+    dx, dy = p[..., 0] - A[:, None, 0], p[..., 1] - A[:, None, 1]
+    return np.stack([c * dx + s * dy, -s * dx + c * dy, p[..., 2] - A[:, None, 2]], -1)
+
+
+def path_len(fut):
+    """r3.py path_len: fut (n, 8, 3) -> (n,) 4 s path length from the origin."""
+    P = np.concatenate([np.zeros((len(fut), 1, 2)), fut[:, :, :2]], 1)
+    return np.linalg.norm(np.diff(P, axis=1), axis=-1).sum(1)
+
+
+def realised(z, ks):
+    """Row file z (the winner's rollout), decisions ks -> (fut (n, 8, 3) the realised rig poses at t0 + 0.5 .. 4 s in the t0 rig frame, NaN when
+    incomplete; why: '' / 'end' / 'event'; max |target time - nearest decision| in us; the row file's anchors at ks)."""
+    t0 = z["t0_us"].astype(np.int64)
+    A = z["anchor"].astype(np.float64).copy()
+    A[:, 2] = np.unwrap(A[:, 2])
+    ev = int(np.asarray(z["t_event_us"]).min())
+    t_end = min(int(t0[-1]), int(z["t_end_us"]))
+    pos = {int(k): i for i, k in enumerate(z["k"])}
+    i = np.array([pos[int(k)] for k in ks])
+    tq = t0[i][:, None] + T_FUT[None]
+    why = np.where(tq[:, -1] >= ev, "event", np.where(tq[:, -1] > t_end, "end", ""))
+    P = np.stack([np.interp(tq, t0, A[:, c]) for c in range(3)], -1)
+    fut = rig_n(P, A[i])
+    fut[why != ""] = np.nan
+    near = np.abs(t0[np.searchsorted(t0, tq).clip(0, len(t0) - 1)] - tq)
+    return fut.astype(np.float32), why, int(near[why == ""].max()) if (why == "").any() else 0, A[i]
+
+
+def relabel(a):
+    from jevdrive.tokens import link_front
+    O, src, dst = Path(a.root), CR / a.pool, CR / f"on1_{a.out}"                  # --out -: the gates and tables only (pre-flight), no pool
+    assert a.out == "-" or not (dst.exists() or (CR / f"on1_{a.out}@warp").exists()), f"{dst} exists: never overwritten"
+    tb, sc, kk = pool_rows(a.pool)
+    X = np.load(src / "outcome.npz")
+    assert np.array_equal(X["names"], tb["names"])
+    n = len(sc)
+    fut, why, d_anchor, gap, bad_link = np.full((n, 8, 3), np.nan, np.float32), np.full(n, "", "U5"), 0.0, 0, []
+    arm = tb["oarm"].astype(str)
+    for s in np.unique(sc):
+        f = O / "rows/PAIO" / f"{s}.npz"
+        if not Path(os.path.realpath(f)).parent.name.startswith(f"{arm[sc == s][0]}_r"):
+            bad_link.append(s)
+        j = np.flatnonzero(sc == s)
+        with np.load(f) as z:
+            fu, wh, g, An = realised(z, kk[j])
+        fut[j], why[j], gap = fu, wh, max(gap, g)
+        d_anchor = max(d_anchor, float(np.abs(An[:, :2] - X["anchor"][j, :2].astype(np.float64)).max()))
+    ok = why == ""
+    sv = tb["served"].astype(np.float64)
+    v0, ot = tb["speed"].astype(np.float64), tb["otype"].astype(str)
+    Lr, Ls = np.where(ok, path_len(np.nan_to_num(fut.astype(np.float64))), np.nan), path_len(sv)
+    md = lambda x: [float(np.median(x)), float(np.percentile(x, 25)), float(np.percentile(x, 75))] if len(x) else [float("nan")] * 3  # noqa: E731
+    groups = {t: ot == t for t in OTYPES} | {"all but A-wins": ot != "A-wins", "all": np.ones(n, bool)}
+    L0 = {}
+    for g, m in groups.items():
+        st = m & (v0 < V_LAUNCH)
+        k_ = st & ok
+        L0[g] = dict(rows_fed_lt_0p5=int(st.sum()), kept=int(k_.sum()),
+                     realised=dict(stand_share=float((Lr[k_] < L_LAUNCH).mean()) if k_.any() else None, launch_rows=int((k_ & (Lr >= L_LAUNCH)).sum()),
+                                   launch_path_med_p25_p75=md(Lr[k_ & (Lr >= L_LAUNCH)])),
+                     served_same_rows=dict(stand_share=float((Ls[k_] < L_LAUNCH).mean()) if k_.any() else None, launch_rows=int((k_ & (Ls >= L_LAUNCH)).sum()),
+                                           launch_path_med_p25_p75=md(Ls[k_ & (Ls >= L_LAUNCH)])),
+                     served_all_rows=dict(stand_share=float((Ls[st] < L_LAUNCH).mean()) if st.any() else None, launch_path_med_p25_p75=md(Ls[st & (Ls >= L_LAUNCH)])))
+    L1 = {}
+    for g, m in groups.items():
+        for sp, ms in (("fed < 0.5", v0 < V_LAUNCH), ("fed >= 0.5", v0 >= V_LAUNCH), ("any", np.ones(n, bool))):
+            k_ = m & ms & ok
+            d1, d4 = (np.hypot(*(fut[k_, i, :2] - sv[k_, i, :2]).T) for i in (1, 7))
+            r = Lr[k_] / np.maximum(Ls[k_], 0.1)
+            L1[f"{g} | {sp}"] = dict(rows=int(k_.sum()), d1s_med_p90=[float(np.median(d1)), float(np.percentile(d1, 90))] if k_.any() else None,
+                                     d4s_med_p90=[float(np.median(d4)), float(np.percentile(d4, 90))] if k_.any() else None,
+                                     path_ratio_med=float(np.median(r)) if k_.any() else None,
+                                     path_med_realised_served=[float(np.median(Lr[k_])), float(np.median(Ls[k_]))] if k_.any() else None)
+    drop = {t: dict(rows=int((ot == t).sum()), kept=int(((ot == t) & ok).sum()), end=int(((ot == t) & (why == "end")).sum()),
+                    event=int(((ot == t) & (why == "event")).sum())) for t in OTYPES}
+    l0 = L0["partial-fixed"]["realised"]["launch_path_med_p25_p75"][0]
+    chk = dict(anchor_vs_drive_jsonl_m=d_anchor, max_target_time_gap_us=gap, row_file_not_winner=bad_link, kept_finite=bool(np.isfinite(fut[ok]).all()))
+    passed = dict(L0=bool(l0 >= L0_LINE), anchor=d_anchor <= 1e-4, link=not bad_link, finite=chk["kept_finite"], kept_half=bool(ok.mean() >= 0.5))
+    rec = dict(pool=a.pool, out=f"on1_{a.out}", rows=n, kept=int(ok.sum()), dropped=int((~ok).sum()), drop=drop, L0=L0, L1=L1, checks=chk,
+               lines=dict(L0=f"partial-fixed launch rows' realised 4 s path median >= {L0_LINE} m"), passed=passed, ok=all(passed.values()),
+               refs=dict(served_moving_median_d422=1.95, navtrain_launch=8.28, pai_human_launch_R3NS=4.16))
+    res = REPO / "experiments/round5/results/s3"
+    dump(res / "relabel.json", rec)
+    f2 = lambda x: "-" if x is None else f"{x:.2f}"  # noqa: E731
+    q = lambda v: f"{v[0]:.2f} [{v[1]:.2f}, {v[2]:.2f}]"  # noqa: E731
+    Lm = [f"# S3 hindsight relabel: on1_PAIO -> on1_PAIOR (generated by s3.py relabel)", "",
+          "Label = the winner rollout's realised rig poses at t0 + 0.5 .. 4 s in the t0 rig frame (onp_rows log_fut's transform on the rollout's own "
+          "10 Hz anchors). Rows whose 4 s run past the rollout's end / scorer end / first scorer event keep fut = NaN (never drawn, never imitated).", "",
+          f"Rows {n}, kept {rec['kept']}, dropped {rec['dropped']}: " + "; ".join(f"{t} {v['kept']} / {v['rows']} kept (end {v['end']}, event {v['event']})" for t, v in drop.items()), "",
+          f"## L0: launch rows (fed < 0.5 m/s, 4 s path >= 0.5 m); line: partial-fixed realised median >= {L0_LINE} m -> **{'PASS' if passed['L0'] else 'FAIL'}** ({l0:.2f} m)", "",
+          "Refs: served-plan movers 1.95 m (d422), navtrain launch 8.28 m, PAI human 4.16 m (R3NS).", "",
+          "| rows | fed < 0.5 | kept | realised: stand share / launch rows / 4 s path median [p25, p75] | served, same rows | served, all fed < 0.5 rows |",
+          "|:--|--:|--:|:--|:--|:--|"]
+    for g, v in L0.items():
+        r_, s_, s2 = v["realised"], v["served_same_rows"], v["served_all_rows"]
+        Lm.append(f"| {g} | {v['rows_fed_lt_0p5']} | {v['kept']} | {f2(r_['stand_share'])} / {r_['launch_rows']} / {q(r_['launch_path_med_p25_p75'])} | "
+                  f"{f2(s_['stand_share'])} / {s_['launch_rows']} / {q(s_['launch_path_med_p25_p75'])} | {f2(s2['stand_share'])} / {q(s2['launch_path_med_p25_p75'])} |")
+    Lm += ["", "## L1: realised vs served plan (kept rows; position error in m)", "",
+           "| rows | n | 1 s median / p90 | 4 s median / p90 | 4 s path realised / served (median ratio) | 4 s path median realised / served |", "|:--|--:|:--|:--|--:|:--|"]
+    for g, v in L1.items():
+        if v["rows"]:
+            Lm.append(f"| {g} | {v['rows']} | {v['d1s_med_p90'][0]:.2f} / {v['d1s_med_p90'][1]:.2f} | {v['d4s_med_p90'][0]:.2f} / {v['d4s_med_p90'][1]:.2f} | "
+                      f"{v['path_ratio_med']:.2f} | {v['path_med_realised_served'][0]:.2f} / {v['path_med_realised_served'][1]:.2f} |")
+    Lm += ["", f"Checks: row-file anchor vs drive.jsonl anchor max {d_anchor:.2e} m; max target-time gap {gap} us; row files not the winner's: {len(bad_link)}; "
+           f"kept labels finite {chk['kept_finite']}. Passed: {passed}"]
+    (res / "relabel.md").write_text("\n".join(Lm) + "\n")
+    print("\n".join(Lm))
+    if a.out == "-":
+        return
+    if not rec["ok"]:
+        (O / "VERDICT.relabel").write_text(f"STOP relabel: {passed}\n")
+        sys.exit(1)
+    # ---- the pool: same rows, names and files as --pool; tab.fut = the realised future (NaN = dropped); tokens zero-copy
+    import shutil
+    dst.mkdir(parents=True)
+    w = Path(f"{dst}@warp")
+    w.mkdir()
+    for f in ("agent.npz", "road.npz", "route.npz", "outcome.npz", "build.json"):
+        shutil.copy2(src / f, dst / f)
+    shutil.copy2(Path(f"{src}@warp") / "teacher.npz", w / "teacher.npz")
+    feat = DATA / "runs/route_mem/feat"
+    shutil.copy2(feat / f"{a.pool}.npz", feat / f"on1_{a.out}.npz")
+    link_front(w, [Path(f"{src}@warp") / "front.npy"])
+    np.savez(dst / "tab.npz", **(tb | dict(fut=fut)))
+    np.savez(dst / "relabel.npz", names=tb["names"], ok=ok, why=why, fut_served=tb["fut"], path_realised=Lr.astype(np.float32), path_served=Ls.astype(np.float32))
+    dump(dst / "relabel.json", rec)
+    print(json.dumps(dict(pool=str(dst), rows=n, kept=int(ok.sum()))))
+
+
+def rcheck(a):
+    """The relabelled merge against the original merge: every file bit-equal except tab.fut on the --src tail rows (= --src's fut)."""
+    P, R, S = CR / a.pool, CR / a.ref, CR / a.src
+    tp, tr, ts = np.load(P / "tab.npz"), np.load(R / "tab.npz"), np.load(S / "tab.npz")
+    n, m = len(tr["names"]), len(ts["names"])
+    bad = [k for k in tr.files if k != "fut" and not same(tp[k], tr[k])] + [f"tab.{k} only in one" for k in set(tp.files) ^ set(tr.files)]
+    if not same(tp["fut"][:n - m], tr["fut"][:n - m]):
+        bad.append("tab.fut prefix")
+    if not same(tp["fut"][n - m:], ts["fut"]):
+        bad.append("tab.fut tail != src fut")
+    changed = int((~np.isclose(tp["fut"][n - m:], tr["fut"][n - m:], equal_nan=True)).any((1, 2)).sum())
+    for f in ("agent.npz", "road.npz", "drivable.npz", "route.npz"):
+        if (R / f).exists() or (P / f).exists():
+            zp, zr = np.load(P / f), np.load(R / f)
+            bad += [f"{f}.{k}" for k in set(zp.files) | set(zr.files) if k not in zp.files or k not in zr.files or not same(zp[k], zr[k])]
+            del zp, zr
+    feat = DATA / "runs/route_mem/feat"
+    zp, zr = np.load(feat / f"{a.pool}.npz"), np.load(feat / f"{a.ref}.npz")
+    bad += [f"feat.{k}" for k in zr.files if not same(zp[k], zr[k])]
+    zp, zr = np.load(CR / f"{a.pool}@warp/teacher.npz"), np.load(CR / f"{a.ref}@warp/teacher.npz")
+    bad += [f"teacher.{k}" for k in zr.files if not same(zp[k], zr[k])]
+    jp, jr = (json.loads((CR / f"{x}@warp/front.parts.json").read_text()) for x in (a.pool, a.ref))
+    if jp != jr:
+        bad.append("front.parts.json")
+    rec = dict(pool=a.pool, ref=a.ref, src=a.src, rows=n, tail=m, tail_fut_changed=changed, mismatch=bad, ok=not bad)
+    dump(DATA / "runs/round5/s3/checks" / f"rcheck_{a.pool}.json", rec)
+    dump(REPO / "experiments/round5/results/s3" / f"rcheck_{a.pool}.json", rec)
+    print(json.dumps(rec))
+    if bad:
+        sys.exit(2)
+
+
 # ---------------------------------------------------------------- report
 def du(p):
     p = Path(p)
@@ -501,7 +675,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
     for name, args in dict(scenes=["out"], lists=["scenes", "root"], check=["root", "d3"], select=["root", "d3", "scenes"], r1=["root", "chunk?"],
-                           tag=["root", "pool"], r2=["root", "pool"], r1in=["root", "pool", "fwd", "tag", "control"], mfix=["pool", "ref"], weights=["pool", "base", "out"], report=["root", "pool"]).items():
+                           tag=["root", "pool"], r2=["root", "pool"], r1in=["root", "pool", "fwd", "tag", "control"], mfix=["pool", "ref"], weights=["pool", "base", "out"], report=["root", "pool"],
+                           relabel=["root", "pool", "out"], rcheck=["pool", "ref", "src"]).items():
         p = sp.add_parser(name)
         for x in args:
             p.add_argument(f"--{x.rstrip('?')}", required=not x.endswith("?"), default="")
