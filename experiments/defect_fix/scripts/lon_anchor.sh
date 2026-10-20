@@ -74,6 +74,20 @@ assert a == "C" or json.load(open(f"{r}/calib.json"))["w1"] > 0, "no calibration
 PY
   CMD="$(cmd $A)" || exit 1; echo "$(date '+%F %T') train ${TAG[$A]}: $CMD" | tee -a $L/stages.txt; exec $CMD ;;
 cf)     $TR $IN cf --tags $INIT,${TAG[C]},${TAG[H]},${TAG[A]},${TAG[D]},RSG-L18-s0 --gate-tag RSG-L18-s0 --name lon_anchor ;;
+long)     # supplement 5: x2 (calib A20) and its control for 5 000 steps, snapshots at 1 000 / 2 500 -> inertia (lon_long) -> longread
+  for X in LONC5K LONAD5K; do for k in "" x1000 x2500; do [[ ! -e $RUNS/$X$k-L18-s0/ckpt-final.pt ]] || die "$X$k exists"; done; done
+  c=$(sub lon-long-LONC5K "${FT[@]}" --timeout-h 3 -- bash $ME longtrain C) || exit 1
+  d=$(sub lon-long-LONAD5K "${FT[@]}" --timeout-h 3 -- bash $ME longtrain D) || exit 1
+  f=$(sub lon-long-cf --after $c,$d --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- $TR $IN cf --tags $INIT,LONC5Kx1000-L18-s0,LONC5Kx2500-L18-s0,LONC5K-L18-s0,LONAD5Kx1000-L18-s0,LONAD5Kx2500-L18-s0,LONAD5K-L18-s0,RSG-L18-s0 --gate-tag RSG-L18-s0 --name lon_long) || exit 1
+  r=$(sub lon-long-report --after $f --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME longreport) || exit 1
+  echo "$(date '+%F %T') long (code $(git rev-parse --short HEAD)): train $c $d cf $f report $r" | tee -a $L/stages.txt ;;
+longtrain)
+  A=$2; T=$([[ $A == C ]] && echo LONC5K-L18-s0 || echo LONAD5K-L18-s0)
+  CMD="$(base $T 5000) --save-at 1000,2500$([[ $A == D ]] && echo " --on-anchor $(dose A20)")" || exit 1
+  echo "$(date '+%F %T') longtrain $T: $CMD" | tee -a $L/stages.txt; exec $CMD ;;
+longreport)
+  $TR $IN report --name lon_long > $L/inertia_long.log 2>&1 || die "inertia report (long)"
+  $TR $PY longread || die "longread"; date '+%F %T' > $L/LONG_DONE ;;
 report)
   $TR $IN report --name lon_anchor > $L/inertia_report.log 2>&1 || die "inertia report"
   cp experiments/defect_fix/results/inertia/report_lon_anchor.md $RES/inertia_report.md && cp experiments/defect_fix/results/inertia/report_lon_anchor.json $RES/inertia_report.json || die "no report"

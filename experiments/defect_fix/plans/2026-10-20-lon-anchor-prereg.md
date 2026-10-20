@@ -172,3 +172,9 @@ tags = RB0-F-s0（编码帧、G0）、SIMPN1K（对照）、SIMPB1K（不拉平�
    全部 10 个读数一起进池；读完后 `pai_fix.py report` 对 NTV0-L18-s0 的参照读数（`-vl` / `-ag`）→ `results/lon_anchor/simp_paifix_{vl,ag}.md`。
    报告每臂 TARGET 均值与按类型的零分（overshoot / route-turn / offroad / AF-front / side），STOP / STOP-L / TURN 分开，GUARD，T281 一列，两种 serve。
    PAI-FIX 的判读线由主会话定（`experiments/pai_fix/` 的登记）；本 lane 只报告。
+
+## 补记 5（10-20 晚，主会话要的「是不是只差步数」检查；写于任何输出之前）
+
+×2（W 0.0022）与同步对照从 NTV0-L18-s0 各训 5 000 步（同池 on1_JTCP、同抽样 LONP，warm-up 50，cosine 到 5 000 步），在 1 000 / 2 500 / 5 000 步存检查点
+（`rm_train --save-at`，tag `LONC5K / LONAD5K[x1000|x2500]-L18-s0`），每个检查点跑 inertia.py（不改，`--name lon_long`），报告 STOP / TURN 比、空路 v24 斜率、
+plan 含停车份额、plan − 人速度与项的损失曲线（`lon_anchor.py longread` → `results/lon_anchor/long.md`）；不做考场读数。**预测**：若问题只是步数，×2 的 STOP / TURN 比随步数单调下降并低于同步数的对照。

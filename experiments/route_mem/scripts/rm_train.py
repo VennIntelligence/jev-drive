@@ -1450,6 +1450,16 @@ def cmd_train(a):
                     run.status(f"step {step + 1}/{cfg.steps}")
             if k_on and (step + 1 == 60 or (step + 1) % 1000 == 0 or step + 1 == cfg.steps):
                 run.summary.update({f"on_hash_{step + 1}": hsh})
+            if getattr(a, "save_at", "") and step + 1 in {int(x) for x in a.save_at.split(",")} and step + 1 < cfg.steps:   # snapshots (no RNG, no update)
+                stag = a.tag.replace("-L18-", f"x{step + 1}-L18-") if "-L18-" in a.tag else f"{a.tag}x{step + 1}"
+                sd = T.proot("runs", stag)
+                assert not (sd / "ckpt-final.pt").exists(), f"{sd} exists"
+                sd.mkdir(parents=True, exist_ok=True)
+                torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": ns.head, "snapshot_of": a.tag, "step": step + 1}, sd / "ckpt-final.pt")
+                torch.save(model.adapter.state_dict(), sd / "adapter.pt")
+                RM.write_sidecar(stag, ns.head, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop, rm_drop_pool=False,
+                                                     on=a.on, on_lon=a.on_lon, steps=step + 1, snapshot_of=a.tag))
+                run.info(f"snapshot @ {step + 1}: {sd / 'ckpt-final.pt'}")
             if (step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps:
                 ev = dev_ev()
                 run.scalars({f"dev/{q}": v for q, v in ev.items()}, step + 1)
@@ -1646,6 +1656,8 @@ if __name__ == "__main__":
                        "lateral term + arc cap (defect_fix lib/nr1_tight.py; labels <pool>/tight_in.npz; 0 = off)")
         p.add_argument("--on-anchor", type=float, default=0.0, help="LON-ANCHOR: weight of the station-anchored two-sided arc term on the S rows "
                        "(defect_fix lib/nr1_anchor.py; labels <pool>/lon_anchor.npz; 0 = off)")
+        p.add_argument("--save-at", default="", help="steps (comma list) at which a snapshot checkpoint is saved as tag <tag with x<step> before -L18->; "
+                       "'' = off")
         p.add_argument("--flat-brk", default="", help="SIMP-F: file of navtrain tokens (lead_break.py's brake-needed rows) whose fed history is "
                        "flattened on training draws (ax 0, past poses at constant current speed; label kept); '' = off")
         p.add_argument("--simp-region", type=float, default=0.0, help="SIMP: weight (x 10) of the merged road + oncoming-lane hinge on the S rows; "

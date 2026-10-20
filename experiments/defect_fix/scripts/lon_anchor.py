@@ -496,6 +496,44 @@ def cmd_inertia(a):
     print("\n".join(L))
 
 
+def cmd_longread(a):
+    """Supplement 5: the inertia cells per checkpoint (control / x2 at 1 000, 2 500, 5 000 steps) + the term's loss curve -> results/lon_anchor/long.{json,md}."""
+    r = json.load(open(REPO / "experiments/defect_fix/results/inertia/report_lon_long.json"))
+    V, cells = r["verdicts"], {(c["tag"], c["win"]): c for c in r["cells"]}
+    rows = []
+    for arm, base in (("control", "LONC5K"), ("x2", "LONAD5K")):
+        for st, t in ((1000, f"{base}x1000-L18-s0"), (2500, f"{base}x2500-L18-s0"), (5000, f"{base}-L18-s0")):
+            c = lambda w, k: cells.get((t, w), {}).get(k)  # noqa: E731
+            rows.append(dict(arm=arm, step=st, tag=t, stop_ratio=V[t].get("STOP_aux_ratio"), turn_ratio=V[t].get("TURN_ratio"),
+                             open_v24=(c("OPEN", "slope_v24_B") or [None])[0], stop_has=c("STOP", "has_F"), v24_h_stop=c("STOP", "v24_F_minus_h"),
+                             v24_h_open=c("OPEN", "v24_F_minus_h"), stop_minus_rest=c("STOP", "S_F_minus_rest")))
+    curve = {}
+    for t in ("LONAD5K-L18-s0", "LONC5K-L18-s0"):
+        f = sorted(glob.glob(str(DATA / "runs/route_mem" / f"train-{t}" / "*" / "events.jsonl")))[-1]
+        S = defaultdict(list)
+        for line in open(f):
+            e = json.loads(line)
+            if e.get("kind") == "scalar" and e["tag"] in ("loss/on/lon_anchor_mean", "loss/imit", "dev/ade"):
+                S[e["tag"]].append((e["step"], e["value"]))
+        curve[t] = {k: [(b, float(np.mean([v for s_, v in x if b - 500 < s_ <= b]))) for b in range(500, 5001, 500) if any(b - 500 < s_ <= b for s_, v in x)]
+                    for k, x in S.items()}
+    out = dict(rows=rows, curve=curve, prediction="steps were the issue iff the x2 ratio falls monotonically with steps and below the control's")
+    (RES / "long.json").write_text(json.dumps(out, indent=1, default=float))
+    f2 = lambda x: "" if x is None else f"{x:.3f}"  # noqa: E731
+    L = ["# LON-ANCHOR x2 for 5 000 steps (supplement 5; inertia.py unchanged, P160)", "",
+         "| arm | step | STOP ratio | TURN ratio | OPEN v24 slope | STOP plan has a stop | v24 - human STOP | v24 - human OPEN | STOP plan stop - human rest (m) |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    L += [f"| {x['arm']} | {x['step']} | {f2(x['stop_ratio'])} | {f2(x['turn_ratio'])} | {f2(x['open_v24'])} | {f2(x['stop_has'])} | {f2(x['v24_h_stop'])} | "
+          f"{f2(x['v24_h_open'])} | {f2(x['stop_minus_rest'])} |" for x in rows]
+    L += ["", "Term loss per S row (loss/on/lon_anchor_mean, mean per 500 steps), imitation loss, dev ADE:", ""]
+    for t, cv in curve.items():
+        for k, v in cv.items():
+            L.append(f"- {t} {k}: " + ", ".join(f"{b}: {y:.4f}" for b, y in v))
+    L += ["", out["prediction"]]
+    (RES / "long.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -507,6 +545,7 @@ def main():
     q.add_argument("--out", required=True), q.add_argument("--require-fix", action="store_true")
     q = sp.add_parser("calib")
     q.add_argument("--tag", required=True), q.add_argument("--w", type=float, required=True)
+    sp.add_parser("longread")
     q = sp.add_parser("inertia")
     q.add_argument("--name", default="lon_anchor"), q.add_argument("--report", default=""), q.add_argument("--ctl", required=True), q.add_argument("--arms", nargs="+", required=True)
     q.add_argument("--out-stem", default="inertia")
