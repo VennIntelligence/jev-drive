@@ -1,0 +1,21 @@
+{
+ "a": "R3IDA-L18-s0",
+ "b": "R3IDB-L18-s0",
+ "note": "NS's command 60 steps eager: without vs with --save-at 20,40 (snapshots only)",
+ "scalars": 275,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5376477241516113,
+  0.5376477241516113
+ ],
+ "on_hash_60": [
+  "482e1e7656ad2972",
+  "482e1e7656ad2972"
+ ],
+ "want_hash": null,
+ "identical": true
+}
