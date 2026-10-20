@@ -1,0 +1,213 @@
+{
+ "label": "smoke_c001",
+ "image": "jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7",
+ "base": "alpasim-base:0.89.0",
+ "wall_s": "1891",
+ "driver_gpu_peak_mib": "1466",
+ "tmp_peak_bytes": "33013760",
+ "serve": "serve: driver pai (pai_driver.py), tag NTV0-L18-s0, replica 0 of 1; switches JEV_VCONT=1.0 JEV_LEAD=1 JEV_VHIST= JEV_ACC=1 JEV_GAP=0.7,2.7 JEV_HOLD=",
+ "wiz": "controller.gains.rel_front_steering_angle_weight=10",
+ "run": {
+  "n": 36,
+  "mean": 0.7666,
+  "zeros": 6,
+  "ones": 22
+ },
+ "driver": {
+  "drives": 7151,
+  "sessions": 36,
+  "inference_errors": 0,
+  "input_errors": 0,
+  "total_ms": {
+   "p50": 58.7,
+   "p90": 77.0,
+   "p99": 150.3,
+   "max": 224.6
+  },
+  "wait_ms": {
+   "p50": 0.0,
+   "p90": 7.7,
+   "p99": 50.2,
+   "max": 108.2
+  },
+  "frames_ms": {
+   "p50": null,
+   "p90": null,
+   "p99": null,
+   "max": null
+  },
+  "encode_ms": {
+   "p50": 33.6,
+   "p90": 38.9,
+   "p99": 42.6,
+   "max": 50.2
+  },
+  "policy_ms": {
+   "p50": 13.3,
+   "p90": 17.3,
+   "p99": 23.2,
+   "max": 109.9
+  }
+ },
+ "ref": {
+  "n": 36,
+  "mean": 0.7939,
+  "zeros": 5,
+  "ones": 23
+ },
+ "common": 36,
+ "differ": 9,
+ "max_abs_diff": 1.0,
+ "mean_diff": -0.0273,
+ "within_001": 34,
+ "within_005": 35,
+ "zeros_agree": 35,
+ "missing_in_run": [],
+ "missing_in_ref": [],
+ "scenes": {
+  "clipgt-901c2cff-f4a4-4f21-8ba2-f2f357be7bb8": [
+   1.0,
+   1.0
+  ],
+  "clipgt-90ab8c24-2d85-4e52-8a57-3554c418cef2": [
+   1.0,
+   1.0
+  ],
+  "clipgt-91d84204-d511-464e-b986-6cab844794cc": [
+   0.9632494780005232,
+   0.9678919994188646
+  ],
+  "clipgt-92af888e-acdd-45e9-b8bb-06406f232300": [
+   1.0,
+   1.0
+  ],
+  "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac": [
+   0.973216420682281,
+   0.9599635773183574
+  ],
+  "clipgt-984b2242-ddb6-4c71-b98a-8cc87972d974": [
+   1.0,
+   1.0
+  ],
+  "clipgt-9b6c68b4-1f13-46ec-a2cd-5023a8e9341d": [
+   0.0,
+   0.0
+  ],
+  "clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c": [
+   0.6697444258587573,
+   0.6710542466980388
+  ],
+  "clipgt-9f393c8a-4e24-4b04-b98a-099a28bde89a": [
+   0.3551793922760349,
+   0.35517933284472936
+  ],
+  "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677": [
+   1.0,
+   1.0
+  ],
+  "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d": [
+   0.0,
+   0.0
+  ],
+  "clipgt-a64b1333-89c8-4eea-bf9a-890703edf9c1": [
+   1.0,
+   1.0
+  ],
+  "clipgt-a68ad579-8a04-45b9-89f9-89ec3c1893bb": [
+   0.0,
+   0.0
+  ],
+  "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3": [
+   1.0,
+   1.0
+  ],
+  "clipgt-b1d93f58-d8dd-4a84-959c-aaea3aa0701b": [
+   1.0,
+   1.0
+  ],
+  "clipgt-b40f4729-29c4-4846-a04b-72c78832a062": [
+   1.0,
+   1.0
+  ],
+  "clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2": [
+   0.7656649130687795,
+   0.7657696259962
+  ],
+  "clipgt-b65e55e9-f3d5-4445-bdbd-325b07a5c493": [
+   0.4893647328149534,
+   0.4804721287641076
+  ],
+  "clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0": [
+   0.0,
+   0.0
+  ],
+  "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633": [
+   1.0,
+   1.0
+  ],
+  "clipgt-b727530b-d0d4-4ad0-885c-15d14d3a871e": [
+   1.0,
+   1.0
+  ],
+  "clipgt-b88aa3d5-aab8-43d6-82f4-f2334d57be18": [
+   1.0,
+   1.0
+  ],
+  "clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd": [
+   0.0,
+   0.0
+  ],
+  "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc": [
+   0.0,
+   1.0
+  ],
+  "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494": [
+   1.0,
+   1.0
+  ],
+  "clipgt-bbc1699d-be16-42e4-9723-14a45c9c5f59": [
+   1.0,
+   1.0
+  ],
+  "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f": [
+   1.0,
+   1.0
+  ],
+  "clipgt-bd97de34-6f59-455a-93c5-9f469f243b4a": [
+   0.4908316200659106,
+   0.4908270299650215
+  ],
+  "clipgt-bf1847a9-3112-4ff8-a4dc-8613ad8b2a5b": [
+   1.0,
+   1.0
+  ],
+  "clipgt-bf56fd00-f06d-4af9-903a-2cf8d0e0589d": [
+   1.0,
+   1.0
+  ],
+  "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e": [
+   1.0,
+   1.0
+  ],
+  "clipgt-c5da4975-f324-48bc-823c-885d1e1ae0ea": [
+   1.0,
+   1.0
+  ],
+  "clipgt-c7956ed6-0be6-44f2-8066-da068a6352b4": [
+   1.0,
+   1.0
+  ],
+  "clipgt-c8641276-c887-465d-b88e-df70bd7214b6": [
+   0.8886992164467346,
+   0.8886319642701518
+  ],
+  "clipgt-c8cab401-90c0-4e8c-809d-28d7411119de": [
+   1.0,
+   1.0
+  ],
+  "clipgt-ca7accbc-3505-4fe3-9ef8-ad1e5a5041e4": [
+   1.0,
+   1.0
+  ]
+ }
+}
