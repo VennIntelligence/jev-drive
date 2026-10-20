@@ -1,0 +1,7 @@
+{
+ "w_road": 0.0,
+ "w_agent": 0.0,
+ "w_route": 1.0,
+ "w_dev": 0.0,
+ "margin": 0.25
+}
