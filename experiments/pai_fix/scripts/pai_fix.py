@@ -194,11 +194,10 @@ def cmd_drives(a):
     E = {s: ld(s) for s in ex}
     miss = [s for s, v in E.items() if v is None]
     E = {s: v for s, v in E.items() if v is not None}
-    ETr = np.concatenate([np.c_[v["la"][::10], v["lo"][::10]] for v in E.values()])
-    km = lambda la1, lo1, la2, lo2: 6371 * np.hypot(np.radians(la2 - la1), np.radians(lo2 - lo1) * np.cos(np.radians(la1)))  # noqa: E731
-    Es = np.array([v["ss"] for v in E.values()])
-    El, Eo = np.array([v["la"][0] for v in E.values()]), np.array([v["lo"][0] for v in E.values()])
     names = list(E)
+    km = lambda la1, lo1, la2, lo2: 6371 * np.hypot(np.radians(la2 - la1), np.radians(lo2 - lo1) * np.cos(np.radians(la1)))  # noqa: E731
+    Es = np.array([E[n]["ss"] for n in names])
+    El, Eo = np.array([E[n]["la"][0] for n in names]), np.array([E[n]["lo"][0] for n in names])
     rows = []
     for s in tr:
         r = ld(s)
@@ -208,14 +207,15 @@ def cmd_drives(a):
         d = km(r["la"][0], r["lo"][0], El, Eo)
         ds = np.abs(Es - r["ss"])
         hit = (ds < 600) & (d < 0.3 + 0.03 * ds)
-        dd = km(r["la"][::10, None], r["lo"][::10, None], ETr[None, :, 0], ETr[None, :, 1])
-        place = bool((dd < 0.010).any())
-        if hit.any() or place:
-            rows.append(dict(scene_id=s, why="+".join((["session"] if hit.any() else []) + (["same_place"] if place else [])),
-                             gap_s=float(ds[hit].min()) if hit.any() else np.nan, exam_scene=names[int(np.argmin(np.where(hit, ds, np.inf)))] if hit.any() else ""))
+        for j, n in enumerate(names):                 # one row per (train scene, exam scene) pair
+            place = bool(d[j] < 5.0 and (km(r["la"][::10, None], r["lo"][::10, None], E[n]["la"][None, ::10], E[n]["lo"][None, ::10]) < 0.010).any())
+            if hit[j] or place:
+                rows.append(dict(scene_id=s, exam_scene=n, why="+".join((["session"] if hit[j] else []) + (["same_place"] if place else [])),
+                                 gap_s=float(ds[j]) if hit[j] else np.nan))
     X = pd.DataFrame(rows)
     X.to_csv(a.out, index=False, float_format="%.1f")
-    print(len(ex), "exam val160 scenes,", len(miss), "without meta;", len(X), "curated-train rows flagged:", X.why.value_counts().to_dict() if len(X) else {})
+    print(len(ex), "exam val160 scenes,", len(miss), "without meta;", X.scene_id.nunique(), "curated-train scenes flagged in", len(X), "pairs:",
+          X.why.value_counts().to_dict() if len(X) else {})
 
 
 # ---------------------------------------------------------------- calibration on stored PAI 281 reads (Mac)
