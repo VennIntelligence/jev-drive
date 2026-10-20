@@ -31,21 +31,21 @@ from pai281 import load, ptype, zclass  # noqa: E402
 
 D = os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs") + "/runs"
 L = f"{D}/defect_fix/lineage/read"
-NEW = [("P0-NAT", "P0 | native"), ("P0-VL", "P0 | VC+LEAD"), ("P0-AG", "P0 | +ACC+GAP"), ("RB0-VL", "RB0-F-s0 | VC+LEAD"),
-       ("NTV0-NAT", "NTV0-L18-s0 | native")]
-STORED = [("NTV0-VL", "NTV0-L18-s0 | VC+LEAD (stored N0)", "route_follow/pai_input_loop/N0"),
-          ("NTV0-AG", "NTV0-L18-s0 | +ACC+GAP (stored)", "defect_fix/pai_accgap/NTV0-L18-s0"),
-          ("NTV0s1-AG", "NTV0-L18-s1 | +ACC+GAP", "defect_fix/pai_accgap/NTV0-L18-s1"),
-          ("RSG-VL", "RSG-L18-s0 | VC+LEAD", "route_follow/pai_g10/g10"),
-          ("RSG-ACC", "RSG-L18-s0 | +ACC", "route_follow/pai_g10/acc"),
-          ("RSG-AG", "RSG-L18-s0 | +ACC+GAP", "route_follow/acc_gap/read/s2"),
-          ("JTN-VL", "JTN-L18-s0 | VC+LEAD", "defect_fix/pai_nohold/JTN-L18-s0"),
-          ("JTN-AG", "JTN-L18-s0 | +ACC+GAP", "defect_fix/pai_accgap/JTN-L18-s0"),
-          ("JTNs1-AG", "JTN-L18-s1 | +ACC+GAP", "defect_fix/pai_accgap/JTN-L18-s1"),
-          ("Bs0-AG", "B STANDFMX-L18-s0 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s0"),
-          ("Bs1-AG", "B STANDFMX-L18-s1 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s1"),
-          ("B2s0-AG", "B2 STANDFMXH-L18-s0 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s0"),
-          ("B2s1-AG", "B2 STANDFMXH-L18-s1 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s1")]
+NEW = [("P0-NAT", "P0, native"), ("P0-VL", "P0, VC+LEAD"), ("P0-AG", "P0, +ACC+GAP"), ("RB0-VL", "RB0-F-s0, VC+LEAD"),
+       ("NTV0-NAT", "NTV0-L18-s0, native")]
+STORED = [("NTV0-VL", "NTV0-L18-s0, VC+LEAD (stored N0)", "route_follow/pai_input_loop/N0"),
+          ("NTV0-AG", "NTV0-L18-s0, +ACC+GAP (stored)", "defect_fix/pai_accgap/NTV0-L18-s0"),
+          ("NTV0s1-AG", "NTV0-L18-s1, +ACC+GAP", "defect_fix/pai_accgap/NTV0-L18-s1"),
+          ("RSG-VL", "RSG-L18-s0, VC+LEAD", "route_follow/pai_g10/g10"),
+          ("RSG-ACC", "RSG-L18-s0, +ACC", "route_follow/pai_g10/acc"),
+          ("RSG-AG", "RSG-L18-s0, +ACC+GAP", "route_follow/acc_gap/read/s2"),
+          ("JTN-VL", "JTN-L18-s0, VC+LEAD", "defect_fix/pai_nohold/JTN-L18-s0"),
+          ("JTN-AG", "JTN-L18-s0, +ACC+GAP", "defect_fix/pai_accgap/JTN-L18-s0"),
+          ("JTNs1-AG", "JTN-L18-s1, +ACC+GAP", "defect_fix/pai_accgap/JTN-L18-s1"),
+          ("Bs0-AG", "B STANDFMX-L18-s0, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s0"),
+          ("Bs1-AG", "B STANDFMX-L18-s1, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s1"),
+          ("B2s0-AG", "B2 STANDFMXH-L18-s0, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s0"),
+          ("B2s1-AG", "B2 STANDFMXH-L18-s1, +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s1")]
 ORDER = ["P0-NAT", "P0-VL", "P0-AG", "RB0-VL", "NTV0-NAT", "NTV0-VL", "NTV0-AG"]
 ROWS = [(k, lab, f"{L}/{k}") for k, lab in NEW] + [(k, lab, f"{D}/{r}") for k, lab, r in STORED]
 ROWS = sorted(ROWS, key=lambda r: ORDER.index(r[0]) if r[0] in ORDER else len(ORDER) + [s[0] for s in STORED].index(r[0]))
