@@ -1,0 +1,74 @@
+{
+ "pool": "on1_JTCP",
+ "rows": 253648,
+ "s_rows": 171054,
+ "ok": 143144,
+ "why": {
+  "ok": 143144,
+  "lead": 16655,
+  "log_end": 8273,
+  "no_reach": 2818,
+  "lead_unknown": 164
+ },
+ "by_part": {
+  "cp": {
+   "s_rows": 84042,
+   "ok": 62294,
+   "why": {
+    "ok": 62294,
+    "lead": 10564,
+    "log_end": 8249,
+    "no_reach": 2771,
+    "lead_unknown": 164
+   }
+  },
+  "rb0": {
+   "s_rows": 17429,
+   "ok": 16178,
+   "why": {
+    "ok": 16178,
+    "lead": 1241,
+    "no_reach": 5,
+    "log_end": 5
+   }
+  },
+  "rtb1": {
+   "s_rows": 17489,
+   "ok": 16216,
+   "why": {
+    "ok": 16216,
+    "lead": 1266,
+    "no_reach": 4,
+    "log_end": 3
+   }
+  },
+  "y": {
+   "s_rows": 17306,
+   "ok": 16042,
+   "why": {
+    "ok": 16042,
+    "lead": 1253,
+    "no_reach": 6,
+    "log_end": 5
+   }
+  },
+  "ys": {
+   "s_rows": 34788,
+   "ok": 32414,
+   "why": {
+    "ok": 32414,
+    "lead": 2331,
+    "no_reach": 32,
+    "log_end": 11
+   }
+  }
+ },
+ "dt_h_q": [
+  -2.88,
+  -0.65,
+  -0.04,
+  0.01,
+  3.01
+ ],
+ "lag_note": "dt_h = t_h - t: > 0 the ego is ahead of the human's schedule at this station, < 0 behind"
+}
