@@ -1,0 +1,273 @@
+{
+ "pool": "on1_JTCP",
+ "file": "lon_anchor_v2.npz",
+ "rows": 253648,
+ "s_rows": 171054,
+ "ok": 134033,
+ "why": {
+  "ok": 134033,
+  "lead": 16655,
+  "log_end": 8273,
+  "clock_go": 6505,
+  "no_reach": 2818,
+  "clock_stop": 2606,
+  "lead_unknown": 164
+ },
+ "by_pool": {
+  "nuplan": {
+   "s_rows": 87012,
+   "ok": 77479,
+   "why": {
+    "ok": 77479,
+    "lead": 6091,
+    "clock_go": 1885,
+    "clock_stop": 1486,
+    "no_reach": 47,
+    "log_end": 24
+   }
+  },
+  "pai": {
+   "s_rows": 84042,
+   "ok": 56554,
+   "why": {
+    "ok": 56554,
+    "lead": 10564,
+    "log_end": 8249,
+    "clock_go": 4620,
+    "no_reach": 2771,
+    "clock_stop": 1120,
+    "lead_unknown": 164
+   }
+  }
+ },
+ "by_class": {
+  "bend": {
+   "s_rows": 8732,
+   "ok": 6947,
+   "why": {
+    "ok": 6947,
+    "log_end": 966,
+    "lead": 746,
+    "no_reach": 70,
+    "clock_go": 3
+   }
+  },
+  "launch": {
+   "s_rows": 14337,
+   "ok": 6533,
+   "why": {
+    "ok": 6533,
+    "lead": 3482,
+    "log_end": 2546,
+    "clock_go": 1378,
+    "lead_unknown": 136,
+    "no_reach": 135,
+    "clock_stop": 127
+   }
+  },
+  "nuplan": {
+   "s_rows": 87012,
+   "ok": 77479,
+   "why": {
+    "ok": 77479,
+    "lead": 6091,
+    "clock_go": 1885,
+    "clock_stop": 1486,
+    "no_reach": 47,
+    "log_end": 24
+   }
+  },
+  "stop_nolead": {
+   "s_rows": 29914,
+   "ok": 20081,
+   "why": {
+    "ok": 20081,
+    "lead": 2983,
+    "no_reach": 2404,
+    "clock_go": 1911,
+    "log_end": 1701,
+    "clock_stop": 834
+   }
+  },
+  "turn_sharp": {
+   "s_rows": 31059,
+   "ok": 22993,
+   "why": {
+    "ok": 22993,
+    "lead": 3353,
+    "log_end": 3036,
+    "clock_go": 1328,
+    "no_reach": 162,
+    "clock_stop": 159,
+    "lead_unknown": 28
+   }
+  }
+ },
+ "by_kind": {
+  "nuplan/launch": {
+   "rows": 4179,
+   "ok": 2065,
+   "why": {
+    "ok": 2065,
+    "clock_stop": 1252,
+    "lead": 608,
+    "clock_go": 254
+   }
+  },
+  "nuplan/stop": {
+   "rows": 3658,
+   "ok": 2139,
+   "why": {
+    "ok": 2139,
+    "clock_go": 1067,
+    "clock_stop": 234,
+    "lead": 218
+   }
+  },
+  "nuplan/turn": {
+   "rows": 11504,
+   "ok": 10681,
+   "why": {
+    "ok": 10681,
+    "lead": 744,
+    "clock_go": 79
+   }
+  },
+  "nuplan/move": {
+   "rows": 67600,
+   "ok": 62594,
+   "why": {
+    "ok": 62594,
+    "lead": 4521,
+    "clock_go": 485
+   }
+  },
+  "nuplan/none": {
+   "rows": 71,
+   "ok": 0,
+   "why": {
+    "no_reach": 47,
+    "log_end": 24
+   }
+  },
+  "pai/launch": {
+   "rows": 8936,
+   "ok": 3226,
+   "why": {
+    "ok": 3226,
+    "lead": 2997,
+    "clock_go": 2172,
+    "clock_stop": 377,
+    "lead_unknown": 164
+   }
+  },
+  "pai/stop": {
+   "rows": 5448,
+   "ok": 3233,
+   "why": {
+    "ok": 3233,
+    "clock_go": 1046,
+    "clock_stop": 743,
+    "lead": 426
+   }
+  },
+  "pai/turn": {
+   "rows": 9812,
+   "ok": 8628,
+   "why": {
+    "ok": 8628,
+    "lead": 917,
+    "clock_go": 267
+   }
+  },
+  "pai/move": {
+   "rows": 48826,
+   "ok": 41467,
+   "why": {
+    "ok": 41467,
+    "lead": 6224,
+    "clock_go": 1135
+   }
+  },
+  "pai/none": {
+   "rows": 11020,
+   "ok": 0,
+   "why": {
+    "log_end": 8249,
+    "no_reach": 2771
+   }
+  }
+ },
+ "by_part": {
+  "cp": {
+   "s_rows": 84042,
+   "ok": 56554,
+   "why": {
+    "ok": 56554,
+    "lead": 10564,
+    "log_end": 8249,
+    "clock_go": 4620,
+    "no_reach": 2771,
+    "clock_stop": 1120,
+    "lead_unknown": 164
+   }
+  },
+  "rb0": {
+   "s_rows": 17429,
+   "ok": 15530,
+   "why": {
+    "ok": 15530,
+    "lead": 1241,
+    "clock_go": 391,
+    "clock_stop": 257,
+    "no_reach": 5,
+    "log_end": 5
+   }
+  },
+  "rtb1": {
+   "s_rows": 17489,
+   "ok": 15370,
+   "why": {
+    "ok": 15370,
+    "lead": 1266,
+    "clock_stop": 480,
+    "clock_go": 366,
+    "no_reach": 4,
+    "log_end": 3
+   }
+  },
+  "y": {
+   "s_rows": 17306,
+   "ok": 15412,
+   "why": {
+    "ok": 15412,
+    "lead": 1253,
+    "clock_go": 375,
+    "clock_stop": 255,
+    "no_reach": 6,
+    "log_end": 5
+   }
+  },
+  "ys": {
+   "s_rows": 34788,
+   "ok": 31167,
+   "why": {
+    "ok": 31167,
+    "lead": 2331,
+    "clock_go": 753,
+    "clock_stop": 494,
+    "no_reach": 32,
+    "log_end": 11
+   }
+  }
+ },
+ "dt_h_q": [
+  -2.29,
+  -0.57,
+  -0.04,
+  0.01,
+  1.72
+ ],
+ "lag_note": "dt_h = t_h - t: > 0 the ego is ahead of the human's schedule at this station, < 0 behind",
+ "class_note": "by_class: the cp scenes' class (scenes570.tsv), nuPlan rows 'nuplan'; by_kind (rows with a target): launch = ego t0 speed < 0.5 m/s; stop = the target's last 0.5 s step < 0.5 m/s; turn = |path heading change from s_e to s_e + s_t,8| >= 30 deg; move = the rest; none = no target"
+}

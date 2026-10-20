@@ -1,0 +1,346 @@
+{
+ "gate": {
+  "region": 0.0762308647083161,
+  "clear": 0.03935014673728764,
+  "line_region": 0.02,
+  "line_clear": 0.02,
+  "pass_": false
+ },
+ "argv": [
+  "train",
+  "--tag",
+  "SIMPGATE",
+  "--init",
+  "RB0-F-s0",
+  "--allow-init",
+  "--warmup",
+  "1",
+  "--eval-every",
+  "500",
+  "--yr-mass",
+  "0.1",
+  "--label-bank",
+  "--agent-lam",
+  "10",
+  "--agent-on-only",
+  "--shape",
+  "--ho-w",
+  "3",
+  "--rm-lr",
+  "3e-4",
+  "--on-split",
+  "alpasim_nuplan/onpol-train",
+  "--lr-scale",
+  "0.1",
+  "--on-k",
+  "13",
+  "--on-mode",
+  "self",
+  "--on",
+  "on1_JTCP",
+  "--on-k",
+  "32",
+  "--on-mode",
+  "mixed",
+  "--on-lon-all",
+  "--on-normal",
+  "--on-wfile",
+  "runs/defect_fix/w/SIMPW05.npz",
+  "--on-hold-pct",
+  "15",
+  "--ego-scale-speed",
+  "0.5",
+  "--ego-scale-max",
+  "0.2",
+  "--lat-file",
+  "/root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2",
+  "--lat-depth",
+  "0.0",
+  "--lat-soft-depth",
+  "0.0",
+  "--lat-buf",
+  "0.4",
+  "--lat-host",
+  "--on-arc",
+  "0",
+  "--diag",
+  "--warmup",
+  "50",
+  "--lr-floor",
+  "0.1",
+  "--on-arc-rows",
+  "brake",
+  "--steps",
+  "1000",
+  "--seed",
+  "0",
+  "--simp-region",
+  "1",
+  "--simp-clear",
+  "1"
+ ],
+ "attach": {
+  "self": 171054,
+  "road_ok": 87012,
+  "clear_ok": 171054
+ },
+ "tables": {
+  "human": {
+   "region": {
+    "all": {
+     "rows": 87012,
+     "active": 0.0762308647083161
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.0762308647083161
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "region_road": {
+    "all": {
+     "rows": 87012,
+     "active": 0.07179469498459982
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.07179469498459982
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "region_onc": {
+    "all": {
+     "rows": 34918,
+     "active": 0.012056818832693739
+    },
+    "nuplan": {
+     "rows": 34918,
+     "active": 0.012056818832693739
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "clear": {
+    "all": {
+     "rows": 171054,
+     "active": 0.03935014673728764
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.03760400864248609
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.04115799243235525
+    }
+   },
+   "clear_lead": {
+    "all": {
+     "rows": 171054,
+     "active": 0.02218597635834298
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.020801728497218775
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.02361914280954761
+    }
+   },
+   "old_road": {
+    "all": {
+     "rows": 87012,
+     "active": 0.11693789362386797
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.11693789362386797
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "old_onc": {
+    "all": {
+     "rows": 34918,
+     "active": 0.012056818832693739
+    },
+    "nuplan": {
+     "rows": 34918,
+     "active": 0.012056818832693739
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "old_agent": {
+    "all": {
+     "rows": 171054,
+     "active": 0.02210413085926082
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.020732772491150644
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.023523952309559507
+    }
+   },
+   "old_side": {
+    "all": {
+     "rows": 171054,
+     "active": 0.024132730015082957
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.023088769365145038
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.0252135836843483
+    }
+   }
+  },
+  "stored": {
+   "region": {
+    "all": {
+     "rows": 87012,
+     "active": 0.10845630487748817
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.10845630487748817
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "region_road": {
+    "all": {
+     "rows": 87012,
+     "active": 0.09904381004918862
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.09904381004918862
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "region_onc": {
+    "all": {
+     "rows": 34918,
+     "active": 0.027550260610573342
+    },
+    "nuplan": {
+     "rows": 34918,
+     "active": 0.027550260610573342
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "clear": {
+    "all": {
+     "rows": 171054,
+     "active": 0.09823213721982532
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.10165264561209948
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.09469074986316366
+    }
+   },
+   "clear_lead": {
+    "all": {
+     "rows": 171054,
+     "active": 0.07409940720474237
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.07710430745184572
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.07098831536612646
+    }
+   },
+   "old_road": {
+    "all": {
+     "rows": 87012,
+     "active": 0.13521123523192202
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.13521123523192202
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "old_onc": {
+    "all": {
+     "rows": 34918,
+     "active": 0.027550260610573342
+    },
+    "nuplan": {
+     "rows": 34918,
+     "active": 0.027550260610573342
+    },
+    "pai": {
+     "rows": 0,
+     "active": 0.0
+    }
+   },
+   "old_agent": {
+    "all": {
+     "rows": 171054,
+     "active": 0.07391233177826885
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.07683997609525123
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.07088122605363985
+    }
+   },
+   "old_side": {
+    "all": {
+     "rows": 171054,
+     "active": 0.040279677762577897
+    },
+    "nuplan": {
+     "rows": 87012,
+     "active": 0.042867650439019904
+    },
+    "pai": {
+     "rows": 84042,
+     "active": 0.03760024749529997
+    }
+   }
+  }
+ },
+ "note": "active = max per-step violation > 0.05 m; human = tab fut (the imitation target from the visited state); stored = nuPlan rows' served plans, cp rows' NTV0-L18-s0 model plans; clear_lead = the lead part (its along-heading gradient may only shorten the plan): on the stored plans this is the brake-gradient trigger rate"
+}

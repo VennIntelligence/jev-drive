@@ -1,0 +1,8 @@
+{
+ "source": "runs/defect_fix/lead_break/nav.parquet (lead_break.py nav; navtrain_full, v0 >= 2 m/s)",
+ "lead_rows": 33660,
+ "brk_rows": 12850,
+ "brk_logs": 781,
+ "brk_already_decelerating": 10750,
+ "brk_initiation": 2100
+}

@@ -1,0 +1,66 @@
+{
+ "report": "lon_anchor",
+ "ctl": "LONC1K-L18-s0",
+ "arms": {
+  "LONC1K-L18-s0": {
+   "stop_ratio": 0.8911115929315311,
+   "turn_ratio": 0.9258317592204024,
+   "open_v24": 0.777826300808456,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "LONAH1K-L18-s0": {
+   "stop_ratio": 0.8904280331394905,
+   "turn_ratio": 0.9229824562795478,
+   "open_v24": 0.7820928918271616,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "LONA1K-L18-s0": {
+   "stop_ratio": 0.8891987086711065,
+   "turn_ratio": 0.9151107982050838,
+   "open_v24": 0.7808412125845984,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "LONAD1K-L18-s0": {
+   "stop_ratio": 0.8852421781790459,
+   "turn_ratio": 0.9151409644154325,
+   "open_v24": 0.7659800566288157,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "NTV0-L18-s0": {
+   "stop_ratio": 0.8949043954839871,
+   "turn_ratio": 0.9208861196803877,
+   "open_v24": 0.7756524704014788,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "RSG-L18-s0": {
+   "stop_ratio": 0.8864418630351998,
+   "turn_ratio": 0.9398568523271701,
+   "open_v24": 0.7947088871460553,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  }
+ },
+ "lines": {
+  "stop": 0.6,
+  "turn": 0.6,
+  "drop": 0.15,
+  "open": 0.7
+ }
+}

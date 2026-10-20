@@ -1,0 +1,21 @@
+{
+ "a": "SIMPGGF-old",
+ "b": "SIMPGGF-new",
+ "note": "the NTV0 recipe from RB0-F-s0 on on1_JTCP / SIMPW00, 60 steps eager: code d4f3b4f8 vs e91535e9 without new flags",
+ "scalars": 254,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.528322160243988,
+  0.528322160243988
+ ],
+ "on_hash_60": [
+  "08f1b4fbeccdae85",
+  "08f1b4fbeccdae85"
+ ],
+ "want_hash": null,
+ "identical": true
+}

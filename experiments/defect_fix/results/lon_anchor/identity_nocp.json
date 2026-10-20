@@ -1,0 +1,21 @@
+{
+ "a": "LONGG-old",
+ "b": "LONGG-new",
+ "note": "LON control command (NTV0 recipe on on1_JTCP / LONP) 60 steps eager: code 40777a4e vs 1338aef1 without --on-anchor",
+ "scalars": 254,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5361137390136719,
+  0.5361137390136719
+ ],
+ "on_hash_60": [
+  "08f1b4fbeccdae85",
+  "08f1b4fbeccdae85"
+ ],
+ "want_hash": null,
+ "identical": true
+}
