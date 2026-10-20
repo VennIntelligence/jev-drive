@@ -157,7 +157,7 @@ def _feat_one(job):
         ca = np.r_[0, np.cumsum(np.hypot(*np.diff(np.r_[[[0.0, 0.0]], pz[:, :2]], axis=0).T))]
         tt = np.arange(0, 4.01, 0.05)
         vmin_h = float(np.interp(t_h + tt, tl, v).min())
-        rows.append(dict(id=wid, k=int(q.k), t0=int(q.t0), v=float(q.v), vh=vh, t_h=t_h, s_e=s_e, s_e_hum=float(q.s_e),
+        rows.append(dict(id=wid, k=int(q.k), t0=int(q.t0), v=float(q.v), vh=vh, t_h=t_h, s_e=s_e - S[L["f0"]], s_e_hum=float(q.s_e),
                          lead_gap=float(q.lead_gap), kmax=km, dh20=dh20, done20=done20,
                          dv02=ca[4] / 2 - q.v, dv24=(ca[8] - ca[4]) / 2 - q.v, arc4=ca[8],
                          dv02_h=b(2.0) / 2 - vh, dv24_h=(b(4.0) - b(2.0)) / 2 - vh, arc4_h=b(4.0), vmin_h=vmin_h))
@@ -293,7 +293,7 @@ def cmd_stats(a):
             S2 = G[(np.sign(G.done20) * np.sign(G.dh20) >= 0) & (tot.abs() >= 45)].copy()
             S2["frac"] = S2.done20.abs() / (S2.done20.abs() + S2.dh20.abs())
             S2["phase"] = pd.cut(S2.frac, [0, 1 / 3, 2 / 3, 1.0001], labels=["approach", "inside", "exit"], right=False)
-            S2["tside"] = np.where(tot < 0, "right", "left")
+            S2["tside"] = np.where((S2.done20 + S2.dh20) < 0, "right", "left")
             for (sd, ph), gp in S2.groupby(["tside", "phase"], observed=True):
                 if gp.id.nunique() < 5:
                     continue
@@ -368,25 +368,27 @@ def cmd_fig(a):
         a_.set_ylabel("mean speed 2-4 s minus now (m/s)")
         PS.panel(a_, f"({'ab'[j]}) {side} turns + straight, clean")
         if j == 0:
-            a_.legend(fontsize=6, frameon=False, loc="lower left")
+            a_.legend(fontsize=6, frameon=False, loc="upper left")
     a_ = ax[1, 0]
     S = A[(A.resp == "dv24") & (A.set == "clean") & A.side.isin(["right", "left"])]
     reads = list(SHORT.values())
     for i, r in enumerate(reads):
-        for k, side in enumerate(("right", "left")):
+        for side in ("right", "left"):
             g = S[(S.read == r) & (S.side == side)]
             if not len(g):
                 continue
-            y = i + (0.18 if side == "right" else -0.18)
             g = g.iloc[0]
-            a_.errorbar(g.ratio, y, xerr=[[g.ratio - g.ratio_lo], [g.ratio_hi - g.ratio]], fmt="o" if side == "right" else "s",
-                        color=col[r], mfc=col[r] if side == "right" else "white", ms=4, capsize=2, lw=0.8)
-    for xv in (NOREACT, REACT, 1.0):
-        a_.axvline(xv, color="#999999", ls="--" if xv < 1 else "-", lw=0.6)
+            y = i + (-0.2 if side == "right" else 0.2)
+            mk = "o" if side == "right" else "s"
+            a_.errorbar(g.b_h_cov, y - 0.08, xerr=[[g.b_h_cov - g.b_h_cov_lo], [g.b_h_cov_hi - g.b_h_cov]], fmt=mk, color=PS.BASELINE,
+                        mfc=PS.BASELINE if side == "right" else "white", ms=3.5, capsize=1.5, lw=0.8)
+            a_.errorbar(g.b_m_cov, y + 0.08, xerr=[[g.b_m_cov - g.b_m_cov_lo], [g.b_m_cov_hi - g.b_m_cov]], fmt=mk, color=col[r],
+                        mfc=col[r] if side == "right" else "white", ms=3.5, capsize=1.5, lw=0.8)
+    a_.axvline(0, color="#999999", lw=0.6)
     a_.set_yticks(range(len(reads)), reads)
     a_.invert_yaxis()
-    a_.set_xlabel("slope ratio plan / human (dv 2-4 s vs curvature)")
-    PS.panel(a_, "(c) filled = right, open = left; 95 % window bootstrap")
+    a_.set_xlabel("slope of dv 2-4 s on curvature, speed held fixed (m/s per 1/m)")
+    PS.panel(a_, "(c) grey = human, colour = plan; filled right, open left")
     a_ = ax[1, 1]
     ph = Ph[Ph.side == "right"]
     order = ["approach", "inside", "exit"]

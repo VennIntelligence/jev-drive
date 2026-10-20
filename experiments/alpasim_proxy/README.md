@@ -74,6 +74,7 @@ its remaining PCS is the 48 easy misses (+882 / +742 = cap); its 464 wins over g
 Half-dose B2 (`STANDFMXH-L18-s1` / s0, B s1 alongside): [results/easy_items_B2.md](results/easy_items_B2.md) (d393).
 Lateral zeros of B2 split into overspeed / path error / other (stop overrun 6 / 4, sharp right turns 9 / 9, path error 1 / 1; levers STAND-R and TURN-CAP priced): [results/lat_zero.md](results/lat_zero.md) (d395, figure `results/figs/lat_zero.png`).
 Sharp-turn failures vs passes: no state of B2's own plan or speed separates them (best AUC 0.78 / 0.73); only path tightness (max curvature >= 0.108 /m) does (0.85 / 0.92); garage turns in early and stays inside; draft TIGHT-IN (supplement 22 DRAFT): [results/turn_sep.md](results/turn_sep.md) (d397, figure `results/figs/turn_sep.png`).
+Does the plan's speed react to the curvature ahead like the human's: with speed held fixed the human's 2-4 s speed change falls with curvature (-10 .. -21 m/s per 1/m), every plan's is flat (CI includes 0; B2, JTN, RSG alike); above 0.15 /m the human stops accelerating and the plans do not; B2 is +0.3 .. +0.5 m/s over the human in every phase of sharp right turns: [results/plan_speed_curv.md](results/plan_speed_curv.md) (d403, figure `results/figs/plan_speed_curv.png`).
 - Easy misses: 47 / 54, against B's 48 / 48.
 - Lateral zeros: 19 / 20 easy windows, against B's 25 / 28.
 - The red-line class does not move (9-10 windows). It is the largest single class, worth +29 / +54 on s1.
