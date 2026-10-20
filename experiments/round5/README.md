@@ -47,6 +47,13 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
   (fed < 0.5 m/s, 4 182 rows, 0.83 a batch) 44 % stand (4 s path < 0.5 m) and the movers cover 1.95 m median in 4 s (navtrain launch labels
   8.3 m, PAI human 4.2 m): D3's "faster wins" came from the ACC targets, not from a faster plan, so imitating the winner's served plan teaches
   the model's own slow launch. Inertia stop / turn 0.758 / 0.934, 0.768 / 0.926. No PAI 281 read. About 1.7 card-h.
+- R5-B, stage 3 (prereg addendum 2; s3-rows plan addendum 1; [results/s3/relabel.md](results/s3/relabel.md)): S3 labels relabelled with the winner
+  rollout's realised 4 s rig poses (log_fut's transform on the rollout's own 10 Hz anchors; tokens unchanged). **Stopped at L0, nothing trained**:
+  partial-fixed launch rows (fed < 0.5 m/s) realised 4 s path median 3.59 m vs the 4.2 m line (served plan on the same rows 2.39 m, stand share
+  44 % -> 13 %; PAI human 4.16 m, navtrain 8.28 m). Even the F winners' realised launches are 4.01 m, launch-class scenes 2.97 m: the winners
+  launch only slightly faster than A, so their realised futures cannot carry a human-like launch. L1: the controller runs about 2x the plan's
+  path at standstill launches, 1.00x when moving; 4 s position error median 1.89 m. 11 360 / 51 443 rows (22 %) lack a complete 4 s future (all
+  at the rollout end). Pre-flight only (CPU, minutes); no on1_PAIOR / on1_JTPHOR built.
 
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 
