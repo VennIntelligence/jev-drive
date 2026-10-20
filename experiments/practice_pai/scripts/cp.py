@@ -21,7 +21,6 @@ import argparse
 import csv
 import json
 import os
-import shutil
 import subprocess
 import sys
 import zlib
@@ -91,11 +90,12 @@ def cmd_stage(a):
     ok = n_ok >= a.min_ok and n_dump > 0 and n_asl > 0 and len(want) == a.n
     if a.n3:        # size stage 3: kept products final(N) = merged pool 12 GB + rows / cache / pool 0.094 GB a scene (d367: 15 GB / 160 scenes),
         # transient = W chunks of 32 scenes holding rollout.asl + dumps; final + transient <= min(budget, free - floor)
-        free = shutil.disk_usage(D).free / 1e9
+        st = os.statvfs(D)
+        free = st.f_bavail * st.f_frsize / 1e9                         # what df shows as available (no root reserve)
         cap = min(a.budget_gb, free - a.free_floor_gb)
         fin = lambda n: 12.0 + 0.094 * n  # noqa: E731
         chunk = 32 * max(per, 1e-3)
-        N, W = a.done + a.n3, int((cap - fin(a.done + a.n3)) // chunk)
+        N, W = a.done + a.n3, min(int((cap - fin(a.done + a.n3)) // chunk), 20)
         if W < 2:
             W, N = 2, int((cap - 2 * chunk - 12.0) / 0.094)
         n3 = min(a.n3, N - a.done)
@@ -146,7 +146,7 @@ def cmd_labels(a):
     poses = np.stack([r["poses"] for r in res]).astype(np.float32)
     fire, _ = SP.score(poses, A["rest"], speed[i], A["ok"])
     fire = fire.astype(bool) & A["ok"]
-    own = [n.split(":", 2)[2] for n in names[i]]                       # the PAI pool's own names "on:pai:<scene>:<k>"
+    own = ["on:" + n.split(":", 2)[2] for n in names[i]]               # merged "on:cp:pai:<scene>:<k>" -> the PAI pool's "on:pai:<scene>:<k>"
     afire = agent_fire(a.src_pool, np.array(own), poses)
     cls = {r["scene_id"]: r["cls"] for r in scenes(a.scenes)}
     sc = logs[i]
