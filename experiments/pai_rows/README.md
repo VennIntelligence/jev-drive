@@ -44,6 +44,25 @@ Pools (box, `$DATA_DIR/runs/op_parity/cache/`): `on1_PAIH` (names `on:paih:<scen
 `on1_CPAIXT` (11 scenes each) are kept for the gates. Splits: `physical_ai_av/pai-rows@v1` (853), `physical_ai_av/pai-rows-half-a@v1` (428).
 Run dir `$DATA_DIR/runs/pai_rows/` (jobs.txt, stages.txt). Append scenes: add them to scenes.tsv, `pr.sh chain H|S`.
 
+## Download queue v2 (prepared, not started)
+
+[`results/download_queue_v2.csv`](results/download_queue_v2.csv): the NuRec scenes of `experiments/pai_av/results/nurec_select.csv` that are
+not on disk and have `cls` in stop_nolead / turn_sharp / launch, rank-ordered, with the select list's columns (so `nurec_fetch.py --list`
+reads it) plus `queue_pos` and `queue_cum_gb`. **64 scenes, 111.15 GB** (stop_nolead 29, turn_sharp 29, launch 6; largest 2.04 GB; ranks
+1177-1546).
+
+How it was cut: 1 554 listed, 1 301 on disk (the box's `all-usdzs` equals `pai_rows/results/usdz_20261020.txt`, checked 2026-10-21), 253
+not on disk, 174 of the three classes. Removed 110 (195.1 GB): scenes in `pai_fix/scenes/train_exclude.csv` (68) or linked to val160 by
+`pai_fix/scenes/drives_val160.csv` (89, union 110); nothing of `exam_scenes.txt`, `nurec_train_excluded.csv` or the val160 / test281 scenes of
+`pai_av/results/exam_nurec.csv` was in the 174 (those are all on disk). All 64 kept scenes are select-list tranche 3 (same drive as an exam
+scene, 145-591 s away, median 392 s; tranches 1 and 2 are fully on disk). Nine `.part` files from the 10-20 fetch sit in `_dl/` (none of them
+in this queue).
+
+Command (box repo root, not run; `--weight 0:1` gives the box every rank, `--floor-gb 600` is the box default and needs about 711 GB free to
+finish; free space was 558 GB before the 2026-10-21 zero-copy swap, [swap_20261021.md](../cl_infra/results/zero-copy/swap_20261021.md)):
+
+    ssh autodl 'cd ~/data/jev-drive && scripts/nurec_fetch.sh box --list experiments/pai_rows/results/download_queue_v2.csv --weight 0:1 --floor-gb 600'
+
 <!-- files:begin -->
 ## Files
 

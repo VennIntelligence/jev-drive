@@ -56,7 +56,9 @@ existing `front.npy` that is `np.load(f, mmap_mode="r")`, so the code paths of r
 A zero-copy pool needs its sources unchanged: each part's size and mtime are recorded and checked at open. Before deleting
 any `on1_*@warp`, run `python -m jevdrive.tokens refs $DATA_DIR/runs/op_parity/cache` ([docs/storage.md](../../../../docs/storage.md)).
 
-## Copied merged pools that a zero-copy index could replace (nothing deleted)
+## Copied merged pools that a zero-copy index could replace
+
+Swapped 2026-10-21 (user-approved, all five except L18RB0J; 316.2 GB freed, every row verified bitwise first): [swap_20261021.md](swap_20261021.md).
 
 | pool | rows | `front.npy` | sources (all present, row counts match) |
 |:--|--:|--:|:--|
