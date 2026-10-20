@@ -14,12 +14,13 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 O=$DATA_DIR/runs/round5/s3; D3R=$DATA_DIR/runs/round5/d3; ME=experiments/round5/scripts/s3.sh; PY=experiments/round5/scripts/s3.py; V=.venv/bin/python
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; RF=experiments/route_follow/scripts
 PP=experiments/practice_pai/scripts/pp.py; CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs
-T=NTV0-L18-s0; WRONG=RB0-F-s1; PRIO=${PRIO:-8}; TSV=experiments/round5/results/s3_scenes.tsv; ARMS="A F S L"; NP=PAIO; NM=JTPHO; REF=R2J-L18-s0
+T=NTV0-L18-s0; WRONG=RB0-F-s1; PRIO=${PRIO:-8}; TSV=experiments/round5/results/s3_scenes.tsv; ARMS="A F S L"; REF=R2J-L18-s0
+NP=${S3_NP:-PAIO}; NM=${S3_NM:-JTPHO}; WO=${S3_WO:-R2JFO}; SMX=${S3_SM:-S3SM}   # env overrides: the R3 pre-flight on a test pool
 BASE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
 declare -A SV=([A]="$BASE" [F]="$BASE JEV_ACC_VSET=1.15 JEV_ACC_ALAT=3.174" [S]="$BASE JEV_ACC_VSET=0.85 JEV_ACC_ALAT=1.734"
                [L]="$BASE JEV_TTS=1 JEV_TTS_W=$PWD/experiments/round5/scripts/d3_tts_route.json")
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both on1_PAIH:ph:both on1_PAIH05:ph05:both on1_PAIH15:ph15:both"
-declare -A SM=([a]=S3SMA-L18-s0 [b]=S3SMB-L18-s0)
+declare -A SM=([a]=${SMX}A-L18-s0 [b]=${SMX}B-L18-s0)
 FE=(--train --vram 40 --cpu 6 --ram 30 --timeout-h 1 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)
 mkdir -p $O/pool $O/checks
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
@@ -118,12 +119,12 @@ merge)
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 200 )) || die "free $free GB < 200 GB"
   $TR $RF/rf_pait.py merge --pools $PARTS on1_$NP:po:both --out $NM --nan-keys fut_reg || die merge
   $TR $PY mfix --pool on1_$NM --ref on1_JTPH || die "mfix: the merged prefix differs from on1_JTPH ($O/checks/mfix_on1_$NM.json)" ;;
-weights) $TR $PY weights --pool on1_$NM --base R2JF --out R2JFO ;;
+weights) $TR $PY weights --pool on1_$NM --base R2JF --out $WO ;;
 smoke)  # smoke a|b: R2J-L18-s0's recorded argv, 60 steps eager; a = as recorded (on1_JTPH, R2JF), b = on1_JTPHO + R2JFO (PAIO rows at weight 0)
   X=${SM[$2]}; [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; M=$(ls -d $DATA_DIR/runs/route_mem/train-$REF/*/ | tail -1)meta.json; [[ -f $M ]] || die "no $M"
-  mapfile -t A < <(python3 - "$M" "$X" "$2" "$NM" <<'PY'
+  mapfile -t A < <(python3 - "$M" "$X" "$2" "$NM" "$WO" <<'PY'
 import json, sys
-m, tag, arm, nm = sys.argv[1:]
+m, tag, arm, nm, wo = sys.argv[1:]
 a = json.load(open(m))["argv"]
 a[a.index("--tag") + 1] = tag
 a[len(a) - 1 - a[::-1].index("--steps") + 1] = "60"
@@ -133,16 +134,16 @@ if arm == "b":
     a[i + 1] = f"on1_{nm}"
     j = a.index("--on-wfile")
     assert a[j + 1].endswith("/R2JF.npz"), a[j + 1]
-    a[j + 1] = a[j + 1][:-len("R2JF.npz")] + "R2JFO.npz"
+    a[j + 1] = a[j + 1][:-len("R2JF.npz")] + f"{wo}.npz"
 print("\n".join(a))
 PY
 )
   echo "$(date '+%F %T') smoke $2 $X: ${A[*]}" >> $O/stages.txt
   exec $TR "${A[@]}" ;;
 bitcmp)
-  $TR experiments/defect_fix/scripts/df.py bitcmp --a ${SM[a]} --b ${SM[b]} --out round5_s3_r3 \
-      --note "R2J-L18-s0 command 60 steps eager: on1_JTPH / R2JF vs on1_JTPHO / R2JFO (on1_PAIO rows appended at weight 0)"
-  cp experiments/defect_fix/results/round5_s3_r3.json $O/checks/r3.json; exit 0 ;;   # the verdict is in r3.json (report)
+  $TR experiments/defect_fix/scripts/df.py bitcmp --a ${SM[a]} --b ${SM[b]} --out round5_s3_r3_$NM \
+      --note "R2J-L18-s0 command 60 steps eager: on1_JTPH / R2JF vs on1_$NM / $WO (on1_$NP rows appended at weight 0)"
+  cp experiments/defect_fix/results/round5_s3_r3_$NM.json $O/checks/r3_$NM.json; exit 0 ;;   # the verdict is in the json (report)   # the verdict is in r3.json (report)
 report) $V $PY report --root $O --pool on1_$NP > $O/report/rows.log 2>&1 || { echo "STOP report crashed" > $O/VERDICT; exit 1; }; date '+%F %T' > $O/DONE ;;
 wait)  # returns when the lane has an outcome (DONE / VERDICT; S1DONE too with WAIT_S1=1) or one of its jobs failed / was cancelled
   until [[ -f $O/VERDICT || -f $O/DONE || ( -n ${WAIT_S1:-} && -f $O/S1DONE ) ]] || ! $V - $O/jobs.txt <<'PY'
