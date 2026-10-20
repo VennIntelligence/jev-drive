@@ -214,6 +214,9 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
   --flat-brk FILE   (SIMP-F, lon-anchor prereg supplement 3) navtrain training rows whose token is in FILE (lead_break.py's brake-needed
             rows) are fed a flat history on every draw: ax 0 and the 3 past poses re-spaced at the current speed (parity_adapter.cv_history);
             their label is kept. '' (default) = off: no operation added.
+  --flat-p P        (ROUND2, experiments/round2/plans/2026-10-20-round2-prereg.md) with --flat-brk: each draw of a listed row is flattened
+            with probability P (one uniform per batch row from its own stream [seed, 0, 179]). 1 (default) = every draw, as before (no stream,
+            no operation added); 0 = off (the list is not loaded: bit-identical to no --flat-brk).
   --simp-region W / --simp-clear W   (SIMP, defect_fix plans/2026-10-20-lon-anchor-prereg.md supplement 2) defect_fix lib/nr1_simp.py on the
             S rows: the road hinge and lat_onc as one hinge on their union, the agent hinge and lat_side as one clearance hinge (lead objects
             may only shorten the plan); each replaces the trainer's own hinge on the S rows (nr1_lat.attach); through nr1_lat: 10 W x ho_w x
@@ -909,7 +912,8 @@ def cmd_train(a):
         krng = np.random.default_rng([cfg.seed, 0, 151])
         kdrec = RS.rec | dict(kd_lam=a.kd_lam, mode=a.kd_mode, k=a.kd_k, k_nav=a.kd_nav_k if len(RS.nav) else 0)
     FLAT, flrec = None, {}
-    if getattr(a, "flat_brk", ""):                                    # SIMP-F (lon-anchor supplement 3): brake-needed navtrain rows, flat history
+    flp_ = getattr(a, "flat_p", 1.0)
+    if getattr(a, "flat_brk", "") and flp_ > 0:                       # SIMP-F (lon-anchor supplement 3): brake-needed navtrain rows, flat history
         import parity_adapter as PA_
         tk_ = set(_pl.Path(a.flat_brk).read_text().split())
         nm_ = np.asarray(ns.names).astype(str)
@@ -917,6 +921,9 @@ def cmd_train(a):
         FLAT = torch.zeros(S.n, dtype=torch.bool, device=dev)
         FLAT[torch.as_tensor(fi_, device=dev)] = True
         flrec = dict(file=a.flat_brk, tokens=len(tk_), train_rows=int(len(fi_)), train_rows_total=int(len(tr_o)))
+        if flp_ < 1:                                                  # ROUND2 --flat-p: per-draw probability, own stream
+            frng_ = np.random.default_rng([cfg.seed, 0, 179])
+            flrec |= dict(p=flp_, stream=[cfg.seed, 0, 179])
         assert len(fi_), f"--flat-brk {a.flat_brk}: no training row matched"
     if a.ego_scale_speed > 0:                                         # ANTI-COPY history-speed noise (docstring)
         srng = np.random.default_rng([cfg.seed, 0, 149])
@@ -1314,6 +1321,8 @@ def cmd_train(a):
                 Ls_s = dict(scale_share=sm.float().mean(), scale_abs=((sc - 1).abs().sum() / sm.sum().clamp_min(1)))
             if FLAT is not None:                                      # SIMP-F: no deceleration in the fed history where braking must start
                 fm_ = FLAT[rows] & ~anchor
+                if flp_ < 1:                                          # ROUND2 --flat-p: this draw is flattened with probability P
+                    fm_ = fm_ & torch.as_tensor(frng_.random(len(rows)) < flp_, device=dev)
                 nfl_ = fm_.sum()
                 if nfl_ > 0:
                     e_ = ego[fm_]
@@ -1660,6 +1669,8 @@ if __name__ == "__main__":
                        "'' = off")
         p.add_argument("--flat-brk", default="", help="SIMP-F / SIMP-G: file of navtrain tokens (brake-needed / braking-onset rows) whose fed history is "
                        "flattened on training draws (ax 0, past poses at constant current speed; label kept); '' = off")
+        p.add_argument("--flat-p", type=float, default=1.0, help="ROUND2: with --flat-brk, probability that a draw of a listed row is flattened "
+                       "(own stream [seed, 0, 179]); 1 = every draw (as before), 0 = off")
         p.add_argument("--simp-region", type=float, default=0.0, help="SIMP: weight (x 10) of the merged road + oncoming-lane hinge on the S rows; "
                        "replaces the trainer's road hinge there (defect_fix lib/nr1_simp.py; needs --lat-file for the onc raster; 0 = off)")
         p.add_argument("--simp-clear", type=float, default=0.0, help="SIMP: weight (x 10) of the merged object-clearance hinge on the S rows (leads may "
@@ -1754,6 +1765,7 @@ if __name__ == "__main__":
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"
     assert getattr(a, "on_hold_pct", 0) == 0 or (a.on and 0 < a.on_hold_pct < 100 and a.on_hold_res < 0), "--on-hold-pct: needs --on, 1..99, not with --on-hold-res"
+    assert 0 <= getattr(a, "flat_p", 1.0) <= 1 and (getattr(a, "flat_p", 1.0) == 1 or getattr(a, "flat_brk", "")), "--flat-p in [0, 1], needs --flat-brk"
     assert 0 <= getattr(a, "lr_floor", 0.0) < 1 and getattr(a, "diag_every", 100) > 0, "--lr-floor in [0, 1), --diag-every > 0"
     assert not (getattr(a, "rm_anchor", False) and a.lc_cf), "--rm-anchor: no anchored --lc-cf rows (rf_cfpool builds the ordered layout)"   # ANCHOR
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)
