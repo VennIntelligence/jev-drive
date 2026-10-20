@@ -145,3 +145,11 @@ cat /data/runs/alpasim/pai_image/gains10.json                    # {"rel_front_s
 ujs-iv's ECR repository has nuPlan layers only. The base / package layers come from the same Dockerfile but were built on 10-19 from other
 commits, so expect most of the 8 GB to upload. A `pai-warmup` first (status only, own quota) is optional: d356's identical serve passed
 32 / 32 there.
+
+## Pushed and submitted (2026-10-21 ~02:50 JST, session, on the user's handover)
+
+Clash GLOBAL on `AWS Japan 01`. Profile `acct3` now holds the ujs-iv token (`me` -> team_id ujs-iv; `limits` before submit: 2 of 3
+used, 1 left). Pushed `teams/ujs-iv:p1021a`, registry digest `sha256:db8168ab51afc7d91ba2adcd78f37366337aa26245e76bb87e6692e705baa8a2`
+(local image id `sha256:37183c04...0558`). Official PAI submission with `gains10.json` (`rel_front_steering_angle_weight` 10):
+submission id `e616a394-8885-4514-a3ab-bd302507fd02`, QUEUED 4 / 4. This spends ujs-iv's last October slot. Logs:
+Tokyo `/data/runs/alpasim/pai_image/push_p1021a/`.
