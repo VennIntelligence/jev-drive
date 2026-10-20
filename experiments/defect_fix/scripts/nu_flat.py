@@ -6,6 +6,10 @@
                                               N = round(T_total / (0.75 nN), 100), W = round(0.05 N) -> results/nu_flat/steps.json
   $TR nu_flat.py held --tags A B ..           (box) held 460 @18 of each tag, paired against CTRL and B2-s1 -> results/nu_flat/held.json
   $TR nu_flat.py costs --tags A B ..          (box) training wall time -> results/nu_flat/costs.{json,md}
+  .venv/bin/python nu_flat.py guard           (box, one pass; the waiter runs it every 5 min) the coordinator's card reservation (10-20 21:55): while
+                                              any ROUND2 training (r2-train-*) or PAI-FIX chunk (pai-r2*) is queued, this lane's queued jobs may use
+                                              cards 2, 3, 4 only (re-narrowed if the pool's auto_retarget widened them); once none is queued, widened
+                                              to any card once ($S/WIDENED). Logged to $S/stages.txt
   tmp/pcs_local/.venv/bin/python nu_flat.py gate   (Mac; tmp/nu_flat/ext_full = the box's $S/ext_full) the registered lines per arm against
                                               CTRL: guards from the stand.py tables (716-window subset, wait set, held 460), frozen-pool PCS and easy-miss
                                               classes (stand_r.py's _ctx / classes) on the 18 chunks and on the subset -> results/nu_flat/gate.{json,md}
@@ -120,6 +124,33 @@ def cmd_costs(a):
     print("\n".join(L))
 
 
+def cmd_guard(a):
+    import time
+    from jevdrive.cl import pool as P
+    S = DATA / "runs/defect_fix/nu_flat"
+    jobs = P.snapshot()[0]["jobs"]
+    r2ids = [ln.split()[0] for ln in open(DATA / "runs/round2/jobs.txt") if ln.split()]
+    r2 = [jobs[i] for i in dict.fromkeys(r2ids) if i in jobs and jobs[i]["spec"]["name"].startswith(("r2-train-", "pai-r2"))]
+    r2q = sum(j["state"] == "queued" for j in r2)
+    mine = set(ln.split()[0] for ln in open(S / "jobs.txt") if ln.split())
+    pre = tuple(f"ws-readc-{t}" for t in [*ARMS.values(), B2])
+    q = [i for i, j in jobs.items() if j["state"] == "queued" and (i in mine or j["spec"]["name"].startswith(pre))]
+    log = lambda m: open(S / "stages.txt", "a").write(f"{time.strftime('%F %T')} guard: {m}\n")  # noqa: E731
+    if r2q or len(r2) < 18:
+        bad = [i for i in q if sorted(jobs[i]["spec"].get("gpus") or []) != [2, 3, 4]]
+        for i in bad:
+            P.retarget(i, gpus=[2, 3, 4])
+        if bad:
+            log(f"{len(bad)} queued jobs re-narrowed to cards 2,3,4 (ROUND2 jobs queued {r2q} / {len(r2)})")
+        print(f"reserve: ROUND2 queued {r2q} / {len(r2)}, mine queued {len(q)}, re-narrowed {len(bad)}")
+    elif not (S / "WIDENED").exists():
+        for i in q:
+            P.retarget(i, gpus=[])
+        (S / "WIDENED").write_text(time.strftime("%F %T"))
+        log(f"all {len(r2)} ROUND2 trainings / PAI-FIX chunks started; {len(q)} queued jobs widened to any card")
+        print(f"widened {len(q)}")
+
+
 def cmd_gate(a):
     import pandas as pd
     import stand_r as SR
@@ -206,7 +237,8 @@ if __name__ == "__main__":
     p.add_argument("--tags", nargs="+", required=True)
     p = sp.add_parser("costs")
     p.add_argument("--tags", nargs="+", required=True)
+    sp.add_parser("guard")
     p = sp.add_parser("gate")
     p.add_argument("--dec", default=str(REPO / "tmp/nu_flat/ext_full"))
     a = ap.parse_args()
-    dict(ident=cmd_ident, smoke=cmd_smoke, held=cmd_held, costs=cmd_costs, gate=cmd_gate)[a.cmd](a)
+    dict(ident=cmd_ident, smoke=cmd_smoke, guard=cmd_guard, held=cmd_held, costs=cmd_costs, gate=cmd_gate)[a.cmd](a)

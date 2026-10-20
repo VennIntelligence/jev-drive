@@ -8,7 +8,8 @@
 #   nu_flat.sh pre <old rev>    identity (CTRL's command 60 steps eager: <old rev> from its own worktree vs this code without new flags, and
 #                               this code with --flat-brk <list> --flat-p 0) + smoke (FR's command 60 steps eager -> smoke.json, steps.json)
 #   nu_flat.sh launch           3 trainings (each re-checks identity / smoke / steps) -> per arm reads -> nsum -> $S/DONE
-#   nu_flat.sh wait             blocks until $S/DONE or a failed job of this lane (one run_in_background waiter)
+#   nu_flat.sh wait             blocks until $S/DONE or a failed job of this lane (one run_in_background waiter); every round it runs
+#                               nu_flat.py guard (cards 2, 3, 4 only while ROUND2's trainings / PAI-FIX chunks are queued)
 #   job bodies: ident <old> <new> | smoke | train <arm> | nsum
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/defect_fix; S=$O/nu_flat; J=$O/jt; ME=experiments/defect_fix/scripts/nu_flat.sh; PY=experiments/defect_fix/scripts/nu_flat.py
@@ -122,7 +123,7 @@ if bad:
     print("failed:", *bad, sep="\n  ", file=sys.stderr)
 sys.exit(1 if bad else 0)
 PY
-  do sleep 300; done
+  do $V $PY guard || echo "guard failed" >&2; sleep 300; done
   [[ -f $S/DONE ]] && echo "DONE $(cat $S/DONE)"; true ;;
 *) sed -n 2,13p "$0"; exit 2 ;;
 esac
