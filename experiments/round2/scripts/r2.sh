@@ -10,9 +10,10 @@
 #                            fix -> draw R2JT -> J's command 60 steps -> r2.py smoke)
 #   r2.sh launch             the whole chain, gated in the queue on PAI-ROWS H/DONE: merge on1_JTPH -> fix -> draws R2JF / R2JA -> steps ->
 #                            3 trainings -> per arm PAI-FIX vl -> report; inertia cf -> report -> read-out; lead_break cf -> read-outs -> summary
-#   r2.sh stage2             (main session, 10-21: J picked) full PAI 281 reads of R2J / R2C under VC + LEAD (native) and ACC + GAP (g10, FAST=1,
-#                            NTV0 + ACC + GAP's chunk lists, pai_box.sh as the lineage / accgap reads) + PAI-FIX ACC + GAP of R2J -> facts (pai_fix.sh
-#                            tax, also of the stored NTV0 reads N0 / pai_accgap) -> r2.py r281 (vs R2C and NTV0) -> $O/DONE2
+#   r2.sh stage2             (main session / user, 10-21: J picked) PAI 281 (g10, FAST=1, NTV0 + ACC + GAP's chunk lists, pai_box.sh as the
+#                            lineage / accgap reads): R2J + ACC + GAP first at PRIO 20 -> facts -> s2gate (vs stored NTV0 + ACC + GAP; worse =
+#                            paired CI upper < 0 or zeros >= +5 -> S2STOP) -> else stage2rest: R2J native, R2C native + ACC + GAP, PAI-FIX
+#                            ACC + GAP of R2J -> s2report (r2.py r281 vs R2C and NTV0) -> $O/DONE2
 #   r2.sh wait               blocks until $O/DONE, a PAI-ROWS STOP or a failed job of this lane (one run_in_background waiter)
 #   job bodies: ident | smokepool | smoketrain | merge | weights | train <arm> | paifix | cf | report | lbcf | lbread | summary
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -41,6 +42,17 @@ cmd() {  # cmd <arm> <steps> [tag pool wfile]: CTRL = the recipe; J / JH = merge
   J|JH) local W=$([[ $A == J ]] && echo R2JF || echo R2JA); echo "$(base ${3:-${TAG[$A]}} ${4:-on1_JTPH} ${5:-$W} $N 64) --flat-brk $FLATG --flat-p $FP" ;;
   esac; }
 steps() { python3 -c "import json; print(json.load(open('$O/steps.json'))['$1']['steps'])"; }
+read281() {  # read281 <arm> <vl|ag> <prio>: one PAI 281 read (NTV0 + ACC + GAP's chunk lists, g10, FAST=1, CONC 4) -> "<chunk ids...> <facts job id>"
+  local A=$1 s=$2 R=$O/pai281/${TAG[$1]}-$2 SV ids t
+  SV=$([[ $s == vl ]] && echo "JEV_VCONT=1.0 JEV_LEAD=1" || echo "JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7")
+  CHUNKS_FROM=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks SERVE="$SV" WIZ=controller.gains.rel_front_steering_angle_weight=10 CONC=4 \
+    ALPASIM_FAST=1 PRIO=$3 bash experiments/alpasim/scripts/pai_box.sh submit $R ${TAG[$A]} > $R.submit.txt || die "pai submit ${TAG[$A]} $s"
+  ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt); [[ $(wc -w <<< "$ids") == 8 ]] || die "${TAG[$A]} $s: not 8 chunks"
+  awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt >> $O/jobs.txt
+  t=$(tax281 ${TAG[$A]}-281$s $R "$(paste -sd, <<< "$ids")" $3) || exit 1; echo $ids $t; }
+tax281() {  # tax281 <name> <read root> <after ids> <prio>: rf_tax + pai_fix facts -> $DATA_DIR/runs/pai_fix/facts/<name>.csv; prints the job id
+  local t; t=$(PRIO=$4 AFTER=$3 bash experiments/pai_fix/scripts/pai_fix.sh tax $1 $2 | tail -1) && [[ -n $t ]] || die "tax $1"
+  echo "$t pai_fix-tax-$1" >> $O/jobs.txt; echo $t; }
 case ${1:-} in
 dry)
   N=${2:-9600}; for A in C J JH; do echo "$A: $(cmd $A $N)"; done
@@ -149,22 +161,26 @@ lbcf)   $TR $LB cf --tags RB0-F-s0,NTV0-L18-s0,${TAG[C]},${TAG[J]},${TAG[JH]} --
 lbread)  # simp.py leadread per arm (its output stem is per name, so each read is copied before the next)
   for A in J JH; do $TR $SP leadread ${TAG[$A]} ${TAG[C]} NTV0-L18-s0 round2 || die "leadread $A"
     cp $DFR/lon_anchor/round2_leadbreak.md $RES/leadbreak_$A.md && cp $DFR/lon_anchor/round2_leadbreak.json $RES/leadbreak_$A.json || die "copy $A"; done ;;
-stage2)
-  CF=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks; WIZ=controller.gains.rel_front_steering_angle_weight=10; mkdir -p $O/pai281
-  declare -A SV=([vl]="JEV_VCONT=1.0 JEV_LEAD=1" [ag]="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"); x=()
-  for A in J C; do for s in vl ag; do R=$O/pai281/${TAG[$A]}-$s
-    CHUNKS_FROM=$CF SERVE="${SV[$s]}" WIZ=$WIZ CONC=4 ALPASIM_FAST=1 PRIO=13 bash experiments/alpasim/scripts/pai_box.sh submit $R ${TAG[$A]} > $R.submit.txt \
-      || die "pai submit ${TAG[$A]} $s"
-    ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt | paste -sd,); [[ $(tr , '\n' <<< $ids | wc -l) == 8 ]] || die "${TAG[$A]} $s: not 8 chunks"
-    awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt >> $O/jobs.txt
-    t=$(PRIO=13 AFTER=$ids bash experiments/pai_fix/scripts/pai_fix.sh tax ${TAG[$A]}-281$s $R | tail -1) || die "tax ${TAG[$A]} $s"
-    x+=($t); echo "$t pai_fix-tax-${TAG[$A]}-281$s" >> $O/jobs.txt; done; done
-  for p in "NTV0-L18-s0-281vl $DATA_DIR/runs/route_follow/pai_input_loop/N0" "NTV0-L18-s0-281ag $DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0"; do
-    set -- $p; t=$(PRIO=13 bash experiments/pai_fix/scripts/pai_fix.sh tax $1 $2 | tail -1) || die "tax $1"; x+=($t); echo "$t pai_fix-tax-$1" >> $O/jobs.txt; done
+stage2)   # user order (10-21): R2J + ACC + GAP on PAI 281 first (PRIO 20), stored NTV0 + ACC + GAP facts; the gate (in the queue) decides the rest
+  mkdir -p $O/pai281; rm -f $O/S2GATE $O/S2STOP; x=($(read281 J ag 20)) || exit 1
+  t=$(tax281 NTV0-L18-s0-281ag $DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0 "" 20) || exit 1
+  g=$(PRIO=20 sub r2-s2gate --after $(csv ${x[-1]} $t) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME s2gate) || exit 1
+  echo "$(date '+%F %T') stage2 (code $(git rev-parse --short HEAD)): R2J ag chunks ${x[*]:0:${#x[@]}-1} facts ${x[-1]}; NTV0 ag facts $t; gate $g" | tee -a $O/stages.txt ;;
+s2gate)  # worse = paired mean CI upper < 0 or zeros >= +5 vs stored NTV0 + ACC + GAP -> S2STOP (nothing else submitted); else the rest
+  F_=$DATA_DIR/runs/pai_fix/facts
+  $TR $PY r281 --read NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R2J-ag=$F_/${TAG[J]}-281ag.csv --pairs R2J-ag:NTV0-ag --out $RES/pai281_R2J_ag.md \
+      --title "PAI 281, ACC + GAP: R2J vs stored NTV0-L18-s0" || die "r281 R2J ag"
+  w=$(python3 -c "import json; d=json.load(open('$RES/pai281_R2J_ag.json'))['pairs']['R2J-ag:NTV0-ag']; print(int(d['mean']['hi'] < 0 or d['zeros']['diff'] >= 5))")
+  if [[ $w == 1 ]]; then echo "$(date '+%F %T') R2J + ACC + GAP worse than NTV0 + ACC + GAP: the rest of stage 2 is not run" | tee $O/S2STOP >> $O/stages.txt
+  else bash $ME stage2rest || die "stage2rest"; fi
+  date '+%F %T' > $O/S2GATE ;;
+stage2rest)  # R2J native, R2C native + ACC + GAP, PAI-FIX ACC + GAP of R2J, the stored native N0's facts -> s2report
+  x=(); for q in "J vl" "C vl" "C ag"; do x+=($(read281 $q 13)) || exit 1; done
+  x+=($(tax281 NTV0-L18-s0-281vl $DATA_DIR/runs/route_follow/pai_input_loop/N0 "" 13)) || exit 1
   o=$(PRIO=13 bash experiments/pai_fix/scripts/pai_fix.sh read ${TAG[J]} ag "v t" | tail -1) || die "pai_fix read ag"
   x+=(${o%% *}); echo "${o%% *} pai_fix-tax-${TAG[J]}-ag" >> $O/jobs.txt; awk '{print $1, $2}' $DATA_DIR/runs/pai_fix/reads/${TAG[J]}-ag/jobs.txt >> $O/jobs.txt
   s=$(sub r2-s2report --after $(csv ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME s2report) || exit 1
-  echo "$(date '+%F %T') stage2 (code $(git rev-parse --short HEAD)): facts / tax ${x[*]} report $s" | tee -a $O/stages.txt ;;
+  echo "$(date '+%F %T') stage2rest: ${x[*]} report $s" | tee -a $O/stages.txt ;;
 s2report)
   F_=$DATA_DIR/runs/pai_fix/facts
   for s in vl ag; do $TR $PY r281 --read NTV0-$s=$F_/NTV0-L18-s0-281$s.csv R2C-$s=$F_/${TAG[C]}-281$s.csv R2J-$s=$F_/${TAG[J]}-281$s.csv \
