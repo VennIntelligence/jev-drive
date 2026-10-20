@@ -10,8 +10,9 @@ frame-stretched variants, the scene table / halves, and the gates. Lane script: 
   stretch  --pool P --rows DIR --f F --name OUT [--limit n]   (GPU pool job) the frame-stretched variant of the human-state pool on1_<P>:
            per row the 8 slots re-picked from the 10 Hz rendered frames at t0 + F x (-1.4 .. 0) s (exact on 10 Hz for F = 0.5 / 1.0 / 1.5),
            the ego row from the history at t0 + F x (-1.5, -1.0, -0.5) s (the driven anchors, linear in time between the 10 Hz decisions;
-           F = 1: the stored history), velocity x F, acceleration x F^2; tokens and teacher by onp_cache.encode, the label (fut = the log's
-           future poses), actor boxes, route memory and route labels of the plain row unchanged -> on1_<OUT>, on1_<OUT>@warp, feat/on1_<OUT>.npz
+           F = 1: the stored history), velocity x F, acceleration x F^2; tokens and teacher by onp_cache.encode; the label dilated the same way
+           (supplement 2: the log's pose at t0 + F x 0.5 (j + 1) s; rows without that much log dropped); route memory and route labels of the
+           plain row unchanged, actor boxes kept but ok False for F != 1 (they are on the undilated clock) -> on1_<OUT>, @warp, feat/on1_<OUT>.npz
   gate1    --plain P --f1 P10 --out FILE   (CPU) F = 1 against the plain pool, row by row: ego, fut, front tokens, teacher bit-equal
   feas     --pools P:f.. --out DIR   (CPU) the unchanged label against the fed speed: mean acceleration needed over 0 .. 0.5 s
            (2 (|fut_0| - f v0 0.5) / 0.25) and 0 .. 1 s, shares beyond 3 / 6 / 9 m/s^2, by class and speed
@@ -37,7 +38,7 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
 import numpy as np  # noqa: E402
 
 R_ = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(R_), str(R_ / "lib"), str(R_ / "experiments/onpol_pai/scripts"), str(R_ / "experiments/defect_fix/scripts")]
+sys.path[:0] = [str(R_), str(R_ / "lib"), str(R_ / "experiments/onpol_pai/scripts"), str(R_ / "experiments/onpol_pai/lib"), str(R_ / "experiments/defect_fix/scripts")]
 D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 CR, FEAT = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
 RES = R_ / "experiments/pai_rows/results"
@@ -46,7 +47,7 @@ CLASSES = ("stop_nolead", "turn_sharp", "launch", "bend", "rest")
 SLOT_T = np.round(np.arange(-7, 1) * 0.2, 3)                  # sh30_core.SLOT_T: the 8 policy slots, oldest first
 T_KEY = np.array([-1.5, -1.0, -0.5, 0.0])                       # op_interp.T_KEY: the ego history keys
 TOL_US = 30_000
-PART_VER = 2                                                     # stretch parts: 2 = encoded over the row file's whole slot table
+PART_VER = 3                                                     # stretch parts: 2 = encoded over the row file's whole slot table, 3 = + dilated label
 HOLD = 15                                                        # the trainers' --on-hold-pct: crc32(scene) % 100 < 15 is never drawn
 
 
@@ -169,6 +170,16 @@ def stretch_row(z, n, f, yaw_u):
     return j.astype(np.int32), P, f * z["V"][n], f * f * z["acc"][n]
 
 
+def dilated_label(path, anchor, t0, f):
+    """Supplement 2: the label of a row played at f x = the log's rig pose at t0 + f x 0.5 (j + 1) s, j = 0..7, in the rig frame at the
+    row's anchor (onp_rows' log_fut rule, onp_geom.Path.at_time; f = 1 reproduces log_fut bit for bit) -> (8, 3) f4 or None (log too short)."""
+    import onp_geom as G
+    fp, _, ok = path.at_time(np.int64(t0) + np.round(f * G.T_FUT).astype(np.int64))
+    if not ok.all():
+        return None
+    return G.pose_to_rig(fp, anchor).astype(np.float32)
+
+
 def hist_err(z, yaw_u):
     """The anchor history at f = 1 against the stored history on rows with a real 1.5 s history (k >= 15): max |diff| (x, y in m, yaw rad)."""
     T, e = z["t0_us"], np.zeros(3)
@@ -211,11 +222,14 @@ def cmd_stretch(a):
                 if o["src"].tolist() == sig.tolist() and np.array_equal(o["names_all"], names[base]) and float(o["f"]) == f and int(o.get("ver", 0)) == PART_VER:
                     continue
             zz = np.load(rf)
-            z = {k: zz[k] for k in ("frames", "frame_ts", "t0_us", "k", "slot", "P", "V", "acc", "cmd", "anchor", "ego_in", "lht", "cold_rows", "cold_cur")}
+            z = {k: zz[k] for k in ("frames", "frame_ts", "t0_us", "k", "slot", "P", "V", "acc", "cmd", "anchor", "ego_in", "lht", "cold_rows", "cold_cur",
+                                    "log_t_us", "log_xyyaw")}
+            import onp_geom as G
+            lpath = G.Path(z["log_t_us"], z["log_xyyaw"])
             yaw_u = np.unwrap(z["anchor"][:, 2])
             herr = np.maximum(herr, hist_err(z, yaw_u))
             pos = {int(k): i for i, k in enumerate(z["k"])}
-            keep, rows_n, ego, slot2 = [], [], [], z["slot"].copy()
+            keep, rows_n, ego, fut, slot2 = [], [], [], [], z["slot"].copy()
             for b in base:
                 n = pos[int(kk[b])]
                 if (z["slot"][n] < 0).any():                           # cold-start rows (back-warped slots): no rendered frames to re-pick
@@ -226,15 +240,19 @@ def cmd_stretch(a):
                     why[r] += 1
                     continue
                 j, P, V, acc = r
+                lf = dilated_label(lpath, z["anchor"][n], z["t0_us"][n], f)
+                if lf is None:
+                    why["label"] += 1
+                    continue
                 if f == 1.0:
                     slot_eq[0] += int(np.array_equal(j, z["slot"][n]))
                     slot_eq[1] += 1
-                keep.append(b), rows_n.append(n)
+                keep.append(b), rows_n.append(n), fut.append(lf)
                 slot2[n] = j
                 ego.append(PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(z["cmd"][n], np.float32)))
             if not keep:
                 np.savez(pf, ver=PART_VER, src=sig, names_all=names[base], f=f, base=np.zeros(0, np.int64), tix=np.zeros((0, 8), np.int64),
-                         t_out=np.zeros((0, len(di)), np.float32), ego=np.zeros((0, 20), np.float32))
+                         t_out=np.zeros((0, len(di)), np.float32), ego=np.zeros((0, 20), np.float32), fut=np.zeros((0, 8, 3), np.float32))
                 np.save(tf, np.zeros((0, *A.H_SHAPE), np.float16))
                 continue
             # the row file's whole slot table (stretched slots on the kept rows, the stored ones and the cold rows' frames elsewhere): pair order
@@ -249,7 +267,7 @@ def cmd_stretch(a):
             np.save(tf.with_suffix(".tmp.npy"), tok)
             os.replace(tf.with_suffix(".tmp.npy"), tf)
             np.savez(pf.with_suffix(".tmp.npz"), ver=PART_VER, src=sig, names_all=names[base], f=f, base=np.array(keep, np.int64), tix=tix, t_out=t_out,
-                     ego=np.stack(ego).astype(np.float32))
+                     ego=np.stack(ego).astype(np.float32), fut=np.stack(fut))
             os.replace(pf.with_suffix(".tmp.npz"), pf)
             n_new += 1
         # ---- assemble the pool from every scene's part (also the parts of earlier runs: appending scenes = rerun)
@@ -275,18 +293,23 @@ def cmd_stretch(a):
         T = {k: tab[k] for k in tab.files}
         newt = {k: v[base] for k, v in T.items() if len(v) == len(names)} | dict(names=new_names, ego=np.concatenate([p["ego"] for p in P_]))
         newt["speed"] = (f * T["speed"][base]).astype(np.float32)
+        newt["fut"] = np.concatenate([p["fut"] for p in P_])                # supplement 2: the dilated label (= log_fut at f = 1)
+        fut_eq_f1 = bool(np.array_equal(newt["fut"], T["fut"][base])) if f == 1.0 else None
         newt |= dict(f=np.full(n, f, np.float32), base=np.array([names[b] for b in base]))
         np.savez(out / "tab.npz", **newt)
         for lf in ("agent", "road", "route"):
             L = np.load(src / f"{lf}.npz")
             assert np.array_equal(L["tokens"], names), f"{lf}.npz rows differ from tab"
-            np.savez(out / f"{lf}.npz", **({k: L[k][base] for k in L.files if k != "tokens"} | dict(tokens=new_names)))
+            d = {k: L[k][base] for k in L.files if k != "tokens"} | dict(tokens=new_names)
+            if lf == "agent" and f != 1.0:                              # actor boxes are at t0 + 0.5 j, not on the dilated clock: no agent label
+                d["ok"] = np.zeros(n, bool)
+            np.savez(out / f"{lf}.npz", **d)
         Fz = np.load(FEAT / f"on1_{a.pool}.npz")
         assert np.array_equal(Fz["names"], names)
         np.savez(FEAT / f"on1_{a.name}.npz", **({k: Fz[k][base] for k in Fz.files if k != "names"} | dict(names=new_names)))
         rec = dict(name=a.name, pool=a.pool, f=f, prefix=prefix, scenes=len(scenes), scenes_encoded_now=n_new, rows=int(n), rows_plain=int(len(names)),
                    dropped=dict(why), hist_src_err_f1=dict(x=float(herr[0]), y=float(herr[1]), yaw=float(herr[2])),
-                   slot_repick_equal_f1=None if f != 1.0 else f"{slot_eq[0]} / {slot_eq[1]}", encode_s=round(t_enc, 1),
+                   slot_repick_equal_f1=None if f != 1.0 else f"{slot_eq[0]} / {slot_eq[1]}", fut_equal_log_fut_f1=fut_eq_f1, encode_s=round(t_enc, 1),
                    front_gb=round(n * 8 * 32 * 512 * 2 / 1e9, 2), out=str(out))
         (out / "build.json").write_text(json.dumps(rec, indent=1))
         run.summary.update({k: v for k, v in rec.items() if not isinstance(v, dict)})
@@ -322,30 +345,49 @@ def scene_table():
 
 
 def cmd_feas(a):
+    """Supplement 2: required constant acceleration from the fed speed f v0 to the label's pose at t (cumulative chord d_t):
+    a_t = 2 (d_t - f v0 t) / t^2 at t = 0.5 / 1 / 4 s; shares beyond 3 / 6 / 9 m/s^2, and per row against the plain row it came from
+    (median |a_t^f| / (f^2 |a_t^1|) over rows whose plain |a_t| >= 0.5: a consistent dilation gives f^2)."""
     S = scene_table()
-    out, md = {}, ["# PAI-ROWS: the unchanged human label against the fed (stretched) speed\n\n",
-                   "a05 = 2 (|fut_0.5s| - f v0 0.5) / 0.25, the constant acceleration that takes the fed speed f v0 to the label's first pose; a10 the same "
-                   "to the 1 s pose. Shares of rows with |a| above 3 / 6 / 9 m/s^2 (comfort / hard braking / beyond tyre grip).\n\n",
-                   "| pool | f | rows | v0 median | a05 p5 / p50 / p95 | abs a05 > 3 / 6 / 9 | abs a10 > 3 / 6 / 9 |\n|---|--:|--:|--:|---|---|---|\n"]
-    by = []
+    TT = {0.5: 0, 1.0: 1, 4.0: 7}
+    acc = {}
+    md = ["# PAI-ROWS: required acceleration under the label (supplement 2: the label dilated with the clip)\n\n",
+          "a_t = 2 (d_t - f v0 t) / t^2: the constant acceleration that takes the fed speed f v0 to the label's pose at t (d_t = cumulative chord). "
+          "Ratio = median over rows of |a_t(f)| / (f^2 |a_t(plain)|) on the same decision (rows with plain |a_t| >= 0.5 m/s^2); 1.0 = the human's own times f^2.\n\n",
+          "| pool | f | rows | v0 median | " + " | ".join(f"abs a{t:g} > 3 / 6 / 9" for t in TT) + " | " + " | ".join(f"ratio a{t:g}" for t in TT) + " |\n|---|--:|--:|--:|" + "---|" * (2 * len(TT)) + "\n"]
+    out, by = {}, []
     for spec in a.pools:
         p, f = spec.split(":")
         f = float(f)
         t = np.load(CR / f"on1_{p}" / "tab.npz")
         v0 = t["speed"] / f
-        d05, d10 = np.hypot(*t["fut"][:, 0, :2].T), np.hypot(*t["fut"][:, 1, :2].T)
-        a05, a10 = 2 * (d05 - f * v0 * 0.5) / 0.25, 2 * (d10 - f * v0 * 1.0) / 1.0
+        xy = np.concatenate([np.zeros((len(v0), 1, 2)), t["fut"][..., :2]], 1)
+        d = np.cumsum(np.hypot(*np.diff(xy, axis=1).transpose(2, 0, 1)), 1)
+        A_ = {tt: 2 * (d[:, k] - f * v0 * tt) / tt ** 2 for tt, k in TT.items()}
+        names = t["base"].astype(str) if "base" in t.files else t["names"].astype(str)
+        acc[p] = (f, names, A_)
         sh = lambda x: [float((np.abs(x) > q).mean()) for q in (3, 6, 9)]  # noqa: E731
         cls = np.array([S.get(x, {}).get("cls", "?") for x in t["log"].astype(str)])
-        out[p] = dict(f=f, rows=int(len(v0)), v0_med=float(np.median(v0)), a05_q=[float(np.percentile(a05, q)) for q in (5, 50, 95)], a05_over=sh(a05),
-                      a10_over=sh(a10), by_cls={c: dict(rows=int((cls == c).sum()), a05_over=sh(a05[cls == c])) for c in CLASSES if (cls == c).any()},
-                      by_v0={b: dict(rows=int(m.sum()), a05_over=sh(a05[m])) for b, m in (("<2", v0 < 2), ("2-5", (v0 >= 2) & (v0 < 5)),
-                                                                                         ("5-10", (v0 >= 5) & (v0 < 10)), (">=10", v0 >= 10)) if m.any()})
-        o = out[p]
-        md.append(f"| {p} | {f:g} | {o['rows']} | {o['v0_med']:.1f} | " + " / ".join(f"{x:+.1f}" for x in o["a05_q"]) + " | "
-                  + " / ".join(f"{x:.3f}" for x in o["a05_over"]) + " | " + " / ".join(f"{x:.3f}" for x in o["a10_over"]) + " |\n")
-        by += [f"| {p} | {k} | {v['rows']} | " + " / ".join(f"{x:.3f}" for x in v["a05_over"]) + " |\n" for k, v in {**o["by_cls"], **o["by_v0"]}.items()]
-    md += ["\n| pool | class or v0 bin (m/s) | rows | abs a05 > 3 / 6 / 9 |\n|---|---|--:|---|\n"] + by
+        out[p] = dict(f=f, rows=int(len(v0)), v0_med=float(np.median(v0)), over={str(tt): sh(x) for tt, x in A_.items()},
+                      by_cls={c: {str(tt): sh(x[cls == c]) for tt, x in A_.items()} for c in CLASSES if (cls == c).any()},
+                      by_v0={b: {str(tt): sh(x[m]) for tt, x in A_.items()} for b, m in (("<2", v0 < 2), ("2-5", (v0 >= 2) & (v0 < 5)),
+                             ("5-10", (v0 >= 5) & (v0 < 10)), (">=10", v0 >= 10)) if m.any()})
+    plain = [p for p, (f, _, _) in acc.items() if f == 1.0]
+    for p, (f, names, A_) in acc.items():
+        r = {}
+        if plain and f != 1.0:
+            f1, n1, A1 = acc[plain[0]]
+            ix = {x: i for i, x in enumerate(n1)}
+            j = np.array([ix.get(x, -1) for x in names])
+            for tt in TT:
+                m = (j >= 0) & (np.abs(A1[tt][np.maximum(j, 0)]) >= 0.5)
+                r[str(tt)] = float(np.median(np.abs(A_[tt][m]) / (f * f * np.abs(A1[tt][j[m]])))) if m.any() else float("nan")
+        out[p]["ratio_f2"] = r
+        o_ = out[p]
+        md.append(f"| {p} | {f:g} | {o_['rows']} | {o_['v0_med']:.1f} | " + " | ".join(" / ".join(f"{x:.3f}" for x in o_["over"][str(tt)]) for tt in TT)
+                  + " | " + " | ".join(f"{r[str(tt)]:.2f}" if str(tt) in r else "-" for tt in TT) + " |\n")
+        by += [f"| {p} | {k} | " + " | ".join(" / ".join(f"{x:.3f}" for x in v[str(tt)]) for tt in TT) + " |\n" for k, v in {**o_["by_cls"], **o_["by_v0"]}.items()]
+    md += ["\n| pool | class or v0 bin (m/s) | " + " | ".join(f"abs a{t:g} > 3 / 6 / 9" for t in TT) + " |\n|---|---|" + "---|" * len(TT) + "\n"] + by
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / "feas.json").write_text(json.dumps(out, indent=1))
     (Path(a.out) / "feas.md").write_text("".join(md))

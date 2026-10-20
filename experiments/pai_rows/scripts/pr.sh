@@ -12,6 +12,7 @@
 #   pr.sh chain H|S       submit (ids in $O/jobs.txt, stages in $O/stages.txt)
 #   pr.sh resume H|S      after a probe STOP fixed in code: probe -> rest (unsubmitted chunks) [-> chain S]
 #   pr.sh wait H|S        blocks until $O/<pass>/DONE, $O/<pass>/STOP or a failed job of the pass (for one run_in_background waiter)
+#   pr.sh reprobe         (GPU job body) the probe's stretch part alone -> $O/H/probe/REPROBE_OK; the full stretch requires it
 #   job bodies: check <pass> <chunk> <n> <min> | rows <pass> <chunk> | clean <pass> <chunk> | probe <pass> | rest <pass> | cache <pass> <tag> |
 #               pool <pass> <name> | fwd <name> <rows> | r1 <pass> <name> | stretch <f> | gate1 | feas | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -121,8 +122,9 @@ pool)  # pool <pass> <name>: rf_pai_pool on the pass's cache (H: fut = the log's
   $TR $RF/rf_pai_pool.py --name $3 --rows $O/rows/$p --cache $O/cache/$p --runs "$O/roll/$p/*/runs/*" --split $TSV "${extra[@]}" ;;
 fwd)   $TR $RF/rf_recov.py fwd --pool $2 --rows $3 --tags $T,$WRONG --out $O/fwd ;;
 r1)    $TR $PP r1 --pool $3 --cache $O/cache/$2 --fwd $O/fwd --tag $T --control $WRONG --out $O/$2/r1_$3.json || stop $2 "R1 failed on $3 ($O/$2/r1_$3.json)" ;;
-stretch)  # stretch <f> <plain pool>
+stretch)  # stretch <f> <plain pool>; the full pool only after the probe's stretch gate of the current label rule (supplement 2: REPROBE_OK)
   n=$3$(tr -d . <<< $2)                                                # PAIH + 05 / 15 / 10
+  [[ $3 != PAIH || -f $O/H/probe/REPROBE_OK ]] || stop H "full stretch $2: no $O/H/probe/REPROBE_OK (supplement 2 probe)"
   $TR $PY stretch --pool $3 --rows $O/rows/H --f $2 --name $n ;;
 probe)  # probe <pass>: the tail on the first 11 scenes (pools on1_<POOL>T*), every gate before the rest is submitted
   p=$2; n=${POOL[$p]}T; mkdir -p $O/$p/probe
@@ -132,12 +134,15 @@ probe)  # probe <pass>: the tail on the first 11 scenes (pools on1_<POOL>T*), ev
   for rs in train-rec dev-rec; do bash $ME fwd $n $rs || stop $p "probe fwd $rs failed"; done
   bash $ME r1 $p $n || exit 2
   if [[ $p == H ]]; then
-    for f in 1.0 0.5 1.5; do rm -rf $DATA_DIR/runs/op_parity/cache/on1_$n${f/./}{,@warp} $O/stretch/$n${f/./}; bash $ME stretch $f $n || stop H "probe stretch $f failed"; done
-    $TR $PY gate1 --plain $n --f1 ${n}10 --out $O/H/probe/gate1.json || stop H "f = 1 identity gate failed ($O/H/probe/gate1.json)"
-    $TR $PY feas --pools $n:1 ${n}05:0.5 ${n}15:1.5 --out $O/H/probe
-    $TR $PY report --pools $n ${n}05 ${n}15 --out $O/H/probe
+    bash $ME reprobe || exit 2
   else $TR $PY report --pools $n --out $O/S/probe; fi
   cp $O/$p/probe/*.json $O/$p/probe/*.md $O/$p/r1_$n.json $O/$p/checks/*.json $RES/ 2>/dev/null; echo "$(date '+%F %T') probe $p passed" | tee -a $O/stages.txt ;;
+reprobe)  # supplement 2: the probe's stretch part again (dilated label): f = 1 / 0.5 / 1.5 on on1_PAIHT, f = 1 gate, feasibility, rows -> REPROBE_OK
+  n=PAIHT; rm -f $O/H/probe/REPROBE_OK
+  for f in 1.0 0.5 1.5; do rm -rf $DATA_DIR/runs/op_parity/cache/on1_$n${f/./}{,@warp} $O/stretch/$n${f/./}; bash $ME stretch $f $n || stop H "reprobe stretch $f failed"; done
+  $TR $PY gate1 --plain $n --f1 ${n}10 --out $O/H/probe/gate1.json || stop H "f = 1 identity gate failed ($O/H/probe/gate1.json)"
+  $TR $PY feas --pools $n:1 ${n}05:0.5 ${n}15:1.5 --out $O/H/probe && $TR $PY report --pools $n ${n}05 ${n}15 --out $O/H/probe || exit 1
+  git rev-parse --short HEAD > $O/H/probe/REPROBE_OK; echo "$(date '+%F %T') reprobe H passed" | tee -a $O/stages.txt ;;
 final)  # final <pass>: tables of the full pools -> $O/<pass>/ (copied to results/ by hand: the box never commits)
   p=$2
   if [[ $p == H ]]; then $TR $PY feas --pools PAIH:1 PAIH05:0.5 PAIH15:1.5 --out $O/H && $TR $PY report --pools PAIH PAIH05 PAIH15 --out $O/H || exit 1
