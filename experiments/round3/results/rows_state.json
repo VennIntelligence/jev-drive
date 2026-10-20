@@ -1,0 +1,130 @@
+{
+ "rule": {
+  "standing": "v0 < 0.3 and label path < 0.5 m",
+  "creeping": "0.3 <= v0 < 1.0, path < 0.5 m",
+  "launching": "v0 < 1.0 and path >= 0.5 m",
+  "stopping": "v0 >= 1.0 and the label's last 1 s < 0.5 m",
+  "moving": "else"
+ },
+ "parts": {
+  "ph": {
+   "drawable": 114453,
+   "share": 0.24999999999999994,
+   "counts": {
+    "standing": 9216,
+    "creeping": 779,
+    "launching": 8924,
+    "stopping": 5319,
+    "moving": 90215
+   },
+   "per_batch": {
+    "standing": 1.2883541715813476,
+    "creeping": 0.10890059675150496,
+    "launching": 1.2475339222213482,
+    "stopping": 0.7435715970747816,
+    "moving": 12.611639712371016
+   },
+   "standing_wait": {
+    "<=2 s": 2099,
+    "2-6 s": 1624,
+    "6-10 s": 53,
+    ">10 s": 19,
+    "not in clip": 5421
+   },
+   "standing_scenes": 207,
+   "standing_rows_per_scene_med": 41.0
+  },
+  "ph05": {
+   "drawable": 104415,
+   "share": 0.12500000000000003,
+   "counts": {
+    "standing": 11371,
+    "creeping": 407,
+    "launching": 9707,
+    "stopping": 1829,
+    "moving": 81101
+   },
+   "per_batch": {
+    "standing": 0.8712158214815882,
+    "creeping": 0.031183259110281098,
+    "launching": 0.7437245606474167,
+    "stopping": 0.14013312263563665,
+    "moving": 6.2137432361250795
+   },
+   "standing_wait": {
+    "<=2 s": 3021,
+    "2-6 s": 2502,
+    "6-10 s": 110,
+    ">10 s": 25,
+    "not in clip": 5713
+   },
+   "standing_scenes": 258,
+   "standing_rows_per_scene_med": 41.0
+  },
+  "ph15": {
+   "drawable": 83671,
+   "share": 0.125,
+   "counts": {
+    "standing": 3956,
+    "creeping": 534,
+    "launching": 7218,
+    "stopping": 5866,
+    "moving": 66097
+   },
+   "per_batch": {
+    "standing": 0.37824335791373354,
+    "creeping": 0.05105711656368396,
+    "launching": 0.6901315868102449,
+    "stopping": 0.5608633815778465,
+    "moving": 6.319704557134491
+   },
+   "standing_wait": {
+    "<=2 s": 436,
+    "2-6 s": 77,
+    "6-10 s": 16,
+    ">10 s": 0,
+    "not in clip": 3427
+   },
+   "standing_scenes": 123,
+   "standing_rows_per_scene_med": 21.0
+  }
+ },
+ "per_batch_all": {
+  "standing": 2.5378133509766694,
+  "creeping": 0.19114097242547,
+  "launching": 2.6813900696790096,
+  "stopping": 1.4445681012882647,
+  "moving": 25.145087505630585
+ },
+ "s_rows_per_batch": {
+  "standing": 0.13693265060415724,
+  "creeping": 0.052916346335165856,
+  "launching": 2.4749996373605643,
+  "stopping": 1.707248437024035,
+  "moving": 27.627902928676058
+ },
+ "navtrain": {
+  "rows": 103288,
+  "counts": {
+   "standing": 22,
+   "creeping": 363,
+   "launching": 13467,
+   "stopping": 9124,
+   "moving": 80312
+  }
+ },
+ "per_batch_J": {
+  "standing": 2.6856088317256646,
+  "creeping": 0.42329401615045853,
+  "launching": 11.805923050700018,
+  "stopping": 7.6569284583804595,
+  "moving": 92.42824564304338
+ },
+ "per_batch_CTRL": {
+  "standing": 0.1546113741732069,
+  "creeping": 0.34461528522448504,
+  "launching": 13.296789196651092,
+  "stopping": 9.039097248115352,
+  "moving": 92.16488689583585
+ }
+}

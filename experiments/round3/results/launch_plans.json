@@ -1,0 +1,158 @@
+{
+ "PAI 281, all launch scenes (ACC + GAP)": {
+  "NTV0-281ag": {
+   "n": 37,
+   "launched": 33,
+   "arc4": 11.193461618971273,
+   "arc4_lt1": 1,
+   "go": -3.899697,
+   "nogo": 0,
+   "short3": 0.0,
+   "ego": -1.156493,
+   "lead": 24
+  },
+  "R2J-281ag": {
+   "n": 37,
+   "launched": 21,
+   "arc4": 8.067628478861458,
+   "arc4_lt1": 1,
+   "go": -3.085805,
+   "nogo": 0,
+   "short3": 0.012612612612612612,
+   "ego": -0.10472,
+   "lead": 24
+  }
+ },
+ "PAI 281, the 14 launches NTV0 makes and R2J loses": {
+  "NTV0-281ag": {
+   "n": 14,
+   "launched": 14,
+   "arc4": 11.317605269736251,
+   "arc4_lt1": 1,
+   "go": -4.3006015,
+   "nogo": 0,
+   "short3": 0.0,
+   "ego": -1.3850989999999999,
+   "lead": 8
+  },
+  "R2J-281ag": {
+   "n": 14,
+   "launched": 0,
+   "arc4": 4.285391655558595,
+   "arc4_lt1": 1,
+   "go": -3.282064,
+   "nogo": 0,
+   "short3": 0.0,
+   "ego": 0.6753785,
+   "lead": 8
+  }
+ },
+ "PAI-FIX G-LAUNCH (VC + LEAD)": {
+  "NTV0-vl": {
+   "n": 6,
+   "launched": 5,
+   "arc4": 7.532749198839804,
+   "arc4_lt1": 1,
+   "go": -4.709827000000001,
+   "nogo": 0,
+   "short3": 0.016666666666666666,
+   "ego": 0.066214,
+   "lead": 6
+  },
+  "R2C-vl": {
+   "n": 6,
+   "launched": 5,
+   "arc4": 7.3962708189856725,
+   "arc4_lt1": 0,
+   "go": -4.709827000000001,
+   "nogo": 0,
+   "short3": 0.0,
+   "ego": 0.066214,
+   "lead": 6
+  },
+  "R2J-vl": {
+   "n": 6,
+   "launched": 3,
+   "arc4": 5.990499911671989,
+   "arc4_lt1": 1,
+   "go": -1.8722254999999999,
+   "nogo": 0,
+   "short3": 0.16666666666666666,
+   "ego": 0.38358000000000003,
+   "lead": 6
+  },
+  "R2JH-vl": {
+   "n": 6,
+   "launched": 4,
+   "arc4": 5.951293547445658,
+   "arc4_lt1": 1,
+   "go": -1.8222255,
+   "nogo": 0,
+   "short3": 0.16666666666666666,
+   "ego": 0.38358000000000003,
+   "lead": 6
+  }
+ },
+ "PAI-FIX all launch scenes (G-LAUNCH + TARGET, VC + LEAD)": {
+  "NTV0-vl": {
+   "n": 18,
+   "launched": 13,
+   "arc4": 14.629183519564382,
+   "arc4_lt1": 1,
+   "go": -4.968852,
+   "nogo": 0,
+   "short3": 0.005555555555555556,
+   "ego": -1.1769235,
+   "lead": 7
+  },
+  "R2C-vl": {
+   "n": 18,
+   "launched": 13,
+   "arc4": 14.19483928421174,
+   "arc4_lt1": 0,
+   "go": -4.968852,
+   "nogo": 0,
+   "short3": 0.0,
+   "ego": -1.1769235,
+   "lead": 7
+  },
+  "R2J-vl": {
+   "n": 18,
+   "launched": 8,
+   "arc4": 6.551959650487692,
+   "arc4_lt1": 1,
+   "go": -3.3864894999999997,
+   "nogo": 0,
+   "short3": 0.05555555555555555,
+   "ego": 0.012036,
+   "lead": 7
+  },
+  "R2JH-vl": {
+   "n": 18,
+   "launched": 8,
+   "arc4": 4.937610442559859,
+   "arc4_lt1": 1,
+   "go": -3.3864894999999997,
+   "nogo": 0,
+   "short3": 0.05555555555555555,
+   "ego": 0.0785855,
+   "lead": 7
+  }
+ },
+ "lost": [
+  "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+  "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4",
+  "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+  "clipgt-76f7e025-e86a-47d9-ba21-f5aa5834322c",
+  "clipgt-7c6529f6-c6cf-465d-affe-b2bb30f3716d",
+  "clipgt-9fa1d6eb-7e0f-417f-8fa6-7dd38b28b8f9",
+  "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+  "clipgt-c8cab401-90c0-4e8c-809d-28d7411119de",
+  "clipgt-ca173de1-7cc2-4bf9-865a-57c9af85bb8c",
+  "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+  "clipgt-e37aa159-7300-4529-a519-0308ddd61134",
+  "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+  "clipgt-f1069db5-593f-4a28-adef-a1b8bff97c3a",
+  "clipgt-fda39805-f188-4751-81cb-9de1c5071b5d"
+ ]
+}

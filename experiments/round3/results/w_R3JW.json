@@ -1,0 +1,50 @@
+{
+ "base": "R2JF",
+ "rule": "PAI human rows (plain and stretch) whose own 4 s label path is < 0.5 m (standing + creeping) -> weight 0; each part renormalised to its base share",
+ "parts": {
+  "ph": {
+   "share": 0.24999999999999994,
+   "drawable_before": 114453,
+   "dropped": 10012,
+   "drawable_after": 104441,
+   "dropped_by_state": {
+    "standing": 9216,
+    "creeping": 779,
+    "launching": 0,
+    "stopping": 17,
+    "moving": 0
+   },
+   "dropped_share": 0.08747695560623138
+  },
+  "ph05": {
+   "share": 0.12500000000000003,
+   "drawable_before": 104415,
+   "dropped": 11778,
+   "drawable_after": 92637,
+   "dropped_by_state": {
+    "standing": 11371,
+    "creeping": 407,
+    "launching": 0,
+    "stopping": 0,
+    "moving": 0
+   },
+   "dropped_share": 0.11279988507398363
+  },
+  "ph15": {
+   "share": 0.125,
+   "drawable_before": 83671,
+   "dropped": 4646,
+   "drawable_after": 79025,
+   "dropped_by_state": {
+    "standing": 3956,
+    "creeping": 534,
+    "launching": 0,
+    "stopping": 156,
+    "moving": 0
+   },
+   "dropped_share": 0.05552700457745217
+  }
+ },
+ "pai_drawable_rows": 276103,
+ "out": "R3JW"
+}

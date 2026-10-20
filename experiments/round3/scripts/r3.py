@@ -9,9 +9,13 @@ Box, repo root (op-train env for the pool rows, .venv for the read stores; both 
   r3.py launch                    on the launch scenes (handoff < 1 m/s, log moves > 5 m) of the stored reads: the human's launch time t_L
         (log 0.5 m past its handoff pose), the read's model plan (poses_model) at the first decision at or after t_L, the first decision whose
         plan covers >= 2 m, the ego's own launch -> results/launch_plans.{md,json,csv}
-  r3.py weights --out R3JW        J-W: R2JF with every standing PAI human row (the `rows` rule, each row's own label) at weight 0, each part
+  r3.py weights --out R3JW        J-W: R2JF with every PAI human row whose own 4 s label path is < 0.5 m (standing + creeping) at weight 0, each part
         renormalised to its R2JF share -> $DATA_DIR/runs/defect_fix/w/R3JW.npz + results/w_R3JW.json
   r3.py steps                     results/steps.json (both arms 9 500 steps = round 2's J and CTRL) -> $O/steps.json
+  r3.py smoke --tag T --arm JW|JNF  the 60-step smoke's checks (finite scalars; pool imitation rows 0.75-1.25 x 32; no hinge on them; JW: flattened
+        rows 0.6-1.4 x expected and p 0.5 recorded; JNF: no flattening) -> results/smoke_<arm>.json; exit 2 on a failure
+  r3.py gate --arms TAG.. --ctrl R2C-L18-s0   the registered PAI-FIX native lines per arm against CTRL (stored facts): G-LAUNCH mean >= CTRL - 0.05
+        (binding), T281 route-turn zeros <= CTRL - 5, TARGET (val160) mean >= CTRL - 0.02 -> results/gate.{json,md}; prints the passing tags
 """
 from __future__ import annotations
 
@@ -28,12 +32,13 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
+sys.path[:0] = [str(REPO)]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 CR, W = DATA / "runs/op_parity/cache", DATA / "runs/defect_fix/w"
 O, RES = DATA / "runs/round3", REPO / "experiments/round3/results"
 PARTS = {"ph": "on1_PAIH", "ph05": "on1_PAIH05", "ph15": "on1_PAIH15"}
 V_STAND, L_STAND, V_LAUNCH = 0.3, 0.5, 1.0                     # the registered row-state rule (prereg)
-K_PAI, K_S = 32, 32                                            # expected PAI human / S rows per batch (round 2, J)
+K_ON, K_S = 64, 32                                             # J: on-k 64 (w sums to 1 over S + PAI rows); expected S rows per batch 32
 
 
 def dump(path, obj):
@@ -105,7 +110,9 @@ def pai_states():
             w = w_plain
         else:  # base row's wait (log s after its own 4 s window); the stretch label covers 4 f s of log
             w = np.array([wp.get(b, np.nan) for b in t["base"].astype(str)]) + 4.0 - 4.0 * t["f"]
-        out[p] = dict(names=t["names"].astype(str), log=t["log"].astype(str), state=st, L=L, wait=w)
+        nm = t["names"].astype(str)
+        out[p] = dict(names=np.array([f"on:{p}:{x[3:]}" for x in nm]), log=t["log"].astype(str), state=st, L=L, wait=w,  # merged-pool names
+                      speed=t["speed"], fut=t["fut"])
     return out
 
 
@@ -131,7 +138,7 @@ def cmd_rows(a):
         dr = wt > 0
         sh = wt.sum()
         c = {s: int(((d["state"] == s) & dr).sum()) for s in STATES}
-        pb = {s: float(wt[d["state"] == s].sum() * K_PAI) for s in STATES}
+        pb = {s: float(wt[d["state"] == s].sum() * K_ON) for s in STATES}
         for s in STATES:
             tot[s] += pb[s]
         stand = (d["state"] == "standing") & dr
@@ -158,8 +165,23 @@ def cmd_rows(a):
     sb = {s: float(wv[st == s].sum() * K_S) for s in STATES}
     rec["s_rows_per_batch"] = sb
     L += ["", "The 32 S / trainval pool rows of a batch (JT00S, both arms): " + ", ".join(f"{s} {sb[s]:.2f}" for s in STATES), ""]
-    L += ["Per batch, J vs CTRL (pool rows only; the navtrain rows are 51 in J vs 83 in CTRL, their states not counted here): standing "
-          f"{sb['standing'] + tot['standing']:.2f} vs {sb['standing']:.2f}, launching {sb['launching'] + tot['launching']:.2f} vs {sb['launching']:.2f}."]
+    nc, nn = defaultdict(int), 0                                 # navtrain_full (all 12 shards, rows with a full label): J draws 51 a batch, CTRL 83
+    for i in range(12):
+        t = np.load(CR / f"navtrain_full.s{i}of12/tab.npz")
+        ok = ~np.isnan(t["fut"]).any((1, 2))
+        st, _ = state(t["speed"][ok].astype(np.float64), t["fut"][ok])
+        for s_ in STATES:
+            nc[s_] += int((st == s_).sum())
+        nn += int(ok.sum())
+    nv = {s_: nc[s_] / nn for s_ in STATES}
+    rec["navtrain"] = dict(rows=nn, counts=dict(nc))
+    L += [f"navtrain_full ({nn} rows): " + ", ".join(f"{s_} {nc[s_]} ({nv[s_]:.2%})" for s_ in STATES), ""]
+    J_ = {s_: 51 * nv[s_] + sb[s_] + tot[s_] for s_ in STATES}
+    C_ = {s_: 83 * nv[s_] + sb[s_] for s_ in STATES}
+    rec["per_batch_J"], rec["per_batch_CTRL"] = J_, C_
+    L += ["Per batch (navtrain 51 / 83 + 32 S rows + J's 32 PAI human rows; the 13 yaw-rate rows not counted), J vs CTRL: "
+          + ", ".join(f"{s_} {J_[s_]:.2f} vs {C_[s_]:.2f}" for s_ in STATES)
+          + f"; standing / (standing + launching) {J_['standing'] / (J_['standing'] + J_['launching']):.1%} vs {C_['standing'] / (C_['standing'] + C_['launching']):.1%}."]
     dump(RES / "rows_state.json", rec)
     (RES / "rows_state.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
@@ -319,16 +341,20 @@ def cmd_weights(a):
     B = np.load(W / f"{a.base}.npz")
     names, w, grp = B["names"].astype(str), B["w"].astype(np.float64).copy(), B["grp"]
     idx = {x: i for i, x in enumerate(names)}
-    rec = dict(base=a.base, rule=f"PAI human rows (plain and stretch) with v0 < {V_STAND} m/s and their own 4 s label path < {L_STAND} m -> weight 0; "
+    M = np.load(CR / a.pool / "tab.npz")
+    assert np.array_equal(M["names"].astype(str), names), f"{a.base} rows != {a.pool}"
+    rec = dict(base=a.base, rule=f"PAI human rows (plain and stretch) whose own 4 s label path is < {L_STAND} m (standing + creeping) -> weight 0; "
                "each part renormalised to its base share", parts={})
     for p, d in S.items():
         ix = np.array([idx[x] for x in d["names"]])
+        assert np.array_equal(M["speed"][ix], d["speed"]) and np.array_equal(M["fut"][ix], d["fut"]), f"{p}: merged rows != source"
         sh = w[ix].sum()
-        drop = (d["state"] == "standing") & (w[ix] > 0)
+        drop = (d["L"] < L_STAND) & (w[ix] > 0)                    # the label stands throughout, whatever the fed speed (standing + creeping)
         keep = (w[ix] > 0) & ~drop
         w[ix[drop]] = 0.0
         w[ix[keep]] *= sh / w[ix[keep]].sum()
         rec["parts"][p] = dict(share=float(sh), drawable_before=int((drop | keep).sum()), dropped=int(drop.sum()), drawable_after=int(keep.sum()),
+                               dropped_by_state={st: int((drop & (d["state"] == st)).sum()) for st in STATES},
                                dropped_share=float(drop.sum() / max((drop | keep).sum(), 1)))
     assert abs(w.sum() - 1) < 1e-9 and abs(B["w"].sum() - 1) < 1e-9, (w.sum(), B["w"].sum())
     nonpai = ~np.isin(np.arange(len(w)), np.concatenate([[idx[x] for x in d["names"]] for d in S.values()]))
@@ -346,17 +372,94 @@ def cmd_steps(a):
     print(json.dumps(out))
 
 
+def run_dir(tag):
+    d = sorted(glob.glob(str(DATA / f"runs/route_mem/train-{tag}/*")))
+    assert d, f"no run dir for {tag}"
+    return Path(d[-1])
+
+
+def cmd_smoke(a):
+    d = run_dir(a.tag)
+    S = defaultdict(list)
+    for line in open(d / "events.jsonl"):
+        e = json.loads(line)
+        if e.get("kind") == "scalar":
+            S[e["tag"]].append(e["value"])
+    done = json.loads((d / "DONE").read_text()) if (d / "DONE").exists() else {}
+    fl = done.get("flat_brk", {})
+    mean = lambda k: float(np.mean(S[k])) if k in S else float("nan")  # noqa: E731
+    ck = dict(done=(bool(done), True, bool(done)), finite=(None, None, all(np.isfinite(v).all() for v in S.values())),
+              pool_imit_rows=(mean("loss/on/n_imit"), K_S, 0.75 * K_S <= mean("loss/on/n_imit") <= 1.25 * K_S),
+              pool_imit_rows_without_hinge=(max(S.get("loss/on/n_hinge", [np.nan])), 0, max(S.get("loss/on/n_hinge", [1])) == 0),
+              agent_ho_zero=(max(S.get("loss/on/agent_ho", [0])), 0, max(S.get("loss/on/agent_ho", [0])) == 0))
+    if a.arm == "JW":
+        exp = 0.5 * 51 * 0.75 * fl.get("train_rows", 0) / max(fl.get("train_rows_total", 1), 1)
+        ck |= dict(flat_rows=(mean("loss/flat/rows"), exp, 0.6 * exp <= mean("loss/flat/rows") <= 1.4 * exp), flat_p=(fl.get("p"), 0.5, fl.get("p") == 0.5))
+    else:
+        ck |= dict(no_flat=(mean("loss/flat/rows"), 0, not fl and np.nan_to_num(mean("loss/flat/rows")) == 0))
+    ok = bool(all(v[2] for v in ck.values()))
+    res = dict(tag=a.tag, arm=a.arm, run=str(d), pass_=ok, checks=ck, steps=len(S.get("loss/total", [])), draw_shares=done.get("draw_shares"))
+    dump(RES / f"smoke_{a.arm}.json", res)
+    print(json.dumps(res, indent=1, default=float))
+    if not ok:
+        raise SystemExit(2)
+
+
+def cmd_gate(a):
+    import pandas as pd
+    sys.path[:0] = [str(REPO / "experiments/pai_fix/scripts")]
+    from jevdrive import stats
+    E = pd.read_csv(REPO / "experiments/pai_fix/scenes/exam.csv").set_index("scene")
+    FA = DATA / "runs/pai_fix/facts"
+    rd = lambda t: pd.read_csv(FA / f"{t}-vl.csv").set_index("scene").reindex(E.index)  # noqa: E731
+    C = rd(a.ctrl)
+    sets = dict(TARGET=["STOP", "STOP-L", "TURN"], G_LAUNCH=["G-LAUNCH"], T281=["T281-STOP", "T281-TURN"])
+    out, md, passing = dict(ctrl=a.ctrl, lines=dict(G_LAUNCH="mean >= CTRL - 0.05 (binding)", T281="route-turn zeros <= CTRL - 5",
+                                                         TARGET="mean >= CTRL - 0.02"), arms={}), [], []
+    md += ["# ROUND3 PAI-FIX native (VC + LEAD) lines against CTRL " + a.ctrl, "", "| arm | G-LAUNCH arm / CTRL (diff, CI) | T281 route-turn zeros arm / CTRL "
+           "| TARGET arm / CTRL (diff, CI) | launched G-LAUNCH | pass |", "|:--|:--|:--|:--|:--|:--|"]
+    for t in a.arms:
+        F = rd(t)
+        r = {}
+        for k, subs in sets.items():
+            m = E.subset.isin(subs) & F.score.notna() & C.score.notna() & ~F.rpc.fillna(False).astype(bool) & ~C.rpc.fillna(False).astype(bool)
+            u, v = F.score[m].to_numpy(float), C.score[m].to_numpy(float)
+            r[k] = dict(n=int(m.sum()), arm=float(u.mean()), ctrl=float(v.mean()), diff=stats.paired(u, v),
+                        rt_arm=int((F.fclass[m] == "route-turn").sum()), rt_ctrl=int((C.fclass[m] == "route-turn").sum()))
+        gl = E.subset == "G-LAUNCH"
+        import pai_fix as PF
+        lau = f"{int((PF.launch_mask(F[gl]) & PF.launched(F[gl])).sum())} / {int((PF.launch_mask(C[gl]) & PF.launched(C[gl])).sum())} of {int(PF.launch_mask(F[gl]).sum())}"
+        ok = dict(G_LAUNCH=r["G_LAUNCH"]["arm"] >= r["G_LAUNCH"]["ctrl"] - 0.05, T281=r["T281"]["rt_arm"] <= r["T281"]["rt_ctrl"] - 5,
+                  TARGET=r["TARGET"]["arm"] >= r["TARGET"]["ctrl"] - 0.02)
+        out["arms"][t] = dict(r, ok=ok, pass_=all(ok.values()), launched_glaunch=lau)
+        if all(ok.values()):
+            passing.append(t)
+        g, q, x = r["G_LAUNCH"], r["T281"], r["TARGET"]
+        md.append(f"| {t} | {g['arm']:.3f} / {g['ctrl']:.3f} ({stats.fmt(g['diff'], '+.3f')}) {'ok' if ok['G_LAUNCH'] else 'FAIL'} | {q['rt_arm']} / {q['rt_ctrl']} "
+                  f"{'ok' if ok['T281'] else 'FAIL'} | {x['arm']:.3f} / {x['ctrl']:.3f} ({stats.fmt(x['diff'], '+.3f')}) {'ok' if ok['TARGET'] else 'FAIL'} | {lau} | "
+                  f"{'PASS' if all(ok.values()) else 'fail'} |")
+    out["passing"] = passing
+    dump(RES / "gate.json", out)
+    (RES / "gate.md").write_text("\n".join(md) + "\n")
+    print("\n".join(md), file=sys.stderr)
+    print(" ".join(passing))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("rows")
     sub.add_parser("launch")
     p = sub.add_parser("weights")
-    p.add_argument("--base", default="R2JF"), p.add_argument("--out", default="R3JW")
+    p.add_argument("--base", default="R2JF"), p.add_argument("--out", default="R3JW"), p.add_argument("--pool", default="on1_JTPH")
     p = sub.add_parser("steps")
     p.add_argument("--n", type=int, default=9500)
+    p = sub.add_parser("smoke")
+    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("JW", "JNF"), required=True)
+    p = sub.add_parser("gate")
+    p.add_argument("--arms", nargs="+", required=True), p.add_argument("--ctrl", default="R2C-L18-s0")
     a = ap.parse_args()
-    dict(rows=cmd_rows, launch=cmd_launch, weights=cmd_weights, steps=cmd_steps)[a.cmd](a)
+    dict(rows=cmd_rows, launch=cmd_launch, weights=cmd_weights, steps=cmd_steps, smoke=cmd_smoke, gate=cmd_gate)[a.cmd](a)
 
 
 if __name__ == "__main__":
