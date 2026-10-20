@@ -37,6 +37,16 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
   class guard fails on offroad (7 vs R2C 3; R3MV 4). Against R3MV (same seed): TARGET -0.060 [-0.140, +0.011], zeros +4 (new 5, fixed 1), offroad
   4 -> 7 (new 4: curve inside / outside, straight, junction inside); the road hinge did not cut offroad zeros. Inertia stop / turn 0.744 / 0.945
   (R3MV 0.744 / 0.948). No PAI 281 read (stop rule). About 1 card-h.
+- R5-A, stage 2 (prereg addendum 1: no road hinge; [results/gate_r5a.md](results/gate_r5a.md),
+  [results/paifix_r5a_vl_vs_R3MV.md](results/paifix_r5a_vl_vs_R3MV.md)): R3MV's argv + 9 extra S3 outcome rows a batch (on1_JTPHO, draw R5A:
+  partial-fixed 4.5 / zero-rescued 2.25 / A-wins 2.25; --on-k 73 --batch 137 --yr-mass 0.095 keeps 51 / 13 / 64), seeds 0 and 1 from NTV0-L18-s0;
+  smoke and the weight-0 identity pass. **Both seeds fail, launch worse than MV**: G-LAUNCH 0.328 / 0.319 vs R2C 0.865 (launched 2 / 6, rear-hit
+  5 / 5; R3MV 0.569, 3 / 6); TARGET 0.546 / 0.466 (s1 fails the line); T281 route-turn zeros 2 / 2 (ok); class guard ok. S3 effect, s0 vs R3MV
+  (same seed): G-LAUNCH -0.241 [-0.527, -0.065], TARGET -0.028 [-0.105, +0.042], T281 +0.020; s1 vs R3MV-s0 (not a same-seed pair): G-LAUNCH
+  -0.250, TARGET -0.108 [-0.197, -0.031]. Offline (after the read, not registered): the S3 rows' labels are the served plans, and at standstill
+  (fed < 0.5 m/s, 4 182 rows, 0.83 a batch) 44 % stand (4 s path < 0.5 m) and the movers cover 1.95 m median in 4 s (navtrain launch labels
+  8.3 m, PAI human 4.2 m): D3's "faster wins" came from the ACC targets, not from a faster plan, so imitating the winner's served plan teaches
+  the model's own slow launch. Inertia stop / turn 0.758 / 0.934, 0.768 / 0.926. No PAI 281 read. About 1.7 card-h.
 
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 

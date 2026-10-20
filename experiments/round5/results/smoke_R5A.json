@@ -1,0 +1,260 @@
+{
+ "tag": "R5SMA-L18-s0",
+ "arm": "A",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R5SMA-L18-s0/20261021-055705",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "/root/autodl-tmp/ujs/runs/round5/r5/w/R5A.npz",
+   "R5A",
+   true
+  ],
+  "no_road_pai": [
+   false,
+   false,
+   true
+  ],
+  "k_on": [
+   73,
+   73,
+   true
+  ],
+  "batch_rows": [
+   [
+    "51",
+    "13",
+    "73"
+   ],
+   [
+    "51",
+    "13",
+    "73"
+   ],
+   true
+  ],
+  "pool_imit_rows": [
+   41.193333333333335,
+   41,
+   true
+  ],
+  "share_S": [
+   0.43835616438384495,
+   0.43835616438384495,
+   true
+  ],
+  "share_S_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_braking": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_cruising": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_starting": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_stopped": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_turning": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_launch": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph": [
+   0.21917808219185067,
+   0.21917808219185067,
+   true
+  ],
+  "share_ph05": [
+   0.10958904109600545,
+   0.10958904109600545,
+   true
+  ],
+  "share_ph05_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph15": [
+   0.10958904109587991,
+   0.10958904109587991,
+   true
+  ],
+  "share_ph15_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_s3_A-wins": [
+   0.03082191780822376,
+   0.03082191780822376,
+   true
+  ],
+  "share_s3_partial-f": [
+   0.061643835616425974,
+   0.061643835616425974,
+   true
+  ],
+  "share_s3_zero-resc": [
+   0.030821917808218195,
+   0.030821917808218195,
+   true
+  ],
+  "share_stand_r": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_stand_u": [
+   0.0,
+   0.0,
+   true
+  ]
+ },
+ "expected": {
+  "base": "R3MV",
+  "pool": "on1_JTPHO",
+  "s3": "on1_PAIO",
+  "k_on": 64,
+  "k_s3": 9,
+  "k_all": 73,
+  "s3_share_of_on": 0.1232876712328767,
+  "shares_wanted": {
+   "partial-fixed": 0.5,
+   "zero-rescued": 0.25,
+   "A-wins": 0.25
+  },
+  "shares_used": {
+   "partial-fixed": 0.5,
+   "zero-rescued": 0.25,
+   "A-wins": 0.25
+  },
+  "rows": {
+   "partial-fixed": {
+    "rows": 11414,
+    "drawable": 11414,
+    "per_batch": 4.5,
+    "by_cls": {
+     "launch": 3428,
+     "other": 2660,
+     "stop_nolead": 557,
+     "turn_sharp": 4769
+    }
+   },
+   "zero-rescued": {
+    "rows": 13398,
+    "drawable": 13398,
+    "per_batch": 2.25,
+    "by_cls": {
+     "launch": 374,
+     "other": 4144,
+     "stop_nolead": 1560,
+     "turn_sharp": 7320
+    }
+   },
+   "A-wins": {
+    "rows": 26631,
+    "drawable": 26631,
+    "per_batch": 2.25,
+    "by_cls": {
+     "launch": 4225,
+     "other": 10199,
+     "stop_nolead": 4719,
+     "turn_sharp": 7488
+    }
+   }
+  },
+  "out": "R5A",
+  "group_share": {
+   "S": 0.43835616438384495,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.21917808219185067,
+   "ph05": 0.10958904109600545,
+   "ph05_held": 0.0,
+   "ph15": 0.10958904109587991,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "s3_A-wins": 0.03082191780822376,
+   "s3_partial-f": 0.061643835616425974,
+   "s3_zero-resc": 0.030821917808218195,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ },
+ "steps": 0,
+ "road": {
+  "road_ho": 0.0,
+  "road_pos": 0.0,
+  "road_posmean": 0.11293159572071293,
+  "n_hinge": 8.626666666666667,
+  "n_imit": 41.193333333333335
+ },
+ "draw_shares": {
+  "on_wfile": "/root/autodl-tmp/ujs/runs/round5/r5/w/R5A.npz",
+  "rows_w0": 225632,
+  "group_share": {
+   "S": 0.43835616438384495,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.21917808219185067,
+   "ph05": 0.10958904109600545,
+   "ph05_held": 0.0,
+   "ph15": 0.10958904109587991,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "s3_A-wins": 0.03082191780822376,
+   "s3_partial-f": 0.061643835616425974,
+   "s3_zero-resc": 0.030821917808218195,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

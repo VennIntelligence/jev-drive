@@ -1,0 +1,76 @@
+{
+ "base": "R3MV",
+ "pool": "on1_JTPHO",
+ "s3": "on1_PAIO",
+ "k_on": 64,
+ "k_s3": 9,
+ "k_all": 73,
+ "s3_share_of_on": 0.1232876712328767,
+ "shares_wanted": {
+  "partial-fixed": 0.5,
+  "zero-rescued": 0.25,
+  "A-wins": 0.25
+ },
+ "shares_used": {
+  "partial-fixed": 0.5,
+  "zero-rescued": 0.25,
+  "A-wins": 0.25
+ },
+ "rows": {
+  "partial-fixed": {
+   "rows": 11414,
+   "drawable": 11414,
+   "per_batch": 4.5,
+   "by_cls": {
+    "launch": 3428,
+    "other": 2660,
+    "stop_nolead": 557,
+    "turn_sharp": 4769
+   }
+  },
+  "zero-rescued": {
+   "rows": 13398,
+   "drawable": 13398,
+   "per_batch": 2.25,
+   "by_cls": {
+    "launch": 374,
+    "other": 4144,
+    "stop_nolead": 1560,
+    "turn_sharp": 7320
+   }
+  },
+  "A-wins": {
+   "rows": 26631,
+   "drawable": 26631,
+   "per_batch": 2.25,
+   "by_cls": {
+    "launch": 4225,
+    "other": 10199,
+    "stop_nolead": 4719,
+    "turn_sharp": 7488
+   }
+  }
+ },
+ "out": "R5A",
+ "group_share": {
+  "S": 0.43835616438384495,
+  "S_held": 0.0,
+  "c_braking": 0.0,
+  "c_cruising": 0.0,
+  "c_starting": 0.0,
+  "c_stopped": 0.0,
+  "c_turning": 0.0,
+  "launch": 0.0,
+  "ph": 0.21917808219185067,
+  "ph05": 0.10958904109600545,
+  "ph05_held": 0.0,
+  "ph15": 0.10958904109587991,
+  "ph15_held": 0.0,
+  "ph_held": 0.0,
+  "s3_A-wins": 0.03082191780822376,
+  "s3_partial-f": 0.061643835616425974,
+  "s3_zero-resc": 0.030821917808218195,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ }
+}
