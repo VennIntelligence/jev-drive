@@ -83,6 +83,27 @@ def pairs(z: dict):
     return np.stack(prev), np.stack(cur), tix
 
 
+def encode(net, A, di, prev, cur, tix, lht: bool, dev, bs: int = 8):
+    """Distinct image pairs prev, cur (U, 2, 6, 128, 256) uint8 and the rows' pair table tix (N, 8) -> tokens (U, 32, 512) fp16 (the frozen
+    Cinque encoder, `bs` pairs per call) and the teacher t_out (N, len(di)) f4 (shipped Cinque on the row's 8 tokens, pp_prep's rule: a zero,
+    invalid slot before the 8). Shared by `build` and experiments/pai_rows/scripts/pr.py stretch (the frame-stretched rows)."""
+    import torch
+    tok = np.empty((len(cur), *A.H_SHAPE), np.float16)
+    t_out = np.zeros((len(tix), len(di)), np.float32)
+    with torch.no_grad():
+        for i in range(0, len(cur), bs):
+            p, c = (torch.from_numpy(x[i:i + bs]).to(dev) for x in (prev, cur))
+            tok[i:i + bs] = net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE).cpu().numpy()
+        tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=dev)
+        for i in range(0, len(tix), 256):
+            H = torch.from_numpy(tok[tix[i:i + 256]]).to(dev)
+            H = torch.cat([torch.zeros_like(H[:, :1]), H], 1)
+            valid = torch.ones(H.shape[:2], dtype=torch.bool, device=dev)
+            valid[:, 0] = False
+            t_out[i:i + 256] = A._policy(net, H, AT, tc.expand(len(H), 2), valid)["outputs"].float()[:, di].cpu().numpy()
+    return tok, t_out
+
+
 def cmd_build(a):
     import torch
     from jevdrive import op_adapt as A
@@ -120,18 +141,7 @@ def cmd_build(a):
                     tix, t_out, tok, n_keep = old["tix"], old["t_out"], None, n_keep + 1
                 elif not a.labels_only:
                     prev, cur, tix = pairs(z)
-                    tok = np.empty((len(cur), *A.H_SHAPE), np.float16)
-                    with torch.no_grad():
-                        for i in range(0, len(cur), a.bs):
-                            p, c = (torch.from_numpy(x[i:i + a.bs]).to(dev) for x in (prev, cur))
-                            tok[i:i + a.bs] = net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE).cpu().numpy()
-                        tc = torch.tensor([[0.0, 1.0] if bool(z["lht"]) else [1.0, 0.0]], device=dev)
-                        for i in range(0, n, 256):                      # pp_prep's teacher: a zero, invalid slot before the 8
-                            H = torch.from_numpy(tok[tix[i:i + 256]]).to(dev)
-                            H = torch.cat([torch.zeros_like(H[:, :1]), H], 1)
-                            valid = torch.ones(H.shape[:2], dtype=torch.bool, device=dev)
-                            valid[:, 0] = False
-                            t_out[i:i + 256] = A._policy(net, H, AT, tc.expand(len(H), 2), valid)["outputs"].float()[:, di].cpu().numpy()
+                    tok, t_out = encode(net, A, di, prev, cur, tix, bool(z["lht"]), dev, a.bs)
                 rep = lambda k: np.broadcast_to(np.asarray(z[k]), (n,) + np.asarray(z[k]).shape).copy()  # noqa: E731
                 d = {k: z[k] for k in ROW} | {k: rep(k) for k in SCENE + ("lht",)}
                 assert all(len(v) == n for v in d.values()), {k: v.shape for k, v in d.items() if len(v) != n}

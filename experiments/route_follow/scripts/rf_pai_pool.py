@@ -17,6 +17,9 @@ so route_mem/scripts/rm_train.py can train on it (--on on1_<name> --on-mode self
             labels: the merged polyline of ALL messages of the rollout (rmem.merge, after the fact; no map) -> rm_build.label at the anchor ->
             route.npz (tokens, ok, poly (n, 51, 2), seglen, dz = 1.0, cov20 = the fed memory's +20 m point)
 
+  --fut log_fut --prefix paih --src human (experiments/pai_rows, human-state rows of a log-following read): fut = the log's own future
+            poses log_fut (rows need all 8 inside the log), names on:<prefix>:<scene>:<k>, tab `src`; defaults (imit, pai, none) = as before
+
   rf_pai_pool.py --name PAIRB0 --rows /data/runs/route_night/rows/pol --cache /data/runs/route_night/cache/pol \
       --runs '/data/runs/route_night/roll/*/runs/*' --split experiments/onpol_pai/results/split/train160.tsv
 """
@@ -61,14 +64,18 @@ def main():
     ap.add_argument("--cache", required=True)
     ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--split", required=True)
+    ap.add_argument("--fut", default="imit", choices=("imit", "log_fut"))
+    ap.add_argument("--prefix", default="pai")
+    ap.add_argument("--src", default="")
     a = ap.parse_args()
     keep_sc = {l.split("\t")[0] for l in Path(a.split).read_text().splitlines() if l.startswith("clipgt-")}
     T = np.load(Path(a.cache) / "tab.npz")
     scenes = T["scenes"][T["sid"]]
-    sel = np.flatnonzero(T["usable"] & ~T["after_event"] & ~T["after_end"] & np.isin(scenes, list(keep_sc)))
+    fok = T["log_fut_ok"].all(1) if a.fut == "log_fut" else True
+    sel = np.flatnonzero(T["usable"] & ~T["after_event"] & ~T["after_end"] & fok & np.isin(scenes, list(keep_sc)))
     n = len(sel)
     sc, kk, t0 = scenes[sel], T["k"][sel].astype(int), T["t0_us"][sel].astype(np.int64)
-    names = np.array([f"on:pai:{s}:{k}" for s, k in zip(sc, kk)])
+    names = np.array([f"on:{a.prefix}:{s}:{k}" for s, k in zip(sc, kk)])
     assert len(set(names.tolist())) == n, "duplicate row names"
     msgs, served = routes(a.runs)
     anchor, sess = np.zeros((n, 3)), np.empty(n, object)
@@ -102,9 +109,11 @@ def main():
     sm = RM.summary(F.astype(np.float32))
     pool, warp = CR / f"on1_{a.name}", CR / f"on1_{a.name}@warp"
     pool.mkdir(parents=True, exist_ok=True), warp.mkdir(parents=True, exist_ok=True), FEAT.mkdir(parents=True, exist_ok=True)
-    imit = np.nan_to_num(T["imit"][sel]).astype(np.float32)
+    imit = np.nan_to_num(T[a.fut][sel]).astype(np.float32)
+    assert a.fut == "imit" or np.isfinite(T[a.fut][sel]).all(), "log_fut not finite on a kept row"
     np.savez(pool / "tab.npz", names=names, log=sc, ego=T["ego_in"][sel].astype(np.float32), fut=imit, cam=T["cam_t"][sel].astype(np.float32),
-             lht=T["lht"][sel].astype(bool), speed=T["v0"][sel].astype(np.float32), served=T["poses"][sel].astype(np.float32))
+             lht=T["lht"][sel].astype(bool), speed=T["v0"][sel].astype(np.float32), served=T["poses"][sel].astype(np.float32),
+             **({"src": np.full(n, a.src)} if a.src else {}))
     tok = np.load(Path(a.cache) / "tok.npy", mmap_mode="r")
     fr = np.lib.format.open_memmap(warp / "front.npy", "w+", np.float16, (n, 8) + tok.shape[1:])
     tix = T["tix"][sel]
@@ -118,7 +127,7 @@ def main():
     np.savez(pool / "route.npz", tokens=names, ok=rok, poly=poly, seglen=seg, dz=np.ones(n, np.float32), cov20=np.asarray(sm["c20"], bool) & ok)
     np.savez(FEAT / f"on1_{a.name}.npz", names=names, f=F, k=kk, ok=ok)
     fin = np.isfinite(poly[rok, :, 0])
-    rec = dict(name=a.name, rows=n, scenes=int(len(np.unique(sc))), rows_cached=int(len(scenes)), route_in_ok=float(ok.mean()), rows_without_messages=nomsg,
+    rec = dict(name=a.name, fut=a.fut, prefix=a.prefix, rows=n, scenes=int(len(np.unique(sc))), rows_cached=int(len(scenes)), route_in_ok=float(ok.mean()), rows_without_messages=nomsg,
                served_compared=ncmp, served_max_abs_diff=dmax, c20=float(sm["c20"][ok].mean()) if ok.any() else 0.0, route_ok=float(rok.mean()),
                route_pts_med=float(np.median(fin.sum(1))) if len(fin) else 0.0,
                route_lat0_med=float(np.nanmedian(np.abs(poly[rok, 5, 1]))) if rok.any() else float("nan"), road_rows=0, pool=str(pool))
