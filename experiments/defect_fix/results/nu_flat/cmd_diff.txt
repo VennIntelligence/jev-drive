@@ -1,0 +1,64 @@
+== STANDFMXH-L18-s1 (stored training command) -> each arm (N 3000, W 150)
+== -> B2C-L18-s1
+5c5
+< STANDFMXH-L18-s1
+---
+> B2C-L18-s1
+7c7
+< RB0-F-s0
+---
+> STANDFMXH-L18-s1
+67c67
+< 500
+---
+> 150
+73c73
+< 9500
+---
+> 3000
+== -> B2F-L18-s1
+5c5
+< STANDFMXH-L18-s1
+---
+> B2F-L18-s1
+7c7
+< RB0-F-s0
+---
+> STANDFMXH-L18-s1
+67c67
+< 500
+---
+> 150
+73c73
+< 9500
+---
+> 3000
+85a86,89
+> --flat-brk
+> /root/autodl-tmp/ujs/runs/defect_fix/simp/flat_onset.txt
+> --flat-p
+> 0.5
+== -> B2FR-L18-s1
+5c5
+< STANDFMXH-L18-s1
+---
+> B2FR-L18-s1
+7c7
+< RB0-F-s0
+---
+> STANDFMXH-L18-s1
+67c67
+< 500
+---
+> 150
+73c73
+< 9500
+---
+> 3000
+85a86,91
+> --flat-brk
+> /root/autodl-tmp/ujs/runs/defect_fix/simp/flat_onset.txt
+> --flat-p
+> 0.5
+> --on-stand-roll
+> 3.0

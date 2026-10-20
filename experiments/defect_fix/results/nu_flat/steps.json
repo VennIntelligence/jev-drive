@@ -1,0 +1,16 @@
+{
+ "rule": "N = round(T / ((1 - d_frac) nN), 100), W = round(0.05 N)",
+ "T": 101499,
+ "nN": 45,
+ "on_k": [
+  13,
+  70
+ ],
+ "d_frac": 0.25,
+ "steps": 3000,
+ "warmup": 150,
+ "listed_rows": 37847,
+ "eligible_draws_per_listed_row": 0.997546773859841,
+ "flattened_per_listed_row": 0.4987733869299205,
+ "expected_flat_rows_per_batch": 6.292358791712234
+}

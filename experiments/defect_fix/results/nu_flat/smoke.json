@@ -1,0 +1,46 @@
+{
+ "tag": "NFSM-L18-s1",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NFSM-L18-s1/20261020-214333",
+ "pass_": true,
+ "checks": {
+  "finite": true,
+  "flat_rows": [
+   6.3999999999999995,
+   6.292358791712234,
+   true
+  ],
+  "standr_pos_some_step": [
+   0.010285714343190193,
+   0,
+   true
+  ],
+  "flat_p_recorded": [
+   0.5,
+   0.5,
+   true
+  ],
+  "init": [
+   true,
+   "STANDFMXH-L18-s1",
+   true
+  ],
+  "dev_ade": [
+   0.5599138736724854,
+   null,
+   true
+  ]
+ },
+ "steps": 0,
+ "flat_brk": {
+  "file": "/root/autodl-tmp/ujs/runs/defect_fix/simp/flat_onset.txt",
+  "tokens": 38509,
+  "train_rows": 37847,
+  "train_rows_total": 101499,
+  "p": 0.5,
+  "stream": [
+   1,
+   0,
+   179
+  ]
+ }
+}
