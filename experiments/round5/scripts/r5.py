@@ -113,7 +113,7 @@ def cmd_weights(a):
     names, n0 = T["names"].astype(str), len(B["names"])
     assert np.array_equal(names[:n0], B["names"].astype(str)), f"{a.pool}: prefix != {a.base}'s rows"
     s3n = P["names"].astype(str)
-    assert np.array_equal(names[n0:], s3n), f"{a.pool}: tail != {a.s3}'s rows"
+    assert len(names) == n0 + len(s3n) and all(x.endswith(y[2:]) for x, y in zip(names[n0:], s3n)), f"{a.pool}: tail != {a.s3}'s rows"   # merge prefixes on:<p>:
     ot = P["otype"].astype(str)
     has = np.isfinite(P["fut"].reshape(len(s3n), -1)).all(1) if "fut" in P.files else np.ones(len(s3n), bool)
     k_all = a.k_on + a.k_s3
@@ -128,7 +128,7 @@ def cmd_weights(a):
         mm = np.flatnonzero((ot == t) & has)
         w[n0 + mm] = a.k_s3 / k_all * (s / tot) / len(mm)
         rec["rows"][t] = dict(rows=int((ot == t).sum()), drawable=int(len(mm)), per_batch=a.k_s3 * s / tot,
-                              by_cls={c: int((P["cls"].astype(str)[mm] == c).sum()) for c in np.unique(P["cls"].astype(str))} if "cls" in P.files else {})
+                              by_cls={c: int((P["ocls"].astype(str)[mm] == c).sum()) for c in np.unique(P["ocls"].astype(str))} if "ocls" in P.files else {})
     assert abs(w.sum() - 1) < 1e-9, w.sum()
     gs = defaultdict(float)
     for g_, x in zip(grp, w):
