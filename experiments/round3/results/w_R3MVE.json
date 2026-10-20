@@ -1,0 +1,66 @@
+{
+ "base": "R2JF",
+ "rule": "MV (fed < 2.0 m/s -> 0) and every PAI human row without an exam event ahead -> weight 0 (route turn: max heading change >= 15.0 deg over the human's path to 4 s or 20.0 m, whichever reaches further; stop: the human < 0.5 m/s within the label or the next 4 s; stretch rows on their own clock from the base row's log future); each part renormalised to its base share",
+ "rule_key": "mve",
+ "parts": {
+  "ph": {
+   "share": 0.24999999999999994,
+   "share_after": 0.25,
+   "drawable_before": 114453,
+   "dropped": 85166,
+   "drawable_after": 29287,
+   "dropped_by_state": {
+    "standing": 9216,
+    "creeping": 779,
+    "launching": 8924,
+    "stopping": 1529,
+    "moving": 64718
+   },
+   "dropped_share": 0.7441133041510489,
+   "kept_turn_only": 18155,
+   "kept_stop_only": 10234,
+   "kept_both": 898,
+   "moving_rows": 90631
+  },
+  "ph05": {
+   "share": 0.12500000000000003,
+   "share_after": 0.12499999999999997,
+   "drawable_before": 104415,
+   "dropped": 90638,
+   "drawable_after": 13777,
+   "dropped_by_state": {
+    "standing": 11371,
+    "creeping": 407,
+    "launching": 9707,
+    "stopping": 1549,
+    "moving": 67604
+   },
+   "dropped_share": 0.8680553560312215,
+   "kept_turn_only": 10818,
+   "kept_stop_only": 2652,
+   "kept_both": 307,
+   "moving_rows": 74250
+  },
+  "ph15": {
+   "share": 0.125,
+   "share_after": 0.12500000000000006,
+   "drawable_before": 83671,
+   "dropped": 52863,
+   "drawable_after": 30808,
+   "dropped_by_state": {
+    "standing": 3956,
+    "creeping": 534,
+    "launching": 7218,
+    "stopping": 816,
+    "moving": 40339
+   },
+   "dropped_share": 0.6317959627589009,
+   "kept_turn_only": 18107,
+   "kept_stop_only": 11760,
+   "kept_both": 941,
+   "moving_rows": 69095
+  }
+ },
+ "pai_drawable_rows": 73872,
+ "out": "R3MVE"
+}
