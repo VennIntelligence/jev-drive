@@ -11,7 +11,7 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 D=$DATA_DIR/runs; O=$D/defect_fix/lineage; ME=experiments/defect_fix/scripts/lineage.sh; PY=experiments/defect_fix/scripts/lineage_pai281.py
 AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; RF=experiments/route_follow/scripts; PRIO=${PRIO:-13}
 CF=$D/defect_fix/pai_accgap/NTV0-L18-s0/chunks; WIZ=controller.gains.rel_front_steering_angle_weight=10; VL="JEV_VCONT=1.0 JEV_LEAD=1"
-FIRST=P0-VL; REST="P0-NAT P0-ACC P0-AG RB0-VL RB0-ACC RB0-AG NTV0-NAT NTV0-ACC NTV0-LG NTV0-AG10"
+FIRST=P0-VL; REST="P0-NAT P0-AG RB0-VL NTV0-NAT"   # 2026-10-20 scope: P0+ACC, RB0+ACC(+GAP), NTV0 ACC-only / LEAD+GAP / GAP 1.0,4.0 dropped (d330, d381)
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 serve() { case ${1#*-} in NAT) echo "" ;; VL) echo "$VL" ;; ACC) echo "$VL JEV_ACC=1" ;; AG) echo "$VL JEV_ACC=1 JEV_GAP=0.7,2.7" ;;
           LG) echo "$VL JEV_GAP=0.7,2.7" ;; AG10) echo "$VL JEV_ACC=1 JEV_GAP=1.0,4.0" ;; *) die "serve $1" ;; esac; }

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""LINEAGE-PAI281 table (box, repo .venv; read roots are read, never written). Reads: lineage.sh.
+"""LINEAGE-PAI281 table (box, repo .venv; read roots are read, never written). Reads: lineage.sh. Arms dropped on 2026-10-20 (scope): P0 + ACC,
+RB0-F-s0 + ACC and + ACC + GAP, NTV0-L18-s0 + ACC without GAP, + LEAD + GAP without ACC, + ACC + GAP at 1.0,4.0 (stored evidence: d330, d381).
 
   lineage_pai281.py stored                              "<label> <root>" of the stored comparison reads (lineage.sh extracts them)
   lineage_pai281.py table --tax DIR --out FILE.md [--json FILE]
@@ -30,10 +31,8 @@ from pai281 import load, ptype, zclass  # noqa: E402
 
 D = os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs") + "/runs"
 L = f"{D}/defect_fix/lineage/read"
-NEW = [("P0-NAT", "P0 | native"), ("P0-VL", "P0 | VC+LEAD"), ("P0-ACC", "P0 | +ACC"), ("P0-AG", "P0 | +ACC+GAP"),
-       ("RB0-VL", "RB0-F-s0 | VC+LEAD"), ("RB0-ACC", "RB0-F-s0 | +ACC"), ("RB0-AG", "RB0-F-s0 | +ACC+GAP"),
-       ("NTV0-NAT", "NTV0-L18-s0 | native"), ("NTV0-ACC", "NTV0-L18-s0 | +ACC (no GAP)"), ("NTV0-LG", "NTV0-L18-s0 | VC+LEAD+GAP (no ACC)"),
-       ("NTV0-AG10", "NTV0-L18-s0 | +ACC+GAP 1.0,4.0")]
+NEW = [("P0-NAT", "P0 | native"), ("P0-VL", "P0 | VC+LEAD"), ("P0-AG", "P0 | +ACC+GAP"), ("RB0-VL", "RB0-F-s0 | VC+LEAD"),
+       ("NTV0-NAT", "NTV0-L18-s0 | native")]
 STORED = [("NTV0-VL", "NTV0-L18-s0 | VC+LEAD (stored N0)", "route_follow/pai_input_loop/N0"),
           ("NTV0-AG", "NTV0-L18-s0 | +ACC+GAP (stored)", "defect_fix/pai_accgap/NTV0-L18-s0"),
           ("NTV0s1-AG", "NTV0-L18-s1 | +ACC+GAP", "defect_fix/pai_accgap/NTV0-L18-s1"),
@@ -47,15 +46,12 @@ STORED = [("NTV0-VL", "NTV0-L18-s0 | VC+LEAD (stored N0)", "route_follow/pai_inp
           ("Bs1-AG", "B STANDFMX-L18-s1 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMX-L18-s1"),
           ("B2s0-AG", "B2 STANDFMXH-L18-s0 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s0"),
           ("B2s1-AG", "B2 STANDFMXH-L18-s1 | +ACC+GAP", "defect_fix/stand_b/pai281/STANDFMXH-L18-s1")]
-ROWS = [(k, lab, f"{L}/{k}") for k, lab in NEW[:7]] + [(k, lab, f"{D}/{r}") for k, lab, r in STORED[:1]] + \
-       [(k, lab, f"{L}/{k}") for k, lab in NEW[7:]] + [(k, lab, f"{D}/{r}") for k, lab, r in STORED[1:]]
-ORDER = ["P0-NAT", "P0-VL", "P0-ACC", "P0-AG", "RB0-VL", "RB0-ACC", "RB0-AG", "NTV0-NAT", "NTV0-VL", "NTV0-ACC", "NTV0-LG", "NTV0-AG", "NTV0-AG10"]
+ORDER = ["P0-NAT", "P0-VL", "P0-AG", "RB0-VL", "NTV0-NAT", "NTV0-VL", "NTV0-AG"]
+ROWS = [(k, lab, f"{L}/{k}") for k, lab in NEW] + [(k, lab, f"{D}/{r}") for k, lab, r in STORED]
 ROWS = sorted(ROWS, key=lambda r: ORDER.index(r[0]) if r[0] in ORDER else len(ORDER) + [s[0] for s in STORED].index(r[0]))
-STEPS = [("RB0-VL", "P0-VL"), ("NTV0-VL", "RB0-VL"), ("RB0-ACC", "P0-ACC"), ("NTV0-ACC", "RB0-ACC"), ("RB0-AG", "P0-AG"), ("NTV0-AG", "RB0-AG"),
-         ("NTV0-NAT", "P0-NAT"),
-         ("P0-VL", "P0-NAT"), ("P0-ACC", "P0-VL"), ("P0-AG", "P0-ACC"), ("RB0-ACC", "RB0-VL"), ("RB0-AG", "RB0-ACC"),
-         ("NTV0-VL", "NTV0-NAT"), ("NTV0-ACC", "NTV0-VL"), ("NTV0-AG", "NTV0-ACC"), ("NTV0-LG", "NTV0-VL"), ("NTV0-AG", "NTV0-LG"),
-         ("NTV0-AG10", "NTV0-AG")]
+STEPS = [("RB0-VL", "P0-VL"), ("NTV0-VL", "RB0-VL"), ("NTV0-VL", "P0-VL"), ("NTV0-AG", "P0-AG"), ("NTV0-NAT", "P0-NAT"), ("RSG-VL", "RB0-VL"),
+         ("P0-VL", "P0-NAT"), ("P0-AG", "P0-VL"), ("NTV0-VL", "NTV0-NAT"), ("NTV0-AG", "NTV0-VL"),
+         ("RSG-ACC", "RSG-VL"), ("RSG-AG", "RSG-ACC")]
 COR = {"cor_route_end": "overshoot", "cor_straight_at_turn": "turn", "cor_turn_under": "turn", "cor_turn_over": "turn", "cor_wrong_exit": "turn",
        "cor_drift": "other", "cor_lane_change": "other"}
 
@@ -130,16 +126,6 @@ def main():
         q = stats.paired(sa, sb, groups=np.array(["_".join(s.split("_")[:2]) for s in S]))
         T.append(f"| {J[x]['label']} - {J[y]['label']} | {len(S)} | {sa.mean():.4f} | {sb.mean():.4f} | {stats.fmt(q, '+.4f')} | "
                  f"{int((sa == 0).sum()) - int((sb == 0).sum()):+d} |")
-    x, y = "NTV0-AG10", "NTV0-AG"
-    S = sorted(clean[x] & clean[y])
-    pick = [s for s in S for k in (x, y) if (J[k]["scores"][s] == 0 and zclass(J[k]["types"][s]) == "AF-front")
-            or (0 < J[k]["scores"][s] < 0.98 and J[k]["types"][s] == "rear-hit")]
-    pick = sorted(set(pick))
-    T += ["", f"## GAP 1.0,4.0 against 0.7,2.7 (NTV0-L18-s0 + ACC + GAP): scenes AF-front or rear-hit partial in either read ({len(pick)})", "",
-          "| scene | 0.7,2.7 | 1.0,4.0 | change |", "|---|---|---|--:|"]
-    for s in pick:
-        b, g = J[y]["scores"][s], J[x]["scores"][s]
-        T.append(f"| {s[7:15]} | {b:.3f} {J[y]['types'][s]} | {g:.3f} {J[x]['types'][s]} | {g - b:+.3f} |")
     T += ["", "## Read roots and serve flags", "", "| read | root | SERVE | WIZ | ALPASIM_FAST | code |", "|---|---|---|---|---|---|"]
     for k, lab, root in ROWS:
         c = J[k]
