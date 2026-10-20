@@ -1,0 +1,13 @@
+{
+ "rule": "both arms take round 2's J / CTRL steps (prereg)",
+ "JW": {
+  "steps": 9500
+ },
+ "JNF": {
+  "steps": 9500
+ },
+ "CTRL": {
+  "steps": 9500,
+  "tag": "R2C-L18-s0"
+ }
+}
