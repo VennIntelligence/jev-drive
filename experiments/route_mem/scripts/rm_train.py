@@ -1701,7 +1701,8 @@ if __name__ == "__main__":
         if a.env_lo_scale != 1.0:
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
-    assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc) > 0, "--on-arc-rows: needs nr1_lat"
+    assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc, getattr(a, "simp_region", 0.0),
+                                                              getattr(a, "simp_clear", 0.0), getattr(a, "on_anchor", 0.0)) > 0, "--on-arc-rows: needs nr1_lat"
     if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0), getattr(a, "on_stand", 0.0), getattr(a, "on_stoppt", 0.0), getattr(a, "on_turncap", 0.0), getattr(a, "on_tightin", 0.0), getattr(a, "on_anchor", 0.0), getattr(a, "simp_region", 0.0), getattr(a, "simp_clear", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
