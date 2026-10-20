@@ -19,7 +19,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [pai_av](pai_av/README.md) (REAL-GAP, PAI-AV real clips, real vs render): live; REAL-GAP: real vs render plan distance 0.90 m vs 0.35 m checkpoint yardstick; pilot only [d394]
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]
-- [round2](round2/README.md): live; J vs CTRL PAI-FIX TARGET -0.013, T281 +0.152, G-LAUNCH -0.33; both gates FAIL [dnone,yet]
+- [round2](round2/README.md): live; J + ACC + GAP PAI 281 0.689 vs NTV0 0.744 (-0.056); launches 21 / 37; gates FAIL [dnone,yet]
 - [practice_nuplan](practice_nuplan/README.md): closed; new start-state S rows; static rows cause the right bias; full-length arms without them not adopted [d368-369,377,385]
 - [self_iter](self_iter/README.md): live; round 1 pilot STOP: trainval rows teach standstill holds, launches lag [d338]
 - [self_model](self_model/README.md): live; SELF-FWD: (a) fails 1.14 m vs 0.2; (b) passes AUC +0.080 (contact-led) [d364]
