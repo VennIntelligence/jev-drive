@@ -1,0 +1,63 @@
+{
+ "off": {
+  "a": "R2GG-old",
+  "b": "R2GG-new",
+  "note": "CTRL's command (NTV0 recipe from NTV0-L18-s0, on1_JT / JT00S) 60 steps eager: code b7baa4ad at /root/autodl-tmp/ujs/tmp/df_old_b7baa4ad vs 3039f4c8, no new flag",
+  "scalars": 254,
+  "scalar_keys_equal": true,
+  "scalar_max_abs_diff": 0.0,
+  "extra_keys_b": null,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "dev_ade": [
+   0.536005973815918,
+   0.536005973815918
+  ],
+  "on_hash_60": [
+   "08f1b4fbeccdae85",
+   "08f1b4fbeccdae85"
+  ],
+  "want_hash": null,
+  "identical": true
+ },
+ "p0": {
+  "a": "R2GG-old",
+  "b": "R2GGP0-new",
+  "note": "the same: code b7baa4ad without --flat-brk vs 3039f4c8 with --flat-brk <SIMP-G onset list> --flat-p 0",
+  "scalars": 254,
+  "scalar_keys_equal": true,
+  "scalar_max_abs_diff": 0.0,
+  "extra_keys_b": null,
+  "weight_max_abs_diff": 0.0,
+  "weight_keys_equal": true,
+  "dev_ade": [
+   0.536005973815918,
+   0.536005973815918
+  ],
+  "on_hash_60": [
+   "08f1b4fbeccdae85",
+   "08f1b4fbeccdae85"
+  ],
+  "want_hash": null,
+  "identical": true
+ },
+ "code": {
+  "R2GG-old": {
+   "sha": "b7baa4ad",
+   "dirty": false,
+   "cwd": "/root/autodl-tmp/ujs/tmp/df_old_b7baa4ad"
+  },
+  "R2GG-new": {
+   "sha": "3039f4c8",
+   "dirty": false,
+   "cwd": "/root/autodl-tmp/ujs/jev-drive"
+  },
+  "R2GGP0-new": {
+   "sha": "3039f4c8",
+   "dirty": false,
+   "cwd": "/root/autodl-tmp/ujs/jev-drive"
+  }
+ },
+ "two_codes": true,
+ "identical": true
+}

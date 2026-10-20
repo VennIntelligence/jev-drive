@@ -1,0 +1,42 @@
+{
+ "pool": "on1_JTPHT",
+ "base": "JT00S",
+ "s_share": 0.5,
+ "half": null,
+ "allow": "physical_ai_av/pai-rows@v1:bcfba1aeeca8",
+ "held_pct": 15,
+ "parts": {
+  "ph": {
+   "share": 0.25,
+   "rows": 1759,
+   "scenes": 11,
+   "held_rows": 640,
+   "drawable_rows": 1119,
+   "drawable_scenes": 7
+  },
+  "ph05": {
+   "share": 0.125,
+   "rows": 1605,
+   "scenes": 11,
+   "held_rows": 584,
+   "drawable_rows": 1021,
+   "drawable_scenes": 7
+  },
+  "ph15": {
+   "share": 0.125,
+   "rows": 1286,
+   "scenes": 11,
+   "held_rows": 468,
+   "drawable_rows": 818,
+   "drawable_scenes": 7
+  }
+ },
+ "k_on": 64,
+ "expected_per_batch": {
+  "S": 31.999999999999996,
+  "ph": 15.999999999999998,
+  "ph05": 8.0,
+  "ph15": 8.000000000000002
+ },
+ "pai_drawable_rows": 2958
+}

@@ -1,0 +1,29 @@
+{
+ "pool": "on1_JTPHT",
+ "ref": "on1_JT",
+ "ref_rows": 34918,
+ "rows": 39568,
+ "parts": {
+  "ph": 1759,
+  "ph05": 1605,
+  "ph15": 1286,
+  "rb0": 17429,
+  "rtb1": 17489
+ },
+ "agent_ok_before": {
+  "ph": 1759,
+  "ph05": 0,
+  "ph15": 0
+ },
+ "mismatch": [],
+ "agent_ok_after": {
+  "ph": 0,
+  "ph05": 0,
+  "ph15": 0
+ },
+ "road_ok_pai": 0,
+ "mode_pai": [
+  "both"
+ ],
+ "prefix_identical": true
+}

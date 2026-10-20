@@ -1,0 +1,53 @@
+{
+ "tag": "R2SM-L18-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R2SM-L18-s0/20261020-200139",
+ "pass_": true,
+ "checks": {
+  "finite": true,
+  "flat_rows": [
+   7.44,
+   7.1313399639405315,
+   true
+  ],
+  "pool_imit_rows": [
+   31.486666666666665,
+   32.0,
+   true
+  ],
+  "pool_imit_rows_without_hinge": [
+   0.0,
+   0,
+   true
+  ],
+  "agent_ho_zero": [
+   0.0,
+   0,
+   true
+  ],
+  "flat_p_recorded": [
+   0.5,
+   0.5,
+   true
+  ],
+  "group_share": [
+   {
+    "S": 0.5000000000000493,
+    "S_held": 0.0,
+    "ph": 0.2500000000000043,
+    "ph05": 0.12500000000000114,
+    "ph05_held": 0.0,
+    "ph15": 0.12500000000000122,
+    "ph15_held": 0.0,
+    "ph_held": 0.0
+   },
+   null,
+   true
+  ],
+  "dev_ade": [
+   0.5637611150741577,
+   null,
+   true
+  ]
+ },
+ "steps": 0
+}
