@@ -85,13 +85,20 @@ def cmd_recede(a):
             rows.append(dict(scene=s, group="overrun" if s in over else "control", k=-1))
             continue
         H = float(first.s_e.iloc[0] + first.rest.iloc[0])
+        g = g[g.s_e < g.s_end - 0.5]                         # supplement 2: past the log end s_e is clamped there
+        reach = g.k[g.s_e >= H]
+        if len(reach):
+            g = g[g.k <= reach.min()]                         # the approach ends at the first decision at or past H
         for r in g[(g.s_e >= H - 60) & (g.s_e < H + 2)].itertuples():
             d = recs.get(int(r.k))
             if d is None:
                 continue
-            m = metrics(np.asarray(d.get("poses_model") or d["poses"], np.float64))
+            P = np.asarray(d.get("poses_model") or d["poses"], np.float64)
+            m = metrics(P)
+            v_end = float(np.linalg.norm(P[-1, :2] - P[-2, :2]) / 0.5)
             rows.append(dict(scene=s, group="overrun" if s in over else "control", k=int(r.k), v0=float(r.v0), s_e=float(r.s_e), H=H,
-                             has=bool(m["has"]), stop_st=float(r.s_e + m["S"]) if m["has"] else np.nan, A4=float(m["A4"])))
+                             has=bool(m["has"]), stop_st=float(r.s_e + m["S"]) if m["has"] else np.nan, A4=float(m["A4"]),
+                             E=float(r.s_e + m["A4"]), v_end=v_end))
     df = pd.DataFrame(rows)
     O.mkdir(parents=True, exist_ok=True)
     RES.mkdir(parents=True, exist_ok=True)
@@ -115,16 +122,34 @@ def cmd_recede(a):
             after = g[(g.k > last) & (g.s_e < r["H"])]
             r |= dict(ahead_med=float((st.stop_st - st.s_e).median()), rel_H_med=float((st.stop_st - r["H"]).median()),
                       letgo=bool((~after.has).sum() >= 5), letgo_dist=float(r["H"] - st[st.k == last].s_e.iloc[0]))
+        ap = g[(g.s_e >= r["H"] - 40) & (g.s_e < r["H"])]           # supplement 2, exploratory: the plan's 4 s end station
+        if len(ap) >= 10 and np.ptp(ap.s_e) >= 5:
+            r |= dict(E_slope=float(np.polyfit(ap.s_e, ap.E, 1)[0]), E_minus_H_med=float((ap.E - r["H"]).median()), v_end_med=float(ap.v_end.median()),
+                      v0_med=float(ap.v0.median()))
+            r["E_cls"] = "end recedes" if r["E_slope"] >= 0.7 else "end pinned" if r["E_slope"] <= 0.3 else "between"
         per.append(r)
     P = pd.DataFrame(per).sort_values(["group", "scene"])
     P.to_csv(RES / "recede.csv", index=False, float_format="%.3f")
     out = {grp: dict(scenes=int(len(g)), **{c: int((g.cls == c).sum()) for c in ("receding", "fixed", "mixed", "never", "not judged", "too short")},
-                     letgo=int(g.letgo.fillna(False).sum())) for grp, g in P.groupby("group")}
+                     letgo=int(g.letgo.fillna(False).sum()),
+                     explore={c: int((g.get("E_cls", pd.Series(dtype=str)) == c).sum()) for c in ("end recedes", "end pinned", "between")})
+           for grp, g in P.groupby("group")}
+    d2 = df[df.k >= 0].assign(dH=lambda x: x.H - x.s_e, EmH=lambda x: x.E - x.H)
+    d2["bin"] = pd.cut(d2.dH, [0, 5, 10, 20, 30, 40, 60], include_lowest=True).astype(str)
+    out["bins"] = {grp: x.groupby("bin").agg(n=("k", "size"), v0=("v0", "median"), A4=("A4", "median"), E_minus_H=("EmH", "median"),
+                                             v_end=("v_end", "median")).round(2).reset_index().to_dict("records") for grp, x in d2.groupby("group")}
     # per-scene series (decision index, ego station, planned stop station, H) for the overrun scenes
-    ser = {s: g.sort_values("k")[["k", "s_e", "stop_st", "H"]].round(2).values.tolist() for s, g in df[(df.group == "overrun") & (df.k >= 0)].groupby("scene")}
+    ser = {s: g.sort_values("k")[["k", "s_e", "stop_st", "E", "v_end", "H"]].round(2).values.tolist() for s, g in df[(df.group == "overrun") & (df.k >= 0)].groupby("scene")}
     json.dump(dict(summary=out, series=ser), open(RES / "recede.json", "w"), indent=0)
     print(P.to_string(index=False))
     print(json.dumps(out, indent=1))
+
+
+def gate_ok(a, b):
+    """supplement 2's G0 for one row: every coordinate within max(0.06 m, 2 fp16 steps at its magnitude)."""
+    a, b = np.asarray(a, np.float64), np.asarray(b, np.float64)
+    step = 2.0 ** (np.floor(np.log2(np.maximum(np.abs(b), 1e-3))) - 10)
+    return bool((np.abs(a - b) <= np.maximum(0.06, 2 * step)).all())
 
 
 # ---------------------------------------------------------------- cf: rows and labels
@@ -262,7 +287,9 @@ def cmd_cf(a):
                 meta.append({k: r[k] for k in ("scene", "k", "t0", "v0", "win", "rest", "lead", "line", "obj40", "h40", "h60", "hv24")}
                             | dict(i=i, w_ok=all(r["sl"][fw] is not None for fw in WF), gate=float(np.abs(
                                 np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index("RSG-L18-s0") + names.index("F")]["P"]).reshape(8, 3)[:, :2]
-                                - r["poses_log"][:, :2]).max())))
+                                - r["poses_log"][:, :2]).max()), gate2=bool(gate_ok(
+                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index("RSG-L18-s0") + names.index("F")]["P"]).reshape(8, 3)[:, :2],
+                                r["poses_log"][:, :2]))))
             if nf % 20 == 0:
                 run.info(f"{nf + 1} / {len(by)} scenes, {len(meta)} rows")
         M = pd.DataFrame(meta)
@@ -273,8 +300,8 @@ def cmd_cf(a):
         C.drop(columns="P").to_parquet(O / "cf.parquet")
         np.save(O / "cf_poses.npy", Pm.astype(np.float32))
         M.to_parquet(O / "rows.parquet")
-        g = dict(rows=len(M), gate_p99=float(M.gate.quantile(0.99)), gate_max=float(M.gate.max()),
-                 pass_=bool(M.gate.quantile(0.99) <= 0.06 and M.gate.max() <= 0.15), w_ok=float(M.w_ok.mean()))
+        g = dict(rows=len(M), gate_p99=float(M.gate.quantile(0.99)), gate_max=float(M.gate.max()), gate2_share=float(M.gate2.mean()),
+                 pass_=bool(M.gate2.mean() >= 0.99 and M.gate.max() <= 0.15), w_ok=float(M.w_ok.mean()))   # supplement 2's G0
         json.dump(g, open(O / "gate.json", "w"), indent=1)
         run.summary.update(g)
         run.info(f"gate {g}")
@@ -375,7 +402,7 @@ def cmd_report(a):
     out["verdicts"] = V
     RES.mkdir(parents=True, exist_ok=True)
     json.dump(out, open(RES / "report.json", "w"), indent=1, default=lambda x: x.tolist() if hasattr(x, "tolist") else str(x))
-    lines.append(f"G0 (RSG-L18-s0 F against the logged plan): p99 {g['gate_p99']:.4f} m, max {g['gate_max']:.4f} m, rows {g['rows']}, W/B usable {g['w_ok']:.2f}\n")
+    lines.append(f"G0 (RSG-L18-s0 F against the logged plan): p99 {g['gate_p99']:.4f} m, max {g['gate_max']:.4f} m, within 2 fp16 steps {g['gate2_share']:.3f}, rows {g['rows']}, W/B usable {g['w_ok']:.2f}\n")
     lines.append("| model | window | rows (scenes) | W/B rows | has stop F | dS_R per +20 % | dS_W | dS_B | d(has) R / B per +20 % | G_R | G_W | G_B | v24 slope R / B | dHead20 R / B |")
     lines.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for c in out["cells"]:
