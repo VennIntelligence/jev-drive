@@ -470,7 +470,7 @@ def report(a):
     rows = {}
     for t in OTYPES + ("all",):
         for c in CLS + ("all",):
-            m = (ot == t if t != "all" else True) & (cl == c if c != "all" else True)
+            m = (ot == t if t != "all" else np.ones(len(ot), bool)) & (cl == c if c != "all" else np.ones(len(cl), bool))
             rows[f"{t}|{c}"] = dict(scenes=int(len(np.unique(sc[m]))), rows=int(m.sum()), post_hand=int((m & X["post_hand"]).sum()),
                                     from_div=int((m & div).sum()), slot2=int((m & X["slot2"]).sum()), slot2_post_div=int((m & X["slot2"] & div).sum()),
                                     with_A=int((m & X["has_A"]).sum()), same_state_A=int((m & X["same_state_A"]).sum()))
