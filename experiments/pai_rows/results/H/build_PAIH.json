@@ -1,0 +1,18 @@
+{
+ "name": "PAIH",
+ "fut": "log_fut",
+ "prefix": "paih",
+ "rows": 135793,
+ "scenes": 851,
+ "rows_cached": 169061,
+ "route_in_ok": 1.0,
+ "rows_without_messages": 0,
+ "served_compared": 135793,
+ "served_max_abs_diff": 2.700021505355835,
+ "c20": 0.7156996310560927,
+ "route_ok": 0.999499237810491,
+ "route_pts_med": 46.0,
+ "route_lat0_med": 0.3675101101398468,
+ "road_rows": 0,
+ "pool": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIH"
+}

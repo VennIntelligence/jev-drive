@@ -1,24 +1,48 @@
 # pai_rows: PAI human-state and frame-stretch training rows
 
 status: live
-decisions: none yet
-index: building: 853 eligible NuRec scenes (half A 428); H / stretch / S row pools
+decisions: none yet (rows only)
+index: built: PAIH 135 793 human-state rows (851 scenes) + stretch 0.5x / 1.5x 223 148 + S 50 932; R1 and f = 1 identity pass
 
 **Question.** Build training pools from every training-eligible NuRec scene on the box: PAI human-state imitation rows (the ego follows the
 human log, label = the human's logged future), their frame-stretched variants (slots re-picked at 0.5x / 1.5x spacing, ego row scaled to
 match, label unchanged; against the frame-channel speed copy of decision 404), and on-policy S rows (the d402 pipeline) on the scenes the
 d402 pool lacks; plus a class-stratified half split for the data-scaling arms of round 2.
 
-**Conclusion.** Not yet: rows are being built (pools on1_PAIH, on1_PAIH05, on1_PAIH15, on1_CPAIX).
+**Conclusion.** Built 2026-10-20 (no training, no decision entry yet). Every gate of the prereg passes: roll checks (every log-following
+record returned the log), R1 trainer forward on the full pools (PAIH median 0.0098 m, 4.7 % over, wrong model 99.4 %; CPAIX 0.0096 m, 0.6 %,
+99.4 %) and the f = 1 identity (ego, label, 8 tokens, teacher bit-equal on 1 605 probe rows, after supplement 1 fixed the encoder batch
+order). Under supplement 2 (label dilated with the clip) at most 0.5 % of stretched rows need more than 6 m/s^2 at 0.5 / 1 / 4 s (plain rows 0.2 %);
+the 4 s acceleration is 0.92-0.97 x f^2 the human's own. Under the first, unchanged label 76 % of stretched rows needed > 6 m/s^2 at 0.5 s.
 
-**Next.** Gates of the prereg (stage checks, R1 trainer forward, f = 1 bit identity), then the row / feasibility tables in results/.
+| pool (`$DATA_DIR/runs/op_parity/cache/`) | scenes | rows | outside held | stop_nolead | turn_sharp | launch | bend | rest | half A (outside held) | GB |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| `on1_PAIH` (human state, fut = log future) | 851 | 135 793 | 114 453 | 34 892 | 34 379 | 12 933 | 21 542 | 32 047 | 68 059 (57 425) | 38 |
+| `on1_PAIH05` (f = 0.5, dilated) | 851 | 123 879 | 104 415 | 31 840 | 31 355 | 11 799 | 19 652 | 29 233 | 62 081 (52 385) | 35 |
+| `on1_PAIH15` (f = 1.5, dilated) | 851 | 99 269 | 83 671 | 25 527 | 25 131 | 9 450 | 15 757 | 23 404 | 49 747 (41 974) | 28 |
+| `on1_CPAIX` (S rows, d402 pipeline, new scenes) | 288 | 50 932 | 42 170 | 0 | 0 | 0 | 14 614 | 36 318 | 25 821 (20 436) | 15 |
 
-**Read more.** [plans/2026-10-20-pai-rows-prereg.md](plans/2026-10-20-pai-rows-prereg.md) (scenes, recipe, gates, half split and passes per row, cost);
+- Stretch drops (of the plain rows): f = 0.5 only the cold-start rows (11 914, 8.8 %); f = 1.5 also 16 951 without 6 s of log (12.5 %) and 7 659
+  in the first 2.3 s (frames / history). Stretched rows carry `agent.ok` False (boxes on the undilated clock): use them as imitation rows.
+- Missing: 2 of 853 H scenes (655dfa49, 8ca50753) lost their rollout to a renderer RPC error (score 0, no rows); a rerun of `pr.sh chain H`
+  does not relist them (they sit in a chunk).
+- The d402 pool holds 5 scenes now excluded via drives_val160 (results/scenes.md); a grown SIMP pool should drop them.
+- Passes per row at k = 16 human PAI draws a step (outside held): J-half (half A, N steps) 16 N / 57 425 plain, 16 N / 151 784 with both
+  stretch pools; J (all, 2N steps) 32 N / 114 453 and 32 N / 302 539; N = 1 000: 0.28 / 0.11 for both arms.
+- Cost: GPU 12.0 job-h of rolls (H 8.95, S 3.05; a roll books a third of a card, about 4.0 card-h) + 1.45 job-h encode / forward / stretch
+  -> about 5.5 card-h. Disk about 250 GB net (rows 58, cache 42, stretch parts 28, pools 116, probe pools 2.3); 741 GB free after.
+
+**Next.** Round 2 (main session): joint arm J on PAIH + PAIH05 + PAIH15 (full, 2N steps), J-half on half A (N steps), same-step control.
+
+**Read more.** [plans/2026-10-20-pai-rows-prereg.md](plans/2026-10-20-pai-rows-prereg.md) (scenes, recipe, gates, half split and passes per row, cost;
+supplements 1 and 2); [results/H/rows.md](results/H/rows.md), [results/H/feas.md](results/H/feas.md), [results/S/rows.md](results/S/rows.md),
+[results/probe/gate1.json](results/probe/gate1.json) (f = 1 identity), [results/probe/feas.md](results/probe/feas.md) (dilated label, probe),
 [results/scenes.md](results/scenes.md) (the 853 scenes by class and half).
 
-Pools (box, `$DATA_DIR/runs/op_parity/cache/`): `on1_PAIH` (human-state rows, names `on:paih:<scene>:<k>`, fut = log_fut), `on1_PAIH05` /
-`on1_PAIH15` (stretched, `on:paih05:..` / `on:paih15:..`, tab `f`, `base`), `on1_CPAIX` (S rows on the 288 new scenes). Splits:
-`physical_ai_av/pai-rows@v1` (853), `physical_ai_av/pai-rows-half-a@v1` (428). Run dir `$DATA_DIR/runs/pai_rows/`.
+Pools (box, `$DATA_DIR/runs/op_parity/cache/`): `on1_PAIH` (names `on:paih:<scene>:<k>`), `on1_PAIH05` / `on1_PAIH15` (`on:paih05:..` /
+`on:paih15:..`, tab `f`, `base` = the plain row's name, `speed` = f x v0), `on1_CPAIX` (`on:pai:..`, as on1_CPAI570). Probe pools `on1_PAIHT*`,
+`on1_CPAIXT` (11 scenes each) are kept for the gates. Splits: `physical_ai_av/pai-rows@v1` (853), `physical_ai_av/pai-rows-half-a@v1` (428).
+Run dir `$DATA_DIR/runs/pai_rows/` (jobs.txt, stages.txt). Append scenes: add them to scenes.tsv, `pr.sh chain H|S`.
 
 <!-- files:begin -->
 ## Files
@@ -32,5 +56,5 @@ Pools (box, `$DATA_DIR/runs/op_parity/cache/`): `on1_PAIH` (human-state rows, na
 - `rf_pai_pool.py` (experiments/route_follow/scripts): Route-night section 9 step 5
 - `onp_log_driver.py` (experiments/onpol_pai/lib): the simulated ego is steered along the …
 
-[results/](results/) 3 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
+[results/](results/) 22 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->

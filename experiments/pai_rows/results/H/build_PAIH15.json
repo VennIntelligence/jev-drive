@@ -1,0 +1,26 @@
+{
+ "name": "PAIH15",
+ "pool": "PAIH",
+ "f": 1.5,
+ "prefix": "paih15",
+ "scenes": 851,
+ "scenes_encoded_now": 851,
+ "rows": 99269,
+ "rows_plain": 135793,
+ "dropped": {
+  "cold": 11914,
+  "frames": 5957,
+  "history": 1702,
+  "label": 16951
+ },
+ "hist_src_err_f1": {
+  "x": 1.0658141036401503e-14,
+  "y": 4.0190073491430667e-14,
+  "yaw": 1.7763568394002505e-15
+ },
+ "slot_repick_equal_f1": null,
+ "fut_equal_log_fut_f1": null,
+ "encode_s": 716.1,
+ "front_gb": 26.02,
+ "out": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIH15"
+}

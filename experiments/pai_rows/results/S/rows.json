@@ -1,0 +1,35 @@
+{
+ "CPAIX": {
+  "scenes": 288,
+  "rows": 50932,
+  "drawn": 42170,
+  "by_cls": {
+   "stop_nolead": 0,
+   "turn_sharp": 0,
+   "launch": 0,
+   "bend": 14614,
+   "rest": 36318
+  },
+  "by_cls_scenes": {
+   "stop_nolead": 0,
+   "turn_sharp": 0,
+   "launch": 0,
+   "bend": 87,
+   "rest": 201
+  },
+  "half": {
+   "A": {
+    "rows": 25821,
+    "drawn": 20436,
+    "scenes": 148
+   },
+   "B": {
+    "rows": 25111,
+    "drawn": 21734,
+    "scenes": 140
+   }
+  },
+  "unknown": 0,
+  "gb": 15.3
+ }
+}

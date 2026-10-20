@@ -15,7 +15,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [desire_cap](desire_cap/README.md): closed; P0 laneChange 1.04 m at 4 s (partial); P2-F cuts 69 %, left 97 % [d332]; driver-side route desire D0 does not carry lane changes, costs collisions [d334]
 - [others_turn](others_turn/README.md): live; held 24 turns: RSG 16, rule expert 22, WA-JEPA 7, garage 1, LTF 0, DD 0 [dnone]
 - [pai_fix](pai_fix/README.md): live; PAI-FIX exam: 118 scenes, 0.44 card-h (val160 part 0.28); NTV0 AG TARGET 0.486, STOP saturated under ACC [dnone]
-- [pai_rows](pai_rows/README.md): live; building: 853 eligible NuRec scenes (half A 428); H / stretch / S row pools [dnone,yet]
+- [pai_rows](pai_rows/README.md): live; built: PAIH 135 793 human-state rows (851 scenes) + stretch 0.5x / 1.5x 223 148 + S 50 932; R1 and f = 1 identity pass [dnone,yet,(rows,only)]
 - [pai_av](pai_av/README.md) (REAL-GAP, PAI-AV real clips, real vs render): live; REAL-GAP: real vs render plan distance 0.90 m vs 0.35 m checkpoint yardstick; pilot only [d394]
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]

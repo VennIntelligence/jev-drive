@@ -136,7 +136,7 @@ probe)  # probe <pass>: the tail on the first 11 scenes (pools on1_<POOL>T*), ev
   if [[ $p == H ]]; then
     bash $ME reprobe || exit 2
   else $TR $PY report --pools $n --out $O/S/probe; fi
-  cp $O/$p/probe/*.json $O/$p/probe/*.md $O/$p/r1_$n.json $O/$p/checks/*.json $RES/ 2>/dev/null; echo "$(date '+%F %T') probe $p passed" | tee -a $O/stages.txt ;;
+  echo "$(date '+%F %T') probe $p passed" | tee -a $O/stages.txt ;;                # tables stay in $O (copied to results/ on the Mac)
 reprobe)  # supplement 2: the probe's stretch part again (dilated label): f = 1 / 0.5 / 1.5 on on1_PAIHT, f = 1 gate, feasibility, rows -> REPROBE_OK
   n=PAIHT; rm -f $O/H/probe/REPROBE_OK
   for f in 1.0 0.5 1.5; do rm -rf $DATA_DIR/runs/op_parity/cache/on1_$n${f/./}{,@warp} $O/stretch/$n${f/./}; bash $ME stretch $f $n || stop H "reprobe stretch $f failed"; done
