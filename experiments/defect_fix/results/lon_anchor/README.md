@@ -118,3 +118,11 @@ What the read shows:
   are all present and finite.
 - **After the pilots** (queued by `simp.sh arms`): inertia on all five arms, `lead_break.py cf --name simp` on N / B / F, and the
   supplement 3 rule. That rule needs BRK stays-behind SIMPF - SIMPN >= +0.10 with the CI low > 0, and |FOL change| <= 0.05.
+
+## A: x2 for 5 000 steps (supplement 5) — "more steps" refuted
+
+[long.md](long.md). The term's loss does fall now (0.44 -> 0.31 per S row), but the x2 STOP ratio rises with steps (0.868 / 0.906 / 0.914 at
+1k / 2.5k / 5k; control 0.889 / 0.888 / 0.885) and the TURN ratio too (0.944 / 0.943 / 0.975 vs 0.937 / 0.926 / 0.918). The free-road slope
+falls (0.73 / 0.65 / 0.62 vs 0.78) and the plan stays faster than the human (v24 - human OPEN +1.07 / +0.89 / +1.13 vs +0.29). Dev ADE is
+0.564 against the control's 0.533 at 5k. The registered prediction (ratio falls monotonically and below the control) fails: more steps learn
+the term's level (faster), not cue-dependence.
