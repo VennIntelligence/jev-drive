@@ -93,6 +93,14 @@ armg)    # supplement 6: SIMP-G after the main session has seen B: train -> iner
   x=(); for v in vl ag; do o=$(AFTER=$t bash experiments/pai_fix/scripts/pai_fix.sh read ${TAG[G]} $v "v t" | tail -1) || die "pai_fix read G $v"; x+=(${o%% *}); done
   p=$(sub simp-g-paifix --after $(IFS=,; echo "${x[*]}") --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME paifixg) || exit 1
   echo "$(date '+%F %T') armg (dose $D): train $t cf $f report $r lead-break $l $k PAI-FIX ${x[*]} report $p" | tee -a $B/stages.txt ;;
+paifixvl)  # main-session re-plan: native (vl) reads of all five arms; ACC + GAP only for the control (its read was already running)
+  F_=$DATA_DIR/runs/pai_fix/facts
+  rd=(NTV0-L18-s0-vl=$F_/NTV0-L18-s0-vl.csv); for A in N A B C F; do rd+=(${TAG[$A]}-vl=$F_/${TAG[$A]}-vl.csv); done
+  .venv/bin/python experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref NTV0-L18-s0-vl --out $RES/simp_paifix_vl.md \
+    --scores $RES/simp_paifix_vl.csv > /dev/null || die "pai_fix report vl"
+  if [[ -f $F_/${TAG[N]}-ag.csv ]]; then .venv/bin/python experiments/pai_fix/scripts/pai_fix.py report --read NTV0-L18-s0-ag=$F_/NTV0-L18-s0-ag.csv \
+    ${TAG[N]}-ag=$F_/${TAG[N]}-ag.csv --ref NTV0-L18-s0-ag --out $RES/simp_paifix_ag_control.md > /dev/null || die "pai_fix report ag (control)"; fi
+  date '+%F %T' > $B/PAIFIX_VL_DONE ;;
 paifixg)
   F_=$DATA_DIR/runs/pai_fix/facts; for v in vl ag; do
     rd=(NTV0-L18-s0-$v=$F_/NTV0-L18-s0-$v.csv); for A in N B F G; do rd+=(${TAG[$A]}-$v=$F_/${TAG[$A]}-$v.csv); done
