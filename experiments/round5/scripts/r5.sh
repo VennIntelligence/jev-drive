@@ -77,7 +77,7 @@ jobs = P.snapshot()[0]["jobs"]
 bad = [f"{n} {i} {jobs[i]['state']}" for n, i in last.items() if jobs.get(i, {}).get("state") in ("failed", "cancelled")]
 if bad:
     print("failed:", *bad, sep="\n  ", file=sys.stderr)
-open_ = [n for n, i in last.items() if jobs.get(i, {}).get("state", "gone") not in ("done", "failed", "cancelled", "gone")]
+open_ = [n for n, i in last.items() if jobs.get(i, {}).get("state", "inbox") not in ("done", "failed", "cancelled")]   # not yet listed = still in the inbox
 sys.exit(1 if bad else (3 if open_ else 0))
 PY
 }
