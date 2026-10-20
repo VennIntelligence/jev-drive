@@ -14,9 +14,9 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 B=$DATA_DIR/runs/defect_fix/simp; ME=experiments/defect_fix/scripts/simp.sh; PY=experiments/defect_fix/scripts/simp.py; LA=experiments/defect_fix/scripts/lon_anchor.py
 TR=$DATA_DIR/envs/op-train/bin/python; V=.venv/bin/python; JT=experiments/defect_fix/scripts/jt.sh; IN=experiments/defect_fix/scripts/inertia.py
 LAT=$DATA_DIR/runs/defect_fix/lat/L18NR1v2; RES=experiments/defect_fix/results/lon_anchor; POOL=on1_JTCP; RUNS=$DATA_DIR/runs/op_parity/runs
-declare -A TAG=([N]=SIMPN1K-L18-s0 [A]=SIMPA1K-L18-s0 [B]=SIMPB1K-L18-s0 [C]=SIMPC1K-L18-s0 [F]=SIMPF1K-L18-s0) \
-           WF=([N]=SIMPW00 [A]=SIMPW00 [B]=SIMPW05 [C]=SIMPW10 [F]=SIMPW05)
-FLATF=$B/flat_brk.txt; LB=experiments/defect_fix/scripts/lead_break.py
+declare -A TAG=([N]=SIMPN1K-L18-s0 [A]=SIMPA1K-L18-s0 [B]=SIMPB1K-L18-s0 [C]=SIMPC1K-L18-s0 [F]=SIMPF1K-L18-s0 [G]=SIMPG1K-L18-s0) \
+           WF=([N]=SIMPW00 [A]=SIMPW00 [B]=SIMPW05 [C]=SIMPW10 [F]=SIMPW05 [G]=SIMPW05)
+FLATF=$B/flat_brk.txt; FLATG=$B/flat_onset.txt; LB=experiments/defect_fix/scripts/lead_break.py
 LATF="--lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 "
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
 mkdir -p $B/pool $RES
@@ -29,7 +29,8 @@ base() {  # base <tag> <wfile> <steps> [jt.sh]: NTV0-L18-s0's command (jt.sh tra
      && $C == *"--on-arc 0 "* ]] || die "unexpected command: $C"; echo "$C"; }
 simp() {  # simp <tag> <wfile> <steps> [dose]: the control's command without lat_onc / lat_soft / lat_side, + region, clear [+ LON-ANCHOR]
   local C; C=$(base $1 $2 $3) || exit 1; echo "${C/$LATF/} --simp-region 1 --simp-clear 1$([[ -n ${4:-} && ${4:-0} != 0 ]] && echo " --on-anchor $4")"; }
-cmd() { [[ $1 == N ]] && { base ${TAG[N]} ${WF[N]} 1000; return; }; echo "$(simp ${TAG[$1]} ${WF[$1]} 1000 ${2:?dose})$([[ $1 == F ]] && echo " --flat-brk $FLATF")"; }
+cmd() { [[ $1 == N ]] && { base ${TAG[N]} ${WF[N]} 1000; return; }; local C; C=$(simp ${TAG[$1]} ${WF[$1]} 1000 ${2:?dose}) || exit 1
+  [[ $1 == F ]] && C="$C --flat-brk $FLATF"; [[ $1 == G ]] && C="$C --flat-brk $FLATG"; echo "$C"; }
 case ${1:-} in
 pre)
   rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
@@ -55,27 +56,48 @@ ident)  # ident <old rev> <stem>: the control's command 60 steps eager, <old rev
   e=$(sub simp-bitcmp-$X --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a SIMPGG$X-old \
       --b SIMPGG$X-new --out lon_anchor/simp_identity_$X --note "the NTV0 recipe from RB0-F-s0 on on1_JTCP / SIMPW00, 60 steps eager: code $rev vs $h without new flags") || exit 1
   echo "$(date '+%F %T') ident $X (code $h, old $rev): $a $b bitcmp $e" | tee -a $B/stages.txt ;;
-smoke)   # smoke [after]: the F arm's command (dose 0.0011 = A's x 1, 60 steps, --diag-every 20) as a code check of region / clear / flatten
-  s_=$(sub simp-smoke ${2:+--after $2} "${FT[@]}" --timeout-h 1 -- bash $ME smokebody) || exit 1; echo "$(date '+%F %T') smoke: $s_" | tee -a $B/stages.txt ;;
+smoke)   # smoke [after] [arm]: the arm's command (F: dose 0.0011 = A's x 1; G: dose 0; 60 steps, --diag-every 20) as a code check
+  S_=${3:-F}; s_=$(sub simp-smoke$([[ $S_ == F ]] || echo -$S_) ${2:+--after $2} "${FT[@]}" --timeout-h 1 -- bash $ME smokebody $S_) || exit 1
+  echo "$(date '+%F %T') smoke $S_: $s_" | tee -a $B/stages.txt ;;
 smokebody)
-  X=SIMPSM-L18-s0; C=$(cmd F 0.0011) || exit 1; C=${C/--tag ${TAG[F]} /--tag $X }; C="${C/--steps 1000 /--steps 60 } --diag-every 20"
+  S_=${2:-F}; X=SIMPSM$([[ $S_ == F ]] || echo $S_)-L18-s0; C=$(cmd $S_ $([[ $S_ == G ]] && echo 0 || echo 0.0011)) || exit 1
+  C=${C/--tag ${TAG[$S_]} /--tag $X }; C="${C/--steps 1000 /--steps 60 } --diag-every 20"
   echo "$(date '+%F %T') smoke: $C" | tee -a $B/stages.txt
   $C > $B/smoke.log 2>&1 || die "smoke run (log $B/smoke.log)"
   grep -E "SIMP attach|SIMP-F flat|lon_anchor labels" $B/smoke.log | tee $B/smoke_check.txt
   f=$(ls -d $DATA_DIR/runs/route_mem/train-$X/* | tail -1)/events.jsonl
-  $TR - $f $RES/simp_smoke.json <<'PY' || die "smoke check"
+  $TR - $f $RES/simp_smoke$([[ $S_ == F ]] || echo _$S_).json $B/stages.txt <<'PY' || die "smoke check"
 import json, sys
 S = {}
 for l in open(sys.argv[1]):
     e = json.loads(l)
     if e.get("kind") == "scalar" and any(k in e["tag"] for k in ("simp_", "flat/", "lon_anchor", "grad/", "dev/ade", "loss/total")):
         S.setdefault(e["tag"], []).append(round(e["value"], 4))
-ok = all(any(k in t for t in S) for k in ("on/simp_region_ho", "on/simp_clear_ho", "flat/rows", "on/lon_anchor_ho")) and all(v == v for x in S.values() for v in x)
+need = ("on/simp_region_ho", "on/simp_clear_ho", "flat/rows") + (("on/lon_anchor_ho",) if sys.argv[2].endswith("simp_smoke.json") else ())   # F smoke ran with LON-ANCHOR
+ok = all(any(k in t for t in S) for k in need) and all(v == v for x in S.values() for v in x)
 json.dump(dict(pass_=bool(ok), scalars={k: v[-3:] for k, v in S.items()}), open(sys.argv[2], "w"), indent=1)
 print("smoke", "PASS" if ok else "FAIL", {k: v[-1] for k, v in S.items() if "simp" in k or "flat" in k})
 sys.exit(0 if ok else 2)
 PY
   rm -rf $RUNS/$X ;;
+glist) f=$(sub simp-glist --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY glist $FLATG $RES/simp_flat_onset.json) || exit 1
+  echo "$(date '+%F %T') glist: $f" | tee -a $B/stages.txt; echo $f ;;
+armg)    # supplement 6: SIMP-G after the main session has seen B: train -> inertia (simp_g) -> lead_break (N / B / G) -> PAI-FIX both serves -> report
+  D=${2:?dose}; [[ ! -e $RUNS/${TAG[G]}/ckpt-final.pt ]] || die "${TAG[G]} exists"; [[ -s $FLATG ]] || die "no $FLATG"
+  for X in N B F; do [[ -e $RUNS/${TAG[$X]}/ckpt-final.pt ]] || die "${TAG[$X]} missing"; done
+  t=$(sub simp-train-${TAG[G]} "${FT[@]}" --timeout-h 2 -- bash $ME train G $D) || exit 1
+  f=$(sub simp-g-cf --after $t --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- $TR $IN cf --tags NTV0-L18-s0,${TAG[N]},${TAG[B]},${TAG[F]},${TAG[G]},RSG-L18-s0 --gate-tag RSG-L18-s0 --name simp_g) || exit 1
+  r=$(sub simp-g-report --after $f --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash -c "$TR $IN report --name simp_g > $B/inertia_g.log 2>&1 && $TR $LA inertia --name simp_g --ctl ${TAG[N]} --arms ${TAG[B]} ${TAG[F]} ${TAG[G]} --out-stem simp_g_inertia") || exit 1
+  l=$(sub simp-g-lbcf --after $t --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- $TR $LB cf --tags RB0-F-s0,${TAG[N]},${TAG[B]},${TAG[G]} --name simp_g) || exit 1
+  k=$(sub simp-g-lbread --after $l --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY leadread ${TAG[G]} ${TAG[N]} ${TAG[B]} simp_g) || exit 1
+  x=(); for v in vl ag; do o=$(AFTER=$t bash experiments/pai_fix/scripts/pai_fix.sh read ${TAG[G]} $v "v t" | tail -1) || die "pai_fix read G $v"; x+=(${o%% *}); done
+  p=$(sub simp-g-paifix --after $(IFS=,; echo "${x[*]}") --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME paifixg) || exit 1
+  echo "$(date '+%F %T') armg (dose $D): train $t cf $f report $r lead-break $l $k PAI-FIX ${x[*]} report $p" | tee -a $B/stages.txt ;;
+paifixg)
+  F_=$DATA_DIR/runs/pai_fix/facts; for v in vl ag; do
+    rd=(NTV0-L18-s0-$v=$F_/NTV0-L18-s0-$v.csv); for A in N B F G; do rd+=(${TAG[$A]}-$v=$F_/${TAG[$A]}-$v.csv); done
+    .venv/bin/python experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref NTV0-L18-s0-$v --out $RES/simp_g_paifix_$v.md \
+      --scores $RES/simp_g_paifix_$v.csv > /dev/null || die "pai_fix report G $v"; done ;;
 flat) f=$(sub simp-flatlist --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME flatlist) || exit 1; echo "$(date '+%F %T') flat: $f" | tee -a $B/stages.txt ;;
 arms)
   D=${2:?dose}; for X in ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done

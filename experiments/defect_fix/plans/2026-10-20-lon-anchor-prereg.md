@@ -178,3 +178,15 @@ tags = RB0-F-s0（编码帧、G0）、SIMPN1K（对照）、SIMPB1K（不拉平�
 ×2（W 0.0022）与同步对照从 NTV0-L18-s0 各训 5 000 步（同池 on1_JTCP、同抽样 LONP，warm-up 50，cosine 到 5 000 步），在 1 000 / 2 500 / 5 000 步存检查点
 （`rm_train --save-at`，tag `LONC5K / LONAD5K[x1000|x2500]-L18-s0`），每个检查点跑 inertia.py（不改，`--name lon_long`），报告 STOP / TURN 比、空路 v24 斜率、
 plan 含停车份额、plan − 人速度与项的损失曲线（`lon_anchor.py longread` → `results/lon_anchor/long.md`）；不做考场读数。**预测**：若问题只是步数，×2 的 STOP / TURN 比随步数单调下降并低于同步数的对照。
+
+## 补记 6（10-20 晚，用户批准；写于任何 SIMP-G 输出之前）
+
+**臂 SIMP-G（`SIMPG1K-L18-s0`）**：= SIMPB1K（SIMP，PAI 份额 0.5，无 LON-ANCHOR）+ 把 SIMP-F 的历史拉平推广到**所有人在刹车的 navtrain 模仿行**，一条规则：
+navtrain_full 行，t0 速度 v0 ≥ 2 m/s，人日志未来（tab `fut`）最后 0.5 s 一步的速度 v4 满足 v0 − v4 ≥ 1 m/s 或 ≥ 0.2 × v0（不论原因：前车、停止线、弯）。
+这些行的 token 写入 `$DATA_DIR/runs/defect_fix/simp/flat_onset.txt`（`simp.py glist`），训练时与 SIMP-F 同一开关、同一函数：`rm_train --flat-brk <文件>`
+（ax 0，3 个过去 pose 按当前速度重排，`parity_adapter.cv_history`），标签不变；只动训练划分的 navtrain 行。
+**原因分类（只报告，便宜的规则，按顺序）**：lead = 该行在 `lead_break.py nav` 里判为 BRK；stop = 人 4 s 末速度 < 0.5 m/s；curve = 人未来路径航向变化 ≥ 30°；其余 other。
+另报告其中历史里已在减速（喂入 ax ≤ −0.5 m/s²）的份额。
+**闸**：关掉时逐位相同（当前代码对 d4f3b4f8，不带新开关，`simp.sh ident d4f3b4f8 G`）；60 步冒烟（`simp.sh smoke <after> G`）。
+**训练只在主会话看过 B 的读数之后入队**（`simp.sh armg 0`：训练 → inertia（`--name simp_g`：NTV0、SIMPN1K、SIMPB1K、SIMPF1K、SIMPG1K、RSG）→
+lead_break（N / B / G）→ PAI-FIX 两种 serve → 报告），读数与判读同补记 3 / 4（lead_break 规则以 SIMPG − SIMPN 判）。

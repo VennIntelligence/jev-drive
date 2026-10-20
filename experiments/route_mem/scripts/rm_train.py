@@ -1658,7 +1658,7 @@ if __name__ == "__main__":
                        "(defect_fix lib/nr1_anchor.py; labels <pool>/lon_anchor.npz; 0 = off)")
         p.add_argument("--save-at", default="", help="steps (comma list) at which a snapshot checkpoint is saved as tag <tag with x<step> before -L18->; "
                        "'' = off")
-        p.add_argument("--flat-brk", default="", help="SIMP-F: file of navtrain tokens (lead_break.py's brake-needed rows) whose fed history is "
+        p.add_argument("--flat-brk", default="", help="SIMP-F / SIMP-G: file of navtrain tokens (brake-needed / braking-onset rows) whose fed history is "
                        "flattened on training draws (ax 0, past poses at constant current speed; label kept); '' = off")
         p.add_argument("--simp-region", type=float, default=0.0, help="SIMP: weight (x 10) of the merged road + oncoming-lane hinge on the S rows; "
                        "replaces the trainer's road hinge there (defect_fix lib/nr1_simp.py; needs --lat-file for the onc raster; 0 = off)")

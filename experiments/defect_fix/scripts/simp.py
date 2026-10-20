@@ -139,6 +139,38 @@ def cmd_gate(argv):
         raise SystemExit(2)
 
 
+def cmd_glist(out_txt, out_json):
+    """Supplement 6: navtrain_full rows where the human's logged future decelerates (v0 >= 2 m/s; v0 - v4 >= 1 m/s or >= 0.2 v0, v4 = the speed of
+    the last 0.5 s step of tab fut) -> token list; causes (lead: lead_break nav BRK; stop: v4 < 0.5; curve: heading change >= 30 deg; other) and the
+    share already decelerating in the fed history (ax <= -0.5 m/s^2)."""
+    import pandas as pd
+    nav = pd.read_parquet(DATA / "runs/defect_fix/lead_break/nav.parquet")
+    brk = set(nav.token[nav.win == "BRK"].astype(str))
+    toks, rec = [], dict(rows_total=0, rows_v2=0, onset=0, causes=dict(lead=0, stop=0, curve=0, other=0), hist_decel=0, by_shard={})
+    for k in range(12):
+        z = np.load(DATA / f"runs/op_parity/cache/navtrain_full.s{k}of12/tab.npz")
+        fut, v0, names, ax = z["fut"].astype(np.float64), z["speed"].astype(np.float64), z["names"].astype(str), z["ego"][:, 6].astype(np.float64) * 3.0
+        ok = np.isfinite(fut).all((1, 2)) & (v0 >= 2.0)
+        P = np.concatenate([np.zeros((len(fut), 1, 2)), np.nan_to_num(fut[..., :2])], 1)
+        v4 = np.hypot(*(P[:, -1] - P[:, -2]).T) / 0.5
+        dv = v0 - v4
+        on = ok & ((dv >= 1.0) | (dv >= 0.2 * v0))
+        dpsi = np.degrees(np.abs((np.nan_to_num(fut[:, -1, 2]) + np.pi) % (2 * np.pi) - np.pi))
+        lead = np.array([n in brk for n in names])
+        c = np.select([lead, v4 < 0.5, dpsi >= 30], ["lead", "stop", "curve"], "other")
+        rec["rows_total"] += len(names); rec["rows_v2"] += int(ok.sum()); rec["onset"] += int(on.sum())
+        for q in rec["causes"]:
+            rec["causes"][q] += int((on & (c == q)).sum())
+        rec["hist_decel"] += int((on & (ax <= -0.5)).sum())
+        rec["by_shard"][k] = int(on.sum())
+        toks += names[on].tolist()
+    rec["hist_decel_share"] = rec["hist_decel"] / max(rec["onset"], 1)
+    rec["rule"] = "v0 >= 2 m/s and (v0 - v4 >= 1 m/s or >= 0.2 v0), v4 = the last 0.5 s step of tab fut; causes in order lead (lead_break nav BRK) / stop (v4 < 0.5) / curve (|heading change| >= 30 deg) / other"
+    Path(out_txt).write_text("\n".join(toks) + "\n")
+    Path(out_json).write_text(json.dumps(rec, indent=1))
+    print(json.dumps({k: v for k, v in rec.items() if k != "by_shard"}))
+
+
 TOL_V2 = 0.01                                        # supplement 4: merged term active share <= the sum of the replaced terms' shares + 1 pp
 
 
@@ -164,12 +196,13 @@ def cmd_regate():
 LB_RISE, LB_FOL = 0.10, 0.05                         # supplement 3: BRK clear rise vs the control >= 0.10 (CI low > 0); FOL change within 0.05
 
 
-def cmd_leadread(arm, ctl, ref):
+def cmd_leadread(arm, ctl, ref, name="simp"):
     """lead_break.py cf --name simp on RB0-F's own PAI crash states -> the supplement 3 rule: the share of plans that stay behind the lead
     over 4 s (as served, arm F) on BRK, arm vs control (and vs the SIMP arm without flattening), FOL held -> results/lon_anchor/simp_leadbreak.*"""
     import pandas as pd
     import inertia as IN
-    O = DATA / "runs/defect_fix/lead_break/simp"
+    O = DATA / "runs/defect_fix/lead_break" / name
+    stem = "simp_leadbreak" if name == "simp" else f"{name}_leadbreak"
     g = json.load(open(O / "gate.json"))
     M = pd.read_parquet(O / "rows.parquet").set_index("i")
     C = pd.read_parquet(O / "cf.parquet")
@@ -203,17 +236,20 @@ def cmd_leadread(arm, ctl, ref):
     b, f = out["BRK"]["arm-ctl"], out["FOL"]["arm-ctl"]
     out["pass_"] = bool(g["pass_"] and b[0] >= LB_RISE and b[1] > 0 and abs(f[0]) <= LB_FOL)
     L += [f"Rule: BRK {arm} - {ctl} >= +{LB_RISE} with CI low > 0, and |FOL {arm} - {ctl}| <= {LB_FOL}: {'PASS' if out['pass_'] else 'FAIL'}"]
-    (RES / "simp_leadbreak.json").write_text(json.dumps(out, indent=1, default=float))
-    (RES / "simp_leadbreak.md").write_text("\n".join(L) + "\n")
+    (RES / f"{stem}.json").write_text(json.dumps(out, indent=1, default=float))
+    (RES / f"{stem}.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
 
 if __name__ == "__main__":
+    if sys.argv[1] == "glist":
+        cmd_glist(sys.argv[2], sys.argv[3])
+        raise SystemExit(0)
     if sys.argv[1] == "regate":
         cmd_regate()
         raise SystemExit(0)
     if sys.argv[1] == "leadread":
-        cmd_leadread(*sys.argv[2:5])
+        cmd_leadread(*sys.argv[2:6])
         raise SystemExit(0)
     assert sys.argv[1] == "gate" and sys.argv[2] == "--", "usage: simp.py gate -- <rm_train train args> | leadread ARM CTL REF"
     cmd_gate(sys.argv[3:])
