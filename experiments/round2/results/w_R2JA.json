@@ -1,0 +1,42 @@
+{
+ "pool": "on1_JTPH",
+ "base": "JT00S",
+ "s_share": 0.5,
+ "half": "physical_ai_av/pai-rows-half-a@v1:70c6f83364b3",
+ "allow": "physical_ai_av/pai-rows@v1:bcfba1aeeca8",
+ "held_pct": 15,
+ "parts": {
+  "ph": {
+   "share": 0.25,
+   "rows": 135793,
+   "scenes": 851,
+   "held_rows": 21340,
+   "drawable_rows": 57425,
+   "drawable_scenes": 360
+  },
+  "ph05": {
+   "share": 0.125,
+   "rows": 123879,
+   "scenes": 851,
+   "held_rows": 19464,
+   "drawable_rows": 52385,
+   "drawable_scenes": 360
+  },
+  "ph15": {
+   "share": 0.125,
+   "rows": 99269,
+   "scenes": 851,
+   "held_rows": 15598,
+   "drawable_rows": 41974,
+   "drawable_scenes": 360
+  }
+ },
+ "k_on": 64,
+ "expected_per_batch": {
+  "S": 31.999999999999986,
+  "ph": 15.999999999999993,
+  "ph05": 7.999999999999999,
+  "ph15": 8.0
+ },
+ "pai_drawable_rows": 151784
+}

@@ -13,6 +13,9 @@ summary. Box, repo root, op-train env (pool jobs of scripts/r2.sh).
         drawable PAI human rows) and J-half (half A) -> $O/steps.json + results/steps.{json,md} (the passes-per-row table)
   r2.py smoke --tag T --wfile NAME --k-on K --nn N               the 60-step smoke's registered checks -> results/smoke.json; exit 2 on a failure
   r2.py costs --tags A B ..                                      train wall time / steps per arm -> results/costs.md
+  r2.py r281 --read K=FACTS.csv .. --pairs A:B .. --out F.md     stage 2: full PAI 281 reads (pai_fix.py facts rows) on the scenes every read
+        scored without a driver RPC error: mean, zeros by class, partials, launch counts per read; per pair A - B the paired mean difference
+        and the paired difference of every class count (jevdrive.stats.paired on the per-scene indicator, x n), new / fixed zeros
 """
 from __future__ import annotations
 
@@ -197,6 +200,53 @@ def cmd_costs(a):
     print("\n".join(L))
 
 
+def cmd_r281(a):
+    import pandas as pd
+    sys.path.insert(0, str(REPO / "experiments/pai_fix/scripts"))
+    import pai_fix as PF
+    from jevdrive import stats
+    R = {}
+    for x in a.read:
+        k, f = x.split("=", 1)
+        R[k] = pd.read_csv(f).set_index("scene")
+    common = sorted(set.intersection(*[set(F.index[F.score.notna() & ~F.rpc.fillna(False).astype(bool)]) for F in R.values()]))
+    R = {k: F.reindex(common) for k, F in R.items()}
+    cols = ["n", "mean", "zeros", *[f"z_{k}" for k in PF.ZCLS], *[f"p_{k}" for k in PF.PCLS], "launch"]
+    L = [f"# {a.title}", "", f"Scenes every read scored without a driver RPC error: {len(common)} (of {max(len(pd.read_csv(x.split('=', 1)[1])) for x in a.read)} per read). "
+         "Zero classes (pai_fix.py fclass): overshoot / route-turn / offroad / AF-front / side / zero-other; partials (0 < score < 0.98): rear-hit / slow "
+         "(creep + no-launch + slow) / hit; launch = launched / launch scenes (handoff speed < 1 m/s, log moves > 5 m).", "",
+         "| read | " + " | ".join(cols) + " |", "|---|" + "--:|" * len(cols)]
+    out = dict(scenes=len(common), reads={}, pairs={})
+    for k, F in R.items():
+        m = PF.metrics(F)
+        out["reads"][k] = m
+        L.append(f"| {k} | " + " | ".join(f"{m[c]:.3f}" if c == "mean" else str(m[c]) for c in cols) + " |")
+    L.append("")
+    n = len(common)
+    for pr in a.pairs:
+        A, B = pr.split(":")
+        u, v = R[A].score.to_numpy(float), R[B].score.to_numpy(float)
+        d = dict(mean=stats.paired(u, v))
+        L += [f"## {A} - {B}", "", f"- mean {stats.fmt(d['mean'], '+.3f')}; zeros {int((u == 0).sum()) - int((v == 0).sum()):+d} "
+              f"(new {int(((u == 0) & (v > 0)).sum())}, fixed {int(((u > 0) & (v == 0)).sum())})", "",
+              "| class | A | B | A - B (count, 95 % CI) | new | fixed |", "|:--|--:|--:|--:|--:|--:|"]
+        cl = [("zeros", R[A].score == 0, R[B].score == 0)] + [(c, R[A].fclass == c, R[B].fclass == c) for c in PF.ZCLS + PF.PCLS]
+        la, lb = PF.launch_mask(R[A]), PF.launch_mask(R[B])
+        cl += [("launched (of launch scenes)", la & PF.launched(R[A]), lb & PF.launched(R[B]))]
+        for c, x, y in cl:
+            x, y = x.to_numpy(float), y.to_numpy(float)
+            q = stats.paired(x, y)
+            d[c] = dict(a=int(x.sum()), b=int(y.sum()), diff=n * q["mean"], lo=n * q["lo"], hi=n * q["hi"], new=int(((x == 1) & (y == 0)).sum()),
+                        fixed=int(((x == 0) & (y == 1)).sum()))
+            L.append(f"| {c} | {d[c]['a']} | {d[c]['b']} | {d[c]['diff']:+.0f} [{d[c]['lo']:+.0f}, {d[c]['hi']:+.0f}] | {d[c]['new']} | {d[c]['fixed']} |")
+        L.append("")
+        out["pairs"][pr] = d
+    L.append("Paired bootstrap: jevdrive.stats.paired (10 000 draws, seed 0, scenes as units; each PAI scene is its own log).")
+    Path(a.out).write_text("\n".join(L) + "\n")
+    dump(Path(a.out).with_suffix(".json"), out)
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -212,7 +262,10 @@ if __name__ == "__main__":
     q = sp.add_parser("smoke")
     q.add_argument("--tag", required=True), q.add_argument("--wfile", required=True), q.add_argument("--nn", type=int, default=51)
     q.add_argument("--flat-p", type=float, default=0.5)
+    q = sp.add_parser("r281")
+    q.add_argument("--read", nargs="+", required=True), q.add_argument("--pairs", nargs="+", required=True), q.add_argument("--out", required=True)
+    q.add_argument("--title", default="PAI 281 paired read")
     q = sp.add_parser("costs")
     q.add_argument("--tags", nargs="+", required=True)
     a = ap.parse_args()
-    dict(fix=cmd_fix, weights=cmd_weights, steps=cmd_steps, smoke=cmd_smoke, costs=cmd_costs)[a.cmd](a)
+    dict(fix=cmd_fix, weights=cmd_weights, steps=cmd_steps, smoke=cmd_smoke, costs=cmd_costs, r281=cmd_r281)[a.cmd](a)

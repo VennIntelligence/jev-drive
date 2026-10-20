@@ -1,0 +1,51 @@
+{
+ "rule": "N = round(R / k, nearest 100); R = drawable PAI human rows (plain + both stretches) of the arm, k = PAI human rows per batch (expected); CTRL takes J's N",
+ "k": 32,
+ "J": {
+  "steps": 9500,
+  "R": 302539,
+  "passes_all": 1.0048291294676057,
+  "parts": {
+   "ph": {
+    "R": 114453,
+    "k": 16.0,
+    "passes": 1.3280560579451828
+   },
+   "ph05": {
+    "R": 104415,
+    "k": 8.0,
+    "passes": 0.7278647703873965
+   },
+   "ph15": {
+    "R": 83671,
+    "k": 8.0,
+    "passes": 0.9083194894288343
+   }
+  }
+ },
+ "JH": {
+  "steps": 4700,
+  "R": 151784,
+  "passes_all": 0.9908817793706847,
+  "parts": {
+   "ph": {
+    "R": 57425,
+    "k": 16.0,
+    "passes": 1.3095341750108838
+   },
+   "ph05": {
+    "R": 52385,
+    "k": 8.0,
+    "passes": 0.7177627183354014
+   },
+   "ph15": {
+    "R": 41974,
+    "k": 8.0,
+    "passes": 0.8957926335350455
+   }
+  }
+ },
+ "CTRL": {
+  "steps": 9500
+ }
+}

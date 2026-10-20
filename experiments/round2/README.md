@@ -2,15 +2,19 @@
 
 status: live
 decisions: none yet
-index: registered: CTRL / J / J-half from NTV0-L18-s0, PAI human rows + onset flattening
+index: J vs CTRL PAI-FIX TARGET -0.013, T281 +0.152, G-LAUNCH -0.33; both gates FAIL
 
 **Question.** Does one joint continuation of NTV0-L18-s0 (SIMP-G onset rows flattened with probability 0.5 + PAI human-state imitation rows with
 their time-dilated stretch variants, 32 of the 83 navtrain rows of a batch) beat the same-step continuation without changes on the PAI-FIX
 native exam and the two offline gates (inertia, lead_break), and does it scale from half A to all 853 scenes?
 
-**Conclusion.** Not yet: registered, identity / smoke first, training gated on the PAI-ROWS H pools.
+**Conclusion.** Round 1 read (9 500 / 4 700 steps, results/): on the PAI-FIX native exam J does not beat CTRL on TARGET (0.511 vs 0.523,
+-0.013 [-0.118, +0.094], zeros 22 vs 25: overshoot 9 vs 13, route-turn 0 vs 5, offroad 6 vs 3), gains on T281 (+0.152 [+0.048, +0.265],
+zeros 28 vs 40) and loses G-LAUNCH (-0.330 [-0.638, -0.074], launched 3 / 6 vs 5 / 6); J-half is lower on TURN (-0.174). Offline: inertia
+STOP ratio 0.753 vs 0.892 (TURN 0.942 vs 0.906; free-road slope 0.947), lead_break BRK +0.074 [+0.034, +0.123]: both registered gates FAIL.
+The main session picked J for the PAI 281 stage (stage 2: results/pai281_*.md).
 
-**Next.** `r2.sh pre` (identity, smoke) -> `r2.sh launch` (queued on PAI-ROWS H/DONE) -> results/.
+**Next.** Stage 2 (`r2.sh stage2`): full PAI 281 reads of R2J / R2C, native and ACC + GAP, and PAI-FIX ACC + GAP of R2J.
 
 **Read more.** [plans/2026-10-20-round2-prereg.md](plans/2026-10-20-round2-prereg.md) (arms, draw shares, step rule and passes per row, gates,
 read-outs, cost).
@@ -31,5 +35,5 @@ Box: run dir `$DATA_DIR/runs/round2/` (jobs.txt, stages.txt, steps.json, DONE); 
 - `inertia.py` (experiments/defect_fix/scripts): does the plan's stop / turn / open-road …
 - `lead_break.py` (experiments/defect_fix/scripts): why does RB0-F-s0's own plan not brake …
 
-[plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
+[results/](results/) 22 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->

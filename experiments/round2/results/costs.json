@@ -1,0 +1,20 @@
+{
+ "R2C-L18-s0": {
+  "steps": 9500,
+  "wall_s": 2212.3,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R2C-L18-s0/20261020-221902",
+  "card_h": 0.6145277777777778
+ },
+ "R2J-L18-s0": {
+  "steps": 9500,
+  "wall_s": 2240.4,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R2J-L18-s0/20261020-221944",
+  "card_h": 0.6223333333333334
+ },
+ "R2JH-L18-s0": {
+  "steps": 4700,
+  "wall_s": 694.0,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R2JH-L18-s0/20261020-221945",
+  "card_h": 0.19277777777777777
+ }
+}

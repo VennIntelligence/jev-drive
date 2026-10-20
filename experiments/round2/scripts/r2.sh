@@ -10,6 +10,9 @@
 #                            fix -> draw R2JT -> J's command 60 steps -> r2.py smoke)
 #   r2.sh launch             the whole chain, gated in the queue on PAI-ROWS H/DONE: merge on1_JTPH -> fix -> draws R2JF / R2JA -> steps ->
 #                            3 trainings -> per arm PAI-FIX vl -> report; inertia cf -> report -> read-out; lead_break cf -> read-outs -> summary
+#   r2.sh stage2             (main session, 10-21: J picked) full PAI 281 reads of R2J / R2C under VC + LEAD (native) and ACC + GAP (g10, FAST=1,
+#                            NTV0 + ACC + GAP's chunk lists, pai_box.sh as the lineage / accgap reads) + PAI-FIX ACC + GAP of R2J -> facts (pai_fix.sh
+#                            tax, also of the stored NTV0 reads N0 / pai_accgap) -> r2.py r281 (vs R2C and NTV0) -> $O/DONE2
 #   r2.sh wait               blocks until $O/DONE, a PAI-ROWS STOP or a failed job of this lane (one run_in_background waiter)
 #   job bodies: ident | smokepool | smoketrain | merge | weights | train <arm> | paifix | cf | report | lbcf | lbread | summary
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -146,10 +149,33 @@ lbcf)   $TR $LB cf --tags RB0-F-s0,NTV0-L18-s0,${TAG[C]},${TAG[J]},${TAG[JH]} --
 lbread)  # simp.py leadread per arm (its output stem is per name, so each read is copied before the next)
   for A in J JH; do $TR $SP leadread ${TAG[$A]} ${TAG[C]} NTV0-L18-s0 round2 || die "leadread $A"
     cp $DFR/lon_anchor/round2_leadbreak.md $RES/leadbreak_$A.md && cp $DFR/lon_anchor/round2_leadbreak.json $RES/leadbreak_$A.json || die "copy $A"; done ;;
+stage2)
+  CF=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks; WIZ=controller.gains.rel_front_steering_angle_weight=10; mkdir -p $O/pai281
+  declare -A SV=([vl]="JEV_VCONT=1.0 JEV_LEAD=1" [ag]="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"); x=()
+  for A in J C; do for s in vl ag; do R=$O/pai281/${TAG[$A]}-$s
+    CHUNKS_FROM=$CF SERVE="${SV[$s]}" WIZ=$WIZ CONC=4 ALPASIM_FAST=1 PRIO=13 bash experiments/alpasim/scripts/pai_box.sh submit $R ${TAG[$A]} > $R.submit.txt \
+      || die "pai submit ${TAG[$A]} $s"
+    ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt | paste -sd,); [[ $(tr , '\n' <<< $ids | wc -l) == 8 ]] || die "${TAG[$A]} $s: not 8 chunks"
+    awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt >> $O/jobs.txt
+    t=$(PRIO=13 AFTER=$ids bash experiments/pai_fix/scripts/pai_fix.sh tax ${TAG[$A]}-281$s $R | tail -1) || die "tax ${TAG[$A]} $s"
+    x+=($t); echo "$t pai_fix-tax-${TAG[$A]}-281$s" >> $O/jobs.txt; done; done
+  for p in "NTV0-L18-s0-281vl $DATA_DIR/runs/route_follow/pai_input_loop/N0" "NTV0-L18-s0-281ag $DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0"; do
+    set -- $p; t=$(PRIO=13 bash experiments/pai_fix/scripts/pai_fix.sh tax $1 $2 | tail -1) || die "tax $1"; x+=($t); echo "$t pai_fix-tax-$1" >> $O/jobs.txt; done
+  o=$(PRIO=13 bash experiments/pai_fix/scripts/pai_fix.sh read ${TAG[J]} ag "v t" | tail -1) || die "pai_fix read ag"
+  x+=(${o%% *}); echo "${o%% *} pai_fix-tax-${TAG[J]}-ag" >> $O/jobs.txt; awk '{print $1, $2}' $DATA_DIR/runs/pai_fix/reads/${TAG[J]}-ag/jobs.txt >> $O/jobs.txt
+  s=$(sub r2-s2report --after $(csv ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME s2report) || exit 1
+  echo "$(date '+%F %T') stage2 (code $(git rev-parse --short HEAD)): facts / tax ${x[*]} report $s" | tee -a $O/stages.txt ;;
+s2report)
+  F_=$DATA_DIR/runs/pai_fix/facts
+  for s in vl ag; do $TR $PY r281 --read NTV0-$s=$F_/NTV0-L18-s0-281$s.csv R2C-$s=$F_/${TAG[C]}-281$s.csv R2J-$s=$F_/${TAG[J]}-281$s.csv \
+      --pairs R2J-$s:R2C-$s R2J-$s:NTV0-$s R2C-$s:NTV0-$s --out $RES/pai281_$s.md --title "PAI 281, $s serve: R2J / R2C vs stored NTV0-L18-s0" || die "r281 $s"; done
+  $V experiments/pai_fix/scripts/pai_fix.py report --read NTV0-L18-s0-ag=$F_/NTV0-L18-s0-ag.csv SIMPN1K-L18-s0-ag=$F_/SIMPN1K-L18-s0-ag.csv \
+      ${TAG[J]}-ag=$F_/${TAG[J]}-ag.csv --ref NTV0-L18-s0-ag --out $RES/paifix_ag_R2J.md --scores $RES/paifix_ag.csv > /dev/null || die "pai_fix report ag"
+  date '+%F %T' > $O/DONE2 ;;
 summary)
   $TR $PY costs --tags ${TAG[C]} ${TAG[J]} ${TAG[JH]} || die "costs"; date '+%F %T' > $O/DONE ;;
 wait)
-  until [[ -f $O/DONE || -f $PR/H/STOP ]] || ! $V - $O/jobs.txt <<'PY'
+  until [[ -f $O/${WAITFOR:-DONE} || -f $PR/H/STOP ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
 from jevdrive.cl import pool as P
 last = {}
@@ -163,6 +189,6 @@ if bad:
 sys.exit(1 if bad else 0)
 PY
   do sleep 300; done
-  [[ -f $PR/H/STOP ]] && echo "PAI-ROWS STOP: $(cat $PR/H/STOP)"; [[ -f $O/DONE ]] && echo "DONE $(cat $O/DONE)"; true ;;
+  [[ -f $PR/H/STOP ]] && echo "PAI-ROWS STOP: $(cat $PR/H/STOP)"; [[ -f $O/${WAITFOR:-DONE} ]] && echo "${WAITFOR:-DONE} $(cat $O/${WAITFOR:-DONE})"; true ;;
 *) sed -n 2,14p "$0"; exit 2 ;;
 esac
