@@ -256,6 +256,7 @@ in 1 s but >= 2 m by 4 s ("go later", re-planned every 0.1 s); `ego_4s` / `human
 
 Lane-change-shaped moving labels (v0 > 5 m/s, 4 s point |y| > 2.5 m with |yaw| < 12 deg): on1_PAIH 10 710 of 90 109 (11.9 %), navtrain 3 549 of
 44 512 (8.0 %); of the PAIH ones with a route label (10 703), the route polyline passes within 1.2 m of the label's 4 s point in 56 %.
+The f = 1.5 stretch pool has 17.3 % (its labels cover 1.5 x the distance), the f = 0.5 pool 2.8 %; J draws them 2 : 1 : 1 (plain : 0.5 : 1.5).
 
 ## 4. Overshoot anatomy (J family vs NTV0 / R2C)
 
