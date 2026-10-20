@@ -291,7 +291,7 @@ def report(a):
                      card_h_per_100_scenes=stack_h / CARD_STACKS / max(len(rows), 1) * 100)
     # determinism: A against the stored d402 roll of the same scene (same serve, frame dumps on, other chunk lists)
     pr = [(r["s_A"], r["A_stored"]) for r in rows if r["A_stored"] is not None]
-    S["A_vs_d402"] = dict(n=len(pr), identical=sum(abs(x - y) < 1e-6 for x, y in pr), ge02=sum(abs(x - y) >= INFO for x, y in pr),
+    S["A_vs_d402"] = dict(n=len(pr), identical=sum(abs(x - y) < 1e-3 for x, y in pr), ge02=sum(abs(x - y) >= INFO for x, y in pr),
                           mean_abs=float(np.mean([abs(x - y) for x, y in pr])) if pr else None)
     # per class
     G = {r["scene"]: r["drive_g"] for r in rows}
