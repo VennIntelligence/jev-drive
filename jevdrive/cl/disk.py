@@ -6,6 +6,7 @@ torch.compile's /tmp/torchinductor_<user> grows 0.5-1.8 GB on compile-heavy days
 /tmp/__nvrtc_auto_pch_<pid>_* behind killed processes). Two parts:
 
   job_env(tag)   env for one job: TMPDIR = <data>/tmp/cl/<tag> (removed by release(tag) when the job ends, any rc),
+                 RAY_TMPDIR = /tmp/ray-<tag> (short: Ray's socket paths must stay under 107 bytes; also removed by release),
                  TORCHINDUCTOR_CACHE_DIR / TRITON_CACHE_DIR / CUDA_CACHE_PATH = shared caches under <data>/cache/
                  (persistent, so later jobs still start warm; the CUDA JIT cache is seeded once from ~/.nv/ComputeCache).
                  A job's own env wins over these. Users: the GPU pool (every job, jevdrive/cl/pool.py), tmux_run.sh,
@@ -92,15 +93,22 @@ def _seed(dst: Path, src: Path) -> None:
         dst.mkdir(parents=True, exist_ok=True)
 
 
+def ray_tmp(tag: str) -> Path:
+    return sys_tmp() / f"ray-{tag}"
+
+
 def job_env(tag: str, data: Path = None, make: bool = True) -> dict:
     """Env that keeps one job's temp files and compile caches on the data disk (see module doc)."""
     data = data or data_dir()
     t = job_root(data) / tag
-    env = dict(TMPDIR=str(t), TORCHINDUCTOR_CACHE_DIR=str(cache_dir("torchinductor", data)),
+    # Ray puts AF_UNIX sockets under its temp dir (<dir>/ray/session_<ts>_<pid>/sockets/plasma_store, limit 107 bytes);
+    # below <data>/tmp/cl/<tag> that is too long (NAVSIM devkit scoring failed), so Ray gets a short dir on /tmp.
+    env = dict(TMPDIR=str(t), RAY_TMPDIR=str(ray_tmp(tag)), TORCHINDUCTOR_CACHE_DIR=str(cache_dir("torchinductor", data)),
                TRITON_CACHE_DIR=str(cache_dir("triton", data)), CUDA_CACHE_PATH=str(cache_dir("cuda", data)),
                CUDA_CACHE_MAXSIZE=str(int(cfg(data)["cuda_cache_bytes"])))
     if make:
         t.mkdir(parents=True, exist_ok=True)
+        ray_tmp(tag).mkdir(parents=True, exist_ok=True)
         for k in ("TORCHINDUCTOR_CACHE_DIR", "TRITON_CACHE_DIR"):
             Path(env[k]).mkdir(parents=True, exist_ok=True)
         _seed(Path(env["CUDA_CACHE_PATH"]), Path.home() / ".nv" / "ComputeCache")
@@ -132,6 +140,9 @@ def _rm(p: Path) -> None:
 
 def release(tag: str, data: Path = None) -> int:
     """Remove one job's temp dir (only ever below job_root). Returns the bytes it held."""
+    r = ray_tmp(tag)
+    if "/" not in tag and r.is_dir() and not r.is_symlink():
+        shutil.rmtree(r, ignore_errors=True)
     root = job_root(data).resolve()
     t = (root / tag).resolve()
     if t.parent != root or not t.exists():
