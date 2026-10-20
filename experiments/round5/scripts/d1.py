@@ -7,6 +7,9 @@
   mapcov   (box, alpasim env)  d1.py mapcov --cfg-glob '<roll>/*/runs/*/sim/generated-user-config-0.yaml' --out <csv> [--scenes <txt>]
            per NuRec scene: lanes / road areas in the scene's vector map (the evaluator's offroad surface), share of the human log's
            footprint inside it, and the time to build a 128 x 96 signed-distance raster (the nuPlan road.npz layout) at sampled log poses
+  labels   (box)  d1.py labels     label statistics of the PAI human pools (on1_PAIH / 05 / 15) against navtrain (navtrain_full.s*of12):
+           standstill rows (v0 < 0.3) by label type (stay 4 s / stand then go / go now), launch-row label arcs, lane-change-shaped moving labels
+           (|y4| > 2.5 m, |yaw4| < 12 deg, v0 > 5) and whether the route label goes there (route.npz poly within 1.2 m of the label's 4 s point)
   budget | offroad | launch | overshoot  (Mac)  the four D1 read-outs from the stored facts / rf_tax extracts / decision pickles
            -> experiments/round5/results/ (tables appended to d1_budget.md by `report`)
 """
@@ -140,6 +143,43 @@ def cmd_mapcov(a):
     print(D.describe(include="all").T.to_string())
 
 
+# ---------------------------------------------------------------- label statistics of the training pools (box)
+def cmd_labels(a):
+    C = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs")) / "runs/op_parity/cache"
+
+    def arcs(f):
+        P = np.concatenate([np.zeros((len(f), 1, 2)), f[:, :, :2]], 1)
+        return np.cumsum(np.hypot(*np.diff(P, axis=1).transpose(2, 0, 1)), 1)          # (n, 8): arc at 0.5 .. 4 s
+
+    def lat_at(P, x):
+        P = P[np.isfinite(P[:, 0])]
+        if len(P) < 2:
+            return np.nan
+        i = np.argsort(P[:, 0])
+        return np.interp(x, P[i, 0], P[i, 1])
+
+    pools = {p: np.load(C / p / "tab.npz", allow_pickle=True) for p in ("on1_PAIH", "on1_PAIH05", "on1_PAIH15")}
+    nav = [np.load(f, allow_pickle=True) for f in sorted(glob.glob(str(C / "navtrain_full.s*of12/tab.npz")))]
+    sets = {k: (t["fut"], t["speed"]) for k, t in pools.items()}
+    sets["navtrain"] = (np.concatenate([z["fut"] for z in nav]), np.concatenate([z["speed"] for z in nav]))
+    for k, (f, v) in sets.items():
+        A = arcs(f)
+        st = v < 0.3
+        stay, defer, go = st & (A[:, 7] < 0.5), st & (A[:, 1] < 0.3) & (A[:, 7] >= 2), st & (A[:, 1] >= 0.3)
+        la = (v < 1.0) & (A[:, 7] >= 2)
+        y4, h4 = f[:, 7, 1], np.degrees(f[:, 7, 2])
+        lc = (np.abs(y4) > 2.5) & (np.abs(h4) < 12) & (v > 5)
+        rec = dict(rows=len(f), standstill=int(st.sum()), stay=int(stay.sum()), stand_then_go=int(defer.sum()), go_now=int(go.sum()),
+                   launch_rows=int(la.sum()), launch_arc_1_2_4=[round(float(np.median(A[la, j])), 2) for j in (1, 3, 7)],
+                   moving=int((v > 5).sum()), lane_change_shaped=int(lc.sum()), lane_change_share=round(float(lc[v > 5].mean()), 4))
+        if k == "on1_PAIH":
+            r = np.load(C / k / "route.npz")
+            idx = np.flatnonzero(lc & r["ok"])
+            ry = np.array([lat_at(r["poly"][i], f[i, 7, 0]) for i in idx])
+            rec |= dict(lane_change_with_route=len(idx), route_within_1p2m=round(float(np.mean(np.abs(ry - y4[idx]) < 1.2)), 3))
+        print(k, json.dumps(rec), flush=True)
+
+
 # ---------------------------------------------------------------- Mac read-outs live in d1_mac.py
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -154,8 +194,9 @@ def main():
     q.add_argument("--out", required=True)
     q.add_argument("--raster-sample", type=int, default=20)
     q.add_argument("--workers", type=int, default=16)
+    sp.add_parser("labels")
     a = p.parse_args()
-    dict(extract=cmd_extract, mapcov=cmd_mapcov)[a.cmd](a)
+    dict(extract=cmd_extract, mapcov=cmd_mapcov, labels=cmd_labels)[a.cmd](a)
 
 
 if __name__ == "__main__":
