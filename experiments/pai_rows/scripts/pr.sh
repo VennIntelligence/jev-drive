@@ -165,13 +165,13 @@ final)  # final <pass>: tables of the full pools -> $O/<pass>/ (copied to result
   date '+%F %T' > $O/$p/DONE ;;
 merge)  # N: zero-copy merges (rf_pait.py merge, the default; no token file is copied): PAIHX* = PAIH* + PAIHN*; JTPHX = JTPH's parts + PAIH* + PAIHN*
   [[ ! -f $O/N/STOP ]] || exit 2; mkdir -p $O/N/x
-  for x in PAIHX PAIHX05 PAIHX15 JTPHX; do [[ ! -e $CRC/on1_$x ]] || stop N "on1_$x exists: never overwritten"; done
+  for x in PAIHX PAIHX05 PAIHX15 JTPHX; do [[ ! -e $CRC/on1_$x || -f $O/N/x/started_$x ]] || stop N "on1_$x exists: never overwritten"; touch $O/N/x/started_$x; done   # a rerun of this job overwrites only its own output
   for s in "" 05 15; do
     $TR $RF/rf_pait.py merge --pools on1_PAIH$s:ph$s:both on1_PAIHN$s:phn$s:both --out PAIHX$s || stop N "merge PAIHX$s failed"
-    $TR $PY mcheck --pool on1_PAIHX$s --ref on1_PAIH$s --skip-names --out $O/N/x || stop N "prefix check PAIHX$s failed ($O/N/x/mcheck_on1_PAIHX$s.json)"; done
+    $TR $PY mcheck --pool PAIHX$s --ref PAIH$s --skip-names --out $O/N/x || stop N "prefix check PAIHX$s failed ($O/N/x/mcheck_PAIHX$s.json)"; done
   $TR $RF/rf_pait.py merge --pools $JT_PARTS on1_PAIH:ph:both on1_PAIH05:ph05:both on1_PAIH15:ph15:both on1_PAIHN:phn:both on1_PAIHN05:phn05:both on1_PAIHN15:phn15:both \
       --out JTPHX --nan-keys fut_reg || stop N "merge JTPHX failed"
-  $TR $PY xfix --pool on1_JTPHX --ref on1_JTPH --parts phn,phn05,phn15 --out $O/N/x || stop N "JTPHX fix failed ($O/N/x/xfix_on1_JTPHX.json)"
+  $TR $PY xfix --pool JTPHX --ref JTPH --parts phn,phn05,phn15 --out $O/N/x || stop N "JTPHX fix failed ($O/N/x/xfix_JTPHX.json)"
   $TR $PY report --pools PAIHX PAIHX05 PAIHX15 --out $O/N/x || exit 1
   date '+%F %T' > $O/N/DONE ;;
 wait)  # wait <pass>: one blocking waiter (run_in_background): returns at DONE / STOP or when a job of this lane has failed
