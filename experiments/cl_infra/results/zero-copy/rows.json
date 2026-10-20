@@ -1,0 +1,52 @@
+{
+ "a": "on1_JTPH",
+ "b": "on1_JTPHZ",
+ "files_diff": {
+  "runs/op_parity/cache/on1_JTPHZ/tab.npz": [],
+  "runs/op_parity/cache/on1_JTPHZ/agent.npz": [],
+  "runs/op_parity/cache/on1_JTPHZ/road.npz": [],
+  "runs/op_parity/cache/on1_JTPHZ/drivable.npz": [],
+  "runs/op_parity/cache/on1_JTPHZ/route.npz": [],
+  "runs/route_mem/feat/on1_JTPHZ.npz": [],
+  "runs/op_parity/cache/on1_JTPHZ@warp/teacher.npz": []
+ },
+ "rows": 528547,
+ "shape_equal": true,
+ "parts": [
+  "on1_L18RB0@warp/front.npy",
+  "on1_L18RTB1@warp/front.npy",
+  "on1_L18YS@warp/front.npy",
+  "on1_L18Y@warp/front.npy",
+  "on1_NR1TV@warp/front.npy",
+  "on1_PAIH@warp/front.npy",
+  "on1_PAIH05@warp/front.npy",
+  "on1_PAIH15@warp/front.npy"
+ ],
+ "part_rows": [
+  17429,
+  17489,
+  34788,
+  17306,
+  82594,
+  135793,
+  123879,
+  99269
+ ],
+ "sweep": {
+  "chunks": 517,
+  "rows": 528547,
+  "bad_chunks": [],
+  "s": 239.2
+ },
+ "gather": {
+  "batches": 72,
+  "rows_per_batch": 96,
+  "catmm": true,
+  "catmm_slot7": true,
+  "pp_train_open_front": true,
+  "tokens_host_pageable": true,
+  "rowcache": true
+ },
+ "pass_": true,
+ "s": 265.3
+}

@@ -80,6 +80,24 @@ if cache.done(path, k): ...                        # skip-if-done check for loop
   `<root>/<model>/<version>/<split_id slug>/<unit>.npy`; `version` names the extraction recipe, the split hash makes
   the dir content-addressed. Old feature dirs need not move.
 
+## `jevdrive.tokens`: zero-copy token stores
+
+```python
+from jevdrive.tokens import open_front, link_front
+fr = open_front(CR / "on1_JTPH@warp/front.npy")     # np.load(f, mmap_mode="r") if the file exists, else the CatMM of front.parts.json
+x = fr[rows]                                        # also fr[a:b], fr[rows, 7], len(fr), fr.shape: the same bytes the copied file holds
+link_front(CR / "on1_X@warp", [CR / "on1_A@warp/front.npy", CR / "on1_B@warp/front.npy"])   # what rf_pait.py merge does
+```
+
+- A merged on-policy pool (`rf_pait.py merge`, default since 2026-10-20; `--copy` for the old layout) writes
+  `<pool>@warp/front.parts.json` instead of a concatenated `front.npy`: the source files' row ranges, paths relative to the
+  cache root. A zero-copy source expands into its own parts. tab / agent / road / drivable / route / feat and `teacher.npz`
+  are still written as files. Any reader of `<pool>@warp/front.npy` opens it with `open_front` (pp_train's `open_front`,
+  `Tokens`, `RowCache` handle it; a plain `np.load` fails loudly with FileNotFoundError, never with other rows).
+- The merged pool depends on its sources: each part's size and mtime are recorded and checked at open (deleted or rebuilt
+  source -> FileNotFoundError). Before deleting any `on1_*@warp` run `python -m jevdrive.tokens refs $DATA_DIR/runs/op_parity/cache`
+  (docs/storage.md). Verification and costs: [experiments/cl_infra/results/zero-copy](../experiments/cl_infra/results/zero-copy/README.md).
+
 ## `jevdrive.par`: shards and parallel map
 
 ```python

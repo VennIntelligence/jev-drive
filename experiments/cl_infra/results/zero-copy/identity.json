@@ -1,0 +1,21 @@
+{
+ "a": "ZCA-L18-s0",
+ "b": "ZCB-L18-s0",
+ "note": "R2J's command 60 steps eager: on1_JTPH (copied tokens) vs on1_JTPHZ (zero-copy front.parts.json)",
+ "scalars": 278,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5458450317382812,
+  0.5458450317382812
+ ],
+ "on_hash_60": [
+  "43bfc742366790f8",
+  "43bfc742366790f8"
+ ],
+ "want_hash": null,
+ "identical": true
+}

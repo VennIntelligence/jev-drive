@@ -8,12 +8,17 @@ index: 220 routes take a measured 3.11 h; reduced profile
 
 **Conclusion.** Needs libegl1 (decisions 16); 220 routes take 3.11 h, 209 complete (17). Default `reduced`: 59.1 vs 59.8 tick/s, 3.3x fewer threads (83).
 
+**Zero-copy pool merges (2026-10-20).** `rf_pait.py merge` now indexes the source tokens (`front.parts.json`, `jevdrive.tokens`)
+instead of copying them. On on1_JTPH it is bitwise identical through every reader path, gives an identical 60-step training,
+and takes 85 s / 35 GB instead of about 10 min / 173 GB: [results/zero-copy](results/zero-copy/README.md).
+
 **Read more.** research/b2d-closed-loop/index.html, docs/closed-loop-runbook.md, docs/bench2drive-cost.md
 
 <!-- files:begin -->
 ## Files
 
 - [`sigkill_trigger.py`](scripts/sigkill_trigger.py) (scripts): The SIGKILLs of one night against the box sampler; with `memwatch.py` (1 s sampler), `canary.py`, `canary_fork.py` ([results](results/sigkill-trigger/README.md), decision 222)
+- [`zc_merge.sh`](scripts/zc_merge.sh) (scripts): Zero-copy pool merge check lane; with `zc_check.py` (bitwise rows / pinned gather) ([results](results/zero-copy/README.md))
 - [`pool_usage.py`](scripts/pool_usage.py) (scripts): One day of the GPU pool: idle card-hours by cause, why jobs waited, old vs new accounting replay ([results](results/pool-fix/README.md), decision 181)
 - `carla_parallel.sh` (archive): How many headless CARLA servers fit on …
 - `carla_threads.py` (archive): CARLA server thread census and a …

@@ -15,6 +15,11 @@ Read this when you need to decide where a model, dataset, checkpoint or output g
 | `ckpt/` | our own checkpoints |
 | `runs/` | experiment outputs and logs |
 
+Merged on-policy pools (`runs/op_parity/cache/on1_*@warp` with a `front.parts.json` and no `front.npy`, docs/lib.md
+`jevdrive.tokens`) hold no tokens of their own: they index their source pools' `front.npy`. Deleting or rebuilding a source
+breaks them (loudly, at open), so before removing any `on1_*@warp` run `python -m jevdrive.tokens refs
+$DATA_DIR/runs/op_parity/cache` and keep every file it lists while a pool that uses it is live.
+
 HF models live in the HF cache, so `from_pretrained("Qwen/Qwen3-VL-4B-Instruct")` works without a path.
 Add new models to `scripts/download_models.sh`.
 

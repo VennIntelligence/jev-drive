@@ -1,0 +1,9 @@
+{
+ "a": "on1_JTPH",
+ "b": "on1_JTPHZ",
+ "batches": 72,
+ "rows_per_batch": 96,
+ "tokens_host_pinned": true,
+ "rowcache_card": true,
+ "pass_": true
+}
