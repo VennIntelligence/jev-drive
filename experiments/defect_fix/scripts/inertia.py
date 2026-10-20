@@ -250,8 +250,10 @@ def cmd_cf(a):
         rm = rmem_of(sorted({r["run"] for r in R}))
         R = [r for r in R if (r["session"], r["k"]) in rm]
         run.info(f"{len(R)} rows in {len({r['scene'] for r in R})} scenes: " + str(pd.Series([r["win"] for r in R]).value_counts().to_dict()))
-        cores = {t: SC.Core(t, "cuda", "backwarp") for t in TAGS}
-        enc_core = cores[TAGS[0]]
+        tags = tuple(a.tags.split(","))
+        assert a.gate_tag in tags, (a.gate_tag, tags)
+        cores = {t: SC.Core(t, "cuda", "backwarp") for t in tags}
+        enc_core = cores[tags[0]]
         net, A = enc_core.model.net, enc_core.A
 
         def encode(frames, slots):
@@ -284,16 +286,16 @@ def cmd_cf(a):
                 for t, core in cores.items():
                     row = np.stack([np.r_[feeds[n][1], rm[(r["session"], r["k"])]] if core.rm else feeds[n][1] for n in names]).astype(np.float32)
                     with torch.no_grad():
-                        o = core.model(H, torch.from_numpy(row).to(core.dev), tc)
+                        o = core.model(H, torch.from_numpy(row).to(core.dev), tc)   # P0: no adapter, the row is not read
                     mu = (o[0] if isinstance(o, tuple) else o).float()[:, core.pi].reshape(len(names), 33, 15).cpu().numpy()
                     for n, m in zip(names, mu):
                         p = I.to_rear(m[:, 0:3], m[:, 11], I.T_IDXS, r["cam_t"][:2], Z.T_OUT, "lever")[:, :3]
                         recs.append(dict(i=i, tag=t, arm=n, P=np.asarray(p, np.float32).ravel()))
                 meta.append({k: r[k] for k in ("scene", "k", "t0", "v0", "win", "rest", "lead", "line", "obj40", "h40", "h60", "hv24")}
                             | dict(i=i, w_ok=all(r["sl"][fw] is not None for fw in WF), gate=float(np.abs(
-                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2]
+                                np.asarray(recs[-len(names) * len(tags) + len(names) * tags.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2]
                                 - r["poses_log"][:, :2]).max()), gate2=bool(gate_ok(
-                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2],
+                                np.asarray(recs[-len(names) * len(tags) + len(names) * tags.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2],
                                 r["poses_log"][:, :2]))))
             if nf % 20 == 0:
                 run.info(f"{nf + 1} / {len(by)} scenes, {len(meta)} rows")
@@ -389,7 +391,8 @@ def cmd_report(a):
     W = {c: C.pivot_table(index=["tag", "i"], columns="arm", values=c) for c in ("S", "has", "A4", "v24", "head20")}
     out, lines = dict(gate=g, cells=[]), []
     f3 = lambda t: f"{t[0]:+.3f} [{t[1]:+.3f}, {t[2]:+.3f}]"  # noqa: E731
-    for tag in TAGS:
+    TG = [t for t in TAGS + ("P0",) if t in set(C.tag)] + sorted(set(C.tag) - set(TAGS) - {"P0"})
+    for tag in TG:
         for win in ("STOP", "STOP-line", "NS", "TURN", "OPEN"):
             m = M[M.win.eq("STOP") & M.line] if win == "STOP-line" else M[M.win.eq(win)]
             if not len(m):
@@ -440,7 +443,7 @@ def cmd_report(a):
     # verdicts (prereg)
     V = {}
     cells = {(c["tag"], c["win"]): c for c in out["cells"]}
-    for tag in TAGS:
+    for tag in TG:
         st, ns, tu, op = (cells.get((tag, w)) for w in ("STOP", "NS", "TURN", "OPEN"))
         v = {}
         if st:
@@ -499,6 +502,7 @@ def main():
     c.add_argument("--rows", default=str(ROWS), help="row files (onp_rows output dir)")
     c.add_argument("--gate-tag", default="RSG-L18-s0", help="the policy whose logged plan G0 compares against")
     c.add_argument("--name", default="", help="output subdir of $O (default: P160 at $O itself)")
+    c.add_argument("--tags", default=",".join(TAGS), help="models (comma list; the first encodes the frames)")
     c.add_argument("--every", type=int, default=5)
     c.add_argument("--workers", type=int, default=16)
     c.add_argument("--limit", type=int, default=0)

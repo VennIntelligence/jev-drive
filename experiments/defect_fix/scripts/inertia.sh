@@ -23,6 +23,8 @@ recede) sub inertia-recede --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY 
 smoke)  sub inertia-smoke --vram 24 --cpu 8 --ram 48 --timeout-h 1 -- bash -c "O_SMOKE=1 $TR $PY cf --limit 3 --workers 3" ;;
 all)    c=$(sub inertia-cf --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- $TR $PY cf) || exit 1
         sub inertia-report --after $c --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY report ;;
+p0)     c=$(sub inertia-cf-p0 --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- $TR $PY cf --tags P0,RB0-F-s0,RSG-L18-s0 --gate-tag RSG-L18-s0 --name p160_p0) || exit 1
+        sub inertia-report-p0 --after $c --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- $TR $PY report --name p160_p0 ;;   # supplement 4
 s1select) $TR $PY select && sub inertia-recede-s1 --vram 0.1 --cpu 4 --ram 48 --timeout-h 1 -- $TR $PY recede --controls $S1/stop_ctrl.txt ;;
 s1one)
   mkdir -p $S1; echo "$2" > $S1/one.txt
