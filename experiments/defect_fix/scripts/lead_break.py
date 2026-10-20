@@ -387,6 +387,7 @@ def cmd_report(a):
 
 
 def main():
+    global O, TAGS
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
     sp.add_parser("select")
@@ -394,10 +395,15 @@ def main():
     c.add_argument("--every", type=int, default=2)
     c.add_argument("--workers", type=int, default=16)
     c.add_argument("--limit", type=int, default=0)
+    c.add_argument("--tags", default=",".join(TAGS), help="models (must hold RB0-F-s0: it encodes the frames and carries G0)")
+    c.add_argument("--name", default="", help="output subdir of $O (default: $O itself)")
     n = sp.add_parser("nav")
     n.add_argument("--workers", type=int, default=12)
     sp.add_parser("report")
     a = p.parse_args()
+    if a.cmd == "cf" and (a.name or a.tags != ",".join(TAGS)):         # lon-anchor supplement 3: the pilot read on other checkpoints
+        O, TAGS = O / a.name if a.name else O, tuple(a.tags.split(","))
+        assert "RB0-F-s0" in TAGS, "--tags: RB0-F-s0 encodes the frames"
     {"select": cmd_select, "cf": cmd_cf, "nav": cmd_nav, "report": cmd_report}[a.cmd](a)
 
 

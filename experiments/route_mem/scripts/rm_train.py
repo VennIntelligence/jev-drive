@@ -211,6 +211,9 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             <pool>/tight_in.npz from defect_fix scripts/tight_in.py label): the plan outside the human's line by > 0.2 m (across each pose's
             heading; on/lon_tightin) + TURN-CAP's arc cap (along the heading; on/lon_tightina); through nr1_lat: 10 W x ho_w x sum / n_imit
             each. 0 (default) = off. With --diag: grad/lon_tightin (both parts together).
+  --flat-brk FILE   (SIMP-F, lon-anchor prereg supplement 3) navtrain training rows whose token is in FILE (lead_break.py's brake-needed
+            rows) are fed a flat history on every draw: ax 0 and the 3 past poses re-spaced at the current speed (parity_adapter.cv_history);
+            their label is kept. '' (default) = off: no operation added.
   --simp-region W / --simp-clear W   (SIMP, defect_fix plans/2026-10-20-lon-anchor-prereg.md supplement 2) defect_fix lib/nr1_simp.py on the
             S rows: the road hinge and lat_onc as one hinge on their union, the agent hinge and lat_side as one clearance hinge (lead objects
             may only shorten the plan); each replaces the trainer's own hinge on the S rows (nr1_lat.attach); through nr1_lat: 10 W x ho_w x
@@ -905,6 +908,16 @@ def cmd_train(a):
         assert RS.n or len(RS.nav), "--kd-lam: no retention row (--kd-k 0 and no --kd-nav)"
         krng = np.random.default_rng([cfg.seed, 0, 151])
         kdrec = RS.rec | dict(kd_lam=a.kd_lam, mode=a.kd_mode, k=a.kd_k, k_nav=a.kd_nav_k if len(RS.nav) else 0)
+    FLAT, flrec = None, {}
+    if getattr(a, "flat_brk", ""):                                    # SIMP-F (lon-anchor supplement 3): brake-needed navtrain rows, flat history
+        import parity_adapter as PA_
+        tk_ = set(_pl.Path(a.flat_brk).read_text().split())
+        nm_ = np.asarray(ns.names).astype(str)
+        fi_ = np.asarray(tr_o)[np.isin(nm_[np.asarray(tr_o)], list(tk_))]
+        FLAT = torch.zeros(S.n, dtype=torch.bool, device=dev)
+        FLAT[torch.as_tensor(fi_, device=dev)] = True
+        flrec = dict(file=a.flat_brk, tokens=len(tk_), train_rows=int(len(fi_)), train_rows_total=int(len(tr_o)))
+        assert len(fi_), f"--flat-brk {a.flat_brk}: no training row matched"
     if a.ego_scale_speed > 0:                                         # ANTI-COPY history-speed noise (docstring)
         srng = np.random.default_rng([cfg.seed, 0, 149])
         spow = torch.as_tensor(EGO_SCALE_POW, device=dev, dtype=torch.float32)
@@ -1186,6 +1199,9 @@ def cmd_train(a):
         if kd_on:
             run.info(f"RETAIN: P0 speed-profile distillation, {json.dumps(kdrec)}")
             run.summary.update(retain=kdrec)
+        if FLAT is not None:
+            run.info(f"SIMP-F flat history (ax 0, constant-speed past poses: parity_adapter.cv_history) on the brake-needed navtrain rows: {json.dumps(flrec)}")
+            run.summary.update(flat_brk=flrec)
         if a.ego_scale_speed > 0:
             screc = dict(share=a.ego_scale_speed, max=a.ego_scale_max, cols=EGO_SPEED, pow=EGO_SCALE_POW, rows="non-anchor, non-pool")
             run.info(f"ANTI-COPY history-speed noise: {json.dumps(screc)}, rng [seed, 0, 149]")
@@ -1296,6 +1312,14 @@ def cmd_train(a):
                 sc = torch.where(sm, 1.0 + a.ego_scale_max * (2.0 * us[:, 1] - 1.0), torch.ones_like(us[:, 1]))
                 ego[:len(r), esp] = ego[:len(r), esp] * sc[:, None].pow(spow[None])
                 Ls_s = dict(scale_share=sm.float().mean(), scale_abs=((sc - 1).abs().sum() / sm.sum().clamp_min(1)))
+            if FLAT is not None:                                      # SIMP-F: no deceleration in the fed history where braking must start
+                fm_ = FLAT[rows] & ~anchor
+                nfl_ = fm_.sum()
+                if nfl_ > 0:
+                    e_ = ego[fm_]
+                    e_[:, 6] = 0.0
+                    e_[:, 8:20] = PA_.cv_history(e_[:, :20])
+                    ego[fm_] = e_
             dq = None
             if des_on:                                                # D1: the table rows' desire (anchor rows never)
                 sd_ = SIDE[rows].long() * (~anchor).long()
@@ -1309,6 +1333,8 @@ def cmd_train(a):
                 total, Ls = LS(out, S, rows, anchor)
             if des_on:
                 Ls["d1/rows"] = (sd_ != 0).sum().float()
+            if FLAT is not None:
+                Ls["flat/rows"] = nfl_.float()
             if a.ego_scale_speed > 0:
                 Ls["scale/share"], Ls["scale/abs"] = Ls_s["scale_share"], Ls_s["scale_abs"]
             if kd_on:                                                 # RETAIN: P0's speed profile on the retention rows (second forward)
@@ -1620,6 +1646,8 @@ if __name__ == "__main__":
                        "lateral term + arc cap (defect_fix lib/nr1_tight.py; labels <pool>/tight_in.npz; 0 = off)")
         p.add_argument("--on-anchor", type=float, default=0.0, help="LON-ANCHOR: weight of the station-anchored two-sided arc term on the S rows "
                        "(defect_fix lib/nr1_anchor.py; labels <pool>/lon_anchor.npz; 0 = off)")
+        p.add_argument("--flat-brk", default="", help="SIMP-F: file of navtrain tokens (lead_break.py's brake-needed rows) whose fed history is "
+                       "flattened on training draws (ax 0, past poses at constant current speed; label kept); '' = off")
         p.add_argument("--simp-region", type=float, default=0.0, help="SIMP: weight (x 10) of the merged road + oncoming-lane hinge on the S rows; "
                        "replaces the trainer's road hinge there (defect_fix lib/nr1_simp.py; needs --lat-file for the onc raster; 0 = off)")
         p.add_argument("--simp-clear", type=float, default=0.0, help="SIMP: weight (x 10) of the merged object-clearance hinge on the S rows (leads may "

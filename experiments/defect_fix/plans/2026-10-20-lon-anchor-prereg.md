@@ -139,3 +139,23 @@ JOINT-DAGGER（第 321 条，规则路径目标打掉「别撞」）。
 
 **读数**：训练后 `inertia.py`（不改）在 P160 上跑 NTV0-L18-s0（编码帧）、四个 B 检查点、RB0-F-s0（起点）、RSG-L18-s0（G0），按 A 块同一条通过线报告每臂对对照；
 闭环筛选由主会话在 PAI-FIX 上做。
+
+## 补记 3（10-20 晚，主会话转达用户的 B 块加臂；写于任何 SIMP-F 输出之前）
+
+**起因**：第 407 条（LEAD-BREAK，`results/lead_break/`）：RB0-F 的 ego 状态输入覆盖了前车刹车；navtrain 上需刹车的行 84 % 历史里已在减速，
+模型学成「已经在刹才刹」。
+
+**臂 SIMP-F（`SIMPF1K-L18-s0`）**：= SIMPB1K（SIMP，PAI 份额 0.5，同一 LON-ANCHOR 剂量）+ navtrain 模仿行的历史拉平：`lead_break.py nav` 判为 BRK
+（需刹车：按原速保持会在 4 s 内越过前车尾部、接近速度 ≥ 0.5 m/s，v0 ≥ 2 m/s）的 navtrain 训练行（`simp.sh flat` → `$DATA_DIR/runs/defect_fix/simp/flat_brk.txt`），
+每次被抽到时喂一个不减速的历史：ax = 0，3 个过去 pose 沿自己的折线按当前速度重新排布（`parity_adapter.cv_history`，与 TR1 hist_cv 同一函数），标签不变。
+开关 `rm_train --flat-brk FILE`，默认空：不加任何运算；关掉时的逐位同一性另做一次（`simp.sh ident <B 代码前的提交> F` → `simp_identity_F.json`），训练前检查。
+锚行（cons）不动；只动训练划分里的 navtrain 行（dev 行不动）。报告拉平的行数（文件里的 token 数、匹配到的训练行数、每步抽到的行数 `flat/rows`）。
+
+**pilot 后的离线闸（只对 SIMP-F）**：`lead_break.py cf`（代码只加 `--tags / --name`，规则不变）在 RB0-F-s0 自己的 PAI 撞前车状态上，
+tags = RB0-F-s0（编码帧、G0）、SIMPN1K（对照）、SIMPB1K（不拉平的同配方）、SIMPF1K。读数「原样 serve 时 4 s 内留在前车后面的份额」（F 臂）：
+**过** = BRK 上 SIMPF − SIMPN ≥ **+0.10** 且 CI 下界 > 0，**并且** FOL（稳定跟车）上 |SIMPF − SIMPN| ≤ **0.05**；另报 SIMPF − SIMPB、
+以及朝 RB0-F 关输入（OFF，第 407 条 0.61）缩小的差距份额（`simp.py leadread` → `results/lon_anchor/simp_leadbreak.{json,md}`）。inertia 读数照补记 2 也加上这一臂。
+
+**补记 2 闸的读数（写在这里备查，不改闸）**：人路径当 plan，region 激活 7.62 %、clear 3.94 %（线各 2 %），**FAIL**；同一批行上被替换的原项：
+道路 hinge 11.69 %、lat_onc 1.21 %、agent hinge 2.21 %、lat_side 2.41 %（`results/lon_anchor/simp_gate.md`）。即合并项在人路径上的触发不比它们替换的原项多
+（region 低于原道路 hinge；clear ≈ agent + side 之和），2 % 的线定在了现配方自身的水平以下。按登记，B 臂在主会话决定之前不训练（train 的前置检查读 simp_gate.json）。

@@ -6,13 +6,17 @@
 #   simp.sh pre <old rev>      draws SIMPW00 / SIMPW05 / SIMPW10 -> identity (the control's command 60 steps eager, <old rev> vs this code, no
 #                              SIMP flag) + the offline gate (GPU job: simp.py gate on the share-0.5 arm's command)
 #   simp.sh dry <dose>         the four commands and their diffs against the control
-#   simp.sh arms <dose>        control + 3 arms (refuse unless identity and gate passed) -> inertia.py cf / report -> read-out
-#   job bodies: weights | gate | train <arm> <dose> | cf | report
+#   simp.sh flat               (supplement 3) the brake-needed navtrain tokens (lead_break.py nav: win BRK) -> $B/flat_brk.txt (CPU job)
+#   simp.sh arms <dose>        control + 4 arms (A / B / C shares, F = B + flat history on the brake-needed rows; refuse unless identity and
+#                              gate passed) -> inertia.py cf / report -> read-out; lead_break.py cf on N / B / F -> simp.py leadread
+#   job bodies: weights | gate | flatlist | train <arm> <dose> | cf | report | lbcf | lbread
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 B=$DATA_DIR/runs/defect_fix/simp; ME=experiments/defect_fix/scripts/simp.sh; PY=experiments/defect_fix/scripts/simp.py; LA=experiments/defect_fix/scripts/lon_anchor.py
 TR=$DATA_DIR/envs/op-train/bin/python; V=.venv/bin/python; JT=experiments/defect_fix/scripts/jt.sh; IN=experiments/defect_fix/scripts/inertia.py
 LAT=$DATA_DIR/runs/defect_fix/lat/L18NR1v2; RES=experiments/defect_fix/results/lon_anchor; POOL=on1_JTCP; RUNS=$DATA_DIR/runs/op_parity/runs
-declare -A TAG=([N]=SIMPN1K-L18-s0 [A]=SIMPA1K-L18-s0 [B]=SIMPB1K-L18-s0 [C]=SIMPC1K-L18-s0) WF=([N]=SIMPW00 [A]=SIMPW00 [B]=SIMPW05 [C]=SIMPW10)
+declare -A TAG=([N]=SIMPN1K-L18-s0 [A]=SIMPA1K-L18-s0 [B]=SIMPB1K-L18-s0 [C]=SIMPC1K-L18-s0 [F]=SIMPF1K-L18-s0) \
+           WF=([N]=SIMPW00 [A]=SIMPW00 [B]=SIMPW05 [C]=SIMPW10 [F]=SIMPW05)
+FLATF=$B/flat_brk.txt; LB=experiments/defect_fix/scripts/lead_break.py
 LATF="--lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 "
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
 mkdir -p $B/pool $RES
@@ -25,7 +29,7 @@ base() {  # base <tag> <wfile> <steps> [jt.sh]: NTV0-L18-s0's command (jt.sh tra
      && $C == *"--on-arc 0 "* ]] || die "unexpected command: $C"; echo "$C"; }
 simp() {  # simp <tag> <wfile> <steps> [dose]: the control's command without lat_onc / lat_soft / lat_side, + region, clear [+ LON-ANCHOR]
   local C; C=$(base $1 $2 $3) || exit 1; echo "${C/$LATF/} --simp-region 1 --simp-clear 1${4:+ --on-anchor $4}"; }
-cmd() { [[ $1 == N ]] && base ${TAG[N]} ${WF[N]} 1000 || simp ${TAG[$1]} ${WF[$1]} 1000 ${2:?dose}; }
+cmd() { [[ $1 == N ]] && { base ${TAG[N]} ${WF[N]} 1000; return; }; echo "$(simp ${TAG[$1]} ${WF[$1]} 1000 ${2:?dose})$([[ $1 == F ]] && echo " --flat-brk $FLATF")"; }
 case ${1:-} in
 pre)
   rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
@@ -41,29 +45,56 @@ pre)
   g=$(sub simp-gate --after $w "${FT[@]}" --timeout-h 1 -- bash $ME gate) || exit 1
   echo "$(date '+%F %T') pre (code $h, old $rev): weights $w identity $a $b bitcmp $e gate $g" | tee -a $B/stages.txt ;;
 dry)
-  D=${2:?dose}; for A in N A B C; do echo "$A: $(cmd $A $D)"; done
-  for A in A B C; do echo "== control -> $A"; diff <(cmd N | tr ' ' '\n') <(cmd $A $D | tr ' ' '\n'); done ;;
+  D=${2:?dose}; for A in N A B C F; do echo "$A: $(cmd $A $D)"; done
+  for A in A B C F; do echo "== control -> $A"; diff <(cmd N | tr ' ' '\n') <(cmd $A $D | tr ' ' '\n'); done ;;
+ident)  # ident <old rev> <stem>: the control's command 60 steps eager, <old rev> vs this code (no new flag) -> results/lon_anchor/simp_identity_<stem>.json
+  rev=${2:?old rev}; X=${3:?stem}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
+  FE=("${FT[@]}" --env JEV_RM_EAGER=1); h=$(git rev-parse --short HEAD)
+  a=$(sub simp-gg-old-$X "${FE[@]}" --timeout-h 1 -- bash -c "$(base SIMPGG$X-old SIMPW00 60 $WT/$JT)") || exit 1
+  b=$(sub simp-gg-new-$X "${FE[@]}" --timeout-h 1 -- bash -c "$(base SIMPGG$X-new SIMPW00 60)") || exit 1
+  e=$(sub simp-bitcmp-$X --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a SIMPGG$X-old \
+      --b SIMPGG$X-new --out lon_anchor/simp_identity_$X --note "the NTV0 recipe from RB0-F-s0 on on1_JTCP / SIMPW00, 60 steps eager: code $rev vs $h without new flags") || exit 1
+  echo "$(date '+%F %T') ident $X (code $h, old $rev): $a $b bitcmp $e" | tee -a $B/stages.txt ;;
+flat) f=$(sub simp-flatlist --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME flatlist) || exit 1; echo "$(date '+%F %T') flat: $f" | tee -a $B/stages.txt ;;
 arms)
   D=${2:?dose}; for X in ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
-  t=(); for A in N A B C; do t+=($(sub simp-train-${TAG[$A]} "${FT[@]}" --timeout-h 2 -- bash $ME train $A $D)) || exit 1; done
-  f=$(sub simp-cf --after $(IFS=,; echo "${t[*]}") --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- bash $ME cf) || exit 1
+  [[ -s $FLATF ]] || die "no $FLATF (simp.sh flat)"
+  declare -A T_; for A in N A B C F; do T_[$A]=$(sub simp-train-${TAG[$A]} "${FT[@]}" --timeout-h 2 -- bash $ME train $A $D) || exit 1; done
+  f=$(sub simp-cf --after $(IFS=,; echo "${T_[*]}") --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- bash $ME cf) || exit 1
   r=$(sub simp-report --after $f --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME report) || exit 1
-  echo "$(date '+%F %T') arms (code $(git rev-parse --short HEAD), LON-ANCHOR dose $D): train ${t[*]} cf $f report $r" | tee -a $B/stages.txt ;;
+  l=$(sub simp-lbcf --after ${T_[N]},${T_[B]},${T_[F]} --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- bash $ME lbcf) || exit 1
+  k=$(sub simp-lbread --after $l --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME lbread) || exit 1
+  echo "$(date '+%F %T') arms (code $(git rev-parse --short HEAD), LON-ANCHOR dose $D): train ${T_[*]} cf $f report $r lead-break cf $l read $k" | tee -a $B/stages.txt ;;
 weights) for x in 00:0 05:0.5 10:1.0; do $TR $LA weights --pool $POOL --base JT00S --share ${x#*:} --out SIMPW${x%%:*} --require-fix || exit 1; done ;;
 gate)    $TR $PY gate -- $(simp SIMPGATE SIMPW05 1000 | cut -d' ' -f3-) ;;
+flatlist)
+  $TR - $FLATF $RES/simp_flat.json <<'PY' || die "flat list"
+import json, os, sys
+import pandas as pd
+N = pd.read_parquet(os.environ["DATA_DIR"] + "/runs/defect_fix/lead_break/nav.parquet")
+b = N[N.win == "BRK"]
+open(sys.argv[1], "w").write("\n".join(b.token.astype(str)) + "\n")
+rec = dict(source="runs/defect_fix/lead_break/nav.parquet (lead_break.py nav; navtrain_full, v0 >= 2 m/s)", lead_rows=len(N), brk_rows=len(b),
+           brk_logs=int(b.log.nunique()), brk_already_decelerating=int((b.ax <= -0.5).sum()), brk_initiation=int((b.ax > -0.5).sum()))
+json.dump(rec, open(sys.argv[2], "w"), indent=1); print(json.dumps(rec))
+PY
+  ;;
 train)
   A=$2; python3 - $RES <<'PY' || die "pre-checks failed: no training"
 import json, sys
 r = sys.argv[1]
 assert json.load(open(f"{r}/simp_identity.json"))["identical"], "switch-off identity failed"
+assert json.load(open(f"{r}/simp_identity_F.json"))["identical"], "switch-off identity (flat history code) failed"
 assert json.load(open(f"{r}/simp_gate.json"))["gate"]["pass_"], "SIMP gate failed"
 assert json.load(open(f"{r}/gate_v2.json"))["G1"]["pass_"], "LON-ANCHOR G1 failed"
 PY
   CMD="$(cmd $A $3)" || exit 1; echo "$(date '+%F %T') train ${TAG[$A]}: $CMD" | tee -a $B/stages.txt; exec $CMD ;;
-cf)     $TR $IN cf --tags NTV0-L18-s0,${TAG[N]},${TAG[A]},${TAG[B]},${TAG[C]},RB0-F-s0,RSG-L18-s0 --gate-tag RSG-L18-s0 --name simp ;;
+cf)     $TR $IN cf --tags NTV0-L18-s0,${TAG[N]},${TAG[A]},${TAG[B]},${TAG[C]},${TAG[F]},RB0-F-s0,RSG-L18-s0 --gate-tag RSG-L18-s0 --name simp ;;
+lbcf)   $TR $LB cf --tags RB0-F-s0,${TAG[N]},${TAG[B]},${TAG[F]} --name simp ;;
+lbread) $TR $PY leadread ${TAG[F]} ${TAG[N]} ${TAG[B]} ;;
 report)
   $TR $IN report --name simp > $B/inertia_report.log 2>&1 || die "inertia report"
   cp experiments/defect_fix/results/inertia/report_simp.md $RES/simp_inertia_report.md && cp experiments/defect_fix/results/inertia/report_simp.json $RES/simp_inertia_report.json || die "no report"
-  $TR $LA inertia --name simp --ctl ${TAG[N]} --arms ${TAG[A]} ${TAG[B]} ${TAG[C]} --out-stem simp_inertia || die "read-out"; date '+%F %T' > $B/DONE ;;
+  $TR $LA inertia --name simp --ctl ${TAG[N]} --arms ${TAG[A]} ${TAG[B]} ${TAG[C]} ${TAG[F]} --out-stem simp_inertia || die "read-out"; date '+%F %T' > $B/DONE ;;
 *) sed -n 2,11p $0; exit 2 ;;
 esac

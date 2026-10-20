@@ -139,6 +139,56 @@ def cmd_gate(argv):
         raise SystemExit(2)
 
 
+LB_RISE, LB_FOL = 0.10, 0.05                         # supplement 3: BRK clear rise vs the control >= 0.10 (CI low > 0); FOL change within 0.05
+
+
+def cmd_leadread(arm, ctl, ref):
+    """lead_break.py cf --name simp on RB0-F's own PAI crash states -> the supplement 3 rule: the share of plans that stay behind the lead
+    over 4 s (as served, arm F) on BRK, arm vs control (and vs the SIMP arm without flattening), FOL held -> results/lon_anchor/simp_leadbreak.*"""
+    import pandas as pd
+    import inertia as IN
+    O = DATA / "runs/defect_fix/lead_break/simp"
+    g = json.load(open(O / "gate.json"))
+    M = pd.read_parquet(O / "rows.parquet").set_index("i")
+    C = pd.read_parquet(O / "cf.parquet")
+    C["clear"] = np.where(np.isfinite(C.margin), (C.margin >= 0).astype(float), np.nan)
+    W = C.pivot_table(index="i", columns=["tag", "arm"], values="clear", dropna=False)
+    out, L = dict(gate=g, arm=arm, ctl=ctl, ref=ref), [f"# SIMP-F lead-break read (supplement 3; lead_break.py cf on RB0-F-s0's PAI crash states)", "",
+                                                       f"G0: {'PASS' if g['pass_'] else 'FAIL'} (p99 {g['gate_p99']:.4f} m, rows {g['rows']})", ""]
+    p3 = lambda t: f"{t[0]:+.3f} [{t[1]:+.3f}, {t[2]:+.3f}]"  # noqa: E731
+    for win in ("BRK", "FOL"):
+        m = M[M.win == win]
+        ids, sc = m.index.values, m.scene.values
+        X = W.reindex(ids)
+        col = lambda t, x="F": X[(t, x)].values if (t, x) in X.columns else np.full(len(ids), np.nan)  # noqa: E731
+        cell = dict(rows=len(m), scenes=int(m.scene.nunique()), clear={})
+        for t, x in [(t, "F") for t in sorted({c[0] for c in X.columns})] + [("RB0-F-s0", "OFF")]:
+            v = col(t, x)
+            k = np.isfinite(v)
+            cell["clear"][f"{t}/{x}"] = IN.boot(lambda i: float(np.nanmean(v[i][k[i]])), sc)
+        def pair(t1, t0):
+            u, v = col(t1), col(t0)
+            k = np.isfinite(u) & np.isfinite(v)
+            return IN.boot(lambda i: float(np.mean(u[i][k[i]] - v[i][k[i]])), sc)
+        cell["arm-ctl"], cell["arm-ref"], cell["ref-ctl"] = pair(arm, ctl), pair(arm, ref), pair(ref, ctl)
+        off, c0 = cell["clear"]["RB0-F-s0/OFF"][0], cell["clear"][f"{ctl}/F"][0]
+        cell["gap_closed"] = float(cell["arm-ctl"][0] / max(off - c0, 1e-6))
+        out[win] = cell
+        L += [f"## {win}: {len(m)} decisions in {cell['scenes']} scenes", "", "| model / arm | stays behind the lead (95 % scene CI) |", "|:--|--:|"]
+        L += [f"| {k} | {p3(v)} |" for k, v in cell["clear"].items()]
+        L += ["", f"- {arm} - {ctl}: {p3(cell['arm-ctl'])}; {arm} - {ref}: {p3(cell['arm-ref'])}; {ref} - {ctl}: {p3(cell['ref-ctl'])}; "
+              f"share of the gap to RB0-F OFF closed: {cell['gap_closed']:.2f}", ""]
+    b, f = out["BRK"]["arm-ctl"], out["FOL"]["arm-ctl"]
+    out["pass_"] = bool(g["pass_"] and b[0] >= LB_RISE and b[1] > 0 and abs(f[0]) <= LB_FOL)
+    L += [f"Rule: BRK {arm} - {ctl} >= +{LB_RISE} with CI low > 0, and |FOL {arm} - {ctl}| <= {LB_FOL}: {'PASS' if out['pass_'] else 'FAIL'}"]
+    (RES / "simp_leadbreak.json").write_text(json.dumps(out, indent=1, default=float))
+    (RES / "simp_leadbreak.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
-    assert sys.argv[1] == "gate" and sys.argv[2] == "--", "usage: simp.py gate -- <rm_train train args>"
+    if sys.argv[1] == "leadread":
+        cmd_leadread(*sys.argv[2:5])
+        raise SystemExit(0)
+    assert sys.argv[1] == "gate" and sys.argv[2] == "--", "usage: simp.py gate -- <rm_train train args> | leadread ARM CTL REF"
     cmd_gate(sys.argv[3:])
