@@ -65,3 +65,17 @@ nuPlan 池行：t0 车身已在道路栅格外的行改用更宽的 drivable 栅
   G3 是三个 GPU 60 步作业（PRIO 5）+ 一个 CPU 比对作业。用 `--after` 串成一条链，最后一个作业写 `DONE`；只用一个后台等待者。
 - 代码：`experiments/round5/scripts/road_pai.py`（build / index / g1 / g2 / report）、`road_pai.sh`（chain / wait / 作业体）。
 - 结果：`experiments/round5/results/road_pai.md` + `road_pai.json`。不写 decisions.md（主会话写）。
+
+## 补记 1（2026-10-21，2 场景冒烟之后、全量构建与任何闸读数之前）：面改成评测器的 PAI offroad 规则
+
+- 冒烟（on1_PAIH 前 2 个场景、320 张栅格）按第 1 节「车道多边形 ∪ road area」建面：人自己 t0 车身出面 153 / 320，挂上的行里人的标签
+  路径触发 hinge 68 %。BEV 看到原因：相邻车道多边形之间有细缝（并集里的窄条「面外」），正好落在人走的车道线上；PAI 地图没有 road area。
+- 评测器 `eval/scorers/offroad.py` 对 PAI（有 road edge 的地图）的规则其实是：某条车道或附近车道并集包住车身 -> 不算出路；否则车身碰到
+  与自车高差 ≤ 3 m 的 road edge（距离 < 1 mm）才算出路。车道并集只是豁免，出路的边界是 road edge。
+- 所以面改为：在 opb_labels 的 0.25 m 画布上画出与自车同层（每条 edge 取平面上离自车最近的顶点，|dz| ≤ 3 m，自车 z = 日志 rig z
+  + rig -> 车框中心 0.91 m，同 onp_rows）的 road edge 线，取自车车框中心所在的 4 连通区域，再并上车道并集；SDF 仍用 opb_labels 的
+  `mask_sdf`（两侧 EDT、2 x 2 平均、±20 m、float16），格式、分辨率、坐标系不变。edge 有缺口时区域会漏出去（冒烟 28 % 的栅格 > 90 %
+  画布在面内），那时 edge 线本身仍是一条窄的负值墙，与评测器「碰到 edge 才算」一致。road edge 取自场景加载器的矢量地图（onp_rows
+  `load_map` 同一来源）。
+- 新面下冒烟：t0 出面 0 / 320，标签路径最小 SDF 中位 1.10 m，G1 = 0。闸、线、回退规则（a）-（d）不变。
+- 代码：`opb_labels.canvas_sdf` 再拆成 `canvas_fill` + `mask_sdf`（nuPlan 行为逐位不变，合成多边形 200 例对比旧实现 0 差异）。

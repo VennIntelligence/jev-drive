@@ -76,16 +76,25 @@ def sdf_raster(m, pose):
 
 def canvas_sdf(u, pose):
     """sdf_raster's canvas on a (multi)polygon u already in the map frame (None = no surface) at pose (x, y, yaw): the same (NH, NW)
-    float32 SDF. Also the PAI road raster's (experiments/round5/scripts/road_pai.py, u = the NuRec lane / road-area union)."""
+    float32 SDF. The two halves (canvas_fill, mask_sdf) are also the PAI road raster's (experiments/round5/scripts/road_pai.py)."""
+    return mask_sdf(canvas_fill(u, pose) > 0)
+
+
+def canvas_fill(u, pose):
+    """(NX, NY) uint8 0.25 m canvas of the (multi)polygon u (map frame; None = empty) at pose: 1 inside, holes 0."""
     import cv2
-    from scipy.ndimage import distance_transform_edt as edt
     img = np.zeros((NX, NY), np.uint8)
     if u is not None:
         for g in (u.geoms if hasattr(u, "geoms") else [u]):
             cv2.fillPoly(img, [_ring(g.exterior.coords, pose)], 1, shift=4)
             for h in g.interiors:
                 cv2.fillPoly(img, [_ring(h.coords, pose)], 0, shift=4)
-    ins = img > 0
+    return img
+
+
+def mask_sdf(ins):
+    """(NX, NY) bool inside mask of the canvas -> the stored (NH, NW) float32 SDF (EDT both sides, 2 x 2 mean of the 0.5 m cells)."""
+    from scipy.ndimage import distance_transform_edt as edt
     if not ins.any():
         return np.full((NH, NW), -20.0, np.float32)
     d = edt(ins) - edt(~ins)

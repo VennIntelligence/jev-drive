@@ -3,9 +3,10 @@
 road hinge (on_train LossesOn `both` / `mixed`, --road-lam / --road-margin) can act on them. Lane script: scripts/road_pai.sh.
 
   build   (box, AlpaSim venv, CPU)  --pool on1_PAIH --rows <row dir> --cfg-glob '<roll>/*/runs/*/sim/generated-user-config-0.yaml'
-          one raster per (scene, k) of the pool at the row's anchor (row file: rig pose = rear axle, scene local frame). Surface = the NuRec
-          vector map's lane polygons + road areas (rf_tax.Map: the evaluator's offroad surface, D1 mapcov's object); canvas =
-          opb_labels.canvas_sdf (the nuPlan road.npz recipe: 0.25 m fill, EDT both sides, 2 x 2 mean, clipped +-20 m, float16).
+          one raster per (scene, k) of the pool at the row's anchor (row file: rig pose = rear axle, scene local frame). Surface (plan
+          amendment 1) = the evaluator's PAI offroad rule: the 4-connected component of the ego's box centre among the canvas cells that no
+          road edge at the ego's level (|dz| <= 3 m, the scorer's test) crosses, plus the lane union (rf_tax.Map); canvas and SDF =
+          opb_labels.canvas_fill / mask_sdf (the nuPlan road.npz recipe: 0.25 m, EDT both sides, 2 x 2 mean, clipped +-20 m, float16).
           -> <out>/parts/<scene>.npz (resumable) -> <out>/sdf.npy (U, 128, 96) float16 + <out>/keys.npz (scene, k, anchor, empty)
   index   (box, op-train env, CPU)  --pool on1_X   every PAI human row of the pool (names ..:paih|paih05|paih15:<scene>:<k>; stretch rows share
           the plain row's t0 pose and raster) -> <out>/road_on1_X.npz in the dedup layout lib/drivable_hinge.Hinge reads (tokens, ok, ix,
@@ -44,8 +45,9 @@ D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 CR, RES = D / "runs/op_parity/cache", REPO / "experiments/round5/results"
 OUT = Path(os.environ.get("RP_OUT") or D / "runs/round5/road_pai")    # RP_OUT: a smoke elsewhere
 PAI_PRE = ("paih", "paih05", "paih15")
-LAYERS = np.array(["NUREC_LANE", "NUREC_ROAD_AREA"])     # rf_tax.Map: lane polygons + road areas
+LAYERS = np.array(["NUREC_ROAD_EDGE_SIDE", "NUREC_LANE", "NUREC_ROAD_AREA"])   # pai_raster: road-edge component + lane union
 B_OUT, MARGIN = -0.5, 0.3                                 # fallback (b) depth; the recipe's --road-margin
+EDGE_DZ, EDGE_R = 3.0, 80.0                               # the scorer's MAX_ROAD_EDGE_ELEVATION_DELTA_M; edges beyond 80 m miss the canvas
 WHY = ("ok", "t0_off", "label_out", "no_surface", "label_trig")
 SPEED = ((0, 0.3), (0.3, 5), (5, 10), (10, 20), (20, 99))
 SPLIT = "physical_ai_av/pai-rows@v1"
@@ -66,20 +68,67 @@ def scene_cfgs(pattern: str) -> dict:
     return out
 
 
-def surface(scene: str, cfg: str, xy: np.ndarray):
-    """The NuRec surface (lane polygons + road areas) around the points xy, or None. -> (geometry | None, load s)."""
+def scene_geom(scene: str, cfg: str, xy: np.ndarray) -> dict:
+    """One NuRec scene's data source (the runtime's scene loader, rf_tax.loader) -> lane union around xy (rf_tax.Map: lane polygons + road
+    areas, or None), road-edge polylines [(n, 3) x y z] (onp_rows.load_map's), the rig trajectory (T, 3), the rig -> box-centre offsets."""
     import rf_tax as RT
+    from trajdata.maps.vec_map_elements import MapElementType as MT
     t = time.time()
-    vm = RT.loader(cfg).get_data_source(scene).map
-    if vm is None or not len(vm.lanes):
-        return None, time.time() - t
-    U = RT.Map(vm, xy).U
-    return (None if U.is_empty else U), time.time() - t
+    ds = RT.loader(cfg).get_data_source(scene)
+    vm, vc = ds.map, ds.rig.vehicle_config
+    tr = np.asarray(ds.rig.trajectory.positions, float)
+    g = dict(U=None, E=[], traj=np.c_[tr[:, :2], tr[:, 2] if tr.shape[1] > 2 else np.full(len(tr), np.nan)],
+             xc=float(vc.aabb_x_offset_m + vc.aabb_x_m / 2), zc=float(vc.aabb_z_offset_m + vc.aabb_z_m / 2))   # onp_rows: rig_to_aabb (x 1.4675)
+    if vm is not None:
+        for e in vm.elements.get(MT.ROAD_EDGE, {}).values():
+            q = np.asarray(e.polyline.points, float)
+            if len(q) > 1:
+                g["E"].append(np.c_[q[:, :2], q[:, 2] if q.shape[1] > 2 else np.full(len(q), np.nan)])
+        if len(vm.lanes):
+            U = RT.Map(vm, xy).U
+            g["U"] = None if U.is_empty else U
+    g["P"] = np.concatenate(g["E"]) if g["E"] else np.zeros((0, 3))
+    g["pid"] = np.repeat(np.arange(len(g["E"])), [len(e) for e in g["E"]])
+    g["t_load"] = time.time() - t
+    return g
 
 
-def rasters(U, poses: np.ndarray) -> np.ndarray:
+def pai_raster(g: dict, pose: np.ndarray):
+    """The evaluator's PAI offroad rule (eval/scorers/offroad.py: off = no lane / lane union contains the footprint AND it touches a road
+    edge within 3 m of the ego's elevation) on opb_labels' canvas: inside = the 4-connected component of the ego's box centre among the cells
+    no same-level road edge crosses, plus the lane union; SDF by opb_labels.mask_sdf. -> (NH, NW) float16, share of the canvas inside, edges."""
+    import cv2
     import opb_labels as OL
-    return np.stack([np.clip(OL.canvas_sdf(U, p), -20, 20).astype(np.float16) for p in poses])
+    from scipy.ndimage import label
+    P, pid = g["P"], g["pid"]
+    tr = g["traj"]
+    z_ego = tr[np.argmin(((tr[:, :2] - pose[:2]) ** 2).sum(1)), 2] + g["zc"]          # log z beside the pose + rig -> box centre (the scorer's ego z)
+    bar, keep = np.zeros((OL.NX, OL.NY), np.uint8), []
+    d2 = ((P[:, :2] - pose[:2]) ** 2).sum(1)
+    near = d2 < EDGE_R ** 2
+    if near.any():
+        q, dq, zq = pid[near], d2[near], P[near, 2]
+        o = np.lexsort((dq, q))
+        first = o[np.r_[True, np.diff(q[o]) != 0]]                                    # each edge's vertex nearest the ego in plan view
+        keep = q[first][~(np.abs(zq[first] - z_ego) > EDGE_DZ)].tolist()               # the scorer's level test (no z: kept)
+        if keep:
+            cv2.polylines(bar, [OL._ring(g["E"][i], pose) for i in keep], False, 1, shift=4)
+    lab, _ = label(bar == 0)
+    i0, j0 = int((g["xc"] - OL.CX0) / OL.FINE), int(-OL.CY0 / OL.FINE)
+    w = lab[i0 - 8:i0 + 9, j0 - 8:j0 + 9]                                               # an edge pixel under the box centre: nearest free cell
+    ii, jj = np.nonzero(w)
+    seed = w[ii, jj][np.argmin((ii - 8) ** 2 + (jj - 8) ** 2)] if len(ii) else 0
+    ins = (lab == seed) if seed else np.zeros_like(bar, bool)
+    if g["U"] is not None:
+        ins |= OL.canvas_fill(g["U"], pose) > 0
+    frac = float(ins.mean())
+    sdf = np.full((OL.NH, OL.NW), 20.0, np.float32) if ins.all() else np.clip(OL.mask_sdf(ins), -20, 20)
+    return sdf.astype(np.float16), frac, len(keep)
+
+
+def rasters(g: dict, poses: np.ndarray):
+    out = [pai_raster(g, p) for p in poses]
+    return np.stack([o[0] for o in out]), np.array([o[1] for o in out], np.float32), np.array([o[2] for o in out], np.int32)
 
 
 # ---------------------------------------------------------------- build (AlpaSim venv)
@@ -90,14 +139,16 @@ def _build_one(job):
     miss = [k for k in ks if k not in pos]
     assert not miss, f"{scene}: pool rows k {miss[:5]} not in {rowf}"
     A = z["anchor"][[pos[k] for k in ks]].astype(np.float64)
-    U, t_load = surface(scene, cfg, A[:, :2])
+    g = scene_geom(scene, cfg, A[:, :2])
     t = time.time()
-    sdf = rasters(U, A)
+    sdf, frac, ne = rasters(g, A)
     t_ras = (time.time() - t) / len(A)
+    empty = g["U"] is None and not g["E"]
     tmp = part.with_suffix(".tmp.npz")
-    np.savez_compressed(tmp, k=np.asarray(ks, np.int32), anchor=A, sdf=sdf, empty=U is None)
+    np.savez_compressed(tmp, k=np.asarray(ks, np.int32), anchor=A, sdf=sdf, frac=frac, n_edges=ne, empty=empty)
     os.replace(tmp, part)
-    return dict(scene=scene, n=len(ks), empty=U is None, area_m2=0.0 if U is None else float(U.area), t_load=t_load, t_ras=t_ras)
+    return dict(scene=scene, n=len(ks), empty=empty, edges=len(g["E"]), lanes=g["U"] is not None, frac_med=float(np.median(frac)),
+                t_load=g["t_load"], t_ras=t_ras)
 
 
 def _part_done(job) -> bool:
@@ -135,23 +186,26 @@ def cmd_build(a):
         st = [v for v in res.values if v]
         n = sum(len(by[s]) for s in sc)
         sdf = np.lib.format.open_memmap(OUT / "sdf.tmp.npy", "w+", np.float16, (n, 128, 96))
-        S, K, A, E, o = [], [], [], [], 0
+        S, K, A, E, Fr, Ne, o = [], [], [], [], [], [], 0
         for s in sc:
             with np.load(parts / f"{s}.npz") as z:
                 m = len(z["k"])
                 sdf[o:o + m] = z["sdf"]
                 S += [s] * m
-                K.append(z["k"]), A.append(z["anchor"])
+                K.append(z["k"]), A.append(z["anchor"]), Fr.append(z["frac"]), Ne.append(z["n_edges"])
                 E += [bool(z["empty"])] * m
                 o += m
         sdf.flush()
         del sdf
         os.replace(OUT / "sdf.tmp.npy", OUT / "sdf.npy")
-        np.savez(OUT / "keys.npz", scene=np.array(S), k=np.concatenate(K), anchor=np.concatenate(A), empty=np.array(E))
+        Fr, Ne = np.concatenate(Fr), np.concatenate(Ne)
+        np.savez(OUT / "keys.npz", scene=np.array(S), k=np.concatenate(K), anchor=np.concatenate(A), empty=np.array(E), frac=Fr, n_edges=Ne)
         rec = dict(pool=a.pool, rows=len(names), scenes=len(sc), rasters=n, built_now=len(st), empty_scenes=sum(v["empty"] for v in st),
+                   scenes_without_edges=sum(v["edges"] == 0 for v in st), scenes_without_lanes=sum(not v["lanes"] for v in st),
+                   rasters_no_edge=float((Ne == 0).mean()), rasters_inside_gt90=float((Fr > 0.9).mean()), inside_frac_med=float(np.median(Fr)),
                    sdf_gb=(OUT / "sdf.npy").stat().st_size / 1e9, parts_gb=sum(f.stat().st_size for f in parts.glob("*.npz")) / 1e9,
                    t_load_med=float(np.median([v["t_load"] for v in st])) if st else None,
-                   t_ras_med=float(np.median([v["t_ras"] for v in st])) if st else None, wall_s=time.time() - t0, split=sp.id)
+                   t_ras_med=float(np.median([v["t_ras"] for v in st])) if st else None, build_s=time.time() - t0, split=sp.id)
         (OUT / "build.json").write_text(json.dumps(rec, indent=1))
         run.summary |= rec
         print(json.dumps(rec))
@@ -190,7 +244,7 @@ def cmd_index(a):
     K = np.load(OUT / "keys.npz")
     at = {(s, int(k)): i for i, (s, k) in enumerate(zip(K["scene"].tolist(), K["k"].tolist()))}
     tok = names[sel]
-    ix = np.array([at.get(k, -1) for k in np.array(keys, object)[sel]], np.int64)
+    ix = np.array([at.get(keys[i], -1) for i in np.flatnonzero(sel)], np.int64)
     fut, v0 = T["fut"][sel].astype(np.float32), T["speed"][sel].astype(np.float32)
     part = T["pool"][sel].astype(str) if "pool" in T.files else np.full(len(tok), a.pool)
     no_s = (ix < 0) | K["empty"][np.maximum(ix, 0)]
@@ -268,8 +322,8 @@ def ego_at(C, t):                                          # d1_mac.ego_at (cont
 
 def _g2_one(job):
     scene, cfg, poses = job
-    U, _ = surface(scene, cfg, poses[:, :2])
-    return rasters(U, poses), U is None
+    g = scene_geom(scene, cfg, poses[:, :2])
+    return rasters(g, poses)[0], g["U"] is None and not g["E"]
 
 
 def cmd_g2(a):
