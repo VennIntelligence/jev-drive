@@ -44,7 +44,33 @@ Pools (box, `$DATA_DIR/runs/op_parity/cache/`): `on1_PAIH` (names `on:paih:<scen
 `on1_CPAIXT` (11 scenes each) are kept for the gates. Splits: `physical_ai_av/pai-rows@v1` (853), `physical_ai_av/pai-rows-half-a@v1` (428).
 Run dir `$DATA_DIR/runs/pai_rows/` (jobs.txt, stages.txt). Append scenes: add them to scenes.tsv, `pr.sh chain H|S`.
 
-## Download queue v2 (prepared, not started)
+## Second batch N (built 2026-10-21, no training, no decision entry)
+
+The 64 scenes of the download queue v2 (all on the same drive as a PAI test281 scene, 144-591 s apart, median 391 s; [results/scenes_n.tsv](results/scenes_n.tsv),
+[results/n_t281_partner.tsv](results/n_t281_partner.tsv)), built with H's recipe by `pr.sh chain N` ([plans/2026-10-21-pai-rows-n.md](plans/2026-10-21-pai-rows-n.md)), new
+pools plus zero-copy merges (box `$DATA_DIR/runs/op_parity/cache/`). Every row of the new pools carries tab key `t281` (first 8 characters of the partner test281
+scene id; "" on the older rows of the merged pools); scene-level partner id and gap are in `n_t281_partner.tsv`. Splits `physical_ai_av/pai-rows-n@v1` (64),
+`physical_ai_av/pai-rows-x@v1` (853 + 64). `scenes.tsv` and the 853-scene pools are unchanged.
+
+| pool | scenes | rows | outside held | stop_nolead | turn_sharp | launch | other (bend / rest) |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| `on1_PAIHN` (f = 1) | 64 | 10 202 | 8 926 | 4 614 | 4 633 | 955 | 0 |
+| `on1_PAIHN05` | 64 | 9 306 | 8 142 | 4 208 | 4 227 | 871 | 0 |
+| `on1_PAIHN15` | 64 | 7 450 | 6 518 | 3 367 | 3 386 | 697 | 0 |
+| `on1_PAIHX` = PAIH + PAIHN | 915 | 145 995 | 123 379 | 39 506 | 39 012 | 13 888 | 53 589 |
+| `on1_PAIHX05` | 915 | 133 185 | 112 557 | 36 048 | 35 582 | 12 670 | 48 885 |
+| `on1_PAIHX15` | 915 | 106 719 | 90 189 | 28 894 | 28 517 | 10 147 | 39 161 |
+| `on1_JTPHX` = JTPH parts + PAIH* + PAIHN* (agent ok False on all PAI human parts) | | 555 505 | | | | | |
+
+(PAIHX scene counts are 915 = 851 + 64.) Gates: roll checks 1 / 1 and 10 / 10 scored, every log-following record returned the log; R1 (trainer forward) PAIHN median 0.0103 m,
+7.0 % over (line 10 %), wrong model 99.3 % over, 0 missing rows (probe PAIHNT 0.0083 m, 4.3 %); f = 1 identity bit-equal on the probe (1 597 / 1 751 rows) **and on
+the full pool** (9 306 rows: ego, label, 8 tokens, teacher, slots 9 306 / 9 306); zero-copy prefix checks of PAIHX* against PAIH* and of JTPHX against JTPH pass
+(every tab key, agent / road / route, feat, teacher, 4 000 sampled token rows). Under the dilated label at most 0.8 % of PAIHN15 rows need > 6 m/s^2 at 1 s
+(15 % > 3). Results: [results/N/](results/N/) (rows.md, feas.md, r1_*.json, gate1.json, x/mcheck_*.json, x/xfix_JTPHX.json). Cost about 1 h wall at PRIO 6, under 1 card-h
+(estimate; rolls ~0.7 job-h); disk about 72 GB (new pools 12, merged pools PAIHX* 14, JTPHX 34 because the merge rewrites agent / road / drivable, rows, cache and stretch parts 11).
+The first merge job stopped at the prefix check because of a wrong pool-name argument in `pr.sh` (fixed, rerun passed; the lane's own half-written PAIHX was overwritten).
+
+## Download queue v2 (downloaded 2026-10-21 02:51, built as batch N above)
 
 [`results/download_queue_v2.csv`](results/download_queue_v2.csv): the NuRec scenes of `experiments/pai_av/results/nurec_select.csv` that are
 not on disk and have `cls` in stop_nolead / turn_sharp / launch, rank-ordered, with the select list's columns (so `nurec_fetch.py --list`

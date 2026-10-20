@@ -1,0 +1,36 @@
+{
+ "plain": "PAIHNT",
+ "f1": "PAIHNT10",
+ "rows": 1597,
+ "rows_plain": 1751,
+ "ego_equal": true,
+ "fut_equal": true,
+ "front_equal_share": 1.0,
+ "front_max_abs_diff": 0.0,
+ "teacher_equal": true,
+ "teacher_max_abs_diff": 0.0,
+ "build": {
+  "name": "PAIHNT10",
+  "pool": "PAIHNT",
+  "f": 1.0,
+  "prefix": "paihn1",
+  "scenes": 11,
+  "scenes_encoded_now": 11,
+  "rows": 1597,
+  "rows_plain": 1751,
+  "dropped": {
+   "cold": 154
+  },
+  "hist_src_err_f1": {
+   "x": 3.552713678800501e-15,
+   "y": 8.881784197001252e-16,
+   "yaw": 2.220446049250313e-16
+  },
+  "slot_repick_equal_f1": "1597 / 1597",
+  "fut_equal_log_fut_f1": true,
+  "encode_s": 10.5,
+  "front_gb": 0.42,
+  "out": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIHNT10"
+ },
+ "pass_": true
+}

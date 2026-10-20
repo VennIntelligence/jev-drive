@@ -1,0 +1,36 @@
+{
+ "plain": "PAIHN",
+ "f1": "PAIHN10",
+ "rows": 9306,
+ "rows_plain": 10202,
+ "ego_equal": true,
+ "fut_equal": true,
+ "front_equal_share": 1.0,
+ "front_max_abs_diff": 0.0,
+ "teacher_equal": true,
+ "teacher_max_abs_diff": 0.0,
+ "build": {
+  "name": "PAIHN10",
+  "pool": "PAIHN",
+  "f": 1.0,
+  "prefix": "paihn1",
+  "scenes": 64,
+  "scenes_encoded_now": 64,
+  "rows": 9306,
+  "rows_plain": 10202,
+  "dropped": {
+   "cold": 896
+  },
+  "hist_src_err_f1": {
+   "x": 3.552713678800501e-15,
+   "y": 5.440092820663267e-15,
+   "yaw": 3.3306690738754696e-16
+  },
+  "slot_repick_equal_f1": "9306 / 9306",
+  "fut_equal_log_fut_f1": true,
+  "encode_s": 52.1,
+  "front_gb": 2.44,
+  "out": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_PAIHN10"
+ },
+ "pass_": true
+}

@@ -1,0 +1,14 @@
+{
+ "root": "/root/autodl-tmp/ujs/runs/pai_rows/roll/N/n001",
+ "scenes": 10,
+ "scored": 10,
+ "rpc": [],
+ "missing": [],
+ "dump_entries": 200,
+ "asl": 10,
+ "late": 1783,
+ "returned_log": 1783,
+ "inferences": 1783,
+ "gb": 1.14,
+ "pass_": true
+}

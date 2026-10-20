@@ -1,0 +1,13 @@
+{
+ "pool": "PAIHX05",
+ "ref": "PAIH05",
+ "ref_rows": 123879,
+ "rows": 133185,
+ "parts": {
+  "ph05": 123879,
+  "phn05": 9306
+ },
+ "agent_ok_prefix_equal": true,
+ "mismatch": [],
+ "pass_": true
+}
