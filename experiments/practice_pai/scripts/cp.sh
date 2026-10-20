@@ -8,7 +8,8 @@
 # Ids in $O/jobs.txt, stages in $O/stages.txt; the outcome (PASS / FAIL / STOP ..) in $O/VERDICT.
 #   cp.sh chain                     submit stage 1 + 2 and their checks (the stage-2 check submits everything after it)
 #   cp.sh dry                       the pilot and control training commands and their diff (only --tag and --on-wfile may differ)
-#   cp.sh wait                      blocks until $O/VERDICT or a failed job of this lane (for a run_in_background waiter)
+#   cp.sh wait                      blocks until $O/VERDICT / DONE or a failed job of this lane (for a run_in_background waiter)
+#   cp.sh resume                    resubmit the failed tail (fwd .. gate) with the same commands; rolls, rows, cache and pool reused
 #   job bodies: chk1 | chk2 | rest <after ids> | rows <chunk> | clean <chunk> | link | cache | pool | fwd <rows> | r1 | merge | labels |
 #               weights <arm> | train <arm> | tax <arm> | gate
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -55,6 +56,24 @@ cmd_train() {  # cmd_train <arm>: NTV0-L18-s0's command (jt.sh train DRY, ONK=32
   local C; C=$(DRY=1 ONK=32 ARCROWS=brake WARM=50 bash $JT train ${TAG[$1]} on1_$NM $LAT ${WF[$1]} 1000 0 | tail -1)
   [[ $C == *"--init RB0-F-s0 "* && $C == *"--on-k 32 "* && $C == *"--warmup 50 "* && $C == *"--steps 1000 "* && $C == *"w/${WF[$1]}.npz "* ]] || die "unexpected: $C"
   echo "${C/--init RB0-F-s0 /--init $T } --on-stoppt $WS"; }
+tail_fwd() {  # tail_fwd [after]: fwd .. gate (submitted by rest after cp-pool, or by resume with no dependency); ids land in globals
+  local p=${1:-}
+  f1=$(sub cp-fwd-train ${p:+--after $p} --vram 16 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME fwd train-rec) || exit 1
+  f2=$(sub cp-fwd-dev ${p:+--after $p} --vram 16 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME fwd dev-rec) || exit 1
+  g=$(sub cp-r1 --after $f1,$f2 --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME r1) || exit 1
+  m=$(sub cp-merge --after $g --vram 0.1 --cpu 4 --ram 60 --timeout-h 3 -- bash $ME merge) || exit 1
+  lb=$(sub cp-labels --after $m --vram 0.1 --cpu 24 --ram 96 --timeout-h 2 -- bash $ME labels) || exit 1
+  t=(); for A in pilot control; do
+    w=$(sub cp-w-$A --after $m --vram 0.1 --cpu 2 --ram 24 --timeout-h 1 -- bash $ME weights $A) || exit 1
+    t+=($(sub cp-train-$A --after $lb,$w "${FT[@]}" --timeout-h 2 -- bash $ME train $A)) || exit 1; done
+  q=(); x=(); for i in 0 1; do A=$([[ $i == 0 ]] && echo pilot || echo control); R=$O/read/${TAG[$A]}
+    CHUNKS_FROM=$REF/chunks SERVE="$SERVE" WIZ=$WIZ CONC=4 PRIO=$PRIO AFTER=${t[$i]} bash experiments/alpasim/scripts/pai_box.sh submit $R ${TAG[$A]} \
+      > $O/read_$A.txt || die "read submit $A"
+    [[ $(wc -l < $R/jobs.txt) == 8 ]] || die "$A: not 8 read chunks"; awk '{print $1, $2}' $R/jobs.txt >> $O/jobs.txt
+    r=$(awk '{print $1}' $R/jobs.txt | paste -sd,); q+=($r)
+    x+=($(sub cp-tax-$A --after $r --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME tax $A)) || exit 1; done
+  gt=$(sub cp-gate --after $(csv ${q[@]} ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME gate) || exit 1
+}
 case ${1:-} in
 dry)
   diff <(cmd_train pilot | tr ' ' '\n') <(cmd_train control | tr ' ' '\n'); echo "pilot:   $(cmd_train pilot)"; echo "control: $(cmd_train control)" ;;
@@ -98,22 +117,19 @@ PY
   l=$(sub cp-link --after $(csv ${rw[@]} ${cl[@]}) --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $ME link) || exit 1
   c=$(sub cp-cache --after $l --vram 20 --cpu 8 --ram 64 --timeout-h 3 -- bash $ME cache) || exit 1
   p=$(sub cp-pool --after $c --vram 0.5 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME pool) || exit 1
-  f1=$(sub cp-fwd-train --after $p --vram 16 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME fwd train-rec) || exit 1
-  f2=$(sub cp-fwd-dev --after $p --vram 16 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME fwd dev-rec) || exit 1
-  g=$(sub cp-r1 --after $f1,$f2 --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME r1) || exit 1
-  m=$(sub cp-merge --after $g --vram 0.1 --cpu 4 --ram 60 --timeout-h 3 -- bash $ME merge) || exit 1
-  lb=$(sub cp-labels --after $m --vram 0.1 --cpu 24 --ram 96 --timeout-h 2 -- bash $ME labels) || exit 1
-  t=(); for A in pilot control; do
-    w=$(sub cp-w-$A --after $m --vram 0.1 --cpu 2 --ram 24 --timeout-h 1 -- bash $ME weights $A) || exit 1
-    t+=($(sub cp-train-$A --after $lb,$w "${FT[@]}" --timeout-h 2 -- bash $ME train $A)) || exit 1; done
-  q=(); x=(); for i in 0 1; do A=$([[ $i == 0 ]] && echo pilot || echo control); R=$O/read/${TAG[$A]}
-    CHUNKS_FROM=$REF/chunks SERVE="$SERVE" WIZ=$WIZ CONC=4 PRIO=$PRIO AFTER=${t[$i]} bash experiments/alpasim/scripts/pai_box.sh submit $R ${TAG[$A]} \
-      > $O/read_$A.txt || die "read submit $A"
-    [[ $(wc -l < $R/jobs.txt) == 8 ]] || die "$A: not 8 read chunks"; awk '{print $1, $2}' $R/jobs.txt >> $O/jobs.txt
-    r=$(awk '{print $1}' $R/jobs.txt | paste -sd,); q+=($r)
-    x+=($(sub cp-tax-$A --after $r --vram 0.1 --cpu 16 --ram 40 --timeout-h 1 -- bash $ME tax $A)) || exit 1; done
-  gt=$(sub cp-gate --after $(csv ${q[@]} ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME gate) || exit 1
+  tail_fwd $p || exit 1
   echo "$(date '+%F %T') tail: link $l cache $c pool $p fwd $f1 $f2 r1 $g merge $m labels $lb train ${t[*]} reads ${q[*]} tax ${x[*]} gate $gt" | tee -a $O/stages.txt ;;
+resume)  # resume: resubmit fwd .. gate with the same commands after a failed tail (rolls, rows, cache and pool reused); never overwrites outputs
+  for x in $CR/on1_$NM $DATA_DIR/runs/op_parity/runs/${TAG[pilot]} $DATA_DIR/runs/op_parity/runs/${TAG[control]} $O/VERDICT $O/DONE; do
+    [[ ! -e $x ]] || die "$x exists: never overwritten"; done
+  [[ -f $O/pool/cp-pool/DONE && -d $CR/on1_$NP ]] || die "cp-pool not done"
+  ts=$(date +%Y%m%d-%H%M%S)
+  for A in pilot control; do R=$O/read/${TAG[$A]}                     # failed read chunks: pai_box.sh skips a chunk with SUBMITTED and no ERROR
+    [[ -f $R/jobs.txt ]] && mv $R/jobs.txt $R/jobs.$ts.txt                # beside it; its pool ERROR is in pool/: move the marker, keep the old ids
+    for r in $R/runs/*; do [[ -f $r/DONE ]] && die "$r done: not a failed tail"; [[ -f $r/SUBMITTED ]] && mv $r/SUBMITTED $r/SUBMITTED.$ts; done; done
+  echo "$(date '+%F %T') resume (code $(git rev-parse --short HEAD), first chain code $(cat $O/code.txt)): resubmit fwd .. gate" | tee -a $O/stages.txt
+  tail_fwd || exit 1
+  echo "$(date '+%F %T') resumed tail: fwd $f1 $f2 r1 $g merge $m labels $lb train ${t[*]} reads ${q[*]} tax ${x[*]} gate $gt" | tee -a $O/stages.txt ;;
 rows)  # rows <chunk>: that chunk's rollouts -> $ROWS/CP_<chunk>/<scene>.npz (own pass and staging dir: chunks run side by side)
   c=$2; P=CP_$c; G=$STG/$c; mkdir -p $G $ROWS
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $P \
@@ -146,8 +162,22 @@ gate)
   $AP experiments/defect_fix/scripts/stoppt.py overrun --tax NTV0=$DATA_DIR/runs/route_follow/pai_input_loop/tax/A0.pkl pilot=$O/tax/pilot.pkl \
       control=$O/tax/control.pkl --out $O/gate/overrun.json || echo "overrun failed" >> $O/gate/notes.txt
   date '+%F %T' > $O/DONE ;;
-wait)  # for the main session's single run_in_background waiter: returns when the lane has an outcome or a failed job
-  until [[ -f $O/VERDICT ]] || ls $O/pool/*/ERROR $O/roll/*/runs/*/ERROR $O/read/*/runs/*/ERROR > /dev/null 2>&1; do sleep 300; done
-  cat $O/VERDICT 2>/dev/null; ls $O/pool/*/ERROR $O/roll/*/runs/*/ERROR $O/read/*/runs/*/ERROR 2>/dev/null ;;
-*) sed -n 2,14p "$0"; exit 2 ;;
+wait)  # for the main session's single run_in_background waiter: returns when the lane has an outcome (VERDICT / DONE) or a failed job: the pool
+       # state of the newest id per job name in jobs.txt (a resubmitted name counts by its new id; stale ERROR files of a resumed tail do not)
+  until [[ -f $O/VERDICT || -f $O/DONE ]] || ! $V - $O/jobs.txt <<'PY'
+import sys
+from jevdrive.cl import pool as P
+last = {}
+for l in open(sys.argv[1]):
+    if l.split():
+        last[l.split()[1]] = l.split()[0]
+jobs = P.snapshot()[0]["jobs"]
+bad = [f"{n} {i} {jobs[i]['state']}: {jobs[i].get('why', '')}" for n, i in last.items() if jobs.get(i, {}).get("state") in ("failed", "cancelled")]
+if bad:
+    print("failed:", *bad, sep="\n  ", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+  do sleep 300; done
+  cat $O/VERDICT 2>/dev/null; [[ -f $O/DONE ]] && echo "DONE $(cat $O/DONE)"; true ;;
+*) sed -n 2,15p "$0"; exit 2 ;;
 esac

@@ -74,3 +74,10 @@ PAI 281（ACC + GAP）是否**好过**同命令、不抽这批行的对照，并
 c000 滚 → chk1 → (c000 建行 → 删)；c001 滚 → chk2 → (c001 建行 → 删)；cp-rest：c002.. 每个 chunk 滚 → 建行 → 删（第 k + W 个等第 k 个删完）→ link → cache →
 pool → fwd × 2 → r1 → merge → labels（G0）→ 权重 × 2 → 训练 pilot / 对照 → 各 8 个 PAI 281 读数 → rf_tax × 2 → gate。作业 id 记在
 `$DATA_DIR/runs/practice_pai/curated/jobs.txt` 与 `stages.txt`。
+
+## 续跑记录（2026-10-20 午，设计不变）
+
+尾部 `cp-fwd-train` / `cp-fwd-dev` 因 `runs/op_probe/labels/navtrain_all.npz`（NAVSIM 可行驶栅格，on_train `NAVSIM_RASTER`）在当天的盘清理
+（cl_infra/cleanup/2026-10-20b-box.md，10-20c 节）中被整目录删掉而报 FileNotFoundError，其后所有作业按依赖失败；滚动、建行、cache、`cp-pool`
+已正常完成。栅格用原脚本 `opb_labels.py` 原样重建，与旧文件逐点一致（turn_selinput / turn_selnt 存下的旧边距在 3 154 + 28 323 个 token 上差值为 0；
+见清理清单的 10-20d 复盘节）。从 `cp-fwd-*` 起用同一份代码与命令重新入队（`cp.sh resume`），不重滚、不重建行，臂、闸、数值一概不动。
