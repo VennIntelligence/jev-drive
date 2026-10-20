@@ -166,6 +166,16 @@ stage2)   # user order (10-21): R2J + ACC + GAP on PAI 281 first (PRIO 20), stor
   t=$(tax281 NTV0-L18-s0-281ag $DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0 "" 20) || exit 1
   g=$(PRIO=20 sub r2-s2gate --after $(csv ${x[-1]} $t) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME s2gate) || exit 1
   echo "$(date '+%F %T') stage2 (code $(git rev-parse --short HEAD)): R2J ag chunks ${x[*]:0:${#x[@]}-1} facts ${x[-1]}; NTV0 ag facts $t; gate $g" | tee -a $O/stages.txt ;;
+s2c)   # (main session, 10-21) one PAI 281 read of R2C + ACC + GAP at PRIO 13, scene-paired vs the stored NTV0 + ACC + GAP facts (stage2 built them; reused if present)
+  mkdir -p $O/pai281; rm -f $O/DONE2C; F_=$DATA_DIR/runs/pai_fix/facts; x=($(read281 C ag 13)) || exit 1; a=${x[-1]}
+  if [[ ! -s $F_/NTV0-L18-s0-281ag.csv ]]; then a=$a,$(tax281 NTV0-L18-s0-281ag $DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0 "" 13) || exit 1; fi
+  s=$(PRIO=13 sub r2-s2creport --after $a --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME s2creport) || exit 1
+  echo "$(date '+%F %T') s2c (code $(git rev-parse --short HEAD)): R2C ag chunks ${x[*]:0:${#x[@]}-1} facts ${x[-1]}; report $s" | tee -a $O/stages.txt ;;
+s2creport)
+  F_=$DATA_DIR/runs/pai_fix/facts
+  $TR $PY r281 --read NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R2C-ag=$F_/${TAG[C]}-281ag.csv --pairs R2C-ag:NTV0-ag --out $RES/pai281_R2C_ag.md \
+      --title "PAI 281, ACC + GAP: R2C vs stored NTV0-L18-s0" || die "r281 R2C ag"
+  date '+%F %T' > $O/DONE2C ;;
 s2gate)  # worse = paired mean CI upper < 0 or zeros >= +5 vs stored NTV0 + ACC + GAP -> S2STOP (nothing else submitted); else the rest
   F_=$DATA_DIR/runs/pai_fix/facts
   $TR $PY r281 --read NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R2J-ag=$F_/${TAG[J]}-281ag.csv --pairs R2J-ag:NTV0-ag --out $RES/pai281_R2J_ag.md \
