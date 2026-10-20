@@ -30,6 +30,7 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
   - the RSG serve steps below.
 - **Cost.**
   - 5 new reads, 40 chunk jobs, each on its first try: 13.3 stack-hours, about 4.4 card-hours at 3 stacks per card.
+  - RB0-F-s0 native, added later (`lineage.sh add RB0-NAT`): 8 chunks on the first try, 2.8 stack-hours (about 0.9 card-hours).
   - Wall time 1.26 h on cards 0-4. The 18 rf_tax extracts were CPU pool jobs, a few minutes each.
 
 ## Short answer
@@ -38,7 +39,15 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
   then adds +0.10, but that leaves P0 at 0.351. RB0-F-s0 sits +0.31 above P0 at VC+LEAD and is level with RSG-L18-s0 (+0.016 [-0.006,
   +0.039]). NTV0 adds +0.055 [+0.026, +0.086] over RB0-F at VC+LEAD.
 - **NTV0 native loses 0.17 to VC+LEAD, and most of the loss is front collisions.** AF-front zeros are 43 native against 2 with the lead
-  MPC. P0 native has only 16: the shipped model, read natively, drives too poorly to reach the lead.
+  MPC.
+- **The plan's own lead following broke at the adapter step (P0 -> RB0-F), not at NTV0.** Read natively:
+  - AF-front: P0 16, RB0-F-s0 50, NTV0-L18-s0 43.
+  - 38 of NTV0's 43 are also AF-front for RB0-F; only 6 of RB0-F's 50 are AF-front for P0.
+  - On RB0-F's 50 AF-front scenes, P0 native is 7 ok, 13 rear-hit partials (it stops behind the lead and is hit from behind), 6 AF-front, 15
+    corridor, 3 offroad, 3 AF-side, 2 slow, 2 no-launch.
+  - With the lead MPC (RB0-F VC+LEAD), 26 of the 50 score 1 and 5 stay AF-front.
+  - Along the native chain the mean still rises: RB0-F - P0 +0.134 [+0.079, +0.189], NTV0 - RB0-F +0.065 [+0.036, +0.097]. The adapter's
+    route-following gain outweighs the lead following it loses.
 - **On P0, ACC + GAP moves zeros from offroad and collisions into the corridor.** Offroad 70 -> 47, corridor 75 -> 94 (other corridor
   24 -> 44). Rear-hit partials halve, 54 -> 25, as they do for NTV0 (75 -> 26).
 
@@ -49,6 +58,7 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
 | P0, native | 280 | 0.2419 | 0.2396 | 161 | 16 | 11 | 58 | 76 | 9 / 40 / 27 | 0 | 56 | 12 | 14 | 09528162 |
 | P0, VC+LEAD | 281 | 0.2487 | 0.2469 | 172 | 11 | 16 | 70 | 75 | 14 / 37 / 24 | 0 | 54 | 12 | 3 | - |
 | P0, +ACC+GAP | 281 | 0.3511 | 0.3480 | 164 | 15 | 8 | 47 | 94 | 18 / 32 / 44 | 0 | 25 | 5 | 2 | - |
+| RB0-F-s0, native | 281 | 0.3757 | 0.3711 | 135 | 50 | 3 | 29 | 53 | 22 / 20 / 11 | 0 | 51 | 31 | 1 | - |
 | RB0-F-s0, VC+LEAD | 280 | 0.5564 | 0.5527 | 81 | 5 | 5 | 18 | 53 | 18 / 28 / 7 | 0 | 64 | 34 | 1 | 0cc7fa67 |
 | NTV0-L18-s0, native | 281 | 0.4412 | 0.4424 | 107 | 43 | 5 | 16 | 43 | 24 / 14 / 5 | 0 | 62 | 40 | 2 | - |
 | NTV0-L18-s0, VC+LEAD (stored N0) | 281 | 0.6114 | 0.6091 | 59 | 2 | 3 | 15 | 39 | 17 / 17 / 5 | 0 | 75 | 42 | 0 | - |
@@ -71,6 +81,9 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
 
 | step | n | A mean | B mean | A - B, 95 % CI | zeros A - B |
 |---|--:|--:|--:|---|--:|
+| RB0-F-s0, native - P0, native | 280 | 0.3762 | 0.2419 | +0.1343 [+0.0789, +0.1893] | -26 |
+| NTV0-L18-s0, native - RB0-F-s0, native | 281 | 0.4412 | 0.3757 | +0.0654 [+0.0356, +0.0965] | -28 |
+| RB0-F-s0, VC+LEAD - RB0-F-s0, native | 280 | 0.5564 | 0.3759 | +0.1805 [+0.1294, +0.2304] | -54 |
 | RB0-F-s0, VC+LEAD - P0, VC+LEAD | 280 | 0.5564 | 0.2496 | +0.3068 [+0.2504, +0.3633] | -90 |
 | NTV0-L18-s0, VC+LEAD (stored N0) - RB0-F-s0, VC+LEAD | 280 | 0.6116 | 0.5564 | +0.0552 [+0.0263, +0.0863] | -22 |
 | NTV0-L18-s0, VC+LEAD (stored N0) - P0, VC+LEAD | 281 | 0.6114 | 0.2487 | +0.3627 [+0.3049, +0.4204] | -113 |
@@ -91,6 +104,7 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
 | P0, native | `$DATA_DIR/runs/defect_fix/lineage/read/P0-NAT` | `(none)` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | e1079613 |
 | P0, VC+LEAD | `$DATA_DIR/runs/defect_fix/lineage/read/P0-VL` | `JEV_VCONT=1.0 JEV_LEAD=1` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | 80cd4ddd |
 | P0, +ACC+GAP | `$DATA_DIR/runs/defect_fix/lineage/read/P0-AG` | `JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | e1079613 |
+| RB0-F-s0, native | `$DATA_DIR/runs/defect_fix/lineage/read/RB0-NAT` | `(none)` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | 82ccd478 |
 | RB0-F-s0, VC+LEAD | `$DATA_DIR/runs/defect_fix/lineage/read/RB0-VL` | `JEV_VCONT=1.0 JEV_LEAD=1` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | e1079613 |
 | NTV0-L18-s0, native | `$DATA_DIR/runs/defect_fix/lineage/read/NTV0-NAT` | `(none)` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | e1079613 |
 | NTV0-L18-s0, VC+LEAD (stored N0) | `$DATA_DIR/runs/route_follow/pai_input_loop/N0` | `JEV_VCONT=1.0 JEV_LEAD=1` | `controller.gains.rel_front_steering_angle_weight=10` | 1 | 96583428 |
@@ -113,4 +127,5 @@ unchanged, rf_tax extracts, summary) and `scripts/lineage_pai281.py` (table). Bo
 # box, repo root
 bash experiments/defect_fix/scripts/lineage.sh first    # staged first arm (P0 VC+LEAD); its first chunk checked before the rest
 bash experiments/defect_fix/scripts/lineage.sh submit   # the other 4 arms, 18 extracts (CPU), summary --after all
+bash experiments/defect_fix/scripts/lineage.sh add RB0-NAT   # RB0-F-s0 native, its extract, summary
 ```
