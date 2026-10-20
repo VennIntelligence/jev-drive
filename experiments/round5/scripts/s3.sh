@@ -13,7 +13,7 @@
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round5/s3; D3R=$DATA_DIR/runs/round5/d3; ME=experiments/round5/scripts/s3.sh; PY=experiments/round5/scripts/s3.py; V=.venv/bin/python
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; RF=experiments/route_follow/scripts
-PP=experiments/practice_pai/scripts/pp.py; CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs
+CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs
 T=NTV0-L18-s0; WRONG=RB0-F-s1; PRIO=${PRIO:-8}; TSV=experiments/round5/results/s3_scenes.tsv; ARMS="A F S L"; REF=R2J-L18-s0
 NP=${S3_NP:-PAIO}; NM=${S3_NM:-JTPHO}; WO=${S3_WO:-R2JFO}; SMX=${S3_SM:-S3SM}   # env overrides: the R3 pre-flight on a test pool
 BASE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
@@ -112,8 +112,7 @@ pool)
 tag)  $V $PY tag --root $O --pool on1_$NP ;;
 r2)   $V $PY r2 --root $O --pool on1_$NP ;;
 fwd)  $TR $RF/rf_recov.py fwd --pool $NP --rows train-rec --tags $T,$WRONG --out $O/fwd ;;
-r1in) $TR $PP r1 --pool $NP --cache $O/cache/$NP --fwd $O/fwd --tag $T --control $WRONG --out $O/checks/r1in_$NP.json \
-        || { echo "STOP R1 input-path check failed ($O/checks/r1in_$NP.json)" > $O/VERDICT; exit 2; } ;;
+r1in) $V $PY r1in --root $O --pool on1_$NP --fwd $O/fwd/$NP-train-rec --tag $T --control $WRONG ;;
 merge)
   [[ ! -e $CR/on1_$NM ]] || die "on1_$NM exists: never overwritten"
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 200 )) || die "free $free GB < 200 GB"

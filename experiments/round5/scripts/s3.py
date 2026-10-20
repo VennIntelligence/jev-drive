@@ -12,6 +12,7 @@ s3.sh runs the chain; this file holds the selection, the checks and the tags.
                                                     without --chunk every re-rolled scene, and O/keep.tsv (the scenes whose re-roll reproduces)
   s3.py tag --root O --pool on1_PAIO                box: the pool's outcome tags (tab otype / ocls / osub / oarm) and outcome.npz (k, divergence, A's served plan)
   s3.py r2 --root O --pool on1_PAIO                 box: R2, every row's fut against the stage-1 drive.jsonl `poses` of the same decision -> O/checks/r2.json
+  s3.py r1in --root O --pool on1_PAIO --fwd DIR --tag T --control W   box: R1 input path (trainer forward vs the model's own plan) -> O/checks/r1in.json
   s3.py mfix --pool on1_JTPHO --ref on1_JTPH        box: after the zero-copy merge: the prefix equals --ref (every file), agent ok of the prefix from --ref
   s3.py weights --pool on1_JTPHO --base R2JF --out R2JFO   box: --base's draw + weight 0 on the PAIO rows (R3)
   s3.py report --root O --pool on1_PAIO             box: rows by outcome type x class, disk, card-hours -> O/report/rows.{md,json}
@@ -238,8 +239,9 @@ _J = {}
 
 
 def served(path, scene):
-    """drive.jsonl of a roll chunk -> {k: (now, anchor (3,), poses (8, 3))} of the scene's inference decisions (raw 4-decimal records);
-    raises when the scene has more than one session in the file."""
+    """drive.jsonl of a roll chunk -> {k: (now, anchor (3,), poses (8, 3) served, the model's own plan (8, 3))} of the scene's inference
+    decisions (raw 4-decimal records; the model's plan = poses_own when TTS switched, else poses_model); raises when the scene has more than
+    one session in the file."""
     if path not in _J:
         D, ses = defaultdict(dict), defaultdict(set)
         for line in open(path):
@@ -247,7 +249,8 @@ def served(path, scene):
                 continue
             r = json.loads(line)
             if r.get("kind") == "drive" and r.get("infer"):
-                D[r["scene"]][r["k"]] = (r["now"], np.array(r["anchor"], np.float64), np.array(r["poses"], np.float64))
+                D[r["scene"]][r["k"]] = (r["now"], np.array(r["anchor"], np.float64), np.array(r["poses"], np.float64),
+                                         np.array(r.get("poses_own") or r.get("poses_model") or r["poses"], np.float64))
                 ses[r["scene"]].add(r["session"])
         _J[path] = (D, ses)
     D, ses = _J[path]
@@ -358,6 +361,37 @@ def r2(a):
         sys.exit(1)
 
 
+def r1in(a):
+    """R1 input path (pp.py r1's line): the trainer-path forward of --tag on the pool's tokens + ego (rf_recov fwd plans) against the model's own
+    plan of the decision in drive.jsonl (poses_own where TTS switched: there the driver's poses_model is the TTS candidate), and a wrong checkpoint."""
+    O = Path(a.root)
+    sel = json.loads((O / "sel.json").read_text())
+    tb, sc, kk = pool_rows(a.pool)
+    ref = np.full((len(sc), 8, 2), np.nan)
+    for s in np.unique(sc):
+        e = sel[s]
+        W = served(e["drv"][e["winner"]], s)
+        for j in np.flatnonzero(sc == s):
+            ref[j] = W[int(kk[j])][3][:, :2]
+    tol = np.maximum(4 * 2.0 ** (np.floor(np.log2(np.maximum(np.abs(ref), 2.0 ** -14))) - 10), 0.03)
+    res = {}
+    for t in (a.tag, a.control):
+        z = np.load(Path(a.fwd) / f"plans_{t}.npz")
+        P = np.full(ref.shape, np.nan)
+        P[z["rows"]] = z["poses"][:, :8, :2]
+        d = np.abs(P - ref).reshape(len(ref), -1).max(1)
+        over = (np.abs(P - ref) > tol).reshape(len(ref), -1).any(1)
+        res[t] = dict(share_over=float(over.mean()), median_m=float(np.nanmedian(d)), p99_m=float(np.nanpercentile(d, 99)), rows=int(len(d)),
+                      missing=int(np.isnan(d).sum()), by_arm={x: float(over[tb["oarm"] == x].mean()) for x in np.unique(tb["oarm"])})
+    out = dict(pool=a.pool, tag=a.tag, control=a.control, model=res[a.tag], wrong=res[a.control])
+    out["ok"] = bool(res[a.tag]["missing"] == 0 and res[a.tag]["median_m"] <= 0.02 and res[a.tag]["share_over"] <= 0.10 and res[a.control]["share_over"] >= 0.9)
+    dump(O / "checks/r1in.json", out)
+    print(json.dumps(out))
+    if not out["ok"]:
+        (O / "VERDICT").write_text(f"STOP R1 input path: {out}\n")
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------- R3: the merged pool and its draw file
 def mfix(a):
     from jevdrive.tokens import open_front
@@ -461,7 +495,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
     for name, args in dict(scenes=["out"], lists=["scenes", "root"], check=["root", "d3"], select=["root", "d3", "scenes"], r1=["root", "chunk?"],
-                           tag=["root", "pool"], r2=["root", "pool"], mfix=["pool", "ref"], weights=["pool", "base", "out"], report=["root", "pool"]).items():
+                           tag=["root", "pool"], r2=["root", "pool"], r1in=["root", "pool", "fwd", "tag", "control"], mfix=["pool", "ref"], weights=["pool", "base", "out"], report=["root", "pool"]).items():
         p = sp.add_parser(name)
         for x in args:
             p.add_argument(f"--{x.rstrip('?')}", required=not x.endswith("?"), default="")
