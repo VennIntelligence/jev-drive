@@ -247,6 +247,8 @@ def cmd_report(a):
         L += [f"## {name} ({int(m.sum())} scenes)", "", "| read | " + " | ".join(cols) + " |", "|---|" + "--:|" * len(cols)]
         for k, F in R.items():
             f = F[m & F.score.notna() & ~F.rpc.fillna(False).astype(bool)]
+            if not len(f):
+                continue
             r = metrics(f)
             L.append(f"| {k} | " + " | ".join(f"{r[c]:.3f}" if c == "mean" else str(r[c]) for c in cols) + " |")
         if a.ref and a.ref in R:
