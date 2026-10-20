@@ -25,6 +25,10 @@ index: STAND-B (d391): half-dose B2 STANDFMXH-L18-s1 is the nuPlan native candid
 - NU-FLAT (10-20 evening; [results/nu_flat/](results/nu_flat/README.md), plan [plans/2026-10-20-nu-flat-prereg.md](plans/2026-10-20-nu-flat-prereg.md)):
   3 000-step continuations of B2-s1. Onset flattening (F) is neutral on nuPlan (arena +0.001, PCS +7, wait-set launches -2 / -1), and F + STAND-R x 1 (FR)
   fixes 7 of 10 red-line easy zeros but loses launches (28 -> 21, 14 -> 9) and PCS (-96). Both fail the binding launch guard, so B2-s1 stays the nuPlan candidate.
+- NU-DEFECTS (10-21 night, diagnosis, 0 GPU; [results/nu_defects/](results/nu_defects/README.md)): B2-s1 has the PAI defects in kind (stop-approach
+  copy elasticity 0.94 of open road; failing approaches plan a stop in 14 % of decisions, end +6.1 m past the human's stop), but they cost little on nuPlan:
+  stop-approach zeros 18 items, +18 / +36 PCS at full fix; AF-front 2 / 2 228 windows. Largest classes: launch partials +49 / +66 (mostly low-a items),
+  red line +30 / +56, turn +28 / +53. No cheap data / single-signal bet was worth the card-hours; none run.
 - The "Conclusion" and "Result 19:00" paragraphs below are the 10-17 NR1 state. RSG-L18-s0 was still the pick then; the two candidates
   above replace it.
 
