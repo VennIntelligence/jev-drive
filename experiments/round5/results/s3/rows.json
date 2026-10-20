@@ -1,0 +1,234 @@
+{
+ "pool": "on1_PAIO",
+ "rows": {
+  "partial-fixed|stop_nolead": {
+   "scenes": 3,
+   "rows": 557,
+   "post_hand": 506,
+   "from_div": 425,
+   "slot2": 112,
+   "slot2_post_div": 84,
+   "with_A": 557,
+   "same_state_A": 184
+  },
+  "partial-fixed|turn_sharp": {
+   "scenes": 26,
+   "rows": 4769,
+   "post_hand": 4327,
+   "from_div": 3468,
+   "slot2": 963,
+   "slot2_post_div": 693,
+   "with_A": 4769,
+   "same_state_A": 1983
+  },
+  "partial-fixed|launch": {
+   "scenes": 18,
+   "rows": 3428,
+   "post_hand": 3122,
+   "from_div": 2121,
+   "slot2": 693,
+   "slot2_post_div": 425,
+   "with_A": 3428,
+   "same_state_A": 1840
+  },
+  "partial-fixed|other": {
+   "scenes": 14,
+   "rows": 2660,
+   "post_hand": 2422,
+   "from_div": 2328,
+   "slot2": 536,
+   "slot2_post_div": 462,
+   "with_A": 2660,
+   "same_state_A": 392
+  },
+  "partial-fixed|all": {
+   "scenes": 61,
+   "rows": 11414,
+   "post_hand": 10377,
+   "from_div": 8342,
+   "slot2": 2304,
+   "slot2_post_div": 1664,
+   "with_A": 11414,
+   "same_state_A": 4399
+  },
+  "zero-rescued|stop_nolead": {
+   "scenes": 12,
+   "rows": 1560,
+   "post_hand": 1356,
+   "from_div": 1164,
+   "slot2": 316,
+   "slot2_post_div": 233,
+   "with_A": 1560,
+   "same_state_A": 396
+  },
+  "zero-rescued|turn_sharp": {
+   "scenes": 39,
+   "rows": 7320,
+   "post_hand": 6657,
+   "from_div": 5432,
+   "slot2": 1476,
+   "slot2_post_div": 1082,
+   "with_A": 7320,
+   "same_state_A": 1892
+  },
+  "zero-rescued|launch": {
+   "scenes": 2,
+   "rows": 374,
+   "post_hand": 340,
+   "from_div": 169,
+   "slot2": 76,
+   "slot2_post_div": 34,
+   "with_A": 374,
+   "same_state_A": 205
+  },
+  "zero-rescued|other": {
+   "scenes": 22,
+   "rows": 4144,
+   "post_hand": 3770,
+   "from_div": 3276,
+   "slot2": 836,
+   "slot2_post_div": 651,
+   "with_A": 4144,
+   "same_state_A": 876
+  },
+  "zero-rescued|all": {
+   "scenes": 75,
+   "rows": 13398,
+   "post_hand": 12123,
+   "from_div": 10041,
+   "slot2": 2704,
+   "slot2_post_div": 2000,
+   "with_A": 13398,
+   "same_state_A": 3369
+  },
+  "A-wins|stop_nolead": {
+   "scenes": 29,
+   "rows": 4719,
+   "post_hand": 4226,
+   "from_div": 3751,
+   "slot2": 954,
+   "slot2_post_div": 748,
+   "with_A": 4719,
+   "same_state_A": 4719
+  },
+  "A-wins|turn_sharp": {
+   "scenes": 40,
+   "rows": 7488,
+   "post_hand": 6808,
+   "from_div": 5578,
+   "slot2": 1507,
+   "slot2_post_div": 1108,
+   "with_A": 7488,
+   "same_state_A": 7488
+  },
+  "A-wins|launch": {
+   "scenes": 22,
+   "rows": 4225,
+   "post_hand": 3851,
+   "from_div": 2448,
+   "slot2": 851,
+   "slot2_post_div": 487,
+   "with_A": 4225,
+   "same_state_A": 4225
+  },
+  "A-wins|other": {
+   "scenes": 57,
+   "rows": 10199,
+   "post_hand": 9230,
+   "from_div": 8275,
+   "slot2": 2057,
+   "slot2_post_div": 1647,
+   "with_A": 10199,
+   "same_state_A": 10199
+  },
+  "A-wins|all": {
+   "scenes": 148,
+   "rows": 26631,
+   "post_hand": 24115,
+   "from_div": 20052,
+   "slot2": 5369,
+   "slot2_post_div": 3990,
+   "with_A": 26631,
+   "same_state_A": 26631
+  },
+  "all|stop_nolead": {
+   "scenes": 44,
+   "rows": 6836,
+   "post_hand": 6088,
+   "from_div": 5340,
+   "slot2": 1382,
+   "slot2_post_div": 1065,
+   "with_A": 6836,
+   "same_state_A": 5299
+  },
+  "all|turn_sharp": {
+   "scenes": 105,
+   "rows": 19577,
+   "post_hand": 17792,
+   "from_div": 14478,
+   "slot2": 3946,
+   "slot2_post_div": 2883,
+   "with_A": 19577,
+   "same_state_A": 11363
+  },
+  "all|launch": {
+   "scenes": 42,
+   "rows": 8027,
+   "post_hand": 7313,
+   "from_div": 4738,
+   "slot2": 1620,
+   "slot2_post_div": 946,
+   "with_A": 8027,
+   "same_state_A": 6270
+  },
+  "all|other": {
+   "scenes": 93,
+   "rows": 17003,
+   "post_hand": 15422,
+   "from_div": 13879,
+   "slot2": 3429,
+   "slot2_post_div": 2760,
+   "with_A": 17003,
+   "same_state_A": 11467
+  },
+  "all|all": {
+   "scenes": 284,
+   "rows": 51443,
+   "post_hand": 46615,
+   "from_div": 38435,
+   "slot2": 10377,
+   "slot2_post_div": 7654,
+   "with_A": 51443,
+   "same_state_A": 34399
+  }
+ },
+ "disk_gb": {
+  "stage1": 50.55889370664954,
+  "reroll": 0.372172380797565,
+  "rows": 15.040708597749472,
+  "cache": 10.362433407455683,
+  "pool": 1.5922034410759807,
+  "pool_warp": 12.862321987748146,
+  "merged": 31.80774063244462,
+  "merged_warp": 3.415971865877509
+ },
+ "cost": {
+  "roll": {
+   "stack_h": 25.82128785100248,
+   "card_h": 8.60709595033416
+  },
+  "reroll": {
+   "stack_h": 3.15773332854112,
+   "card_h": 1.0525777761803734
+  }
+ },
+ "checks": {
+  "c000": true,
+  "mfix_on1_JTPHO": null,
+  "r1_all": true,
+  "r1_r000": true,
+  "r1in": true,
+  "r2": true,
+  "r3_JTPHO": true
+ }
+}

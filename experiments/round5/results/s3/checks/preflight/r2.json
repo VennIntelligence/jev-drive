@@ -1,0 +1,10 @@
+{
+ "pool": "on1_PAIOT",
+ "rows": 521,
+ "missing_decision": 0,
+ "max_abs": 1.9042968730786924e-06,
+ "bitwise_share": 0.0,
+ "over_1mm": 0,
+ "fut_eq_served_tab": true,
+ "ok": true
+}

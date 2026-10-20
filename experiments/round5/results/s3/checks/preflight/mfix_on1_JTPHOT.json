@@ -1,0 +1,23 @@
+{
+ "pool": "on1_JTPHOT",
+ "ref": "on1_JTPH",
+ "ref_rows": 528547,
+ "rows": 529068,
+ "parts": {
+  "ph": 135793,
+  "ph05": 123879,
+  "ph15": 99269,
+  "po": 521,
+  "rb0": 17429,
+  "rtb1": 17489,
+  "tv": 82594,
+  "y": 17306,
+  "ys": 34788
+ },
+ "agent_ok_fixed": 0,
+ "new_rows_mode": [
+  "both"
+ ],
+ "new_agent_ok": 521,
+ "mismatch": []
+}

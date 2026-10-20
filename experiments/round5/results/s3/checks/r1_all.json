@@ -1,0 +1,4270 @@
+{
+ "chunk": "all",
+ "scenes": 284,
+ "reproduced": 284,
+ "mismatched": [],
+ "not_rerolled": [],
+ "ok": true,
+ "per_scene": {
+  "clipgt-0026c1ce-efb6-4d41-b206-032598f31f7f": {
+   "arm": "A",
+   "score": [
+    0.9556,
+    0.9556228772364995
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-002ae4d8-ef9d-49ff-a7ba-0778fadbd98b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0052e196-30ca-4e6a-a472-df9434407b03": {
+   "arm": "A",
+   "score": [
+    0.9176,
+    0.9175597796701033
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-007fc5b6-87df-4b6b-9d0b-60d1498f3620": {
+   "arm": "A",
+   "score": [
+    0.6291,
+    0.6290873358670738
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-01cbe890-4ac2-4943-a2ed-2bda77fd2f56": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0418c913-fead-437c-a856-bc397fc606cb": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-065dcac9-ee67-4434-a835-c6b816c88e48": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-08c22260-d040-4ced-a6b0-728ea69020fc": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-09d16838-f053-4bbf-9b6c-3ff29670edd0": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0bd567e4-04e8-4e79-a691-b125382eabf0": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0c60eb4c-3545-49a2-a270-a65f888964c2": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0e002edd-c307-437c-9b97-6a1f6d28ac91": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    200,
+    200
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0eac65ba-8cd3-460f-be17-07cceee88454": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0ef9835a-64f9-4f2b-b364-098a838b6fd4": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0fb94790-b759-41f2-8cd9-63a58dfa0861": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-10834e23-7e77-4256-987f-dc5cbd49e484": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-133a9c96-0cb9-41ae-8b84-ea87b74f3376": {
+   "arm": "A",
+   "score": [
+    0.9184,
+    0.9184192032361191
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1370aa93-94e4-4dcb-9855-ede07046cbff": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-14a02b32-08ac-493f-b9b5-5367df0cc568": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-14e9329f-5964-4888-99d9-bb3027477bea": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-15dd433e-ff56-47b5-82c4-ea91f8f7443f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1656742b-a785-48fa-a1b0-e789da89d5ee": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-16eb5dec-90fa-4ce1-ade9-3f70c2ed9c9a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1b024ad1-c2cc-4538-a7c5-8184f8cf0959": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1bdbff74-69d4-4c5d-8e3e-c8c7180dbdf8": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1e7d049c-a19b-478a-8f49-126aff5f6ad3": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1f75b859-8f33-4841-bfbb-8e7d64621859": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-20a9fb48-2989-4ed1-8cb9-8b5973e6b96e": {
+   "arm": "A",
+   "score": [
+    0.9115,
+    0.9114504750943665
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-20b155e0-c26e-4fba-9d34-21ca609cbba6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-25343c92-abac-49bd-8cd3-bedc3215ed0f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2554a11a-f982-438b-804f-96d04aa94903": {
+   "arm": "A",
+   "score": [
+    0.5872,
+    0.5871919505722242
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-25f6ad44-f4ca-4b73-9038-9295546e0da1": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-28dcc0c4-5912-4a9b-99c5-b0f3856698d1": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-28fda1db-773b-450d-bfec-5538ba5503db": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2a356a82-3672-4fd5-ad80-174a780ae0c9": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2c9a5309-e6e3-45d6-b30f-c1ed724bf7a6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2e109d83-cefb-4c81-ba3e-012700335c5c": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2f3ed8fe-0d6b-492a-9dc3-1f281e3486e8": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3063e706-131a-476a-bc02-6b646896c6a7": {
+   "arm": "A",
+   "score": [
+    0.4622,
+    0.462230410236056
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-322caa08-a1af-4b5f-bfb6-d99beacf5596": {
+   "arm": "A",
+   "score": [
+    0.9071,
+    0.9071338961817195
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-39f3ab94-d506-421a-9f85-3b7dd00094c1": {
+   "arm": "A",
+   "score": [
+    0.9167,
+    0.9166657771230997
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3b6a7ba3-9fca-428a-8fbc-8c4e44cb4c4d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3b9d9d7a-5c8c-4404-ba4b-34264b476925": {
+   "arm": "A",
+   "score": [
+    0.5901,
+    0.5900980742125621
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3b9f9fa6-c966-41a5-9a6c-c64374d97e7c": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3bfdcef1-9b39-4c54-b9a9-dbe662aaefa3": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3c91d836-ede2-4e15-9f34-5b7ebe0b1c0d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3cc29c99-7396-4c53-a919-5970207155ce": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3e9966a3-c42d-4fd1-b588-6f5cc02b7c25": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3ee65034-1980-4180-b092-aac471402463": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3f4b238e-03dd-4e04-8092-18785266f7b7": {
+   "arm": "A",
+   "score": [
+    0.3721,
+    0.37211211083378176
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-42b261f7-4799-4528-ac87-5c696f900dc4": {
+   "arm": "A",
+   "score": [
+    0.9454,
+    0.945372887192768
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-46ea6266-fa8d-48dc-baf2-68d7f367cfb9": {
+   "arm": "A",
+   "score": [
+    0.8161,
+    0.8160644674875376
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4969ac16-f08c-4231-a4d4-8a5b46422f76": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-497183c6-6a87-43e7-8c2b-ab357e1cb57e": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4ac6e6fb-8a9b-46c7-b7b4-b8d33368f6fb": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4ce9f18b-d251-4bfc-a72d-58bac48fd525": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4cef6180-5c55-4611-a407-7aed3e17199c": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4f8168cc-0add-48aa-a44b-206268cd07b9": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-50541d25-ddd7-46e4-afea-05250006705a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5293e562-5d50-4999-9eb6-cbb5cc07f66f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5358b7b1-7d0a-477b-b032-4ffb04f3cc20": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-53a8a5c6-92cb-45b2-92e3-2ad333d68601": {
+   "arm": "A",
+   "score": [
+    0.917,
+    0.9170432564870201
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-58467d6b-de3b-4eb0-9080-8d97b88ba714": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-58b5c3ad-5f6a-4e7c-ba0b-c76d52c8f478": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5c871a72-ca26-4e8a-9bca-0736260285ea": {
+   "arm": "A",
+   "score": [
+    0.8909,
+    0.8909064994501943
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5d7a5fec-e13e-4d97-801a-7c92cfb2b4c9": {
+   "arm": "A",
+   "score": [
+    0.5358,
+    0.5357868989409
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5dde348a-e6d1-4b78-bbea-f60a963a277f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6473b827-1f6a-4c04-b222-5ec8db5b3ff6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-64cfbdc4-e2c1-4969-ad12-816c4e4768e1": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-666e32ef-8af7-408a-bb25-f5b107f53a45": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6dcd2117-4204-4bc4-88f7-4373636a830d": {
+   "arm": "A",
+   "score": [
+    0.9144,
+    0.9144497842917684
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6f6be966-190f-4b1a-a9c2-79feb78ab775": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-702366ca-58ac-470d-8900-7ed4b2880462": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7137a5ee-1760-49b4-9585-82e137705fe6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-72c981ea-6ad7-4b10-b117-ea4d847b5d6d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-72cb4b63-16d1-4004-b82a-b1cba0c7c148": {
+   "arm": "A",
+   "score": [
+    0.6986,
+    0.698569151070406
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-738f3e44-120e-4a27-be44-b114795ab3cb": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7685e516-96ca-4656-a545-7e08b9a7c60b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-769e6724-8826-48fb-8c44-5e40ff19540b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-774f756b-9f5e-4305-b014-3fc5f80cc7c3": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7c223679-68fe-41f4-87ee-fad337ca4752": {
+   "arm": "A",
+   "score": [
+    0.5509,
+    0.5508712010087425
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7fd4d554-b155-45c6-a46a-646486029d85": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-852f57f7-669e-4372-9851-ee55ce9c9f74": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-85bd8781-683c-43c8-9944-2d623bfe2c3e": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-86a858a3-637b-4afd-8ec6-8cd53721ec3d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-89329b0b-a059-4824-9e98-5fad3cdcc1e4": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8a7717b2-7831-43c2-a4bb-c22815b556f7": {
+   "arm": "A",
+   "score": [
+    0.9166,
+    0.9166425615681697
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8ca50753-f008-4e22-b4a3-3e382a087895": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8e6b7231-5d94-4c5a-82dc-6115482ed321": {
+   "arm": "A",
+   "score": [
+    0.9589,
+    0.9588783087623729
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-90a3d349-81d7-420d-9846-aa10da55ac2e": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-951fbca0-a83e-4a23-b1a0-8d0ffa3f0950": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-95890206-1978-4fc3-a03d-bdb2bd1de1b7": {
+   "arm": "A",
+   "score": [
+    0.9315,
+    0.931512321241422
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9702e788-a40e-4c15-a465-af59f7f43c49": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-98f13b37-9245-484b-8297-31cb16112450": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9bcb959a-3093-4b6b-9a93-7a334f469248": {
+   "arm": "A",
+   "score": [
+    0.8103,
+    0.8102579105598531
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9c0be6c6-3ee6-4a1d-9ce4-ae184286f8d3": {
+   "arm": "A",
+   "score": [
+    0.2562,
+    0.2561744152599939
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9c351bef-84b8-4a7f-bad8-9df0f50d0ded": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9d195516-197b-4850-93ca-b9a35f8ae3d5": {
+   "arm": "A",
+   "score": [
+    0.6959,
+    0.6959192050983727
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9d45080a-b929-4d2a-92ab-75069958233d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9efa4ece-5030-42a5-9da0-1ff3d1c6ae93": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a9e8dfc7-24ff-4c9d-8fe1-20210c077073": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-aaf3ce56-fdd7-4dab-84af-c44606d760eb": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ade18f35-93ae-4d3f-8253-798ca06893a1": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b0499b70-4b20-4389-8e0f-cd9fce07e7b2": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b06346cc-27a1-480d-8584-1e4ad04489a6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b1056deb-e6f8-4bb7-aa5e-7241863ab851": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b22281c8-1f6f-4647-b59e-3f11331e82a6": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b3e8bb38-b1b9-419a-8325-2dd8ab554a7b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b7d705f4-9a58-423f-87ce-988aab77fa44": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-bad7a546-ebed-4ba6-9fd5-a0925e725689": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-bd08d260-83a3-46aa-8799-d3aa50fb0e20": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c51a2930-b9f6-4748-b67d-38fa7f0495f2": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c6ebf66e-2474-4de9-a436-3abdec13a05b": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c71afeca-6381-49d6-98ef-3c5fb9fe32c8": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c97537ee-83a4-4259-98d8-c61790ea7613": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-cac1d7a0-c214-4642-9bae-57a01c88c428": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-cbe2d634-0e1d-47a8-9490-4e4c3391e45c": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-cf34e1e7-34d0-4c28-806f-0d9be6967abc": {
+   "arm": "A",
+   "score": [
+    0.9301,
+    0.930108182517401
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d42754e7-7a14-4436-9284-c0c4545f32ba": {
+   "arm": "A",
+   "score": [
+    0.9744,
+    0.9743936855675087
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d4676b71-65a6-47b4-8195-db9a744be261": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d4c97cc1-1297-41fd-9ad8-87d269b65e4d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d604fdc3-c0ca-4e41-8a9a-e601ec30e9f1": {
+   "arm": "A",
+   "score": [
+    0.96,
+    0.9600303582377626
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d6fea552-5873-4580-87dc-e1893ec6b82d": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d7a39a99-683b-4e81-9ff2-475ed4de90fc": {
+   "arm": "A",
+   "score": [
+    0.9248,
+    0.9247525265903564
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d9af9815-c264-4be6-9a24-00d061f3ce4d": {
+   "arm": "A",
+   "score": [
+    0.925,
+    0.9249847750448492
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-db529700-208c-414d-820e-84dd75b8caa8": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-dc6e2af1-716c-44ba-84c0-b234ea4dbd31": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ddd2c391-873c-43f5-8105-180475fdc133": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e0699821-d727-4274-b122-8a90dd8255d3": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e1192860-315d-4204-9947-51a2e589b18a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e14cf3db-46c9-475b-97a4-3666a1a9a047": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e34fcbdc-537f-49ce-87bd-0cfc3c6258f7": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e4d69be6-b60a-4d25-ab99-e6f7224f7f5c": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e9335cc9-4273-4c4a-b975-051551836cae": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ed143086-bc48-42ea-af3b-646c88eada2a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ede8c19c-d344-4835-8613-4692b0c605f4": {
+   "arm": "A",
+   "score": [
+    0.7325,
+    0.7324834499650053
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ef1d76a9-a754-40f3-ae3c-8edb3cd112ef": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f128a0bb-1f4b-460e-8f62-6b387988a069": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f341c0aa-2fe1-4f20-a918-7ae2502e1e06": {
+   "arm": "A",
+   "score": [
+    0.9917,
+    0.9917105965487374
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f4627599-88a9-462d-8ad6-10c9dd278e71": {
+   "arm": "A",
+   "score": [
+    0.4968,
+    0.4968019954021692
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f68b3f5c-2030-4a38-985d-c319da26845a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f6e38e7b-64db-4381-bbf1-d8814db2bfe8": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f8becb46-598e-4a77-b8e4-f875ab02625a": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f93db5db-442a-40f5-87fb-24f061a12c1f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-fdf09f96-1b3f-4b10-b4b5-459fe6ad2a95": {
+   "arm": "A",
+   "score": [
+    0.7453,
+    0.745312988526162
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ff255f49-5b9c-47d8-a55f-d9eed1f55d3f": {
+   "arm": "A",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ff3ded58-8259-40e8-879b-e1c01db2f536": {
+   "arm": "A",
+   "score": [
+    0.9926,
+    0.992600883036211
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-00ecbc19-5168-48c4-8b6a-9d64005e640e": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-10eef229-32c8-4ef5-8a53-2e5e4b6675a0": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-149fbd30-9ccf-4b23-b3fa-6ccbad8bb88c": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-153222d8-e989-4828-ab09-b5f2a3a333a5": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-19073df6-076e-4ae0-9f8a-be59239919bb": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1b80e5ad-d436-4a3a-a639-ae991b443c5d": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    190,
+    190
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1d5f7881-a7f4-4c60-8e56-6ab1b85c5689": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-20c02adf-a773-4167-9231-82f89c0121be": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2221b2b3-1e50-44dc-ba04-55367379b72f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2387cbf7-1d05-4854-8c20-d3ed91d1bffe": {
+   "arm": "F",
+   "score": [
+    0.9798,
+    0.9797881946636927
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2516202b-7d0c-4456-85cb-b88b351f0655": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2c9a4206-432a-45f6-8507-98a8648621ca": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-31032a73-3e7b-4fa4-8559-b0c9fe030f0d": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-31ae8f1a-7a39-4c0d-a22a-e5931129e2eb": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3259c4fe-f663-401d-b0a8-c7e944bcab8b": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-37a9fc2d-9122-4b96-a4b4-fbe5c242d074": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3a316bee-8a51-47c2-b814-ff37eed2ce78": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3f4a9496-3ee6-407c-acf0-dff2463ec145": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-3fa7ce7c-5124-4fb8-abcd-30fc122b5232": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-41d714e0-3524-4f96-a05c-d15337a083fa": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-45f08b17-c7d7-4ea9-b56d-d859601e2ff7": {
+   "arm": "F",
+   "score": [
+    0.9571,
+    0.9570548239688154
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-57024ddc-cb15-497c-b63e-14ba0e186b8c": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5894f7ff-cd15-49c5-9b6e-5152a8f21092": {
+   "arm": "F",
+   "score": [
+    0.5446,
+    0.5445610057761558
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-589e8a0d-dbb2-4dae-9e8b-ede945261edb": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5cda81fb-3a63-487e-9af3-fe726971556e": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5da7524e-66ce-4f61-a98a-151783bcdd8c": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5f064b02-2066-4dc4-a04b-b4386ff80c84": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6023999c-cab4-4e04-92e6-722284a0065b": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-659ed0bf-ddce-4bc8-b6fc-5318ca5cbaf7": {
+   "arm": "F",
+   "score": [
+    0.9655,
+    0.9655489722070695
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6b4ed79b-f9f3-4c1f-aa57-2875a72c2a7d": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7a3d8529-f5c4-445d-97ed-8303b2ece934": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8022db31-29b1-41ce-af35-79fc2e240d0c": {
+   "arm": "F",
+   "score": [
+    0.9637,
+    0.9636859859834204
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-86d06a78-3ff2-483b-a319-9a772fce45e0": {
+   "arm": "F",
+   "score": [
+    0.9807,
+    0.9807234706290076
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8701a102-a13a-440a-9988-6ba8a818bc7f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-881b9dd6-7e2c-4c48-b270-cce2dc790b34": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8d56c7ba-c404-4764-a7d1-b45e6bc2d952": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8f8d5705-944e-4051-ab25-66a230a11dce": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-914f293b-1699-4bd9-8861-7e7a5327909b": {
+   "arm": "F",
+   "score": [
+    0.9929,
+    0.9929316261647089
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-92d9c0eb-e191-420c-ad6c-df822ca186c1": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-951ce3ff-104a-40de-9669-3a553409a25f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-97eeb9d7-866d-46bf-bc37-134191c34818": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9881e5b9-5821-44fd-a056-bea86c853675": {
+   "arm": "F",
+   "score": [
+    0.6588,
+    0.6588303114579276
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9b314680-02be-48fe-bd6d-162a00a743d1": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9d73b364-2e13-4df8-9c27-d56670b9b39d": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9e1baa2e-0fb8-47c9-975b-c584dc9af9aa": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9e77fe57-8c5e-4cdf-add7-fde6107db9ca": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-9e792fc4-4d90-44d5-87a2-6dcd3aad4ac2": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a087953d-72d7-446e-bf4f-d08482d400e8": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a5befa5b-55f3-41c3-81ce-e1b2538d62fc": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a88cc83c-ea8d-460b-8757-f6a47d0a9e2a": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ab7d288a-1a82-4cd5-9185-7d5d735030cd": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-afe7621b-500d-40fc-b386-6ccfbc1b6706": {
+   "arm": "F",
+   "score": [
+    0.6013,
+    0.6013116553600477
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b187d5d3-767d-47fc-a5d3-78c939c54d2f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b59fd578-58e7-41a0-a07f-5b08ed8b5919": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c25bc17c-e4f9-4880-ae9c-040d89d9c61f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ccc1ac21-05b2-414c-83ab-647eaf562fc1": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-cd3958e4-7022-4cba-96e4-44832f6ce7db": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d34673c7-2573-42a4-b771-1a5bf38f7d60": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d70db121-938c-464b-bf83-d2f2f2da1a2b": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-dffd4c04-92a8-468d-a362-cd3a98445da9": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e64dca05-bdd2-4ee1-a748-f2f50c7dfaa5": {
+   "arm": "F",
+   "score": [
+    0.8462,
+    0.8461861817705394
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ec684752-0bbb-4561-8e99-483a39318efe": {
+   "arm": "F",
+   "score": [
+    0.9564,
+    0.9564234314459736
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-edff7d34-861e-4afa-89d4-79597dc62e25": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f60f9d49-65b7-4fdf-b2b8-da49f28fabcd": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f636ac7b-7984-4c83-820e-c315642d1bfb": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f9ec6a41-a2c9-43aa-98c7-9f43af02fca0": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-fa035232-d2ea-4725-a4b1-89a5686371de": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-fe313a2d-fb9e-4c0a-8efe-31f84f25f747": {
+   "arm": "F",
+   "score": [
+    0.9429,
+    0.9428698328901067
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-03f14707-e02a-4a8e-a448-cf667458c127": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1c576012-70de-43e6-8e3f-bee14bb7a35a": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2640e5d4-678e-427a-85b4-072f98a445f3": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2b8f1bfc-145f-4da2-9cfa-e9cd97e53845": {
+   "arm": "S",
+   "score": [
+    0.4838,
+    0.48378258450282463
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-2f2f97fa-1617-459e-bfb8-a6d34fe0658c": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-33a95264-5147-4848-b8f9-eea4d1b32450": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-4bdcda96-d062-4d63-ba55-5c1664943a7c": {
+   "arm": "S",
+   "score": [
+    0.9738,
+    0.9737703939953841
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6a1fa487-9df3-4e05-bb71-b06cf3e7f8a1": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7a8d8d03-c3aa-4719-9d61-1e9545bc81f5": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7db87a26-d589-4212-85b9-dcd4c565f41d": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-83135623-d812-42ed-bb42-6a9974f42b7b": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-91cf2c35-3b03-4dc5-bb55-ab5c722735b6": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b45e6497-2b89-4358-b353-234fbd944271": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-be794864-766e-438a-86d7-ec06da5ee921": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-dc21dc72-bb36-4ad4-a758-1c39db316deb": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e297279a-6d0d-4d36-8882-ce69a79d324a": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f776e499-c8fb-45ca-8050-ac9e96f2fa44": {
+   "arm": "S",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-007a5809-8a56-40b5-8af5-7e0f65229496": {
+   "arm": "L",
+   "score": [
+    0.7955,
+    0.7955112229184798
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-05a1d902-b975-4d11-a9ed-e6bfc774577f": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-085955e2-c98a-4a43-ae63-ff6e333ce9ef": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0cb146c8-f877-4d11-ac73-ed7b68a9eae5": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-0e479696-934d-4b1a-9d21-3e159990c4f8": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-167f9d8c-812a-48d1-98b9-c9fd29feb860": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-195e294c-7631-4f72-a495-4695723e10ce": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1a394766-ea99-4cf5-98de-d1821222612b": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1bed5f04-325a-41d1-9eb6-973285f62dae": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1c9774e9-02ec-4ae4-a404-c057c9aa88fe": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-1d87bdc8-a321-4796-9ca1-da8a94160535": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-24ffbf90-1e77-4bbd-95a3-913a347e800e": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-300157fe-f27b-4e8d-af9a-b4f5724abccf": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-37113280-a033-4be4-afdd-cb199299e028": {
+   "arm": "L",
+   "score": [
+    0.7123,
+    0.7123310104619446
+   ],
+   "decisions": [
+    197,
+    197
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-400aa790-3055-4d4b-aba2-e89834928fb8": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-411ee080-8d8a-4ba5-a6f0-4a19b939ee1f": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-471f2484-3cdd-47bb-9039-abc856acaeb8": {
+   "arm": "L",
+   "score": [
+    0.8914,
+    0.8913870602534435
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-530a9510-4cf8-4ab1-9532-cdd3b1725e2b": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-5debfbf6-12f4-4926-a293-a8517e917e31": {
+   "arm": "L",
+   "score": [
+    0.9604,
+    0.960369551431835
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-63ac00e5-2b62-4b85-acd5-b1594313ffc9": {
+   "arm": "L",
+   "score": [
+    0.8232,
+    0.8231678520223465
+   ],
+   "decisions": [
+    190,
+    190
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6bffbe09-1e0d-4ac3-833c-ca6178346e76": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-6ecf04c0-e3fb-439c-bae4-2e2393be430d": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-706f3a65-b118-4745-862f-50936cc68463": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7b418416-8860-46d5-b7fc-687c7d078c4b": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-7ce9e86e-c63f-4f0e-97cd-072c9ab24a88": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-813e0bc6-9881-46f3-b120-c4123a2f556a": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-8c383368-3f9c-4bc7-a486-076802271599": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-92e0d11d-184c-4614-881c-2325ba7bae5a": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a5414a7e-00de-41ad-ae50-874dc811fb2c": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a62e9c2c-1619-49c7-9ba5-89135d1ea909": {
+   "arm": "L",
+   "score": [
+    0.6327,
+    0.6326520297085093
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a730d6db-25bc-45f5-b013-20cc8605323d": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-a76a868d-1403-4cc1-a2a3-67581bee0041": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-adf0a670-6527-4890-ab06-cb83abeb99c5": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ae17d11f-c473-4d74-ba00-5bc45f183025": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-af7e58a3-a943-4cfc-9d25-fe602c0caf15": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b1997ecf-ea4b-48f2-8d42-2da5c00c58f0": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-b2189741-4adc-496e-a094-aae1b3da335b": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-be4db4e9-eeff-4c22-b735-15ad9f7a0b49": {
+   "arm": "L",
+   "score": [
+    0.8764,
+    0.8764114018862857
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c438a779-964c-4bb7-bfde-61d9abe5b39d": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-c9311b4c-5380-45e9-a855-9b5c4e27afe8": {
+   "arm": "L",
+   "score": [
+    0.3112,
+    0.31122514927838224
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d19d1b01-9e6b-465f-bb85-d11718a526c7": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d68c7161-bef6-4342-800f-607127417825": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-d85682b8-f612-4aa3-90a2-ee2bb86151e6": {
+   "arm": "L",
+   "score": [
+    0.967,
+    0.9669717225756563
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-e742759b-9403-4d6c-9c52-704b81bc5ba9": {
+   "arm": "L",
+   "score": [
+    0.9824,
+    0.9824318248433054
+   ],
+   "decisions": [
+    198,
+    198
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ec41061e-077f-411e-838a-af1e564d9666": {
+   "arm": "L",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ec76174b-64a9-45fe-bad8-9c2cfa4493c2": {
+   "arm": "L",
+   "score": [
+    0.8788,
+    0.8787533283376473
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-ef6dfba5-5284-488a-a43b-4f2e8a25c0b0": {
+   "arm": "L",
+   "score": [
+    0.7558,
+    0.7558260479149109
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-f1964480-fef1-467a-96c1-99dedf008873": {
+   "arm": "L",
+   "score": [
+    0.3486,
+    0.3486439766088803
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  }
+ }
+}

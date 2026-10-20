@@ -1,0 +1,10 @@
+{
+ "pool": "on1_PAIO",
+ "rows": 51443,
+ "missing_decision": 0,
+ "max_abs": 7.61718749231477e-06,
+ "bitwise_share": 0.002565946776043388,
+ "over_1mm": 0,
+ "fut_eq_served_tab": true,
+ "ok": true
+}

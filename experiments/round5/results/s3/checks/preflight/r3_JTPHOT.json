@@ -1,0 +1,21 @@
+{
+ "a": "S3TSA-L18-s0",
+ "b": "S3TSB-L18-s0",
+ "note": "R2J-L18-s0 command 60 steps eager: on1_JTPH / R2JF vs on1_JTPHOT / R2JFOT (on1_PAIOT rows appended at weight 0)",
+ "scalars": 278,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5458450317382812,
+  0.5458450317382812
+ ],
+ "on_hash_60": [
+  "43bfc742366790f8",
+  "43bfc742366790f8"
+ ],
+ "want_hash": null,
+ "identical": true
+}

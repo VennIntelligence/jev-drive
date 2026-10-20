@@ -1,0 +1,55 @@
+{
+ "chunk": "r000",
+ "scenes": 3,
+ "reproduced": 3,
+ "mismatched": [],
+ "not_rerolled": [],
+ "ok": true,
+ "per_scene": {
+  "clipgt-0026c1ce-efb6-4d41-b206-032598f31f7f": {
+   "arm": "A",
+   "score": [
+    0.9556,
+    0.9556228772364995
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-00ecbc19-5168-48c4-8b6a-9d64005e640e": {
+   "arm": "F",
+   "score": [
+    1.0,
+    1.0
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  },
+  "clipgt-007a5809-8a56-40b5-8af5-7e0f65229496": {
+   "arm": "L",
+   "score": [
+    0.7955,
+    0.7955112229184798
+   ],
+   "decisions": [
+    199,
+    199
+   ],
+   "keys_equal": true,
+   "poses_max_abs": 0.0,
+   "anchor_max_abs": 0.0,
+   "ok": true
+  }
+ }
+}
