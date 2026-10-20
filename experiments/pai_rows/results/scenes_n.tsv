@@ -1,65 +1,65 @@
 scene_id	cls	d402	half	held	uuid	size_gb	t281	t281_gap_s	t281_why
-clipgt-1d0d601f-bba0-423a-8f3f-8942bb529fd7	stop_nolead	False	N	False	ee0a4188-1a40-4afb-a77c-d98d9efe2551	1.776112216			
-clipgt-d1a25a99-0f02-4730-a076-96f067e92874	stop_nolead	False	N	False	db4af7f5-b83f-47c0-b015-30a838ed5a6f	1.780430722			
-clipgt-54a63683-73a9-4621-9c67-4da295e04424	turn_sharp	False	N	False	1e3402b7-c313-4753-9fb9-d2e1fc9c42e4	1.776673914			
-clipgt-d2fcf4b2-2a4b-47e3-a2ec-a9e3372c3a8a	stop_nolead	False	N	True	a3a76c29-b892-4314-b6bc-381b9e3ac8f1	1.82497888			
-clipgt-df1c92ea-065f-4d4b-86e9-7df95c361a2e	turn_sharp	False	N	True	08c25bed-e666-4168-9f59-8277dbd40b89	1.783626672			
-clipgt-e0f6bfcb-0091-4e35-b291-db9d129cf797	turn_sharp	False	N	False	c093d317-559a-4bd4-af16-d551daf10b0b	1.946238754			
-clipgt-64c5e830-a863-4a9a-95ca-a6800afb7edd	stop_nolead	False	N	False	8a5eabf5-a5b1-4900-ade0-722daa35c223	1.816350214			
-clipgt-50aa86f5-9179-4984-9e4f-d9a678b1e77e	stop_nolead	False	N	False	a1a562b3-53b0-4cd1-9db1-b71307b32087	1.698080399			
-clipgt-893bf219-95d4-49da-8b04-8b14bf61636a	turn_sharp	False	N	False	bddd031f-7a1c-4a27-a4c0-a7f13ada2eb6	1.864614524			
-clipgt-f69a9538-6694-48aa-952e-5b27b3f915fd	stop_nolead	False	N	False	4c5f1336-daad-45cd-9244-73bb9d7e8850	1.712444765			
-clipgt-5ebe79fa-04ce-4105-8fe8-f4ff15fd8d44	turn_sharp	False	N	False	316c1e35-621c-4359-bb46-fa8bc532ca17	1.756400815			
-clipgt-cb1b00aa-b3a5-40b2-99d1-5175d6f70e13	launch	False	N	True	cb75f0e7-c9b0-4253-98cb-0e450c776709	1.64835471			
-clipgt-ddd6bec8-0df3-43c8-be1f-447de0d808ee	turn_sharp	False	N	False	0792db2b-57ef-4903-b4dc-944f7b9bf3a0	1.733562573			
-clipgt-2ab29546-2823-42a7-a5a5-1f59fbe67a03	stop_nolead	False	N	False	17e7def6-4ff2-48fc-a8cb-2fe6bbdc07d1	1.739070442			
-clipgt-8659d8e4-3fb3-4cb7-8e92-2596ef9ee5f1	launch	False	N	False	bc4004c6-445e-45fc-a60c-54aa236c5a7e	1.901933548			
-clipgt-d8c8ac7b-c550-47af-8002-5625bedfc995	stop_nolead	False	N	False	be053e64-0dd2-4f3d-84d6-4ecf0a95f1e3	1.709914091			
-clipgt-e5c8536c-82cd-4dd4-a639-cff683aceab9	turn_sharp	False	N	False	a08a9aca-284e-4f6e-8e9a-d38cc3da29e1	1.645742658			
-clipgt-9f925aad-732f-43aa-9dda-f1e5d095bb5a	stop_nolead	False	N	False	8b01c22e-357b-4b3b-9394-90db27163a92	1.613313166			
-clipgt-11336325-e0c8-49ab-9f34-0be03dd1b8e2	stop_nolead	False	N	False	22c4b3a7-4b04-4c9c-a4a8-a0362510591e	1.845053825			
-clipgt-1ad2258e-7166-4af6-a076-d2174b78f73a	turn_sharp	False	N	True	dc4509fe-9c25-4869-b8e9-f2a7b6381209	1.750302796			
-clipgt-ae850982-a7b9-4df3-891f-4dc84be870f6	stop_nolead	False	N	False	12041c79-0b32-4023-8a25-b3bfce43febb	1.924444027			
-clipgt-78c4ceb6-d3c3-4653-9316-55f8cf3203d5	turn_sharp	False	N	False	ac7e757e-a114-45e9-83a2-169ffd642736	1.681423107			
-clipgt-49a97127-746d-4f7f-90f3-3ffed4cfa592	stop_nolead	False	N	False	54b3f37b-8995-48ab-a7eb-38835bd78a68	1.725236262			
-clipgt-67e7f1e1-ea41-4e14-85e9-2efa231fbace	turn_sharp	False	N	False	92789a67-380f-467c-8166-76b7135e3523	1.720636437			
-clipgt-6bec4e02-ae49-4092-9d66-136ee490e138	turn_sharp	False	N	False	6415e2bb-7e79-498e-975c-69452736763c	1.972095562			
-clipgt-0d76134f-350d-44b5-a694-208e9dab9600	stop_nolead	False	N	False	4bffde5f-0e7d-4c9e-9d39-f4205361c854	1.768001494			
-clipgt-6f4fc882-8c0b-4be0-9610-7b500d79c11a	turn_sharp	False	N	False	d42fe97a-17ba-461f-b7c4-6f2b4954a1a4	1.469978582			
-clipgt-1e0b54b8-2608-4fe2-a2d2-0b05bf169e4a	turn_sharp	False	N	False	62e284b3-e81d-450d-b72e-87ec5378f784	1.81139094			
-clipgt-2acac2c5-2fe4-4481-b389-dc9fdce0c90a	stop_nolead	False	N	False	5c241966-ddc0-46c2-a143-9970f0284bf7	2.020210577			
-clipgt-a7733a20-3b3a-48a3-a7fc-77379f654094	turn_sharp	False	N	False	6d8237cc-a457-4477-a9de-51474e4b2dfc	1.811472398			
-clipgt-44e97708-8896-49ac-b046-cd489253bcfe	stop_nolead	False	N	False	d96ddb8a-ea91-4460-b473-941e81f43a0d	1.37055439			
-clipgt-1e6e41a1-e402-48a1-8a96-2ad92a57eb26	stop_nolead	False	N	False	9dbd74dd-74d3-4847-8670-695cc7448bf0	1.95366138			
-clipgt-14850e11-6a08-4cd7-9875-be353f1a764b	turn_sharp	False	N	True	4e49e85d-a2d2-40ec-9815-f0fd80373773	1.650093999			
-clipgt-93982b71-92af-4cf6-8447-00d619f50ad3	turn_sharp	False	N	False	0f384206-541b-4c77-af1d-38364a600b8c	1.766033929			
-clipgt-c692a017-f113-48c0-b1dc-c6383490edb5	turn_sharp	False	N	False	82ec2550-a980-4e38-888c-415754501425	1.743335998			
-clipgt-2301484b-78ff-4108-994f-d6ccaf88d546	stop_nolead	False	N	False	937dcec1-5388-46bc-897c-88707c856544	2.007945739			
-clipgt-a5c06f4f-de00-44d1-add2-0a89818a3b0b	turn_sharp	False	N	False	e4ae6829-a1ae-49b4-bc07-f10cc75ffe8d	1.465513216			
-clipgt-9494a989-73d5-4dd0-972b-df0df55cc6a9	turn_sharp	False	N	False	0523350f-4e13-4b41-a781-c94da24674b8	1.808764282			
-clipgt-9dfc06b4-f46d-42ef-a552-d71ef221e0b5	stop_nolead	False	N	False	9e8ed1fc-f010-400d-9716-97d505433b36	1.948385384			
-clipgt-bd2e4de4-3ba5-4b18-a79c-5edf9a5518ca	turn_sharp	False	N	False	dad80914-94aa-4510-8d1c-068401e71624	1.741861842			
-clipgt-976ac5a3-0d48-4c73-bc12-d891c8a9543c	turn_sharp	False	N	False	f1bf3309-3ea7-4aa8-9537-e636df311f4a	1.747396862			
-clipgt-7396591d-4a3b-40cb-9169-b0308558c9cd	stop_nolead	False	N	False	3784dadc-e917-45a5-9dca-414a86fc019f	2.025709082			
-clipgt-1b45d8e1-d2fd-4c7c-8440-c7ddb15ea152	stop_nolead	False	N	False	7fe974b0-1129-40e7-bee5-87c2e035bdbb	1.393008619			
-clipgt-22eb5c41-c157-434a-b563-f2eda1148cfd	launch	False	N	False	96fe0cbe-178e-4836-8322-f299c9e7f229	1.224573552			
-clipgt-12c89c65-e52c-446e-9d0b-f4b783f46116	turn_sharp	False	N	False	e45f265a-eb50-47e0-945f-3f62ab4f98b4	1.73673654			
-clipgt-f3fd4dbd-5c4e-4774-8b41-ebb9b515e9cb	turn_sharp	False	N	False	2f80a3f6-a673-4157-be12-c61bc3ae31e8	1.66349466			
-clipgt-ad927cb1-fe19-44e0-943a-99959a38fac9	stop_nolead	False	N	False	2e1701d9-1728-467f-9a72-e0a874a48fb8	1.817526556			
-clipgt-1bccdc21-6e9c-425a-a0a1-392e2353f2b3	stop_nolead	False	N	True	8e23f039-3aaa-4aba-bbec-e8d96513b242	1.648280614			
-clipgt-36626308-fe08-4180-abc6-76ef1fa1cb39	launch	False	N	False	c12621a2-e6a3-4a72-8a15-44d9199abd34	1.745402007			
-clipgt-3e265bc2-2a8b-4c5c-8e6b-1de009b6672d	stop_nolead	False	N	True	4987b068-8264-4771-98a0-07765a320078	1.669681965			
-clipgt-27068a85-f418-41ba-9c6f-f1ce69c9f892	turn_sharp	False	N	False	af6b55b7-bfb6-4df1-a0a9-d31b91be89c7	1.656280674			
-clipgt-86ad21f0-5c8e-4733-9e48-585b3b3c0607	stop_nolead	False	N	False	75f89649-faf7-4916-bf0e-227a5bd06cfe	1.812345825			
-clipgt-21d4de35-b8d4-46b4-803d-7c22528961ea	launch	False	N	False	81d02326-0b9d-49bc-a21c-8e83811c1544	1.807306471			
-clipgt-25cc74b5-b8a5-4fb4-afd0-d681aec94f77	turn_sharp	False	N	False	e90972fb-5055-4d2d-8e52-8b22fe05cc5d	1.629633234			
-clipgt-7963a932-3a44-4f10-a3f9-b27a40d85329	stop_nolead	False	N	False	dc1873f6-1fd6-4d02-a1ff-38b34dccb404	1.641530065			
-clipgt-118a3400-83ce-4a64-98dd-f38f786be4b2	stop_nolead	False	N	False	69c72034-ae65-4c73-a422-e2e508c8c3f1	1.707877904			
-clipgt-70e1ccff-a8af-4107-9f2c-f72d6eb33d66	stop_nolead	False	N	True	5b08dce1-0122-4011-8859-262f42a1bd74	1.215744738			
-clipgt-75ad98a4-a2de-4eb8-be40-dadfa0d10351	launch	False	N	False	e9fd26bf-ae81-47bc-930c-4b68f98afc10	2.043841179			
-clipgt-066bb895-3f45-4b92-a67a-382e5fd52516	turn_sharp	False	N	False	6837c6b8-d1ad-41da-8e5e-4afcc9212853	1.802310923			
-clipgt-0ac02819-4171-4363-9458-ad2f192884bf	stop_nolead	False	N	False	9b2c544f-9efa-4b21-aa0b-4d5cf0f3d2b0	1.828894211			
-clipgt-99bfc2be-2618-4d5f-bb70-d7604d9b2541	turn_sharp	False	N	False	4b012596-a253-486f-a581-ccf87b00c0e6	1.601618807			
-clipgt-c76072c5-82a6-4b1e-b62f-a9da2ef48762	turn_sharp	False	N	False	8b0cc895-88cc-447a-ae62-c4506bba84a7	1.651738323			
-clipgt-bb4c859c-a4af-49ce-ad4d-0c4347053dd8	stop_nolead	False	N	False	889302a0-42bd-49d4-b463-b42dd2fbfd3a	1.704757958			
-clipgt-17343b97-975b-4e32-9d1f-3ce37f99effc	turn_sharp	False	N	False	5578b7d6-7a08-4ae0-8ae4-5ea7f48f72a0	1.690833795			
+clipgt-1d0d601f-bba0-423a-8f3f-8942bb529fd7	stop_nolead	False	N	False	ee0a4188-1a40-4afb-a77c-d98d9efe2551	1.776112216	593ebf97	337.3	session
+clipgt-d1a25a99-0f02-4730-a076-96f067e92874	stop_nolead	False	N	False	db4af7f5-b83f-47c0-b015-30a838ed5a6f	1.780430722	2c263e19	144.5	session
+clipgt-54a63683-73a9-4621-9c67-4da295e04424	turn_sharp	False	N	False	1e3402b7-c313-4753-9fb9-d2e1fc9c42e4	1.776673914	5266c7c9	146.9	epoch+session
+clipgt-d2fcf4b2-2a4b-47e3-a2ec-a9e3372c3a8a	stop_nolead	False	N	True	a3a76c29-b892-4314-b6bc-381b9e3ac8f1	1.82497888	6fb661c5	156.2	epoch+session
+clipgt-df1c92ea-065f-4d4b-86e9-7df95c361a2e	turn_sharp	False	N	True	08c25bed-e666-4168-9f59-8277dbd40b89	1.783626672	de9db5dc	421.4	session
+clipgt-e0f6bfcb-0091-4e35-b291-db9d129cf797	turn_sharp	False	N	False	c093d317-559a-4bd4-af16-d551daf10b0b	1.946238754	3232fdb7	279.8	session
+clipgt-64c5e830-a863-4a9a-95ca-a6800afb7edd	stop_nolead	False	N	False	8a5eabf5-a5b1-4900-ade0-722daa35c223	1.816350214	4e8c8f9e	234.2	epoch+session
+clipgt-50aa86f5-9179-4984-9e4f-d9a678b1e77e	stop_nolead	False	N	False	a1a562b3-53b0-4cd1-9db1-b71307b32087	1.698080399	e7551f4e	589.3	session
+clipgt-893bf219-95d4-49da-8b04-8b14bf61636a	turn_sharp	False	N	False	bddd031f-7a1c-4a27-a4c0-a7f13ada2eb6	1.864614524	c0c88642	478.6	session
+clipgt-f69a9538-6694-48aa-952e-5b27b3f915fd	stop_nolead	False	N	False	4c5f1336-daad-45cd-9244-73bb9d7e8850	1.712444765	22fa5c92	511.0	session
+clipgt-5ebe79fa-04ce-4105-8fe8-f4ff15fd8d44	turn_sharp	False	N	False	316c1e35-621c-4359-bb46-fa8bc532ca17	1.756400815	593ebf97	409.9	session
+clipgt-cb1b00aa-b3a5-40b2-99d1-5175d6f70e13	launch	False	N	True	cb75f0e7-c9b0-4253-98cb-0e450c776709	1.64835471	51242b4d	560.9	session
+clipgt-ddd6bec8-0df3-43c8-be1f-447de0d808ee	turn_sharp	False	N	False	0792db2b-57ef-4903-b4dc-944f7b9bf3a0	1.733562573	5c4a277a	192.7	session
+clipgt-2ab29546-2823-42a7-a5a5-1f59fbe67a03	stop_nolead	False	N	False	17e7def6-4ff2-48fc-a8cb-2fe6bbdc07d1	1.739070442	fb138448	317.5	session
+clipgt-8659d8e4-3fb3-4cb7-8e92-2596ef9ee5f1	launch	False	N	False	bc4004c6-445e-45fc-a60c-54aa236c5a7e	1.901933548	2b9447b3	450.4	epoch+session
+clipgt-d8c8ac7b-c550-47af-8002-5625bedfc995	stop_nolead	False	N	False	be053e64-0dd2-4f3d-84d6-4ecf0a95f1e3	1.709914091	2eaf1872	587.5	session
+clipgt-e5c8536c-82cd-4dd4-a639-cff683aceab9	turn_sharp	False	N	False	a08a9aca-284e-4f6e-8e9a-d38cc3da29e1	1.645742658	94c1d722	372.2	session
+clipgt-9f925aad-732f-43aa-9dda-f1e5d095bb5a	stop_nolead	False	N	False	8b01c22e-357b-4b3b-9394-90db27163a92	1.613313166	b1d93f58	561.4	session
+clipgt-11336325-e0c8-49ab-9f34-0be03dd1b8e2	stop_nolead	False	N	False	22c4b3a7-4b04-4c9c-a4a8-a0362510591e	1.845053825	e7ddb7f0	392.0	epoch+session
+clipgt-1ad2258e-7166-4af6-a076-d2174b78f73a	turn_sharp	False	N	True	dc4509fe-9c25-4869-b8e9-f2a7b6381209	1.750302796	000525f6	447.7	session
+clipgt-ae850982-a7b9-4df3-891f-4dc84be870f6	stop_nolead	False	N	False	12041c79-0b32-4023-8a25-b3bfce43febb	1.924444027	9827beca	262.8	epoch+session
+clipgt-78c4ceb6-d3c3-4653-9316-55f8cf3203d5	turn_sharp	False	N	False	ac7e757e-a114-45e9-83a2-169ffd642736	1.681423107	c8641276	389.8	session
+clipgt-49a97127-746d-4f7f-90f3-3ffed4cfa592	stop_nolead	False	N	False	54b3f37b-8995-48ab-a7eb-38835bd78a68	1.725236262	de9db5dc	232.5	session
+clipgt-67e7f1e1-ea41-4e14-85e9-2efa231fbace	turn_sharp	False	N	False	92789a67-380f-467c-8166-76b7135e3523	1.720636437	2b577fc2	429.2	session
+clipgt-6bec4e02-ae49-4092-9d66-136ee490e138	turn_sharp	False	N	False	6415e2bb-7e79-498e-975c-69452736763c	1.972095562	8f9634bb	265.4	epoch+session
+clipgt-0d76134f-350d-44b5-a694-208e9dab9600	stop_nolead	False	N	False	4bffde5f-0e7d-4c9e-9d39-f4205361c854	1.768001494	af85ffdb	291.2	epoch+session
+clipgt-6f4fc882-8c0b-4be0-9610-7b500d79c11a	turn_sharp	False	N	False	d42fe97a-17ba-461f-b7c4-6f2b4954a1a4	1.469978582	d90fe123	167.2	epoch+session
+clipgt-1e0b54b8-2608-4fe2-a2d2-0b05bf169e4a	turn_sharp	False	N	False	62e284b3-e81d-450d-b72e-87ec5378f784	1.81139094	450d5c8d	288.6	session
+clipgt-2acac2c5-2fe4-4481-b389-dc9fdce0c90a	stop_nolead	False	N	False	5c241966-ddc0-46c2-a143-9970f0284bf7	2.020210577	4e8c8f9e	382.4	epoch+session
+clipgt-a7733a20-3b3a-48a3-a7fc-77379f654094	turn_sharp	False	N	False	6d8237cc-a457-4477-a9de-51474e4b2dfc	1.811472398	7c6529f6	272.6	session
+clipgt-44e97708-8896-49ac-b046-cd489253bcfe	stop_nolead	False	N	False	d96ddb8a-ea91-4460-b473-941e81f43a0d	1.37055439	6d8226d4	521.2	epoch+session
+clipgt-1e6e41a1-e402-48a1-8a96-2ad92a57eb26	stop_nolead	False	N	False	9dbd74dd-74d3-4847-8670-695cc7448bf0	1.95366138	6fb661c5	404.6	epoch+session
+clipgt-14850e11-6a08-4cd7-9875-be353f1a764b	turn_sharp	False	N	True	4e49e85d-a2d2-40ec-9815-f0fd80373773	1.650093999	dbfd6c72	492.8	session
+clipgt-93982b71-92af-4cf6-8447-00d619f50ad3	turn_sharp	False	N	False	0f384206-541b-4c77-af1d-38364a600b8c	1.766033929	a174faed	247.4	epoch+session
+clipgt-c692a017-f113-48c0-b1dc-c6383490edb5	turn_sharp	False	N	False	82ec2550-a980-4e38-888c-415754501425	1.743335998	56bf7a4b	460.4	session
+clipgt-2301484b-78ff-4108-994f-d6ccaf88d546	stop_nolead	False	N	False	937dcec1-5388-46bc-897c-88707c856544	2.007945739	e7ddb7f0	219.4	epoch+session
+clipgt-a5c06f4f-de00-44d1-add2-0a89818a3b0b	turn_sharp	False	N	False	e4ae6829-a1ae-49b4-bc07-f10cc75ffe8d	1.465513216	6d8226d4	512.7	epoch+session
+clipgt-9494a989-73d5-4dd0-972b-df0df55cc6a9	turn_sharp	False	N	False	0523350f-4e13-4b41-a781-c94da24674b8	1.808764282	074e5ee3	583.0	session
+clipgt-9dfc06b4-f46d-42ef-a552-d71ef221e0b5	stop_nolead	False	N	False	9e8ed1fc-f010-400d-9716-97d505433b36	1.948385384	a2c5ae46	203.0	epoch+session
+clipgt-bd2e4de4-3ba5-4b18-a79c-5edf9a5518ca	turn_sharp	False	N	False	dad80914-94aa-4510-8d1c-068401e71624	1.741861842	6f3be572	584.9	session
+clipgt-976ac5a3-0d48-4c73-bc12-d891c8a9543c	turn_sharp	False	N	False	f1bf3309-3ea7-4aa8-9537-e636df311f4a	1.747396862	e7551f4e	451.3	session
+clipgt-7396591d-4a3b-40cb-9169-b0308558c9cd	stop_nolead	False	N	False	3784dadc-e917-45a5-9dca-414a86fc019f	2.025709082	a2c5ae46	552.8	epoch+session
+clipgt-1b45d8e1-d2fd-4c7c-8440-c7ddb15ea152	stop_nolead	False	N	False	7fe974b0-1129-40e7-bee5-87c2e035bdbb	1.393008619	6d8226d4	497.4	epoch+session
+clipgt-22eb5c41-c157-434a-b563-f2eda1148cfd	launch	False	N	False	96fe0cbe-178e-4836-8322-f299c9e7f229	1.224573552	6d8226d4	307.1	epoch+session
+clipgt-12c89c65-e52c-446e-9d0b-f4b783f46116	turn_sharp	False	N	False	e45f265a-eb50-47e0-945f-3f62ab4f98b4	1.73673654	bbc1699d	498.3	session
+clipgt-f3fd4dbd-5c4e-4774-8b41-ebb9b515e9cb	turn_sharp	False	N	False	2f80a3f6-a673-4157-be12-c61bc3ae31e8	1.66349466	e7551f4e	312.6	session
+clipgt-ad927cb1-fe19-44e0-943a-99959a38fac9	stop_nolead	False	N	False	2e1701d9-1728-467f-9a72-e0a874a48fb8	1.817526556	7dc59d0d	524.3	epoch+session
+clipgt-1bccdc21-6e9c-425a-a0a1-392e2353f2b3	stop_nolead	False	N	True	8e23f039-3aaa-4aba-bbec-e8d96513b242	1.648280614	a174faed	223.1	epoch+session
+clipgt-36626308-fe08-4180-abc6-76ef1fa1cb39	launch	False	N	False	c12621a2-e6a3-4a72-8a15-44d9199abd34	1.745402007	b44a4a44	330.3	session
+clipgt-3e265bc2-2a8b-4c5c-8e6b-1de009b6672d	stop_nolead	False	N	True	4987b068-8264-4771-98a0-07765a320078	1.669681965	65907a2b	434.5	session
+clipgt-27068a85-f418-41ba-9c6f-f1ce69c9f892	turn_sharp	False	N	False	af6b55b7-bfb6-4df1-a0a9-d31b91be89c7	1.656280674	e7551f4e	165.3	session
+clipgt-86ad21f0-5c8e-4733-9e48-585b3b3c0607	stop_nolead	False	N	False	75f89649-faf7-4916-bf0e-227a5bd06cfe	1.812345825	a2c5ae46	401.9	epoch+session
+clipgt-21d4de35-b8d4-46b4-803d-7c22528961ea	launch	False	N	False	81d02326-0b9d-49bc-a21c-8e83811c1544	1.807306471	4176f31d	364.8	session
+clipgt-25cc74b5-b8a5-4fb4-afd0-d681aec94f77	turn_sharp	False	N	False	e90972fb-5055-4d2d-8e52-8b22fe05cc5d	1.629633234	e7551f4e	432.8	session
+clipgt-7963a932-3a44-4f10-a3f9-b27a40d85329	stop_nolead	False	N	False	dc1873f6-1fd6-4d02-a1ff-38b34dccb404	1.641530065	f8ee31cb	549.5	session
+clipgt-118a3400-83ce-4a64-98dd-f38f786be4b2	stop_nolead	False	N	False	69c72034-ae65-4c73-a422-e2e508c8c3f1	1.707877904	6fb661c5	187.5	epoch+session
+clipgt-70e1ccff-a8af-4107-9f2c-f72d6eb33d66	stop_nolead	False	N	True	5b08dce1-0122-4011-8859-262f42a1bd74	1.215744738	6d8226d4	346.2	epoch+session
+clipgt-75ad98a4-a2de-4eb8-be40-dadfa0d10351	launch	False	N	False	e9fd26bf-ae81-47bc-930c-4b68f98afc10	2.043841179	2b577fc2	561.1	session
+clipgt-066bb895-3f45-4b92-a67a-382e5fd52516	turn_sharp	False	N	False	6837c6b8-d1ad-41da-8e5e-4afcc9212853	1.802310923	65907a2b	352.9	session
+clipgt-0ac02819-4171-4363-9458-ad2f192884bf	stop_nolead	False	N	False	9b2c544f-9efa-4b21-aa0b-4d5cf0f3d2b0	1.828894211	c8cab401	227.9	session
+clipgt-99bfc2be-2618-4d5f-bb70-d7604d9b2541	turn_sharp	False	N	False	4b012596-a253-486f-a581-ccf87b00c0e6	1.601618807	c6a47fa1	337.2	session
+clipgt-c76072c5-82a6-4b1e-b62f-a9da2ef48762	turn_sharp	False	N	False	8b0cc895-88cc-447a-ae62-c4506bba84a7	1.651738323	b1d93f58	581.0	session
+clipgt-bb4c859c-a4af-49ce-ad4d-0c4347053dd8	stop_nolead	False	N	False	889302a0-42bd-49d4-b463-b42dd2fbfd3a	1.704757958	f8ee31cb	520.3	session
+clipgt-17343b97-975b-4e32-9d1f-3ce37f99effc	turn_sharp	False	N	False	5578b7d6-7a08-4ae0-8ae4-5ea7f48f72a0	1.690833795	b88aa3d5	591.4	session

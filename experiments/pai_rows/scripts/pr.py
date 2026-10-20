@@ -555,7 +555,7 @@ def cmd_tag(a):
 
 def _same(x, y):
     x, y = np.asarray(x), np.asarray(y)
-    return x.shape == y.shape and x.dtype == y.dtype and np.array_equal(x, y, equal_nan=x.dtype.kind in "fc")
+    return x.shape == y.shape and (x.dtype == y.dtype or x.dtype.kind == y.dtype.kind == "U") and np.array_equal(x, y, equal_nan=x.dtype.kind in "fc")
 
 
 def _prefix_diff(P, R, skip_names, tmp=None):
