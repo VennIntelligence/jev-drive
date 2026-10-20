@@ -277,6 +277,7 @@ def cmd_gate(a):
     seg_c = np.diff(np.c_[np.zeros(len(ok)), np.nan_to_num(z["hc8"])], axis=1) / NA.DT
     stop = ok & (seg_t[:, -1] < 0.5)                                         # the anchored target ends standing
     conflict = stop & (seg_c[:, -1] >= 2.0)                                  # ... while the human at this clock moved >= 2 m/s
+    goconf = ok & (np.nan_to_num(z["s_t"])[:, -1] >= 2.0) & (np.nan_to_num(z["hc8"])[:, -1] < 0.5)   # target moves >= 2 m, the clock human stands
     act_p = ok & (np.abs(dp).max(1) > ACTIVE_M)
     q = lambda x: np.quantile(x, [0.5, 0.9, 0.99]).round(4).tolist() if len(x) else []  # noqa: E731
     g1 = dict(rows=int(hum_ok.sum()), labelled=int(ok.sum()), no_path_plan=int((ok & ~hum_ok).sum()), active=int(act_h.sum()),
@@ -290,7 +291,7 @@ def cmd_gate(a):
         d4 = dp[m, -1]
         rep[k] = dict(rows=int(m.sum()), active=float(act_p[m].mean()) if m.any() else 0.0, fast=float((act_p[m] & (dp[m].max(1) > ACTIVE_M)).mean()) if m.any() else 0.0,
                       slow=float((act_p[m] & (dp[m].min(1) < -ACTIVE_M)).mean()) if m.any() else 0.0, d4_q=q(d4), d4_mean=float(d4.mean()) if m.any() else 0.0,
-                      term_q=q(vp[m]), target_stop=int(stop[m].sum()), clock_conflict=int(conflict[m].sum()),
+                      term_q=q(vp[m]), target_stop=int(stop[m].sum()), clock_conflict=int(conflict[m].sum()), go_conflict=int(goconf[m].sum()),
                       dt_h_q=q(z["dt_h"][m]))
     S = z["why"] != "not_s"
     res = dict(G1=g1, G4="df.py bitcmp (results/lon_anchor/identity.json)", stored_plans=rep,
@@ -304,11 +305,11 @@ def cmd_gate(a):
           f"{g1['active']} of {g1['rows']} labelled rows active (max |d| > {G1_ACTIVE} m) = {100 * g1['share']:.2f} % (line <= {100 * G1_LINE:.0f} %); "
           f"term quantiles (50 / 90 / 99 %) {g1['term_q']}; nuPlan {100 * g1['by_src']['nuplan']['share']:.2f} %, PAI {100 * g1['by_src']['pai']['share']:.2f} %.",
           "", "Stored plans against the anchored target (reported only):", "",
-          "| rows | n | active | plan too fast | plan too slow | d4 mean | d4 50 / 90 / 99 % | target ends standing | of those: human moving at the clock | dt_h 50 / 90 / 99 % |",
-          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+          "| rows | n | active | plan too fast | plan too slow | d4 mean | d4 50 / 90 / 99 % | target ends standing | of those: human moving at the clock | target moves >= 2 m, clock human stands | dt_h 50 / 90 / 99 % |",
+          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for k, r in rep.items():
         Lm.append(f"| {k} | {r['rows']} | {100 * r['active']:.1f} % | {100 * r['fast']:.1f} % | {100 * r['slow']:.1f} % | {r['d4_mean']:+.2f} | {r['d4_q']} | "
-                  f"{r['target_stop']} | {r['clock_conflict']} | {r['dt_h_q']} |")
+                  f"{r['target_stop']} | {r['clock_conflict']} | {r['go_conflict']} | {r['dt_h_q']} |")
     Lm += ["", f"Label outcomes (S rows): {json.dumps(res['why'])}", "", res["note"]]
     (RES / "gate.md").write_text("\n".join(Lm) + "\n")
     print("\n".join(Lm))
