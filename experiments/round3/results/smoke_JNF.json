@@ -1,0 +1,61 @@
+{
+ "tag": "R3SMJNF-L18-s0",
+ "arm": "JNF",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R3SMJNF-L18-s0/20261021-001351",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "pool_imit_rows": [
+   31.486666666666665,
+   32,
+   true
+  ],
+  "pool_imit_rows_without_hinge": [
+   0.0,
+   0,
+   true
+  ],
+  "agent_ho_zero": [
+   0.0,
+   0,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   1.0
+  ]
+ },
+ "steps": 0,
+ "draw_shares": {
+  "on_wfile": "runs/defect_fix/w/R2JF.npz",
+  "rows_w0": 157069,
+  "group_share": {
+   "S": 0.49999999999936234,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.2500000000003062,
+   "ph05": 0.12499999999991088,
+   "ph05_held": 0.0,
+   "ph15": 0.12500000000002773,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

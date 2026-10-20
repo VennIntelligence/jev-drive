@@ -12,7 +12,7 @@ keep the route-turn fix (PAI 281 route-turn zeros 15 -> 2)?
 through their label (navtrain has 22 of 103 288, the S pool 0.14 a batch), so "standstill and stay" goes from 1.1 % to 18.5 % of the standstill
 rows (stay + launch); at the human's launch J is still in 15 / 37 PAI 281 launch scenes (NTV0 7) and its plan from standstill covers 0.39 x the
 human's 4 s arc (NTV0 0.62 x). The flattening alone moves none of the training probes in two stored pairs (SIMPF / SIMPB, B2F / B2C). Points to
-H1; H3 is not separable from H1. Arms J-W (standing-label rows at weight 0) and J-NF (no flattening) are prepared, not yet trained.
+H1; H3 is not separable from H1. Arms J-W (standing-label rows at weight 0) and J-NF (no flattening) are prepared and their 60-step smokes pass; not yet trained.
 
 **Next.** Main session: launch both arms (`r3.sh launch`) or J-W only; the prereg's lines decide the PAI 281 read.
 
@@ -34,5 +34,5 @@ control is round 2's stored R2C-L18-s0.
 - `README.md` (experiments/pai_rows): PAI human-state and frame-stretch …
 - `README.md` (experiments/pai_fix): targeted PAI exam for stop and turn …
 
-[results/](results/) 6 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
+[results/](results/) 8 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->
