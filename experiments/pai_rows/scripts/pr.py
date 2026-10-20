@@ -46,6 +46,7 @@ CLASSES = ("stop_nolead", "turn_sharp", "launch", "bend", "rest")
 SLOT_T = np.round(np.arange(-7, 1) * 0.2, 3)                  # sh30_core.SLOT_T: the 8 policy slots, oldest first
 T_KEY = np.array([-1.5, -1.0, -0.5, 0.0])                       # op_interp.T_KEY: the ego history keys
 TOL_US = 30_000
+PART_VER = 2                                                     # stretch parts: 2 = encoded over the row file's whole slot table
 HOLD = 15                                                        # the trainers' --on-hold-pct: crc32(scene) % 100 < 15 is never drawn
 
 
@@ -207,14 +208,14 @@ def cmd_stretch(a):
             sig = np.array(OC.sig(rf))
             if pf.exists() and tf.exists() and not a.force:
                 o = np.load(pf)
-                if o["src"].tolist() == sig.tolist() and np.array_equal(o["names_all"], names[base]) and float(o["f"]) == f:
+                if o["src"].tolist() == sig.tolist() and np.array_equal(o["names_all"], names[base]) and float(o["f"]) == f and int(o.get("ver", 0)) == PART_VER:
                     continue
             zz = np.load(rf)
-            z = {k: zz[k] for k in ("frames", "frame_ts", "t0_us", "k", "slot", "P", "V", "acc", "cmd", "anchor", "ego_in", "lht")}
+            z = {k: zz[k] for k in ("frames", "frame_ts", "t0_us", "k", "slot", "P", "V", "acc", "cmd", "anchor", "ego_in", "lht", "cold_rows", "cold_cur")}
             yaw_u = np.unwrap(z["anchor"][:, 2])
             herr = np.maximum(herr, hist_err(z, yaw_u))
             pos = {int(k): i for i, k in enumerate(z["k"])}
-            keep, sl, ego = [], [], []
+            keep, rows_n, ego, slot2 = [], [], [], z["slot"].copy()
             for b in base:
                 n = pos[int(kk[b])]
                 if (z["slot"][n] < 0).any():                           # cold-start rows (back-warped slots): no rendered frames to re-pick
@@ -228,21 +229,26 @@ def cmd_stretch(a):
                 if f == 1.0:
                     slot_eq[0] += int(np.array_equal(j, z["slot"][n]))
                     slot_eq[1] += 1
-                keep.append(b), sl.append(j)
+                keep.append(b), rows_n.append(n)
+                slot2[n] = j
                 ego.append(PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(z["cmd"][n], np.float32)))
             if not keep:
-                np.savez(pf, src=sig, names_all=names[base], f=f, base=np.zeros(0, np.int64), tix=np.zeros((0, 8), np.int64),
+                np.savez(pf, ver=PART_VER, src=sig, names_all=names[base], f=f, base=np.zeros(0, np.int64), tix=np.zeros((0, 8), np.int64),
                          t_out=np.zeros((0, len(di)), np.float32), ego=np.zeros((0, 20), np.float32))
                 np.save(tf, np.zeros((0, *A.H_SHAPE), np.float16))
                 continue
-            q = dict(slot=np.stack(sl), frames=z["frames"], cold_rows=np.zeros(0, np.int32), cold_cur=np.zeros((0, 8) + OC.FRAME, np.uint8))
+            # the row file's whole slot table (stretched slots on the kept rows, the stored ones and the cold rows' frames elsewhere): pair order
+            # and encoder / teacher batches are then those of onp_cache build, so f = 1 is the plain cache bit for bit (the encoder is not
+            # batch-invariant at the last fp16 step: probe 1 of the prereg); rows not kept cost encoder time only
+            q = dict(slot=slot2, frames=z["frames"], cold_rows=z["cold_rows"], cold_cur=z["cold_cur"])
             prev, cur, tix = OC.pairs(q)
             t1 = time.time()
             tok, t_out = OC.encode(net, A, di, prev, cur, tix, bool(z["lht"]), dev, a.bs)
+            tix, t_out = tix[rows_n], t_out[rows_n]
             t_enc += time.time() - t1
             np.save(tf.with_suffix(".tmp.npy"), tok)
             os.replace(tf.with_suffix(".tmp.npy"), tf)
-            np.savez(pf.with_suffix(".tmp.npz"), src=sig, names_all=names[base], f=f, base=np.array(keep, np.int64), tix=tix, t_out=t_out,
+            np.savez(pf.with_suffix(".tmp.npz"), ver=PART_VER, src=sig, names_all=names[base], f=f, base=np.array(keep, np.int64), tix=tix, t_out=t_out,
                      ego=np.stack(ego).astype(np.float32))
             os.replace(pf.with_suffix(".tmp.npz"), pf)
             n_new += 1

@@ -10,6 +10,7 @@
 # most W chunks holding rollout.asl / dumps at once) -> tail. Every chunk: roll -> rows -> clean. Rerunning `chain` after new scenes join
 # scenes.tsv lists only the scenes not yet in a chunk (chunks of 32, no staging) and rebuilds the tail (cache / stretch parts are resumed).
 #   pr.sh chain H|S       submit (ids in $O/jobs.txt, stages in $O/stages.txt)
+#   pr.sh resume H|S      after a probe STOP fixed in code: probe -> rest (unsubmitted chunks) [-> chain S]
 #   pr.sh wait H|S        blocks until $O/<pass>/DONE, $O/<pass>/STOP or a failed job of the pass (for one run_in_background waiter)
 #   job bodies: check <pass> <chunk> <n> <min> | rows <pass> <chunk> | clean <pass> <chunk> | probe <pass> | rest <pass> | cache <pass> <tag> |
 #               pool <pass> <name> | fwd <name> <rows> | r1 <pass> <name> | stretch <f> | gate1 | feas | report
@@ -87,8 +88,16 @@ chain)
     echo "$(date '+%F %T') chain $p (code $(git rev-parse --short HEAD)): ${ch[0]} roll $r0 check $k1 rows/clean ${u0[*]}; ${ch[1]} roll $r1 check $k2" \
          "rows $w1 clean $c1; probe $pb; rest $rs (${#ch[@]} chunks)" | tee -a $O/stages.txt
   else bash $ME rest $p "${ch[*]}" ""; fi ;;                          # an append: the new chunks and the tail, no staging
+resume)  # resume <pass>: after a probe STOP whose cause is fixed in the code: probe -> rest (the chunks not yet submitted) [-> chain S]; rolls,
+         # rows and cache parts are reused, probe outputs are rebuilt
+  p=$2; [[ -f $O/$p/STOP ]] || die "$p: no STOP"; mv $O/$p/STOP $O/$p/STOP.$(date +%m%d%H%M%S); git rev-parse --short HEAD >> $O/$p/code.txt
+  ch=($(for d in $O/roll/$p/${p,,}[0-9][0-9][0-9]; do [[ -n $(ls $d/runs/*/SUBMITTED 2>/dev/null) ]] || basename $d; done))
+  PRIO=${PRI[$p]}; pb=$(sub pr-probe-$p --vram 20 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME probe $p) || exit 1
+  rs=$(sub pr-rest-$p --after $pb --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME rest $p "${ch[*]}" "") || exit 1
+  [[ $p == H && ! -d $O/roll/S ]] && cs=$(PRIO=10 sub pr-chainS --after $rs --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME chain S)
+  echo "$(date '+%F %T') resume $p (code $(git rev-parse --short HEAD)): probe $pb rest $rs (${#ch[@]} chunks) ${cs:+chain S $cs}" | tee -a $O/stages.txt ;;
 rest)  # rest <pass> "<chunks>" <after ids>: the remaining units (window W) and the tail (an in-queue job after the probe, or an append)
-  p=$2; [[ ! -f $O/$p/STOP ]] || exit 2; ch=($3); rw=(${4//,/ }); cl=()
+  p=$2; [[ ! -f $O/$p/STOP ]] || exit 2; ch=($3); rw=(${4:+${4//,/ }}); cl=()
   for i in "${!ch[@]}"; do a=""; (( i >= W )) && a=${cl[$((i - W))]}
     u=($(unit $p ${ch[$i]} "$a" "")) || exit 1; rw+=(${u[1]} ${u[2]}); cl+=(${u[2]}); done
   echo "$(date '+%F %T') rest $p: ${#ch[@]} chunks, window $W, cleans ${cl[*]}" | tee -a $O/stages.txt
