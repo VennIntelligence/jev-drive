@@ -29,6 +29,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO)]
+from jevdrive.tokens import open_front  # noqa: E402
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 CR, FEAT, W = DATA / "runs/op_parity/cache", DATA / "runs/route_mem/feat", DATA / "runs/defect_fix/w"
 O, RES = DATA / "runs/round2", REPO / "experiments/round2/results"
@@ -55,7 +56,7 @@ def cmd_fix(a):
     zp, zr = np.load(CR / f"{a.pool}@warp/teacher.npz"), np.load(CR / f"{a.ref}@warp/teacher.npz")
     bad += [f"teacher.{k}" for k in ("out", "plan") if not np.array_equal(zp[k][:n], zr[k][:n])]
     i = np.sort(np.random.default_rng(0).choice(n, min(2000, n), replace=False))
-    Fp, Fr = np.load(CR / f"{a.pool}@warp/front.npy", mmap_mode="r"), np.load(CR / f"{a.ref}@warp/front.npy", mmap_mode="r")
+    Fp, Fr = open_front(CR / f"{a.pool}@warp/front.npy"), open_front(CR / f"{a.ref}@warp/front.npy")
     if not np.array_equal(np.asarray(Fp[i]), np.asarray(Fr[i])):
         bad.append("front sample")
     ag = dict(np.load(P / "agent.npz"))

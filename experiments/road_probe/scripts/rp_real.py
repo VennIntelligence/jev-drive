@@ -29,6 +29,7 @@ import numpy as np  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "experiments/road_probe/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 OUT, FIGS = REPO / "experiments/road_probe/results", REPO / "experiments/road_probe/figs"
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 W = DATA / "runs/road_probe"
@@ -185,7 +186,7 @@ def load_rows(split, rows, dev, n_threads=8):
 
     def one(j):
         d, r, o = j
-        return o, np.ascontiguousarray(np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")[r])
+        return o, np.ascontiguousarray(open_front(CR / f"{d}@warp" / "front.npy")[r])
     with ThreadPoolExecutor(n_threads) as ex:
         for o, x in ex.map(one, jobs):
             V[torch.as_tensor(o, device=dev)] = torch.from_numpy(x).to(dev)

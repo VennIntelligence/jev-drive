@@ -12,9 +12,13 @@ Box, envs/op-train (numpy only).   rf_v2cpool.py [--out L18RB0J]
 """
 import argparse
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from jevdrive.tokens import open_front  # noqa: E402
 
 D = Path(os.environ["DATA_DIR"])
 CR, FE = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
@@ -60,7 +64,7 @@ def main(a):
     np.savez(out / "route.npz", tokens=T["names"], ok=np.r_[np.zeros(n_s, bool), rc["ok"][jc]], poly=np.r_[rs_poly, rc["poly"][jc]],
              seglen=np.r_[np.full((n_s,) + rc["seglen"].shape[1:], np.nan, np.float32), rc["seglen"][jc]],
              dz=np.r_[np.ones(n_s, np.float32), rc["dz"][jc]], cov20=np.r_[np.zeros(n_s, bool), rc["cov20"][jc]])
-    F = [(np.load(CR / f"{d.name}@warp/front.npy", mmap_mode="r"), r) for d, _, r in sel]
+    F = [(open_front(CR / f"{d.name}@warp/front.npy"), r) for d, _, r in sel]
     o = np.lib.format.open_memmap(warp / "front.npy", "w+", F[0][0].dtype, (n_s + n_c,) + F[0][0].shape[1:])
     i = 0
     for x, r in F:

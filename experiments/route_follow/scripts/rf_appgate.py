@@ -31,6 +31,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/op_parity/scripts"), str(REPO / "experiments/route_mem/lib"),
                 str(REPO / "experiments/route_mem/scripts"), str(REPO / "experiments/route_follow/scripts"), str(REPO / "experiments/onpol_nuplan/lib")]
+from jevdrive.tokens import open_front  # noqa: E402
 SRC = (("nup", "L18RSG"), ("pai", "PAIonp"))
 LINE_DROP, LINE_NEG = 0.30, 0.10
 
@@ -83,7 +84,7 @@ def main(a):
         P = []
         for s, _ in SRC:
             x = rows[s]
-            fr = np.load(CR / f"on1_{x['pool']}@warp" / "front.npy", mmap_mode="r")
+            fr = open_front(CR / f"on1_{x['pool']}@warp" / "front.npy")
             tc = torch.as_tensor(np.where(np.asarray(x["lht"], bool)[:, None], [[0.0, 1.0]], [[1.0, 0.0]]), dtype=torch.float32, device=dev)
             P.append(G.plans(m, fr, x["r"], x["ego"], tc, torch.as_tensor(x["cam"], dtype=torch.float32, device=dev), pi, W, dev))
         P = np.concatenate(P)

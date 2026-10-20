@@ -18,6 +18,7 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 OUT = data_dir() / "runs" / "op_probe"
 TAPS = ["outputs", "add_40", "select_4", "add_54"]
@@ -50,7 +51,7 @@ def to_poses(plan_mu, cam, t_out):
 
 def load(data, frames):
     tab = dict(np.load(data_dir() / "runs" / "op_parity" / "cache" / data / "tab.npz"))
-    front = np.load(frames_dir(data, frames) / "front.npy", mmap_mode="r")
+    front = open_front(frames_dir(data, frames) / "front.npy")
     assert len(front) == len(tab["names"])
     return tab, front
 

@@ -39,6 +39,7 @@ import numpy as np  # noqa: E402
 
 R_ = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R_), str(R_ / "lib"), str(R_ / "experiments/onpol_pai/scripts"), str(R_ / "experiments/onpol_pai/lib"), str(R_ / "experiments/defect_fix/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 CR, FEAT = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
 RES = R_ / "experiments/pai_rows/results"
@@ -322,7 +323,7 @@ def cmd_gate1(a):
     tp, tq = np.load(P / "tab.npz"), np.load(Q / "tab.npz")
     idx = {x: i for i, x in enumerate(tp["names"].astype(str))}
     b = np.array([idx[x] for x in tq["base"].astype(str)])
-    fp, fq = (np.load(x.parent / f"{x.name}@warp" / "front.npy", mmap_mode="r") for x in (P, Q))
+    fp, fq = (open_front(x.parent / f"{x.name}@warp" / "front.npy") for x in (P, Q))
     ep, eq = (np.load(x.parent / f"{x.name}@warp" / "teacher.npz")["out"] for x in (P, Q))
     rs = np.arange(len(b))
     fr_eq = np.array([np.array_equal(fp[b[i]], fq[i]) for i in rs])

@@ -31,7 +31,7 @@ sub() { local n=$1; shift; [[ -f $L/$n/DONE || -f $CK/$n/ckpt-final.pt ]] && ret
         $CL submit --owner onpol-nuplan --name "on-$n" --train --priority 15 --vram "${VRAM:-40}" --cpu 6 --ram 60 --timeout-h 4 --log-dir "$L/$n" -- "$@" > /dev/null || die "submit $n"; }
 waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do [[ -f $CK/$n/ckpt-final.pt && ! -d $L/$n ]] && break; sleep 30; done
              [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n"; done; return 0; }
-[[ -f $DATA_DIR/runs/op_parity/cache/$POOL/tab.npz && -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.npy ]] || die "no pool $POOL"
+[[ -f $DATA_DIR/runs/op_parity/cache/$POOL/tab.npz && ( -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.npy || -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.parts.json ) ]] || die "no pool $POOL"
 S="--ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs --agent-lam 10 --shape --label-bank"
 OT="$PY experiments/onpol_nuplan/scripts/on_train.py train $S"
 ON="--on $POOL --on-k 13"

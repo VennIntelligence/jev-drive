@@ -16,6 +16,7 @@ for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
 import sys as _sys, pathlib as _pl  # noqa: E401,E402
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "research"), str(_pl.Path(__file__).parent)]
+from jevdrive.tokens import open_front  # noqa: E402
 import argparse, hashlib, json, pickle, time  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
@@ -250,7 +251,7 @@ def build_model(nv, use_h, d=256):
 def _vision(kind, data, rows, tokens):
     """(len(rows), T, 512) fp16 vision tokens of the cache rows `rows` of one data dir."""
     if kind in ("c8", "c1"):
-        f = np.load(CR / f"{data}@warp" / "front.npy", mmap_mode="r")
+        f = open_front(CR / f"{data}@warp" / "front.npy")
         x = np.asarray(f[rows]) if kind == "c8" else np.asarray(f[rows, -1])
         return np.ascontiguousarray(x.reshape(len(rows), -1, 512))
     out, hit = np.zeros((len(rows), 32, 512), np.float16), np.zeros(len(rows), bool)

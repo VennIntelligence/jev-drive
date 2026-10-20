@@ -34,6 +34,8 @@ exam hard_train half (experiments/alpasim/results/pai_exam/hard_train.txt); neve
           --exclude <list files>: scenes never packed (hard_exam / hard_train / control), asserted absent from the output.
   merge   pools -> one (names prefixed on:<prefix>:..., feat merged, absent label files filled ok False; `src` kept, absent = "human";
           string tags of one pool kept, "" elsewhere; `pool` = the prefix, so rm_train --on-weight pool=<prefix>:W balances the parts).
+          Tokens zero-copy by default: @warp/front.parts.json indexes the sources' front.npy (jevdrive.tokens; readers open it with
+          open_front; the sources must stay); teacher.npz is concatenated as before. --copy writes a real front.npy (the old layout).
   r1      GPU (or CPU) read of the pool rows: the pass's driver checkpoint on the pool's tokens + ego vs its logged poses_model, per-coordinate
           tolerance max(0.03 m, 4 fp16 ulps), and a wrong checkpoint (onp_cache gid-ulp's working line) -> gates file updated.
 
@@ -50,6 +52,7 @@ import glob
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "POLARS_MAX_THREADS", "RAYON_NUM_THREADS"):
@@ -58,6 +61,7 @@ import numpy as np  # noqa: E402
 
 R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R), str(R / "experiments/route_follow/scripts"), str(R / "experiments/route_mem/lib"), str(R / "experiments/route_mem/scripts"), str(R / "experiments/anchor_offset/scripts")]
+from jevdrive import tokens as JTOK  # noqa: E402
 D = Path(os.environ.get("DATA_DIR", "/data"))
 CR, FEAT = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
 PRE_S, APPROACH = 6.0, 40.0
@@ -472,7 +476,7 @@ def cmd_pack(a):
                  cov20=np.asarray(sm["c20"], bool) & fok)
         np.savez(FEAT / f"on1_{a.name}.npz", names=names, f=F.astype(np.float16), k=kk, ok=fok)
         # G-r1: the pool files are the cache rows bit for bit (front, ego, teacher)
-        fr = np.load(warp / "front.npy", mmap_mode="r")
+        fr = JTOK.open_front(warp / "front.npy")
         rs = np.random.default_rng(0).choice(n, min(n, 256), replace=False)
         G["G_r1"] = dict(front_equal=bool(all(np.array_equal(fr[i], tok[tix[i]]) for i in rs)),
                          ego_equal=bool(np.array_equal(np.load(pool / "tab.npz")["ego"], T["ego_in"][sel].astype(np.float32))),
@@ -498,6 +502,7 @@ def cmd_pack(a):
 
 # ---------------------------------------------------------------- merge
 def cmd_merge(a):
+    t0 = time.time()
     spec = [x.split(":") for x in a.pools]                            # pool:prefix[:mode] (mode -> tab `mode`, on_train --on-mode mixed)
     src = [(x[0], x[1]) for x in spec]
     modes = [x[2] if len(x) > 2 else "" for x in spec]
@@ -542,19 +547,26 @@ def cmd_merge(a):
     Fz = [np.load(FEAT / f"{p}.npz") for p, _ in src]
     np.savez(FEAT / f"on1_{a.out}.npz", names=names, f=np.concatenate([z["f"] for z in Fz]).astype(np.float16), k=np.concatenate([z["k"] for z in Fz]),
              ok=np.concatenate([z["ok"] for z in Fz]))
-    Fr = [np.load(CR / f"{p}@warp/front.npy", mmap_mode="r") for p, _ in src]
-    o = np.lib.format.open_memmap(warp / "front.npy", "w+", np.float16, (len(names),) + Fr[0].shape[1:])
-    i = 0
-    for x in Fr:
-        for j in range(0, len(x), 4096):
-            o[i + j:i + min(j + 4096, len(x))] = x[j:j + 4096]
-        i += len(x)
-    o.flush()
+    if a.copy:                                                         # --copy: the tokens copied into one front.npy (the pre-2026-10-20 layout)
+        (warp / JTOK.PARTS).unlink(missing_ok=True)
+        Fr = [JTOK.open_front(CR / f"{p}@warp/front.npy") for p, _ in src]
+        o = np.lib.format.open_memmap(warp / "front.npy", "w+", np.float16, (len(names),) + Fr[0].shape[1:])
+        i = 0
+        for x in Fr:
+            for j in range(0, len(x), 4096):
+                o[i + j:i + min(j + 4096, len(x))] = x[j:j + 4096]
+            i += len(x)
+        o.flush()
+    else:                                                              # default: zero-copy, front.parts.json indexes the sources' front.npy
+        JTOK.link_front(warp, [CR / f"{p}@warp/front.npy" for p, _ in src])
+    assert len(JTOK.open_front(warp / "front.npy")) == len(names), "front rows"
     Tz = [dict(np.load(CR / f"{p}@warp/teacher.npz")) for p, _ in src]
     assert all(np.array_equal(t["di"], Tz[0]["di"]) and np.array_equal(t["pi"], Tz[0]["pi"]) for t in Tz)
     np.savez(warp / "teacher.npz", out=np.concatenate([t["out"] for t in Tz]), plan=np.concatenate([t["plan"] for t in Tz]), di=Tz[0]["di"], pi=Tz[0]["pi"])
+    wrote = sum(f.stat().st_size for d in (out, warp) for f in d.iterdir() if f.is_file()) + (FEAT / f"on1_{a.out}.npz").stat().st_size
     print(json.dumps(dict(pool=str(out), rows=len(names), parts={p: n for (p, _), n in zip(src, ns)}, modes=modes,
-                          src={s: int((M["src"] == s).sum()) for s in np.unique(M["src"])})))
+                          src={s: int((M["src"] == s).sum()) for s in np.unique(M["src"])}, tokens="copy" if a.copy else "zero-copy",
+                          wall_s=round(time.time() - t0, 1), bytes_written=wrote)))
 
 
 # ---------------------------------------------------------------- r1
@@ -573,7 +585,7 @@ def cmd_r1(a):
     ref = torch.as_tensor(C["poses_model"][ci][..., :2], dtype=torch.float64)
     ulp = torch.pow(2.0, torch.floor(torch.log2(ref.abs().clamp_min(2.0 ** -14))) - 10)
     tol = torch.clamp(4 * ulp, min=0.03)
-    fr = np.load(warp / "front.npy", mmap_mode="r")
+    fr = JTOK.open_front(warp / "front.npy")
     W = torch.as_tensor(R2.t_weights(T.T8), device=dev)
     ego = torch.as_tensor(tb["ego"], device=dev)
     tc = torch.as_tensor(np.where(tb["lht"][:, None], [[0.0, 1.0]], [[1.0, 0.0]]), dtype=torch.float32, device=dev)
@@ -617,6 +629,7 @@ if __name__ == "__main__":
     p = sub.add_parser("merge")
     p.add_argument("--out", required=True), p.add_argument("--pools", nargs="+", required=True)
     p.add_argument("--nan-keys", nargs="*", default=[], help="float tab keys some parts lack: NaN on those parts' rows (e.g. fut_reg)")
+    p.add_argument("--copy", action="store_true", help="copy the tokens into a new front.npy instead of the zero-copy front.parts.json index")
     p = sub.add_parser("r1")
     p.add_argument("--name", default="PAIT"), p.add_argument("--cache", required=True), p.add_argument("--out", required=True)
     p.add_argument("--tag", default="P2H10S-F-s0"), p.add_argument("--control", nargs="+", default=["P2H10S-F-s1"])

@@ -35,6 +35,7 @@ import numpy as np  # noqa: E402
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO)]
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 CR = data_dir() / "runs/op_parity/cache"
 H1 = data_dir() / "runs/corridor/head1"
@@ -70,7 +71,7 @@ def load_tokens(src, n, dev, chunk=1024, threads=8):
 
     def one(j):
         d, rows, o = j
-        return o, np.ascontiguousarray(np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")[rows])
+        return o, np.ascontiguousarray(open_front(CR / f"{d}@warp" / "front.npy")[rows])
     with ThreadPoolExecutor(threads) as ex:
         for o, x in ex.map(one, jobs):
             V[o:o + len(x)] = torch.from_numpy(x).to(dev)

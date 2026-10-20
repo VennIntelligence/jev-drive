@@ -23,6 +23,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/op_parity/scripts")]
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 from jevdrive.data import splits  # noqa: E402
 from jevdrive.run import Run  # noqa: E402
 
@@ -62,7 +63,7 @@ def cf(a):
         for g in a.groups:
             src, out = RP / f"tok/{g}", W / "cf" / g
             out.mkdir(parents=True, exist_ok=True)
-            front, tb = np.load(src / "front.npy", mmap_mode="r"), dict(np.load(src / "tab.npz"))
+            front, tb = open_front(src / "front.npy"), dict(np.load(src / "tab.npz"))
             N, V, cam = len(tb["ego"]), variants(tb["ego"]), tb["cam"].astype(np.float64)
             served_tag = tb["label"].astype(str) if "label" in tb else np.full(N, "YS-L18-s1")
             for tag in a.tags:

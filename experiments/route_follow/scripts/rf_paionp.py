@@ -35,6 +35,7 @@ import numpy as np  # noqa: E402
 R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R), str(R / "experiments/route_follow/scripts"), str(R / "experiments/route_mem/lib"), str(R / "experiments/route_mem/scripts"),
                 str(R / "experiments/op_parity/scripts"), str(R / "experiments/onpol_nuplan/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 D = Path(os.environ.get("DATA_DIR", "/data"))
 CR, FEAT, OUT = D / "runs/op_parity/cache", D / "runs/route_mem/feat", D / "runs/route_follow/paionp"
 EXAM = R / "experiments/alpasim/results/pai_exam"
@@ -154,7 +155,7 @@ def cmd_pack(a):
     np.savez(FEAT / f"on1_{a.name}.npz", names=T["names"], f=fz["f"][keep], k=fz["k"][keep], ok=fz["ok"][keep])
     th = np.load(CR / f"on1_{a.pool}@warp/teacher.npz")
     np.savez(dw / "teacher.npz", out=th["out"][keep], plan=th["plan"][keep], di=th["di"], pi=th["pi"])
-    fr = np.load(CR / f"on1_{a.pool}@warp/front.npy", mmap_mode="r")
+    fr = open_front(CR / f"on1_{a.pool}@warp/front.npy")
     o = np.lib.format.open_memmap(dw / "front.npy", "w+", np.float16, (n,) + fr.shape[1:])
     for i in range(0, n, 1024):
         o[i:i + 1024] = fr[keep[i:i + 1024]]
@@ -193,7 +194,7 @@ def cmd_r1(a):
     ego = np.concatenate([tb["ego"][rows], fz["f"][rows].astype(np.float32)], 1)
     tc = torch.as_tensor(np.where(tb["lht"][rows, None], [[0.0, 1.0]], [[1.0, 0.0]]), dtype=torch.float32, device=dev)
     cam = torch.as_tensor(tb["cam"][rows, 0], dtype=torch.float32, device=dev)
-    fr = np.load(CR / f"on1_{a.pool}@warp/front.npy", mmap_mode="r")
+    fr = open_front(CR / f"on1_{a.pool}@warp/front.npy")
     ref = C["poses_model"][ci[rows]][..., :2].astype(np.float64)
     ulp = 2.0 ** (np.floor(np.log2(np.maximum(np.abs(ref), 2.0 ** -14))) - 10)
     tol = np.maximum(4 * ulp, 0.03)

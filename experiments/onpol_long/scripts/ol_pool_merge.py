@@ -7,9 +7,13 @@ share <scene>:<seed>:<k>; the label files' tokens are renamed the same way (rout
 """
 import argparse
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from jevdrive.tokens import open_front  # noqa: E402
 
 CR = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs")) / "runs/op_parity/cache"
 
@@ -61,7 +65,7 @@ def main(a):
     route(src, out)
     names = np.load(out / "tab.npz")["names"]
     assert len(set(names.tolist())) == len(names)
-    F = [np.load(CR / f"{d.name}@warp/front.npy", mmap_mode="r") for d, _ in src]
+    F = [open_front(CR / f"{d.name}@warp/front.npy") for d, _ in src]
     o = np.lib.format.open_memmap(warp / "front.npy", "w+", F[0].dtype, (sum(len(x) for x in F),) + F[0].shape[1:])
     i = 0
     for x in F:

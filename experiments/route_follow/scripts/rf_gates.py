@@ -42,6 +42,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/op_parity/scripts"), str(REPO / "experiments/route_mem/lib"),
                 str(REPO / "experiments/route_follow/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import rmem as RM  # noqa: E402
 
 TI = (2, 3)                                    # plan poses at 1.5 and 2.0 s
@@ -189,7 +190,7 @@ def main(a):
         ok = rt["ok"] & fz["ok"] & okr
         run.info(f"{a.pool}: {n} rows, ok {ok.sum()} (route {rt['ok'].sum()}, cf memory {fz['ok'].sum()}, real memory + polyline {okr.sum()})")
         rows = np.flatnonzero(ok)
-        front = np.load(CR / f"{a.pool}@warp" / "front.npy", mmap_mode="r")
+        front = open_front(CR / f"{a.pool}@warp" / "front.npy")
         tc, cam_x = tcs(tb["lht"][rows]), torch.as_tensor(tb["cam"][rows, 0], dtype=torch.float32, device=dev)
         f_cf = fz["f"][rows].astype(np.float32)
         t0 = time.time()
@@ -230,7 +231,7 @@ def main(a):
         for data, rr in sorted(st_rows.items()):
             rr = np.array(rr)
             stb, z = np.load(CR / data / "tab.npz"), np.load(FEAT / f"{data}.npz")
-            fr = np.load(CR / f"{data}@warp" / "front.npy", mmap_mode="r")
+            fr = open_front(CR / f"{data}@warp" / "front.npy")
             e, f = stb["ego"][rr], z["f"][rr].astype(np.float32)
             tc_, cx = tcs(stb["lht"][rr]) if "lht" in stb.files else tcs(np.zeros(len(rr), bool)), torch.as_tensor(stb["cam"][rr, 0], dtype=torch.float32, device=dev)
             base = plans(model, fr, rr, np.c_[e, f].astype(np.float32), tc_, cx, pi, W, dev)

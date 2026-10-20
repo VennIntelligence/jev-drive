@@ -55,6 +55,7 @@ R = Path(os.environ.get("SELF_REPO") or Path(__file__).resolve().parents[3])
 HERE = R / "experiments/route_follow/scripts"
 sys.path[:0] = [str(R), str(HERE), str(R / "experiments/onpol_pai/scripts"), str(R / "experiments/onpol_pai/lib"), str(R / "experiments/route_mem/lib"),
                 str(R / "experiments/route_mem/scripts"), str(R / "experiments/anchor_offset/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 D = Path(os.environ.get("DATA_DIR", "/data"))
 CR, FEAT = D / "runs/op_parity/cache", D / "runs/route_mem/feat"
 EXAM = R / "experiments/alpasim/results/pai_exam"
@@ -471,7 +472,7 @@ def cmd_pack(a):
     np.savez(fdir / f"on1_{a.name}.npz", names=names, f=F_in.astype(np.float16), k=kk, ok=fok)
     if set(tags["part"].tolist()) & {"hard_exam", "control"}:
         (pool / "EXAM_SCENES_INSIDE").write_text("dev pool: hard_exam / control scenes inside; never train on it\n")
-    fr = np.load(warp / "front.npy", mmap_mode="r")
+    fr = open_front(warp / "front.npy")
     rs = np.random.default_rng(0).choice(n, min(n, 256), replace=False)
     G["G_r1"] = dict(front_equal=bool(all(np.array_equal(fr[i], tok[tix[i]]) for i in rs)), rows_checked=int(len(rs)),
                      ego_equal=bool(np.array_equal(np.load(pool / "tab.npz")["ego"], T["ego_in"][sel].astype(np.float32))),

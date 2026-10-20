@@ -51,6 +51,7 @@ import torch.nn.functional as F  # noqa: E402
 import parity_adapter as PA  # noqa: E402
 from jevdrive import op_adapt as A  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive import tokens as JT  # noqa: E402
 from experiments.op_adapt_l.lib import op_adapt_l as L  # noqa: E402
 from experiments.op_adapt_r2.lib import op_adapt_r2 as R2  # noqa: E402
 
@@ -308,9 +309,10 @@ class IndexedMM:
 
 
 def open_front(f):
-    """np.load(f, mmap) of a front.npy, or the IndexedMM of a b2d_prep dir that has no front.npy."""
+    """np.load(f, mmap) of a front.npy, the CatMM of a zero-copy merged pool (front.parts.json, jevdrive.tokens), or the IndexedMM of a
+    b2d_prep dir that has neither."""
     f = _pl.Path(f)
-    return np.load(f, mmap_mode="r") if f.exists() else IndexedMM(f.parent)
+    return JT.open_front(f) if JT.is_tokens(f) else IndexedMM(f.parent)
 
 
 class Tokens:
@@ -357,6 +359,8 @@ class Tokens:
                 continue
             if isinstance(m, np.ndarray) and not self.mixed:
                 np.take(m, rs[i:j] - self.off[s], axis=0, out=b[i:j], mode="clip")   # clip: no bounds-check copy (the rows are in range)
+            elif isinstance(m, JT.CatMM) and not self.mixed:
+                m.take(rs[i:j] - self.off[s], b[i:j])                           # zero-copy pool: the same np.take, part by part
             else:
                 g = m[rs[i:j] - self.off[s]]
                 b[i:j, self.ns - g.shape[1]:] = g                               # right-aligned: the missing older slots stay zero

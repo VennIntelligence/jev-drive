@@ -27,6 +27,7 @@ import numpy as np  # noqa: E402
 
 import pixel_store as PX  # noqa: E402
 from jevdrive import cache  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 from jevdrive.run import Run, cli_args  # noqa: E402
 
@@ -207,7 +208,7 @@ def cmd_check_t0(a):
         net, _ = P.encoder(dev)
         for d in a.datas:
             arr = np.load(pdir(d) / T0_FILE, mmap_mode="r")
-            ref = np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")
+            ref = open_front(CR / f"{d}@warp" / "front.npy")
             assert arr.shape == (len(ref), 2) + PX.FRAME and arr.dtype == np.uint8, f"{d}: {arr.shape} vs front {ref.shape}"
             rows = np.sort(np.random.default_rng(0).choice(len(arr), min(a.rows, len(arr)), replace=False))
             dm, mx, sq, n = 0.0, 0.0, 0.0, 0
@@ -256,7 +257,7 @@ def cmd_check(a):
         net, _ = P.encoder(dev)
         for d in a.datas:
             PS = PX.PixelStore([d], dev, mode="all", root=_ROOT[0])
-            ref = np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")
+            ref = open_front(CR / f"{d}@warp" / "front.npy")
             rows = np.sort(np.random.default_rng(0).choice(len(PS), min(a.rows, len(PS)), replace=False))
             dm, mx, sq, n, t0d = 0.0, 0.0, 0.0, 0, 0.0
             for i in range(0, len(rows), 32):                                      # pp_prep's batches: 32 rows = 256 pairs, 128 per pass

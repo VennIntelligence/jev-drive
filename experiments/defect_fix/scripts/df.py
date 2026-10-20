@@ -35,6 +35,7 @@ import numpy as np  # noqa: E402
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/wait_cap/scripts"), str(REPO / "experiments/self_iter/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import self_iter as SI  # noqa: E402
 import wt  # noqa: E402
 
@@ -169,7 +170,7 @@ def cmd_pack(a):
     assert all(np.array_equal(t["di"], TH[0]["di"]) and np.array_equal(t["pi"], TH[0]["pi"]) for t in TH)
     np.savez(dw / "teacher.npz", out=np.concatenate([t["out"][p[3]] for t, p in zip(TH, parts)]),
              plan=np.concatenate([t["plan"][p[3]] for t, p in zip(TH, parts)]), di=TH[0]["di"], pi=TH[0]["pi"])
-    FR = [np.load(CR / f"{d}@warp/front.npy", mmap_mode="r") for d, _, _, _ in parts]
+    FR = [open_front(CR / f"{d}@warp/front.npy") for d, _, _, _ in parts]
     o = np.lib.format.open_memmap(dw / "front.npy", "w+", np.float16, (n,) + FR[0].shape[1:])
     i0 = 0
     for f_, p in zip(FR, parts):
@@ -180,7 +181,7 @@ def cmd_pack(a):
     o.flush()
     del o
     rs = np.random.default_rng(0).choice(n, 32, replace=False)
-    Fo = np.load(dw / "front.npy", mmap_mode="r")
+    Fo = open_front(dw / "front.npy")
     starts = np.cumsum([0] + [int(p[3].sum()) for p in parts])
     chk = []
     for i in rs:

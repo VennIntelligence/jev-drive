@@ -50,6 +50,7 @@ import numpy as np  # noqa: E402
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO), str(HERE)]
+from jevdrive.tokens import open_front  # noqa: E402
 import wc  # noqa: E402
 
 DATA = wc.DATA
@@ -241,7 +242,7 @@ def cmd_teacher(a):
     from jevdrive.run import Run
     d = f"idx_{bsplit(a.batch)}"
     tab = np.load(CR / d / "tab.npz")
-    front = np.load(CR / f"{d}@warp/front.npy", mmap_mode="r")
+    front = open_front(CR / f"{d}@warp/front.npy")
     n = len(tab["names"])
     assert front.shape == (n, 8, 32, 512), front.shape
     dev = torch.device("cuda")
@@ -263,7 +264,7 @@ def cmd_teacher(a):
         np.savez(CR / f"{d}@warp/teacher.npz", out=o_, plan=plan, di=di, pi=pi)
         # the same call on 64 rows of on1_L18RB0 reproduces their stored teacher (on_rows make_teacher, the protocol check)
         zb = np.load(CR / f"{BASE}@warp/teacher.npz")
-        fb = np.load(CR / f"{BASE}@warp/front.npy", mmap_mode="r")
+        fb = open_front(CR / f"{BASE}@warp/front.npy")
         tb = np.load(CR / BASE / "tab.npz")
         with torch.no_grad():
             H = torch.from_numpy(np.ascontiguousarray(fb[:64])).to(dev)
@@ -361,7 +362,7 @@ def cmd_pack(a):
         th = np.load(CR / f"{d}@warp/teacher.npz")
         assert np.array_equal(th["di"], np.load(CR / f"{parts[0][1]}@warp/teacher.npz")["di"])
         TH.append((th["out"][s_], th["plan"][s_], th["di"], th["pi"]))
-        FR.append((np.load(CR / f"{d}@warp/front.npy", mmap_mode="r"), s_))
+        FR.append((open_front(CR / f"{d}@warp/front.npy"), s_))
     np.savez(FEAT / f"{NEW}.npz", names=pn, f=np.concatenate([z["f"] for z in FZ]).astype(np.float16), k=np.concatenate([z["k"] for z in FZ]).astype(np.int64),
              ok=np.concatenate([z["ok"] for z in FZ]))
     fz = dict(ok=np.concatenate([z["ok"] for z in FZ]))
@@ -386,7 +387,7 @@ def cmd_pack(a):
                base_names=bool(all(m[5:] == b[3:] for m, b in zip(M["names"][:ns].tolist(), B["names"].tolist()))),
                base_ego_equal=bool(np.array_equal(M["ego"][:ns], B["ego"])), base_fut_equal=bool(np.array_equal(M["fut"][:ns], B["fut"])),
                keys=sorted(M))
-    Fm, Fb = np.load(CR / f"{POOL}@warp/front.npy", mmap_mode="r"), np.load(CR / f"{BASE}@warp/front.npy", mmap_mode="r")
+    Fm, Fb = open_front(CR / f"{POOL}@warp/front.npy"), open_front(CR / f"{BASE}@warp/front.npy")
     rs = np.random.default_rng(0).choice(ns, 64, replace=False)
     chk["base_front_equal_64"] = bool(all(np.array_equal(Fm[i], Fb[i]) for i in rs))
     chk["new_front_equal_64"] = bool(all(np.array_equal(Fm[ns + i], fr[i]) for i in rs % n))

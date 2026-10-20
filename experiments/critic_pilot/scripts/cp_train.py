@@ -22,6 +22,7 @@ from queue import Queue
 _R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "experiments/critic_pilot/lib"), str(_R / "experiments/route_mem/lib"),
                 str(_R / "experiments/body1/lib"), str(_R / "experiments/op_parity/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import numpy as np  # noqa: E402
 
 TRAIN = ("L18RB0", "L18RSG", "L18RBSG")
@@ -47,7 +48,7 @@ def load_pool(D, name, tokens: bool):
              **{k: L[k][rows].astype(np.float32) for k in ("ev", "anyz", "spin", "lat2", "q2", "prog4", "wzpk", "b_now", "b_plan", "b_log")})
     if tokens:
         t0 = time.time()
-        f = np.load(P.parent / f"on1_{name}@warp/front.npy", mmap_mode="r")
+        f = open_front(P.parent / f"on1_{name}@warp/front.npy")
         d["front"] = np.empty((len(rows), 8, 32, 512), np.float16)
         for i in range(0, len(rows), 2048):
             d["front"][i:i + 2048] = f[rows[i:i + 2048]]
@@ -279,7 +280,7 @@ def cf_rows(D):
         ego_real[pj], f_real[pj] = st["ego"][src], ft["f"][src].astype(np.float32)
         Rr[pj], okr[pj] = Z["real"][zi], ft["ok"][src] & (np.isfinite(Z["real"][zi]).all(-1).sum(-1) >= 2)
     ok = rt["ok"] & fz["ok"] & okr & np.isin(cls, ["j0", "j1"])
-    front = np.load(CRD / f"{pool}@warp/front.npy", mmap_mode="r")
+    front = open_front(CRD / f"{pool}@warp/front.npy")
     r = np.flatnonzero(ok)
     return dict(rows=r, front=np.asarray(front[r]), ego_real=ego_real[r], f_real=f_real[r], ego_cf=tb["ego"][r], f_cf=fz["f"][r].astype(np.float32),
                 Rr=Rr[r], C=rt["poly"][r].astype(np.float64), fut=tb["fut"][r], log=tb["log"][r], cls=cls[r])

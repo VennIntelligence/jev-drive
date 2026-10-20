@@ -50,6 +50,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/op_parity/scripts"), str(REPO / "experiments/route_mem/lib"),
                 str(REPO / "experiments/route_mem/scripts"), str(REPO / "experiments/route_follow/scripts"), str(REPO / "experiments/onpol_nuplan/lib")]
+from jevdrive.tokens import open_front  # noqa: E402
 import rmem as RM  # noqa: E402
 
 TI = (2, 3)
@@ -125,7 +126,7 @@ def main(a):
             order = M[tg][1]
             for x in dv:
                 n = len(x["r"])
-                fr = np.load(CR / f"{x['d']}@warp" / "front.npy", mmap_mode="r")
+                fr = open_front(CR / f"{x['d']}@warp" / "front.npy")
                 f = fn(feed(order, x["f"], x["fo"]), x["trav"], slice(o, o + n), order)
                 out.append(run_plans(tg, fr, x["r"], x["ego"], f, f, tcs(x["lht"]), torch.as_tensor(x["cam"], dtype=torch.float32, device=dev)))
                 o += n
@@ -199,7 +200,7 @@ def main(a):
             Rr[pj], okr[pj] = Z["real"][zi], ft["ok"][src] & (np.isfinite(Z["real"][zi]).all(-1).sum(-1) >= 2)
         ok = rt["ok"] & fz["ok"] & okr
         rows = np.flatnonzero(ok)
-        front = np.load(CR / f"{a.pool}@warp" / "front.npy", mmap_mode="r")
+        front = open_front(CR / f"{a.pool}@warp" / "front.npy")
         tc, cx = tcs(tb["lht"][rows]), torch.as_tensor(tb["cam"][rows, 0], dtype=torch.float32, device=dev)
         C, logs, cl = rt["poly"][rows].astype(np.float64), tb["log"][rows], cls[rows]
         res["cf_rows"] = dict(rows=int(n), ok=int(len(rows)), junction=int(np.isin(cl, ["j0", "j1"]).sum()), lc=int((cl == "lc").sum()))

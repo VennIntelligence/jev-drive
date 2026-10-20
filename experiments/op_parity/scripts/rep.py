@@ -22,6 +22,7 @@ import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_pl.Path(__file__).parent),
                  str(_R / "experiments/op_probe/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import argparse, json, os, time  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
@@ -191,7 +192,7 @@ def cmd_x4(a):
             os.replace(d / f".{data}{lim}.tmp.npy", f)
             np.save(d / f"{data}{lim}.tokens.npy", names[:N])
             x = np.load(f, mmap_mode="r")
-            ref = np.load(CR / f"{data}@warp" / "front.npy", mmap_mode="r")
+            ref = open_front(CR / f"{data}@warp" / "front.npy")
             with torch.no_grad():
                 hv = net.run_batched({U.X4: torch.from_numpy(np.ascontiguousarray(x[:64])).to(dev)[:, None]}, ["view_39"])["view_39"]
             hv = hv.reshape(-1, *A.H_SHAPE).float().cpu().numpy()

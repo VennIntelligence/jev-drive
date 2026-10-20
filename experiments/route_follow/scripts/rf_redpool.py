@@ -39,6 +39,7 @@ import numpy as np
 
 R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R), str(R / "experiments/body1/lib"), str(R / "experiments/long_contact/lib"), str(R / "experiments/onpol_nuplan/lib")]
+from jevdrive.tokens import open_front  # noqa: E402
 import b1 as B  # noqa: E402
 import on_lon as OL  # noqa: E402
 
@@ -188,7 +189,7 @@ def write_pool(name, z, g, names, fut, extra, road, logs, run):
         for q in tb:
             tb[q][m] = t[q][src]
         o = np.argsort(src)
-        F = np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")
+        F = open_front(CR / f"{d}@warp" / "front.npy")
         for c in range(0, len(m), 512):
             front[m[o[c:c + 512]]] = F[src[o[c:c + 512]]]
         T = np.load(CR / f"{d}@warp" / "teacher.npz")

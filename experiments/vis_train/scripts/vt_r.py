@@ -30,6 +30,7 @@ import argparse, json, os, subprocess, time  # noqa: E401,E402
 import numpy as np  # noqa: E402
 
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 FULL = tuple(f"navtrain_full.s{i}of12" for i in range(12))
 DATAS = FULL + ("lb_navtest", "lb_navhard")
@@ -97,7 +98,7 @@ def cmd_bank(a):
             names = np.load(CACHE / data / "tab.npz")["names"]
             if f.exists() and meta["rows"].get(data) == len(names):
                 continue
-            front = np.load(CACHE / f"{data}@warp" / "front.npy", mmap_mode="r")      # (N, 8, 32, 512): Cinque's frozen slot tokens, protocol W
+            front = open_front(CACHE / f"{data}@warp" / "front.npy")      # (N, 8, 32, 512): Cinque's frozen slot tokens, protocol W
             assert len(front) == len(names)
             tmp = od / f".{data}.{os.getpid()}.npy"
             o = np.lib.format.open_memmap(tmp, "w+", np.float16, (len(names), 32, 512) if nv == 1 else (len(names), nv, 32, 512))

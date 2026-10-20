@@ -40,7 +40,7 @@ waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do [
              [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n"; done; return 0; }
 OT="$PY experiments/onpol_nuplan/scripts/on_train.py train"
 [[ $STAGE == c ]] && POOL=on1_train
-[[ -f $DATA_DIR/runs/op_parity/cache/$POOL/tab.npz && -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.npy ]] || die "no pool $POOL"
+[[ -f $DATA_DIR/runs/op_parity/cache/$POOL/tab.npz && ( -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.npy || -f $DATA_DIR/runs/op_parity/cache/$POOL@warp/front.parts.json ) ]] || die "no pool $POOL"
 ON="--on $POOL --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self"
 Y="--yr-mass 0.1 --label-bank"
 declare -A F=([YSELFnoL]="$Y --agent-lam 10 --agent-on-only --shape --ho-w 3 $ON" [YNONE]="$Y")

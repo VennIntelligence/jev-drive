@@ -545,8 +545,10 @@ def report(a):
     rz = CR / f"on1_{a.name}" / "route.npz"
     if rz.exists():
         rec["route_ok"] = float(np.load(rz)["ok"].mean())
+    sys.path.insert(0, str(R_))
+    from jevdrive.tokens import is_tokens, open_front
     fr = CR / f"on1_{a.name}@warp" / "front.npy"
-    rec["front_rows"] = int(np.load(fr, mmap_mode="r").shape[0]) if fr.exists() else None
+    rec["front_rows"] = len(open_front(fr)) if is_tokens(fr) else None             # a real front.npy or a zero-copy merge's index
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / f"report_{a.name}.json").write_text(json.dumps(rec, indent=1, default=float) + "\n")

@@ -20,6 +20,7 @@ import argparse, json, os  # noqa: E401,E402
 import numpy as np  # noqa: E402
 
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 FULL = [f"navtrain_full.s{i}of12" for i in range(12)]
 CACHE = data_dir() / "runs/op_parity/cache"
@@ -46,7 +47,7 @@ def main():
             f = OUT / f"{d}.npy"
             if f.exists() and meta["rows"].get(d) == len(names):
                 continue
-            front = np.load(CACHE / f"{d}@warp" / "front.npy", mmap_mode="r")
+            front = open_front(CACHE / f"{d}@warp" / "front.npy")
             side = np.load(SIDE / d / "side_t0.npy", mmap_mode="r")
             sn = np.load(SIDE / d / "meta.npz")["names"]
             assert len(front) == len(side) == len(names) and (sn == names).all(), f"{d}: row order of the caches differs"

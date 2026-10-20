@@ -36,6 +36,7 @@ nearest polyline point faded out over 3 m; kinds without timing leave the second
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "research"), str(_pl.Path(__file__).parent), str(_R / "experiments/op_probe/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import argparse, json, zlib  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
@@ -423,7 +424,7 @@ def cmd_head(a):
         splits.check_disjoint(s_tk, s_tr), splits.check_disjoint(s_tk, s_dv)
 
         def tokens(d):                                                           # (n, 2, 32, 512) fp16: slots 7 (t0) and 0 (-1.4 s); only their pages are read
-            mm = np.load(G.CR / f"{d}@warp" / "front.npy", mmap_mode="r")
+            mm = open_front(G.CR / f"{d}@warp" / "front.npy")
             return torch.from_numpy(np.stack([np.ascontiguousarray(mm[:, 7]), np.ascontiguousarray(mm[:, 0])], 1)).to(dev)
         X = torch.cat([tokens(d) for d in datas])
         ft = torch.as_tensor(np.nan_to_num(fut), dtype=torch.float32, device=dev)

@@ -63,6 +63,7 @@ R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R), str(R / "lib"), str(R / "experiments/route_mem/lib"), str(R / "experiments/route_mem/scripts"), str(R / "experiments/alpasim/scripts"),
                 str(R / "experiments/alpasim/lib"), str(R / "experiments/corridor/lib"), str(R / "experiments/corridor/scripts"), str(R / "experiments/route_follow/scripts")]
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 D = data_dir()
 os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
@@ -390,7 +391,7 @@ def write_pool(name, Z, sel, datas, road, run, prefix="cf", fut=None):
             if k != "log":
                 tb[k][m] = tabs[s][k][src]
         o = np.argsort(src)
-        F = np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")
+        F = open_front(CR / f"{d}@warp" / "front.npy")
         for c in range(0, len(m), 512):
             front[m[o[c:c + 512]]] = F[src[o[c:c + 512]]]
         T = np.load(CR / f"{d}@warp" / "teacher.npz")

@@ -56,6 +56,7 @@ _R = _P[3] if len(_P) > 3 else _P[0]                                     # pai-e
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_R / "experiments/op_parity/scripts"),
                  str(_R / "experiments/alpasim/lib"), str(_R / "experiments/alpasim/scripts"), str(_R / "experiments/body1/lib"),
                  str(_R / "experiments/onpol_nuplan/lib"), str(_R / "experiments/route_mem/lib")]
+from jevdrive.tokens import open_front  # noqa: E402
 import argparse, json, os  # noqa: E401,E402
 from pathlib import Path  # noqa: E402
 
@@ -268,7 +269,7 @@ def load_rows(pool, rows, dev):
     assert np.array_equal(fz["names"], t["names"]), pool
     f = fz["f"].astype(np.float32)
     f[~fz["ok"]] = 0
-    fr = np.load(C / f"{pool}@warp" / "front.npy", mmap_mode="r")
+    fr = open_front(C / f"{pool}@warp" / "front.npy")
     o = np.argsort(rows)
     fx = np.empty((len(rows),) + fr.shape[1:], np.float16)
     fx[o] = fr[np.asarray(rows)[o]]

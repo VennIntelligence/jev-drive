@@ -34,6 +34,7 @@ import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "experiments/onpol_nuplan/lib"), str(_R / "experiments/body1/lib"), str(_R / "experiments/long_contact/lib"),
                  str(_R / "experiments/alpasim/lib"), str(_pl.Path(__file__).resolve().parent)]
+from jevdrive.tokens import open_front  # noqa: E402
 import argparse, glob, json, os  # noqa: E401,E402
 
 for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -129,7 +130,7 @@ def policy(a, run):
     X = dict(np.load(D / "runs/onpol_nuplan/ctx/ctx.npz"))
     names = tab["names"]
     assert (m["names"] == names).all() and (Z["names"] == names).all(), "tab / meta / lon rows differ"
-    front = np.load(D / "runs/op_parity/cache" / f"on1_{a.pool}@warp" / "front.npy", mmap_mode="r")
+    front = open_front(D / "runs/op_parity/cache" / f"on1_{a.pool}@warp" / "front.npy")
     assert front.shape[0] == len(names), "frames do not cover the tab"
     N = len(names)
     scene, k, logf = m["scene"].astype(str), m["k"].astype(int), m["log"].astype(str)

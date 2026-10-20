@@ -21,6 +21,7 @@ from pathlib import Path  # noqa: E402
 import numpy as np  # noqa: E402
 
 from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.tokens import open_front  # noqa: E402
 
 STEP_US = 500_000
 _RUNS = {}
@@ -201,7 +202,7 @@ def cmd_held(a):
         out.flush()
         net, enc = P.encoder(torch.device("cuda"))
         idx = np.random.default_rng(0).choice(len(df), a.check, replace=False)
-        ref = np.load(data_dir() / "runs/road_probe/tok/held/front.npy", mmap_mode="r")
+        ref = open_front(data_dir() / "runs/road_probe/tok/held/front.npy")
         t = enc(out[np.sort(idx), 0], out[np.sort(idx), 1]).astype(np.float32)
         x = np.stack([ref[df.tok_row[i]][7] for i in np.sort(idx)]).astype(np.float32)
         st = dict(rows=len(df), check_rows=int(a.check), tok_mean_abs=float(np.abs(t - x).mean()), tok_max_abs=float(np.abs(t - x).max()), tok_rms=float(np.sqrt((x ** 2).mean())))
@@ -264,7 +265,7 @@ def cmd_gdump(a):
             if cur is None:
                 continue
             f = df.tok_file[i]
-            fronts.setdefault(f, np.load(CACHE / f / "front.npy", mmap_mode="r"))
+            fronts.setdefault(f, open_front(CACHE / f / "front.npy"))
             pr.append(pair_of(cur)), ref.append(np.asarray(fronts[f][df.tok_row[i]][7])), rows.append(int(df.rid[i]))
         pr, ref = np.stack(pr), np.stack(ref).astype(np.float32)
         t = enc(pr[:, 0], pr[:, 1]).astype(np.float32)

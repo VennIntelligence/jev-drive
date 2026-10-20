@@ -44,6 +44,7 @@ import numpy as np  # noqa: E402
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/wait_cap/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import self_iter as SI  # noqa: E402
 import wc  # noqa: E402
 import wt  # noqa: E402
@@ -212,7 +213,7 @@ def cmd_pack(a):
     TH = [np.load(CR / f"{d}@warp/teacher.npz") for d, _, _ in parts]
     assert all(np.array_equal(t["di"], TH[0]["di"]) and np.array_equal(t["pi"], TH[0]["pi"]) for t in TH)
     np.savez(dw / "teacher.npz", out=np.concatenate([t["out"] for t in TH]), plan=np.concatenate([t["plan"] for t in TH]), di=TH[0]["di"], pi=TH[0]["pi"])
-    FR = [np.load(CR / f"{d}@warp/front.npy", mmap_mode="r") for d, _, _ in parts]
+    FR = [open_front(CR / f"{d}@warp/front.npy") for d, _, _ in parts]
     o = np.lib.format.open_memmap(dw / "front.npy", "w+", np.float16, (n,) + FR[0].shape[1:])
     i0 = 0
     for f_ in FR:
@@ -231,7 +232,7 @@ def cmd_pack(a):
     chk = dict(base_rows=ns, new_rows=n, merged=len(M["names"]), base_first=bool((M["pool"][:ns] == "s").all() and (M["pool"][ns:] == "t").all()),
                modes=dict(zip(*[x.tolist() for x in np.unique(M["mode"], return_counts=True)])), base_ego_equal=bool(np.array_equal(M["ego"][:ns], B["ego"])),
                base_fut_equal=bool(np.array_equal(M["fut"][:ns], B["fut"])), hold_rows=int((M["hold"] == "1").sum()))
-    Fm, Fb = np.load(CR / f"{merged}@warp/front.npy", mmap_mode="r"), np.load(CR / f"{BASE}@warp/front.npy", mmap_mode="r")
+    Fm, Fb = open_front(CR / f"{merged}@warp/front.npy"), open_front(CR / f"{BASE}@warp/front.npy")
     rs = np.random.default_rng(0).choice(ns, 64, replace=False)
     chk["base_front_equal_64"] = bool(all(np.array_equal(Fm[i], Fb[i]) for i in rs))
     chk["new_front_equal_64"] = bool(all(np.array_equal(Fm[ns + i], FR[0][i]) for i in rs % len(FR[0])))

@@ -49,6 +49,7 @@ import numpy as np  # noqa: E402
 
 R = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(R), str(R / "experiments/route_follow/scripts"), str(R / "experiments/onpol_nuplan/scripts"), str(R / "experiments/onpol_nuplan/lib")]
+from jevdrive.tokens import open_front  # noqa: E402
 D = Path(os.environ.get("DATA_DIR", "/data"))
 CR, FEAT, OUT = D / "runs/op_parity/cache", D / "runs/route_mem/feat", D / "runs/route_follow/approach"
 RES = R / "experiments/route_follow/results/approach"
@@ -367,7 +368,7 @@ def subset(src_pool, keep, name, extra):
     np.savez(FEAT / f"on1_{name}.npz", names=T["names"], **{k: fz[k][keep] for k in ("f", "k", "ok")})
     th = np.load(CR / f"on1_{src_pool}@warp/teacher.npz")
     np.savez(dw / "teacher.npz", out=th["out"][keep], plan=th["plan"][keep], di=th["di"], pi=th["pi"])
-    fr = np.load(CR / f"on1_{src_pool}@warp/front.npy", mmap_mode="r")
+    fr = open_front(CR / f"on1_{src_pool}@warp/front.npy")
     o = np.lib.format.open_memmap(dw / "front.npy", "w+", fr.dtype, (len(keep),) + fr.shape[1:])
     for i in range(0, len(keep), 2048):
         o[i:i + 2048] = fr[keep[i:i + 2048]]

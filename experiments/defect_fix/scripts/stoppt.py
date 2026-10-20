@@ -36,6 +36,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO), str(HERE), str(REPO / "experiments/defect_fix/lib"), str(REPO / "experiments/route_follow/scripts"),
                 str(REPO / "experiments/onpol_nuplan/scripts"), str(REPO / "experiments/wait_cap/scripts")]
+from jevdrive.tokens import open_front  # noqa: E402
 import nr1_free as NF  # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
@@ -527,7 +528,7 @@ def cmd_pfeats(a):
                         for nm in PCACHE}
                 get = lambda i: (lambda tx, lh, tok: (tok[tx[x["row"][i]]], bool(lh[x["row"][i]])))(*srcs[str(x["src"][i])])  # noqa: E731
             else:
-                fr = np.load(CR / "on1_JT@warp/front.npy", mmap_mode="r")
+                fr = open_front(CR / "on1_JT@warp/front.npy")
                 get = lambda i: (fr[x["row"][i]], False)  # noqa: E731
             tn = np.lib.format.open_memmap(F / f"{d}_toknew.npy", "w+", np.float16, (n, 32, 512))
             feat = {k: np.empty((n, len(c)), np.float32) for k, c in cols.items()}
