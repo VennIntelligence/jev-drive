@@ -38,6 +38,10 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
   tightin (TIGHT-IN, rm_train --on-tightin W; prereg supplement 22) nr1_tight's two parts on moving S rows in tight turns (labels
         <pool>/tight_in.npz): the plan outside the human's logged line beyond 0.2 m (lon_tightin, across the heading) and TURN-CAP's arc cap
         (lon_tightina, along the heading), each 10 x W x its part. W = 0: nothing loaded or added.
+  simp_region / simp_clear (SIMP, rm_train --simp-region W / --simp-clear W; lon-anchor prereg supplement 2) nr1_simp's merged S-row
+        hinges: the road hinge + onc on their union raster, the agent hinge + side as one clearance hinge (leads may only shorten the plan);
+        attach() (called by on_train.setup) hands over the trainer's road raster and switches the replaced trainer hinges off on the S rows.
+        W = 0: nothing loaded, attach() does nothing.
   anchor (LON-ANCHOR, rm_train --on-anchor W; plans/2026-10-20-lon-anchor-prereg.md) nr1_anchor's station-anchored two-sided arc term on
         S rows (labels <pool>/lon_anchor.npz): logged as lon_anchor, 10 x W x nr1_anchor.term. W = 0: nothing loaded or added.
 """
@@ -51,7 +55,7 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0, tightin=0.0, stand_launch=0.0, anchor=0.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0, tightin=0.0, stand_launch=0.0, anchor=0.0, simp_region=0.0, simp_clear=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
@@ -69,11 +73,15 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
         CFG["tightin"] = float(tightin)
     if anchor > 0:                                                             # LON-ANCHOR: only the weight, labels from the file
         CFG["anchor"] = float(anchor)
+    if simp_region > 0:                                                        # SIMP (supplement 2): the merged hinges' weights
+        CFG["simp_region"] = float(simp_region)
+    if simp_clear > 0:
+        CFG["simp_clear"] = float(simp_clear)
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
         CFG["stoppt"] = float(stoppt)
         return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
-    if anchor > 0:
-        return dict(_configure_rest(free_frac, free_mode, stand_margin), anchor=CFG["anchor"])
+    if anchor > 0 or simp_region > 0 or simp_clear > 0:
+        return dict(_configure_rest(free_frac, free_mode, stand_margin), **{k: CFG[k] for k in ("anchor", "simp_region", "simp_clear") if k in CFG})
     return _configure_rest(free_frac, free_mode, stand_margin)
 
 
@@ -113,7 +121,7 @@ def load(pool_dir, names, dev, file=None):
     names = np.asarray(names).astype(str)
     pack = dict(M=torch.as_tensor(interp_matrix(), dtype=torch.float32, device=dev), dev=dev)
     f = Path(file or CFG["file"]) if (file or CFG["file"]) else None
-    if CFG["onc"] > 0 or CFG["soft"] > 0 or file:
+    if CFG["onc"] > 0 or CFG["soft"] > 0 or file or CFG.get("simp_region", 0.0) > 0:
         z = np.load(f / "meta.npz")
         nr = len(z["names"])                                                   # JT (df_lat build --prefix): the raster may cover the pool's first rows
         assert np.array_equal(z["names"].astype(str), names[:nr]) and (nr == len(names) or CFG["host"]), f"{f}: rows != the pool's"
@@ -122,15 +130,16 @@ def load(pool_dir, names, dev, file=None):
         pack["ok"] = torch.as_tensor(np.r_[z["ok"].astype(bool), np.zeros(len(names) - nr, bool)], device=dev)
         pack["points"] = str(z["points"]) if "points" in z.files else "both"      # prereg amendment 1: "ra" = the rear axle only
         for k in ("onc", "soft"):
-            if (CFG[k] > 0 or file) and CFG["host"]:
+            need = CFG[k] > 0 or file or (k == "onc" and CFG.get("simp_region", 0.0) > 0)       # SIMP region reads the onc raster
+            if need and CFG["host"]:
                 pack[k] = np.load(f / f"{k}.npy", mmap_mode="r")
-            elif CFG[k] > 0 or file:
+            elif need:
                 a = np.load(f / f"{k}.npy", mmap_mode="r")
                 t = torch.empty(a.shape, dtype=torch.float16, device=dev)
                 for i in range(0, len(a), 2048):
                     t[i:i + 2048] = torch.from_numpy(np.ascontiguousarray(a[i:i + 2048])).to(dev)
                 pack[k] = t
-    if CFG["side"] > 0 or file:
+    if CFG["side"] > 0 or file or CFG.get("simp_clear", 0.0) > 0:
         from agent_hinge import AgentHinge
         pack["ah"] = AgentHinge(Path(pool_dir) / "agent.npz", names, dev, 0.0, None)
     if CFG["arc"] > 0 or CFG["arc_rows"] != "move":                            # NR1HVR: the longitudinal labels from the pool's tab (JTB / JTN:
@@ -165,6 +174,31 @@ def load(pool_dir, names, dev, file=None):
         pack["anchor"] = nr1_anchor.load(pool_dir, names, dev)
         print(f"nr1_lat: lon_anchor labels {pack['anchor']['rec']}", flush=True)
     return pack
+
+
+def attach(pack, road=None, on_aok=None, on0=0, self_on=None):
+    """on_train.setup after load (SIMP only; otherwise nothing): the trainer's road raster for the region hinge; the replaced trainer hinges
+    (Losses43's road / agent hinge) switched off on the S rows (self rows of a mixed pool). -> record dict ({} when SIMP is off)."""
+    if not (CFG.get("simp_region", 0.0) > 0 or CFG.get("simp_clear", 0.0) > 0):
+        return {}
+    import torch
+    dev = pack["dev"]
+    sm = torch.as_tensor(np.asarray(self_on[on0:], bool), device=dev)
+    pack["self"] = sm
+    rec = dict(self_rows=int(sm.sum()))
+    if CFG.get("simp_region", 0.0) > 0:
+        assert road is not None, "--simp-region: needs the trainer's road raster (--road-lam > 0)"
+        pack["road"], pack["road_on0"] = road, on0
+        pack["road_ok"] = road.ok[on0:].clone() & sm
+        road.ok[on0:] &= ~sm                                                    # Losses43's road hinge leaves the S rows
+        rec |= dict(region_road_rows=int(pack["road_ok"].sum()), region_onc_rows=int((pack["ok"] & sm).sum()) if "ok" in pack else 0)
+    if CFG.get("simp_clear", 0.0) > 0:
+        assert on_aok is not None, "--simp-clear: needs the pool's agent labels"
+        pack["clear_ok"] = pack["ah"].ok & sm
+        on_aok[on0:] &= ~sm                                                     # Losses43's agent hinge leaves the S rows
+        rec |= dict(clear_rows=int(pack["clear_ok"].sum()))
+    print(f"nr1_lat: SIMP attach {rec}", flush=True)
+    return rec
 
 
 def dense(poses, M):
@@ -280,4 +314,10 @@ def loss(poses, rows, pack):
     if CFG.get("anchor", 0.0) > 0:
         import nr1_anchor
         out["lon_anchor"] = 10.0 * CFG["anchor"] * nr1_anchor.term(poses, rows, pack["anchor"])
+    if CFG.get("simp_region", 0.0) > 0:
+        import nr1_simp
+        out["simp_region"] = 10.0 * CFG["simp_region"] * nr1_simp.region(poses, rows, pack)
+    if CFG.get("simp_clear", 0.0) > 0:
+        import nr1_simp
+        out["simp_clear"] = 10.0 * CFG["simp_clear"] * nr1_simp.clear(poses, rows, pack["ah"], pack["clear_ok"][rows])
     return out

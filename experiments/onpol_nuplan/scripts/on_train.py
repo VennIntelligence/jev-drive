@@ -302,6 +302,10 @@ def setup(a, dev):
         import importlib
         lon = importlib.import_module(a.on_lon)
         pack = lon.load(pd, pn, dev) if hasattr(lon, "load") else dict(dir=pd, names=pn, dev=dev)
+        if hasattr(lon, "attach"):                                    # SIMP (defect_fix nr1_lat): {} and nothing touched unless its flags are on
+            rec_ = lon.attach(pack, road=road, on_aok=on_aok, on0=on0, self_on=self_on)
+            if rec_:
+                onrec |= dict(simp=rec_)
     t = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
 
     def losses(md):

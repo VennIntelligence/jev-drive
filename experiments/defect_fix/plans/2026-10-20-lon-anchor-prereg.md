@@ -98,3 +98,44 @@ JOINT-DAGGER（第 321 条，规则路径目标打掉「别撞」）。
 的同样份额（与 AF-front 相关）。主会话已接受 nuPlan 上「推快」的倾向（模型本来就偏慢）。
 
 臂、抽样（LONP，PAI-FIX 125 个场景、PAI 281、practice-pai 排除）、剂量规则、G4、inertia 读数与通过线都不变。
+
+### 补记 1 追加（10-20 18:20，抽样修正；任何训练完成之前）
+
+第一次链（18:10 入队）的 `weights` 把 84 042 行 cp 行**全部**判成 PAI-FIX 场景：`experiments/pai_fix/scenes/` 里此时多了
+`onbox_train_20261020.txt`（盒上 854 个 curated-train 场景的清单，包含全部 570 个 cp 场景），它是库存清单，不是考题。于是 LONP 里 cp 份额为 0，
+校准跑（W1 = 0.00091）与已开始的四个训练都是在纯 nuPlan 抽样上。四个训练、cf、report 在完成前取消，校准作废（结果文件改名为 `*_nocp.json` 留档）。
+修正：排除来源 = PAI 281、practice-pai，以及 `pai_fix/scenes/` 下除库存清单（文件名以 `onbox_train_` 开头）外的所有文件
+（考题清单、chunks、`train_exclude.csv`、`drives_val160.csv`）；新增断言：份额 > 0 时排除后剩下的 cp 行须超过 held 外的一半。
+按此，cp 场景里被排除 5 个（都来自 drives_val160.csv），PAI 281 / val160 命中 0。整条 A 链（weights → 同一性 → 校准 → 4 训练 → inertia）用新的同一性 / 校准 tag
+（LONGG2-old / new、LONACAL2）原样重跑；臂、剂量规则、闸、读数都不变。
+
+## 补记 2（10-20 18:25，用户批准的 B 块 SIMP；写于任何 B 输出之前）
+
+**设计**（主会话转达）：从 RB0-F-s0 起的一个简化联合配方，其余同 NTV0 配方（每批 83 navtrain + 13 yaw-rate + 32 S，1 000 步 pilot，warm-up 50，1 seed）。
+- 保留：模仿、distill（30）、模仿行上的 drivable hinge（10）、cons（3）。
+- S 行上三项：
+  1. `region`：道路 hinge（Losses43 road_ho：road-and-lane 栅格，Pacifica 足迹四角，margin 0.3）与 lat_onc（对向车道栅格，后轴与车身中心两点，depth 0）
+     合成一个 hinge：每个 0.1 s 稠密步 j = 1..40，v_j = max(道路部分, 对向部分)，道路部分 = 四角 relu(0.3 − sdf) 的均值，对向部分 = 两点 relu(−sdf) 的均值
+     （各栅格在各自的点上读，与原两项一致）；项 = v_j 对步取均值；shape-only；权重 10（`--simp-region 1`，= road_lam 10）。只有一种栅格的行读那一种
+     （on1_JTCP 的对向栅格只覆盖 rb0 / rtb1 行；PAI 行两种栅格都没有，region 为 0）。
+  2. `clear`：agent hinge（车身前缘外推 0.3 m、前方物体、走廊内 margin 0.3、走廊外 0）与 lat_side（原车身、走廊外且不在后方的物体、0.4）合成一个净空 hinge：
+     每步每个物体，走廊内且中心在原车身中心之前的「前车」取 relu(0.3 − 外推车身距离)，走廊外且不在后方的「侧方」取 relu(0.4 − 原车身距离)，对物体取最大、
+     对 41 步取均值；权重 10（`--simp-clear 1`，= agent_lam 10）。梯度：侧方物体 shape-only；前车部分保留沿航向的分量，但**只允许缩短方向**
+     （每个 pose 沿航向的位移只回传「让它后退」的梯度，`nr1_simp.lead_poses`）：前车只能让 plan 刹，永远推不长（深度重叠时 SDF 想往前穿，这一方向也被挡住）。
+  3. LON-ANCHOR（补记 1 的项），剂量 = 主会话按 A 块 PAI-FIX 筛选选定的那一档。
+- 去掉：lat_soft、STAND、FREE-M、弧长项（后三者 NTV0 配方本来就没有）。
+- 实现：`lib/nr1_simp.py`；nr1_lat 的 `attach()`（on_train.setup 在 load 之后调用）把训练器的道路栅格交给 region，并把被替换的 Losses43 道路 / agent hinge
+  在 S 行上关掉（只动 S 行的 ok 掩码）；两个开关默认 0 时 attach 什么都不做。
+- **臂**：SIMP 在 PAI curated 池份额 0 / 0.5 / 1.0（占 32 行 S 抽取；`SIMPA1K / SIMPB1K / SIMPC1K-L18-s0`，抽样 SIMPW00 / 05 / 10，排除规则同补记 1 追加），
+  + 同步对照 `SIMPN1K-L18-s0` = NTV0 配方从 RB0-F-s0 起 1 000 步（份额 0，同一池 on1_JTCP、同一抽样 SIMPW00；lat_onc / lat_soft / lat_side 照原配方）。
+  臂命令 = 对照命令去掉 `--lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5`、加 `--simp-region 1 --simp-clear 1 --on-anchor <剂量>`（`simp.sh dry` 打印并 diff）。
+  去掉 cons 的臂只在 SIMP 赢之后再说。
+
+**闸（训练前）**：
+- 同一性：对照命令 60 步 eager，B 代码之前的提交 vs B 代码，不带 SIMP 开关，`df.py bitcmp` 逐位相同。
+- 人路径当 plan：S 行的 `fut`（从访问状态出发的人的模仿目标）过 region 与 clear，激活（每步违反的最大值 > 0.05 m）份额 **≤ 2 %**（各自），不过 → 停。
+  同表报告被替换的四个原项（道路 hinge、lat_onc、agent hinge、lat_side）在同一批行上的激活份额，nuPlan / PAI 分开。LON 的人路径闸即补记 1 的 G1（已过，0.10 %）。
+- 只报告：存档 plan 上 region / clear / 前车部分（「clear 刹车梯度」）的触发份额，nuPlan / PAI 分开（`simp.py gate` → `results/lon_anchor/simp_gate.{json,md}`）。
+
+**读数**：训练后 `inertia.py`（不改）在 P160 上跑 NTV0-L18-s0（编码帧）、四个 B 检查点、RB0-F-s0（起点）、RSG-L18-s0（G0），按 A 块同一条通过线报告每臂对对照；
+闭环筛选由主会话在 PAI-FIX 上做。

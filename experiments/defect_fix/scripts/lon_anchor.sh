@@ -12,7 +12,7 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 L=$DATA_DIR/runs/defect_fix/lon_anchor; ME=experiments/defect_fix/scripts/lon_anchor.sh; PY=experiments/defect_fix/scripts/lon_anchor.py
 TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; V=.venv/bin/python; JT=experiments/defect_fix/scripts/jt.sh
 LAT=$DATA_DIR/runs/defect_fix/lat/L18NR1v2; RES=experiments/defect_fix/results/lon_anchor; POOL=on1_JTCP; WF=LONP; INIT=NTV0-L18-s0; W_PROBE=0.004
-IN=experiments/defect_fix/scripts/inertia.py; RUNS=$DATA_DIR/runs/op_parity/runs
+IN=experiments/defect_fix/scripts/inertia.py; RUNS=$DATA_DIR/runs/op_parity/runs; GG=LONGG2; CAL=LONACAL2-L18-s0   # supplement 1 addendum: rerun tags
 declare -A TAG=([C]=LONC1K-L18-s0 [H]=LONAH1K-L18-s0 [A]=LONA1K-L18-s0 [D]=LONAD1K-L18-s0) DOSE=([H]=A05 [A]=A10 [D]=A20)
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
 mkdir -p $L/pool $RES
@@ -39,16 +39,16 @@ dry)
   for A in H A D; do echo "== control -> $A"; diff <(cmd C | tr ' ' '\n') <(cmd $A | tr ' ' '\n'); done ;;
 chain)
   rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
-  for X in LONGG-old LONGG-new LONACAL-L18-s0 ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
+  for X in $GG-old $GG-new $CAL ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
   [[ -f $RES/gate_v2.json ]] && python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/gate_v2.json'))['G1']['pass_'] else 1)" || die "G1 not passed"
   ls experiments/pai_fix/scenes/* > /dev/null 2>&1 || die "experiments/pai_fix/scenes/ missing: the exam exclusion is required"
   h=$(git rev-parse --short HEAD); echo $h > $L/code_chain.txt
   w=$(sub lon-weights --vram 0.1 --cpu 2 --ram 24 --timeout-h 1 -- bash $ME weights) || exit 1
   FE=("${FT[@]}" --env JEV_RM_EAGER=1)
-  a=$(sub lon-gg-old --after $w "${FE[@]}" --timeout-h 1 -- bash -c "$(base LONGG-old 60 $WT/$JT)") || exit 1
-  b=$(sub lon-gg-new --after $w "${FE[@]}" --timeout-h 1 -- bash -c "$(base LONGG-new 60)") || exit 1
-  e=$(sub lon-bitcmp --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a LONGG-old \
-      --b LONGG-new --out lon_anchor/identity --note "LON control command (NTV0 recipe on on1_JTCP / LONP) 60 steps eager: code $rev vs $h without --on-anchor") || exit 1
+  a=$(sub lon-gg-old --after $w "${FE[@]}" --timeout-h 1 -- bash -c "$(base $GG-old 60 $WT/$JT)") || exit 1
+  b=$(sub lon-gg-new --after $w "${FE[@]}" --timeout-h 1 -- bash -c "$(base $GG-new 60)") || exit 1
+  e=$(sub lon-bitcmp --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a $GG-old \
+      --b $GG-new --out lon_anchor/identity --note "LON control command (NTV0 recipe on on1_JTCP / LONP) 60 steps eager: code $rev vs $h without --on-anchor") || exit 1
   c=$(sub lon-calrun --after $e "${FT[@]}" --timeout-h 1 -- bash $ME calrun) || exit 1
   k=$(sub lon-calib --after $c --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME calib) || exit 1
   t=(); for A in C H A D; do
@@ -60,10 +60,10 @@ labels) $AP $PY labels --pool $POOL ;;
 gate)   $TR $PY gate ;;
 weights) $TR $PY weights --pool $POOL --base JT00S --share 0.5 --out $WF --require-fix ;;
 calrun)  # the calibration: arm A's command at W_PROBE, 100 steps, --diag every 10 (its gradients set the dose; the checkpoint is removed)
-  X=LONACAL-L18-s0; CMD="$(base $X 100) --on-anchor $W_PROBE --diag-every 10"
+  X=$CAL; CMD="$(base $X 100) --on-anchor $W_PROBE --diag-every 10"
   echo "$(date '+%F %T') calrun: $CMD" | tee -a $L/stages.txt
   $CMD > $L/calrun.log 2>&1 || die "calibration run (log $L/calrun.log)"; rm -rf $RUNS/$X ;;
-calib) $TR $PY calib --tag LONACAL-L18-s0 --w $W_PROBE ;;
+calib) $TR $PY calib --tag $CAL --w $W_PROBE ;;
 train)   # train <arm>: refuses unless G1, identity and (arms) the calibration are there
   A=$2; python3 - $RES $A <<'PY' || die "pre-checks failed: no training"
 import json, sys

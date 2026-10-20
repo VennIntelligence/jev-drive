@@ -211,6 +211,10 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             <pool>/tight_in.npz from defect_fix scripts/tight_in.py label): the plan outside the human's line by > 0.2 m (across each pose's
             heading; on/lon_tightin) + TURN-CAP's arc cap (along the heading; on/lon_tightina); through nr1_lat: 10 W x ho_w x sum / n_imit
             each. 0 (default) = off. With --diag: grad/lon_tightin (both parts together).
+  --simp-region W / --simp-clear W   (SIMP, defect_fix plans/2026-10-20-lon-anchor-prereg.md supplement 2) defect_fix lib/nr1_simp.py on the
+            S rows: the road hinge and lat_onc as one hinge on their union, the agent hinge and lat_side as one clearance hinge (lead objects
+            may only shorten the plan); each replaces the trainer's own hinge on the S rows (nr1_lat.attach); through nr1_lat: 10 W x ho_w x
+            sum / n_imit. 0 (default) = off: nothing loaded, attach does nothing.
   --on-anchor W     (LON-ANCHOR, defect_fix plans/2026-10-20-lon-anchor-prereg.md) defect_fix lib/nr1_anchor.py on the S rows of
             <pool>/lon_anchor.npz (scripts/lon_anchor.py labels): the plan's arc against the human's own travel started from the ego's station
             on his path (smooth L1 per pose, two-sided), gradient only along each pose's heading; rows with a lead closer than his are skipped;
@@ -1037,6 +1041,9 @@ def cmd_train(a):
                     parts[f"lon_{q}"] = [(hw * ll, g0(f"on/lon_{q}_ho"))]
             if g0("on/lon_tightin_ho") is not None:                    # TIGHT-IN (supplement 22): both parts as one term
                 parts["lon_tightin"] = [(hw * ll, g0("on/lon_tightin_ho")), (hw * ll, g0("on/lon_tightina_ho"))]
+            for q in ("simp_region", "simp_clear"):                     # SIMP (lon-anchor supplement 2): only when on
+                if g0(f"on/{q}_ho") is not None:
+                    parts[q] = [(hw * ll, g0(f"on/{q}_ho"))]
             sc, out, G = float(scaler.get_scale()), {}, {}
             for k, lst in parts.items():
                 v = [w * t for w, t in lst if t is not None]
@@ -1613,6 +1620,10 @@ if __name__ == "__main__":
                        "lateral term + arc cap (defect_fix lib/nr1_tight.py; labels <pool>/tight_in.npz; 0 = off)")
         p.add_argument("--on-anchor", type=float, default=0.0, help="LON-ANCHOR: weight of the station-anchored two-sided arc term on the S rows "
                        "(defect_fix lib/nr1_anchor.py; labels <pool>/lon_anchor.npz; 0 = off)")
+        p.add_argument("--simp-region", type=float, default=0.0, help="SIMP: weight (x 10) of the merged road + oncoming-lane hinge on the S rows; "
+                       "replaces the trainer's road hinge there (defect_fix lib/nr1_simp.py; needs --lat-file for the onc raster; 0 = off)")
+        p.add_argument("--simp-clear", type=float, default=0.0, help="SIMP: weight (x 10) of the merged object-clearance hinge on the S rows (leads may "
+                       "only shorten the plan); replaces the trainer's agent hinge there (defect_fix lib/nr1_simp.py; 0 = off)")
         p.add_argument("--on-hold-res", type=int, default=-1, help="NR1HVR: hold out the pool logs with sha1(log) %% 10 == R (-1 = off)")
         p.add_argument("--on-hold-n", type=int, default=2048, help="NR1HVR: rows of the held / fitted pool slices scored at every dev eval")
         p.add_argument("--on-hold-pct", type=int, default=0, help="JT: hold out the pool logs with crc32(log) %% 100 < P (0 = off; mixed pools: "
@@ -1691,13 +1702,13 @@ if __name__ == "__main__":
             import on_envelope
             print(f"rm_train: on_envelope {on_envelope.configure(a.env_lo_scale)}", flush=True)
     assert getattr(a, "on_arc_rows", "move") == "move" or max(a.lat_onc, a.lat_soft, a.lat_side, a.on_arc) > 0, "--on-arc-rows: needs nr1_lat"
-    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0), getattr(a, "on_stand", 0.0), getattr(a, "on_stoppt", 0.0), getattr(a, "on_turncap", 0.0), getattr(a, "on_tightin", 0.0), getattr(a, "on_anchor", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
+    if max(getattr(a, "lat_onc", 0.0), getattr(a, "lat_soft", 0.0), getattr(a, "lat_side", 0.0), getattr(a, "on_arc", 0.0), getattr(a, "on_free", 0.0), getattr(a, "on_stand", 0.0), getattr(a, "on_stoppt", 0.0), getattr(a, "on_turncap", 0.0), getattr(a, "on_tightin", 0.0), getattr(a, "on_anchor", 0.0), getattr(a, "simp_region", 0.0), getattr(a, "simp_clear", 0.0)) > 0:   # NR1: nr1_lat as the --on-lon module
         assert a.on and a.on_lon in ("", "nr1_lat") and a.on_mode in ("self", "both", "mixed"), "--lat-*: needs --on (self | both | mixed), no other --on-lon"
         assert (a.lat_onc == 0 and a.lat_soft == 0) or a.lat_file, "--lat-onc / --lat-soft: need --lat-file"
         _sys.path.insert(0, str(_R / "experiments/defect_fix/lib"))
         import nr1_lat
         a.on_lon, a.on_lon_lam = "nr1_lat", 1.0
-        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stand_roll=getattr(a, 'on_stand_roll', 0.0), stand_launch=getattr(a, 'on_stand_launch', 0.0), stoppt=getattr(a, 'on_stoppt', 0.0), free_clear=tuple(float(x) for x in getattr(a, 'on_free_clear', '0,0').split(',')), turncap=getattr(a, 'on_turncap', 0.0), tightin=getattr(a, 'on_tightin', 0.0), anchor=getattr(a, 'on_anchor', 0.0))}", flush=True)
+        print(f"rm_train: --on-lon nr1_lat, --on-lon-lam 1, {nr1_lat.configure(a.lat_onc, a.lat_soft, a.lat_side, a.lat_depth, a.lat_soft_depth, a.lat_buf, a.lat_file, a.on_arc, getattr(a, 'lat_host', False), getattr(a, 'on_arc_rows', 'move'), free=getattr(a, 'on_free', 0.0), free_frac=getattr(a, 'on_free_frac', 0.8), free_mode=getattr(a, 'on_free_mode', 'all'), stand=getattr(a, 'on_stand', 0.0), stand_margin=getattr(a, 'on_stand_margin', 1.0), stand_roll=getattr(a, 'on_stand_roll', 0.0), stand_launch=getattr(a, 'on_stand_launch', 0.0), stoppt=getattr(a, 'on_stoppt', 0.0), free_clear=tuple(float(x) for x in getattr(a, 'on_free_clear', '0,0').split(',')), turncap=getattr(a, 'on_turncap', 0.0), tightin=getattr(a, 'on_tightin', 0.0), anchor=getattr(a, 'on_anchor', 0.0), simp_region=getattr(a, 'simp_region', 0.0), simp_clear=getattr(a, 'simp_clear', 0.0))}", flush=True)
     if getattr(a, "on_lon_all", False):
         assert a.on_lon and a.on_mode == "mixed", "--on-lon-all: needs an --on-lon module and --on-mode mixed"
     assert getattr(a, "on_hold_res", -1) < 0 or (a.on and 0 <= a.on_hold_res < 10), "--on-hold-res: needs --on, a residue 0..9"

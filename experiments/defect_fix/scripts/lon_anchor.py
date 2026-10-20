@@ -386,13 +386,20 @@ def cmd_gate(a):
 
 
 # ---------------------------------------------------------------- weights
+FIX_SKIP = ("onbox_train_",)       # supplement 1 addendum: the on-box curated-train inventory (854 scenes incl. all 570 cp scenes), not an exam list
+
+
 def excluded():
-    """Scene ids never drawn: PAI 281, practice-pai (= val160), every id found in experiments/pai_fix/scenes/ (any file, uuid match)."""
+    """Scene ids never drawn: PAI 281, practice-pai (= val160), every id in experiments/pai_fix/scenes/ (any file, uuid match: the exam lists,
+    chunks, train_exclude.csv, drives_val160.csv) except the inventory files FIX_SKIP; a file of unknown kind is read as an exclusion list."""
     from jevdrive.data import splits
     ex = {m.split("clipgt-")[-1] for nm in ("physical_ai_av/test281", "physical_ai_av/practice-pai") for m in splits.load(nm).members}
     fix, files = set(), []
     if PAI_FIX.is_dir():
         for f in sorted(p for p in PAI_FIX.rglob("*") if p.is_file()):
+            if f.name.startswith(FIX_SKIP):
+                files.append(f"{f.relative_to(REPO)} (skipped: inventory)")
+                continue
             files.append(str(f.relative_to(REPO)))
             fix |= set(UUID.findall(f.read_text(errors="ignore")))
     return ex, fix, files
@@ -424,6 +431,7 @@ def cmd_weights(a):
     w[draw] = a.share * fs / max(len(draw), 1)
     w /= w.sum()
     assert w[P[bad_x | bad_f]].sum() == 0
+    assert a.share == 0 or len(draw) > 0.5 * (~held).sum(), f"{len(draw)} of {(~held).sum()} cp rows left: the exclusion took most of the pool"
     np.savez(WD / f"{a.out}.npz", names=tb["names"], w=w, grp=grp)
     rec = dict(pool=a.pool, base=a.base, share=a.share, rows=len(names), excluded_exam_rows=int(bad_x.sum()), excluded_fix_rows=int(bad_f.sum()),
                excluded_fix_scenes_in_pool=sorted(set(sc[bad_f])), pai_fix_ids=len(fix), pai_fix_files=files,
@@ -483,8 +491,8 @@ def cmd_inertia(a):
         out[t] = dict(stop_ratio=sr, turn_ratio=tr, open_v24=os_, stop=v.get("STOP"), turn=v.get("TURN"), open=v.get("OPEN"), pass_=p)
         L.append(f"| {t} | {sr:.3f} | {tr:.3f} | {os_:.3f} | {v.get('STOP')} | {v.get('TURN')} | {v.get('OPEN')} | {'' if p is None else ('PASS' if p else 'FAIL')} |")
     RES.mkdir(parents=True, exist_ok=True)
-    (RES / "inertia.json").write_text(json.dumps(dict(report=a.name, ctl=a.ctl, arms=out, lines=dict(stop=STOP_LINE, turn=TURN_LINE, drop=DROP, open=OPEN_LINE)), indent=1, default=float))
-    (RES / "inertia.md").write_text("\n".join(L) + "\n")
+    (RES / f"{a.out_stem}.json").write_text(json.dumps(dict(report=a.name, ctl=a.ctl, arms=out, lines=dict(stop=STOP_LINE, turn=TURN_LINE, drop=DROP, open=OPEN_LINE)), indent=1, default=float))
+    (RES / f"{a.out_stem}.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -501,6 +509,7 @@ def main():
     q.add_argument("--tag", required=True), q.add_argument("--w", type=float, required=True)
     q = sp.add_parser("inertia")
     q.add_argument("--name", default="lon_anchor"), q.add_argument("--report", default=""), q.add_argument("--ctl", required=True), q.add_argument("--arms", nargs="+", required=True)
+    q.add_argument("--out-stem", default="inertia")
     a = p.parse_args()
     globals()[f"cmd_{a.cmd}"](a)
 
