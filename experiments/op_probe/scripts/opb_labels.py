@@ -66,16 +66,21 @@ def _ring(xy, pose):
 
 def sdf_raster(m, pose):
     """(NH, NW) float32 SDF at the stored 0.5 m cell centres (2 x 2 mean of the 0.25 m canvas)."""
-    import cv2
     from nuplan.common.actor_state.state_representation import Point2D
     from nuplan.common.maps.maps_datatypes import SemanticMapLayer as L
-    from scipy.ndimage import distance_transform_edt as edt
     from shapely.ops import unary_union
     objs = m.get_proximal_map_objects(Point2D(float(pose[0]), float(pose[1])), RADIUS, [getattr(L, n) for n in LAYERS])
     polys = [o.polygon for v in objs.values() for o in v]
+    return canvas_sdf(unary_union(polys) if polys else None, pose)
+
+
+def canvas_sdf(u, pose):
+    """sdf_raster's canvas on a (multi)polygon u already in the map frame (None = no surface) at pose (x, y, yaw): the same (NH, NW)
+    float32 SDF. Also the PAI road raster's (experiments/round5/scripts/road_pai.py, u = the NuRec lane / road-area union)."""
+    import cv2
+    from scipy.ndimage import distance_transform_edt as edt
     img = np.zeros((NX, NY), np.uint8)
-    if polys:
-        u = unary_union(polys)
+    if u is not None:
         for g in (u.geoms if hasattr(u, "geoms") else [u]):
             cv2.fillPoly(img, [_ring(g.exterior.coords, pose)], 1, shift=4)
             for h in g.interiors:

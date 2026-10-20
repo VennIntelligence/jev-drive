@@ -154,6 +154,8 @@ class Losses43(T.Losses):
                 if m.any():
                     mg = self.road.margin if self.lm_road is None else self.lm_road[rows[m]][:, None]   # log-consistent: the row's own margin
                     rv[m] = torch.relu(mg - self.road.margins(xs[m], ys[m], psi[m], rows[m])).mean(1)
+                if getattr(self.road, "w", None) is not None:                   # on_train --on-road-pai-w (absent otherwise: unchanged path)
+                    rv = rv * self.road.w[rows]
                 Ls["road_ho"] = rv[h].sum() / n_imit
                 total = total + self.ho_w * self.road_lam * Ls["road_ho"]
                 Ls["road_ho_pos"] = (rv[h] > 0).float().mean()

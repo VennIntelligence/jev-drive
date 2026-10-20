@@ -35,6 +35,8 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     [seed, 0, 71] (every row stream unchanged). P = 1: the adapter's input transform zeroes it (TR1 key `noego`, saved with the
                     weights, so the served driver gets no ego status either). 0 = off: no operation is added.
   --on-road FILE    onpol_long Amendment 13: the pool rows' road raster from FILE instead of <POOL>/road.npz (same tokens, layout); '' = the pool's.
+  --on-road-pai FILE [--on-road-pai-w W]   self / both / mixed: a third road raster source after the navtrain raster and the pool's
+                    (round5 road_pai.py index, PAI rows); W weighs the road hinge of the rows it labels (0: value and n_hinge as without it).
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
   (a.on_lon_all, rm_train --on-lon-all; RECOVERY-ENVELOPE 2026-10-16) in `mixed`, the --on-lon terms on every pool row of the batch (the
@@ -143,6 +145,9 @@ def losses_on():
                 ko = self.road.ok[r]
                 if ko.any():
                     rv[ko] = torch.relu(self.road.margin - self.road.margins(xs[ko], ys[ko], psi[ko], r[ko])).mean(1)
+                if getattr(self.road, "w", None) is not None:           # --on-road-pai-w (absent without --on-road-pai: unchanged path)
+                    wr = self.road.w[r]
+                    rv, ko = rv * wr, ko & (wr > 0)
                 Ls["on/agent_ho"], Ls["on/road_ho"] = av.sum() / n_imit, rv.sum() / n_imit
                 total = total + self.ho_w * (c.agent_lam * Ls["on/agent_ho"] + self.road_lam * Ls["on/road_ho"])
                 Ls |= row_stats(av, "on/agent") | row_stats(rv, "on/road")
@@ -262,9 +267,13 @@ def setup(a, dev):
         if a.agent_on_only:                                          # no offline row carries the agent hinge; the pool's rows are set below
             agent2.ok[:] = False
     if (k_ho or hing) and a.road_lam > 0:                            # C: the road-and-lane raster on the hinge-only rows (+ the pool's own file)
-        rc = replace(cfg, hinge_labels=(a.road_labels,) + ((getattr(a, "on_road", "") or str(pd / "road.npz"),) if hing else ()), hinge_footprint=("pacifica",) * (1 + hing),
-                     hinge_margin=a.road_margin)
+        rpai = (getattr(a, "on_road_pai", "") or "") if hing else ""  # --on-road-pai: a third source for the pool rows the first two leave unlabelled
+        rc = replace(cfg, hinge_labels=(a.road_labels,) + ((getattr(a, "on_road", "") or str(pd / "road.npz"),) if hing else ()) + ((rpai,) if rpai else ()),
+                     hinge_footprint=("pacifica",) * (1 + hing + bool(rpai)), hinge_margin=a.road_margin)
         road = OR.off_hinge(rc, np.where(is_ho | (is_on & hing), names, ""), off, dev, **bk)
+        if rpai:                                                     # --on-road-pai-w: weight of the rows that source labels (LossesOn, rm_train pool_ev)
+            road.w = torch.where(road.ok & (road.src == 2), float(a.on_road_pai_w), 1.0).float()
+            onrec |= dict(road_pai=rpai, road_pai_rows=int((road.ok & (road.src == 2)).sum()), road_pai_w=float(a.on_road_pai_w))
     n_fb = 0
     if road is not None and hinge is not None and k_ho:              # bd4_train note (x): a row not on the scorer-layer road at t0 keeps the NAVSIM raster
         hr = torch.nonzero(torch.as_tensor(is_ho, device=dev) & road.ok)[:, 0]
@@ -716,6 +725,8 @@ if __name__ == "__main__":
     p.add_argument("--fetch-workers", type=int, default=2)
     p.add_argument("--dev-card-gb", type=float, default=4.0)
     p.add_argument("--on-road", default="", help="road-and-lane raster of the pool's rows in place of <POOL>/road.npz (same layout and names; onpol_long Amendment 13)")
+    p.add_argument("--on-road-pai", default="", help="round5 road_pai.py index: a further road raster source of the pool rows (default off)")
+    p.add_argument("--on-road-pai-w", type=float, default=1.0, help="weight of the road hinge on the rows --on-road-pai labels")
     p.add_argument("--ego-drop", type=float, default=0.0, help="share of rows with the ego status zeroed; 1 = removed, also when served (onpol_long Amendment 11)")
     p = sub.add_parser("ident")
     p.add_argument("--a", required=True)

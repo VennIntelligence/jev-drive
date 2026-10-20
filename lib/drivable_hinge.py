@@ -4,7 +4,11 @@ Labels: experiments/op_probe/scripts/opb_labels.py (drivable signed-distance ras
 y -24..24 m, 0.5 m cells, + inside). Loss: the 8 plan poses (x, y, yaw at 0.5 .. 4 s, rear axle, left +) are linearly interpolated to 0.1 s, the
 4 corners of the nuPlan footprint are placed on every interpolated pose, the SDF is sampled bilinearly (border clamp) and
 mean(relu(margin - sdf)) is the hinge. Same geometry as op_probe's decoders (opb_probe.corners_torch / sdf_at).
+A label file may also be deduplicated (tokens, ok, ix, sdf_file: token i's raster is row ix[i] of the .npy beside it, memory-mapped;
+experiments/round5/scripts/road_pai.py); files without `ix` load as before.
 """
+from pathlib import Path
+
 import numpy as np
 import torch
 
@@ -75,7 +79,11 @@ class Hinge:
             pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
             idx = np.array([pos.get(t, -1) for t in tokens.tolist()])
             ok = (idx >= 0) & z["ok"][np.maximum(idx, 0)] & ~ok_all
-            sdf = z["sdf"]
+            if "ix" in z.files:                                                  # deduplicated file (round5 road_pai.py): token i reads raster
+                sdf = np.load(Path(f).parent / str(z["sdf_file"]), mmap_mode="r")  # ix[i] of the memory-mapped sdf_file next to it
+                idx = np.where(idx >= 0, z["ix"][np.maximum(idx, 0)], -1)
+            else:
+                sdf = z["sdf"]
             rows = np.flatnonzero(ok)
             if bank:                                                             # every distinct label of this file once
                 u, inv = np.unique(idx[rows], return_inverse=True)

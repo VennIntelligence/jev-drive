@@ -24,7 +24,7 @@ Route-night additions (research/next-round/route-night.md 4 C):
   no pool   --agent-on-only without --on (RB0, RNONE) means no row carries the agent hinge: run as --agent-lam 0 (on_train.setup would
             refuse the flag without a pool), so the RB / RB0 / RBS / RNONE commands share one $REC.
   pool rows --rm-drop never zeroes a pool row's (--on) route input (the route hinge must not train a turn without its reason); the drop rng
-            stream still draws one number per batch row. --on-lon / --on-lon-lam / --on-road go to on_train.setup unchanged.
+            stream still draws one number per batch row. --on-lon / --on-lon-lam / --on-road / --on-road-pai(-w) go to on_train.setup unchanged.
 
 Next-round addition (2026-10-13, experiments/route_follow/plans/2026-10-13-allrows-prereg.md):
   --ego-drop-speed P   the speed history of the fed ego row (EGO_SPEED: vx, vy, ax, ay and the x / y of the 4 history poses, i.e. everything
@@ -1014,6 +1014,8 @@ def cmd_train(a):
                         ko, rv = LS.road.ok[rt], torch.zeros(len(g), device=dev)
                         if ko.any():
                             rv[ko] = torch.relu(LS.road.margin - LS.road.margins(xs[ko], ys[ko], psi[ko], rt[ko])).mean(1)
+                        if getattr(LS.road, "w", None) is not None:    # --on-road-pai-w, as LossesOn weighs the training term
+                            rv = rv * LS.road.w[rt]
                         tv["road"] = rv
                     if LS.lon is not None:
                         tv |= LS.lon.loss(torch.stack([x, y, psi], -1), rt - LS.on0, LS.pack)
@@ -1594,6 +1596,8 @@ if __name__ == "__main__":
         p.add_argument("--on-lon", default="")
         p.add_argument("--on-lon-lam", type=float, default=10.0)
         p.add_argument("--on-road", default="")
+        p.add_argument("--on-road-pai", default="", help="round5 road_pai.py index: a further road raster source of the pool rows (on_train; default off)")
+        p.add_argument("--on-road-pai-w", type=float, default=1.0, help="weight of the road hinge on the rows --on-road-pai labels")
         p.add_argument("--ego-drop", type=float, default=0.0)
         p.add_argument("--on-weight", default="", help="KEY=VALUE:W,... draw weights of the pool rows from tab.npz string keys")
         p.add_argument("--on-cap-scene", type=float, default=0.0, help="max share of one scene (tab `log`) in the cap subset's draws (0 = off)")
