@@ -1,0 +1,111 @@
+{
+ "tag": "R5SMR-L18-s0",
+ "arm": "R",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R5SMR-L18-s0/20261021-032722",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "pool_imit_rows": [
+   31.486666666666665,
+   32,
+   true
+  ],
+  "road_hinge_share": [
+   0.8958289222951514,
+   0.8902133638982165,
+   true
+  ],
+  "road_fires": [
+   0.054382940940558906,
+   "> 0",
+   true
+  ],
+  "road_pai_rows": [
+   322982,
+   322982,
+   true
+  ],
+  "road_pai_w": [
+   1.0,
+   1.0,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "runs/defect_fix/w/R3MV.npz",
+   "R3MV",
+   true
+  ],
+  "share_ph": [
+   0.24999999999968056,
+   0.25,
+   true
+  ],
+  "share_ph05": [
+   0.12500000000005737,
+   0.125,
+   true
+  ],
+  "share_ph15": [
+   0.12500000000017902,
+   0.125,
+   true
+  ]
+ },
+ "expected": {
+  "pool": "on1_JTPH",
+  "wfile": "R3MV",
+  "index": "road_on1_JTPH.npz",
+  "share": 0.8902133638982165,
+  "pai_mass": 0.5000000000000002,
+  "index_ok_rows": 322982,
+  "part": {
+   "ph": 0.9013251536450001,
+   "ph05": 0.9594478114478115,
+   "ph15": 0.7987553368550546
+  }
+ },
+ "steps": 0,
+ "road": {
+  "road_ho": 0.0013588103097269292,
+  "road_pos": 0.054382940940558906,
+  "road_posmean": 0.10792378446242462,
+  "n_hinge": 28.206666666666667,
+  "n_imit": 31.486666666666665
+ },
+ "draw_shares": {
+  "on_wfile": "runs/defect_fix/w/R3MV.npz",
+  "rows_w0": 225632,
+  "group_share": {
+   "S": 0.49999999999936234,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.24999999999968056,
+   "ph05": 0.12500000000005737,
+   "ph05_held": 0.0,
+   "ph15": 0.12500000000017902,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

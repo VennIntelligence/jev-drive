@@ -1,0 +1,21 @@
+{
+ "a": "R5IDMV-L18-s0",
+ "b": "R5IDW0-L18-s0",
+ "note": "R3MV-L18-s0 argv 60 steps eager: without vs with --on-road-pai road_on1_JTPH.npz --on-road-pai-w 0",
+ "scalars": 275,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5370907187461853,
+  0.5370907187461853
+ ],
+ "on_hash_60": [
+  "44db5595ab3db943",
+  "44db5595ab3db943"
+ ],
+ "want_hash": null,
+ "identical": true
+}
