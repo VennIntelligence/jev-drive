@@ -219,7 +219,7 @@ def cmd_drives(a):
                                  gap_s=float(ds[j]) if hit[j] else np.nan))
     X = pd.DataFrame(rows)
     X.to_csv(a.out, index=False, float_format="%.1f")
-    print(len(ex), "exam val160 scenes,", len(miss), "without meta;", X.scene_id.nunique(), "curated-train scenes flagged in", len(X), "pairs:",
+    print(len(ex), "exam scenes (val160 + test281),", len(miss), "without meta;", X.scene_id.nunique(), "curated-train scenes flagged in", len(X), "pairs:",
           X.why.value_counts().to_dict() if len(X) else {})
 
 

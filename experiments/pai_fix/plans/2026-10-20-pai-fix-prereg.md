@@ -32,8 +32,13 @@
 - **T281（单独一列）**：A0（NTV0-L18-s0 + ACC + GAP，第 366 / 381 条存档读数）零分里 cor_route_end 23 个 + 转弯 / 路口 / 弯道类 23 个
   （cor_straight_at_turn 11、cor_turn_under 3、cor_turn_over 1、off_junc_* 7、off_curve_inside 1）。
 
-结果（`scenes/exam.csv`）：val160 STOP 12、STOP-L 12、TURN 43（TARGET 67）、G-LAUNCH 6、G-LEAD 6；T281 46。
-固定 chunk 表 `scenes/chunks/`：v000–v002（val160，26–27 个）、t000–t001（T281，23 个），s000 = 1 个场景的冒烟。模拟器只在同一 chunk 表内复现，
+- **去掉与盒上训练场景相连的 val160 场景**（补记，同日、仍在任何考题读数之前）：`pai_fix.py drives` 在全部 160 个 val160 上找到 8 个与盒上
+  854 个 curated-train 场景（570 + 284，`scenes/onbox_train_20261020.txt`）同驾驶或同路段的 val160 场景（其中 4 对涉及 d402 的 570 训练池），
+  全部去掉（`scenes/drives_val160.csv`）。去掉后的考题（val160 72 + T281 46）与盒上任何 curated-train 场景都不相连；
+  与之相连、尚未下载的 216 个 curated-train 场景列在 `scenes/train_exclude.csv`，训练方 / 下载器必须排除。
+
+结果（`scenes/exam.csv`）：val160 STOP 12、STOP-L 11、TURN 37（TARGET 60）、G-LAUNCH 6、G-LEAD 6；T281 46。
+固定 chunk 表 `scenes/chunks/`：v000–v002（val160，各 24 个）、t000–t001（T281，各 23 个），s000 = 1 个场景的冒烟。模拟器只在同一 chunk 表内复现，
 所以以后每个读数都用这几张表（`pai_fix.sh read`）。
 
 ## 每次读数的指标（`pai_fix.py report`；各子集分开报）
@@ -55,8 +60,8 @@ T281 上每个读数「修好」A0 零分的个数（偶然水平）；同一检
 2. NTV0-L18-s0 原生 VC + LEAD（vl），v + t。
 3. NTV0-L18-s1 + ACC + GAP，只 v：val160 上的种子噪声底（T281 上的种子噪声已由存档给出）。
 
-预计：一次 v + t 读数 125 个场景，约 37 s / 场景 / stack（A0 的 chunk：约 35 个场景 1 320 s）+ 每个 chunk 约 75 s 固定开销 ≈ 1.4 stack 时，
-按每卡 3 个 stack ≈ 0.45 卡时；只 v（79 个）≈ 0.9 stack 时 ≈ 0.3 卡时。实测记进 README。
+预计：一次 v + t 读数 118 个场景，约 37 s / 场景 / stack（A0 的 chunk：约 35 个场景 1 320 s）+ 每个 chunk 约 75 s 固定开销 ≈ 1.4 stack 时，
+按每卡 3 个 stack ≈ 0.45 卡时；只 v（72 个）≈ 0.8 stack 时 ≈ 0.27 卡时。实测记进 README。
 
 ## 用于变体的筛选读法（提议，主会话定；本轮只给参照行，不判任何变体）
 
@@ -67,7 +72,7 @@ T281 上每个读数「修好」A0 零分的个数（偶然水平）；同一检
 
 ## 已知局限
 
-- val160 的 STOP 只有 12 个场景，TURN 43 个；每类失败数十个上下，单个候选的差 < 2–3 个场景时分不开。
+- val160 的 STOP 只有 12 个场景，STOP-L 11 个，TURN 37 个；每类失败数十个上下，单个候选的差 < 2–3 个场景时分不开。
 - GUARD 的「通过」由 RSG / RB0 家族代替 NTV0 定义；NTV0 参照读数出来后如实报告它在 GUARD 上的分。
 - T281 是按 A0 失败挑的（选择偏差，回归均值方向对变体有利）；只作单独一列。
 - 渲染场景与真实 PAI 私榜不同；一个 seed。

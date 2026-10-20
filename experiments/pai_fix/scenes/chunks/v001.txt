@@ -1,5 +1,7 @@
+clipgt-3a9824bc-0e4e-491d-b848-81babda68457
+clipgt-623d5516-5e45-44f8-9a49-841f5cbc2117
+clipgt-cd0da2b3-a896-4117-af9c-c0d229e6f5f9
 clipgt-3a48e906-2733-4fc9-b687-6b2ed33defec
-clipgt-1594e89e-5d0a-48d6-8d2b-5a5c287d451c
 clipgt-fadc73da-130e-42c1-81b9-9e74405c39f3
 clipgt-1e884c53-d49b-4410-aeb4-65f5da23cf53
 clipgt-605bf77a-3998-4f01-aabb-0a3c7f5eaaed
@@ -7,7 +9,6 @@ clipgt-d0b9a872-bbc5-4df6-b89d-7987e8ead288
 clipgt-c6c01d25-ff8a-4cc3-9d33-27598d48dd90
 clipgt-0e3771c0-04ed-4002-bce1-993fa746c8f3
 clipgt-2d2673a0-cc80-4ba5-ae72-0588836ed07e
-clipgt-0ee89cab-e4a5-4010-b6e7-dd3cfd1f73f2
 clipgt-bd0d494f-fd3c-4d53-a4b2-7e7f3519b3f9
 clipgt-1d879259-ba18-435b-8fc5-0234be52364e
 clipgt-afa37955-fae8-4741-bb91-649ca9e3eb5d
@@ -17,10 +18,7 @@ clipgt-909a2801-9af4-4c49-b33a-1329ae268a29
 clipgt-21626256-03c1-4b4a-857e-09b20eb8f636
 clipgt-1c7e2423-77d7-40b6-bf26-f36fb8ebcf52
 clipgt-145bf9cc-0547-4e74-9903-2b6bac686245
-clipgt-0d10d2e3-29ef-40cb-b612-94021d98245c
-clipgt-9ea70552-6dcb-4ee8-a368-9a906a333f6e
 clipgt-b0fa4732-6057-4e68-bb92-1f346bb5143b
 clipgt-44fdaa0f-373d-439c-bcbb-4d748bcb5bda
 clipgt-6532f25e-2e8e-47ca-b627-631bb466847e
 clipgt-eb7e7674-8022-454e-b957-e7757217b078
-clipgt-edcf41a4-be66-4f5a-9ab1-d760962f4a5d
