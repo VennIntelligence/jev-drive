@@ -3,9 +3,10 @@
 dose calibration and the inertia read-out. Box, repo root.
 
   $AP lon_anchor.py labels [--pool on1_JTCP]   station-anchored targets of the pool's S rows (nuPlan parts: navsim test logs; cp rows: the
-                                              curated PAI row files) -> $CR/<pool>/lon_anchor.npz, $L/labels.npz, results/lon_anchor/labels.json
-  $TR lon_anchor.py gate                      G1 (the human's station-matched path as the plan -> the term ~ 0) + reported trigger statistics
-                                              on the stored plans -> results/lon_anchor/gate.{json,md}; exit 2 on failure
+                                              curated PAI row files), supplement 1's rule -> $CR/<pool>/lon_anchor_v2.npz (+ the row-frame label
+                                              paths), $L/labels_v2.npz, results/lon_anchor/labels_v2.json (v1 = the registered rule: lon_anchor.npz)
+  $TR lon_anchor.py gate                      G1 (supplement 1: the human's path started at the ego as the plan -> the term ~ 0) + reported
+                                              statistics on the stored plans -> results/lon_anchor/gate_v2.{json,md}; exit 2 on failure
   $TR lon_anchor.py weights --out NAME        JT00S's draw on on1_JTCP, the nuPlan S share halved and the other half uniform over the cp rows
                                               outside the held 15 % and outside every excluded scene (PAI 281, practice-pai = val160, every
                                               scene id under experiments/pai_fix/scenes/) -> $W/NAME.npz, results/lon_anchor/w_NAME.json
@@ -50,10 +51,7 @@ TH_US = 150_000                                                  # PAI: a box ti
 
 
 # ---------------------------------------------------------------- shared
-def clock8(t, T, S):
-    """The human's travel from his own position at the same log time t (the clock-aligned profile, for the diagnostics)."""
-    S = np.maximum.accumulate(np.asarray(S, np.float64))
-    return np.interp(t + NA.DT * np.arange(1, 9), T, S) - np.interp(t, T, S)
+clock8 = NA.clock8
 
 
 def along(P, a, q):
@@ -70,9 +68,23 @@ def along(P, a, q):
     return np.c_[x, y, h]
 
 
-def row_out(lab, s_t, th, why, t, T, S, gap_e, gap_h, hum):
-    return dict(s_t=s_t if s_t is not None else np.full(8, np.nan), dt_h=th - t, why=why, gap_e=gap_e, gap_h=gap_h, hc8=clock8(t, T, S),
-                hum=hum if hum is not None else np.full((8, 3), np.nan)) | lab
+def ego_start(Pp, ap, s_t, e0, v0):
+    """Supplement 1's G1 plan: the human's path points at s_t (8,) moved along the path's left normal by e0 x max(0, 1 - s_t / D),
+    D = max(8 m, 2 s x v0) (the imitation target's fade, onp_geom.imit): the human's path started at the ego -> (8, 3)."""
+    q = along(Pp, ap, s_t)
+    e = e0 * np.clip(1.0 - s_t / max(8.0, 2.0 * v0), 0.0, None)
+    return np.c_[q[:, 0] - np.sin(q[:, 2]) * e, q[:, 1] + np.cos(q[:, 2]) * e, q[:, 2]]
+
+
+def row_out(lab, s_t, th, why, t, T, S, gap_e, gap_h, Pp, ap, e0, v0):
+    """One row's label record: the clock exclusion after the lead's (supplement 1), the G1 plan, the label path (row frame)."""
+    c = clock8(t, T, S)
+    if why == "ok":
+        why = NA.clock_skip(s_t, c)
+    ok_p = s_t is not None and Pp is not None and len(Pp) >= 2
+    return dict(s_t=s_t if s_t is not None else np.full(8, np.nan), dt_h=th - t, why=why, gap_e=gap_e, gap_h=gap_h, hc8=c, e0=e0,
+                hum=ego_start(Pp, ap, s_t, e0, v0) if ok_p else np.full((8, 3), np.nan),
+                path=along(Pp, ap, NA.PATH_A)[:, :2].astype(np.float32) if ok_p else None) | lab
 
 
 # ---------------------------------------------------------------- nuPlan S rows (one log per job)
@@ -119,8 +131,7 @@ def _nu_job(job):
                 gap_h = NA.lead_gap(G.at(s_e + ah)[0], ah, B)
         if why == "ok":
             why = NA.lead_skip(gap_e, gap_h)
-        hum = along(gp, ag, s_t) if s_t is not None else None
-        out.append(dict(i=r["i"], **row_out(dict(e0=r["e0"]), s_t, th, why, t, T, S, gap_e, gap_h, hum)))
+        out.append(dict(i=r["i"], **row_out({}, s_t, th, why, t, T, S, gap_e, gap_h, gp, ag, r["e0"], r["v0"])))
     return out
 
 
@@ -139,7 +150,7 @@ def nu_jobs(tab, agent):
         poses[rows] = z["poses"][mi]
         for i, m in zip(rows, mi):
             v = agent["valid"][i, 0]
-            jobs[str(z["log"][m])].append(dict(i=int(i), t_log_us=int(z["t_log_us"][m]), lead=float(z["lead"][m]), e0=float(z["e0"][m]),
+            jobs[str(z["log"][m])].append(dict(i=int(i), t_log_us=int(z["t_log_us"][m]), lead=float(z["lead"][m]), e0=float(z["e0"][m]), v0=float(tab["speed"][i]),
                                                gpath=z["gpath"][m].astype(np.float64), box=agent["box"][i, 0, v, :2].astype(np.float64)))
     return jobs, poses
 
@@ -153,7 +164,7 @@ def to_local(B, a):
 def _pai_job(job):
     f, ks = job
     zz = np.load(f, allow_pickle=True)
-    z = {k: zz[k] for k in ("log_t_us", "log_s", "log_xyyaw", "k", "path", "path_ok", "box", "box_ok", "t0_us", "s_ego", "e0", "anchor", "poses_model")}
+    z = {k: zz[k] for k in ("log_t_us", "log_s", "log_xyyaw", "k", "path", "path_ok", "box", "box_ok", "t0_us", "s_ego", "e0", "anchor", "poses_model", "v0")}
     T, S = z["log_t_us"] * 1e-6, np.maximum.accumulate(z["log_s"].astype(np.float64))
     u = np.r_[True, np.diff(S) > 1e-6]                                           # the human's path in the local frame by arc (vertices only)
     Pv, Sv = z["log_xyyaw"][u, :2].astype(np.float64), S[u]
@@ -176,11 +187,9 @@ def _pai_job(job):
                 gap_h = NA.lead_gap(hp, ah, to_local(z["box"][m, j, z["box_ok"][m, j], :2].astype(np.float64), z["anchor"][m]))
         if why == "ok":
             why = NA.lead_skip(gap_e, gap_h)
-        hum = None
-        if s_t is not None:
-            P, ok = z["path"][n].astype(np.float64), z["path_ok"][n]
-            hum = along(P[ok], pa[ok], s_t) if ok.sum() >= 2 else None
-        out.append(row_out(dict(e0=float(z["e0"][n]), poses=z["poses_model"][n].astype(np.float32)), s_t, th, why, t, T, S, gap_e, gap_h, hum))
+        P, ok = z["path"][n].astype(np.float64), z["path_ok"][n]
+        out.append(row_out(dict(poses=z["poses_model"][n].astype(np.float32)), s_t, th, why, t, T, S, gap_e, gap_h, P[ok], pa[ok],
+                           float(z["e0"][n]), float(z["v0"][n])))
     return out
 
 
@@ -200,6 +209,31 @@ def pai_rows(names, rows_dir, workers):
 
 
 # ---------------------------------------------------------------- labels
+KINDS = ("launch", "stop", "turn", "move", "none")
+KIND_NOTE = ("launch = ego t0 speed < 0.5 m/s; stop = the target's last 0.5 s step < 0.5 m/s; turn = |path heading change from s_e to s_e + s_t,8| "
+             ">= 30 deg; move = the rest; none = no target")
+
+
+def classes(logs, part):
+    import csv
+    cls = {r["scene_id"]: r["cls"] for r in csv.DictReader(open(CP_TSV), delimiter="\t")}
+    return np.array([cls.get(s, "?") if p == "cp" else "nuplan" for s, p in zip(logs, part)])
+
+
+def kinds(s_t, pidx, path, v0):
+    """Row kinds (KIND_NOTE) from the targets and the label paths."""
+    out = np.full(len(s_t), "none", "U8")
+    m = (pidx >= 0) & np.isfinite(s_t).all(1)
+    P = path[pidx[m]]
+    h = np.unwrap(np.arctan2(*np.diff(P, axis=1)[..., ::-1].transpose(2, 0, 1)), axis=1)     # (n, 100) segment headings
+    j = np.clip(np.round(s_t[m, -1] - NA.PATH_A[0]).astype(int), 0, h.shape[1] - 1)
+    turn = np.degrees(np.abs(h[np.arange(len(j)), j] - h[:, int(-NA.PATH_A[0])])) >= 30
+    stop = (s_t[m, -1] - s_t[m, -2]) / NA.DT < 0.5
+    k = np.where(np.asarray(v0)[m] < 0.5, "launch", np.where(stop, "stop", np.where(turn, "turn", "move")))
+    out[m] = k
+    return out
+
+
 def cmd_labels(a):
     from jevdrive.common import n_cpus
     from jevdrive.run import Run
@@ -228,90 +262,124 @@ def cmd_labels(a):
         A = dict(s_t=np.full((N, 8), np.nan, np.float32), hc8=np.full((N, 8), np.nan, np.float32), hum=np.full((N, 8, 3), np.nan, np.float32),
                  dt_h=np.full(N, np.nan, np.float32), gap_e=np.full(N, np.inf, np.float32), gap_h=np.full(N, np.nan, np.float32),
                  e0=np.full(N, np.nan, np.float32), why=np.full(N, "not_s", "U16"))
+        pidx, paths = np.full(N, -1, np.int64), []
         for i, r in enumerate(res):
             if r is not None:
                 for k in A:
                     A[k][i] = r[k]
+                if r["path"] is not None:
+                    pidx[i] = len(paths)
+                    paths.append(r["path"])
+        path = np.stack(paths).astype(np.float32)
         ok = A["why"] == "ok"
-        assert np.isfinite(A["s_t"][ok]).all()
-        np.savez(CR / a.pool / "lon_anchor.npz", names=tab["names"], s_t=np.where(ok[:, None], A["s_t"], np.nan).astype(np.float32), ok=ok, why=A["why"])
+        assert np.isfinite(A["s_t"][ok]).all() and (pidx[ok] >= 0).all() and np.isfinite(path).all()
+        f = CR / a.pool / NA.LABELS
+        assert not f.exists(), f"{f} exists: never overwritten"
+        np.savez(f, names=tab["names"], s_t=np.where(ok[:, None], A["s_t"], np.nan).astype(np.float32), ok=ok, why=A["why"], pidx=pidx, path=path)
         L_.mkdir(parents=True, exist_ok=True)
-        np.savez(L_ / "labels.npz", names=tab["names"], part=part, log=tab["log"], v0=tab["speed"].astype(np.float32), poses=poses, ok=ok, **A)
-        rec = dict(pool=a.pool, rows=N, s_rows=int(S.sum()), ok=int(ok.sum()), why=dict(Counter(A["why"][S].tolist()).most_common()),
-                   by_part={p: dict(s_rows=int((S & (part == p)).sum()), ok=int((ok & (part == p)).sum()),
-                                    why=dict(Counter(A["why"][S & (part == p)].tolist()).most_common())) for p in np.unique(part[S])},
+        np.savez(L_ / "labels_v2.npz", names=tab["names"], part=part, log=tab["log"], v0=tab["speed"].astype(np.float32), poses=poses, ok=ok,
+                 pidx=pidx, path=path, **A)
+        C = classes(tab["log"].astype(str), part)
+        K = kinds(A["s_t"], pidx, path, tab["speed"])
+        src = np.where(part == "cp", "pai", "nuplan")
+        cnt = lambda m: dict(Counter(A["why"][m].tolist()).most_common())  # noqa: E731
+        rec = dict(pool=a.pool, file=NA.LABELS, rows=N, s_rows=int(S.sum()), ok=int(ok.sum()), why=cnt(S),
+                   by_pool={q: dict(s_rows=int((S & (src == q)).sum()), ok=int((ok & (src == q)).sum()), why=cnt(S & (src == q))) for q in ("nuplan", "pai")},
+                   by_class={c: dict(s_rows=int((S & (C == c)).sum()), ok=int((ok & (C == c)).sum()), why=cnt(S & (C == c))) for c in sorted(set(C[S]))},
+                   by_kind={f"{q}/{k}": dict(rows=int((S & (src == q) & (K == k)).sum()), ok=int((ok & (src == q) & (K == k)).sum()),
+                                             why=cnt(S & (src == q) & (K == k))) for q in ("nuplan", "pai") for k in KINDS},
+                   by_part={p: dict(s_rows=int((S & (part == p)).sum()), ok=int((ok & (part == p)).sum()), why=cnt(S & (part == p))) for p in np.unique(part[S])},
                    dt_h_q=np.nanquantile(A["dt_h"][ok], [0.05, 0.25, 0.5, 0.75, 0.95]).round(2).tolist(),
-                   lag_note="dt_h = t_h - t: > 0 the ego is ahead of the human's schedule at this station, < 0 behind")
+                   lag_note="dt_h = t_h - t: > 0 the ego is ahead of the human's schedule at this station, < 0 behind",
+                   class_note="by_class: the cp scenes' class (scenes570.tsv), nuPlan rows 'nuplan'; by_kind (rows with a target): " + KIND_NOTE)
         RES.mkdir(parents=True, exist_ok=True)
-        (RES / "labels.json").write_text(json.dumps(rec, indent=1))
+        (RES / "labels_v2.json").write_text(json.dumps(rec, indent=1))
         run.summary.update(ok=rec["ok"], s_rows=rec["s_rows"])
         print(json.dumps(rec, indent=1))
 
 
-# ---------------------------------------------------------------- gate
-def term_np(poses, s_t, ok):
-    """The trainer's function (nr1_lon.terms on CPU) -> raw term (n,), d (n, 8)."""
+# ---------------------------------------------------------------- gate (supplement 1)
+def term_np(poses, s_t, ok, path, pidx):
+    """The trainer's function (nr1_anchor.terms on CPU) -> raw term (n,), d (n, 8) = projected progress - target (0 where not ok)."""
     import torch
-    import nr1_lon
+    n = len(poses)
     P = torch.as_tensor(np.nan_to_num(poses), dtype=torch.float32)
     st = torch.as_tensor(np.nan_to_num(s_t), dtype=torch.float32)
     okt = torch.as_tensor(ok)
-    v = torch.cat([nr1_lon.terms(P[i:i + 8192], st[i:i + 8192], okt[i:i + 8192]) for i in range(0, len(P), 8192)]).numpy()
-    xy = np.concatenate([np.zeros((len(P), 1, 2)), np.nan_to_num(poses)[..., :2]], 1)
-    sp = np.cumsum(np.hypot(*np.diff(xy, axis=1).transpose(2, 0, 1)), 1)
-    return v, sp - np.nan_to_num(s_t)
+    pt = torch.as_tensor(path)
+    pi = torch.as_tensor(np.maximum(pidx, 0))
+    v, d = np.zeros(n, np.float32), np.zeros((n, 8), np.float32)
+    for i in range(0, n, 8192):
+        sl = slice(i, i + 8192)
+        with torch.no_grad():
+            vv, dd = NA.terms(P[sl], st[sl], okt[sl], pt[pi[sl]], parts=True)
+        v[sl], d[sl] = vv.numpy(), dd.numpy() * ok[sl, None]
+    return v, d
 
 
 def cmd_gate(a):
-    import csv
-    z = dict(np.load(L_ / "labels.npz"))
+    z = dict(np.load(L_ / "labels_v2.npz"))
     ok, part = z["ok"], z["part"].astype(str)
     src = np.where(part == "cp", "pai", "nuplan")
+    C = classes(z["log"].astype(str), part)
+    K = kinds(z["s_t"], z["pidx"], z["path"], z["v0"])
     hum_ok = ok & np.isfinite(z["hum"]).all((1, 2))
-    vh, dh = term_np(z["hum"], z["s_t"], hum_ok)
+    vh, dh = term_np(z["hum"], z["s_t"], hum_ok, z["path"], z["pidx"])
     act_h = hum_ok & (np.abs(dh).max(1) > G1_ACTIVE)
-    vp, dp = term_np(z["poses"], z["s_t"], ok & np.isfinite(z["poses"]).all((1, 2)))
-    cls = {r["scene_id"]: r["cls"] for r in csv.DictReader(open(CP_TSV), delimiter="\t")}
-    C = np.array([cls.get(s, "?") if p == "cp" else "nuplan" for s, p in zip(z["log"].astype(str), part)])
-    seg_t = np.diff(np.c_[np.zeros(len(ok)), np.nan_to_num(z["s_t"])], axis=1) / NA.DT
-    seg_c = np.diff(np.c_[np.zeros(len(ok)), np.nan_to_num(z["hc8"])], axis=1) / NA.DT
-    stop = ok & (seg_t[:, -1] < 0.5)                                         # the anchored target ends standing
-    conflict = stop & (seg_c[:, -1] >= 2.0)                                  # ... while the human at this clock moved >= 2 m/s
-    goconf = ok & (np.nan_to_num(z["s_t"])[:, -1] >= 2.0) & (np.nan_to_num(z["hc8"])[:, -1] < 0.5)   # target moves >= 2 m, the clock human stands
-    act_p = ok & (np.abs(dp).max(1) > ACTIVE_M)
-    q = lambda x: np.quantile(x, [0.5, 0.9, 0.99]).round(4).tolist() if len(x) else []  # noqa: E731
-    g1 = dict(rows=int(hum_ok.sum()), labelled=int(ok.sum()), no_path_plan=int((ok & ~hum_ok).sum()), active=int(act_h.sum()),
-              share=float(act_h.sum() / max(hum_ok.sum(), 1)), line=G1_LINE, term_q=q(vh[hum_ok]),
-              by_src={s: dict(rows=int((hum_ok & (src == s)).sum()), share=float((act_h & (src == s)).sum() / max((hum_ok & (src == s)).sum(), 1)))
-                      for s in ("nuplan", "pai")})
+    pok = ok & np.isfinite(z["poses"]).all((1, 2))
+    vp, dp = term_np(z["poses"], z["s_t"], pok, z["path"], z["pidx"])
+    q = lambda x: np.quantile(x, [0.1, 0.5, 0.9, 0.99]).round(3).tolist() if len(x) else []  # noqa: E731
+    g1 = dict(rule="supplement 1: the human's path started at the ego (offset faded over max(8 m, 2 s x v0)), progress projected on his path",
+              rows=int(hum_ok.sum()), labelled=int(ok.sum()), active=int(act_h.sum()), share=float(act_h.sum() / max(hum_ok.sum(), 1)), line=G1_LINE,
+              term_q=q(vh[hum_ok]), by_src={s_: float((act_h & (src == s_)).sum() / max((hum_ok & (src == s_)).sum(), 1)) for s_ in ("nuplan", "pai")})
     g1["pass_"] = bool(g1["share"] <= G1_LINE)
-    rep = {}
-    for k in ["all", "nuplan", "pai"] + sorted(set(C[part == "cp"])):
-        m = ok & (np.ones(len(ok), bool) if k == "all" else (src == k) if k in ("nuplan", "pai") else (C == k))
-        d4 = dp[m, -1]
-        rep[k] = dict(rows=int(m.sum()), active=float(act_p[m].mean()) if m.any() else 0.0, fast=float((act_p[m] & (dp[m].max(1) > ACTIVE_M)).mean()) if m.any() else 0.0,
-                      slow=float((act_p[m] & (dp[m].min(1) < -ACTIVE_M)).mean()) if m.any() else 0.0, d4_q=q(d4), d4_mean=float(d4.mean()) if m.any() else 0.0,
-                      term_q=q(vp[m]), target_stop=int(stop[m].sum()), clock_conflict=int(conflict[m].sum()), go_conflict=int(goconf[m].sum()),
-                      dt_h_q=q(z["dt_h"][m]))
+    d4 = dp[:, -1]
+
+    def stats(m):
+        m = m & pok
+        n = int(m.sum())
+        f = lambda x: float(x[m].mean()) if n else 0.0  # noqa: E731
+        return dict(rows=n, target_longer=f(d4 < -ACTIVE_M), target_shorter=f(d4 > ACTIVE_M), within=f(np.abs(d4) <= ACTIVE_M),
+                    active=f(np.abs(dp).max(1) > ACTIVE_M), d4_q=q(d4[m]), term_q=q(vp[m]))
+    groups = {"all": np.ones(len(ok), bool), "nuplan": src == "nuplan", "pai": src == "pai"}
+    groups |= {f"pai/{c}": C == c for c in sorted(set(C[part == "cp"]))}
+    groups |= {f"{s_}/{k}": (src == s_) & (K == k) for s_ in ("nuplan", "pai") for k in KINDS[:4]}
+    rep = {k: stats(m) for k, m in groups.items()}
+    ge = z["gap_e"]                                                           # AF-front-relevant: rows with an ego lead on the path
+    lead = {}
+    for s_ in ("nuplan", "pai"):
+        for lo, hi in ((0, 15), (15, 30), (30, 61), (np.inf, np.inf)):
+            m = (src == s_) & ((ge >= lo) & (ge < hi) if np.isfinite(lo) else ~np.isfinite(ge))
+            lead[f"{s_}/gap {lo}-{hi} m" if np.isfinite(lo) else f"{s_}/no lead"] = stats(m)
     S = z["why"] != "not_s"
-    res = dict(G1=g1, G4="df.py bitcmp (results/lon_anchor/identity.json)", stored_plans=rep,
-               why={s: dict(Counter(z["why"][S & (src == s)].tolist()).most_common()) for s in ("nuplan", "pai")},
-               note="stored plans = nuPlan rows' served plans (rows meta `poses`), cp rows' model plans (`poses_model`, NTV0-L18-s0); "
-                    "d4 = plan 4 s arc - anchored target (m); active = max |d| > 0.5 m; reported, not gated")
+    why = {s_: dict(Counter(z["why"][S & (src == s_)].tolist()).most_common()) for s_ in ("nuplan", "pai")}
+    clock = {f"{s_}/{k}": dict(rows=int((S & (src == s_) & (K == k)).sum()), clock_go=int((S & (src == s_) & (K == k) & (z["why"] == "clock_go")).sum()),
+                               clock_stop=int((S & (src == s_) & (K == k) & (z["why"] == "clock_stop")).sum()))
+             for s_ in ("nuplan", "pai") for k in KINDS[:4]}
+    clock |= {f"pai/{c}": dict(rows=int((S & (C == c)).sum()), clock_go=int((S & (C == c) & (z["why"] == "clock_go")).sum()),
+                               clock_stop=int((S & (C == c) & (z["why"] == "clock_stop")).sum())) for c in sorted(set(C[part == "cp"]))}
+    res = dict(G1=g1, G4="df.py bitcmp (results/lon_anchor/identity.json)", stored_plans=rep, by_lead_gap=lead, why=why, clock_exclusion=clock,
+               kind_note=KIND_NOTE, note="stored plans = nuPlan rows' served plans (rows meta `poses`), cp rows' model plans (`poses_model`, NTV0-L18-s0); "
+               "d4 = projected 4 s progress - anchored target (m); target longer = d4 < -0.5 m (the term pushes faster), shorter = d4 > +0.5 m; "
+               "labelled rows after both exclusions; reported, not gated")
     RES.mkdir(parents=True, exist_ok=True)
-    (RES / "gate.json").write_text(json.dumps(res, indent=1))
-    Lm = [f"# LON-ANCHOR offline gates (G1 {'PASS' if g1['pass_'] else 'FAIL'})", "",
-          f"G1: the human's station-matched path (points on his logged path at s_e + s_t,j, in the row frame) as the plan, the trainer's term: "
-          f"{g1['active']} of {g1['rows']} labelled rows active (max |d| > {G1_ACTIVE} m) = {100 * g1['share']:.2f} % (line <= {100 * G1_LINE:.0f} %); "
-          f"term quantiles (50 / 90 / 99 %) {g1['term_q']}; nuPlan {100 * g1['by_src']['nuplan']['share']:.2f} %, PAI {100 * g1['by_src']['pai']['share']:.2f} %.",
-          "", "Stored plans against the anchored target (reported only):", "",
-          "| rows | n | active | plan too fast | plan too slow | d4 mean | d4 50 / 90 / 99 % | target ends standing | of those: human moving at the clock | target moves >= 2 m, clock human stands | dt_h 50 / 90 / 99 % |",
-          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for k, r in rep.items():
-        Lm.append(f"| {k} | {r['rows']} | {100 * r['active']:.1f} % | {100 * r['fast']:.1f} % | {100 * r['slow']:.1f} % | {r['d4_mean']:+.2f} | {r['d4_q']} | "
-                  f"{r['target_stop']} | {r['clock_conflict']} | {r['go_conflict']} | {r['dt_h_q']} |")
-    Lm += ["", f"Label outcomes (S rows): {json.dumps(res['why'])}", "", res["note"]]
-    (RES / "gate.md").write_text("\n".join(Lm) + "\n")
+    (RES / "gate_v2.json").write_text(json.dumps(res, indent=1))
+    pc = lambda x: f"{100 * x:.1f} %"  # noqa: E731
+    Lm = [f"# LON-ANCHOR offline gates, supplement 1 (G1 {'PASS' if g1['pass_'] else 'FAIL'})", "",
+          f"G1 (amended): the human's path started at the ego as the plan, the trainer's term (projected progress): {g1['active']} of {g1['rows']} "
+          f"labelled rows active (max |d| > {G1_ACTIVE} m) = {100 * g1['share']:.3f} % (line <= {100 * G1_LINE:.0f} %); term 10 / 50 / 90 / 99 % "
+          f"{g1['term_q']}; nuPlan {100 * g1['by_src']['nuplan']:.3f} %, PAI {100 * g1['by_src']['pai']:.3f} %.", "",
+          "Label outcomes (S rows): " + json.dumps(why), "", "Clock exclusion by pool and kind / class (S rows with a target):", "",
+          "| rows | S rows | clock_go | clock_stop |", "|:--|--:|--:|--:|"]
+    Lm += [f"| {k} | {v['rows']} | {v['clock_go']} | {v['clock_stop']} |" for k, v in clock.items()]
+    Lm += ["", f"Kinds: {KIND_NOTE}.", "", "Stored plans against the anchored target (labelled rows after both exclusions; reported only):", "",
+           "| rows | n | target longer (push faster) | target shorter (push slower) | within 0.5 m | active | d4 10 / 50 / 90 / 99 % |", "|:--|--:|--:|--:|--:|--:|--:|"]
+    Lm += [f"| {k} | {v['rows']} | {pc(v['target_longer'])} | {pc(v['target_shorter'])} | {pc(v['within'])} | {pc(v['active'])} | {v['d4_q']} |" for k, v in rep.items()]
+    Lm += ["", "By the ego's lead gap on the human's path (AF-front-relevant; rows whose lead is closer than the human's are already excluded):", "",
+           "| rows | n | target longer (push faster) | target shorter | d4 10 / 50 / 90 / 99 % |", "|:--|--:|--:|--:|--:|"]
+    Lm += [f"| {k} | {v['rows']} | {pc(v['target_longer'])} | {pc(v['target_shorter'])} | {v['d4_q']} |" for k, v in lead.items()]
+    Lm += ["", res["note"]]
+    (RES / "gate_v2.md").write_text("\n".join(Lm) + "\n")
     print("\n".join(Lm))
     if not g1["pass_"]:
         raise SystemExit(2)

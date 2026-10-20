@@ -2,7 +2,7 @@
 # LON-ANCHOR (plans/2026-10-20-lon-anchor-prereg.md): the station-anchored two-sided arc term (lib/nr1_anchor.py, rm_train --on-anchor W),
 # three doses + a same-step control, 1 000 steps from NTV0-L18-s0 on on1_JTCP (d402's merged pool) with the cp rows at half the S draw.
 # Box, repo root; every job through the GPU pool, ids in $L/jobs.txt, stages in $L/stages.txt. Env PRIO (11).
-#   lon_anchor.sh pre                labels -> gate (CPU): G1 + reported trigger statistics
+#   lon_anchor.sh pre                labels -> gate (CPU): G1 + reported trigger statistics (supplement 1: labels v2, gate_v2)
 #   lon_anchor.sh dry                the four training commands and their diffs against the control (only --tag, --on-anchor may differ)
 #   lon_anchor.sh chain <old rev>    weights (needs experiments/pai_fix/scenes/) -> identity (the control's command 60 steps eager, <old rev>
 #                                    vs this code) -> calibration (100 steps at W_PROBE, --diag-every 10) -> calib.json -> control + 3 arms ->
@@ -29,7 +29,7 @@ cmd() {  # cmd <arm>: the control's command; arms + --on-anchor <dose>
   local A=$1; [[ $A == C ]] && { base ${TAG[C]} 1000; return; }; echo "$(base ${TAG[$A]} 1000) --on-anchor $(dose ${DOSE[$A]})"; }
 case ${1:-} in
 pre)
-  [[ ! -e $DATA_DIR/runs/op_parity/cache/$POOL/lon_anchor.npz ]] || die "labels exist: never overwritten"
+  [[ ! -e $DATA_DIR/runs/op_parity/cache/$POOL/lon_anchor_v2.npz ]] || die "labels exist: never overwritten"
   git rev-parse --short HEAD > $L/code.txt
   l=$(sub lon-labels --vram 0.1 --cpu 32 --ram 120 --timeout-h 3 -- bash $ME labels) || exit 1
   g=$(sub lon-gate --after $l --vram 0.1 --cpu 8 --ram 64 --timeout-h 1 -- bash $ME gate) || exit 1
@@ -40,7 +40,7 @@ dry)
 chain)
   rev=${2:?old rev}; WT=$DATA_DIR/tmp/df_old_$rev; [[ -d $WT ]] || git worktree add --detach $WT $rev > /dev/null || exit 1
   for X in LONGG-old LONGG-new LONACAL-L18-s0 ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
-  [[ -f $RES/gate.json ]] && python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/gate.json'))['G1']['pass_'] else 1)" || die "G1 not passed"
+  [[ -f $RES/gate_v2.json ]] && python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/gate_v2.json'))['G1']['pass_'] else 1)" || die "G1 not passed"
   ls experiments/pai_fix/scenes/* > /dev/null 2>&1 || die "experiments/pai_fix/scenes/ missing: the exam exclusion is required"
   h=$(git rev-parse --short HEAD); echo $h > $L/code_chain.txt
   w=$(sub lon-weights --vram 0.1 --cpu 2 --ram 24 --timeout-h 1 -- bash $ME weights) || exit 1
@@ -68,7 +68,7 @@ train)   # train <arm>: refuses unless G1, identity and (arms) the calibration a
   A=$2; python3 - $RES $A <<'PY' || die "pre-checks failed: no training"
 import json, sys
 r, a = sys.argv[1], sys.argv[2]
-assert json.load(open(f"{r}/gate.json"))["G1"]["pass_"], "G1 failed"
+assert json.load(open(f"{r}/gate_v2.json"))["G1"]["pass_"], "G1 (supplement 1) failed"
 assert json.load(open(f"{r}/identity.json"))["identical"], "switch-off identity failed"
 assert a == "C" or json.load(open(f"{r}/calib.json"))["w1"] > 0, "no calibration"
 PY

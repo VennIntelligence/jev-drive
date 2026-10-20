@@ -72,3 +72,29 @@ JOINT-DAGGER（第 321 条，规则路径目标打掉「别撞」）。
 
 `lon_anchor.sh pre`（labels → gate），`lon_anchor.sh chain <旧提交>`（weights → 同一性 → 校准 → 4 训练 → inertia cf → report → 读数），作业 id 在
 `$DATA_DIR/runs/defect_fix/lon_anchor/jobs.txt`，阶段在 `stages.txt`。结果在 `experiments/defect_fix/results/lon_anchor/`。
+
+## 补记 1（2026-10-20 晚，主会话决定；写于 v2 标签 / 闸 / 任何训练输出之前）
+
+**起因（登记的 G1 读数，`results/lon_anchor/gate.md`）**：G1 按登记的构造 FAIL，激活 4.65 %（线 1 %；nuPlan 4.82 %、PAI 4.43 %）。读数后的诊断：
+激活行里 99.9 % 的 d_j 在 8 个 pose 上是同一个常数，等于「从自车原点跳到人线上」第一段弦长的多余部分（激活行 |e0| 中位 2.5 m；|e0| > 0.5 m 的行激活 22 %，
+≤ 0.5 m 的 0.1 %）；去掉这段后只剩 8 行（0.01 %）。即登记的测试 plan 在头 0.5 s 横跳上人线，这段横向位移被算成纵向弧长；项本身对约 20 % 偏离人线 > 0.5 m 的行
+也有同样的毛病（回线的横向运动多出弧长）。存档 plan 上另报告了站位对齐与时钟不一致的行：目标在 4 s 末站住而同一时钟的人在动 1 591 行，
+目标走 ≥ 2 m 而同一时钟的人站着 4 120 行（PAI 3 203）。
+
+三项改动（v1 标签文件 `lon_anchor.npz` 与 v1 闸文件保留不动；v2 写 `lon_anchor_v2.npz`、`labels_v2.json`、`gate_v2.{json,md}`）：
+
+1. **G1 改为从自车出发的人路径**：测试 plan = 人日志路径上 s_e + s_t,j 处的点，再沿路径左法向平移 e(s_t,j) = e0 × max(0, 1 − s_t,j / D)，D = max(8 m, 2 s × v0)
+   （= onp_geom.imit 的横向偏移淡出）。线不变：激活（max |d| > 0.5 m）≤ 1 %。不过 → 停。
+2. **项里的「进度」改为投影到人路径上的站位增量**（闸与训练同一函数）：p_j = plan 第 j 个 pose 在人路径（标签文件里的行坐标系折线，s_e − 5 … s_e + 95 m，
+   1 m 顶点，超出日志两端沿端点方向直线延伸）上的投影站位 − 原点的投影站位；d_j = p_j − s_t,j；其余不变（smooth L1 beta 0.5、8 个 pose 求和、双边）。
+   投影取在 `lon_only` 之后的 pose 上，所以梯度仍只沿各 pose 自身航向、不跨航向、不到 yaw；最近线段在 detach 的 pose 上选。横向回线 / 离线不再产生进度。
+   实现：`lib/nr1_anchor.py progress / station / terms`。
+3. **时钟不一致排除（唯一新增的排除）**：c_j = 人在同一日志时刻起的行程 S_h(t + 0.5 j) − S_h(t)。跳过：(a) clock_go：目标 4 s 走 ≥ 2 m 而 c_8 < 2 m
+   （同一时钟的人 4 s 平均 < 0.5 m/s，站着）；(b) clock_stop：目标最后 0.5 s 一步 < 0.5 m/s（站住）而同一时钟的人最后 0.5 s 一步 ≥ 0.5 m/s（在动）。
+   顺序：标签定义 → 前车排除 → 时钟排除。按池（nuPlan / PAI）与类报告去掉的行数：PAI 按场景类（stop_nolead / turn_sharp / launch / bend），
+   两池都按行类（launch：自车 t0 < 0.5 m/s；stop：目标最后一步 < 0.5 m/s；turn：人路径从 s_e 到 s_e + s_t,8 航向变化 ≥ 30°；其余 move）。
+
+另报告（不设线，`gate_v2.md`）：每池存档 plan 对目标「目标更长（项推快）/ 更短（推慢）/ 在 ±0.5 m 内」的份额；按自车前车间距分箱（0–15 / 15–30 / 30–60 m / 无前车）
+的同样份额（与 AF-front 相关）。主会话已接受 nuPlan 上「推快」的倾向（模型本来就偏慢）。
+
+臂、抽样（LONP，PAI-FIX 125 个场景、PAI 281、practice-pai 排除）、剂量规则、G4、inertia 读数与通过线都不变。
