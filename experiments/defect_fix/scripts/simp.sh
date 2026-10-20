@@ -28,7 +28,7 @@ base() {  # base <tag> <wfile> <steps> [jt.sh]: NTV0-L18-s0's command (jt.sh tra
   [[ $C == *"--init RB0-F-s0 "* && $C == *"--on-k 32 "* && $C == *"--warmup 50 "* && $C == *"--steps $3 "* && $C == *"w/$2.npz "* && $C == *"$LATF"* \
      && $C == *"--on-arc 0 "* ]] || die "unexpected command: $C"; echo "$C"; }
 simp() {  # simp <tag> <wfile> <steps> [dose]: the control's command without lat_onc / lat_soft / lat_side, + region, clear [+ LON-ANCHOR]
-  local C; C=$(base $1 $2 $3) || exit 1; echo "${C/$LATF/} --simp-region 1 --simp-clear 1${4:+ --on-anchor $4}"; }
+  local C; C=$(base $1 $2 $3) || exit 1; echo "${C/$LATF/} --simp-region 1 --simp-clear 1$([[ -n ${4:-} && ${4:-0} != 0 ]] && echo " --on-anchor $4")"; }
 cmd() { [[ $1 == N ]] && { base ${TAG[N]} ${WF[N]} 1000; return; }; echo "$(simp ${TAG[$1]} ${WF[$1]} 1000 ${2:?dose})$([[ $1 == F ]] && echo " --flat-brk $FLATF")"; }
 case ${1:-} in
 pre)
@@ -85,7 +85,17 @@ arms)
   r=$(sub simp-report --after $f --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME report) || exit 1
   l=$(sub simp-lbcf --after ${T_[N]},${T_[B]},${T_[F]} --vram 24 --cpu 16 --ram 96 --timeout-h 2 -- bash $ME lbcf) || exit 1
   k=$(sub simp-lbread --after $l --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME lbread) || exit 1
-  echo "$(date '+%F %T') arms (code $(git rev-parse --short HEAD), LON-ANCHOR dose $D): train ${T_[*]} cf $f report $r lead-break cf $l read $k" | tee -a $B/stages.txt ;;
+  x=(); for A in N A B C F; do for v in vl ag; do                             # supplement 4: the PAI-FIX screen, both serves, behind each training
+    o=$(AFTER=${T_[$A]} bash experiments/pai_fix/scripts/pai_fix.sh read ${TAG[$A]} $v "v t" | tail -1) || die "pai_fix read ${TAG[$A]} $v"
+    x+=(${o%% *}); echo "$o pai_fix-tax ${TAG[$A]}-$v" >> $B/jobs.txt; done; done
+  p=$(sub simp-paifix --after $(IFS=,; echo "${x[*]}") --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME paifix) || exit 1
+  echo "$(date '+%F %T') arms (code $(git rev-parse --short HEAD), LON-ANCHOR dose $D): train ${T_[*]} cf $f report $r lead-break cf $l read $k" \
+       "PAI-FIX tax ${x[*]} report $p" | tee -a $B/stages.txt ;;
+paifix)  # both serves: pai_fix.py report against NTV0-L18-s0 -> results/lon_anchor/simp_paifix_{vl,ag}.md (+ per-scene scores csv)
+  F_=$DATA_DIR/runs/pai_fix/facts; for v in vl ag; do
+    rd=(NTV0-L18-s0-$v=$F_/NTV0-L18-s0-$v.csv); for A in N A B C F; do rd+=(${TAG[$A]}-$v=$F_/${TAG[$A]}-$v.csv); done
+    .venv/bin/python experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref NTV0-L18-s0-$v --out $RES/simp_paifix_$v.md \
+      --scores $RES/simp_paifix_$v.csv > /dev/null || die "pai_fix report $v"; done; date '+%F %T' > $B/PAIFIX_DONE ;;
 weights) for x in 00:0 05:0.5 10:1.0; do $TR $LA weights --pool $POOL --base JT00S --share ${x#*:} --out SIMPW${x%%:*} --require-fix || exit 1; done ;;
 gate)    $TR $PY gate -- $(simp SIMPGATE SIMPW05 1000 | cut -d' ' -f3-) ;;
 flatlist)
@@ -107,7 +117,7 @@ r = sys.argv[1]
 assert json.load(open(f"{r}/simp_identity.json"))["identical"], "switch-off identity failed"
 assert json.load(open(f"{r}/simp_identity_F.json"))["identical"], "switch-off identity (flat history code) failed"
 assert json.load(open(f"{r}/simp_smoke.json"))["pass_"], "SIMP-F smoke failed"
-assert json.load(open(f"{r}/simp_gate.json"))["gate"]["pass_"], "SIMP gate failed"
+assert json.load(open(f"{r}/simp_gate_v2.json"))["gate"]["pass_"], "SIMP gate (supplement 4) failed"
 assert json.load(open(f"{r}/gate_v2.json"))["G1"]["pass_"], "LON-ANCHOR G1 failed"
 PY
   CMD="$(cmd $A $3)" || exit 1; echo "$(date '+%F %T') train ${TAG[$A]}: $CMD" | tee -a $B/stages.txt; exec $CMD ;;

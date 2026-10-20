@@ -159,3 +159,16 @@ tags = RB0-F-s0（编码帧、G0）、SIMPN1K（对照）、SIMPB1K（不拉平�
 **补记 2 闸的读数（写在这里备查，不改闸）**：人路径当 plan，region 激活 7.62 %、clear 3.94 %（线各 2 %），**FAIL**；同一批行上被替换的原项：
 道路 hinge 11.69 %、lat_onc 1.21 %、agent hinge 2.21 %、lat_side 2.41 %（`results/lon_anchor/simp_gate.md`）。即合并项在人路径上的触发不比它们替换的原项多
 （region 低于原道路 hinge；clear ≈ agent + side 之和），2 % 的线定在了现配方自身的水平以下。按登记，B 臂在主会话决定之前不训练（train 的前置检查读 simp_gate.json）。
+
+## 补记 4（10-20 晚，主会话决定；写于任何 B 训练输出之前）
+
+1. **A 按登记的闸关闭**（三档剂量 inertia 读数全 FAIL，`results/lon_anchor/inertia.md`），A 不做考场读数。
+2. **B 的人路径闸改写**（起因：补记 2 的线 2 % 低于现配方自身被替换项的水平；实测 `simp_gate.md`：region 7.62 %，被替换的道路 hinge 11.69 % + lat_onc 1.21 % = 12.90 %；
+   clear 3.94 %，agent hinge 2.21 % + lat_side 2.41 % = 4.62 %）。新线：同一批行上，人路径当 plan 时每个合并项的激活份额 **≤ 它替换的各项激活份额之和 + 1 个百分点**。
+   按已测的表计算（不重跑），`simp.py regate` → `results/lon_anchor/simp_gate_v2.{json,md}`；train 的前置检查改读这个文件。
+3. **B 不带 LON-ANCHOR**（剂量 0：臂命令里不出现 `--on-anchor`）。五个训练：对照 SIMPN1K、SIMP 份额 0 / 0.5 / 1.0（SIMPA / B / C1K）、SIMP-F（0.5 + 历史拉平），
+   1 000 步、seed 0，其余同补记 2 / 3；inertia 与 lead_break 读数照登记。
+4. **闭环筛选（PAI-FIX）由本 lane 提交**：每个检查点两种 serve，`pai_fix.sh read <TAG> vl "v t"` 与 `... ag "v t"`（各自排在该臂训练之后），
+   全部 10 个读数一起进池；读完后 `pai_fix.py report` 对 NTV0-L18-s0 的参照读数（`-vl` / `-ag`）→ `results/lon_anchor/simp_paifix_{vl,ag}.md`。
+   报告每臂 TARGET 均值与按类型的零分（overshoot / route-turn / offroad / AF-front / side），STOP / STOP-L / TURN 分开，GUARD，T281 一列，两种 serve。
+   PAI-FIX 的判读线由主会话定（`experiments/pai_fix/` 的登记）；本 lane 只报告。

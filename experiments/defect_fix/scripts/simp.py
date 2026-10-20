@@ -139,6 +139,28 @@ def cmd_gate(argv):
         raise SystemExit(2)
 
 
+TOL_V2 = 0.01                                        # supplement 4: merged term active share <= the sum of the replaced terms' shares + 1 pp
+
+
+def cmd_regate():
+    """Supplement 4's amended human-path rule on the measured table (simp_gate.json, no re-run) -> simp_gate_v2.{json,md}."""
+    G = json.load(open(RES / "simp_gate.json"))
+    h = G["tables"]["human"]
+    sh = lambda k: h[k]["all"]["active"]  # noqa: E731
+    r = dict(region=sh("region"), region_cap=sh("old_road") + sh("old_onc") + TOL_V2, clear=sh("clear"), clear_cap=sh("old_agent") + sh("old_side") + TOL_V2)
+    r["pass_"] = bool(r["region"] <= r["region_cap"] and r["clear"] <= r["clear_cap"])
+    out = dict(gate=r, rule="supplement 4: on the human path (tab fut), each merged term's active share <= the sum of the active shares of the terms it "
+               "replaces on the same rows + 1 pp (region: road hinge + lat_onc; clear: agent hinge + lat_side)", source="simp_gate.json")
+    (RES / "simp_gate_v2.json").write_text(json.dumps(out, indent=1))
+    L = [f"# SIMP human-path gate, supplement 4: {'PASS' if r['pass_'] else 'FAIL'}", "",
+         f"- region {100 * r['region']:.2f} % <= road + onc + 1 pp = {100 * r['region_cap']:.2f} %",
+         f"- clear {100 * r['clear']:.2f} % <= agent + side + 1 pp = {100 * r['clear_cap']:.2f} %", "", out["rule"]]
+    (RES / "simp_gate_v2.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+    if not r["pass_"]:
+        raise SystemExit(2)
+
+
 LB_RISE, LB_FOL = 0.10, 0.05                         # supplement 3: BRK clear rise vs the control >= 0.10 (CI low > 0); FOL change within 0.05
 
 
@@ -187,6 +209,9 @@ def cmd_leadread(arm, ctl, ref):
 
 
 if __name__ == "__main__":
+    if sys.argv[1] == "regate":
+        cmd_regate()
+        raise SystemExit(0)
     if sys.argv[1] == "leadread":
         cmd_leadread(*sys.argv[2:5])
         raise SystemExit(0)
