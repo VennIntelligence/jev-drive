@@ -501,7 +501,8 @@ def cmd_partner(a):
     from jevdrive.data import splits
     S = [r["scene_id"] for r in csv.DictReader(open(a.scenes), delimiter="\t")]
     gap_q = {r["scene_id"]: float(r["exam_gap_s"]) for r in csv.DictReader(open(a.queue))}
-    E = {n: sorted(splits.load(f"{DS}/{n}")) for n in ("test281", "curated-val")}
+    t281 = set(splits.load(f"{DS}/test281"))
+    E = {"test281": sorted(t281), "curated-val": sorted(set(splits.load(f"{DS}/curated-val")) - t281)}   # curated-val holds test281: val160 = the rest
     X = {g: {s: _clock(a.meta, s) for s in ss} for g, ss in E.items()}
 
     def best(c, grp):
