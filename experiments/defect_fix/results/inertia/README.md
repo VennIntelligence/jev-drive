@@ -17,6 +17,18 @@ effect comes through the frames, and only 5-9 % through NTV0's ego-input row. RB
 
 In A0's stored decisions on the 23 overrun scenes, the plan never contains a stop on the approach. Its 4 s end point moves forward
 with the ego (16 of 20 scenes; "between" in 4, held in place in none). Only 47db2eb6 holds its plan end at the stop point and then lets go.
+In the 10 scenes where A0 does stop at the human's point, the planned stop is fixed in the world (5 fixed, 5 not judged, 0 receding).
+
+**Stage 1 (NTV0's own states on the d381 scenes, and the human states H) confirms it.** The re-roll reproduces A0 in 54 of 54 scenes.
+- Own states: stop ratio 0.94, turn ratio 0.98, open-road copy 0.80. On the 20 overrun scenes the plan's stop end lands a median 10 m past
+  the human's stop point, and moves +6.8 m per +20 %.
+- Human states: stop ratio 0.76, turn 0.89, copy 0.83. Inertia here too, but the served plan ends near the human's stop (+0.7 m), because
+  the frames show the human slowing.
+- Frames carry 91-94 % of the effect again.
+
+**Supplement 4: the copying is already in shipped Cinque (P0).** P0 has no ego input. Its frame channel alone matches RB0-F-s0's total
+response (stop: -0.14 m [-0.38, +0.12]) and exceeds RB0's frame channel (+0.67 m [+0.41, +0.97]). The base training moved part of the
+copying into the ego row; it did not create or enlarge it.
 
 ## Data and what changed (read before the numbers)
 
@@ -85,11 +97,17 @@ G is d375's 4 s-arc gain: 1 means the plan continues the input speed exactly.
 **Data.**
 - 20 of the 23 scenes have an approach. In 095cf563 and 4e4a2a51 no decision has the human's stop within 60 m. 3fe2bac8 drops out with the window fix:
   its stop point is at the start of its log, about 0.2 m in, so it has no approach.
-- Six controls: the human ends still, there is no lead at the rest point, and A0 scores 1.0.
+- Controls. The first six (now `control_v1`) were chosen at scene level: the human ends still, no lead at the rest point, A0 scores 1.0.
+  Corrected 10-20 (supplement 3): they were not stops by the model.
+- The proper controls are 10 scenes where A0 scores 1.0, the human stops, there is no lead, and A0 rests for >= 2 s within [-8, +4] m of
+  the human's stop point (`scenes_s1.csv` stop_ctrl).
 
 **Registered read.**
-- Plans with a stop point (< 0.5 m/s) appear in fewer than 10 % of approach decisions in **20 / 20 overrun scenes and 6 / 6 controls**.
-- So the class is **"never appears"** everywhere: 0 receding, 0 fixed, 0 let-go.
+- Overrun scenes: a plan with a stop point (< 0.5 m/s) appears in fewer than 10 % of approach decisions in **20 / 20**. So the class is
+  **"never appears"**: 0 receding, 0 fixed, 0 let-go.
+- **Proper stop controls (10): 5 fixed (slopes -0.36 to +0.25), 5 not judged, 0 receding, 0 never.** When A0 stops at the human's point,
+  its planned stop stays in place in the world. Their approach speed is a median 3.7 m/s, against 10.6 m/s in the overrun scenes.
+- `control_v1` (6): 6 never.
 - Before the window fix, the read was 19 / 21 "never" and 2 not judged, in [recede_prefix.csv](recede_prefix.csv). The bug: past the log end,
   the ego's station is clamped at H.
 
@@ -97,6 +115,7 @@ G is d375's 4 s-arc gain: 1 means the plan continues the input speed exactly.
 - **16 / 20 overrun scenes: the end point moves with the ego** (slope >= 0.7).
 - **4 / 20 are "between"** (127c4f85, 47db2eb6, 62cfe9d3, fc9fde87; slope 0.43-0.66).
 - **0 / 20 are held in place.**
+- Proper stop controls: 6 pinned, 1 between, 1 recedes (slope 0.71, at the line), 2 too short to judge. `control_v1`: 6 / 6 recede.
 
 Median over overrun decisions, binned by the ego's distance to H:
 
@@ -115,10 +134,10 @@ speed rises again inside 20 m.
 - fc9fde87 dips to 1.7 m/s about 20 m out and then lets go the same way. It is not counted, because it holds for less than 1 s.
 - The other scenes never hold. Their minimum terminal speed is 3-14 m/s, except 127c4f85, 62cfe9d3 and 9b6c68b4 at 1.5-1.9 m/s.
 
-**The controls are not "the model stops" cases.**
-- In all 6 controls the ego reaches H (the log end) at 5-9 m/s, and the plan end recedes there too (6 / 6).
-- Their score of 1.0 comes from the scorer's end-of-route handling (probably time or log end), not from braking.
-- So A0 has no clean no-lead stop control.
+**Correction (10-20, supplement 3).** This paragraph first said that "the controls are not 'the model stops' cases" and that "A0 has no clean
+no-lead stop control". The first half holds for the six scene-level controls (`control_v1`): their ego reaches H (the log end) at 5-9 m/s, and
+they score 1.0 by the scorer's end-of-route handling. The second half was wrong. My scene-level filter missed the 10 scenes above, in which
+A0 does stop at the human's point.
 - Per-scene series (decision k, s_e, stop station, E, terminal speed, H): [recede.json](recede.json) `series`.
 
 ## Reading
@@ -154,21 +173,108 @@ is then a speed problem: entry too fast for the controller and MPC. This is cons
 
 ## Limits and uncertainty
 
-- **Not NTV0's states on the 23 / 11 failure scenes.** These are RSG's states on practice scenes. The cue strengths and the speed mix may
-  differ. STOP-line has only 6 scenes (underpowered). TURN has 22 scenes, and its W/B arms 20.
+- **P160 is RSG's states on practice scenes.** There, STOP-line has only 6 scenes (underpowered), and TURN 22 (20 with W/B).
+- **Stage 1 covers NTV0's own states and the human states on the d381 scenes.** Own-state TURN has 14 scenes (underpowered), and the group
+  splits are descriptive.
 - **The frame stretch is out of distribution.** Pair spacings of 0.1 / 0.3 s were never trained. Stretching also speeds up or slows down
   other agents and signals: there are none in STOP / OPEN by the windows, but lights still change. Its size matches d375's in-distribution
   warp on nuPlan (frame gain 0.66 there, 0.67 here), which supports it, but this is still a single open-loop decision.
 - **The STOP line ΔS > 3 m partly follows mechanically from censoring.** 97 % of plans have no stop, so S is the 4 s arc. The registered
   auxiliary ratio (0.89) is the more informative number, and it gives the same verdict.
-- **Supplement 1's controls are invalid as controls** (see above). Its "never appears" result rests on the < 0.5 m/s stop definition. The
-  end-point read is exploratory and was added after the registered result.
+- Supplement 1's first controls were wrong. The proper ones are above. The overrun "never appears" result rests on the < 0.5 m/s stop
+  definition. The end-point read is exploratory and was added after the registered result.
 
-## Next (needs the user's word)
+## Stage 1: NTV0's own states and the human states on the d381 scenes (supplement 3)
 
-**Stage 1.** Re-roll A0 (NTV0-L18-s0 + ACC + GAP, `KEEP_ASL=1 PAI_DUMP=100000`, `pai_box.sh` unchanged), then `onp_rows` to get row
-files in P160's format. Then run `inertia.py cf` with `ROWS` pointed at them.
-- Precedent, 10-19 A0R: 8 chunks took about 70 min wall (about 2 card-hours at 4 reads per card); rows took 6 min (24 CPU) and the cache 6 min.
-  It needed about 26 GB transient disk before cleanup.
-- A list of only the 23 + 11 + controls scenes is about 2 chunks: about 0.5 card-hours and about 7 GB.
-- The H states (d381) need the same dump on `pai_gap.sh`'s H read.
+**What ran.**
+- The main session approved Stage 1 through the coordinator.
+- 54 scenes (`scenes_s1.csv`): 23 overrun, 11 straight-at-turn, 10 stop controls, 10 turn controls (A0 1.0, stratum turn, >= 45°).
+- Own read: A0's exact configuration (VCONT + LEAD + ACC + GAP 0.7,2.7, steering weight 10, CONC 4, ALPASIM_FAST=1) plus
+  `PAI_DUMP=100000 KEEP_ASL=1`, at 14 scenes per chunk.
+- H read: `pai_gap.sh`'s log-replay configuration on the same chunk lists, with the same dumps.
+- Then `onp_rows`, then `inertia.py cf` unchanged, with `--gate-tag NTV0-L18-s0`.
+- Compute: 8 read stacks of about 10.5 min each (1.4 stack-hours, about 0.5 card-hours), plus two 4-min cf jobs.
+- Cleanup: the rollout.asl files and frame dumps were deleted after the row files were built. Kept: row files OWN 3.0 GB and HUM 2.9 GB in
+  `$DATA_DIR/runs/defect_fix/inertia/s1/rows/` until this result is accepted; the read dirs are now 73 / 80 MB.
+
+**Gates.**
+- Parity on 47db2eb6 alone: score equal, and the plan is bit-identical over all 199 decisions (max difference 0.0 m).
+- Full own read: 54 / 54 scenes have the same score as A0 and a plan within 0.15 m over the first 50 decisions (`parity_own.json`).
+  So the overrun and turn groups are A0's own failures.
+- G0: own rows 99.8 % within 2 fp16 steps (568 rows), H rows 99.6 % (791 rows). Both pass.
+
+**Registered cells (NTV0-L18-s0; all 54 scenes pooled by window).** Files: [report_s1_own.md](report_s1_own.md), [report_s1_hum.md](report_s1_hum.md).
+
+| states | window | rows (scenes) | ΔS_R | ΔS_W | ΔS_B per +20 % | G_B | ratio | plan stop / end - human stop (F, median) | verdict |
+|---|---|--:|--:|--:|--:|--:|--:|--:|---|
+| own | STOP | 167 (28) | +0.29 | +5.18 | **+5.50 [+4.48, +6.58]** | 0.78 | **0.94** | **+3.5 m** | inertia |
+| own | STOP-line | 79 (12) | +0.33 | +4.72 | +5.06 | 0.75 | | +2.8 m | |
+| own | TURN | 100 (14, underpowered) | +0.36 | +4.55 | +4.87 | 0.78 | 0.98 | | inertia (underpowered) |
+| own | OPEN | 161 (27) | +0.32 | +6.81 | +7.20 | 0.80 | slope 0.78 | | copy |
+| H | STOP | 198 (28) | +0.21 | +3.70 | **+3.89 [+3.37, +4.45]** | 0.65 | **0.76** | **+0.6 m** | inertia |
+| H | STOP-line | 85 (12) | +0.22 | +3.74 | +3.97 | 0.66 | | -0.2 m | |
+| H | TURN | 144 (18) | +0.33 | +3.38 | +3.68 | 0.75 | 0.89 | | inertia |
+| H | OPEN | 272 (28) | +0.39 | +5.71 | +6.18 | 0.84 | slope 0.81 | | copy |
+
+- Row share for NTV0: 6-7 % on own states, 6-9 % on H. RB0 / RSG: 14-25 %.
+- The verdicts are the same for RB0-F-s0 and RSG-L18-s0 on both state sets.
+- Plan v24 minus the human's at the same station: own STOP +1.99 m/s, H STOP +0.54 m/s.
+
+**By scene group (descriptive, not registered; NTV0, B channel, STOP / TURN windows with W/B usable).** File: `extra_p0_groups.json`.
+
+| states | group | STOP rows (scenes) | ΔS_B per +20 % | G_B | plan end - human stop | ego speed |
+|---|---|--:|--:|--:|--:|--:|
+| own | overrun | 109 (20) | **+6.8 [+5.7, +8.0]** | **0.83** | **+10.1 m** | 10.3 m/s |
+| own | stop control | 46 (8) | +2.5 [+1.7, +3.1] | 0.55 | -0.4 m | 5.4 m/s |
+| H | overrun scenes | 137 (20) | +4.3 [+3.9, +5.0] | 0.67 | +0.7 m | 8.1 m/s |
+| H | stop control scenes | 49 (8) | +2.6 [+1.8, +3.4] | 0.57 | +0.3 m | 5.0 m/s |
+
+| states | TURN group | rows (scenes) | ΔS_B | G_B |
+|---|---|--:|--:|--:|
+| own | turn fail | 43 (6) | +4.1 | 0.71 |
+| own | turn control | 42 (5) | +5.3 | 0.83 |
+| H | turn fail | 74 (10) | +3.1 | 0.73 |
+| H | turn control | 49 (5) | +4.6 | 0.76 |
+
+**Reading.**
+- On its own overrun approaches, NTV0 at about 10 m/s plans to end about 10 m past the human's stop point, and moves that end +6.8 m per
+  +20 % of speed, which is near pure continuation (G 0.83).
+- On the same scenes from human states, the frames show the human's slower, braking motion. The plan is still speed-led (G 0.67), but
+  lands at the human's point.
+- Where A0 stops (the controls), it approaches at about 5 m/s, and the copying is weaker (G 0.55, still about 2.5 m per +20 %).
+- So the overruns are the high-speed, high-copy end of one speed-following plan. They are not a different mechanism.
+- Turn failures do not copy more than well-taken turns (G 0.71 against 0.83 on own states; 5-6 scenes each). The under-turn is not explained
+  by a larger speed copy at the turn. It goes with the ego's higher entry speed, which d381 / d403 already showed.
+
+## Supplement 4: shipped Cinque P0 against RB0-F-s0 (frame channel, P160 rows)
+
+**What ran.**
+- `cf --tags P0,RB0-F-s0,RSG-L18-s0`. P0's own network encoded the frames, and G0 matched the earlier run exactly (99.6 %, the same
+  p99 / max), so the encoders are the same.
+- Frame stretch at the registered 0.5 / 1.5x, linearised to each +20 %. The coordinator asked for 0.6-1.4x, but only 0.5 / 1.5 are exact
+  at 10 Hz.
+- File: [report_p160_p0.md](report_p160_p0.md); paired differences in `extra_p0_groups.json`.
+
+| window | P0 ΔS_W | P0 G_W | RB0 ΔS_W / ΔS_B | RB0 G_W / G_B | P0 W - RB0 W (ΔS) | P0 W - RB0 B (ΔS) | P0 W - RB0 B (G) |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| STOP | +4.04 | 0.70 | +3.37 / +4.18 | 0.59 / 0.73 | +0.67 [+0.41, +0.97] | -0.14 [-0.38, +0.12] | -0.02 [-0.07, +0.02] |
+| NS | +6.46 | 0.81 | +5.26 / +6.65 | 0.66 / 0.83 | +1.20 [+0.90, +1.49] | -0.19 [-0.40, +0.03] | -0.02 [-0.05, +0.00] |
+| TURN | +3.83 | 0.75 | +2.96 / +3.94 | 0.58 / 0.77 | +0.87 [+0.70, +1.04] | -0.10 [-0.31, +0.11] | -0.02 [-0.06, +0.02] |
+| OPEN | +10.86 | 0.86 | +8.98 / +10.26 | 0.71 / 0.82 | +1.89 [+1.68, +2.09] | +0.60 [+0.41, +0.78] | +0.05 [+0.03, +0.06] |
+
+**Registered verdicts for P0:** STOP inertia (ratio 0.87), TURN inertia (0.87, Δhead20 -0.04°), OPEN copy (0.84).
+
+**Reading against supplement 4's three cases.**
+- The registered W-against-W difference is not in any of the three cases as written: P0 is significantly larger than RB0, not smaller.
+- The nearest reading is **"already in shipped Cinque"**. P0 copies speed by the registered rules, and RB0's total equals P0's frame-only
+  response (the CI includes 0 on STOP / NS / TURN).
+- RB0's training moved about 20 % of the copying from the frames into the ego row. It neither created it nor enlarged it. On open road,
+  P0 copies slightly more (+0.05 G).
+- So the 2 Hz keyframe + warp training is not the origin.
+- The lineage gap (P0 native AF-front 16 against NTV0's 43, d405) therefore does not come from more speed copying in NTV0's plan. Per d405 it
+  more likely comes from NTV0's plan not following leads. This probe did not test leads: STOP / OPEN exclude them.
+- P0's served plan also sits further short of the human's stop at served speed (-2.9 m against RB0 -0.8 m on P160 STOP).
+
+**Effect on the training proposal.** The proposal stands, and is stronger. The speed copy is a property of the pretrained openpilot plan.
+It is not something our base training added that could be removed. It has to be trained out on purpose, with frame-stretch states and
+stop-preserving labels.

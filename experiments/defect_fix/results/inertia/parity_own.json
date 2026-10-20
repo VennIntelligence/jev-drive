@@ -1,0 +1,434 @@
+{
+ "clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 197,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-0a228e44-2e22-40fa-a4da-9dcded392963": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-127c4f85-a5db-4920-9813-7970dcd6ebdb": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-2466266e-73bd-4eb4-b881-4e56ab62e0a7": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-2bbf1efc-55e9-4d87-bf74-0740353e8268": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-2d10a08d-2f60-49fe-94e8-9d2797a289d2": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-35e082a4-8543-4fce-ac06-006b2da0f144": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 187,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-403d558a-788a-4c46-a525-d8faabc9c417": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 167,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-47db2eb6-a299-4469-a3ca-e5539e8763a0": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-4cb7f7ac-edf4-4857-b841-2d0f46eb43f7": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-52003cee-c163-41b2-9bc7-7bf4cc46d505": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-559d4ad6-aed7-4065-b25c-cff64aba28c0": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 197,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-6027da62-8d21-4895-a583-1de455ea9803": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-60cc35db-1c6f-4aef-b86f-ffca69fbc3cb": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-65907a2b-e934-4920-9580-c8f14fee5164": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-7d16a9a9-e4c6-4cc1-be75-507c64b0bb90": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-87a3b6d4-fd0f-487f-b409-f8ef2fe53681": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-8a143cb2-4805-452c-97a2-8461062def2d": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-9827beca-da31-4711-bc94-9a807091c0b9": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-9b6c68b4-1f13-46ec-a2cd-5023a8e9341d": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-9f8acd00-e8f5-467a-867d-b205f8d4d75d": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 197,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-a100665e-9a77-4778-99df-19f6af19a196": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 200,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-a309e228-26e1-423e-a44c-cb00aa7378cb": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-ba40be62-0903-41ec-8d2f-040c79c149bd": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-bc309fd6-f660-43eb-84aa-c514bffa305e": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-c4100c5d-aa42-4e68-a7e8-1704768a453d": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-c4a58f83-eeba-4f43-a5b6-6075b7a8437e": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-db53f106-deda-49d6-828e-8fe911e82d0e": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-dc401449-4b7b-42da-86a1-76b903e2290d": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-dd0f84df-9be3-4e13-91ad-28b83a8669a3": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-e0f6ebe1-ce10-4a1b-ae88-102479303fd4": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 197,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-e904e9c0-9c48-4635-9611-2250d5527d43": {
+  "score_a0": 1.0,
+  "score": 1.0,
+  "decisions": 197,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 199,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ },
+ "clipgt-fc9fde87-6b71-49ff-baad-2ac992e7e034": {
+  "score_a0": 0.0,
+  "score": 0.0,
+  "decisions": 198,
+  "max_d": 0.0,
+  "first_k_over": null,
+  "pass_": true
+ }
+}

@@ -17,7 +17,8 @@ index: STAND-B (d391): half-dose B2 STANDFMXH-L18-s1 is the nuPlan native candid
   (389; overspeed and front collisions). STAND pilot: decision 388, [results/stand/](results/stand/README.md).
 - INERTIA (10-20, diagnosis; [results/inertia/](results/inertia/README.md)): the plan's stop and turn speed follow the ego's input speed (0.89 / 0.92 of
   the free-road response). About 90 % of that comes through the frames; the ego row carries 5-9 % for NTV0. RB0 is the same, so it comes from the base.
-  On A0's overrun approaches the plan never holds a stop: its 4 s end point moves with the ego.
+  On A0's overrun approaches the plan never holds a stop: its 4 s end point moves with the ego. Stage 1 confirms this on NTV0's own states
+  (overrun: plan end +10 m past the human's stop, G 0.83) and on human states (G 0.67). Shipped P0 copies speed as much (supplement 4).
 - The "Conclusion" and "Result 19:00" paragraphs below are the 10-17 NR1 state. RSG-L18-s0 was still the pick then; the two candidates
   above replace it.
 
