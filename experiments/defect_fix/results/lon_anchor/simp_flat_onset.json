@@ -1,0 +1,28 @@
+{
+ "rows_total": 103288,
+ "rows_v2": 78144,
+ "onset": 38509,
+ "causes": {
+  "lead": 12670,
+  "stop": 1608,
+  "curve": 2309,
+  "other": 21922
+ },
+ "hist_decel": 21864,
+ "by_shard": {
+  "0": 3259,
+  "1": 3243,
+  "2": 3124,
+  "3": 3228,
+  "4": 3202,
+  "5": 3164,
+  "6": 3180,
+  "7": 3184,
+  "8": 3257,
+  "9": 3148,
+  "10": 3270,
+  "11": 3250
+ },
+ "hist_decel_share": 0.5677633799890934,
+ "rule": "v0 >= 2 m/s and (v0 - v4 >= 1 m/s or >= 0.2 v0), v4 = the last 0.5 s step of tab fut; causes in order lead (lead_break nav BRK) / stop (v4 < 0.5) / curve (|heading change| >= 30 deg) / other"
+}

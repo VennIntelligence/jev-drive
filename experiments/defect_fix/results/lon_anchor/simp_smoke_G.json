@@ -1,0 +1,120 @@
+{
+ "pass_": true,
+ "scalars": {
+  "pool_held/simp_region_mean": [
+   0.091,
+   0.0893
+  ],
+  "pool_held/simp_region_pos": [
+   0.0952,
+   0.0894
+  ],
+  "pool_held/simp_clear_mean": [
+   0.131,
+   0.1222
+  ],
+  "pool_held/simp_clear_pos": [
+   0.1104,
+   0.1094
+  ],
+  "pool_fit/simp_region_mean": [
+   0.1996,
+   0.1974
+  ],
+  "pool_fit/simp_region_pos": [
+   0.0918,
+   0.0889
+  ],
+  "pool_fit/simp_clear_mean": [
+   0.1402,
+   0.1321
+  ],
+  "pool_fit/simp_clear_pos": [
+   0.0972,
+   0.0952
+  ],
+  "dev/ade": [
+   0.5276,
+   0.5951
+  ],
+  "dev/ade_nomem": [
+   0.5431,
+   0.6065
+  ],
+  "loss/flat/rows": [
+   23.4,
+   22.44,
+   24.6
+  ],
+  "loss/grad/clip": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "loss/grad/global": [
+   13.9488,
+   12.3213,
+   13.5315
+  ],
+  "loss/grad/imit": [
+   11.3571,
+   8.5453,
+   8.0356
+  ],
+  "loss/grad/nav_hinge": [
+   1.0931,
+   2.5473,
+   0.4772
+  ],
+  "loss/grad/simp_clear": [
+   13.5821,
+   4.6452,
+   4.4955
+  ],
+  "loss/grad/simp_region": [
+   0.4997,
+   5.0459,
+   2.7975
+  ],
+  "loss/on/simp_clear_ho": [
+   0.0561,
+   0.0579,
+   0.0487
+  ],
+  "loss/on/simp_clear_mean": [
+   0.1308,
+   0.1336,
+   0.1168
+  ],
+  "loss/on/simp_clear_pos": [
+   0.0975,
+   0.1037,
+   0.0969
+  ],
+  "loss/on/simp_clear_posmean": [
+   1.4946,
+   1.3076,
+   1.2045
+  ],
+  "loss/on/simp_region_ho": [
+   0.1493,
+   0.0336,
+   0.2079
+  ],
+  "loss/on/simp_region_mean": [
+   0.3503,
+   0.0795,
+   0.5184
+  ],
+  "loss/on/simp_region_pos": [
+   0.085,
+   0.0925,
+   0.0625
+  ],
+  "loss/on/simp_region_posmean": [
+   8.7231,
+   0.7835,
+   6.9675
+  ]
+ }
+}

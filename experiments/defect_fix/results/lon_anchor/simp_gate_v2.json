@@ -1,0 +1,11 @@
+{
+ "gate": {
+  "region": 0.0762308647083161,
+  "region_cap": 0.13899471245656173,
+  "clear": 0.03935014673728764,
+  "clear_cap": 0.05623686087434378,
+  "pass_": true
+ },
+ "rule": "supplement 4: on the human path (tab fut), each merged term's active share <= the sum of the active shares of the terms it replaces on the same rows + 1 pp (region: road hinge + lat_onc; clear: agent hinge + lat_side)",
+ "source": "simp_gate.json"
+}

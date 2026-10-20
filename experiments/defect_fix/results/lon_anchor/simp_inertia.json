@@ -1,0 +1,84 @@
+{
+ "report": "simp",
+ "ctl": "SIMPN1K-L18-s0",
+ "arms": {
+  "SIMPN1K-L18-s0": {
+   "stop_ratio": 0.8924745781052577,
+   "turn_ratio": 0.9452304151982895,
+   "open_v24": 0.7780148702456989,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "SIMPA1K-L18-s0": {
+   "stop_ratio": 0.887454306346354,
+   "turn_ratio": 0.9381735065368003,
+   "open_v24": 0.7891120039145568,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "SIMPB1K-L18-s0": {
+   "stop_ratio": 0.8613701149241868,
+   "turn_ratio": 0.9056954231629187,
+   "open_v24": 0.7897488136014705,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "SIMPC1K-L18-s0": {
+   "stop_ratio": 0.8500863446575994,
+   "turn_ratio": 0.8953048763139313,
+   "open_v24": 0.7919806646022806,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "SIMPF1K-L18-s0": {
+   "stop_ratio": 0.8517468330172642,
+   "turn_ratio": 0.8933299829995988,
+   "open_v24": 0.7909744333955971,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "NTV0-L18-s0": {
+   "stop_ratio": 0.8949043954839871,
+   "turn_ratio": 0.9208861196803877,
+   "open_v24": 0.7756524704014788,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "RB0-F-s0": {
+   "stop_ratio": 0.8785990095088547,
+   "turn_ratio": 0.9415760988830386,
+   "open_v24": 0.797078129535995,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "RSG-L18-s0": {
+   "stop_ratio": 0.8864418630351998,
+   "turn_ratio": 0.9398568523271701,
+   "open_v24": 0.7947088871460553,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  }
+ },
+ "lines": {
+  "stop": 0.6,
+  "turn": 0.6,
+  "drop": 0.15,
+  "open": 0.7
+ }
+}
