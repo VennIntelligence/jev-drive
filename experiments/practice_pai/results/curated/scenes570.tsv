@@ -1,0 +1,571 @@
+scene_id	cls	sel_rank	tranche	box_rank	strength	drive_g	exam_gap_s	night	country
+clipgt-10e91619-c0e2-4e87-abbb-40791a7ecb6b	stop_nolead	1	1	175	20.041184403026048	clipgt-10e91619-c0e2-4e87-abbb-40791a7ecb6b	inf	True	United States
+clipgt-646a328d-b6c4-4e3f-b7bb-0509bed28fa7	turn_sharp	2	1	317	253.91937702538556	clipgt-646a328d-b6c4-4e3f-b7bb-0509bed28fa7	inf	False	Germany
+clipgt-4cfd325d-76ec-4ee4-abb3-d7b174ea67dc	stop_nolead	3	1	172	17.7965383510046	clipgt-4cfd325d-76ec-4ee4-abb3-d7b174ea67dc	inf	False	United States
+clipgt-41d714e0-3524-4f96-a05c-d15337a083fa	launch	4	1	516	18.640760242028435	clipgt-41d714e0-3524-4f96-a05c-d15337a083fa	inf	True	United States
+clipgt-20b155e0-c26e-4fba-9d34-21ca609cbba6	stop_nolead	5	1	40	20.015251274606594	clipgt-38e9aaaa-1a5e-4b6e-8991-ec266bdedc78	inf		
+clipgt-bb4394e7-7485-43f3-877c-f83e40d48a13	turn_sharp	6	1	294	258.9457380216332	clipgt-bb4394e7-7485-43f3-877c-f83e40d48a13	inf	False	United States
+clipgt-1920170b-0317-4211-9b7c-1002c9925d7a	stop_nolead	7	1	115	17.50391578075798	clipgt-1920170b-0317-4211-9b7c-1002c9925d7a	inf	False	Germany
+clipgt-bc843fa0-b475-46af-8e88-ba1597c02128	turn_sharp	8	1	331	229.54785141166346	clipgt-bc843fa0-b475-46af-8e88-ba1597c02128	inf	False	Netherlands
+clipgt-6d42246a-5be0-4160-a7da-003a1528496b	launch	9	1	515	15.920693704323574	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-0fb75b6e-edbc-406d-a94d-56620a7526b3	bend	10	1	542	59.78079748276934	clipgt-0fb75b6e-edbc-406d-a94d-56620a7526b3	inf	True	Germany
+clipgt-8fd8f4f0-64d4-47ea-a8b5-0f18d51735f6	stop_nolead	11	1	113	16.897888135001857	clipgt-71d7d03b-95bd-4329-a8fb-c8e9891cb478	inf		
+clipgt-b7d705f4-9a58-423f-87ce-988aab77fa44	stop_nolead	12	1	36	15.942915003488132	clipgt-b7d705f4-9a58-423f-87ce-988aab77fa44	inf	True	United States
+clipgt-98f13b37-9245-484b-8297-31cb16112450	turn_sharp	13	1	314	200.1523331158504	clipgt-98f13b37-9245-484b-8297-31cb16112450	inf	True	United States
+clipgt-0ce6f2a3-a6cf-42c3-9133-111139be1dd1	stop_nolead	14	1	178	17.551526010042817	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	False	United States
+clipgt-e34fcbdc-537f-49ce-87bd-0cfc3c6258f7	launch	15	1	455	23.677125136852908	clipgt-e34fcbdc-537f-49ce-87bd-0cfc3c6258f7	inf	False	United States
+clipgt-d54d0ed1-a494-42c6-bfb0-ffde27c7ef57	turn_sharp	16	1	385	190.53710404740906	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-9895e012-2112-40dd-8d1f-cb86e70b6431	stop_nolead	17	1	96	16.727446144448756	clipgt-9895e012-2112-40dd-8d1f-cb86e70b6431	inf	False	United States
+clipgt-3e455540-6812-4dc1-be7f-9ab8395a69c2	stop_nolead	19	1	62	13.150443804050685	clipgt-3e455540-6812-4dc1-be7f-9ab8395a69c2	inf	True	Netherlands
+clipgt-167f9d8c-812a-48d1-98b9-c9fd29feb860	turn_sharp	20	1	257	225.28773141286663	clipgt-0aed52b3-1394-4dc3-8553-c60929e6acf8	inf		
+clipgt-f9ec6a41-a2c9-43aa-98c7-9f43af02fca0	launch	21	1	474	17.86790196386612	clipgt-f9ec6a41-a2c9-43aa-98c7-9f43af02fca0	inf	False	United States
+clipgt-46252225-453d-474c-963c-bc0cd917e7e4	stop_nolead	23	1	98	16.444839938941463	clipgt-3a1341fc-81a0-47b6-8955-bdeb4a709d20	inf		
+clipgt-3764254a-8653-437b-9ad7-667778d0524a	turn_sharp	24	1	372	184.3177610524329	clipgt-3764254a-8653-437b-9ad7-667778d0524a	inf	False	France
+clipgt-c681d7d8-95a8-4f25-a923-c36b51b1c45f	stop_nolead	25	1	213	15.117224731291302	clipgt-c681d7d8-95a8-4f25-a923-c36b51b1c45f	inf		
+clipgt-1e5435de-0e4f-4f9c-943b-c44275544715	stop_nolead	26	1	134	16.044857786120666	clipgt-1e5435de-0e4f-4f9c-943b-c44275544715	inf	False	United States
+clipgt-4969ac16-f08c-4231-a4d4-8a5b46422f76	turn_sharp	27	1	276	172.3451467908547	clipgt-4969ac16-f08c-4231-a4d4-8a5b46422f76	inf	False	United States
+clipgt-a88cc83c-ea8d-460b-8757-f6a47d0a9e2a	launch	28	1	514	17.20758418464375	clipgt-a88cc83c-ea8d-460b-8757-f6a47d0a9e2a	inf	True	United States
+clipgt-c438a779-964c-4bb7-bfde-61d9abe5b39d	stop_nolead	29	1	167	14.15940775072577	clipgt-3e18388c-aa5b-4152-99bd-f93e570bd2ff	inf		
+clipgt-384bad4c-f8e9-40f6-810e-9248abf1e10a	turn_sharp	30	1	396	159.64331670916891	clipgt-384bad4c-f8e9-40f6-810e-9248abf1e10a	inf	True	United States
+clipgt-0dbb91dd-8db1-4e10-b155-14fdf46218bc	stop_nolead	31	1	9	13.85820678877674	clipgt-0dbb91dd-8db1-4e10-b155-14fdf46218bc	inf		
+clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	launch	32	1	451	17.192011558147804	clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	inf	False	United States
+clipgt-34749833-a005-4d71-92c2-362ad095e1f5	stop_nolead	34	1	216	12.711241616781145	clipgt-34749833-a005-4d71-92c2-362ad095e1f5	inf	False	Germany
+clipgt-ccb80b67-0cd9-4419-987f-d985d4a78d55	turn_sharp	35	1	423	183.40205926999	clipgt-ccb80b67-0cd9-4419-987f-d985d4a78d55	inf	False	Germany
+clipgt-3e9966a3-c42d-4fd1-b588-6f5cc02b7c25	stop_nolead	36	1	112	12.92985751798733	clipgt-46db670e-79d2-4373-ab80-e354ae6523a7	inf	True	United States
+clipgt-25f6ad44-f4ca-4b73-9038-9295546e0da1	turn_sharp	38	1	295	161.6909064440193	clipgt-25f6ad44-f4ca-4b73-9038-9295546e0da1	inf		
+clipgt-6dcd2117-4204-4bc4-88f7-4373636a830d	launch	39	1	486	17.027124277032307	clipgt-37267559-c70a-438b-a759-545cd4484de4	inf	False	United States
+clipgt-ddd998a9-4e83-4a90-8c26-9dd12ff32db8	stop_nolead	40	1	38	14.352910654635831	clipgt-ddd998a9-4e83-4a90-8c26-9dd12ff32db8	inf	False	United States
+clipgt-c51a2930-b9f6-4748-b67d-38fa7f0495f2	stop_nolead	41	1	65	12.90673204132862	clipgt-c51a2930-b9f6-4748-b67d-38fa7f0495f2	inf	True	United States
+clipgt-dba136f2-22ba-4407-8b87-a2ad5272b8c5	turn_sharp	42	1	318	183.23951601790162	clipgt-6ceb65e2-bd2d-4294-a244-3e48fdfb05ce	inf	False	Germany
+clipgt-be9a1742-c4f2-42aa-bbe0-13b071abfeea	stop_nolead	43	1	7	12.358975549837401	clipgt-be9a1742-c4f2-42aa-bbe0-13b071abfeea	inf	False	Austria
+clipgt-97d6b1d4-2d03-423e-b423-78c0139baa9a	launch	44	1	492	13.243951803132077	clipgt-9ff17e92-8625-4e70-8d82-679d461f2ebe	inf	True	Germany
+clipgt-cb09cf43-efa4-4a46-bd25-6173a6bfa05b	turn_sharp	46	1	273	158.81690448376105	clipgt-b72bf7fa-a3f7-4059-b5fd-17330dbb1ab3	inf		
+clipgt-1dbf641f-7723-473e-a6e2-488a3a7f949c	stop_nolead	47	1	212	13.67764250510532	clipgt-1dbf641f-7723-473e-a6e2-488a3a7f949c	inf	False	United States
+clipgt-a15f9634-e61b-4627-98e1-541a3163149b	stop_nolead	48	1	161	13.391590416473129	clipgt-1370aa93-94e4-4dcb-9855-ede07046cbff	inf	False	United States
+clipgt-792df0c2-570d-483b-b900-5aa938308152	turn_sharp	49	1	360	147.77919916228305	clipgt-792df0c2-570d-483b-b900-5aa938308152	inf	True	United States
+clipgt-fa035232-d2ea-4725-a4b1-89a5686371de	launch	50	1	478	15.621827615728378	clipgt-fa035232-d2ea-4725-a4b1-89a5686371de	inf	False	United States
+clipgt-0d943259-f09d-4eec-aaa0-73f0e8e6cff3	stop_nolead	51	1	202	12.292714056257415	clipgt-0d943259-f09d-4eec-aaa0-73f0e8e6cff3	inf	False	Italy
+clipgt-813e0bc6-9881-46f3-b120-c4123a2f556a	turn_sharp	52	1	291	159.00145336478022	clipgt-813e0bc6-9881-46f3-b120-c4123a2f556a	inf	False	United States
+clipgt-c9825ad1-398d-47ae-a536-13b4a2cf6625	stop_nolead	53	1	13	12.774191395822006	clipgt-2431387d-b9c5-4241-a219-497a99d1f4e5	inf		
+clipgt-00064c58-7047-4a53-8a36-b033baaaa5fb	stop_nolead	54	1	47	12.489654035134773	clipgt-00064c58-7047-4a53-8a36-b033baaaa5fb	inf	True	United States
+clipgt-0fb94790-b759-41f2-8cd9-63a58dfa0861	turn_sharp	55	1	279	153.96203247055533	clipgt-0fb94790-b759-41f2-8cd9-63a58dfa0861	inf	True	Germany
+clipgt-20a9fb48-2989-4ed1-8cb9-8b5973e6b96e	launch	56	1	502	15.063528149280142	clipgt-20a9fb48-2989-4ed1-8cb9-8b5973e6b96e	inf	False	United States
+clipgt-dceaf6a1-41d3-4268-b34c-9701eb9cb7e1	bend	57	1	564	58.62360899606385	clipgt-dceaf6a1-41d3-4268-b34c-9701eb9cb7e1	inf	False	Germany
+clipgt-f127fab0-7644-4631-a65a-37926e55d55e	stop_nolead	59	1	81	13.046696517915734	clipgt-f127fab0-7644-4631-a65a-37926e55d55e	inf	False	United States
+clipgt-b22281c8-1f6f-4647-b59e-3f11331e82a6	turn_sharp	60	1	336	177.42962700587276	clipgt-b22281c8-1f6f-4647-b59e-3f11331e82a6	inf	False	Germany
+clipgt-27a8bd68-4f4b-4dde-96a0-95b4de726dc2	stop_nolead	61	1	92	12.771569526057597	clipgt-16b83346-578c-437d-b51b-14784ffdf6c1	inf		
+clipgt-31032a73-3e7b-4fa4-8559-b0c9fe030f0d	launch	62	1	466	16.503712379517708	clipgt-31032a73-3e7b-4fa4-8559-b0c9fe030f0d	inf	True	United States
+clipgt-07981e6a-22dd-4796-ad2f-1252037ecd28	stop_nolead	63	1	207	12.369489059386385	clipgt-07981e6a-22dd-4796-ad2f-1252037ecd28	inf	True	United States
+clipgt-5da7524e-66ce-4f61-a98a-151783bcdd8c	turn_sharp	64	1	226	152.55488284806995	clipgt-58467d6b-de3b-4eb0-9080-8d97b88ba714	inf	True	Germany
+clipgt-9e1baa2e-0fb8-47c9-975b-c584dc9af9aa	stop_nolead	65	1	91	11.848555787281407	clipgt-9e1baa2e-0fb8-47c9-975b-c584dc9af9aa	inf	False	Italy
+clipgt-be087898-8bd5-4f41-82a8-ff3d875ef026	turn_sharp	66	1	267	154.9654976595819	clipgt-be087898-8bd5-4f41-82a8-ff3d875ef026	inf	False	Belgium
+clipgt-46ea6266-fa8d-48dc-baf2-68d7f367cfb9	launch	67	1	496	14.90182854421326	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-000a74ae-5c01-486e-ab6f-7f5160136357	stop_nolead	69	1	198	12.813947333517989	clipgt-000a74ae-5c01-486e-ab6f-7f5160136357	inf	False	United States
+clipgt-009d2517-4036-4977-bb4f-e851d69665f9	stop_nolead	70	1	142	11.139234458767799	clipgt-009d2517-4036-4977-bb4f-e851d69665f9	inf	False	Germany
+clipgt-8701a102-a13a-440a-9988-6ba8a818bc7f	turn_sharp	71	1	236	133.76361826878875	clipgt-8701a102-a13a-440a-9988-6ba8a818bc7f	inf		
+clipgt-b2189741-4adc-496e-a094-aae1b3da335b	stop_nolead	72	1	138	12.296359565675033	clipgt-251c0932-ddab-455f-b9d5-3958ad2bc036	inf		
+clipgt-f8becb46-598e-4a77-b8e4-f875ab02625a	launch	73	1	487	14.458399488828814	clipgt-21d4de35-b8d4-46b4-803d-7c22528961ea	inf	False	United States
+clipgt-778a7121-b3c7-4943-b327-9ad4f965eb7e	turn_sharp	74	1	337	128.63343287570652	clipgt-778a7121-b3c7-4943-b327-9ad4f965eb7e	inf	True	United States
+clipgt-fece9f19-fd68-41f6-b406-edd22d4aa15c	stop_nolead	75	1	44	10.594193331563817	clipgt-fece9f19-fd68-41f6-b406-edd22d4aa15c	inf		
+clipgt-aaf3ce56-fdd7-4dab-84af-c44606d760eb	stop_nolead	77	1	45	11.964877569623122	clipgt-aaf3ce56-fdd7-4dab-84af-c44606d760eb	inf	True	United States
+clipgt-2221b2b3-1e50-44dc-ba04-55367379b72f	turn_sharp	78	1	252	162.74703630424136	clipgt-2221b2b3-1e50-44dc-ba04-55367379b72f	inf	False	Germany
+clipgt-96d2e1d2-5a20-4c0a-8f31-b96ebf531bcd	launch	79	1	438	12.800938549738401	clipgt-0fb94790-b759-41f2-8cd9-63a58dfa0861	inf	True	Germany
+clipgt-3b9d9d7a-5c8c-4404-ba4b-34264b476925	bend	80	1	566	54.10308941170988	clipgt-3b9d9d7a-5c8c-4404-ba4b-34264b476925	inf	False	United States
+clipgt-9cc6945c-0aaf-4727-9ff1-ff44896b2012	stop_nolead	81	1	58	11.91107736898133	clipgt-9cc6945c-0aaf-4727-9ff1-ff44896b2012	inf	True	United States
+clipgt-5ec7792d-dd2f-441b-b0c6-7edc7e80a58d	turn_sharp	82	1	371	127.90293769220858	clipgt-5ec7792d-dd2f-441b-b0c6-7edc7e80a58d	inf	True	United States
+clipgt-28d92a45-12ae-46c5-90bb-796cfd754875	stop_nolead	83	1	56	11.621584726058185	clipgt-28d92a45-12ae-46c5-90bb-796cfd754875	inf		
+clipgt-b0f660f0-e369-4e20-9bdc-7bae8c0b40ea	stop_nolead	84	1	114	11.028072823937105	clipgt-b0f660f0-e369-4e20-9bdc-7bae8c0b40ea	inf	False	Germany
+clipgt-bdc3344d-4e43-45b9-807c-f7526199e4ef	turn_sharp	85	1	240	143.35095508413698	clipgt-bdc3344d-4e43-45b9-807c-f7526199e4ef	inf	False	France
+clipgt-881b9dd6-7e2c-4c48-b270-cce2dc790b34	launch	86	1	475	13.78225157300746	clipgt-881b9dd6-7e2c-4c48-b270-cce2dc790b34	inf	False	United States
+clipgt-f244c735-cb12-4190-8b68-64c90251d3f8	stop_nolead	87	1	195	11.549366868237607	clipgt-f244c735-cb12-4190-8b68-64c90251d3f8	inf		
+clipgt-92d9c0eb-e191-420c-ad6c-df822ca186c1	turn_sharp	88	1	229	140.22104472445906	clipgt-92d9c0eb-e191-420c-ad6c-df822ca186c1	inf	False	Belgium
+clipgt-e9335cc9-4273-4c4a-b975-051551836cae	stop_nolead	89	1	194	11.514914625290775	clipgt-5e265710-1a9b-45b3-8c51-1b37a3b1bde7	inf	False	United States
+clipgt-4ce9f18b-d251-4bfc-a72d-58bac48fd525	launch	90	1	484	13.393121006826814	clipgt-4ce9f18b-d251-4bfc-a72d-58bac48fd525	inf	False	United States
+clipgt-d4c97cc1-1297-41fd-9ad8-87d269b65e4d	stop_nolead	92	1	199	11.492798715361307	clipgt-d4c97cc1-1297-41fd-9ad8-87d269b65e4d	inf		
+clipgt-72cb4b63-16d1-4004-b82a-b1cba0c7c148	turn_sharp	93	1	289	124.20362308034527	clipgt-002f04fd-984f-4f0b-943e-aba82864930e	inf	False	United States
+clipgt-c67bdfef-f86b-44d4-a429-a8f2371dd1d3	stop_nolead	94	1	169	11.141056259042648	clipgt-c67bdfef-f86b-44d4-a429-a8f2371dd1d3	inf	True	United States
+clipgt-90d1908c-9fdc-40ea-a5a1-351240aa323e	turn_sharp	96	1	391	124.09931502441229	clipgt-6afccd7b-4cd8-4e06-9bf0-190dcc25efdf	inf		
+clipgt-e6c37af0-ce93-41f2-aff5-86d46189d4d1	launch	97	1	473	14.774409630532947	clipgt-1d6978de-3fda-4526-bcfc-b8287d73e198	inf		
+clipgt-d4e2523f-518c-4ae3-8594-ef812238762e	stop_nolead	98	1	15	10.794321224274519	clipgt-d4e2523f-518c-4ae3-8594-ef812238762e	inf	False	Spain
+clipgt-fdc8aa11-35f3-41e3-863d-1faa9860f049	stop_nolead	99	1	20	10.38944910438123	clipgt-fdc8aa11-35f3-41e3-863d-1faa9860f049	inf	False	Germany
+clipgt-c099d336-1152-4d57-b121-f325d8acb0e4	turn_sharp	100	1	373	143.66191413983483	clipgt-c099d336-1152-4d57-b121-f325d8acb0e4	inf	True	Germany
+clipgt-88272099-3306-4306-87da-1ec5ba3311a1	stop_nolead	101	1	143	11.084975632340566	clipgt-03376794-ae4a-4d16-a804-4efa954eec5f	inf	True	United States
+clipgt-65c66b19-c723-4d6a-a3f1-06eeb60f525c	launch	102	1	446	11.961268764567121	clipgt-004d4a47-2b27-4174-a1b8-0363d81ffc1d	inf	False	Netherlands
+clipgt-ede8c19c-d344-4835-8613-4692b0c605f4	bend	103	1	548	52.233869676674345	clipgt-ede8c19c-d344-4835-8613-4692b0c605f4	inf	False	United States
+clipgt-86d06a78-3ff2-483b-a319-9a772fce45e0	turn_sharp	104	1	342	117.87619723447858	clipgt-2c9a5309-e6e3-45d6-b30f-c1ed724bf7a6	inf		
+clipgt-4e8f1c63-2184-4d5e-976c-a3906f6f743f	stop_nolead	105	1	85	11.062100737586938	clipgt-964e7935-2947-4af8-9f97-4757b744d45c	inf	False	United States
+clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	stop_nolead	106	1	201	10.766675890389264	clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	inf	False	United States
+clipgt-c00ec009-0efe-4b28-a85a-9b76b1bda069	turn_sharp	107	1	353	122.35783769119438	clipgt-c00ec009-0efe-4b28-a85a-9b76b1bda069	inf	False	United States
+clipgt-c25bc17c-e4f9-4880-ae9c-040d89d9c61f	launch	108	1	493	13.37583583976938	clipgt-c25bc17c-e4f9-4880-ae9c-040d89d9c61f	inf	False	United States
+clipgt-4a6f01d5-97bf-44f2-81c5-8e88b439d268	stop_nolead	109	1	89	11.056445425886206	clipgt-4a6f01d5-97bf-44f2-81c5-8e88b439d268	inf		
+clipgt-5bf8dbed-f0a8-4fd5-b1ef-8ce7bf495fd1	turn_sharp	110	1	301	135.89932264583047	clipgt-5bf8dbed-f0a8-4fd5-b1ef-8ce7bf495fd1	inf	False	Sweden
+clipgt-2b8f1bfc-145f-4da2-9cfa-e9cd97e53845	stop_nolead	111	1	126	10.711829262681277	clipgt-2b8f1bfc-145f-4da2-9cfa-e9cd97e53845	inf		
+clipgt-0a18c5a4-9aca-4efd-b604-c75f3269c502	stop_nolead	112	1	103	10.701389372755258	clipgt-0a18c5a4-9aca-4efd-b604-c75f3269c502	inf		
+clipgt-9bcb959a-3093-4b6b-9a93-7a334f469248	turn_sharp	113	1	333	122.20194701104116	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-08c22260-d040-4ced-a6b0-728ea69020fc	launch	114	1	469	13.32081732361306	clipgt-08c22260-d040-4ced-a6b0-728ea69020fc	inf	True	United States
+clipgt-dffd4c04-92a8-468d-a362-cd3a98445da9	stop_nolead	117	1	31	10.657470403284217	clipgt-31ae8f1a-7a39-4c0d-a22a-e5931129e2eb	inf	True	United States
+clipgt-1544b166-8f12-4481-a1c3-eeda51581e1a	turn_sharp	118	1	325	148.8516278002745	clipgt-1544b166-8f12-4481-a1c3-eeda51581e1a	inf	False	Germany
+clipgt-9190bd3f-1572-4a74-b9c4-f9483f6eb441	stop_nolead	119	1	122	10.586254540758713	clipgt-9190bd3f-1572-4a74-b9c4-f9483f6eb441	inf		
+clipgt-b0499b70-4b20-4389-8e0f-cd9fce07e7b2	launch	120	1	494	13.22877245858467	clipgt-b0499b70-4b20-4389-8e0f-cd9fce07e7b2	inf	False	United States
+clipgt-83361019-2822-4c0e-9a99-7f316c6f6f31	stop_nolead	121	1	125	10.291735980399608	clipgt-83361019-2822-4c0e-9a99-7f316c6f6f31	inf	False	United States
+clipgt-007fc5b6-87df-4b6b-9d0b-60d1498f3620	turn_sharp	122	1	227	132.75239353715548	clipgt-007fc5b6-87df-4b6b-9d0b-60d1498f3620	inf	True	Spain
+clipgt-96afa4f7-099a-4b05-8763-0bf6b4e1c1b3	stop_nolead	123	1	171	10.357716103297562	clipgt-96afa4f7-099a-4b05-8763-0bf6b4e1c1b3	inf		
+clipgt-5debfbf6-12f4-4926-a293-a8517e917e31	turn_sharp	124	1	265	121.45564983896911	clipgt-5debfbf6-12f4-4926-a293-a8517e917e31	inf	False	United States
+clipgt-0418c913-fead-437c-a856-bc397fc606cb	launch	125	1	456	13.006302233457157	clipgt-1370aa93-94e4-4dcb-9855-ede07046cbff	inf	False	United States
+clipgt-36509650-f204-40e4-97bd-7d8ae7422c71	stop_nolead	127	1	144	10.253643048054503	clipgt-35953aac-81c1-4815-a5d5-4134c08edaa6	inf		
+clipgt-7dc64687-ce97-44f3-a5cd-ad99ee3bf0a9	stop_nolead	128	1	99	10.243601733192678	clipgt-7dc64687-ce97-44f3-a5cd-ad99ee3bf0a9	inf	False	United States
+clipgt-ccc1ac21-05b2-414c-83ab-647eaf562fc1	turn_sharp	129	1	358	118.43740584676921	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	False	United States
+clipgt-2726cee4-301c-4d59-ad14-64fad8032e87	stop_nolead	130	1	49	10.237374625532421	clipgt-2726cee4-301c-4d59-ad14-64fad8032e87	inf		
+clipgt-8e2813f9-7e29-411d-b898-8432079b27b2	launch	131	1	440	12.813995428345173	clipgt-8e2813f9-7e29-411d-b898-8432079b27b2	inf	True	United States
+clipgt-1aa48b8a-a2d9-4540-8d7e-a6fafd5b0dca	turn_sharp	132	1	327	117.74756496989814	clipgt-1aa48b8a-a2d9-4540-8d7e-a6fafd5b0dca	inf	True	United States
+clipgt-79919eb2-72c2-440a-94ea-24754fcad0fd	stop_nolead	133	1	182	9.762583028515024	clipgt-79919eb2-72c2-440a-94ea-24754fcad0fd	inf	False	Finland
+clipgt-a62e9c2c-1619-49c7-9ba5-89135d1ea909	stop_nolead	135	1	23	10.132390204629429	clipgt-8266c272-9c74-472b-8ccb-fffe911a6e78	inf	False	United States
+clipgt-0ef9835a-64f9-4f2b-b364-098a838b6fd4	turn_sharp	136	1	340	136.68023533589974	clipgt-0ef9835a-64f9-4f2b-b364-098a838b6fd4	inf	False	Germany
+clipgt-6b4ed79b-f9f3-4c1f-aa57-2875a72c2a7d	launch	137	1	497	11.42909449313989	clipgt-6b4ed79b-f9f3-4c1f-aa57-2875a72c2a7d	inf	False	Germany
+clipgt-7b418416-8860-46d5-b7fc-687c7d078c4b	stop_nolead	139	1	155	10.029119102577598	clipgt-7b418416-8860-46d5-b7fc-687c7d078c4b	inf	False	United States
+clipgt-00169207-9da7-44c4-a67b-a925e77056ff	turn_sharp	140	1	420	113.79698035312781	clipgt-00169207-9da7-44c4-a67b-a925e77056ff	inf	False	United States
+clipgt-655544ed-b8a1-4c27-aab0-1435898fbaa8	stop_nolead	141	1	22	9.679647881563117	clipgt-655544ed-b8a1-4c27-aab0-1435898fbaa8	inf	True	Italy
+clipgt-b270b9ab-4029-4cd0-bd4d-80bcf6ce5bd5	stop_nolead	142	1	77	9.465358928529342	clipgt-909c53a3-746f-43ef-aa82-5f7853c23e6c	inf	False	Sweden
+clipgt-f776e499-c8fb-45ca-8050-ac9e96f2fa44	turn_sharp	143	1	339	130.78829740745294	clipgt-f776e499-c8fb-45ca-8050-ac9e96f2fa44	inf	True	France
+clipgt-e64dca05-bdd2-4ee1-a748-f2f50c7dfaa5	launch	144	1	463	12.800463762710017	clipgt-454a378b-8594-43ed-97d7-c7845ff54125	inf	True	United States
+clipgt-914f293b-1699-4bd9-8861-7e7a5327909b	stop_nolead	145	1	80	9.961735697566542	clipgt-914f293b-1699-4bd9-8861-7e7a5327909b	inf	True	United States
+clipgt-6dd87423-39c7-4247-89df-35da5726f464	turn_sharp	146	1	263	113.09092724012703	clipgt-6dd87423-39c7-4247-89df-35da5726f464	inf	True	United States
+clipgt-f5288635-b1e5-4629-b38c-4e0e4e79f1c4	stop_nolead	147	1	2	9.956777804977072	clipgt-f5288635-b1e5-4629-b38c-4e0e4e79f1c4	inf	False	United States
+clipgt-028508ba-ef59-48d3-a95b-94eb92e3b063	launch	148	1	512	12.40019497232861	clipgt-028508ba-ef59-48d3-a95b-94eb92e3b063	inf	False	United States
+clipgt-bd2861b3-ef20-4563-a7b6-4f2f9423326c	stop_nolead	150	1	140	9.28015274910171	clipgt-bd2861b3-ef20-4563-a7b6-4f2f9423326c	inf	True	Germany
+clipgt-7c72937c-c620-4776-9555-d57222c0081f	turn_sharp	151	1	404	127.8721136628097	clipgt-7c72937c-c620-4776-9555-d57222c0081f	inf	False	Belgium
+clipgt-1656742b-a785-48fa-a1b0-e789da89d5ee	stop_nolead	152	1	220	9.364377359867959	clipgt-1656742b-a785-48fa-a1b0-e789da89d5ee	inf	False	Sweden
+clipgt-655a0c29-017c-4e31-8f6b-e140d9587369	turn_sharp	154	1	351	108.88871235259671	clipgt-655a0c29-017c-4e31-8f6b-e140d9587369	inf	False	United States
+clipgt-2e4b7685-7564-464c-aef8-5d5d307c67ef	launch	155	1	483	10.798826859037739	clipgt-2e4b7685-7564-464c-aef8-5d5d307c67ef	inf	True	Italy
+clipgt-53a8a5c6-92cb-45b2-92e3-2ad333d68601	stop_nolead	156	1	152	9.082386025542487	clipgt-53a8a5c6-92cb-45b2-92e3-2ad333d68601	inf	False	Germany
+clipgt-07f6a059-5ac8-4ab5-8ad4-b23c13bb5046	stop_nolead	157	1	128	9.81342376068662	clipgt-07f6a059-5ac8-4ab5-8ad4-b23c13bb5046	inf	False	United States
+clipgt-234e824e-f19d-4e14-964a-d47b5919a941	turn_sharp	158	1	416	112.36296724781933	clipgt-234e824e-f19d-4e14-964a-d47b5919a941	inf	True	United States
+clipgt-4be71004-79ca-476b-be95-290f0dff4334	stop_nolead	159	1	141	9.328447589482261	clipgt-4be71004-79ca-476b-be95-290f0dff4334	inf	False	Spain
+clipgt-56dc10ed-65b5-43ef-867e-367fa33dbf98	launch	160	1	471	12.21774991177208	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	False	United States
+clipgt-69efe005-e461-4758-b1cf-ce685de7888f	turn_sharp	162	1	379	126.59144220316662	clipgt-69efe005-e461-4758-b1cf-ce685de7888f	inf	False	Spain
+clipgt-a729d3eb-6eda-4756-bd9d-156ec1acdeaf	stop_nolead	163	1	68	9.844327599979785	clipgt-a729d3eb-6eda-4756-bd9d-156ec1acdeaf	inf		
+clipgt-2aa2f0c3-7945-4cab-8b35-bde7d99ee24f	stop_nolead	164	1	110	8.941429096706743	clipgt-2aa2f0c3-7945-4cab-8b35-bde7d99ee24f	inf	False	Germany
+clipgt-161aff42-2c7f-4d9c-8a24-97a606bf3df8	turn_sharp	165	1	293	108.60316721824769	clipgt-161aff42-2c7f-4d9c-8a24-97a606bf3df8	inf	True	United States
+clipgt-a3f994f5-4467-46a6-b1ea-0a54bac9c5f6	launch	166	1	518	12.653859578026267	clipgt-2431387d-b9c5-4241-a219-497a99d1f4e5	inf		
+clipgt-4ebbe43e-5d3c-4689-ba5a-521947231b77	stop_nolead	167	1	163	9.663658784341932	clipgt-4ebbe43e-5d3c-4689-ba5a-521947231b77	inf		
+clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530	turn_sharp	168	1	382	106.67704726478195	clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530	inf		
+clipgt-b1abc3d2-b3e6-45c4-b201-e987ff2a72da	stop_nolead	169	1	10	9.434903499685223	clipgt-9c351bef-84b8-4a7f-bad8-9df0f50d0ded	inf	False	United States
+clipgt-03f14707-e02a-4a8e-a448-cf667458c127	stop_nolead	170	1	193	9.340036661267046	clipgt-03f14707-e02a-4a8e-a448-cf667458c127	inf	False	United States
+clipgt-65bb845f-a3ef-4490-a661-ff7ceb4f825a	turn_sharp	171	1	401	103.03692767931561	clipgt-65bb845f-a3ef-4490-a661-ff7ceb4f825a	inf	True	United States
+clipgt-03376794-ae4a-4d16-a804-4efa954eec5f	launch	172	1	464	12.067068942107015	clipgt-03376794-ae4a-4d16-a804-4efa954eec5f	inf	True	United States
+clipgt-33a95264-5147-4848-b8f9-eea4d1b32450	stop_nolead	175	1	179	8.990569708854096	clipgt-33a95264-5147-4848-b8f9-eea4d1b32450	inf	False	Austria
+clipgt-17bec9f8-aa14-4091-ae83-b05714fe6e81	turn_sharp	176	1	414	100.9689156506764	clipgt-17bec9f8-aa14-4091-ae83-b05714fe6e81	inf	False	United States
+clipgt-de7b9321-a77e-4949-a69b-70bddfa781d0	stop_nolead	177	1	72	8.763449524362043	clipgt-de7b9321-a77e-4949-a69b-70bddfa781d0	inf	True	Germany
+clipgt-76c2bb81-6435-44e9-859a-2033ca05173b	launch	178	1	513	10.048912598193217	clipgt-76c2bb81-6435-44e9-859a-2033ca05173b	inf	False	Germany
+clipgt-90a3d349-81d7-420d-9846-aa10da55ac2e	stop_nolead	179	1	66	9.140698605485895	clipgt-90a3d349-81d7-420d-9846-aa10da55ac2e	inf	False	United States
+clipgt-2ce4e533-bfc2-4805-8d31-19542cc17408	turn_sharp	180	1	285	122.45690140324471	clipgt-22a92557-7661-4a06-9854-b0a7f17d5c84	inf	True	Germany
+clipgt-2774114a-2929-4ddf-bf08-63da4cf2342e	stop_nolead	181	1	186	9.07418591893061	clipgt-afcd6edd-0130-4524-af68-691ad1e1bbe0	inf	False	United States
+clipgt-cf5076fd-0662-48f5-86cf-04819066ebb0	turn_sharp	182	1	366	98.51103870032303	clipgt-cf5076fd-0662-48f5-86cf-04819066ebb0	inf	False	United States
+clipgt-37113280-a033-4be4-afdd-cb199299e028	launch	183	1	488	11.710904178498813	clipgt-37113280-a033-4be4-afdd-cb199299e028	inf	False	United States
+clipgt-7ddc6709-99d5-49be-9f8e-5e243e025111	stop_nolead	185	1	100	8.948265118381252	clipgt-7ddc6709-99d5-49be-9f8e-5e243e025111	inf	False	United States
+clipgt-e09d0518-7e4d-4b66-bb78-cd518a6b0c0a	stop_nolead	186	1	217	8.502959010589798	clipgt-6ceb65e2-bd2d-4294-a244-3e48fdfb05ce	inf	True	Germany
+clipgt-21ba518c-a6a8-493e-b2c8-f96d043b4c06	turn_sharp	187	1	307	122.15327920052782	clipgt-21ba518c-a6a8-493e-b2c8-f96d043b4c06	inf	False	Austria
+clipgt-cb882dc8-3a6f-46e6-a157-f245eb1b58c2	stop_nolead	188	1	97	8.743938241516794	clipgt-cb882dc8-3a6f-46e6-a157-f245eb1b58c2	inf	False	Spain
+clipgt-b27e8f9c-1077-49c1-ba9a-6d99bdc12df5	launch	189	1	465	11.907688464947404	clipgt-b27e8f9c-1077-49c1-ba9a-6d99bdc12df5	inf	True	United States
+clipgt-c8e4cce1-6932-4a35-8419-072cd6c656a4	turn_sharp	190	1	412	98.6451739536277	clipgt-c8e4cce1-6932-4a35-8419-072cd6c656a4	inf	True	United States
+clipgt-4d268762-0f46-4ba3-853a-31d909cb6cb6	stop_nolead	191	1	117	8.872092202211466	clipgt-4d268762-0f46-4ba3-853a-31d909cb6cb6	inf	False	United States
+clipgt-8489e6c7-a57e-4ace-ae2c-af07850bb0a8	stop_nolead	193	1	108	8.853386864968908	clipgt-8489e6c7-a57e-4ace-ae2c-af07850bb0a8	inf		
+clipgt-24ffbf90-1e77-4bbd-95a3-913a347e800e	turn_sharp	194	1	248	108.63818242711793	clipgt-24ffbf90-1e77-4bbd-95a3-913a347e800e	inf	False	Germany
+clipgt-c6ebf66e-2474-4de9-a436-3abdec13a05b	launch	195	1	504	9.933639916601054	clipgt-c6ebf66e-2474-4de9-a436-3abdec13a05b	inf	False	Germany
+clipgt-3c1fb774-ed71-48c6-a7b8-daa527810de0	bend	196	1	563	45.96963792385986	clipgt-25f6ad44-f4ca-4b73-9038-9295546e0da1	inf	False	United States
+clipgt-947a30cb-b492-4d13-b29c-b0c12c8314f8	stop_nolead	197	1	180	8.660182217734668	clipgt-947a30cb-b492-4d13-b29c-b0c12c8314f8	inf	True	Denmark
+clipgt-00ecbc19-5168-48c4-8b6a-9d64005e640e	turn_sharp	198	1	350	96.62843607877144	clipgt-00ecbc19-5168-48c4-8b6a-9d64005e640e	inf	False	United States
+clipgt-5b94e1f5-8164-45f6-9b22-33906595d128	stop_nolead	199	1	64	8.426661973668352	clipgt-5b94e1f5-8164-45f6-9b22-33906595d128	inf	False	Germany
+clipgt-3e73027c-2d42-471e-bbdd-364cd9d5d989	stop_nolead	200	1	131	8.737855779967806	clipgt-3e73027c-2d42-471e-bbdd-364cd9d5d989	inf		
+clipgt-d38cf375-2145-4788-910d-6edb3e0d1398	turn_sharp	201	1	387	106.81284228080585	clipgt-d38cf375-2145-4788-910d-6edb3e0d1398	inf	False	Germany
+clipgt-11e26412-dfa2-404f-a163-c2c8743821ff	launch	202	1	448	11.441253035828442	clipgt-11e26412-dfa2-404f-a163-c2c8743821ff	inf	False	United States
+clipgt-33cb3ae6-5cb8-4e96-8214-7633033ec2a1	stop_nolead	203	1	25	8.656271658861172	clipgt-33cb3ae6-5cb8-4e96-8214-7633033ec2a1	inf	False	United States
+clipgt-cf34e1e7-34d0-4c28-806f-0d9be6967abc	turn_sharp	204	1	287	96.27310620081938	clipgt-cf34e1e7-34d0-4c28-806f-0d9be6967abc	inf	True	United States
+clipgt-702366ca-58ac-470d-8900-7ed4b2880462	stop_nolead	205	1	137	8.471274824541565	clipgt-702366ca-58ac-470d-8900-7ed4b2880462	inf		
+clipgt-c9836782-1533-4ad3-8ae9-23282d5e09cb	launch	206	1	495	11.421720559595933	clipgt-c9836782-1533-4ad3-8ae9-23282d5e09cb	inf	False	United States
+clipgt-a80c2cc9-8f02-46bb-9f3c-ce797178bd1a	stop_nolead	208	1	130	8.443008988910654	clipgt-a80c2cc9-8f02-46bb-9f3c-ce797178bd1a	inf		
+clipgt-e742759b-9403-4d6c-9c52-704b81bc5ba9	turn_sharp	209	1	253	95.91208615075756	clipgt-e742759b-9403-4d6c-9c52-704b81bc5ba9	inf		
+clipgt-fff9984b-ef2c-4348-997b-54029aadbd0b	stop_nolead	210	1	76	8.376327699711767	clipgt-fff9984b-ef2c-4348-997b-54029aadbd0b	inf	False	Italy
+clipgt-a0fe28cf-db26-4902-bf9c-fc2390bfe0cc	turn_sharp	212	1	407	103.72459511971499	clipgt-a0fe28cf-db26-4902-bf9c-fc2390bfe0cc	inf	False	Austria
+clipgt-86a858a3-637b-4afd-8ec6-8cd53721ec3d	launch	213	1	508	10.72323718944982	clipgt-7a3d8529-f5c4-445d-97ed-8303b2ece934	inf	False	United States
+clipgt-a9e8dfc7-24ff-4c9d-8fe1-20210c077073	stop_nolead	214	1	84	8.419800598607859	clipgt-a9e8dfc7-24ff-4c9d-8fe1-20210c077073	inf		
+clipgt-f3a32cfb-473f-443b-99cc-74dce9acf342	stop_nolead	215	1	166	8.12593755307153	clipgt-f3a32cfb-473f-443b-99cc-74dce9acf342	inf	False	Germany
+clipgt-192b11e4-9a76-456d-88b1-993942674cec	turn_sharp	216	1	223	96.08714835018861	clipgt-192b11e4-9a76-456d-88b1-993942674cec	inf	True	United States
+clipgt-079fc568-ffea-427e-ba53-8135ea3f453e	stop_nolead	217	1	63	8.408871969823835	clipgt-079fc568-ffea-427e-ba53-8135ea3f453e	inf	False	United States
+clipgt-15dd433e-ff56-47b5-82c4-ea91f8f7443f	launch	218	1	459	10.663815887490182	clipgt-15dd433e-ff56-47b5-82c4-ea91f8f7443f	inf	False	United States
+clipgt-58b5c3ad-5f6a-4e7c-ba0b-c76d52c8f478	bend	219	1	558	51.61652029035056	clipgt-089f9b45-e587-499e-971f-ee3a1ab51e30	inf	False	Spain
+clipgt-f3e2580d-2319-410a-9ab9-e90f1a137f59	turn_sharp	220	1	426	93.09034185004825	clipgt-86005d5e-a6c4-43fb-9ee9-11283261672b	inf	False	United States
+clipgt-3b9f9fa6-c966-41a5-9a6c-c64374d97e7c	stop_nolead	221	1	129	8.283722268070047	clipgt-3b9f9fa6-c966-41a5-9a6c-c64374d97e7c	inf		
+clipgt-23b03b84-fb88-445a-9a85-e19bad0a4986	stop_nolead	222	1	51	8.280150788109276	clipgt-23b03b84-fb88-445a-9a85-e19bad0a4986	inf		
+clipgt-db529700-208c-414d-820e-84dd75b8caa8	turn_sharp	223	1	417	92.68667872689268	clipgt-db529700-208c-414d-820e-84dd75b8caa8	inf	False	United States
+clipgt-a35a2bdf-b828-438e-8ee7-4cb4fa198aeb	launch	224	1	445	10.760393633093107	clipgt-832cd2b0-57b0-4f4e-9be1-a70b38371bbc	inf		
+clipgt-f7209243-2583-47a7-8035-245b04051979	stop_nolead	225	1	83	8.244907265858409	clipgt-b469f38a-f4bc-4b18-a0ec-3ca987b18383	inf		
+clipgt-712f7dd5-0982-4cd0-b532-75127ce45d0f	turn_sharp	226	1	403	92.38205976276332	clipgt-712f7dd5-0982-4cd0-b532-75127ce45d0f	inf	False	United States
+clipgt-166fe701-83b5-473b-9f3f-a2401fec3c78	stop_nolead	227	1	53	8.235494315951687	clipgt-166fe701-83b5-473b-9f3f-a2401fec3c78	inf		
+clipgt-6464082b-7e79-4294-a234-90639bb19c70	stop_nolead	228	1	183	8.06940006739266	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-10eef229-32c8-4ef5-8a53-2e5e4b6675a0	turn_sharp	229	1	355	101.9554729580046	clipgt-10eef229-32c8-4ef5-8a53-2e5e4b6675a0	inf	False	Finland
+clipgt-0f525628-b4c3-4506-8b16-a27385913fa5	launch	230	1	511	9.35867020702732	clipgt-0f525628-b4c3-4506-8b16-a27385913fa5	inf	True	Denmark
+clipgt-0e002edd-c307-437c-9b97-6a1f6d28ac91	stop_nolead	233	1	127	8.02563032448991	clipgt-0e002edd-c307-437c-9b97-6a1f6d28ac91	inf		
+clipgt-400aa790-3055-4d4b-aba2-e89834928fb8	turn_sharp	234	1	410	92.26529152493023	clipgt-400aa790-3055-4d4b-aba2-e89834928fb8	inf	False	United States
+clipgt-aaaf0435-a65e-4d37-8d77-9813ca98cb06	stop_nolead	235	1	55	7.957827900761621	clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	inf	False	United States
+clipgt-3fa7ce7c-5124-4fb8-abcd-30fc122b5232	launch	236	1	517	10.396030887337968	clipgt-3cd82dee-d715-4152-a696-f49bc0e98dfd	inf	False	United States
+clipgt-2517eae8-ea91-4ed2-a713-dc02366cb6d9	stop_nolead	237	1	8	7.911848832455743	clipgt-2517eae8-ea91-4ed2-a713-dc02366cb6d9	inf		
+clipgt-cd344c66-c53e-404b-bb11-a4910c62d8d0	turn_sharp	238	1	436	93.78071573700622	clipgt-cd344c66-c53e-404b-bb11-a4910c62d8d0	inf	True	United States
+clipgt-28c58eaa-60cc-4db4-b9cb-9b9b36df4694	stop_nolead	239	1	153	7.648858901780217	clipgt-28c58eaa-60cc-4db4-b9cb-9b9b36df4694	inf	True	Germany
+clipgt-454a378b-8594-43ed-97d7-c7845ff54125	turn_sharp	240	1	381	91.33017923378534	clipgt-454a378b-8594-43ed-97d7-c7845ff54125	inf	False	United States
+clipgt-ddd2c391-873c-43f5-8105-180475fdc133	launch	241	1	454	9.180354039437455	clipgt-d1d75933-68a8-4397-ab1e-36ae36f9e312	inf	False	Finland
+clipgt-4cef6180-5c55-4611-a407-7aed3e17199c	stop_nolead	243	1	160	7.911269555634136	clipgt-4cef6180-5c55-4611-a407-7aed3e17199c	inf	False	United States
+clipgt-dc6e2af1-716c-44ba-84c0-b234ea4dbd31	stop_nolead	244	1	73	7.756255132870416	clipgt-dc6e2af1-716c-44ba-84c0-b234ea4dbd31	inf	False	Sweden
+clipgt-e828096d-5889-40bb-bc6f-2feed7db9821	turn_sharp	245	1	419	96.88464468106629	clipgt-e828096d-5889-40bb-bc6f-2feed7db9821	inf	False	Belgium
+clipgt-1a84a820-fa70-4e8a-80d6-3e88d8b3f4a5	stop_nolead	246	1	211	7.900516826863684	clipgt-1a84a820-fa70-4e8a-80d6-3e88d8b3f4a5	inf	False	United States
+clipgt-b8566b44-6c1d-4b04-be13-1d7d143047cb	launch	247	1	443	9.00793334054917	clipgt-b8566b44-6c1d-4b04-be13-1d7d143047cb	inf	False	Germany
+clipgt-252f2781-e7f5-459f-a5bf-1129bfa2ed62	turn_sharp	248	1	343	91.50933092567863	clipgt-252f2781-e7f5-459f-a5bf-1129bfa2ed62	inf	True	United States
+clipgt-5cda81fb-3a63-487e-9af3-fe726971556e	stop_nolead	249	1	210	7.7501563642127085	clipgt-5cda81fb-3a63-487e-9af3-fe726971556e	inf	False	Sweden
+clipgt-31ab4b94-98ef-448f-bb1f-e16bc8d5b832	stop_nolead	251	1	164	7.70806772874118	clipgt-1d7ad5d2-02aa-4353-adf3-ee2a1ce1af24	inf		
+clipgt-974e9bae-07f6-4f9c-aef8-66098cc50619	turn_sharp	252	1	241	91.45083596590136	clipgt-41d714e0-3524-4f96-a05c-d15337a083fa	inf	True	United States
+clipgt-810fb719-b3c1-47dd-9c78-80d606a76ebf	launch	253	1	479	10.111589765186146	clipgt-810fb719-b3c1-47dd-9c78-80d606a76ebf	inf	False	United States
+clipgt-35d707e1-856e-4037-8792-060d46506889	bend	254	1	556	45.61494746771599	clipgt-35d707e1-856e-4037-8792-060d46506889	inf	False	United States
+clipgt-22a92557-7661-4a06-9854-b0a7f17d5c84	stop_nolead	255	1	176	7.331129399501885	clipgt-22a92557-7661-4a06-9854-b0a7f17d5c84	inf	True	Germany
+clipgt-d85682b8-f612-4aa3-90a2-ee2bb86151e6	turn_sharp	256	1	418	96.1435571480051	clipgt-d85682b8-f612-4aa3-90a2-ee2bb86151e6	inf	False	France
+clipgt-c3c4f763-44da-450d-a6e2-48a982e62de4	stop_nolead	257	1	37	7.68731938760298	clipgt-c3c4f763-44da-450d-a6e2-48a982e62de4	inf		
+clipgt-738f3e44-120e-4a27-be44-b114795ab3cb	stop_nolead	258	1	219	7.613725729616692	clipgt-738f3e44-120e-4a27-be44-b114795ab3cb	inf	True	United States
+clipgt-ec76174b-64a9-45fe-bad8-9c2cfa4493c2	turn_sharp	259	1	247	90.50188856167291	clipgt-ec76174b-64a9-45fe-bad8-9c2cfa4493c2	inf	False	United States
+clipgt-95d3b1c9-efb1-4d12-9032-d1ed44243bd7	launch	260	1	476	8.939048901565943	clipgt-9d453fb9-0c3c-4766-afba-0b16d01b9817	inf	True	Germany
+clipgt-d1d75933-68a8-4397-ab1e-36ae36f9e312	stop_nolead	261	1	147	7.427768495258646	clipgt-d1d75933-68a8-4397-ab1e-36ae36f9e312	inf	False	Finland
+clipgt-14e9329f-5964-4888-99d9-bb3027477bea	turn_sharp	262	1	300	91.11348872176266	clipgt-14e9329f-5964-4888-99d9-bb3027477bea	inf	False	Germany
+clipgt-cb157636-0dfe-4124-a512-654903465ab2	stop_nolead	263	1	139	7.585852372959204	clipgt-cb157636-0dfe-4124-a512-654903465ab2	inf	False	United States
+clipgt-fb6d1a18-16cd-45f2-b80d-fa963ff59de3	launch	264	1	450	9.908371382648738	clipgt-fb6d1a18-16cd-45f2-b80d-fa963ff59de3	inf	False	United States
+clipgt-7c223679-68fe-41f4-87ee-fad337ca4752	bend	265	1	523	45.50986733177944	clipgt-7c223679-68fe-41f4-87ee-fad337ca4752	inf	False	United States
+clipgt-1cd9b073-5cbc-4c75-85e4-052299ee1cc1	stop_nolead	266	1	86	7.16903641227676	clipgt-1cd9b073-5cbc-4c75-85e4-052299ee1cc1	inf	False	Germany
+clipgt-6575eced-9073-43d2-84bf-2a40d080e812	turn_sharp	267	1	303	93.97677226047269	clipgt-6575eced-9073-43d2-84bf-2a40d080e812	inf	False	Sweden
+clipgt-1bdbff74-69d4-4c5d-8e3e-c8c7180dbdf8	stop_nolead	268	1	12	7.435204044312639	clipgt-1bdbff74-69d4-4c5d-8e3e-c8c7180dbdf8	inf	False	United States
+clipgt-149fbd30-9ccf-4b23-b3fa-6ccbad8bb88c	turn_sharp	270	1	406	90.47102387739425	clipgt-149fbd30-9ccf-4b23-b3fa-6ccbad8bb88c	inf	True	United States
+clipgt-f60f9d49-65b7-4fdf-b2b8-da49f28fabcd	launch	271	1	453	9.804315084953666	clipgt-f60f9d49-65b7-4fdf-b2b8-da49f28fabcd	inf	False	United States
+clipgt-8f549ba1-041e-4004-8c2e-825cde7b78bb	stop_nolead	272	1	61	7.416667225979137	clipgt-8f549ba1-041e-4004-8c2e-825cde7b78bb	inf		
+clipgt-c8f861f7-89fe-4359-8680-b887be6a8ea0	stop_nolead	273	1	118	7.309597611617029	clipgt-c8f861f7-89fe-4359-8680-b887be6a8ea0	inf		
+clipgt-37a9fc2d-9122-4b96-a4b4-fbe5c242d074	turn_sharp	274	1	316	90.42658425032533	clipgt-37a9fc2d-9122-4b96-a4b4-fbe5c242d074	inf	True	United States
+clipgt-169d74f6-99f6-4f65-8352-b43bc6e80520	stop_nolead	275	1	189	7.278702066990495	clipgt-169d74f6-99f6-4f65-8352-b43bc6e80520	inf	False	United States
+clipgt-1d5f7881-a7f4-4c60-8e56-6ab1b85c5689	launch	276	1	503	9.59563976432897	clipgt-1d5f7881-a7f4-4c60-8e56-6ab1b85c5689	inf	False	United States
+clipgt-3063e706-131a-476a-bc02-6b646896c6a7	bend	277	1	565	50.83648173538926	clipgt-3063e706-131a-476a-bc02-6b646896c6a7	inf	True	Germany
+clipgt-80c97721-b259-444c-89ca-5f6a2a486742	turn_sharp	278	1	345	89.55390473883462	clipgt-80c97721-b259-444c-89ca-5f6a2a486742	inf	False	Germany
+clipgt-3ece7254-60dd-49ef-a846-f14e2fd00927	stop_nolead	279	1	69	7.223474833855381	clipgt-3ece7254-60dd-49ef-a846-f14e2fd00927	inf		
+clipgt-490e1e7c-225c-4fa3-96c8-552d4274eb99	stop_nolead	280	1	185	7.082741286315649	clipgt-3f4a9496-3ee6-407c-acf0-dff2463ec145	inf	False	United States
+clipgt-e0699821-d727-4274-b122-8a90dd8255d3	turn_sharp	281	1	282	90.38749079315049	clipgt-e0699821-d727-4274-b122-8a90dd8255d3	inf	True	United States
+clipgt-20c02adf-a773-4167-9231-82f89c0121be	launch	282	1	468	9.216441859730493	clipgt-20c02adf-a773-4167-9231-82f89c0121be	inf	False	United States
+clipgt-2f62f25a-c5bc-467a-beb9-ac67b57572cd	stop_nolead	283	1	156	7.046544311336351	clipgt-2f62f25a-c5bc-467a-beb9-ac67b57572cd	inf	False	United States
+clipgt-3259c4fe-f663-401d-b0a8-c7e944bcab8b	turn_sharp	284	1	261	93.23855152437716	clipgt-3259c4fe-f663-401d-b0a8-c7e944bcab8b	inf	False	Austria
+clipgt-a299c641-3565-4092-a554-f0f4e977d138	stop_nolead	285	1	109	7.032604652611086	clipgt-a299c641-3565-4092-a554-f0f4e977d138	inf	False	United States
+clipgt-16fc3dfe-41bd-4199-86e9-69188de13312	stop_nolead	286	1	162	7.027082527498134	clipgt-16fc3dfe-41bd-4199-86e9-69188de13312	inf		
+clipgt-af7e58a3-a943-4cfc-9d25-fe602c0caf15	turn_sharp	287	1	228	88.31539371562836	clipgt-af7e58a3-a943-4cfc-9d25-fe602c0caf15	inf	True	United States
+clipgt-0494c646-c537-4c6b-98b9-96c7e91fd0a8	launch	288	1	501	8.011488489214326	clipgt-0494c646-c537-4c6b-98b9-96c7e91fd0a8	inf	True	Germany
+clipgt-d68c7161-bef6-4342-800f-607127417825	bend	293	2	535	45.38565112668158	clipgt-16b83346-578c-437d-b51b-14784ffdf6c1	inf		
+clipgt-0cb146c8-f877-4d11-ac73-ed7b68a9eae5	turn_sharp	295	2	255	88.1792536954534	clipgt-0cb146c8-f877-4d11-ac73-ed7b68a9eae5	inf	False	Germany
+clipgt-185ee101-147e-4e76-af41-a0d8b4beb2fe	stop_nolead	297	2	32	6.9475027360918675	clipgt-185ee101-147e-4e76-af41-a0d8b4beb2fe	inf	False	Netherlands
+clipgt-b4bbb3b3-e5b0-4cbe-b848-4ecc9f86691f	turn_sharp	301	2	390	87.57021091802241	clipgt-b4bbb3b3-e5b0-4cbe-b848-4ecc9f86691f	inf	False	United States
+clipgt-659ed0bf-ddce-4bc8-b6fc-5318ca5cbaf7	stop_nolead	305	2	165	6.9737076253206105	clipgt-133a9c96-0cb9-41ae-8b84-ea87b74f3376	inf	False	United States
+clipgt-6ce9587c-acf1-4b80-824f-d198213caeab	turn_sharp	308	2	280	87.54662389632115	clipgt-6ce9587c-acf1-4b80-824f-d198213caeab	inf	False	United States
+clipgt-9b2b3274-205a-482b-9bf7-38b1534c5941	turn_sharp	313	2	386	88.18047237452076	clipgt-afcd6edd-0130-4524-af68-691ad1e1bbe0	inf	True	United States
+clipgt-0cf6368d-ff81-4489-b01e-4103371ba12c	stop_nolead	314	2	90	6.821475933550266	clipgt-0cf6368d-ff81-4489-b01e-4103371ba12c	inf		
+clipgt-9e77fe57-8c5e-4cdf-add7-fde6107db9ca	launch	317	2	444	9.032145014870967	clipgt-9e77fe57-8c5e-4cdf-add7-fde6107db9ca	inf		
+clipgt-a76a868d-1403-4cc1-a2a3-67581bee0041	turn_sharp	321	2	225	88.08396649915308	clipgt-9ff17e92-8625-4e70-8d82-679d461f2ebe	inf	False	Germany
+clipgt-8ac6bba7-040c-4b11-858d-4d31ca0e4224	stop_nolead	323	2	111	6.8763097510637	clipgt-8ac6bba7-040c-4b11-858d-4d31ca0e4224	inf	False	United States
+clipgt-ef1d76a9-a754-40f3-ae3c-8edb3cd112ef	turn_sharp	327	2	368	89.47435103550389	clipgt-ef1d76a9-a754-40f3-ae3c-8edb3cd112ef	inf	False	Netherlands
+clipgt-624265f9-9c16-49c0-ab8b-9660cd740c34	stop_nolead	331	2	133	6.739461188087175	clipgt-624265f9-9c16-49c0-ab8b-9660cd740c34	inf	False	United States
+clipgt-25343c92-abac-49bd-8cd3-bedc3215ed0f	turn_sharp	334	2	389	86.7579680438105	clipgt-25343c92-abac-49bd-8cd3-bedc3215ed0f	inf	False	United States
+clipgt-b187d5d3-767d-47fc-a5d3-78c939c54d2f	turn_sharp	339	2	260	87.72324117694389	clipgt-b187d5d3-767d-47fc-a5d3-78c939c54d2f	inf	True	United States
+clipgt-6434700c-d35c-4753-baea-445ce7f390a5	stop_nolead	341	2	119	6.505402848669067	clipgt-6434700c-d35c-4753-baea-445ce7f390a5	inf	False	Germany
+clipgt-1be86721-4f0e-4237-909d-1bc33ca56f5d	bend	342	2	529	43.79137532661581	clipgt-04394343-92f3-409c-9695-e7cd5397fa02	inf		
+clipgt-d9af9815-c264-4be6-9a24-00d061f3ce4d	launch	344	2	481	9.011600106069746	clipgt-b4746a06-3e95-4911-b079-6a1baaf6d1b1	inf	False	United States
+clipgt-64cfbdc4-e2c1-4969-ad12-816c4e4768e1	turn_sharp	347	2	422	87.55769664649338	clipgt-64cfbdc4-e2c1-4969-ad12-816c4e4768e1	inf	False	Germany
+clipgt-37ef2c67-ab41-4da6-9f55-96ef83e0f49f	stop_nolead	350	2	34	6.697393344275847	clipgt-37ef2c67-ab41-4da6-9f55-96ef83e0f49f	inf	False	United States
+clipgt-62a6072a-6fb3-4053-89a3-a2744c1be219	turn_sharp	353	2	434	86.62502905617048	clipgt-62a6072a-6fb3-4053-89a3-a2744c1be219	inf	False	United States
+clipgt-b59fd578-58e7-41a0-a07f-5b08ed8b5919	bend	355	2	562	47.80143278692341	clipgt-b59fd578-58e7-41a0-a07f-5b08ed8b5919	inf	False	France
+clipgt-89329b0b-a059-4824-9e98-5fad3cdcc1e4	stop_nolead	358	2	104	6.551844577046243	clipgt-89329b0b-a059-4824-9e98-5fad3cdcc1e4	inf		
+clipgt-9dd86799-a27c-46aa-9cb2-73161dcd0415	bend	359	2	545	47.33727010763824	clipgt-9dd86799-a27c-46aa-9cb2-73161dcd0415	inf	True	Germany
+clipgt-b304a9b9-b273-48ec-a9f9-cd94e9d94f62	turn_sharp	360	2	264	85.93808363628096	clipgt-b304a9b9-b273-48ec-a9f9-cd94e9d94f62	inf	False	United States
+clipgt-6ac28ce5-ca21-4610-9f25-ddba46d91d51	turn_sharp	365	2	376	85.92042252784475	clipgt-6ac28ce5-ca21-4610-9f25-ddba46d91d51	inf	False	United States
+clipgt-497183c6-6a87-43e7-8c2b-ab357e1cb57e	stop_nolead	367	2	145	6.672105547355461	clipgt-497183c6-6a87-43e7-8c2b-ab357e1cb57e	inf	False	United States
+clipgt-2c9a5309-e6e3-45d6-b30f-c1ed724bf7a6	launch	371	2	485	5.057758671520649	clipgt-2c9a5309-e6e3-45d6-b30f-c1ed724bf7a6	inf		
+clipgt-77d5887d-637a-40c6-803e-a498d10cb2de	turn_sharp	373	2	413	123.75499400657925	clipgt-77d5887d-637a-40c6-803e-a498d10cb2de	inf	True	Italy
+clipgt-5d5e6eb0-7a74-4903-8185-d0adcf8a0282	stop_nolead	376	2	6	6.547228964822617	clipgt-5d5e6eb0-7a74-4903-8185-d0adcf8a0282	inf	False	United States
+clipgt-55e029f7-66bb-4456-a506-1f86722d758d	turn_sharp	379	2	266	85.78019493194095	clipgt-55e029f7-66bb-4456-a506-1f86722d758d	inf	False	United States
+clipgt-625ee6ce-0838-4024-b262-44d3352ff279	stop_nolead	384	2	48	6.525050701290576	clipgt-625ee6ce-0838-4024-b262-44d3352ff279	inf	False	United States
+clipgt-240c081f-03ca-4eae-89a3-1b821e47d502	bend	385	2	534	38.381357677981384	clipgt-240c081f-03ca-4eae-89a3-1b821e47d502	inf	False	United States
+clipgt-2516202b-7d0c-4456-85cb-b88b351f0655	turn_sharp	386	2	411	91.7473899602349	clipgt-2516202b-7d0c-4456-85cb-b88b351f0655	inf	True	Germany
+clipgt-49d7436d-b1c2-4c49-a4d6-4c64f6f354a0	bend	389	2	531	38.49397227628253	clipgt-2e1ce314-9498-4a16-ab3a-837e6da25bf7	inf		
+clipgt-78df3a2c-80ad-4476-8d12-202099660490	turn_sharp	392	2	398	84.94977320942355	clipgt-78df3a2c-80ad-4476-8d12-202099660490	inf	False	United States
+clipgt-004d4a47-2b27-4174-a1b8-0363d81ffc1d	stop_nolead	394	2	158	6.420914673555367	clipgt-004d4a47-2b27-4174-a1b8-0363d81ffc1d	inf	False	Netherlands
+clipgt-007a5809-8a56-40b5-8af5-7e0f65229496	turn_sharp	398	2	310	88.05590830104079	clipgt-007a5809-8a56-40b5-8af5-7e0f65229496	inf	False	Sweden
+clipgt-5358b7b1-7d0a-477b-b032-4ffb04f3cc20	launch	399	2	447	7.6680840054579145	clipgt-5358b7b1-7d0a-477b-b032-4ffb04f3cc20	inf	False	Italy
+clipgt-84173c99-9f6f-43a9-8884-6aabcf8311b1	stop_nolead	403	2	70	6.103321378232036	clipgt-84173c99-9f6f-43a9-8884-6aabcf8311b1	inf	True	Germany
+clipgt-9b314680-02be-48fe-bd6d-162a00a743d1	turn_sharp	406	2	402	85.81048784832592	clipgt-0dbb91dd-8db1-4e10-b155-14fdf46218bc	inf		
+clipgt-aa094af8-da2c-4be0-bb80-2e17617daa25	turn_sharp	411	2	384	87.43531492449411	clipgt-aa094af8-da2c-4be0-bb80-2e17617daa25	inf	False	Sweden
+clipgt-1a4792c0-cd4b-42fc-9615-2f5ff41f13e0	stop_nolead	412	2	123	6.096348006233042	clipgt-1a4792c0-cd4b-42fc-9615-2f5ff41f13e0	inf	True	Germany
+clipgt-d604fdc3-c0ca-4e41-8a9a-e601ec30e9f1	turn_sharp	418	2	415	84.2261930386814	clipgt-d604fdc3-c0ca-4e41-8a9a-e601ec30e9f1	inf	False	United States
+clipgt-b50ed1e3-a9eb-4ab0-9484-c92e63279fdb	stop_nolead	420	2	107	6.5153555996647645	clipgt-2f5e9ff5-a3f8-4c0c-80e1-163bd60ac56a	inf	False	United States
+clipgt-dc21dc72-bb36-4ad4-a758-1c39db316deb	turn_sharp	424	2	431	84.10253220462297	clipgt-dc21dc72-bb36-4ad4-a758-1c39db316deb	inf	False	United States
+clipgt-bd08d260-83a3-46aa-8799-d3aa50fb0e20	launch	427	2	462	8.35728444963491	clipgt-bd08d260-83a3-46aa-8799-d3aa50fb0e20	inf		
+clipgt-4228c50e-e240-4b1e-9d70-e5b61dad1183	stop_nolead	429	2	124	6.444135828883945	clipgt-4228c50e-e240-4b1e-9d70-e5b61dad1183	inf		
+clipgt-14a02b32-08ac-493f-b9b5-5367df0cc568	turn_sharp	432	2	233	84.86146384724422	clipgt-14a02b32-08ac-493f-b9b5-5367df0cc568	inf	False	Germany
+clipgt-d19d1b01-9e6b-465f-bb85-d11718a526c7	bend	434	2	521	34.36950805912477	clipgt-d19d1b01-9e6b-465f-bb85-d11718a526c7	inf	False	United States
+clipgt-2f5e9ff5-a3f8-4c0c-80e1-163bd60ac56a	turn_sharp	437	2	357	83.6101315609489	clipgt-2f5e9ff5-a3f8-4c0c-80e1-163bd60ac56a	inf	False	United States
+clipgt-bb16e4a7-9a43-4454-818f-c7b07d22c0c6	stop_nolead	438	2	184	6.318938656034531	clipgt-bb16e4a7-9a43-4454-818f-c7b07d22c0c6	inf	False	Germany
+clipgt-be794864-766e-438a-86d7-ec06da5ee921	bend	439	2	520	37.77542422864619	clipgt-be794864-766e-438a-86d7-ec06da5ee921	inf	False	Spain
+clipgt-68abdefe-bd54-4b5e-95c6-a2e2eba6f51e	turn_sharp	444	2	272	113.60776091041521	clipgt-68abdefe-bd54-4b5e-95c6-a2e2eba6f51e	inf	True	Denmark
+clipgt-bba237df-1306-4130-bdf5-83d216ca71b9	stop_nolead	447	2	14	6.46816332052185	clipgt-21d4de35-b8d4-46b4-803d-7c22528961ea	inf	False	United States
+clipgt-adf0a670-6527-4890-ab06-cb83abeb99c5	turn_sharp	450	2	283	86.37792968128194	clipgt-adf0a670-6527-4890-ab06-cb83abeb99c5	inf	False	Belgium
+clipgt-afe7621b-500d-40fc-b386-6ccfbc1b6706	launch	454	2	442	7.617553984005903	clipgt-afe7621b-500d-40fc-b386-6ccfbc1b6706	inf	False	France
+clipgt-57024ddc-cb15-497c-b63e-14ba0e186b8c	stop_nolead	456	2	121	6.4058591115815116	clipgt-57024ddc-cb15-497c-b63e-14ba0e186b8c	inf	False	United States
+clipgt-5c871a72-ca26-4e8a-9bca-0736260285ea	turn_sharp	458	2	308	83.26376925882822	clipgt-5c871a72-ca26-4e8a-9bca-0736260285ea	inf		
+clipgt-a55d1c06-21ce-4ea7-82d7-896ce8c4a1e8	turn_sharp	463	2	409	84.86815235271071	clipgt-a55d1c06-21ce-4ea7-82d7-896ce8c4a1e8	inf	True	Germany
+clipgt-c60175e9-28dc-44cc-b34f-40347cc3861b	stop_nolead	465	2	188	6.091056296147	clipgt-c60175e9-28dc-44cc-b34f-40347cc3861b	inf	False	Germany
+clipgt-f8d52c55-f9b1-41cc-9da3-9470380b5618	turn_sharp	470	2	302	82.71276485262983	clipgt-f8d52c55-f9b1-41cc-9da3-9470380b5618	inf	False	United States
+clipgt-320846a7-36f8-4001-8964-26469a901d78	stop_nolead	473	2	27	6.398016942531258	clipgt-320846a7-36f8-4001-8964-26469a901d78	inf	False	United States
+clipgt-e297279a-6d0d-4d36-8882-ce69a79d324a	turn_sharp	476	2	378	83.58095443754883	clipgt-e297279a-6d0d-4d36-8882-ce69a79d324a	inf	False	Germany
+clipgt-3c91d836-ede2-4e15-9f34-5b7ebe0b1c0d	bend	478	2	570	35.78591566662366	clipgt-3c91d836-ede2-4e15-9f34-5b7ebe0b1c0d	inf	False	France
+clipgt-88c5959a-460b-46a5-a7ef-18ad980454c4	launch	481	2	477	7.803789835207409	clipgt-4a6f01d5-97bf-44f2-81c5-8e88b439d268	inf		
+clipgt-7481112b-92cc-47f8-991a-b01a46dcc947	stop_nolead	482	2	187	6.333301912167339	clipgt-7481112b-92cc-47f8-991a-b01a46dcc947	inf	False	United States
+clipgt-5d2827ec-3b1c-47e3-bf78-1e2003b7209f	turn_sharp	484	2	425	82.55636541007992	clipgt-31390e97-294f-4bfa-bc01-951fbed5a121	inf		
+clipgt-7bb5216b-4d92-466a-bdc6-b6d2f2c34348	turn_sharp	490	2	394	82.46811314179385	clipgt-7bb5216b-4d92-466a-bdc6-b6d2f2c34348	inf	False	United States
+clipgt-02ce6aee-45fb-4d4d-921c-4836f9a64be0	stop_nolead	491	2	204	5.989372432405331	clipgt-02ce6aee-45fb-4d4d-921c-4836f9a64be0	inf	True	United States
+clipgt-d4676b71-65a6-47b4-8195-db9a744be261	turn_sharp	497	2	299	82.11657541801293	clipgt-d4676b71-65a6-47b4-8195-db9a744be261	inf	False	United States
+clipgt-adb72a39-1e21-46ef-80f2-9c86a8e9504a	stop_nolead	500	2	26	5.987429136772932	clipgt-adb72a39-1e21-46ef-80f2-9c86a8e9504a	inf	False	Germany
+clipgt-8266c272-9c74-472b-8ccb-fffe911a6e78	turn_sharp	503	2	312	82.00619397316825	clipgt-8266c272-9c74-472b-8ccb-fffe911a6e78	inf	False	United States
+clipgt-1d205d02-7180-40c0-8242-22e57ad977d7	stop_nolead	508	2	35	5.745364841713913	clipgt-1d205d02-7180-40c0-8242-22e57ad977d7	inf	True	Germany
+clipgt-c71afeca-6381-49d6-98ef-3c5fb9fe32c8	turn_sharp	509	2	361	100.99625202823668	clipgt-c71afeca-6381-49d6-98ef-3c5fb9fe32c8	inf	True	Netherlands
+clipgt-852f57f7-669e-4372-9851-ee55ce9c9f74	launch	510	2	470	7.6335341786512	clipgt-852f57f7-669e-4372-9851-ee55ce9c9f74	inf		
+clipgt-a087953d-72d7-446e-bf4f-d08482d400e8	turn_sharp	516	2	392	81.96590912377054	clipgt-a087953d-72d7-446e-bf4f-d08482d400e8	inf	False	United States
+clipgt-451cbe44-d2ac-4deb-8ae7-3dfedda42042	stop_nolead	518	2	3	6.318447419216846	clipgt-451cbe44-d2ac-4deb-8ae7-3dfedda42042	inf	False	United States
+clipgt-15e74ae9-3bda-497c-ad76-51753f6dbf32	turn_sharp	522	2	405	84.70334104293461	clipgt-15e74ae9-3bda-497c-ad76-51753f6dbf32	inf	False	Italy
+clipgt-b5d12506-227c-4461-b38e-d8ce2ec22247	stop_nolead	526	2	154	6.05771606910855	clipgt-b5d12506-227c-4461-b38e-d8ce2ec22247	inf	False	Sweden
+clipgt-f93db5db-442a-40f5-87fb-24f061a12c1f	turn_sharp	529	2	275	82.94679392205474	clipgt-f93db5db-442a-40f5-87fb-24f061a12c1f	inf	True	United States
+clipgt-031f43ff-bc87-4cf3-99a1-6aef48e6628f	turn_sharp	534	2	347	82.5416769457556	clipgt-031f43ff-bc87-4cf3-99a1-6aef48e6628f	inf	True	United States
+clipgt-2f3ed8fe-0d6b-492a-9dc3-1f281e3486e8	stop_nolead	535	2	41	5.791785027057446	clipgt-2f3ed8fe-0d6b-492a-9dc3-1f281e3486e8	inf	True	United States
+clipgt-bad7a546-ebed-4ba6-9fd5-a0925e725689	launch	538	2	480	7.033380116405043	clipgt-bad7a546-ebed-4ba6-9fd5-a0925e725689	inf	False	Sweden
+clipgt-769e6724-8826-48fb-8c44-5e40ff19540b	bend	540	2	544	23.303701866001635	clipgt-769e6724-8826-48fb-8c44-5e40ff19540b	inf	False	United States
+clipgt-3b6a7ba3-9fca-428a-8fbc-8c4e44cb4c4d	turn_sharp	542	2	231	81.37470847518354	clipgt-3b6a7ba3-9fca-428a-8fbc-8c4e44cb4c4d	inf	False	United States
+clipgt-fadc118c-4ab4-4396-8e03-945fcaef54cf	stop_nolead	544	2	16	6.292031655897663	clipgt-fadc118c-4ab4-4396-8e03-945fcaef54cf	inf	False	United States
+clipgt-fbf1acd4-66a2-4584-9c05-685941b5a6bf	turn_sharp	548	2	297	81.91119362170946	clipgt-fbf1acd4-66a2-4584-9c05-685941b5a6bf	inf	False	Germany
+clipgt-1c576012-70de-43e6-8e3f-bee14bb7a35a	bend	550	2	553	29.59580111890658	clipgt-1c576012-70de-43e6-8e3f-bee14bb7a35a	inf	False	France
+clipgt-ffbc3d2b-00fc-4a53-8e6f-ea0cea4adbe6	stop_nolead	553	2	43	6.252741543569724	clipgt-ffbc3d2b-00fc-4a53-8e6f-ea0cea4adbe6	inf	False	United States
+clipgt-9efa4ece-5030-42a5-9da0-1ff3d1c6ae93	turn_sharp	555	2	244	80.59784738771438	clipgt-9efa4ece-5030-42a5-9da0-1ff3d1c6ae93	inf	False	United States
+clipgt-e14cf3db-46c9-475b-97a4-3666a1a9a047	turn_sharp	560	2	329	84.42956016010089	clipgt-e14cf3db-46c9-475b-97a4-3666a1a9a047	inf	False	Spain
+clipgt-41c06176-96a4-43ff-b5fa-baaa3a8fd8d0	stop_nolead	562	2	28	5.5482846050252075	clipgt-41c06176-96a4-43ff-b5fa-baaa3a8fd8d0	inf	False	Germany
+clipgt-eec448a5-bb52-469d-b76b-3cbd5980533f	bend	563	2	536	22.78362350510513	clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	inf	False	United States
+clipgt-f6a1f6e2-1c72-402a-84b2-43e74edd3a48	launch	565	2	449	7.067112443498978	clipgt-f6a1f6e2-1c72-402a-84b2-43e74edd3a48	inf	False	United States
+clipgt-f636ac7b-7984-4c83-820e-c315642d1bfb	turn_sharp	568	2	239	81.78296857215119	clipgt-f636ac7b-7984-4c83-820e-c315642d1bfb	inf	True	United States
+clipgt-25020844-0ed9-4838-b800-454bfda2e013	stop_nolead	571	2	203	5.903698002500498	clipgt-25020844-0ed9-4838-b800-454bfda2e013	inf	False	United States
+clipgt-ccd14274-9097-4651-b5b7-d89359531faf	turn_sharp	574	2	296	81.23780471899327	clipgt-ccd14274-9097-4651-b5b7-d89359531faf	inf	False	Germany
+clipgt-5d7a5fec-e13e-4d97-801a-7c92cfb2b4c9	bend	576	2	528	22.32877126498912	clipgt-5d7a5fec-e13e-4d97-801a-7c92cfb2b4c9	inf		
+clipgt-3f80214b-4e87-465d-9704-bb03f2bf01e1	stop_nolead	579	2	67	5.6494036887424235	clipgt-3f80214b-4e87-465d-9704-bb03f2bf01e1	inf		
+clipgt-31ae8f1a-7a39-4c0d-a22a-e5931129e2eb	turn_sharp	581	2	365	81.23425930225521	clipgt-31ae8f1a-7a39-4c0d-a22a-e5931129e2eb	inf	True	United States
+clipgt-7ce9e86e-c63f-4f0e-97cd-072c9ab24a88	turn_sharp	587	2	367	80.17853855139106	clipgt-832cd2b0-57b0-4f4e-9be1-a70b38371bbc	inf		
+clipgt-2d52ce30-7dbb-45e8-8c48-c61e4b58c36c	stop_nolead	588	2	42	5.156278669058384	clipgt-2d52ce30-7dbb-45e8-8c48-c61e4b58c36c	inf	True	United States
+clipgt-7bc74f9f-3732-4d08-9e13-3f78da39594e	launch	592	2	499	5.64583105304876	clipgt-7bc74f9f-3732-4d08-9e13-3f78da39594e	inf	True	Germany
+clipgt-4bdcda96-d062-4d63-ba55-5c1664943a7c	turn_sharp	595	2	349	80.04140460418975	clipgt-4bdcda96-d062-4d63-ba55-5c1664943a7c	inf	False	United States
+clipgt-76045d81-bc69-4208-8c7e-de805f00f7fb	stop_nolead	597	2	132	5.060000130387706	clipgt-76045d81-bc69-4208-8c7e-de805f00f7fb	inf	False	Germany
+clipgt-e206610d-26be-49e2-953f-7e0593c5dc4d	turn_sharp	601	2	271	80.26113330269496	clipgt-e206610d-26be-49e2-953f-7e0593c5dc4d	inf	False	Germany
+clipgt-2a356a82-3672-4fd5-ad80-174a780ae0c9	stop_nolead	606	2	190	5.454680587286452	clipgt-2a356a82-3672-4fd5-ad80-174a780ae0c9	inf		
+clipgt-cc289222-8a2c-486d-9b4f-0db31d1165b7	turn_sharp	608	2	424	79.93728736229811	clipgt-02eadd92-02f1-46d8-86fe-a9e338fed0b6	inf		
+clipgt-abc4fda9-6185-47f8-abd8-86dcc1fdec2d	turn_sharp	613	2	221	78.60115967322308	clipgt-4587c40f-2452-46ae-8d32-3fe88a386982	inf	False	United States
+clipgt-689889c5-95b0-42ce-a1c9-f97a4388cb28	stop_nolead	615	2	21	5.026081801341052	clipgt-689889c5-95b0-42ce-a1c9-f97a4388cb28	inf	True	United States
+clipgt-3250c8af-5afd-4ba4-ae46-3cd62ae7b5db	turn_sharp	619	2	305	78.46816981434478	clipgt-3250c8af-5afd-4ba4-ae46-3cd62ae7b5db	inf	False	United States
+clipgt-6023999c-cab4-4e04-92e6-722284a0065b	launch	620	2	509	6.575358393307074	clipgt-23b03b84-fb88-445a-9a85-e19bad0a4986	inf		
+clipgt-bdf2c763-f8a8-4a01-9efe-6482cf9f806d	bend	621	2	526	20.84858884662538	clipgt-bdf2c763-f8a8-4a01-9efe-6482cf9f806d	inf	False	Germany
+clipgt-8d19b573-7a89-4060-a281-e3f6fa111b2f	stop_nolead	624	2	18	5.688631935679362	clipgt-8d19b573-7a89-4060-a281-e3f6fa111b2f	inf	False	United States
+clipgt-951ce3ff-104a-40de-9669-3a553409a25f	turn_sharp	627	2	246	78.36531844073149	clipgt-951ce3ff-104a-40de-9669-3a553409a25f	inf	False	United States
+clipgt-1ee06414-734b-47f3-8b5b-e1a810eb83e6	turn_sharp	632	2	288	80.14804734700702	clipgt-1ee06414-734b-47f3-8b5b-e1a810eb83e6	inf	True	United States
+clipgt-4587c40f-2452-46ae-8d32-3fe88a386982	stop_nolead	633	2	93	4.661397890631331	clipgt-4587c40f-2452-46ae-8d32-3fe88a386982	inf	True	United States
+clipgt-682d1fe7-7c6a-4c03-89f2-77be978c5cd8	bend	634	2	525	27.52377969291101	clipgt-682d1fe7-7c6a-4c03-89f2-77be978c5cd8	inf	False	Belgium
+clipgt-651e79cd-8fd7-4c42-96a0-cb4be9be4ac1	bend	637	2	541	19.881670946539483	clipgt-651e79cd-8fd7-4c42-96a0-cb4be9be4ac1	inf	True	United States
+clipgt-39b6115a-a221-45ea-8faa-3dd98b772058	turn_sharp	639	2	399	79.89557169270871	clipgt-39b6115a-a221-45ea-8faa-3dd98b772058	inf	True	United States
+clipgt-4fdd073a-3aca-46b7-9b9e-fd58e7ba9657	stop_nolead	641	2	135	5.369822641021192	clipgt-4fdd073a-3aca-46b7-9b9e-fd58e7ba9657	inf	False	United States
+clipgt-16eb5dec-90fa-4ce1-ade9-3f70c2ed9c9a	turn_sharp	645	2	428	76.39289529171626	clipgt-16eb5dec-90fa-4ce1-ade9-3f70c2ed9c9a	inf	False	United States
+clipgt-7ae6bec8-ccf1-4397-9180-83164840fbae	launch	648	2	452	6.461056845031354	clipgt-7ae6bec8-ccf1-4397-9180-83164840fbae	inf		
+clipgt-1f1551dd-3492-4877-9e5a-6a741b7a7287	stop_nolead	650	2	95	4.813065578812138	clipgt-1f1551dd-3492-4877-9e5a-6a741b7a7287	inf		
+clipgt-0eb6e9ae-bc08-42c9-bd10-45a99b473288	turn_sharp	653	2	234	83.24689580011034	clipgt-0eb6e9ae-bc08-42c9-bd10-45a99b473288	inf	True	Germany
+clipgt-ed1734bc-6b7b-409f-b4b3-27cfbbf2c642	bend	656	2	524	19.253404134290392	clipgt-ed1734bc-6b7b-409f-b4b3-27cfbbf2c642	inf	False	United States
+clipgt-fb36b704-9f73-43c2-b4ac-24c34d72a150	turn_sharp	658	2	429	82.97960097656046	clipgt-fb36b704-9f73-43c2-b4ac-24c34d72a150	inf	False	Italy
+clipgt-0ac2b5ac-da4f-4910-ba76-139649c74e14	stop_nolead	660	2	159	4.49383764730545	clipgt-0ac2b5ac-da4f-4910-ba76-139649c74e14	inf	True	United States
+clipgt-1a89339b-48d2-42c9-9b6b-277dd098112a	bend	661	2	530	24.98868056606893	clipgt-1a89339b-48d2-42c9-9b6b-277dd098112a	inf	True	Austria
+clipgt-133a9c96-0cb9-41ae-8b84-ea87b74f3376	turn_sharp	665	2	237	73.54038294295995	clipgt-133a9c96-0cb9-41ae-8b84-ea87b74f3376	inf	False	United States
+clipgt-7c31c021-4616-49db-8baa-e9128a25933e	stop_nolead	668	2	74	4.430444225077075	clipgt-7c31c021-4616-49db-8baa-e9128a25933e	inf	False	Austria
+clipgt-a8fb9c09-0cbf-42e3-a0e3-1b6dbc16816b	bend	669	2	567	18.780876421370838	clipgt-a8fb9c09-0cbf-42e3-a0e3-1b6dbc16816b	inf	False	United States
+clipgt-0e479696-934d-4b1a-9d21-3e159990c4f8	turn_sharp	671	2	380	76.91120793042106	clipgt-0e479696-934d-4b1a-9d21-3e159990c4f8	inf	True	Germany
+clipgt-0026c1ce-efb6-4d41-b206-032598f31f7f	launch	675	2	505	6.419006925006851	clipgt-0026c1ce-efb6-4d41-b206-032598f31f7f	inf	False	United States
+clipgt-1b024ad1-c2cc-4538-a7c5-8184f8cf0959	stop_nolead	677	2	157	3.9373633474261718	clipgt-1b024ad1-c2cc-4538-a7c5-8184f8cf0959	inf	False	Germany
+clipgt-4a091b74-4ba0-46e3-90bb-be1370076319	bend	678	2	555	16.335955789506848	clipgt-4a091b74-4ba0-46e3-90bb-be1370076319	inf		
+clipgt-ec41061e-077f-411e-838a-af1e564d9666	turn_sharp	679	2	374	89.15683131366802	clipgt-ec41061e-077f-411e-838a-af1e564d9666	inf	True	Austria
+clipgt-b5305cf7-963b-4cb1-87b8-7bcbb6443af8	turn_sharp	685	2	359	75.29121991847677	clipgt-b5305cf7-963b-4cb1-87b8-7bcbb6443af8	inf	True	Germany
+clipgt-cfb360e9-76cf-46ee-a7c2-d9e87f4a1baf	stop_nolead	686	2	11	5.044864846787758	clipgt-cfb360e9-76cf-46ee-a7c2-d9e87f4a1baf	inf	False	United States
+clipgt-504ee5fd-7588-4ec5-b8f3-2bde1b06c05a	bend	687	2	538	18.549460142633418	clipgt-504ee5fd-7588-4ec5-b8f3-2bde1b06c05a	inf	False	United States
+clipgt-002ae4d8-ef9d-49ff-a7ba-0778fadbd98b	bend	690	2	519	18.337537476108533	clipgt-002ae4d8-ef9d-49ff-a7ba-0778fadbd98b	inf	False	United States
+clipgt-2640e5d4-678e-427a-85b4-072f98a445f3	turn_sharp	692	2	304	71.90791733720302	clipgt-2640e5d4-678e-427a-85b4-072f98a445f3	inf	False	United States
+clipgt-9c30e7ee-3660-465a-a079-99da78872a04	stop_nolead	694	2	39	4.269573006134673	clipgt-b72bf7fa-a3f7-4059-b5fd-17330dbb1ab3	inf		
+clipgt-39f3ab94-d506-421a-9f85-3b7dd00094c1	turn_sharp	698	2	363	72.01582474393427	clipgt-39f3ab94-d506-421a-9f85-3b7dd00094c1	inf		
+clipgt-2da7fb57-852c-43dd-b3fa-f64b88d49fe4	launch	702	2	506	6.324860604655463	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-d0f64342-1f39-41ea-b1eb-be9a5d47ddca	stop_nolead	703	2	33	3.668025892252897	clipgt-d0f64342-1f39-41ea-b1eb-be9a5d47ddca	inf	False	Germany
+clipgt-05ecbbf5-d88c-41b7-97f2-f4ac2615a8c9	turn_sharp	706	2	232	71.29004500946311	clipgt-2a356a82-3672-4fd5-ad80-174a780ae0c9	inf		
+clipgt-6e45ad8a-1c94-4466-bd54-25c1fe9c0858	bend	709	2	537	16.609486993447973	clipgt-6e45ad8a-1c94-4466-bd54-25c1fe9c0858	inf	False	United States
+clipgt-d5f874a2-d08e-4dad-b985-9c067a862b09	turn_sharp	711	2	286	72.06647701870128	clipgt-d5f874a2-d08e-4dad-b985-9c067a862b09	inf	False	Germany
+clipgt-f922e4bc-7bf3-4c4d-a254-63fadb4fd2fe	stop_nolead	713	2	82	4.598321130094945	clipgt-f922e4bc-7bf3-4c4d-a254-63fadb4fd2fe	inf	False	United States
+clipgt-cac1d7a0-c214-4642-9bae-57a01c88c428	turn_sharp	718	2	328	70.8068180549755	clipgt-8489e6c7-a57e-4ace-ae2c-af07850bb0a8	inf		
+clipgt-b609420f-d0d1-46b2-ab04-254885dfd218	stop_nolead	721	2	1	4.0917508948552195	clipgt-b609420f-d0d1-46b2-ab04-254885dfd218	inf	False	United States
+clipgt-19dc4c06-0e82-4fc7-813f-34761e63d009	turn_sharp	724	2	362	87.07136601017369	clipgt-19dc4c06-0e82-4fc7-813f-34761e63d009	inf	True	Spain
+clipgt-10d64934-74a5-40ce-b35e-6debe2cd3d9c	stop_nolead	729	2	75	3.8130050022816278	clipgt-10d64934-74a5-40ce-b35e-6debe2cd3d9c	inf		
+clipgt-f128a0bb-1f4b-460e-8f62-6b387988a069	turn_sharp	730	2	430	69.89384207814354	clipgt-f128a0bb-1f4b-460e-8f62-6b387988a069	inf	False	United States
+clipgt-ea38e557-6b91-4bad-982f-58f2fcbfa382	launch	731	2	472	4.823150749556656	clipgt-ea38e557-6b91-4bad-982f-58f2fcbfa382	inf	False	Germany
+clipgt-4f8168cc-0add-48aa-a44b-206268cd07b9	turn_sharp	737	2	274	74.35073355990598	clipgt-4f8168cc-0add-48aa-a44b-206268cd07b9	inf	False	France
+clipgt-62d7d1ea-522a-4cc1-966c-3cb751e39d1e	stop_nolead	739	2	78	3.4621695503287357	clipgt-62d7d1ea-522a-4cc1-966c-3cb751e39d1e	inf	False	Belgium
+clipgt-bcf67ede-1879-4125-ab20-cae5a483d8cb	turn_sharp	743	2	298	70.16755644027329	clipgt-bcf67ede-1879-4125-ab20-cae5a483d8cb	inf		
+clipgt-e59e7852-4176-4ec6-9c09-c875384ca617	stop_nolead	747	2	94	3.8198541435414204	clipgt-658cc9f4-955b-458c-9531-07c2a6c0c847	inf	False	United States
+clipgt-f1964480-fef1-467a-96c1-99dedf008873	turn_sharp	750	2	262	69.27308561581066	clipgt-f1964480-fef1-467a-96c1-99dedf008873	inf	False	United States
+clipgt-19073df6-076e-4ae0-9f8a-be59239919bb	turn_sharp	755	2	433	73.14577109711387	clipgt-19073df6-076e-4ae0-9f8a-be59239919bb	inf	False	France
+clipgt-666e32ef-8af7-408a-bb25-f5b107f53a45	stop_nolead	757	2	87	1.84209006515848	clipgt-666e32ef-8af7-408a-bb25-f5b107f53a45	inf	True	United States
+clipgt-2bcf87fb-e50e-46fd-b221-01caecb2145e	launch	759	2	482	3.6471347713846067	clipgt-2bcf87fb-e50e-46fd-b221-01caecb2145e	inf	False	Germany
+clipgt-e1192860-315d-4204-9947-51a2e589b18a	bend	762	2	540	15.818269180647194	clipgt-50541d25-ddd7-46e4-afea-05250006705a	inf	False	United States
+clipgt-f20af970-3a39-4b68-a33c-7abaa16d5589	turn_sharp	763	2	370	69.58418293200883	clipgt-f20af970-3a39-4b68-a33c-7abaa16d5589	inf	False	Germany
+clipgt-e1d6972e-614d-4606-ba0f-f535fb56d457	stop_nolead	766	2	57	3.5674996012217255	clipgt-e1d6972e-614d-4606-ba0f-f535fb56d457	inf	False	United States
+clipgt-a6db4919-62db-4da9-bde9-ea065d018562	turn_sharp	769	2	346	68.98029630747547	clipgt-3e18388c-aa5b-4152-99bd-f93e570bd2ff	inf		
+clipgt-68a89a54-8076-4c76-988b-33d45ee03b48	stop_nolead	774	2	181	3.5408392624136873	clipgt-68a89a54-8076-4c76-988b-33d45ee03b48	inf	False	United States
+clipgt-3ffd7a2b-641c-453e-ba00-58809ae3c103	turn_sharp	776	2	238	68.18207168555745	clipgt-3ffd7a2b-641c-453e-ba00-58809ae3c103	inf	False	United States
+clipgt-835f8288-3884-41b4-9f6a-25539170c537	turn_sharp	782	2	243	72.43525344758476	clipgt-489ecd96-6c76-4af9-b36a-8ad4e5d7d91e	inf	False	Italy
+clipgt-a96274d4-a18d-4369-ac0f-420163f54df1	stop_nolead	783	2	60	2.6145624818858986	clipgt-a96274d4-a18d-4369-ac0f-420163f54df1	inf		
+clipgt-abc2dc67-8e69-4bc5-bfc7-3b4e0db31e35	launch	786	2	507	6.281286084205883	clipgt-abc2dc67-8e69-4bc5-bfc7-3b4e0db31e35	inf	False	United States
+clipgt-f095ecaa-fd12-4448-b384-b11407bc5c4f	bend	788	2	539	16.27570186458789	clipgt-22a92557-7661-4a06-9854-b0a7f17d5c84	inf	True	Germany
+clipgt-300157fe-f27b-4e8d-af9a-b4f5724abccf	turn_sharp	790	2	311	70.63957638629688	clipgt-300157fe-f27b-4e8d-af9a-b4f5724abccf	inf	True	Germany
+clipgt-c9b68d76-c8a2-4dd1-aba9-88220a3c0af8	stop_nolead	792	2	196	15.747860640424577	clipgt-38e9aaaa-1a5e-4b6e-8991-ec266bdedc78	inf		
+clipgt-089f9b45-e587-499e-971f-ee3a1ab51e30	turn_sharp	796	2	427	69.65992869319072	clipgt-089f9b45-e587-499e-971f-ee3a1ab51e30	inf	False	Spain
+clipgt-af431f7b-5777-4c7f-b23b-225ccdc56ba3	stop_nolead	800	2	136	12.76508552723223	clipgt-16b83346-578c-437d-b51b-14784ffdf6c1	inf		
+clipgt-3abb7821-04dd-48c8-bda9-4326844b611f	bend	801	2	554	15.003869473294845	clipgt-3a1341fc-81a0-47b6-8955-bdeb4a709d20	inf		
+clipgt-7a8d8d03-c3aa-4719-9d61-1e9545bc81f5	turn_sharp	803	2	354	84.03880401485992	clipgt-7a8d8d03-c3aa-4719-9d61-1e9545bc81f5	inf	True	Spain
+clipgt-471f2484-3cdd-47bb-9039-abc856acaeb8	turn_sharp	808	2	254	67.04377716718756	clipgt-471f2484-3cdd-47bb-9039-abc856acaeb8	inf	True	United States
+clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	stop_nolead	810	2	50	11.320403740947414	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-f9c6d9eb-a008-4906-8726-a4b34cdd0b82	bend	811	2	533	17.938540922635486	clipgt-8c7248f0-2b20-49f8-be47-fe54a31ae900	inf	False	Italy
+clipgt-bbf8ca4c-c999-4dd4-bb21-cb05832c86bb	launch	813	2	461	5.006838326426239	clipgt-bbf8ca4c-c999-4dd4-bb21-cb05832c86bb	inf	False	France
+clipgt-ade18f35-93ae-4d3f-8253-798ca06893a1	turn_sharp	816	2	250	66.81512266552562	clipgt-ade18f35-93ae-4d3f-8253-798ca06893a1	inf	False	Germany
+clipgt-8e6b7231-5d94-4c5a-82dc-6115482ed321	stop_nolead	819	2	149	10.699872032759156	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	True	United States
+clipgt-1ad54fc0-1ccd-4855-8e76-b243938bba7b	bend	820	2	527	16.96917842092674	clipgt-1ad54fc0-1ccd-4855-8e76-b243938bba7b	inf	False	Sweden
+clipgt-1f3816e3-9036-4124-82fe-bde06f7a3721	turn_sharp	822	2	309	66.75933496201468	clipgt-1f3816e3-9036-4124-82fe-bde06f7a3721	inf		
+clipgt-7d257301-a9d1-433b-8f08-85023a4d0fac	stop_nolead	827	2	148	9.962330612189081	clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	inf	True	United States
+clipgt-59e005fe-3cbc-4425-9085-1afcf3495e18	bend	828	2	522	13.661294090442395	clipgt-59e005fe-3cbc-4425-9085-1afcf3495e18	inf	False	Germany
+clipgt-1d87bdc8-a321-4796-9ca1-da8a94160535	turn_sharp	829	2	258	65.95624773780021	clipgt-81a1d7cc-9af5-4c01-8b67-9ce038bf03a0	inf	False	Germany
+clipgt-4995e8aa-8a9b-40a5-aceb-ceccdfa506c7	turn_sharp	834	2	356	76.40474445962631	clipgt-4995e8aa-8a9b-40a5-aceb-ceccdfa506c7	inf	True	Denmark
+clipgt-a5414a7e-00de-41ad-ae50-874dc811fb2c	stop_nolead	836	2	17	8.90840357007197	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-41bb5055-ba29-4656-9238-aea42e58ccb5	turn_sharp	840	2	323	74.75242145424998	clipgt-41bb5055-ba29-4656-9238-aea42e58ccb5	inf	True	Italy
+clipgt-6f2fb06e-59df-4ad1-8854-594288096989	launch	841	2	460	5.214414534007812	clipgt-6f2fb06e-59df-4ad1-8854-594288096989	inf	False	United States
+clipgt-2431387d-b9c5-4241-a219-497a99d1f4e5	stop_nolead	845	2	71	10.260196443580766	clipgt-2431387d-b9c5-4241-a219-497a99d1f4e5	inf		
+clipgt-153222d8-e989-4828-ab09-b5f2a3a333a5	turn_sharp	848	2	313	67.70599600318725	clipgt-153222d8-e989-4828-ab09-b5f2a3a333a5	inf	False	Sweden
+clipgt-4d4352f8-8565-42a8-99ac-8b2c790d2591	bend	850	2	547	12.33783412656656	clipgt-4d4352f8-8565-42a8-99ac-8b2c790d2591	inf	False	United States
+clipgt-7475c381-6a59-4404-99d9-e74c0ed54d0f	turn_sharp	853	2	306	65.36381361012504	clipgt-7475c381-6a59-4404-99d9-e74c0ed54d0f	inf	False	Netherlands
+clipgt-43e7ed53-d38f-4b04-9225-bfcc3875ebb5	stop_nolead	854	2	205	9.549944382491795	clipgt-3a1341fc-81a0-47b6-8955-bdeb4a709d20	inf		
+clipgt-1e7d049c-a19b-478a-8f49-126aff5f6ad3	turn_sharp	860	2	395	172.69542943762207	clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	inf	False	United States
+clipgt-d3d3ab1b-d288-4fcc-b913-1015d2da1e1f	stop_nolead	863	2	208	9.263859413338349	clipgt-c681d7d8-95a8-4f25-a923-c36b51b1c45f	inf		
+clipgt-683a47b6-a288-4745-9e45-4e66a5ac0397	turn_sharp	866	2	435	65.11737368519402	clipgt-683a47b6-a288-4745-9e45-4e66a5ac0397	inf	True	Germany
+clipgt-00097de1-5ded-4fba-a5ed-4b527678d1b0	launch	869	2	437	2.9319394644887544	clipgt-00097de1-5ded-4fba-a5ed-4b527678d1b0	inf	False	Germany
+clipgt-cbe2d634-0e1d-47a8-9490-4e4c3391e45c	stop_nolead	872	2	192	8.852849327376035	clipgt-8489e6c7-a57e-4ace-ae2c-af07850bb0a8	inf		
+clipgt-45f08b17-c7d7-4ea9-b56d-d859601e2ff7	turn_sharp	874	2	393	61.61589121074622	clipgt-45f08b17-c7d7-4ea9-b56d-d859601e2ff7	inf	False	Germany
+clipgt-249733bd-12e5-40d1-bf50-54564f6654e3	turn_sharp	880	2	322	124.0484609718139	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-cf9ca3f2-19c1-4bfb-8e10-9463bd85d800	stop_nolead	881	2	19	7.598005481182666	clipgt-1370aa93-94e4-4dcb-9855-ede07046cbff	inf	False	United States
+clipgt-9702e788-a40e-4c15-a465-af59f7f43c49	bend	885	2	561	10.700315695954822	clipgt-9702e788-a40e-4c15-a465-af59f7f43c49	inf	False	United States
+clipgt-027a5570-83b3-4ebe-b332-ba4f054636ce	turn_sharp	887	2	324	64.43911290347874	clipgt-027a5570-83b3-4ebe-b332-ba4f054636ce	inf	True	Germany
+clipgt-afeb04ed-1568-4525-821e-5991d69b25ee	stop_nolead	889	2	52	7.248437187135043	clipgt-166fe701-83b5-473b-9f3f-a2401fec3c78	inf		
+clipgt-0fa7060f-1481-4ff3-977e-510285e2515d	turn_sharp	893	2	269	177.8111225150457	clipgt-0fa7060f-1481-4ff3-977e-510285e2515d	inf	False	Germany
+clipgt-89dca270-b3a8-4470-8d67-e42de4db7787	launch	896	2	491	3.3767535461542546	clipgt-2f3ed8fe-0d6b-492a-9dc3-1f281e3486e8	inf	False	United States
+clipgt-f9b7dcc6-8ea2-4c5b-9bf2-738f4d4230d6	stop_nolead	898	2	191	6.978176141520429	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-8c383368-3f9c-4bc7-a486-076802271599	turn_sharp	901	2	364	111.9175898027177	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	False	United States
+clipgt-619ce63d-d7ef-44ab-9ba4-3bf75bd472ea	turn_sharp	906	2	268	65.3196029926322	clipgt-619ce63d-d7ef-44ab-9ba4-3bf75bd472ea	inf	False	Italy
+clipgt-325a6911-8ee8-4a04-8b84-55dbfcada98f	stop_nolead	907	2	206	6.299108997872721	clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	inf	False	United States
+clipgt-774f756b-9f5e-4305-b014-3fc5f80cc7c3	turn_sharp	913	2	259	69.41350977335033	clipgt-774f756b-9f5e-4305-b014-3fc5f80cc7c3	inf	True	Italy
+clipgt-0caa5e02-1be0-4154-9a34-6c5d1e632c06	stop_nolead	916	2	209	5.964342105230858	clipgt-21d4de35-b8d4-46b4-803d-7c22528961ea	inf	False	United States
+clipgt-411ee080-8d8a-4ba5-a6f0-4a19b939ee1f	turn_sharp	919	2	224	87.35638017255083	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-86de8ecc-d88f-4f44-9766-33a89219837b	launch	923	2	489	3.0560423449562553	clipgt-002f04fd-984f-4f0b-943e-aba82864930e	inf	False	United States
+clipgt-5e265710-1a9b-45b3-8c51-1b37a3b1bde7	stop_nolead	925	2	170	5.828541456508644	clipgt-5e265710-1a9b-45b3-8c51-1b37a3b1bde7	inf	False	United States
+clipgt-ae42a281-c845-4b25-9dec-d9a67be39df5	turn_sharp	927	2	335	86.60444411709184	clipgt-25343c92-abac-49bd-8cd3-bedc3215ed0f	inf	False	United States
+clipgt-065dcac9-ee67-4434-a835-c6b816c88e48	turn_sharp	932	2	242	87.11518889249959	clipgt-25f6ad44-f4ca-4b73-9038-9295546e0da1	inf		
+clipgt-b7b0c60f-8379-4cfc-af65-c0ed19412d06	stop_nolead	934	2	105	3.9862835554393854	clipgt-9c351bef-84b8-4a7f-bad8-9df0f50d0ded	inf	False	United States
+clipgt-e4a8ce47-7785-4b53-8be5-df70ae234eb6	turn_sharp	939	2	348	80.69452341071066	clipgt-8266c272-9c74-472b-8ccb-fffe911a6e78	inf	False	United States
+clipgt-caf18c8e-1a8c-4543-b4e9-55e363d0e4ff	stop_nolead	942	2	214	1.299798240995125	clipgt-35953aac-81c1-4815-a5d5-4134c08edaa6	inf		
+clipgt-9d73b364-2e13-4df8-9c27-d56670b9b39d	turn_sharp	945	2	277	79.42910197578583	clipgt-41d714e0-3524-4f96-a05c-d15337a083fa	inf	False	United States
+clipgt-05a1d902-b975-4d11-a9ed-e6bfc774577f	bend	947	2	549	30.37038299232622	clipgt-05a1d902-b975-4d11-a9ed-e6bfc774577f	inf		
+clipgt-a013c0c6-c2f0-40b7-ab4a-775138e0d7b6	stop_nolead	950	2	24	15.741496334442221	clipgt-38e9aaaa-1a5e-4b6e-8991-ec266bdedc78	inf		
+clipgt-09426cca-e88a-4178-a82b-0bd5b2be0559	turn_sharp	951	2	352	60.68868760865859	clipgt-09426cca-e88a-4178-a82b-0bd5b2be0559	inf	True	Germany
+clipgt-c9311b4c-5380-45e9-a855-9b5c4e27afe8	launch	952	2	467	2.8159172642780366	clipgt-c9311b4c-5380-45e9-a855-9b5c4e27afe8	inf	False	United States
+clipgt-dd6b54a2-d85d-4050-9042-6b66eb4292e1	turn_sharp	958	2	222	95.36384523269402	clipgt-6ceb65e2-bd2d-4294-a244-3e48fdfb05ce	inf	False	Germany
+clipgt-f33ec7db-febd-4f0b-9924-3f9a26e6983d	stop_nolead	960	2	197	3.65558934626144	clipgt-afcd6edd-0130-4524-af68-691ad1e1bbe0	inf	False	United States
+clipgt-7db87a26-d589-4212-85b9-dcd4c565f41d	turn_sharp	964	2	344	88.2446306349876	clipgt-22a92557-7661-4a06-9854-b0a7f17d5c84	inf	False	Germany
+clipgt-44c3b4d5-de26-4ba6-b748-c3a22730a717	stop_nolead	969	2	29	6.918388000324759	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-ed143086-bc48-42ea-af3b-646c88eada2a	turn_sharp	971	2	245	72.91006201552453	clipgt-4587c40f-2452-46ae-8d32-3fe88a386982	inf	True	United States
+clipgt-5f064b02-2066-4dc4-a04b-b4386ff80c84	turn_sharp	977	2	321	67.90777424718428	clipgt-37113280-a033-4be4-afdd-cb199299e028	inf	False	United States
+clipgt-026d6a39-bd8f-4175-bc61-fe50ed0403a3	stop_nolead	978	2	101	10.271222028382764	clipgt-832cd2b0-57b0-4f4e-9be1-a70b38371bbc	inf		
+clipgt-67aa7417-6741-4191-8c6d-a1a24e145bb3	bend	979	2	560	20.613087041020183	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-ba91fe2c-c4bc-458f-8708-4ce345e675c7	launch	980	2	441	10.583056225471413	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-0274ab02-1d1f-4d40-92dd-561407235199	turn_sharp	985	2	284	71.90381889345981	clipgt-0274ab02-1d1f-4d40-92dd-561407235199	inf	True	United States
+clipgt-5037c30f-f66c-45d6-b459-b0b465602de5	stop_nolead	987	2	151	10.689262203073309	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-8f8d5705-944e-4051-ab25-66a230a11dce	turn_sharp	991	2	338	69.62064562358391	clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530	inf		
+clipgt-3d66c2ae-f62e-4431-aab7-f68ffd0e4de3	stop_nolead	995	2	177	9.564782945272995	clipgt-2431387d-b9c5-4241-a219-497a99d1f4e5	inf		
+clipgt-97eeb9d7-866d-46bf-bc37-134191c34818	turn_sharp	998	2	315	139.4780624825497	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	False	United States
+clipgt-5361354b-f1e7-4839-87d6-8087777f2eca	turn_sharp	1003	2	377	138.1555372633611	clipgt-4dc8100b-e492-4b33-b061-be3d64d52e31	inf	False	United States
+clipgt-16b83346-578c-437d-b51b-14784ffdf6c1	stop_nolead	1004	2	174	9.397255909727756	clipgt-16b83346-578c-437d-b51b-14784ffdf6c1	inf		
+clipgt-8f03f4db-6187-423c-807c-c5e0a1e62874	launch	1007	2	490	2.51861425793315	clipgt-8f03f4db-6187-423c-807c-c5e0a1e62874	inf	False	United States
+clipgt-6bffbe09-1e0d-4ac3-833c-ca6178346e76	turn_sharp	1011	2	256	120.81169451976166	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-21254445-877f-43d0-a92c-a9c1e9694f9f	stop_nolead	1013	2	106	7.018718189083627	clipgt-02eadd92-02f1-46d8-86fe-a9e338fed0b6	inf		
+clipgt-738c453d-7196-44ef-ab43-75c719834c15	turn_sharp	1017	2	319	125.15187360674985	clipgt-0fb94790-b759-41f2-8cd9-63a58dfa0861	inf	True	Germany
+clipgt-be4db4e9-eeff-4c22-b735-15ad9f7a0b49	bend	1019	2	543	35.83868680587652	clipgt-04394343-92f3-409c-9695-e7cd5397fa02	inf		
+clipgt-31390e97-294f-4bfa-bc01-951fbed5a121	stop_nolead	1022	2	88	6.087205809376816	clipgt-31390e97-294f-4bfa-bc01-951fbed5a121	inf		
+clipgt-5894f7ff-cd15-49c5-9b6e-5152a8f21092	turn_sharp	1024	2	320	119.5365367988269	clipgt-5894f7ff-cd15-49c5-9b6e-5152a8f21092	inf	False	Sweden
+clipgt-9e792fc4-4d90-44d5-87a2-6dcd3aad4ac2	turn_sharp	1029	2	341	87.8409777831551	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-3a1341fc-81a0-47b6-8955-bdeb4a709d20	stop_nolead	1031	2	116	5.444855780617345	clipgt-3a1341fc-81a0-47b6-8955-bdeb4a709d20	inf		
+clipgt-9c0be6c6-3ee6-4a1d-9ce4-ae184286f8d3	launch	1034	2	458	11.523436577553454	clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	inf	False	United States
+clipgt-2ff0eef3-fdb9-4334-8096-1df3c4cd86f4	turn_sharp	1037	2	334	70.6998455445903	clipgt-25343c92-abac-49bd-8cd3-bedc3215ed0f	inf	False	United States
+clipgt-b12fa656-9a2f-4cc1-8c92-c30046f4904e	stop_nolead	1040	2	168	6.51897897601	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	True	Germany
+clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	turn_sharp	1043	2	270	74.64990084425142	clipgt-0f1f60d5-785b-4a47-8436-7046ad1a3d21	inf		
+clipgt-d98c59ff-ef24-4b03-9e4e-553471a701ba	stop_nolead	1048	2	4	10.213513565278525	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	False	United States
+clipgt-008513a2-ab70-4e21-852a-6cfe574d3d63	turn_sharp	1050	2	249	68.8037656811781	clipgt-008513a2-ab70-4e21-852a-6cfe574d3d63	inf	True	Italy
+clipgt-0ec1da73-99b4-4f0a-8266-6f696947b162	turn_sharp	1055	2	397	115.19419690723385	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-f68b3f5c-2030-4a38-985d-c319da26845a	stop_nolead	1057	2	54	4.181803472669602	clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f	inf	False	United States
+clipgt-7685e516-96ca-4656-a545-7e08b9a7c60b	bend	1058	2	546	19.78803286381348	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	False	United States
+clipgt-6ceb65e2-bd2d-4294-a244-3e48fdfb05ce	turn_sharp	1061	2	388	74.79607584173777	clipgt-6ceb65e2-bd2d-4294-a244-3e48fdfb05ce	inf	False	Germany
+clipgt-7a3d8529-f5c4-445d-97ed-8303b2ece934	launch	1062	2	457	9.824813940276778	clipgt-7a3d8529-f5c4-445d-97ed-8303b2ece934	inf	False	United States
+clipgt-83135623-d812-42ed-bb42-6a9974f42b7b	stop_nolead	1066	2	59	10.26928987381666	clipgt-832cd2b0-57b0-4f4e-9be1-a70b38371bbc	inf		
+clipgt-5c74a126-b177-4d3f-beb2-5235ca60b8a5	turn_sharp	1069	2	281	102.33870912147633	clipgt-5c74a126-b177-4d3f-beb2-5235ca60b8a5	inf	True	Germany
+clipgt-2c9a4206-432a-45f6-8507-98a8648621ca	bend	1072	2	550	46.08796489932074	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-9d1339da-d069-4ee8-a854-d3abaef1fe8b	turn_sharp	1075	2	292	65.40727032192875	clipgt-2221b2b3-1e50-44dc-ba04-55367379b72f	inf	False	Germany
+clipgt-d2b2fe82-d2ef-4c48-933e-40c73980d951	stop_nolead	1076	2	146	11.131177744666982	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	False	United States
+clipgt-04394343-92f3-409c-9695-e7cd5397fa02	bend	1077	2	532	21.925309429290518	clipgt-04394343-92f3-409c-9695-e7cd5397fa02	inf		
+clipgt-d42754e7-7a14-4436-9284-c0c4545f32ba	turn_sharp	1082	2	278	100.45334527833108	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-4541cef6-f424-4090-8ab3-1ead9616902d	stop_nolead	1084	2	79	7.5534375276350305	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-28fda1db-773b-450d-bfec-5538ba5503db	turn_sharp	1088	2	290	87.17933962979986	clipgt-85a26192-7b37-43a2-bd5d-96cd858cb86b	inf	True	United States
+clipgt-d9c1b946-498f-4cc2-8145-80d16a05c5d3	launch	1090	2	439	6.360136655999981	clipgt-964e7935-2947-4af8-9f97-4757b744d45c	inf	False	United States
+clipgt-d4390315-938c-4a34-9345-b2311393eb18	stop_nolead	1093	2	30	6.376649647421927	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-a6cb4d85-4b82-458f-8cc8-54f2cd5a60c5	turn_sharp	1096	2	432	138.8238553360847	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-28dcc0c4-5912-4a9b-99c5-b0f3856698d1	bend	1098	2	559	18.728051496514606	clipgt-04394343-92f3-409c-9695-e7cd5397fa02	inf		
+clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	turn_sharp	1101	2	383	129.8071119150971	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-9c628a6c-1e33-4b49-9bad-493dd8142946	stop_nolead	1102	2	120	10.024052582036715	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-6e9750c2-2884-4b93-809d-4d7c77adf2a6	bend	1103	2	551	13.24053074437366	clipgt-6e9750c2-2884-4b93-809d-4d7c77adf2a6	inf	True	France
+clipgt-d1681242-2510-4d3e-be98-15b2d35a636e	turn_sharp	1108	2	251	120.90928115479522	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-a6b0c924-fdec-466b-b680-7d2bfc9e6653	stop_nolead	1110	2	150	5.614151840707698	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-91cf2c35-3b03-4dc5-bb55-ab5c722735b6	turn_sharp	1114	2	400	120.81882908514024	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	True	United States
+clipgt-817c63d5-916f-4100-a503-c2767bcd05b6	launch	1117	2	498	4.675223435208931	clipgt-11e26412-dfa2-404f-a163-c2c8743821ff	inf	False	United States
+clipgt-dfe7bef5-bd1e-48ef-ac71-10a266a782dd	stop_nolead	1119	2	200	9.253221059421783	clipgt-832cd2b0-57b0-4f4e-9be1-a70b38371bbc	inf		
+clipgt-706f3a65-b118-4745-862f-50936cc68463	turn_sharp	1122	2	369	71.41684024949501	clipgt-007a5809-8a56-40b5-8af5-7e0f65229496	inf	False	Sweden
+clipgt-3cc29c99-7396-4c53-a919-5970207155ce	turn_sharp	1127	2	235	105.3444902910029	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-2c1e7643-dba1-4434-80f8-89831d0b884b	stop_nolead	1129	2	218	9.821288593667886	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	True	United States
+clipgt-89f2eeb8-f4e4-42a1-8e07-d60003d223dc	bend	1133	2	557	12.949735170768594	clipgt-04394343-92f3-409c-9695-e7cd5397fa02	inf		
+clipgt-95890206-1978-4fc3-a03d-bdb2bd1de1b7	turn_sharp	1134	2	332	91.18626003984056	clipgt-ac085732-d1a7-4d5d-bb61-320c2b94fc39	inf	False	United States
+clipgt-c5638d32-5df6-4cfc-b07a-b9948309d573	stop_nolead	1137	2	46	4.784134083379695	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-f38424ea-61ee-4fb8-9686-8163f246ba0e	turn_sharp	1140	2	230	102.03036799521284	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-c97537ee-83a4-4259-98d8-c61790ea7613	launch	1144	2	500	9.287279936328279	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-19585c5c-d523-49f4-bf15-59291e6c9278	stop_nolead	1146	2	215	5.841486505306962	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	True	United States
+clipgt-1bed5f04-325a-41d1-9eb6-973285f62dae	turn_sharp	1148	2	408	96.89891933749495	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-764c8a4a-bddc-4e3c-9df4-0941982efeba	bend	1151	2	568	11.264751987757887	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-9c0a8e69-14cd-4a15-b04f-dea1c583a27b	turn_sharp	1153	2	375	90.32755174595879	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-7fd4d554-b155-45c6-a46a-646486029d85	stop_nolead	1155	2	102	7.801456923080378	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-3080d0eb-830c-4035-a7a4-393ae04556c1	bend	1159	2	552	10.863972983052678	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-b45e6497-2b89-4358-b353-234fbd944271	turn_sharp	1160	2	326	68.78917691904961	clipgt-6e9750c2-2884-4b93-809d-4d7c77adf2a6	inf	True	France
+clipgt-54bcdd40-b5e3-4bea-94d5-755a4ec83667	stop_nolead	1163	2	5	5.0460444937386075	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-3a316bee-8a51-47c2-b814-ff37eed2ce78	turn_sharp	1166	2	421	70.96475966214828	clipgt-7730a792-87ce-43b8-aae1-eb02b3ae56dc	inf	False	Germany
+clipgt-64ed2c79-3b20-46e7-8d88-f2da92936de8	stop_nolead	1171	2	173	3.684587013914348	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-9881e5b9-5821-44fd-a056-bea86c853675	turn_sharp	1172	2	330	62.49744738802575	clipgt-9881e5b9-5821-44fd-a056-bea86c853675	inf	True	France
+clipgt-d0a5056e-f552-42e2-94df-2aaf8e3f8f66	launch	1173	2	510	9.837443721639149	clipgt-5ac1a321-a0cc-414e-95c1-1463a9fcc957	inf	False	United States
+clipgt-4ac6e6fb-8a9b-46c7-b7b4-b8d33368f6fb	bend	1174	2	569	16.89478917103978	clipgt-089f9b45-e587-499e-971f-ee3a1ab51e30	inf	False	Spain
