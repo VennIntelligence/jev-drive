@@ -55,6 +55,27 @@ ident)  # ident <old rev> <stem>: the control's command 60 steps eager, <old rev
   e=$(sub simp-bitcmp-$X --after $a,$b --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/df.py bitcmp --a SIMPGG$X-old \
       --b SIMPGG$X-new --out lon_anchor/simp_identity_$X --note "the NTV0 recipe from RB0-F-s0 on on1_JTCP / SIMPW00, 60 steps eager: code $rev vs $h without new flags") || exit 1
   echo "$(date '+%F %T') ident $X (code $h, old $rev): $a $b bitcmp $e" | tee -a $B/stages.txt ;;
+smoke)   # smoke [after]: the F arm's command (dose 0.0011 = A's x 1, 60 steps, --diag-every 20) as a code check of region / clear / flatten
+  s_=$(sub simp-smoke ${2:+--after $2} "${FT[@]}" --timeout-h 1 -- bash $ME smokebody) || exit 1; echo "$(date '+%F %T') smoke: $s_" | tee -a $B/stages.txt ;;
+smokebody)
+  X=SIMPSM-L18-s0; C=$(cmd F 0.0011) || exit 1; C=${C/--tag ${TAG[F]} /--tag $X }; C="${C/--steps 1000 /--steps 60 } --diag-every 20"
+  echo "$(date '+%F %T') smoke: $C" | tee -a $B/stages.txt
+  $C > $B/smoke.log 2>&1 || die "smoke run (log $B/smoke.log)"
+  grep -E "SIMP attach|SIMP-F flat|lon_anchor labels" $B/smoke.log | tee $B/smoke_check.txt
+  f=$(ls -d $DATA_DIR/runs/route_mem/train-$X/* | tail -1)/events.jsonl
+  $TR - $f $RES/simp_smoke.json <<'PY' || die "smoke check"
+import json, sys
+S = {}
+for l in open(sys.argv[1]):
+    e = json.loads(l)
+    if e.get("kind") == "scalar" and any(k in e["tag"] for k in ("simp_", "flat/", "lon_anchor", "grad/", "dev/ade", "loss/total")):
+        S.setdefault(e["tag"], []).append(round(e["value"], 4))
+ok = all(any(k in t for t in S) for k in ("on/simp_region_ho", "on/simp_clear_ho", "flat/rows", "on/lon_anchor_ho")) and all(v == v for x in S.values() for v in x)
+json.dump(dict(pass_=bool(ok), scalars={k: v[-3:] for k, v in S.items()}), open(sys.argv[2], "w"), indent=1)
+print("smoke", "PASS" if ok else "FAIL", {k: v[-1] for k, v in S.items() if "simp" in k or "flat" in k})
+sys.exit(0 if ok else 2)
+PY
+  rm -rf $RUNS/$X ;;
 flat) f=$(sub simp-flatlist --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME flatlist) || exit 1; echo "$(date '+%F %T') flat: $f" | tee -a $B/stages.txt ;;
 arms)
   D=${2:?dose}; for X in ${TAG[@]}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
@@ -85,6 +106,7 @@ import json, sys
 r = sys.argv[1]
 assert json.load(open(f"{r}/simp_identity.json"))["identical"], "switch-off identity failed"
 assert json.load(open(f"{r}/simp_identity_F.json"))["identical"], "switch-off identity (flat history code) failed"
+assert json.load(open(f"{r}/simp_smoke.json"))["pass_"], "SIMP-F smoke failed"
 assert json.load(open(f"{r}/simp_gate.json"))["gate"]["pass_"], "SIMP gate failed"
 assert json.load(open(f"{r}/gate_v2.json"))["G1"]["pass_"], "LON-ANCHOR G1 failed"
 PY
