@@ -19,6 +19,9 @@ index: STAND-B (d391): half-dose B2 STANDFMXH-L18-s1 is the nuPlan native candid
   the free-road response). About 90 % of that comes through the frames; the ego row carries 5-9 % for NTV0. RB0 is the same, so it comes from the base.
   On A0's overrun approaches the plan never holds a stop: its 4 s end point moves with the ego. Stage 1 confirms this on NTV0's own states
   (overrun: plan end +10 m past the human's stop, G 0.83) and on human states (G 0.67). Shipped P0 copies speed as much (supplement 4).
+- LEAD-BREAK (10-20, diagnosis; [results/lead_break/](results/lead_break/README.md)): on RB0-F's own PAI AF-front states the plan clears a closing
+  lead 0.15 against P0's 0.63; with the adapter off (present 0) RB0-F clears 0.61 (96 % of the gap), with only the ego state zeroed 0.60, route
+  memory off 0.16, warp slots 0.10. The ego-state bias overrides a brake the weights still have; navtrain's brake-needed rows are 84 % already decelerating.
 - The "Conclusion" and "Result 19:00" paragraphs below are the 10-17 NR1 state. RSG-L18-s0 was still the pick then; the two candidates
   above replace it.
 
