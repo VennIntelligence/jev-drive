@@ -1,0 +1,23 @@
+{
+ "B2C-L18-s1": {
+  "steps": 3000,
+  "wall_s": 493.0,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-B2C-L18-s1/20261020-214753",
+  "card_h": 0.13694444444444445,
+  "gpu_peak_gb": 23.01953125
+ },
+ "B2F-L18-s1": {
+  "steps": 3000,
+  "wall_s": 482.8,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-B2F-L18-s1/20261020-214817",
+  "card_h": 0.13411111111111113,
+  "gpu_peak_gb": 22.94921875
+ },
+ "B2FR-L18-s1": {
+  "steps": 3000,
+  "wall_s": 518.9,
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-B2FR-L18-s1/20261020-214817",
+  "card_h": 0.14413888888888887,
+  "gpu_peak_gb": 23.10546875
+ }
+}

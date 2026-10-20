@@ -22,6 +22,9 @@ index: STAND-B (d391): half-dose B2 STANDFMXH-L18-s1 is the nuPlan native candid
 - LEAD-BREAK (10-20, diagnosis; [results/lead_break/](results/lead_break/README.md)): on RB0-F's own PAI AF-front states the plan clears a closing
   lead 0.15 against P0's 0.63; with the adapter off (present 0) RB0-F clears 0.61 (96 % of the gap), with only the ego state zeroed 0.60, route
   memory off 0.16, warp slots 0.10. The ego-state bias overrides a brake the weights still have; navtrain's brake-needed rows are 84 % already decelerating.
+- NU-FLAT (10-20 evening; [results/nu_flat/](results/nu_flat/README.md), plan [plans/2026-10-20-nu-flat-prereg.md](plans/2026-10-20-nu-flat-prereg.md)):
+  3 000-step continuations of B2-s1. Onset flattening (F) is neutral on nuPlan (arena +0.001, PCS +7, wait-set launches -2 / -1), and F + STAND-R x 1 (FR)
+  fixes 7 of 10 red-line easy zeros but loses launches (28 -> 21, 14 -> 9) and PCS (-96). Both fail the binding launch guard, so B2-s1 stays the nuPlan candidate.
 - The "Conclusion" and "Result 19:00" paragraphs below are the 10-17 NR1 state. RSG-L18-s0 was still the pick then; the two candidates
   above replace it.
 
