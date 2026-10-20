@@ -140,6 +140,11 @@ def cmd_select(a):
     H = F[Path(a.human).stem] if a.human else next(iter(F.values()))
     cm = pd.read_csv(a.clip_map).set_index("scene_id")
     H = H[cm.group.reindex(H.index) == "val160"]
+    if a.drives:                                     # drop val160 scenes on the same drive / road as a curated-train scene already on the box
+        P, onbox = pd.read_csv(a.drives), set(open(a.onbox).read().split())
+        drop = set(P.exam_scene[P.scene_id.isin(onbox)])
+        print(len(drop), "val160 scenes dropped (same drive / road as an on-box curated-train scene)")
+        H = H.drop(index=sorted(drop & set(H.index)))
     tr = target_rules(H, NU)
     S = pd.DataFrame({k: x.score.reindex(H.index) for k, x in F.items()})
     passed = (S >= OK).all(axis=1)
@@ -183,7 +188,7 @@ def cmd_drives(a):
     """Curated-train scenes on the same drive as an exam val160 scene (pav.py's rule: log session clock within 600 s and the start-to-start
     distance drivable at 30 m/s + 0.3 km) or on the same road (a track point within 10 m) -> train_exclude.csv."""
     cm = pd.read_csv(a.clip_map)
-    ex = [s for s in open(a.exam).read().split() if s in set(cm.scene_id[cm.group == "val160"])]
+    ex = [s for s in open(a.exam).read().split() if s in set(cm.scene_id[cm.group.isin(["val160", "test281"])])]
     tr = cm.scene_id[cm.group == "train1761"].tolist()
     def ld(s):
         f = Path(a.meta) / f"{s}.json"
@@ -331,6 +336,7 @@ def main():
     s.add_argument("--nurec", default=str(REPO / "experiments/pai_av/results/exam_nurec.csv"))
     s.add_argument("--clip-map", default=str(REPO / "experiments/pai_av/results/clip_map.csv"))
     s.add_argument("--chunk", type=int, default=32), s.add_argument("--out", required=True)
+    s.add_argument("--drives", default=""), s.add_argument("--onbox", default="")
     d = sp.add_parser("drives")
     d.add_argument("--exam", required=True), d.add_argument("--meta", required=True), d.add_argument("--out", required=True)
     d.add_argument("--clip-map", default=str(REPO / "experiments/pai_av/results/clip_map.csv"))
