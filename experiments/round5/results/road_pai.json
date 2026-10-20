@@ -1,0 +1,405 @@
+{
+ "build": {
+  "pool": "on1_PAIH",
+  "rows": 135793,
+  "scenes": 851,
+  "rasters": 135793,
+  "built_now": 851,
+  "empty_scenes": 0,
+  "scenes_without_edges": 0,
+  "scenes_without_lanes": 0,
+  "rasters_no_edge": 0.0,
+  "rasters_inside_gt90": 0.1260153321599788,
+  "inside_frac_med": 0.523059070110321,
+  "sdf_gb": 3.337248896,
+  "parts_gb": 0.4019345,
+  "t_load_med": 4.924224853515625,
+  "t_ras_med": 0.030421924591064454,
+  "build_s": 158.7209186553955,
+  "split": "physical_ai_av/pai-rows@v1:bcfba1aeeca8"
+ },
+ "index": {
+  "on1_PAIH": {
+   "pool": "on1_PAIH",
+   "rows_pool": 135793,
+   "rows_pai": 135793,
+   "rasters": 135793,
+   "fallback": {
+    "no_surface": 0.0,
+    "t0_off": 0.0014360092199156068,
+    "label_out": 0.024485798237022526,
+    "ok_primary": 0.9740781925430618
+   },
+   "G1": {
+    "margin": 0.3,
+    "trig_of_hinged": 0.06871394766883643,
+    "trig_of_all": 0.06693275794775871,
+    "trig_all_rows_any": 0.09285456540469686,
+    "line": 0.01,
+    "passed_primary": false,
+    "rule_d_added": true,
+    "ok_shipped": 0.9071454345953032,
+    "ok_strict": 0.9071454345953032,
+    "m_lab_q": [
+     -0.04,
+     0.204,
+     0.791,
+     2.057
+    ]
+   },
+   "by_speed": {
+    "0-0.3": {
+     "rows": 16946,
+     "hinged": 16875,
+     "trig_of_hinged": 0.045925925925925926
+    },
+    "0.3-5": {
+     "rows": 28738,
+     "hinged": 28678,
+     "trig_of_hinged": 0.06559034800195272
+    },
+    "5-10": {
+     "rows": 38088,
+     "hinged": 38062,
+     "trig_of_hinged": 0.07083180074615102
+    },
+    "10-20": {
+     "rows": 36085,
+     "hinged": 34940,
+     "trig_of_hinged": 0.0800801373783629
+    },
+    "20-99": {
+     "rows": 15936,
+     "hinged": 13718,
+     "trig_of_hinged": 0.06845021140107888
+    }
+   },
+   "by_part": {
+    "on1_PAIH": {
+     "rows": 135793,
+     "ok_primary": 0.9740781925430618,
+     "ok": 0.9071454345953032,
+     "g1_hinged": 0.06871394766883643
+    }
+   },
+   "readback_equal": true,
+   "readback_rows": 123184,
+   "file": "/root/autodl-tmp/ujs/runs/round5/road_pai/road_on1_PAIH.npz",
+   "file_mb": 33.13744
+  },
+  "on1_PAIH05": {
+   "pool": "on1_PAIH05",
+   "rows_pool": 123879,
+   "rows_pai": 123879,
+   "rasters": 123879,
+   "fallback": {
+    "no_surface": 0.0,
+    "t0_off": 0.0014449583868129383,
+    "label_out": 0.00031482333567432735,
+    "ok_primary": 0.9982402182775127
+   },
+   "G1": {
+    "margin": 0.3,
+    "trig_of_hinged": 0.04133882145543057,
+    "trig_of_all": 0.041266074153004144,
+    "trig_all_rows_any": 0.04302585587549141,
+    "line": 0.01,
+    "passed_primary": false,
+    "rule_d_added": true,
+    "ok_shipped": 0.9569741441245085,
+    "ok_strict": 0.9569741441245085,
+    "m_lab_q": [
+     0.087,
+     0.335,
+     0.864,
+     2.351
+    ]
+   },
+   "by_speed": {
+    "0-0.3": {
+     "rows": 17013,
+     "hinged": 16952,
+     "trig_of_hinged": 0.037104766399244926
+    },
+    "0.3-5": {
+     "rows": 59794,
+     "hinged": 59724,
+     "trig_of_hinged": 0.04949434063358114
+    },
+    "5-10": {
+     "rows": 32599,
+     "hinged": 32519,
+     "trig_of_hinged": 0.0394538577447031
+    },
+    "10-20": {
+     "rows": 14473,
+     "hinged": 14466,
+     "trig_of_hinged": 0.016867136734411724
+    },
+    "20-99": {
+     "rows": 0,
+     "hinged": 0,
+     "trig_of_hinged": null
+    }
+   },
+   "by_part": {
+    "on1_PAIH05": {
+     "rows": 123879,
+     "ok_primary": 0.9982402182775127,
+     "ok": 0.9569741441245085,
+     "g1_hinged": 0.04133882145543057
+    }
+   },
+   "readback_equal": true,
+   "readback_rows": 118549,
+   "file": "/root/autodl-tmp/ujs/runs/round5/road_pai/road_on1_PAIH05.npz",
+   "file_mb": 31.221456
+  },
+  "on1_PAIH15": {
+   "pool": "on1_PAIH15",
+   "rows_pool": 99269,
+   "rows_pai": 99269,
+   "rasters": 99269,
+   "fallback": {
+    "no_surface": 0.0,
+    "t0_off": 0.0015815612124631053,
+    "label_out": 0.08498121266457806,
+    "ok_primary": 0.9134372261229589
+   },
+   "G1": {
+    "margin": 0.3,
+    "trig_of_hinged": 0.10396356257444087,
+    "trig_of_all": 0.09496418821585792,
+    "trig_all_rows_any": 0.1815269620928991,
+    "line": 0.01,
+    "passed_primary": false,
+    "rule_d_added": true,
+    "ok_shipped": 0.8184730379071009,
+    "ok_strict": 0.8184730379071009,
+    "m_lab_q": [
+     -0.213,
+     0.099,
+     0.627,
+     1.835
+    ]
+   },
+   "by_speed": {
+    "0-0.3": {
+     "rows": 10410,
+     "hinged": 10366,
+     "trig_of_hinged": 0.06000385876905267
+    },
+    "0.3-5": {
+     "rows": 15593,
+     "hinged": 15517,
+     "trig_of_hinged": 0.07578784558870916
+    },
+    "5-10": {
+     "rows": 18739,
+     "hinged": 18261,
+     "trig_of_hinged": 0.11658726247193472
+    },
+    "10-20": {
+     "rows": 30687,
+     "hinged": 28972,
+     "trig_of_hinged": 0.11959823277647384
+    },
+    "20-99": {
+     "rows": 23840,
+     "hinged": 17560,
+     "trig_of_hinged": 0.1158883826879271
+    }
+   },
+   "by_part": {
+    "on1_PAIH15": {
+     "rows": 99269,
+     "ok_primary": 0.9134372261229589,
+     "ok": 0.8184730379071009,
+     "g1_hinged": 0.10396356257444087
+    }
+   },
+   "readback_equal": true,
+   "readback_rows": 81249,
+   "file": "/root/autodl-tmp/ujs/runs/round5/road_pai/road_on1_PAIH15.npz",
+   "file_mb": 25.019736
+  },
+  "on1_JTPH": {
+   "pool": "on1_JTPH",
+   "rows_pool": 528547,
+   "rows_pai": 358941,
+   "rasters": 135793,
+   "fallback": {
+    "no_surface": 0.0,
+    "t0_off": 0.0014793517597599605,
+    "label_out": 0.032874483550221344,
+    "ok_primary": 0.9656461646900187
+   },
+   "G1": {
+    "margin": 0.3,
+    "trig_of_hinged": 0.068168835290384,
+    "trig_of_all": 0.06582697434954492,
+    "trig_all_rows_any": 0.10018080965952622,
+    "line": 0.01,
+    "passed_primary": false,
+    "rule_d_added": true,
+    "ok_shipped": 0.8998191903404738,
+    "ok_strict": 0.8998191903404738,
+    "m_lab_q": [
+     -0.027,
+     0.203,
+     0.815,
+     2.1
+    ]
+   },
+   "by_speed": {
+    "0-0.3": {
+     "rows": 44369,
+     "hinged": 44193,
+     "trig_of_hinged": 0.04584436449211413
+    },
+    "0.3-5": {
+     "rows": 104125,
+     "hinged": 103919,
+     "trig_of_hinged": 0.057862373579422435
+    },
+    "5-10": {
+     "rows": 89426,
+     "hinged": 88842,
+     "trig_of_hinged": 0.06875126629296954
+    },
+    "10-20": {
+     "rows": 81245,
+     "hinged": 78378,
+     "trig_of_hinged": 0.08302074561739263
+    },
+    "20-99": {
+     "rows": 39776,
+     "hinged": 31278,
+     "trig_of_hinged": 0.09508280580599783
+    }
+   },
+   "by_part": {
+    "ph": {
+     "rows": 135793,
+     "ok_primary": 0.9740781925430618,
+     "ok": 0.9071454345953032,
+     "g1_hinged": 0.06871394766883643
+    },
+    "ph05": {
+     "rows": 123879,
+     "ok_primary": 0.9982402182775127,
+     "ok": 0.9569741441245085,
+     "g1_hinged": 0.04133882145543057
+    },
+    "ph15": {
+     "rows": 99269,
+     "ok_primary": 0.9134372261229589,
+     "ok": 0.8184730379071009,
+     "g1_hinged": 0.10396356257444087
+    }
+   },
+   "readback_equal": true,
+   "readback_rows": 322982,
+   "file": "/root/autodl-tmp/ujs/runs/round5/road_pai/road_on1_JTPH.npz",
+   "file_mb": 106.250484
+  }
+ },
+ "g1ref": {
+  "navtrain_drivable": {
+   "file": "runs/op_probe/labels/navtrain_all.npz",
+   "rows": 103288,
+   "labelled": 103288,
+   "trig_all_labelled": 0.12080783827743784,
+   "t0_off": 0.004898923398652312,
+   "label_out": 3.872666718302223e-05,
+   "trig_of_hinged_pai_rule": 0.11644515363210026,
+   "trig_below0_all": 0.02008945860119278,
+   "m_lab_q": [
+    -0.102,
+    0.099,
+    0.536,
+    1.085
+   ]
+  },
+  "navtrain_road": {
+   "file": "runs/body1/labels_road/navtrain_s01234567891011.npz",
+   "rows": 103288,
+   "labelled": 103288,
+   "trig_all_labelled": 0.1258519866780265,
+   "t0_off": 0.005053830067384401,
+   "label_out": 3.872666718302223e-05,
+   "trig_of_hinged_pai_rule": 0.12137755201339016,
+   "trig_below0_all": 0.020031368600418247,
+   "m_lab_q": [
+    -0.097,
+    0.091,
+    0.523,
+    1.06
+   ]
+  }
+ },
+ "g2": {
+  "read": "R2J-L18-s0-281ag",
+  "zeros": 20,
+  "zeros_trig": 12,
+  "zeros_trig_share": 0.6,
+  "zeros_off_t0": 0,
+  "zeros_trig_hinged": 12,
+  "zeros_plan_below0": 4,
+  "zeros_h_med": 0.004795152693986893,
+  "line": 0.5,
+  "passed": true,
+  "solved_decisions": 1720,
+  "solved_scenes": 172,
+  "solved_trig_share": 0.10116279069767442,
+  "solved_trig_hinged_share": 0.0969626168224299,
+  "solved_off_t0": 0.004651162790697674,
+  "every": 20,
+  "no_surface_scenes": 0
+ },
+ "g3": {
+  "off": {
+   "a": "RP3-old",
+   "b": "RP3-new",
+   "note": "R2J-L18-s0 command 60 steps eager: code efb733f4 vs dd21692e, no new flag",
+   "scalars": 278,
+   "scalar_keys_equal": true,
+   "scalar_max_abs_diff": 0.0,
+   "extra_keys_b": null,
+   "weight_max_abs_diff": 0.0,
+   "weight_keys_equal": true,
+   "dev_ade": [
+    0.5458450317382812,
+    0.5458450317382812
+   ],
+   "on_hash_60": [
+    "43bfc742366790f8",
+    "43bfc742366790f8"
+   ],
+   "want_hash": null,
+   "identical": true
+  },
+  "w0": {
+   "a": "RP3-new",
+   "b": "RP3W0-new",
+   "note": "the same code: without vs with --on-road-pai road_on1_JTPH.npz --on-road-pai-w 0",
+   "scalars": 278,
+   "scalar_keys_equal": true,
+   "scalar_max_abs_diff": 0.0,
+   "extra_keys_b": null,
+   "weight_max_abs_diff": 0.0,
+   "weight_keys_equal": true,
+   "dev_ade": [
+    0.5458450317382812,
+    0.5458450317382812
+   ],
+   "on_hash_60": [
+    "43bfc742366790f8",
+    "43bfc742366790f8"
+   ],
+   "want_hash": null,
+   "identical": true
+  }
+ },
+ "disk_gb": 4.008148542
+}
