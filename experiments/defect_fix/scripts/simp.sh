@@ -133,12 +133,15 @@ json.dump(rec, open(sys.argv[2], "w"), indent=1); print(json.dumps(rec))
 PY
   ;;
 train)
-  A=$2; python3 - $RES <<'PY' || die "pre-checks failed: no training"
+  A=$2; python3 - $RES $A <<'PY' || die "pre-checks failed: no training"
 import json, sys
-r = sys.argv[1]
+r, a = sys.argv[1], sys.argv[2]
 assert json.load(open(f"{r}/simp_identity.json"))["identical"], "switch-off identity failed"
 assert json.load(open(f"{r}/simp_identity_F.json"))["identical"], "switch-off identity (flat history code) failed"
 assert json.load(open(f"{r}/simp_smoke.json"))["pass_"], "SIMP-F smoke failed"
+if a == "G":
+    assert json.load(open(f"{r}/simp_identity_G.json"))["identical"], "switch-off identity (SIMP-G code) failed"
+    assert json.load(open(f"{r}/simp_smoke_G.json"))["pass_"], "SIMP-G smoke failed"
 assert json.load(open(f"{r}/simp_gate_v2.json"))["gate"]["pass_"], "SIMP gate (supplement 4) failed"
 assert json.load(open(f"{r}/gate_v2.json"))["G1"]["pass_"], "LON-ANCHOR G1 failed"
 PY
