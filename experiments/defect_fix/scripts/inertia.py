@@ -35,7 +35,8 @@ import stoppt as SP  # noqa: E402
 import warp_loop as WL  # noqa: E402
 
 DATA = SP.DATA
-O = DATA / "runs/defect_fix/inertia" / ("smoke" if os.environ.get("O_SMOKE") else "")
+O0 = DATA / "runs/defect_fix/inertia"
+O = O0 / ("smoke" if os.environ.get("O_SMOKE") else "")
 RES = REPO / "experiments/defect_fix/results/inertia"
 ROWS = DATA / "runs/practice_pai/rows/PPAI160"
 GAP = DATA / "runs/route_follow/pai_gap"
@@ -72,7 +73,10 @@ def cmd_recede(a):
     import pai_gap as PG
     sc = pd.read_csv(GAP / "scenes.csv").set_index("scene")
     over = sorted(sc.index[sc["sub"] == "cor_route_end"])
-    ctrl = sorted(sc.index[(sc.h_end_still == True) & (sc.rest_lead == False) & (sc.score >= 1.0)])  # noqa: E712
+    ctrl1 = sorted(sc.index[(sc.h_end_still == True) & (sc.rest_lead == False) & (sc.score >= 1.0)])  # noqa: E712  (supplement 1's filter)
+    ctrl = sorted(x.strip() for x in open(a.controls)) if a.controls else []                    # supplement 3: A0 rests within [-8, +4] m of H
+    grp_of = lambda s: "overrun" if s in over else "control" if s in ctrl else "control_v1"  # noqa: E731
+    ctrl = sorted(set(ctrl) | set(ctrl1))
     G = pd.read_parquet(SP.S_ / "gate/a0.parquet")
     G = G[G.scene.isin(over + ctrl)]
     D = PG.drive(SP.A0)
@@ -82,7 +86,7 @@ def cmd_recede(a):
         g = g.sort_values("k")
         first = g[np.isfinite(g.rest) & (g.rest <= 60)]
         if not len(first):
-            rows.append(dict(scene=s, group="overrun" if s in over else "control", k=-1))
+            rows.append(dict(scene=s, group=grp_of(s), k=-1))
             continue
         H = float(first.s_e.iloc[0] + first.rest.iloc[0])
         g = g[g.s_e < g.s_end - 0.5]                         # supplement 2: past the log end s_e is clamped there
@@ -96,7 +100,7 @@ def cmd_recede(a):
             P = np.asarray(d.get("poses_model") or d["poses"], np.float64)
             m = metrics(P)
             v_end = float(np.linalg.norm(P[-1, :2] - P[-2, :2]) / 0.5)
-            rows.append(dict(scene=s, group="overrun" if s in over else "control", k=int(r.k), v0=float(r.v0), s_e=float(r.s_e), H=H,
+            rows.append(dict(scene=s, group=grp_of(s), k=int(r.k), v0=float(r.v0), s_e=float(r.s_e), H=H,
                              has=bool(m["has"]), stop_st=float(r.s_e + m["S"]) if m["has"] else np.nan, A4=float(m["A4"]),
                              E=float(r.s_e + m["A4"]), v_end=v_end))
     df = pd.DataFrame(rows)
@@ -139,7 +143,7 @@ def cmd_recede(a):
     out["bins"] = {grp: x.groupby("bin").agg(n=("k", "size"), v0=("v0", "median"), A4=("A4", "median"), E_minus_H=("EmH", "median"),
                                              v_end=("v_end", "median")).round(2).reset_index().to_dict("records") for grp, x in d2.groupby("group")}
     # per-scene series (decision index, ego station, planned stop station, H) for the overrun scenes
-    ser = {s: g.sort_values("k")[["k", "s_e", "stop_st", "E", "v_end", "H"]].round(2).values.tolist() for s, g in df[(df.group == "overrun") & (df.k >= 0)].groupby("scene")}
+    ser = {s: g.sort_values("k")[["k", "s_e", "stop_st", "E", "v_end", "H"]].round(2).values.tolist() for s, g in df[df.k >= 0].groupby("scene")}
     json.dump(dict(summary=out, series=ser), open(RES / "recede.json", "w"), indent=0)
     print(P.to_string(index=False))
     print(json.dumps(out, indent=1))
@@ -236,7 +240,7 @@ def cmd_cf(a):
     from jevdrive.run import Run
     O.mkdir(parents=True, exist_ok=True)
     with Run("defect_fix", "inertia-cf", config=vars(a)) as run:
-        files = sorted(glob.glob(str(ROWS / "*.npz")))[:a.limit or None]
+        files = sorted(glob.glob(str(Path(a.rows) / "*.npz")))[:a.limit or None]
         with ProcessPoolExecutor(a.workers) as ex:
             R = [r for out in ex.map(_scene_rows, [(f, a.every) for f in files], chunksize=1) for r in out]
         for r in R:
@@ -286,9 +290,9 @@ def cmd_cf(a):
                         recs.append(dict(i=i, tag=t, arm=n, P=np.asarray(p, np.float32).ravel()))
                 meta.append({k: r[k] for k in ("scene", "k", "t0", "v0", "win", "rest", "lead", "line", "obj40", "h40", "h60", "hv24")}
                             | dict(i=i, w_ok=all(r["sl"][fw] is not None for fw in WF), gate=float(np.abs(
-                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index("RSG-L18-s0") + names.index("F")]["P"]).reshape(8, 3)[:, :2]
+                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2]
                                 - r["poses_log"][:, :2]).max()), gate2=bool(gate_ok(
-                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index("RSG-L18-s0") + names.index("F")]["P"]).reshape(8, 3)[:, :2],
+                                np.asarray(recs[-len(names) * 3 + len(names) * TAGS.index(a.gate_tag) + names.index("F")]["P"]).reshape(8, 3)[:, :2],
                                 r["poses_log"][:, :2]))))
             if nf % 20 == 0:
                 run.info(f"{nf + 1} / {len(by)} scenes, {len(meta)} rows")
@@ -300,11 +304,74 @@ def cmd_cf(a):
         C.drop(columns="P").to_parquet(O / "cf.parquet")
         np.save(O / "cf_poses.npy", Pm.astype(np.float32))
         M.to_parquet(O / "rows.parquet")
-        g = dict(rows=len(M), gate_p99=float(M.gate.quantile(0.99)), gate_max=float(M.gate.max()), gate2_share=float(M.gate2.mean()),
+        g = dict(gate_tag=a.gate_tag, rows_dir=str(a.rows), rows=len(M), gate_p99=float(M.gate.quantile(0.99)), gate_max=float(M.gate.max()), gate2_share=float(M.gate2.mean()),
                  pass_=bool(M.gate2.mean() >= 0.99 and M.gate.max() <= 0.15), w_ok=float(M.w_ok.mean()))   # supplement 2's G0
         json.dump(g, open(O / "gate.json", "w"), indent=1)
         run.summary.update(g)
         run.info(f"gate {g}")
+
+
+
+# ---------------------------------------------------------------- stage 1 (supplement 3): scene list and the parity check
+S1 = O0 / "s1"
+A0R = DATA / "runs/defect_fix/pai_accgap/NTV0-L18-s0"
+
+
+def cmd_select(a):
+    """The stage-1 scene list: d381 overrun (cor_route_end) + straight-at-turn, stop controls (A0 1.0, the human stops, no lead at the first
+    approach decision, A0 rests >= 2 s within [-8, +4] m of the human's stop point), turn controls (A0 1.0, stratum turn, |turn| >= 45 deg)."""
+    import pandas as pd
+    import pai_gap as PG
+    sc = pd.read_csv(GAP / "scenes.csv").set_index("scene")
+    G = pd.read_parquet(SP.S_ / "gate/a0.parquet")
+    D = PG.drive(A0R)
+    stop = []
+    for s in sc.index[sc.score >= 1.0]:
+        g = G[G.scene == s].sort_values("k")
+        g = g[g.s_e < g.s_end - 0.5]
+        f = g[np.isfinite(g.rest) & (g.rest <= 60)]
+        if not len(f) or s not in D or bool(f.lead.iloc[0]):
+            continue
+        H = float(f.s_e.iloc[0] + f.rest.iloc[0])
+        v = np.array([np.hypot(*r["ego"][4:6]) * 10 for r in D[s]])
+        k = np.array([r["k"] for r in D[s]])
+        se = dict(zip(g.k, g.s_e))
+        for i in np.flatnonzero((k >= int(f.k.iloc[0])) & (v < 0.5)):
+            if len(v[i:i + 20]) == 20 and (v[i:i + 20] < 0.5).all():
+                prev = [se[x] for x in k[:i] if x in se]
+                if prev and -8.0 <= prev[-1] - H <= 4.0:
+                    stop.append(s)
+                break
+    groups = {"overrun": sorted(sc.index[sc["sub"] == "cor_route_end"]), "turn_fail": sorted(sc.index[sc["sub"] == "cor_straight_at_turn"]),
+              "stop_ctrl": sorted(stop), "turn_ctrl": sorted(sc.index[(sc.score >= 1.0) & (sc.stratum == "turn") & (sc.turn_deg.abs() >= 45)])}
+    S1.mkdir(parents=True, exist_ok=True)
+    rows = [(s, g) for g, v in groups.items() for s in v]
+    pd.DataFrame(rows, columns=["scene", "group"]).to_csv(RES / "scenes_s1.csv", index=False)
+    (S1 / "scenes.txt").write_text("".join(f"{s}\n" for s, _ in rows))
+    (S1 / "stop_ctrl.txt").write_text("".join(f"{s}\n" for s in groups["stop_ctrl"]))
+    print({g: len(v) for g, v in groups.items()}, len(rows))
+
+
+def cmd_parity(a):
+    """A re-roll against A0 on its scenes: score and the model plan per decision (k) -> stdout JSON; exit 2 unless every scene passes
+    (same score within 1e-9 and the plan within 0.15 m over the first 50 policy decisions)."""
+    import pai_gap as PG
+    x, _ = PG.summaries(A0R)
+    y, _ = PG.summaries(Path(a.read))
+    Dx, Dy = PG.drive(A0R), PG.drive(Path(a.read))
+    out, ok = {}, True
+    for s in sorted(set(y) & set(x)):
+        kx = {int(r["k"]): np.asarray(r.get("poses_model") or r["poses"]) for r in Dx.get(s, [])}
+        ky = {int(r["k"]): np.asarray(r.get("poses_model") or r["poses"]) for r in Dy.get(s, [])}
+        ks = sorted(set(kx) & set(ky))
+        d = [float(np.abs(kx[k][:, :2] - ky[k][:, :2]).max()) for k in ks]
+        first = next((k for k, e in zip(ks, d) if e > 0.15), None)
+        sx, sy = float(x[s]["score"] or 0), float(y[s]["score"] or 0)
+        pas = abs(sx - sy) < 1e-9 and (first is None or first >= (ks[0] + 50 if ks else 0))
+        ok &= pas
+        out[s] = dict(score_a0=sx, score=sy, decisions=len(ks), max_d=max(d) if d else None, first_k_over=first, pass_=pas)
+    print(json.dumps(out, indent=1))
+    sys.exit(0 if ok and out else 2)
 
 
 # ---------------------------------------------------------------- report
@@ -401,8 +468,8 @@ def cmd_report(a):
         V[tag] = v
     out["verdicts"] = V
     RES.mkdir(parents=True, exist_ok=True)
-    json.dump(out, open(RES / "report.json", "w"), indent=1, default=lambda x: x.tolist() if hasattr(x, "tolist") else str(x))
-    lines.append(f"G0 (RSG-L18-s0 F against the logged plan): p99 {g['gate_p99']:.4f} m, max {g['gate_max']:.4f} m, within 2 fp16 steps {g['gate2_share']:.3f}, rows {g['rows']}, W/B usable {g['w_ok']:.2f}\n")
+    json.dump(out, open(RES / f"report{a.suffix}.json", "w"), indent=1, default=lambda x: x.tolist() if hasattr(x, "tolist") else str(x))
+    lines.append(f"G0 ({g.get('gate_tag', 'RSG-L18-s0')} F against the logged plan): p99 {g['gate_p99']:.4f} m, max {g['gate_max']:.4f} m, within 2 fp16 steps {g['gate2_share']:.3f}, rows {g['rows']}, W/B usable {g['w_ok']:.2f}\n")
     lines.append("| model | window | rows (scenes) | W/B rows | has stop F | dS_R per +20 % | dS_W | dS_B | d(has) R / B per +20 % | G_R | G_W | G_B | v24 slope R / B | dHead20 R / B |")
     lines.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for c in out["cells"]:
@@ -418,21 +485,33 @@ def cmd_report(a):
     lines.append("\nVerdicts (prereg rules):\n")
     for t, v in V.items():
         lines.append(f"- {t}: " + "; ".join(f"{k} {x:.2f}" if isinstance(x, float) else f"{k} {x}" for k, x in v.items()))
-    (RES / "report.md").write_text("\n".join(lines) + "\n")
+    (RES / f"report{a.suffix}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
-    sp.add_parser("recede")
+    r = sp.add_parser("recede")
+    r.add_argument("--controls", default="", help="file of stop-control scene ids (supplement 3)")
     c = sp.add_parser("cf")
+    c.add_argument("--rows", default=str(ROWS), help="row files (onp_rows output dir)")
+    c.add_argument("--gate-tag", default="RSG-L18-s0", help="the policy whose logged plan G0 compares against")
+    c.add_argument("--name", default="", help="output subdir of $O (default: P160 at $O itself)")
     c.add_argument("--every", type=int, default=5)
     c.add_argument("--workers", type=int, default=16)
     c.add_argument("--limit", type=int, default=0)
-    sp.add_parser("report")
+    sp.add_parser("select")
+    pa = sp.add_parser("parity")
+    pa.add_argument("--read", required=True)
+    rp = sp.add_parser("report")
+    rp.add_argument("--name", default="")
     a = p.parse_args()
-    {"recede": cmd_recede, "cf": cmd_cf, "report": cmd_report}[a.cmd](a)
+    global O
+    if getattr(a, "name", ""):
+        O = O0 / a.name
+    a.suffix = f"_{a.name}" if getattr(a, "name", "") else ""
+    {"recede": cmd_recede, "cf": cmd_cf, "report": cmd_report, "select": cmd_select, "parity": cmd_parity}[a.cmd](a)
 
 
 if __name__ == "__main__":
