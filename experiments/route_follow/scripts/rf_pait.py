@@ -502,7 +502,7 @@ def cmd_pack(a):
 
 # ---------------------------------------------------------------- merge
 def cmd_merge(a):
-    t0 = time.time()
+    wall0 = time.time()
     spec = [x.split(":") for x in a.pools]                            # pool:prefix[:mode] (mode -> tab `mode`, on_train --on-mode mixed)
     src = [(x[0], x[1]) for x in spec]
     modes = [x[2] if len(x) > 2 else "" for x in spec]
@@ -566,7 +566,7 @@ def cmd_merge(a):
     wrote = sum(f.stat().st_size for d in (out, warp) for f in d.iterdir() if f.is_file()) + (FEAT / f"on1_{a.out}.npz").stat().st_size
     print(json.dumps(dict(pool=str(out), rows=len(names), parts={p: n for (p, _), n in zip(src, ns)}, modes=modes,
                           src={s: int((M["src"] == s).sum()) for s in np.unique(M["src"])}, tokens="copy" if a.copy else "zero-copy",
-                          wall_s=round(time.time() - t0, 1), bytes_written=wrote)))
+                          wall_s=round(time.time() - wall0, 1), bytes_written=wrote)))
 
 
 # ---------------------------------------------------------------- r1
