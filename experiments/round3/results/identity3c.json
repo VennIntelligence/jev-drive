@@ -1,0 +1,21 @@
+{
+ "a": "R3CIDOLD-L18-s0",
+ "b": "R3CIDNEW-L18-s0",
+ "note": "MV's command (draw R3MV, no nav_w) 60 steps eager: rm_train at 6a6f0b4b vs with the ROUND3c nav_w draw (off without nav_w)",
+ "scalars": 275,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5370907187461853,
+  0.5370907187461853
+ ],
+ "on_hash_60": [
+  "44db5595ab3db943",
+  "44db5595ab3db943"
+ ],
+ "want_hash": null,
+ "identical": true
+}
