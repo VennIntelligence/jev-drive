@@ -38,6 +38,8 @@ Every term moves the plan's poses only across their own heading (loss43's shape_
   tightin (TIGHT-IN, rm_train --on-tightin W; prereg supplement 22) nr1_tight's two parts on moving S rows in tight turns (labels
         <pool>/tight_in.npz): the plan outside the human's logged line beyond 0.2 m (lon_tightin, across the heading) and TURN-CAP's arc cap
         (lon_tightina, along the heading), each 10 x W x its part. W = 0: nothing loaded or added.
+  anchor (LON-ANCHOR, rm_train --on-anchor W; plans/2026-10-20-lon-anchor-prereg.md) nr1_anchor's station-anchored two-sided arc term on
+        S rows (labels <pool>/lon_anchor.npz): logged as lon_anchor, 10 x W x nr1_anchor.term. W = 0: nothing loaded or added.
 """
 from __future__ import annotations
 
@@ -49,7 +51,7 @@ CFG = dict(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file
 
 
 def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, file="", arc=0.0, host=False, arc_rows="move", free=0.0,
-              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0, tightin=0.0, stand_launch=0.0):
+              free_frac=0.8, free_mode="all", stand=0.0, stand_margin=1.0, stoppt=0.0, free_clear=(0.0, 0.0), stand_roll=0.0, turncap=0.0, tightin=0.0, stand_launch=0.0, anchor=0.0):
     """host (rm_train --lat-host, JT): the rasters stay a host memmap and each batch's rows are gathered to the card (same values; a pool too big
     for the card)."""
     CFG.update(onc=float(onc), soft=float(soft), side=float(side), depth=float(depth), soft_depth=float(soft_depth), buf=float(buf), file=str(file),
@@ -65,9 +67,13 @@ def configure(onc=0.0, soft=0.0, side=0.0, depth=0.0, soft_depth=0.0, buf=0.4, f
         CFG["turncap"] = float(turncap)
     if tightin > 0:                                                            # TIGHT-IN (supplement 22): only the weight, labels from the file
         CFG["tightin"] = float(tightin)
+    if anchor > 0:                                                             # LON-ANCHOR: only the weight, labels from the file
+        CFG["anchor"] = float(anchor)
     if stoppt > 0:                                                             # NR1STOPPT (supplement 18): only the weight, labels from the file
         CFG["stoppt"] = float(stoppt)
         return dict(_configure_rest(free_frac, free_mode, stand_margin), stoppt=CFG["stoppt"])
+    if anchor > 0:
+        return dict(_configure_rest(free_frac, free_mode, stand_margin), anchor=CFG["anchor"])
     return _configure_rest(free_frac, free_mode, stand_margin)
 
 
@@ -154,6 +160,10 @@ def load(pool_dir, names, dev, file=None):
         import nr1_tight
         pack["tightin"] = nr1_tight.load(pool_dir, names, dev)
         print(f"nr1_lat: lon_tightin labels {pack['tightin']['rec']}", flush=True)
+    if CFG.get("anchor", 0.0) > 0:                                             # LON-ANCHOR: the station-anchored targets
+        import nr1_anchor
+        pack["anchor"] = nr1_anchor.load(pool_dir, names, dev)
+        print(f"nr1_lat: lon_anchor labels {pack['anchor']['rec']}", flush=True)
     return pack
 
 
@@ -267,4 +277,7 @@ def loss(poses, rows, pack):
         import nr1_tight
         vl, va = nr1_tight.term(poses, rows, pack["tightin"])
         out["lon_tightin"], out["lon_tightina"] = 10.0 * CFG["tightin"] * vl, 10.0 * CFG["tightin"] * va
+    if CFG.get("anchor", 0.0) > 0:
+        import nr1_anchor
+        out["lon_anchor"] = 10.0 * CFG["anchor"] * nr1_anchor.term(poses, rows, pack["anchor"])
     return out
