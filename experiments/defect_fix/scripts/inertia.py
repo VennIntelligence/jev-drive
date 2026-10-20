@@ -75,8 +75,9 @@ def cmd_recede(a):
     over = sorted(sc.index[sc["sub"] == "cor_route_end"])
     ctrl1 = sorted(sc.index[(sc.h_end_still == True) & (sc.rest_lead == False) & (sc.score >= 1.0)])  # noqa: E712  (supplement 1's filter)
     ctrl = sorted(x.strip() for x in open(a.controls)) if a.controls else []                    # supplement 3: A0 rests within [-8, +4] m of H
-    grp_of = lambda s: "overrun" if s in over else "control" if s in ctrl else "control_v1"  # noqa: E731
-    ctrl = sorted(set(ctrl) | set(ctrl1))
+    cs = set(ctrl)
+    grp_of = lambda s: "overrun" if s in over else "control" if s in cs else "control_v1"  # noqa: E731
+    ctrl = sorted(cs | set(ctrl1))
     G = pd.read_parquet(SP.S_ / "gate/a0.parquet")
     G = G[G.scene.isin(over + ctrl)]
     D = PG.drive(SP.A0)
