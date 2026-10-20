@@ -20,6 +20,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [human_label](human_label/README.md): stopped 2026-10-13 (user: not how we drive, not first-principles; no labels made); keyboard labelling page for PAI clips, batch 1 = 20 sudden-turn scenes, 62 rollouts [dnone]
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]
 - [round2](round2/README.md): live; J + ACC + GAP PAI 281 0.689 vs NTV0 0.744 (-0.056); launches 21 / 37; gates FAIL [dnone,yet]
+- [round5](round5/README.md): live; D3: 42 % of train scenes informative; faster wins launches +0.124 [dnone,yet]
 - [round3](round3/README.md): live; offline: J's launch loss tracks PAI standing rows (2.5 / batch vs 0.16), not the flattening [dnone,yet]
 - [practice_nuplan](practice_nuplan/README.md): closed; new start-state S rows; static rows cause the right bias; full-length arms without them not adopted [d368-369,377,385]
 - [self_iter](self_iter/README.md): live; round 1 pilot STOP: trainval rows teach standstill holds, launches lag [d338]
