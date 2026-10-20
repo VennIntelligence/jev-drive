@@ -60,7 +60,7 @@ def meta(data):
 
 
 class Keys:
-    """The four keyframes per token: keys.npy of the run dir, else the split's navsim_zs frames cache by index."""
+    """The four keyframes per token: keys.npy of the run dir, else the split's navsim_zs frames cache (rows = meta names)."""
 
     def __init__(self, data):
         mt = meta(data)
@@ -69,8 +69,9 @@ class Keys:
             self.src, self.ix = np.load(own, mmap_mode="r"), np.arange(len(mt["names"]))
         else:
             from jevdrive import navsim_zs as Z
-            self.src = np.load(Z.root("openpilot", mt["split"]) / "frames.npy", mmap_mode="r")
-            self.ix = np.asarray(mt["index"])
+            fr = Z.root("openpilot", mt["split"])
+            assert json.loads((fr / "frames.json").read_text())["tokens"] == mt["names"], "frames cache rows differ from meta"
+            self.src, self.ix = np.load(fr / "frames.npy", mmap_mode="r"), np.arange(len(mt["names"]))   # rows in frames.json order
 
     def __len__(self):
         return len(self.ix)
@@ -96,9 +97,12 @@ def cmd_prep(a):
         keep = Z.nonav_subset(idx, a.per_cmd, a.seed)       # seed-0 draw, a.per_cmd per command (all when fewer)
         sel = np.array([k for k, e in enumerate(idx) if e["token"] in keep])
     else:
-        sel = np.arange(len(idx))
-        fj = Z.root("openpilot", split) / "frames.json"
-        assert json.loads(fj.read_text())["tokens"] == [e["token"] for e in idx], "frames cache out of sync with the index"
+        # Row order = the frames cache order (frames.json), which the pp_prep caches (tab.npz names) also follow. The index was
+        # rebuilt on 10-10 from the shard tab.npz files in another order, so `index` maps each row to its entry in the current index.
+        ft = json.loads((Z.root("openpilot", split) / "frames.json").read_text())["tokens"]
+        pos = {e["token"]: k for k, e in enumerate(idx)}
+        assert len(ft) == len(idx) and set(ft) == set(pos), "frames cache and index hold different tokens"
+        sel = np.array([pos[t] for t in ft])
     sub = [idx[k] for k in sel]
     toks = [e["token"] for e in sub]
     R = root(a.data)
