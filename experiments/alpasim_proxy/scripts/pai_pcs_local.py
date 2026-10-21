@@ -7,7 +7,9 @@ from leaderboard_pai_20261019.json, `BANDS`). Ability is mapped to board PCS by 
 PCS: garage model_0014 1819, the host go-straight 1446, ours RSG-L18-s0 + g10 + ACC + GAP 2089. Subjects outside the pool are scored as
 one more submission under the fixed items (MAP, pcs_local.theta_map).
 
-  pai_pcs_local.py collect --out ROWS.csv.gz            box (repo root, .venv python): per-scene score / type / RPC flag of every source
+  pai_pcs_local.py collect --out ROWS.csv.gz [--only a,b --base OLD.csv.gz]   box (repo root, .venv python): per-scene score / type / RPC
+                                                        flag of every source (--only: just those labels, other rows copied from --base)
+  pai_pcs_local.py r5 --rows ROWS.csv.gz --out DIR --facts DIR --subjects a=FILE,...   the PCS-LOCAL-R5 report (paired vs NTV0, class values)
   pai_pcs_local.py fit --rows ROWS.csv.gz --out DIR [--variants a,b] [--boot N]    Mac (tmp/pcs_local/.venv with drive-irt 82ddd5a)
   pai_pcs_local.py report --rows ROWS.csv.gz --out DIR [--gap scenes.csv]          -> DIR/report.md, DIR/pai_pcs_local.json
 --gap: decision 381's per-scene loss table ($DATA_DIR/runs/route_follow/pai_gap/scenes.csv) for the easy-item cause classes.
@@ -67,6 +69,10 @@ SRC = {
     "RCVRL-g20": ("route_follow/recovery_envelope/pai/RCVRL-L18-s0", "other"),
     "RCVLF-g20": ("route_follow/recovery_envelope/pai/RCVLF-L18-s0", "other"),
     "RCVRLF-g20": ("route_follow/recovery_envelope/pai/RCVRLF-L18-s0", "other"),
+    # round 2 / round 5 PAI 281 ACC + GAP reads (plans: PAI-PCS-LOCAL-R5): scored out of pool under the d392 ruler
+    "R2C-s0+AG": ("round2/pai281/R2C-L18-s0-ag", "other"),
+    "R2J-s0+AG": ("round2/pai281/R2J-L18-s0-ag", "other"),
+    "R3MV-s0+AG": ("round5/r5_281/pai281/R3MV-L18-s0-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
@@ -93,7 +99,10 @@ def cmd_collect(a):
     from pai281 import load, ptype
     D = os.environ["DATA_DIR"] + "/runs/"
     rows = []
+    only = set(a.only.split(",")) if a.only else None
     for lab, (root, fam) in SRC.items():
+        if only is not None and lab not in only:
+            continue
         if not os.path.isdir(D + root):
             print(f"{lab}: missing {root}"); continue
         R, bad = load(D + root)
@@ -101,7 +110,11 @@ def cmd_collect(a):
             rows.append(dict(subject=lab, family=fam, scene=s, score=float(r.get("score") or 0.0), type=ptype(r), rpc=s in bad,
                              reason=str(r.get("failure_reason") or "").splitlines()[0][:80] if r.get("failure_reason") else ""))
         print(f"{lab}: {len(R)} scenes, {len(bad)} RPC errors, mean {np.mean([float(r.get('score') or 0) for r in R.values()]):.4f}")
-    pd.DataFrame(rows).to_csv(a.out, index=False)
+    new = pd.DataFrame(rows)
+    if only is not None:
+        old = pd.read_csv(a.base)
+        new = pd.concat([old[~old.subject.isin(only)], new], ignore_index=True)
+    new.to_csv(a.out, index=False)
 
 
 # ---------------------------------------------------------------- Mac: matrix, pools, fits
@@ -297,6 +310,68 @@ def cmd_report(a):
     print("\n".join(L))
 
 
+# ---------------------------------------------------------------- PCS-LOCAL-R5: more stored reads on the same ruler
+CLASSES = [("partial rear-hit", ["rear-hit"]), ("partial slow", ["slow", "creep", "no-launch"]), ("partial other contact", ["hit"]),
+           ("zero overshoot (passes the human's rest point)", ["overshoot"]), ("zero route-turn", ["route-turn"]), ("zero offroad", ["offroad"]),
+           ("zero other (AF-front, side, drift / lane change)", ["AF-front", "AF-side", "side", "zero-other"])]
+
+
+def cmd_r5(a):
+    sc, _, fam = table(a.rows)
+    out = Path(a.out)
+    z = Ruler(dict(np.load(out / "fits/paimix.npz", allow_pickle=True)), sc)
+    subs = dict(x.split("=") for x in a.subjects.split(","))              # ruler label -> facts file
+    bf = sorted(out.glob("boot_*.csv"))
+    boot = pd.concat([pd.read_csv(f) for f in bf], ignore_index=True)
+    ref = "NTV0-s0+AG"
+    P = (L := []).append
+    P(f"Pool paimix: {len(z.f['subjects'])} rows, {len(z.items)} scenes. Map: PCS = {z.A[0]:.1f} x ability + {z.A[1]:.0f}; {len(boot)} bootstrap draws.\n")
+    P("| subject | scenes scored | local mean | zeros | ability | PCS | 95 % CI | vs NTV0-s0 (paired) | 95 % CI | P(> 0) |"); P("|---|--:|--:|--:|--:|--:|---|--:|---|--:|")
+    J = {}
+    mean = sc[z.items].mean(1)
+    for s in [ref, *subs]:
+        if s == ref:
+            P(f"| {s} (reference) | {int(sc.loc[s, z.items].notna().sum())} | {mean[s]:.3f} | {int((sc.loc[s, z.items] <= 1e-4).sum())} | {z.theta[s]:+.2f} | "
+              f"**{z.pcs[s]:.0f}** | [{np.percentile(boot[s], 2.5):.0f}, {np.percentile(boot[s], 97.5):.0f}] | | | |")
+            J[s] = dict(pcs=z.pcs[s], ci=[float(np.percentile(boot[s], q)) for q in (2.5, 97.5)])
+            continue
+        d = boot[s] - boot[ref]
+        P(f"| {s} | {int(sc.loc[s, z.items].notna().sum())} | {mean[s]:.3f} | {int((sc.loc[s, z.items] <= 1e-4).sum())} | {z.theta[s]:+.2f} | **{z.pcs[s]:.0f}** | "
+          f"[{np.percentile(boot[s], 2.5):.0f}, {np.percentile(boot[s], 97.5):.0f}] | {d.median():+.0f} (point {z.pcs[s] - z.pcs[ref]:+.0f}) | "
+          f"[{d.quantile(.025):+.0f}, {d.quantile(.975):+.0f}] | {(d > 0).mean():.2f} |")
+        J[s] = dict(pcs=z.pcs[s], ci=[float(np.percentile(boot[s], q)) for q in (2.5, 97.5)], diff_median=float(d.median()),
+                    diff_point=z.pcs[s] - z.pcs[ref], diff_ci=[float(d.quantile(.025)), float(d.quantile(.975))], p_pos=float((d > 0).mean()))
+    P("\nPaired differences between the new reads (same draws): " + "; ".join(
+        f"{x} - {y} {(boot[x] - boot[y]).median():+.0f} [{(boot[x] - boot[y]).quantile(.025):+.0f}, {(boot[x] - boot[y]).quantile(.975):+.0f}]"
+        for x, y in (("R3MV-s0+AG", "R2C-s0+AG"), ("R3MV-s0+AG", "R2J-s0+AG"), ("R2J-s0+AG", "R2C-s0+AG"))) + "\n")
+    # class values: set the class's scenes to 1 in that read, items fixed (MAP), PCS delta
+    P("## PCS value of each loss class if fixed (scenes -> 1, items fixed, MAP; paimix)\n")
+    P("Class = pai_fix.py `fclass` of the stored facts. Read the ranking, not the sizes: the ceiling sits above the anchors.\n")
+    P("| class | " + " | ".join(subs_ := [ref, *subs]) + " |"); P("|---|" + "--:|" * len(subs_))
+    V, N = {}, {}
+    facts = {s: pd.read_csv(Path(a.facts) / (subs[s] if s in subs else NTV0_FACTS)).set_index("scene") for s in subs_}
+    for s in subs_:
+        y0 = sc.loc[s, z.items].to_numpy(float)
+        F = facts[s].reindex(z.items)
+        base = pcs_of(z, y0)
+        V[s], N[s] = {}, {}
+        groups = CLASSES + [("all partials", CLASSES[0][1] + CLASSES[1][1] + CLASSES[2][1]), ("all zeros", sum((c[1] for c in CLASSES[3:]), []))]
+        for name, fc in groups:
+            m = F.fclass.isin(fc).to_numpy() & np.isfinite(y0)
+            y = y0.copy(); y[m] = 1.0
+            V[s][name] = pcs_of(z, y) - base; N[s][name] = (int(m.sum()), float(np.sum(1 - y0[m])))
+    for name, _ in CLASSES + [("all partials", 0), ("all zeros", 0)]:
+        P(f"| {name} | " + " | ".join(f"{N[s][name][0]} sc, {N[s][name][1]:.1f} pt: **{V[s][name]:+.0f}**" for s in subs_) + " |")
+    J["class_values"] = V; J["class_counts"] = N
+    # R3MV minus NTV0 class counts are in round5/results/pai281_R3MV_ag.md
+    (out / "r5_report.md").write_text("\n".join(L) + "\n")
+    (out / "pai_pcs_local_r5.json").write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
+NTV0_FACTS = "NTV0-L18-s0-281ag.csv"
+
+
 def pcs_of(z, y):
     from pcs_local import theta_map
     return float(np.polyval(z.A, theta_map(y, z.f, float(np.mean(z.f["theta"])), float(np.std(z.f["theta"])))))
@@ -305,13 +380,15 @@ def pcs_of(z, y):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     s = p.add_subparsers(dest="cmd", required=True)
-    c = s.add_parser("collect"); c.add_argument("--out", required=True)
+    c = s.add_parser("collect"); c.add_argument("--out", required=True); c.add_argument("--only", default=""); c.add_argument("--base", default="")
+    q = s.add_parser("r5"); q.add_argument("--rows", required=True); q.add_argument("--out", required=True); q.add_argument("--facts", required=True)
+    q.add_argument("--subjects", required=True, help="label=facts file name,... (pai_fix facts csv with fclass per scene)")
     f = s.add_parser("fit"); f.add_argument("--rows", required=True); f.add_argument("--out", required=True)
     f.add_argument("--variants", default=""); f.add_argument("--boot", type=int, default=0)
     f.add_argument("--boot0", type=int, default=0, help="first bootstrap draw (seed), for parallel shards")
     r = s.add_parser("report"); r.add_argument("--rows", required=True); r.add_argument("--out", required=True); r.add_argument("--gap", default="")
     a = p.parse_args()
-    dict(collect=cmd_collect, fit=cmd_fit, report=cmd_report)[a.cmd](a)
+    dict(collect=cmd_collect, fit=cmd_fit, report=cmd_report, r5=cmd_r5)[a.cmd](a)
 
 
 if __name__ == "__main__":
