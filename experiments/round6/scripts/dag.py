@@ -64,7 +64,7 @@ W5, W6 = DATA / "runs/round5/r5/w", DATA / "runs/round6/dag/w"
 RES = REPO / os.environ.get("DAG_RES", "experiments/round6/results/dagger")
 TSV = REPO / "experiments/round5/results/s3_scenes.tsv"
 CLS = ("stop_nolead", "turn_sharp", "launch", "other")
-STUDENT = "R5LC-L18-s0"
+STUDENT = os.environ.get("DAG_T", "R5LC-L18-s0")
 CARD_STACKS = 3
 
 # teacher (registered in the plan before any roll)
