@@ -2,7 +2,7 @@
 # ROUND6 ROUTE-CURV (diagnosis, CPU only, PRIO 15): rmc.py extract / scenes / rows / report through the pool. Box, repo root.
 #   rmc.sh launch       extract + rows in parallel -> scenes (--after extract) -> report (--after scenes, rows) -> $O/DONE
 #   rmc.sh smoke        extract -> scenes on 3 test + 3 train scenes, inline-sized (tag smoke): a code check before launch
-#   rmc.sh one <stage>  a single stage (no chain)
+#   rmc.sh one <stage> [--after ID]  a single stage
 #   rmc.sh wait         blocks until $O/DONE or a failed / cancelled job of this lane (one run_in_background waiter)
 #   job bodies: extract | scenes [args] | rows | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -25,7 +25,7 @@ smoke)
   e=$(sub_extract) || exit 1
   s=$(sub rmc-smoke --after $e --vram 0.1 --cpu 6 --ram 32 --timeout-h 1 -- bash $ME scenes --workers 6 --limit 3 --tag smoke) || exit 1
   echo "$(date '+%F %T') smoke (code $(git rev-parse --short HEAD)): extract $e scenes $s" | tee -a $O/stages.txt ;;
-one) rm -f $O/DONE; "sub_$2" ;;
+one) rm -f $O/DONE; "sub_$2" "${@:3}" ;;
 extract) $V $PY extract --workers 8 || die extract ;;
 scenes) shift; "${EA[@]}" $AP $PY scenes "$@" || die scenes ;;
 rows) $V $PY rows || die rows ;;
