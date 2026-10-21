@@ -1,0 +1,12 @@
+{
+ "base": "R5LC",
+ "out": "R6FIXI",
+ "rule": "identity: R6FIX's code with no row dropped (bit-equal to R5LC)",
+ "group_share": {
+  "S": 0.49999999999936234,
+  "ph": 0.25000000000047345,
+  "ph05": 0.12500000000022465,
+  "ph15": 0.12499999999999016
+ },
+ "pai_drawable": 222990
+}

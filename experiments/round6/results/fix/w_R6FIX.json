@@ -1,0 +1,12 @@
+{
+ "base": "R5LC",
+ "out": "R6FIX",
+ "rule": "R5LC with F1 (ph15) and F2 (all PAI parts) rows -> 0, each part renormalised to its R5LC share",
+ "group_share": {
+  "S": 0.49999999999936234,
+  "ph": 0.24999999999982322,
+  "ph05": 0.12500000000000722,
+  "ph15": 0.12500000000008912
+ },
+ "pai_drawable": 193850
+}
