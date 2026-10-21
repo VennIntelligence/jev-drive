@@ -11,7 +11,7 @@
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/joint; ME=experiments/round7/scripts/joint.sh; PY=experiments/round7/scripts/joint.py; DS=experiments/round6/scripts/dag.sh
 V=.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python
-RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; RES=experiments/round7/results/joint; PRIO=${PRIO:-20}; N=9500
+RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; RES=$O/results;   # outside the repo tree (pulls never blocked) PRIO=${PRIO:-20}; N=9500
 PRE=${JOINT_PRE:-ba54017b}                                         # the last commit before this lane's code (identity run A)
 SERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
 J_POOL=${J_POOL:-on1_JTPHDK}; J_WF=${J_WF:-R7J}; J_K=${J_K:-98}; J_HOW=${J_HOW:-1.3}; J_CMD=${J_CMD-heading}   # fallbacks (a change dropped) override these

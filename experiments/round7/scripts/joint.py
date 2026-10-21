@@ -41,7 +41,7 @@ O = DATA / "runs/round7/joint"
 O1 = DATA / "runs/round6/dag"                                     # iteration-1 rows / teacher / R6DAG draw file
 CR = DATA / "runs/op_parity/cache"
 FEAT = DATA / "runs/route_mem/feat"
-RES = REPO / "experiments/round7/results/joint"
+RES = Path(os.environ.get("JOINT_RES", str(O / "results")))         # written on the box outside the repo tree; copied to results/joint/ on the Mac
 BASE, POOL_K, POOL_I, SRC_D = "on1_JTPHD", "on1_JTPHDK", "on1_JTPHDI", "on1_PAID"
 T_J = 0.5 * np.arange(1, 9)
 # change 1 (registered)
