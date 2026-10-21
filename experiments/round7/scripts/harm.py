@@ -8,6 +8,7 @@ DiffusionHarmonizer), encoded by the normal cache path; token distances and plan
   compare  <cache root>/<variant>/{tab.npz, tok.npy} (onp_cache build) of OFFA, OFFB, ON + the row files -> <out>/cmp.json, <out>/cmp.md:
            frame bytes, newest-pair token cosine distance / relative L2, plan deltas (rear-axle x = longitudinal, y = lateral) at 0.5 / 2 / 4 s
            per checkpoint (each variant's own tokens and ego, the onp_cache gid export), per stratum and pooled; verdict per the plan
+  report   cmp.json (+ cost.json) -> the tables of results/harmonizer_openloop.md (stdout); runs anywhere (no torch)
   png      side-by-side OFF-A | ON | 4 x |diff| of the driver camera's newest frame (the model input, 512 x 256) for one state per stratum + the
            largest NTV0 4 s lateral delta -> <out>/png/*.png (palette PNG)
 
@@ -240,6 +241,34 @@ def cmd_png(a):
     print(json.dumps(lst))
 
 
+def cmd_report(a):
+    r = json.load(open(a.cmp))
+    f = lambda x: f"{x:.3f}"  # noqa: E731
+    o = [f"States matched in all three renders: {r['matched']} / {r['states']}. Overall verdict: **{r['overall']}**.\n",
+         "| Render pair | Mean abs grey diff (newest frame, model input) | Share of bytes differing | States bit-identical |\n|---|--:|--:|--:|\n"
+         + "".join(f"| {b} vs OFFA | {v['mean_abs_grey']:.3f} | {v['share_bytes_diff']:.4f} | {v['states_identical']} |\n" for b, v in r["frame"].items()),
+         f"Ego input max abs difference vs OFFA: OFFB {r['ego_maxabs']['OFFB']:.2e}, ON {r['ego_maxabs']['ON']:.2e}. "
+         f"Training-path forward vs logged plan (NTV0, OFFA): max {r['gid_max_m']:.4f} m.\n"]
+    for tag, V in r["verdict"].items():
+        P = r["plans"][tag]
+        o.append(f"### {tag}{' (reference, not judged)' if tag == 'P0' else ''}: {'small' if V['small'] else 'NOT small'}\n")
+        o.append("Plan |delta| median (p90) in m, ON vs OFFA against the floor OFFB vs OFFA. Lat = rear-axle y, lon = rear-axle x.\n")
+        o.append("| Stratum | n | " + " | ".join(f"{ax} {h} s ON / floor" for ax in ("lat", "lon") for h in H_IDX) + " |\n|---|--:|" + "--:|" * 6 + "\n")
+        for g in ("all",) + STRATA:
+            o.append(f"| {g} | {r['n'][g]} | " + " | ".join(f"{f(P[g]['ON'][ax][h]['med'])} ({f(P[g]['ON'][ax][h]['p90'])}) / {f(P[g]['OFFB'][ax][h]['med'])} ({f(P[g]['OFFB'][ax][h]['p90'])})"
+                                                          for ax in ("lat", "lon") for h in H_IDX) + " |\n")
+        o.append(f"\nPooled 4 s median, 95 % bootstrap CI: ON lat {P['ci_all_on_4s']['lat']}, lon {P['ci_all_on_4s']['lon']}; floor lat {P['ci_all_floor_4s']['lat']}, lon {P['ci_all_floor_4s']['lon']}.\n")
+        o.append("Verdict cells: " + "; ".join(f"{c['ax']} {c['h']} s {f(c['on'])} vs line {f(c['line'])} ({c['rule']}) {'ok' if c['ok'] else 'OVER'}" for c in V["cells"])
+                 + f"; lateral 4 s median {f(V['lat4_med'])} {'< 0.2 ok' if V['lat4_ok'] else '>= 0.2 OVER'}. Stratum flags: {'; '.join(V['stratum_flags']) or 'none'}.\n")
+    o.append("### Tokens (newest pair, 32 x 512)\n\n| Stratum | n | 1 - cos ON | 1 - cos floor | rel L2 ON | rel L2 floor | rel L2 ON, mean of 8 slots | rel L2 floor, mean of 8 |\n|---|--:|--:|--:|--:|--:|--:|--:|\n")
+    for g in ("all",) + STRATA:
+        t = r["tokens"][g]
+        o.append(f"| {g} | {r['n'][g]} | {t['ON']['cos7']['med']:.4f} ({t['ON']['cos7']['p90']:.4f}) | {t['OFFB']['cos7']['med']:.4f} ({t['OFFB']['cos7']['p90']:.4f}) | "
+                 f"{t['ON']['rl27']['med']:.4f} ({t['ON']['rl27']['p90']:.4f}) | {t['OFFB']['rl27']['med']:.4f} ({t['OFFB']['rl27']['p90']:.4f}) | "
+                 f"{t['ON']['rl2_all']['med']:.4f} | {t['OFFB']['rl2_all']['med']:.4f} |\n")
+    print("\n".join(o))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -254,9 +283,11 @@ if __name__ == "__main__":
     p.add_argument("--cache", required=True)
     p.add_argument("--rows", required=True, help="dir with <variant>/<scene>.npz")
     p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "R5LC-L18-s0", "P0"])
+    p = sub.add_parser("report")
+    p.add_argument("--cmp", required=True)
     p = sub.add_parser("png")
     p.add_argument("--out", required=True)
     p.add_argument("--rows", required=True)
     p.add_argument("--tag", default="NTV0-L18-s0")
     a = ap.parse_args()
-    {"select": cmd_select, "compare": cmd_compare, "png": cmd_png}[a.cmd](a)
+    {"select": cmd_select, "compare": cmd_compare, "report": cmd_report, "png": cmd_png}[a.cmd](a)

@@ -5,6 +5,7 @@
 # (the normal cache path, same encoder order) -> harm.py compare -> harm.py png.
 #   harm.sh select              (job body) states.tsv + chunks/
 #   harm.sh smoke               submit c000 (one scene) for the three variants
+#   harm.sh smoketail           rows -> cache per variant on c000, then compare on its states (the whole tail once, before chain)
 #   harm.sh chain               submit the other chunks, then rows -> clean, cache per variant, compare -> png (DONE)
 #   harm.sh wait                blocks until $O/DONE or a failed job of this lane (one run_in_background waiter)
 #   job bodies: rows <V> | clean <V> | cache <V> | compare | png
@@ -27,6 +28,11 @@ select) mkdir -p $O; $TR $PY select --out $O ;;
 smoke)
   mkdir -p $O/pool; [[ -f $O/chunks/c000.txt ]] || die "no chunks: run select first"
   for v in $VARS; do echo "$v $(roll $v c000)"; done | tee -a $O/stages.txt ;;
+smoketail)
+  cc=(); for v in $VARS; do w=$(sub harm-rows0-$v --vram 0.5 --cpu 8 --ram 40 --timeout-h 1 -- bash $ME rows $v) || exit 1
+    k=$(sub harm-cache0-$v --after $w --vram 20 --cpu 8 --ram 64 --timeout-h 1 -- bash $ME cache $v) || exit 1; cc+=($k); done
+  m=$(sub harm-compare0 --after $(IFS=,; echo "${cc[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 1 -- bash $ME compare) || exit 1
+  echo "$(date '+%F %T') smoketail: caches ${cc[*]} compare $m" | tee -a $O/stages.txt ;;
 chain)
   ch=$(cd $O/chunks && ls c*.txt | sed 's/.txt$//'); git rev-parse --short HEAD >> $O/code.txt; cc=()
   for v in $VARS; do
@@ -43,7 +49,7 @@ rows)
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $v \
       --runs "$O/roll/$v/runs/*" --out $O/rows --stage $G --tag $T --jobs 8 || exit 1
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $v --out $O/rows --stage $G --jobs 8 || exit 1
-  rm -rf $G; n=$(ls $O/rows/$v/*.npz 2>/dev/null | wc -l); m=$(cat $O/chunks/*.txt | grep -c .); echo "$(date '+%F %T') rows $v: $n / $m scenes" | tee -a $O/stages.txt
+  rm -rf $G; n=$(ls $O/rows/$v/*.npz 2>/dev/null | wc -l); m=$(cat $O/roll/$v/chunks/*.txt | grep -c .); echo "$(date '+%F %T') rows $v: $n / $m scenes" | tee -a $O/stages.txt
   (( n == m )) || die "rows $v: $n of $m scenes" ;;
 clean) r=$O/roll/$2; find $r/runs -name rollout.asl -delete; rm -rf $r/runs/*/sim/driver-logs/dump; echo "$(date '+%F %T') clean $2: $(du -sh $r | cut -f1) left" >> $O/stages.txt ;;
 cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $2 --rows $O/rows/$2 --out $O/cache ;;
