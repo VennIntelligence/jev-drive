@@ -33,6 +33,13 @@ Stage G (prereg addendum 4): R5-G = R3MV's argv with draw R5G ("stand, then go p
   r5.py l37 --read K=FACTS.csv .. --pair A:B .. --target A:B ..   LAUNCH-37 (lead_281.csv's 37 launch scenes): launched, rear-hit, mean, zeros,
         lead / no-lead split per read; paired A - B over the 37 (mean, launched) and over PAI-FIX TARGET (vl facts) -> results/launch37.{md,json}
         (--stem); --sep PAIR=TARGET: further registered comparisons (default: the first --pair with the first --target)
+Stage L (addendum 5): R5-LC (MV-LC) = R3MV's argv with draw R5LC (every PAI human row whose 4 s label is a lane change off the route lane -> 0).
+  r5.py lcrows                  (box, CPU) D1's rule (LC_*: v0 > 5, 4 s point |y| > 2.5 m, |yaw| < 12 deg; route polyline not within 1.2 m of it)
+        on the three PAI parts' own rows -> R5LC (each part renormalised to its R3MV share) and R5LCI (no row dropped, asserted bit-equal to
+        R3MV) -> w/<out>.npz + results/w_<out>.json; rows removed by part / class, lane-change share before / after vs navtrain -> results/lc_rows.{md,json}
+  r5.py lcverdict --json J --md M --read K=F ..   the registered adopt-candidate rule on r2.py r281's json + the secondary column (new zeros /
+        partials on the scenes NTV0 scores 1.0), appended to M
+  r5.py lcpcs --pcs Q --json J --md M   the local PAI PCS ruler's per-read PCS and paired difference vs NTV0 + the secondary rule, appended to M
 """
 from __future__ import annotations
 
@@ -750,7 +757,9 @@ def cmd_lcrows(a):
 
 
 def cmd_lcverdict(a):
-    """Stage L: the registered adopt-candidate rule on r2.py r281's json -> appended to its md."""
+    """Stage L: the registered adopt-candidate rule on r2.py r281's json + the secondary column (d429: new zeros / partials on the scenes NTV0
+    scores 1.0, over r281's common scenes) -> appended to its md."""
+    import pandas as pd
     J = json.loads(Path(a.json).read_text())
     R, P = J["reads"], J["pairs"]
     lat = lambda k: R[k]["z_offroad"] + R[k]["z_zero-other"]  # noqa: E731
@@ -763,13 +772,51 @@ def cmd_lcverdict(a):
         rows.append(f"| {k} | {d['mean']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}] | {'yes' if b else 'no'} | {lat(k)} (offroad {R[k]['z_offroad']}, "
                     f"zero-other {R[k]['z_zero-other']}) | {'yes' if l_ else 'no'} |")
     s = P["R3MV-s1-ag:R3MV-s0-ag"]["mean"]
+    F = {k: pd.read_csv(f).set_index("scene") for k, f in (x.split("=", 1) for x in a.read)}
+    com = sorted(set.intersection(*[set(X.index[X.score.notna() & ~X.rpc.fillna(False).astype(bool)]) for X in F.values()]))
+    assert len(com) == J["scenes"], (len(com), J["scenes"])
+    solved = (F["NTV0-ag"].score.reindex(com) >= 1 - 1e-4).to_numpy()
+    sol = {}
+    for k, X in F.items():
+        y, c = X.score.reindex(com)[solved], X.fclass.reindex(com)[solved]
+        sol[k] = dict(zeros=int((y <= 1e-4).sum()), partials=int(((y > 1e-4) & (y < 1 - 1e-4)).sum()),
+                      by_class={str(q): int(n) for q, n in c[y < 1 - 1e-4].value_counts().items()})
     L = ["", "## Registered rule (prereg addendum 5)", "",
          f"adopt-candidate = both MV-LC seeds beat NTV0 on the mean (paired point estimate > 0) and each seed's offroad + zero-other zeros <= NTV0's + 3 = {cap}.", "",
          "| arm | - NTV0 mean [95 % CI] | beats NTV0 | offroad + zero-other | <= cap |", "|:--|--:|:-:|--:|:-:|", *rows, "",
-         f"**MV-LC: {'adopt-candidate' if ok else 'not an adopt-candidate'}.** Seed noise (R3MV s1 - s0, same argv): {s['mean']:+.3f} [{s['lo']:+.3f}, {s['hi']:+.3f}]."]
+         f"**MV-LC: {'adopt-candidate' if ok else 'not an adopt-candidate'}** (primary rule). Seed noise (R3MV s1 - s0, same argv): "
+         f"{s['mean']:+.3f} [{s['lo']:+.3f}, {s['hi']:+.3f}].", "",
+         f"### Secondary column (addendum 5, d429): new zeros / partials on the {int(solved.sum())} of {len(com)} common scenes NTV0 scores 1.0", "",
+         "| read | new zeros | new partials | by class (zeros + partials) |", "|:--|--:|--:|:--|"]
+    L += [f"| {k} | {v['zeros']} | {v['partials']} | " + ", ".join(f"{q} {n}" for q, n in sorted(v["by_class"].items(), key=lambda t: -t[1])) + " |"
+          for k, v in sol.items() if k != "NTV0-ag"]
+    L += ["", "The local PAI PCS ruler (the second secondary column) is appended by `r5.py lcpcs` after its CPU jobs."]
     with open(a.md, "a") as f:
         f.write("\n".join(L) + "\n")
-    J["verdict"] = dict(adopt_candidate=bool(ok), cap=cap)
+    J["verdict"] = dict(adopt_candidate=bool(ok), cap=cap, ntv0_solved=dict(scenes=int(solved.sum()), reads=sol))
+    Path(a.json).write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
+def cmd_lcpcs(a):
+    """Stage L: the local PAI PCS ruler (pai_pcs_local.py r5 json) per read, paired vs NTV0; the registered secondary rule -> appended to the md."""
+    Q = json.loads(Path(a.pcs).read_text())
+    J = json.loads(Path(a.json).read_text())
+    L = ["", "### Secondary column (addendum 5, d429): local PAI PCS ruler (d392 pool / anchors, paired vs NTV0-s0+AG on the same bootstrap draws)", "",
+         f"NTV0-s0+AG {Q['NTV0-s0+AG']['pcs']:.0f} [{Q['NTV0-s0+AG']['ci'][0]:.0f}, {Q['NTV0-s0+AG']['ci'][1]:.0f}].", "",
+         "| read | PCS [95 % CI] | - NTV0 median (point) [95 % CI] | P(> 0) |", "|:--|--:|--:|--:|"]
+    for k in ("R2C-s0+AG", "R3MV-s0+AG", "R3MV-s1+AG", "R5LC-s0+AG", "R5LC-s1+AG"):
+        q = Q[k]
+        L.append(f"| {k} | {q['pcs']:.0f} [{q['ci'][0]:.0f}, {q['ci'][1]:.0f}] | {q['diff_median']:+.0f} ({q['diff_point']:+.0f}) "
+                 f"[{q['diff_ci'][0]:+.0f}, {q['diff_ci'][1]:+.0f}] | {q['p_pos']:.2f} |")
+    sp = {k: Q[k]["diff_ci"][1] >= 0 for k in ("R5LC-s0+AG", "R5LC-s1+AG")}
+    L += ["", "Registered secondary rule: each MV-LC seed's ruler difference to NTV0 has a 95 % CI upper bound >= 0 (not credibly below NTV0; "
+          "R2C passed at -29 [-95, +19], R3MV failed at -276 [-375, -217], d429): " + ", ".join(f"{k} {'pass' if v else 'fail'}" for k, v in sp.items())
+          + f" -> **{'both pass' if all(sp.values()) else 'not both'}**. Full ruler report: pcs_r5l.md."]
+    with open(a.md, "a") as f:
+        f.write("\n".join(L) + "\n")
+    J.setdefault("verdict", {})["pcs"] = dict({k: Q[k] for k in ("NTV0-s0+AG", "R2C-s0+AG", "R3MV-s0+AG", "R3MV-s1+AG", "R5LC-s0+AG", "R5LC-s1+AG")},
+                                              secondary_pass=sp)
     Path(a.json).write_text(json.dumps(J, indent=1, default=float))
     print("\n".join(L))
 
@@ -914,10 +961,12 @@ def main():
     p.add_argument("--sep", nargs="*", default=[]), p.add_argument("--stem", default="launch37")
     sub.add_parser("lcrows")
     p = sub.add_parser("lcverdict")
-    p.add_argument("--json", required=True), p.add_argument("--md", required=True)
+    p.add_argument("--json", required=True), p.add_argument("--md", required=True), p.add_argument("--read", nargs="+", required=True, help="K=FACTS.csv, r281's reads")
+    p = sub.add_parser("lcpcs")
+    p.add_argument("--pcs", required=True), p.add_argument("--json", required=True), p.add_argument("--md", required=True)
     a = ap.parse_args()
     dict(expect=cmd_expect, smoke=cmd_smoke, weights=cmd_weights, gate=cmd_gate, leadrows=cmd_leadrows, lead281=cmd_lead281,
-         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37, lcrows=cmd_lcrows, lcverdict=cmd_lcverdict)[a.cmd](a)
+         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37, lcrows=cmd_lcrows, lcverdict=cmd_lcverdict, lcpcs=cmd_lcpcs)[a.cmd](a)
 
 
 if __name__ == "__main__":

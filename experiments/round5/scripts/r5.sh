@@ -35,6 +35,9 @@
 #   r5.sh lcrows L          (CPU, offline, before the prereg) r5.py lcrows -> w/R5LC.npz, w/R5LCI.npz + results/{lc_rows,w_R5LC,w_R5LCI}.{md,json}
 #   r5.sh chainL L          one submission: smoke L + identity (R3MV argv: R3MV vs R5LCI) -> launchL: the three trainings in parallel, each one's
 #                           281 read --after it -> r281L (results/pai281_R5LC_ag.md + lcverdict) -> DONE
+#   r5.sh pcsL L <after id>  (addendum 5, secondary) the local PAI PCS ruler (d392 pool / anchors) on the three new reads, CPU pool jobs PRIO 15:
+#                           collect (new rows onto tmp/pcs_r5's) -> 20 bootstrap shards x 5 (d429's fits reused: the new reads are out of pool)
+#                           -> pcsrep: pai_pcs_local.py r5 -> results/pcs_r5l.{md,json} + r5.py lcpcs -> PCSDONE
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 R5=$DATA_DIR/runs/round5/r5; ME=experiments/round5/scripts/r5.sh; PY=experiments/round5/scripts/r5.py; R2PY=experiments/round2/scripts/r2.py
 RES=experiments/round5/results; TR=$DATA_DIR/envs/op-train/bin/python; V=.venv/bin/python; RPD=$DATA_DIR/runs/round5/road_pai; S3O=$DATA_DIR/runs/round5/s3
@@ -45,7 +48,7 @@ declare -A NAME=([R]=round5r [A]=round5a [B]=round5b [B1]=round5b1 [N]=round5n [
 declare -A SMK=([R]=R [A]=R5A [B]=R5B [B1]=R5B [N]=R5N [N1]=R5N [G]=R5G [G2]=R5G2 [L]=R5LC) IDN=([R]=r [A]=a [B]=b [B1]=b [N]=n [N1]=n [G]=g [G2]=g2 [L]=lc); A0=R5A-L18-s0; B0=R5B-L18-s0; N0=R5N-L18-s0
 MVL=R3MVL-L18-s0; GT=R5G-L18-s0; MV1=R3MV-L18-s1; L37=experiments/round5/results/launch37.txt
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train); PRIO=${PRIO:-20}
-ST=${2:-R}; [[ -n ${TAGS[$ST]:-} ]] || { sed -n 2,35p "$0"; exit 2; }; O=$R5/$ST; mkdir -p $O/pool $R5/w $RES
+ST=${2:-R}; [[ -n ${TAGS[$ST]:-} ]] || { sed -n 2,40p "$0"; exit 2; }; O=$R5/$ST; mkdir -p $O/pool $R5/w $RES
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round5-r5 --name "$name" --tries ${TRIES:-1} --priority $PRIO \
      --no-check --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
@@ -268,8 +271,35 @@ r281L)
   $TR $R2PY r281 --read "${rd[@]}" --pairs R5LC-s0-ag:R3MV-s0-ag R5LC-s1-ag:R3MV-s1-ag R5LC-s0-ag:NTV0-ag R5LC-s1-ag:NTV0-ag R3MV-s1-ag:R3MV-s0-ag \
       R3MV-s0-ag:NTV0-ag R3MV-s1-ag:NTV0-ag R5LC-s1-ag:R5LC-s0-ag R5LC-s0-ag:R2C-ag R5LC-s1-ag:R2C-ag --out $RES/pai281_R5LC_ag.md \
       --title "PAI 281, ACC + GAP: R5-LC (MV-LC) s0 / s1 vs R3MV s0 / s1 and stored NTV0-L18-s0 / R2C-L18-s0" || die "r281 L"
-  $V $PY lcverdict --json $RES/pai281_R5LC_ag.json --md $RES/pai281_R5LC_ag.md || die "lcverdict"
+  $V $PY lcverdict --json $RES/pai281_R5LC_ag.json --md $RES/pai281_R5LC_ag.md --read "${rd[@]}" || die "lcverdict"
   date '+%F %T' > $O/DONE ;;
+pcsL)  # pcsL L <after id>: submit the ruler chain (CPU only, PRIO 15)
+  [[ $ST == L ]] || die "pcsL is stage L"; [[ -n ${3:-} ]] || die "pcsL needs the job id to wait for (r281L)"
+  PRIO=15; P0=$DATA_DIR/tmp/pcs_r5; PT=$DATA_DIR/tmp/pcs_r5l; [[ ! -e $PT ]] || die "$PT exists"; for f in $P0/rows.csv.gz $P0/out/fits/paimix.npz; do [[ -s $f ]] || die "no $f"; done
+  mkdir -p $PT/out/fits && cp $P0/out/fits/*.npz $PT/out/fits/; h=$(git rev-parse --short HEAD); echo "$h pcsL" >> $O/code.txt
+  X=experiments/alpasim_proxy/scripts/pai_pcs_local.py; EV=(env OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONPATH=$P0/site)
+  c=$(sub r5-pcs-collect --after $3 --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- "${EV[@]}" $V $X collect --out $PT/rows.csv.gz \
+      --only R5LC-s0+AG,R5LC-s1+AG,R3MV-s1+AG --base $P0/rows.csv.gz) || exit 1
+  b=(); for k in $(seq 0 5 95); do b+=($(sub r5-pcs-boot-$k --after $c --vram 0.1 --cpu 4 --ram 16 --timeout-h 3 -- "${EV[@]}" $V $X fit --rows $PT/rows.csv.gz \
+      --out $PT/out --variants - --boot 5 --boot0 $k)) || exit 1; done
+  r=$(sub r5-pcs-report --after $(csv ${b[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- "${EV[@]}" bash $ME pcsrep L) || exit 1
+  echo "$(date '+%F %T') pcsL (code $h): collect $c boot ${b[*]} report $r" | tee -a $O/stages.txt ;;
+pcsrep)
+  PT=$DATA_DIR/tmp/pcs_r5l; P0=$DATA_DIR/tmp/pcs_r5; X=experiments/alpasim_proxy/scripts/pai_pcs_local.py
+  python3 - $P0/out $PT/out <<'PY' || die "bootstrap draws of the old reads differ from d429's"
+import csv, glob, sys                                            # same seeds, same pool: the old subjects' draws must repeat exactly
+rd = lambda d: [r for f in sorted(glob.glob(d + "/boot_*.csv")) for r in csv.DictReader(open(f))]  # noqa: E731
+a, b = rd(sys.argv[1]), rd(sys.argv[2])
+assert len(a) == len(b) == 100 and all(abs(float(x[k]) - float(y[k])) < 1e-6 for x, y in zip(a, b) for k in x), "boot mismatch"
+print("old draws repeat:", len(a), "draws,", len(a[0]), "subjects")
+PY
+  sj="R2C-s0+AG=R2C-L18-s0-281ag.csv,R2J-s0+AG=R2J-L18-s0-281ag.csv,R3MV-s0+AG=$MV-281ag.csv,R3MV-s1+AG=$MV1-281ag.csv,R5LC-s0+AG=R5LC-L18-s0-281ag.csv,R5LC-s1+AG=R5LC-L18-s1-281ag.csv"
+  $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ --subjects "$sj" \
+      --pairs R5LC-s0+AG:R3MV-s0+AG,R5LC-s1+AG:R3MV-s1+AG,R3MV-s1+AG:R3MV-s0+AG,R5LC-s1+AG:R5LC-s0+AG,R5LC-s0+AG:R2C-s0+AG,R5LC-s1+AG:R2C-s0+AG > $PT/out/r5.log 2>&1 \
+      || die "ruler report (log $PT/out/r5.log)"
+  cp $PT/out/r5_report.md $RES/pcs_r5l.md && cp $PT/out/pai_pcs_local_r5.json $RES/pcs_r5l.json || die "copy ruler report"
+  $V $PY lcpcs --pcs $RES/pcs_r5l.json --json $RES/pai281_R5LC_ag.json --md $RES/pai281_R5LC_ag.md || die "lcpcs"
+  date '+%F %T' > $O/PCSDONE ;;
 leadrows)
   [[ $ST == N ]] || die "leadrows is stage N"
   if [[ ${3:-} != run ]]; then h=$(git rev-parse --short HEAD); echo "$h leadrows" >> $O/code.txt
@@ -366,5 +396,5 @@ wait)   # returns at $O/DONE or when a job of this stage failed / was cancelled
   [[ -f $O/DONE ]] && echo "DONE $(cat $O/DONE)"; tail -3 $O/stages.txt; true ;;
 swait)  # returns when every job of this stage has ended (the smoke stage's waiter)
   until poolwait; rc=$?; (( rc != 3 )); do sleep 120; done; tail -4 $O/stages.txt; true ;;
-*) sed -n 2,35p "$0"; exit 2 ;;
+*) sed -n 2,40p "$0"; exit 2 ;;
 esac

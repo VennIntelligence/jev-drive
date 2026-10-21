@@ -73,6 +73,10 @@ SRC = {
     "R2C-s0+AG": ("round2/pai281/R2C-L18-s0-ag", "other"),
     "R2J-s0+AG": ("round2/pai281/R2J-L18-s0-ag", "other"),
     "R3MV-s0+AG": ("round5/r5_281/pai281/R3MV-L18-s0-ag", "other"),
+    # round 5 stage L (prereg addendum 5): MV-LC s0 / s1 and R3MV s1, out of pool
+    "R5LC-s0+AG": ("round5/r5/pai281/R5LC-L18-s0-ag", "other"),
+    "R5LC-s1+AG": ("round5/r5/pai281/R5LC-L18-s1-ag", "other"),
+    "R3MV-s1+AG": ("round5/r5/pai281/R3MV-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
@@ -343,7 +347,8 @@ def cmd_r5(a):
                     diff_point=z.pcs[s] - z.pcs[ref], diff_ci=[float(d.quantile(.025)), float(d.quantile(.975))], p_pos=float((d > 0).mean()))
     P("\nPaired differences between the new reads (same draws): " + "; ".join(
         f"{x} - {y} {(boot[x] - boot[y]).median():+.0f} [{(boot[x] - boot[y]).quantile(.025):+.0f}, {(boot[x] - boot[y]).quantile(.975):+.0f}]"
-        for x, y in (("R3MV-s0+AG", "R2C-s0+AG"), ("R3MV-s0+AG", "R2J-s0+AG"), ("R2J-s0+AG", "R2C-s0+AG"))) + "\n")
+        for x, y in ([p_.split(":") for p_ in a.pairs.split(",")] if a.pairs else
+                     (("R3MV-s0+AG", "R2C-s0+AG"), ("R3MV-s0+AG", "R2J-s0+AG"), ("R2J-s0+AG", "R2C-s0+AG")))) + "\n")
     # class values: set the class's scenes to 1 in that read, items fixed (MAP), PCS delta
     P("## PCS value of each loss class if fixed (scenes -> 1, items fixed, MAP; paimix)\n")
     P("Class = pai_fix.py `fclass` of the stored facts. Read the ranking, not the sizes: the ceiling sits above the anchors.\n")
@@ -376,7 +381,8 @@ def cmd_r5(a):
     top = aa.sort_values(ascending=False).index[:12]
     band = [s for s in sc.index if fam[s] == "band"]
     P("\n## The 12 most discriminating items (a >= " + f"{aa[top].min():.1f}" + "): scores of the reads and of the 13 pool band reads\n")
-    P("| scene | a | b | NTV0 | R2C | R2J | R3MV | R3MV class | band reads scoring 1 (of 13) |"); P("|---|--:|--:|--:|--:|--:|--:|---|--:|")
+    P("| scene | a | b | " + " | ".join(k.split("+")[0] for k in (ref, *subs)) + " | R3MV class | band reads scoring 1 (of 13) |")
+    P("|---|--:|--:|" + "--:|" * (1 + len(subs)) + "---|--:|")
     bb = pd.Series(z.f["b"], index=it)
     for sname in top:
         P(f"| {sname[-8:]} | {aa[sname]:.2f} | {bb[sname]:+.1f} | " + " | ".join(f"{sc.loc[k, sname]:.2f}" for k in (ref, *subs)) +
@@ -422,6 +428,7 @@ def main():
     c = s.add_parser("collect"); c.add_argument("--out", required=True); c.add_argument("--only", default=""); c.add_argument("--base", default="")
     q = s.add_parser("r5"); q.add_argument("--rows", required=True); q.add_argument("--out", required=True); q.add_argument("--facts", required=True)
     q.add_argument("--subjects", required=True, help="label=facts file name,... (pai_fix facts csv with fclass per scene)")
+    q.add_argument("--pairs", default="", help="x:y,... paired differences between subjects (default: round 5's R3MV / R2C / R2J)")
     f = s.add_parser("fit"); f.add_argument("--rows", required=True); f.add_argument("--out", required=True)
     f.add_argument("--variants", default="", help="comma list; - = none (bootstrap shards only)"); f.add_argument("--boot", type=int, default=0)
     f.add_argument("--boot0", type=int, default=0, help="first bootstrap draw (seed), for parallel shards")
