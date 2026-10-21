@@ -67,6 +67,7 @@ GUARD_TOL = 3
 FRONT, HW = 4.071, 1.0785
 LEAD_G, LEAD_T, LEAD_PSI, LEAD_LAT, LEAD_MINL, LEAD_EXT = 40.0, 4.0, np.radians(60.0), 0.3, 1.5, 200.0
 GO_T, GO_L = 1.0, 0.5                                                     # GO-NOW (addendum 4): fed < r3.V_LROW, label path >= GO_L by GO_T s
+LC_V, LC_Y, LC_YAW, LC_ROUTE = 5.0, 2.5, 12.0, 1.2                         # addendum 5: D1's lane-change shape and route-lane rule (d1.py labels)
 
 
 def wpath(name):
@@ -118,7 +119,7 @@ def cmd_smoke(a):
                    road_fires=(mean("loss/on/road_pos"), "> 0", mean("loss/on/road_pos") > 0 and mean("loss/on/road_ho") > 0),
                    road_pai_rows=(int(m.group(1)) if m else None, ex["index_ok_rows"], bool(m) and int(m.group(1)) == ex["index_ok_rows"]),
                    road_pai_w=(float(m.group(2)) if m else None, 1.0, bool(m) and float(m.group(2)) == 1.0))
-    elif a.arm in ("N", "G"):                                      # R5-N / R5-G (addenda 3 / 4): R3MV's argv, draw R5N / R5G
+    elif a.arm in ("N", "G", "L"):                                 # R5-N / R5-G / R5-LC (addenda 3-5): R3MV's argv, draw R5N / R5G / R5LC
         ex = json.loads((RES / f"w_{a.wfile}.json").read_text())
         k_both = 32
         b = re.search(r"per batch (\d+) normal, (\d+) yaw-rate, (\d+) on-policy", (d / "log.txt").read_text())
@@ -322,6 +323,10 @@ def cmd_leadrows(a):
     for p, r in rec["parts"].items():
         L.append(f"| {p} | {r['drawable']} | {r['lead_drawable']} | {r['lead_share']:.1%} | {r['lead_share_drawweighted']:.1%} | {r['gap_le15']} | "
                  f"{r['gap_q'][2]:.1f} | {r['v0_q_removed'][1]:.1f} / {r['v0_q_kept'][1]:.1f} | {r['scenes_with_kept']} / {r['scenes_drawable']} |")
+    r = rec["parts"]["ph"]
+    L += ["", f"Check against D1 (all plain rows, any draw): lane-change shaped {r['all_rows_lc']} ({r['lc_share_moving_all_rows']:.1%} of moving), "
+          f"with a route {r['all_rows_lc_route_ok']}, off the route lane {r['all_rows_off']} ({r['all_rows_off'] / max(r['all_rows_lc_route_ok'], 1):.0%}); "
+          "D1: 10 710 (11.9 %), 10 703, 44 %."]
     L += ["", "Removed / drawable by label class (r3.label_class; launch and stand are 0 under MV's >= 2 m/s cut):", "",
           "| part | " + " | ".join(r3.CLASSES) + " |", "|:--|" + "--:|" * len(r3.CLASSES)]
     for p, r in rec["parts"].items():
@@ -606,6 +611,169 @@ def cmd_gonow(a):
     print("\n".join(L))
 
 
+def route_lat(poly, x):
+    """D1's lat_at: the route polyline's lateral offset at longitudinal x (finite points sorted by x, np.interp: flat past the ends; nan < 2 points)."""
+    P = poly[np.isfinite(poly[:, 0])]
+    if len(P) < 2:
+        return np.nan
+    i = np.argsort(P[:, 0])
+    return np.interp(x, P[i, 0], P[i, 1])
+
+
+def lane_change_off_route(v0, fut, route):
+    """D1's rule (d1.py labels) on one pool: lane-change shape = fed v0 > LC_V, 4 s label point |y| > LC_Y, |yaw| < LC_YAW deg; it leaves the
+    route lane unless the route polyline (route.npz, row frame) passes within LC_ROUTE m of the 4 s point (route not ok: undecided, kept;
+    route lateral nan: leaves, as D1 counted). -> (lc, off, undecided) masks."""
+    y4, x4, h4 = fut[:, 7, 1].astype(np.float64), fut[:, 7, 0].astype(np.float64), np.degrees(fut[:, 7, 2].astype(np.float64))
+    lc = (np.abs(y4) > LC_Y) & (np.abs(h4) < LC_YAW) & (np.asarray(v0, np.float64) > LC_V)
+    ok = route["ok"].astype(bool)
+    off = np.zeros(len(lc), bool)
+    for i in np.flatnonzero(lc & ok):
+        off[i] = not abs(route_lat(route["poly"][i], x4[i]) - y4[i]) < LC_ROUTE
+    return lc, off, lc & ~ok
+
+
+def part_drop(w0, parts, nodrop=False):
+    """w0 the base draw, parts {p: (ix, drop)} -> w: drop rows at 0, each part's remaining drawable rows rescaled to the part's base mass;
+    non-part weights asserted unchanged."""
+    w = w0.copy()
+    for ix, drop in parts.values():
+        if nodrop or not drop.any():
+            continue
+        sh, keep = w[ix].sum(), (w[ix] > 0) & ~drop
+        w[ix[drop]] = 0.0
+        w[ix[keep]] *= sh / w[ix[keep]].sum()
+    other = np.ones(len(w), bool)
+    other[np.concatenate([v[0] for v in parts.values()])] = False
+    assert abs(w.sum() - 1) < 1e-9 and np.array_equal(w[other], w0[other]), "draw mass / non-PAI weights changed"
+    return w
+
+
+def cmd_lcrows(a):
+    """Stage L (addendum 5): D1's lane-change-off-route rule on the three PAI human parts; R5LC / R5LCI draw files; the offline tables."""
+    from collections import Counter
+    O = DATA / "runs/round5/r5/L"
+    O.mkdir(parents=True, exist_ok=True)
+    B = np.load(W3 / "R3MV.npz")
+    names, w0, grp = B["names"].astype(str), B["w"].astype(np.float64), B["grp"]
+    idx = {x: i for i, x in enumerate(names)}
+    M = np.load(CR / "on1_JTPH/tab.npz")
+    assert np.array_equal(M["names"].astype(str), names), "R3MV rows != on1_JTPH"
+    parts, rec, cls_all, lc_all, vv = {}, dict(parts={}), np.full(len(names), "", dtype="U13"), np.zeros(len(names), bool), np.zeros(len(names))
+    rec["rule"] = dict(text=(f"lane-change-shaped label: fed v0 > {LC_V} m/s, the 4 s label point |y| > {LC_Y} m and |yaw| < {LC_YAW} deg (row "
+                             f"frame); off the route lane: the row's route.npz polyline (lateral interpolated at the 4 s point's x, flat past its "
+                             f"ends) does not pass within {LC_ROUTE} m of the 4 s point (d1.py labels' rule; route not ok -> kept; route lateral "
+                             "nan -> off, as D1 counted). Every part on its own rows: own label, fed speed and route.npz (stretched rows on "
+                             "their own clock)"), LC_V=LC_V, LC_Y=LC_Y, LC_YAW=LC_YAW, LC_ROUTE=LC_ROUTE)
+    for p in r3.PARTS:
+        t = r3.load_part(p)
+        nm = t["names"].astype(str)
+        rt = np.load(CR / r3.PARTS[p] / "route.npz")
+        assert np.array_equal(rt["tokens"].astype(str), nm), f"{p}: route.npz rows != tab rows"
+        ix = np.array([idx[f"on:{p}:{x[3:]}"] for x in nm])
+        v0, fut = t["speed"].astype(np.float64), t["fut"].astype(np.float64)
+        assert np.array_equal(M["speed"][ix], t["speed"]) and np.array_equal(M["fut"][ix], t["fut"]), f"{p}: merged rows != source"
+        lc, off, und = lane_change_off_route(v0, fut, rt)
+        cls, _ = r3.label_class(v0, fut)
+        dr = w0[ix] > 0
+        drop = off & dr
+        parts[p] = (ix, drop)
+        cls_all[ix], lc_all[ix], vv[ix] = cls, lc, v0
+        mv = dr & (v0 > LC_V)
+        nanr = np.array([np.isnan(route_lat(rt["poly"][i], fut[i, 7, 0])) for i in np.flatnonzero(drop)], bool)
+        rec["parts"][p] = dict(rows=int(len(nm)), drawable=int(dr.sum()), moving_drawable=int(mv.sum()), lc_drawable=int((lc & dr).sum()),
+                               lc_route_undecided=int((und & dr).sum()), removed=int(drop.sum()), removed_route_nan=int(nanr.sum()),
+                               lc_share_moving_all_rows=float(lc[v0 > LC_V].mean()), off_share_of_lc=float(drop.sum() / max((lc & dr).sum(), 1)),
+                               all_rows_lc=int(lc.sum()), all_rows_lc_route_ok=int((lc & ~und).sum()), all_rows_off=int(off.sum()),
+                               removed_drawweighted=float(w0[ix][drop].sum() / w0[ix][dr].sum()),
+                               by_class={c: dict(drawable=int((dr & (cls == c)).sum()), removed=int((drop & (cls == c)).sum())) for c in r3.CLASSES},
+                               v0_q_removed=np.percentile(v0[drop], [10, 50, 90]).tolist() if drop.any() else None,
+                               y4_abs_q_removed=np.percentile(np.abs(fut[drop, 7, 1]), [10, 50, 90]).tolist() if drop.any() else None,
+                               scenes_removed=int(len(set(t["log"].astype(str)[drop]))), scenes_drawable=int(len(set(t["log"].astype(str)[dr]))))
+    np.savez(O / "lc_rows.npz", **{f"{p}_{k}": v for p, (ix, drop) in parts.items() for k, v in (("ix", ix), ("drop", drop))})
+    W5.mkdir(parents=True, exist_ok=True)
+    for out_, nodrop in (("R5LC", False), ("R5LCI", True)):
+        w = part_drop(w0, parts, nodrop)
+        if nodrop:
+            assert np.array_equal(w, w0), "R5LCI != R3MV"
+        gs = Counter()
+        for g_, x in zip(grp.astype(str), w):
+            gs[g_] += x
+        np.savez(W5 / f"{out_}.npz", names=B["names"], w=w, grp=grp)
+        r = dict(base="R3MV", out=out_, rule=("R3MV, every PAI human row whose 4 s label is a lane change off the route lane (D1 rule) -> 0, each part "
+                                              "renormalised to its R3MV share") if not nodrop else "identity: R5LC's code with no row dropped (bit-equal to R3MV)",
+                 group_share={k: float(v) for k, v in sorted(gs.items()) if v > 0}, pai_drawable=int(sum((w[v[0]] > 0).sum() for v in parts.values())))
+        r3.dump(RES / f"w_{out_}.json", r)
+        rec[out_] = r
+    wl = np.load(W5 / "R5LC.npz")["w"]
+    pm = cls_all != ""
+    mov = pm & (vv > LC_V)
+    rec["per_batch"] = {k: dict(pai=float(r3.K_ON * ww[pm].sum()), by_class={c: float(r3.K_ON * ww[pm & (cls_all == c)].sum()) for c in r3.CLASSES},
+                                lc=float(r3.K_ON * ww[pm & lc_all].sum()), lc_share_moving=float(ww[mov & lc_all].sum() / ww[mov].sum()),
+                                lc_share_moving_by_part={p: float(ww[ix][lc_all[ix] & (vv[ix] > LC_V)].sum() / ww[ix][vv[ix] > LC_V].sum())
+                                                         for p, (ix, _) in parts.items()},
+                                unique_pai_rows=int((ww[pm] > 0).sum())) for k, ww in (("R3MV", w0), ("R5LC", wl))}
+    nl = []                                                       # navtrain (uniform under both draws): D1's shape share of moving rows
+    for f in sorted(CR.glob("navtrain_full.s*of12/tab.npz")):
+        z = np.load(f)
+        o = np.isfinite(z["fut"].reshape(len(z["fut"]), -1)).all(1)
+        y4, h4, v = z["fut"][o, 7, 1], np.degrees(z["fut"][o, 7, 2]), z["speed"][o]
+        nl.append(((v > LC_V).sum(), ((np.abs(y4) > LC_Y) & (np.abs(h4) < LC_YAW) & (v > LC_V)).sum()))
+    nm_, nlc = map(int, np.sum(nl, 0))
+    rec["navtrain"] = dict(moving=nm_, lc=nlc, lc_share_moving=nlc / nm_)
+    r3.dump(RES / "lc_rows.json", rec)
+    pb = rec["per_batch"]
+    L = ["# R5-LC (MV-LC): lane-change-off-route PAI human rows (offline, before training)", "", rec["rule"]["text"] + ".", "",
+         "R3MV draws only PAI rows fed >= 2 m/s; MV-LC sets the off-route lane-change rows among them to 0 and renormalises each part to its R3MV "
+         "share (ph 0.25, ph05 0.125, ph15 0.125 of the 64 pool rows: still 32 PAI human rows a batch).", "",
+         "| part | R3MV drawable | moving (> 5 m/s) | lane-change shaped | off route (removed) | of shaped | draw-weighted of part | route nan | route not ok (kept) "
+         "| v0 median removed (m/s) | |y4| median removed (m) | scenes removed / drawable |", "|:--|" + "--:|" * 11]
+    for p, r in rec["parts"].items():
+        L.append(f"| {p} | {r['drawable']} | {r['moving_drawable']} | {r['lc_drawable']} | {r['removed']} | {r['off_share_of_lc']:.1%} | "
+                 f"{r['removed_drawweighted']:.2%} | {r['removed_route_nan']} | {r['lc_route_undecided']} | {r['v0_q_removed'][1]:.1f} | "
+                 f"{r['y4_abs_q_removed'][1]:.2f} | {r['scenes_removed']} / {r['scenes_drawable']} |")
+    L += ["", "Removed / drawable by label class (r3.label_class; launch and stand are 0 under MV's >= 2 m/s cut):", "",
+          "| part | " + " | ".join(r3.CLASSES) + " |", "|:--|" + "--:|" * len(r3.CLASSES)]
+    for p, r in rec["parts"].items():
+        L.append(f"| {p} | " + " | ".join(f"{r['by_class'][c]['removed']} / {r['by_class'][c]['drawable']}" for c in r3.CLASSES) + " |")
+    L += ["", "PAI human rows a batch (64 pool rows x draw mass) by class, and the lane-change-shaped share of the drawn moving (> 5 m/s) rows "
+          "(draw-weighted):", "", "| draw | PAI rows | " + " | ".join(r3.CLASSES) + " | lane-change shaped | share of moving | ph / ph05 / ph15 | unique PAI rows |",
+          "|:--|--:|" + "--:|" * len(r3.CLASSES) + "--:|--:|--:|--:|"]
+    for k, r in pb.items():
+        L.append(f"| {k} | {r['pai']:.2f} | " + " | ".join(f"{r['by_class'][c]:.2f}" for c in r3.CLASSES) + f" | {r['lc']:.2f} | {r['lc_share_moving']:.1%} | "
+                 + " / ".join(f"{r['lc_share_moving_by_part'][p]:.1%}" for p in r3.PARTS) + f" | {r['unique_pai_rows']} |")
+    n = rec["navtrain"]
+    L += ["", f"navtrain (navtrain_full, 12 shards, uniform in both draws): lane-change shaped {n['lc']} of {n['moving']} moving rows "
+          f"({n['lc_share_moving']:.1%}). Files: lc_rows.json, w_R5LC.json, w_R5LCI.json (R5LCI = R3MV bit for bit)."]
+    (RES / "lc_rows.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
+def cmd_lcverdict(a):
+    """Stage L: the registered adopt-candidate rule on r2.py r281's json -> appended to its md."""
+    J = json.loads(Path(a.json).read_text())
+    R, P = J["reads"], J["pairs"]
+    lat = lambda k: R[k]["z_offroad"] + R[k]["z_zero-other"]  # noqa: E731
+    cap = lat("NTV0-ag") + 3
+    rows, ok = [], True
+    for k in ("R5LC-s0-ag", "R5LC-s1-ag"):
+        d = P[f"{k}:NTV0-ag"]["mean"]
+        b, l_ = d["mean"] > 0, lat(k) <= cap
+        ok &= b and l_
+        rows.append(f"| {k} | {d['mean']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}] | {'yes' if b else 'no'} | {lat(k)} (offroad {R[k]['z_offroad']}, "
+                    f"zero-other {R[k]['z_zero-other']}) | {'yes' if l_ else 'no'} |")
+    s = P["R3MV-s1-ag:R3MV-s0-ag"]["mean"]
+    L = ["", "## Registered rule (prereg addendum 5)", "",
+         f"adopt-candidate = both MV-LC seeds beat NTV0 on the mean (paired point estimate > 0) and each seed's offroad + zero-other zeros <= NTV0's + 3 = {cap}.", "",
+         "| arm | - NTV0 mean [95 % CI] | beats NTV0 | offroad + zero-other | <= cap |", "|:--|--:|:-:|--:|:-:|", *rows, "",
+         f"**MV-LC: {'adopt-candidate' if ok else 'not an adopt-candidate'}.** Seed noise (R3MV s1 - s0, same argv): {s['mean']:+.3f} [{s['lo']:+.3f}, {s['hi']:+.3f}]."]
+    with open(a.md, "a") as f:
+        f.write("\n".join(L) + "\n")
+    J["verdict"] = dict(adopt_candidate=bool(ok), cap=cap)
+    Path(a.json).write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
 def cmd_l37(a):
     """LAUNCH-37 read-out (addendum 4). The registered comparison is the first --pair (LAUNCH-37) and the first --target (TARGET)."""
     import pandas as pd
@@ -727,7 +895,7 @@ def main():
     p = sub.add_parser("expect")
     p.add_argument("--pool", default="on1_JTPH"), p.add_argument("--wfile", default="R3MV"), p.add_argument("--index", default="road_on1_JTPH.npz")
     p = sub.add_parser("smoke")
-    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("R", "A", "N", "G"), required=True)
+    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("R", "A", "N", "G", "L"), required=True)
     p.add_argument("--wfile", default="R3MV"), p.add_argument("--index", default="road_on1_JTPH.npz"), p.add_argument("--pool", default="on1_JTPHO")
     p.add_argument("--k-s3", type=int, default=9), p.add_argument("--s3-hinged", type=float, default=0.0, help="road-hinged share of the S3 rows")
     p.add_argument("--suffix", default="")
@@ -744,9 +912,12 @@ def main():
     p = sub.add_parser("l37")
     p.add_argument("--read", nargs="+", required=True), p.add_argument("--pair", nargs="*", default=[]), p.add_argument("--target", nargs="*", default=[])
     p.add_argument("--sep", nargs="*", default=[]), p.add_argument("--stem", default="launch37")
+    sub.add_parser("lcrows")
+    p = sub.add_parser("lcverdict")
+    p.add_argument("--json", required=True), p.add_argument("--md", required=True)
     a = ap.parse_args()
     dict(expect=cmd_expect, smoke=cmd_smoke, weights=cmd_weights, gate=cmd_gate, leadrows=cmd_leadrows, lead281=cmd_lead281,
-         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37)[a.cmd](a)
+         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37, lcrows=cmd_lcrows, lcverdict=cmd_lcverdict)[a.cmd](a)
 
 
 if __name__ == "__main__":
