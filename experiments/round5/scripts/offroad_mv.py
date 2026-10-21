@@ -171,20 +171,24 @@ def cmd_events(a):
 
 # ---------------------------------------------------------------- data (training rows)
 VB = (2, 5, 10, 15, 20, 25, 30, 60)
-TURN_CLS = (("straight", 0, 10), ("bend", 10, 25), ("turn", 25, 360))
+OFFS = np.arange(0.0, 8.01, 0.25)
+CTR = 1.45                                  # car centre ahead of the rear axle (PAI rig / Pacifica, about)
 
 
-def label_geo(v0, fut):
-    """per row: peak |lateral acceleration| along the label (v x yaw rate on 0.5 s segments), |heading| at 4 s, its max, arc, |y4|, mean curvature."""
-    P = np.concatenate([np.zeros((len(fut), 1, 2)), fut[:, :, :2]], 1)
-    seg = np.linalg.norm(np.diff(P, axis=1), axis=-1)
-    yaw = np.concatenate([np.zeros((len(fut), 1)), np.unwrap(fut[:, :, 2], axis=1)], 1)
-    dyaw = np.diff(yaw, axis=1)
-    alat = np.abs(seg / 0.5 * dyaw / 0.5)
-    arc = seg.sum(1)
-    hmax = np.degrees(np.abs(yaw).max(1))
-    return dict(alat=alat.max(1), alat_mean=alat.mean(1), h4=np.degrees(np.abs(yaw[:, -1])), hmax=hmax, arc=arc, y4=np.abs(fut[:, 7, 1]),
-                kap=np.abs(yaw[:, -1]) / np.maximum(arc, 1.0), v4=seg[:, -1] / 0.5, sgn=np.sign(yaw[:, -1]))
+def label_feats(v0, fut):
+    """per-row label geometry: peak lateral acceleration from the positions (v^2 x Menger curvature of consecutive label points, origin
+    included), max |heading|, 4 s lateral y4 (signed, left +), end speed (last 0.5 s), arc."""
+    P = np.concatenate([np.zeros((len(fut), 1, 2)), fut[:, :, :2]], 1)                 # (n, 9, 2)
+    seg = np.linalg.norm(np.diff(P, axis=1), axis=-1)                                  # (n, 8)
+    a, b, c = P[:, :-2], P[:, 1:-1], P[:, 2:]
+    cr = np.abs((b - a)[..., 0] * (c - a)[..., 1] - (b - a)[..., 1] * (c - a)[..., 0])
+    den = seg[:, :-1] * seg[:, 1:] * np.linalg.norm(c - a, axis=-1)
+    kap = np.where(den > 1e-3, 2 * cr / np.maximum(den, 1e-9), 0.0)                    # (n, 7) at points 1..7
+    kap = np.where((seg[:, :-1] > 0.25) & (seg[:, 1:] > 0.25), kap, 0.0)               # no curvature from creeping points
+    v = (seg[:, :-1] + seg[:, 1:]) / 1.0                                                 # m/s around the point
+    yaw = np.unwrap(fut[:, :, 2], axis=1)
+    return dict(alat=(v ** 2 * kap).max(1), kmax=kap.max(1), hmax=np.degrees(np.abs(yaw).max(1)), y4=fut[:, 7, 1], arc=seg.sum(1),
+                vend=seg[:, -1] / 0.5, v0=v0, h4=np.degrees(yaw[:, -1]))
 
 
 def sdf_points(H, rows, pts):
@@ -195,12 +199,9 @@ def sdf_points(H, rows, pts):
     return torch.nn.functional.grid_sample(H.sdf[rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
 
 
-OFFS = np.arange(0.0, 8.01, 0.25)
-
-
 def clearances(H, rows, fut, bs=2048):
-    """left / right clearance (m, the first lateral offset where the SDF goes below 0, capped 8 m) of the car centre (rear axle + 1.45 m)
-    at t0 and at the 8 label poses -> (n, 9) left, (n, 9) right; margins of the label footprint (min, n) and of t0 (n)."""
+    """left / right clearance (m) of the car centre to the first SDF < 0 along the pose's normal (capped 8 m) at t0 and the 8 label poses
+    -> left (n, 9), right (n, 9); the label footprint's min margin (n,) and the t0 footprint's (n,) (road_pai._margins, Pacifica)."""
     import torch
     sys.path[:0] = [str(HERE)]
     from road_pai import _margins
@@ -208,70 +209,80 @@ def clearances(H, rows, fut, bs=2048):
     with torch.no_grad():
         for i in range(0, len(rows), bs):
             r = torch.as_tensor(rows[i:i + bs])
-            f = np.concatenate([np.zeros((len(r), 1, 3)), fut[i:i + bs]], 1)              # (B, 9, 3)
+            f = np.concatenate([np.zeros((len(r), 1, 3)), fut[i:i + bs]], 1)
             c, s = np.cos(f[..., 2]), np.sin(f[..., 2])
-            cx, cy = f[..., 0] + 1.45 * c, f[..., 1] + 1.45 * s
+            cx, cy = f[..., 0] + CTR * c, f[..., 1] + CTR * s
             out = []
-            for side in (1.0, -1.0):                                                     # left normal (-s, c)
-                px = cx[..., None] - side * s[..., None] * OFFS
-                py = cy[..., None] + side * c[..., None] * OFFS
+            for side in (1.0, -1.0):
+                px, py = cx[..., None] - side * s[..., None] * OFFS, cy[..., None] + side * c[..., None] * OFFS
                 v = sdf_points(H, r, torch.as_tensor(np.stack([px, py], -1).reshape(len(r), -1, 2), dtype=torch.float32)).numpy()
-                v = v.reshape(len(r), 9, len(OFFS))
-                neg = v < 0
+                neg = v.reshape(len(r), 9, len(OFFS)) < 0
                 out.append(np.where(neg.any(-1), OFFS[np.argmax(neg, -1)], 8.0))
             L.append(out[0]), R.append(out[1])
     m0, ml, _ = _margins(H, rows, fut.astype(np.float32))
     return np.concatenate(L), np.concatenate(R), ml, m0
 
 
-def summarise(name, v0, fut, w, Lc, Rc, ml, m0):
-    """tables by state class (turn class of the label x speed bin), draw-weighted."""
-    G = label_geo(v0.astype(np.float64), fut.astype(np.float64))
-    mov = v0 >= 2
-    out = dict(name=name, rows=int(mov.sum()), w_moving=float(w[mov].sum()))
+def all_rows_index(pool):
+    """a copy of road_pai's index with every raster row usable (ok = True: no fallback; the analysis wants the labels the hinge skips too)."""
+    z = dict(np.load(DATA / f"runs/round5/road_pai/road_{pool}.npz"))
+    z["ok"] = np.ones(len(z["tokens"]), bool)
+    z["sdf_file"] = np.array(str(DATA / "runs/round5/road_pai" / str(z["sdf_file"])))   # absolute: Path(parent) / abs = abs
+    f = O / "idx" / f"road_all_{pool}.npz"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(f, **z)
+    return f
 
-    def wq(x, ww, q):
-        i = np.argsort(x)
+
+def row_table(v0, fut, Lc, Rc, ml, m0):
+    import pandas as pd
+    F = label_feats(v0, fut)
+    T = pd.DataFrame(F)
+    sg = np.sign(F["h4"])
+    T["ml"], T["m0"] = ml, m0
+    T["r_end"], T["l_end"], T["r0"], T["l0"] = Rc[:, 8], Lc[:, 8], Rc[:, 0], Lc[:, 0]
+    T["r_min"], T["l_min"] = Rc[:, 1:].min(1), Lc[:, 1:].min(1)
+    ins, out = np.where(sg[:, None] >= 0, Lc, Rc), np.where(sg[:, None] >= 0, Rc, Lc)          # inside = the side the label turns to
+    T["ins0"], T["ins_min"], T["out_min"] = ins[:, 0], ins[:, 1:].min(1), out[:, 1:].min(1)
+    return T
+
+
+STATES = {  # state classes on the label (v0 = fed speed, m/s; y4 left +; h = max |heading| over the label)
+    "cruise straight (h < 5 deg, v_end >= 0.8 v0)": lambda T: (T.hmax < 5) & (T.vend >= 0.8 * T.v0),
+    "curve / bend (15-45 deg, v0 >= 4)": lambda T: (T.hmax >= 15) & (T.hmax < 45) & (T.v0 >= 4),
+    "junction turn (>= 45 deg)": lambda T: T.hmax >= 45,
+    "decelerating (v_end < 0.6 v0, h < 20 deg)": lambda T: (T.vend < 0.6 * T.v0) & (T.hmax < 20),
+    "pull right while slowing (v_end < 0.6 v0, y4 < -0.8 m, h < 20 deg)": lambda T: (T.vend < 0.6 * T.v0) & (T.y4 < -0.8) & (T.hmax < 20),
+    "pull left while slowing (v_end < 0.6 v0, y4 > 0.8 m, h < 20 deg)": lambda T: (T.vend < 0.6 * T.v0) & (T.y4 > 0.8) & (T.hmax < 20),
+    "fast (v0 >= 25)": lambda T: T.v0 >= 25,
+}
+
+
+def wstats(T, w, m):
+    """draw-weighted read-outs of the rows in mask m."""
+    m = np.asarray(m) & (w > 0)
+    if m.sum() < 10:
+        return dict(n=int(m.sum()))
+    ww = w[m] / w[m].sum()
+    X = T[m]
+
+    def q(x, p):
+        i = np.argsort(x.values)
         c = np.cumsum(ww[i])
-        return [float(x[i][min(np.searchsorted(c, qq * c[-1]), len(x) - 1)]) for qq in q] if len(x) else [np.nan] * len(q)
+        return float(x.values[i][min(np.searchsorted(c, p), len(c) - 1)])
 
-    def wm(m, ww):
-        return float((ww * m).sum() / max(ww.sum(), 1e-12))
-
-    cls = {}
-    for cn, lo, hi in TURN_CLS:
-        for vlo, vhi in zip(VB[:-1], VB[1:]):
-            m = mov & (G["hmax"] >= lo) & (G["hmax"] < hi) & (v0 >= vlo) & (v0 < vhi)
-            if m.sum() < 20:
-                continue
-            ww = w[m]
-            # inside / outside clearance for bend / turn rows: inside = the side the label turns to
-            sg = G["sgn"][m]
-            ins = np.where(sg[:, None] > 0, Lc[m], Rc[m])
-            ous = np.where(sg[:, None] > 0, Rc[m], Lc[m])
-            jmin = ins[:, 1:].argmin(1) + 1
-            ins_min = ins[np.arange(m.sum()), jmin]
-            rec = dict(n=int(m.sum()), w=float(ww.sum()), alat_q=wq(G["alat"][m], ww, (0.5, 0.9, 0.99)),
-                       alat_gt3=wm(G["alat"][m] > 3, ww), alat_gt4=wm(G["alat"][m] > 4, ww), kap_q=wq(G["kap"][m], ww, (0.5, 0.9)),
-                       y4_q=wq(G["y4"][m], ww, (0.5, 0.9, 0.99)), y4_gt1=wm(G["y4"][m] > 1.0, ww), y4_gt2=wm(G["y4"][m] > 2.0, ww),
-                       mlab_q=wq(ml[m], ww, (0.05, 0.25, 0.5)), mlab_lt03=wm(ml[m] < 0.3, ww), mlab_lt0=wm(ml[m] < 0, ww),
-                       m0_lt03=wm(m0[m] < 0.3, ww))
-            if cn != "straight":
-                rec |= dict(ins0_q=wq(ins[:, 0], ww, (0.25, 0.5)), ins_min_q=wq(ins_min, ww, (0.1, 0.25, 0.5)), out_min_q=wq(ous[:, 1:].min(1), ww, (0.25, 0.5)),
-                            ins_drop_q=wq(ins[:, 0] - ins_min, ww, (0.5, 0.9)), ins_tight=wm(ins_min < 1.6, ww),
-                            near_inside=wm(ins.min(1) < ous.min(1), ww))
-            cls[f"{cn}|{vlo}-{vhi}"] = rec
-    out["cls"] = cls
-    # speed coverage and lateral acceleration overall (moving, draw-weighted)
-    out["v_q"] = wq(v0[mov], w[mov], (0.5, 0.9, 0.99))
-    out["v_gt30"] = wm(v0[mov] > 30, w[mov])
-    out["alat_gt3"] = wm(G["alat"][mov] > 3, w[mov])
-    out["alat_gt4"] = wm(G["alat"][mov] > 4, w[mov])
-    out["mlab_lt03"] = wm(ml[mov] < 0.3, w[mov])
-    return out, G
+    def sh(b):
+        return float((ww * np.asarray(b, float)).sum())
+    return dict(n=int(m.sum()), alat50=q(X.alat, 0.5), alat90=q(X.alat, 0.9), alat99=q(X.alat, 0.99), alat_gt2=sh(X.alat > 2), alat_gt3=sh(X.alat > 3),
+                y4_mean=float((ww * X.y4).sum()), y4_right08=sh(X.y4 < -0.8), y4_left08=sh(X.y4 > 0.8), absy4_90=q(X.y4.abs(), 0.9),
+                ml_lt03=sh(X.ml < 0.3), ml_lt0=sh(X.ml < 0), r_end_lt05=sh(X.r_end < 0.5 + 1.1), l_end_lt05=sh(X.l_end < 0.5 + 1.1),
+                r_end50=q(X.r_end, 0.5), r_drop50=q(X.r0 - X.r_end, 0.5), ins_min50=q(X.ins_min, 0.5), ins_tight=sh(X.ins_min < 1.6),
+                ins_drop50=q(X.ins0 - X.ins_min, 0.5), out_min50=q(X.out_min, 0.5), vend_v0=q(X.vend / X.v0.clip(lower=0.5), 0.5),
+                acc_gt115=sh(X.vend > 1.15 * X.v0), v50=q(X.v0, 0.5))
 
 
 def cmd_data(a):
+    import pandas as pd
     import torch
     sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/round3/scripts")]
     from drivable_hinge import Hinge
@@ -282,49 +293,58 @@ def cmd_data(a):
     B = np.load(DATA / "runs/defect_fix/w/R3MV.npz")
     idx = {x: i for i, x in enumerate(B["names"].astype(str))}
     wl = np.load(DATA / "runs/round5/r5/w/R5LC.npz")["w"]
-    res, per = {}, {}
+    res, tabs = dict(states=list(STATES)), {}
     for p, pool in r3.PARTS.items():
         t = r3.load_part(p)
         nm = t["names"].astype(str)
         ix = np.array([idx[f"on:{p}:{x[3:]}"] for x in nm])
-        w3, w5 = B["w"][ix].astype(np.float64), wl[ix].astype(np.float64)
-        H = Hinge(DATA / f"runs/round5/road_pai/road_{pool}.npz", nm, "cpu", 0.3, bank=True)
-        ok = H.ok.numpy()
-        rows = np.flatnonzero(ok)
-        Lc, Rc, ml, m0 = (np.full((len(nm), 9), np.nan), np.full((len(nm), 9), np.nan), np.full(len(nm), np.nan), np.full(len(nm), np.nan))
-        lc, rc, mlr, m0r = clearances(H, rows, t["fut"][rows].astype(np.float64))
-        Lc[rows], Rc[rows], ml[rows], m0[rows] = lc, rc, mlr, m0r
-        v0 = t["speed"].astype(np.float64)
-        sel = ok
-        res[p], G = summarise(p, v0[sel], t["fut"][sel], w3[sel], Lc[sel], Rc[sel], ml[sel], m0[sel])
-        res[p + "|R5LC"], _ = summarise(p + " (MV-LC draw)", v0[sel], t["fut"][sel], w5[sel], Lc[sel], Rc[sel], ml[sel], m0[sel])
-        res[p]["raster_ok_drawn"] = float((w3 * ok).sum() / w3.sum())
-        per[p] = dict(names=nm, v0=v0, ok=ok, ml=ml, alat=label_geo(v0, t["fut"].astype(np.float64))["alat"], hmax=label_geo(v0, t["fut"].astype(np.float64))["hmax"], w=w3)
+        H = Hinge(all_rows_index(pool), nm, "cpu", 0.3, bank=True)
+        rows = np.flatnonzero(H.ok.numpy())
+        assert len(rows) == len(nm), f"{p}: rows without a raster"
+        Lc, Rc, ml, m0 = clearances(H, rows, t["fut"].astype(np.float64))
         del H
-        print(p, json.dumps({k: v for k, v in res[p].items() if k != "cls"}), flush=True)
-    # stretch f = 1.5 rows against their plain base row (same t0 pose, path over 1.5 x the time)
-    ph, p15 = per["ph"], per["ph15"]
-    base = {x.split(":", 2)[2]: i for i, x in enumerate(ph["names"])}
-    j = np.array([base.get(x.split(":", 2)[2], -1) for x in p15["names"]])
-    m = (j >= 0) & (p15["w"] > 0)
-    r15 = dict(paired=int(m.sum()), v_ratio_med=float(np.median(p15["v0"][m] / np.maximum(ph["v0"][j[m]], 0.1))),
-               alat_ratio_med=float(np.median(p15["alat"][m] / np.maximum(ph["alat"][j[m]], 0.05))),
-               alat_gt3_ph15=float((p15["alat"][m] > 3).mean()), alat_gt3_base=float((ph["alat"][j[m]] > 3).mean()),
-               mlab_lt03_ph15=float(np.nanmean(p15["ml"][m] < 0.3)), mlab_lt03_base=float(np.nanmean(ph["ml"][j[m]] < 0.3)),
-               turn_rows_alat_gt3_ph15=float((p15["alat"][m & (p15["hmax"] >= 25)] > 3).mean()))
-    res["stretch15"] = r15
-    # navtrain (uniform; the nuPlan road raster of the S rows' hinge)
-    tabs = [np.load(CR / f"navtrain_full.s{i}of12" / "tab.npz") for i in range(12)]
-    tok = np.concatenate([z["names"] for z in tabs]).astype(str)
-    fut = np.concatenate([z["fut"] for z in tabs]).astype(np.float64)
-    v0 = np.concatenate([z["speed"] for z in tabs]).astype(np.float64)
+        T = row_table(t["speed"].astype(np.float64), t["fut"].astype(np.float64), Lc, Rc, ml, m0)
+        T["name"], T["w3"], T["w5"] = nm, B["w"][ix].astype(np.float64), wl[ix].astype(np.float64)
+        k = np.array([int(x.rsplit(":", 1)[1]) for x in nm])
+        sc = np.array([x.split(":")[2] for x in nm])
+        kmax = pd.Series(k).groupby(sc).transform("max").values
+        T["kpos"] = k / np.maximum(kmax, 1)
+        tabs[p] = T
+        mv = T.v0 >= 2
+        res[p] = {"all moving": wstats(T, T.w3.values, mv)} | {s: wstats(T, T.w3.values, mv & f(T)) for s, f in STATES.items()}
+        res[p + " MV-LC"] = {"all moving": wstats(T, T.w5.values, mv)} | {s: wstats(T, T.w5.values, mv & f(T)) for s, f in STATES.items()}
+        pr = mv & STATES["pull right while slowing (v_end < 0.6 v0, y4 < -0.8 m, h < 20 deg)"](T) & (T.w3 > 0)
+        res[p]["pull right: row position in the clip (k / k_max) median, share in the last 20 %"] = [float(T.kpos[pr].median()), float((T.kpos[pr] > 0.8).mean()),
+                                                                                                   float((T.kpos[mv & (T.w3 > 0)] > 0.8).mean())]
+        res[p]["pull right: rows a batch (64 x draw mass)"] = float(r3.K_ON * T.w3[pr].sum())
+        res[p]["pull right MV-LC: rows a batch"] = float(r3.K_ON * T.w5[pr].sum())
+        print(p, json.dumps(res[p]["all moving"]), flush=True)
+    # stretch f = 1.5 rows against their plain base row (same t0 pose, the base row's 6 s path in 4 s)
+    ph, p15 = tabs["ph"], tabs["ph15"]
+    base = {x.split(":", 2)[2]: i for i, x in enumerate(ph.name)}
+    j = np.array([base.get(x.split(":", 2)[2], -1) for x in p15.name])
+    m = (j >= 0) & (p15.w3.values > 0)
+    A, Bp = p15[m].reset_index(drop=True), ph.iloc[j[m]].reset_index(drop=True)
+    res["stretch15"] = dict(paired=int(m.sum()), v_ratio_med=float(np.median(A.v0 / Bp.v0.clip(lower=0.1))),
+                            alat_ratio_med=float(np.median(A.alat[Bp.alat > 0.3] / Bp.alat[Bp.alat > 0.3])),
+                            alat_gt3_ph15=float((A.alat > 3).mean()), alat_gt3_base=float((Bp.alat > 3).mean()),
+                            ml_lt03_ph15=float((A.ml < 0.3).mean()), ml_lt03_base=float((Bp.ml < 0.3).mean()),
+                            v_gt30_ph15=float((A.v0 > 30).mean()), v_gt30_base=float((Bp.v0 > 30).mean()))
+    # navtrain (uniform; the nuPlan road raster of the S rows' road hinge)
+    nz = [np.load(CR / f"navtrain_full.s{i}of12" / "tab.npz") for i in range(12)]
+    tok = np.concatenate([z["names"] for z in nz]).astype(str)
+    fut = np.concatenate([z["fut"] for z in nz]).astype(np.float64)
+    v0 = np.concatenate([z["speed"] for z in nz]).astype(np.float64)
     H = Hinge(DATA / "runs/body1/labels_road/navtrain_s01234567891011.npz", tok, "cpu", 0.3, bank=True)
-    ok = H.ok.numpy() & np.isfinite(fut.reshape(len(fut), -1)).all(1)
-    rows = np.flatnonzero(ok)
-    lc, rc, mlr, m0r = clearances(H, rows, fut[rows])
-    res["navtrain"], _ = summarise("navtrain", v0[rows], fut[rows], np.ones(len(rows)), lc, rc, mlr, m0r)
-    res["navtrain"]["raster_ok"] = float(ok.mean())
-    print("navtrain", json.dumps({k: v for k, v in res["navtrain"].items() if k != "cls"}), flush=True)
+    rows = np.flatnonzero(H.ok.numpy() & np.isfinite(fut.reshape(len(fut), -1)).all(1))
+    Lc, Rc, ml, m0 = clearances(H, rows, fut[rows])
+    del H
+    T = row_table(v0[rows], fut[rows], Lc, Rc, ml, m0)
+    w = np.ones(len(T))
+    mv = T.v0 >= 2
+    res["navtrain"] = {"all moving": wstats(T, w, mv)} | {s: wstats(T, w, mv & f(T)) for s, f in STATES.items()}
+    res["navtrain"]["raster_rows"] = int(len(rows))
+    print("navtrain", json.dumps(res["navtrain"]["all moving"]), flush=True)
     O.mkdir(parents=True, exist_ok=True)
     (O / "data.json").write_text(json.dumps(res, indent=1, default=float))
 
