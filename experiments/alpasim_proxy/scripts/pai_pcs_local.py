@@ -384,6 +384,19 @@ def cmd_r5(a):
     lo = aa[aa >= 3].index
     P(f"\n{len(lo)} items have a >= 3. Scored 0 on them: " + ", ".join(f"{k} {int((sc.loc[k, lo] <= 1e-4).sum())}" for k in (ref, *subs)) +
       "; mean score on them: " + ", ".join(f"{k} {sc.loc[k, lo].mean():.3f}" for k in (ref, *subs)) + ".")
+    P("\n## Where the ruler looks: items by discrimination a, and what perfection on the high-a items is worth\n")
+    P("| read | a >= 3 (zeros / partials / ones) | 1 <= a < 3 | a < 1 | PCS if every imperfect a >= 3 item -> 1 | if every imperfect a >= 1 item -> 1 |"); P("|---|---|---|---|--:|--:|")
+    J["bands"] = {}
+    for k in [ref, *subs]:
+        y0 = sc.loc[k, it].to_numpy(float); cells = []
+        for lo_, hi_ in ((3, 99), (1, 3), (0, 1)):
+            m = ((aa >= lo_) & (aa < hi_)).to_numpy(); yy = y0[m]
+            cells.append(f"{int(m.sum())} items: {int((yy <= 1e-4).sum())} / {int(((yy > 1e-4) & (yy < 1 - 1e-4)).sum())} / {int((yy >= 1 - 1e-4).sum())}")
+        v = []
+        for thr in (3, 1):
+            y = y0.copy(); m = (aa >= thr).to_numpy() & (y0 < 1 - 1e-4); y[m] = 1.0; v.append(pcs_of(z, y) - pcs_of(z, y0))
+        P(f"| {k} | " + " | ".join(cells) + f" | {v[0]:+.0f} | {v[1]:+.0f} |")
+        J["bands"][k] = dict(cells=cells, fix_a3=v[0], fix_a1=v[1])
     P("\nZeros on the a >= 3 items (all 13 pool band reads score 1 on nearly all of them), by cause, and whether the garage 0014 scores 1 there:\n")
     P("| read | scene | a | fclass | garage | go-straight |"); P("|---|---|--:|---|--:|--:|")
     for k in subs:
