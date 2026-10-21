@@ -10,6 +10,8 @@ index: loss map: R6DAG loses 52 / 63 pts on 281; Harmonizer turns plans tighter,
 
 **Next.** Fill the recipe from DAG2 / REC results; judge PAI candidates on Harmonizer-ON 281 reads (or both); check R6DAG's ON longitudinal shift open-loop (harm.py forward on the stored 300 states) before any ON-render augmentation.
 
+**HARM-MIX lane (live, 10-22).** Harmonizer-ON twins of ~34 % of the PAI human rows (246 scenes; PAIH / 05 / 15) for mixed OFF / ON training, and the trainer switch `rm_train --twin <store>:<p>` (off by default; lib/twin_tokens.py). Plan [plans/2026-10-22-harmonizer-mix.md](plans/2026-10-22-harmonizer-mix.md) (Chinese, written before any render), code scripts/hmix.sh / hmix.py, results [results/harm_mix/](results/harm_mix/). No training arm yet.
+
 **Read more.** [plans/2026-10-21-round7-framework-draft.md](plans/2026-10-21-round7-framework-draft.md) (Chinese working draft), the review page research/round7/loss_diag/index.html.
 
 <!-- files:begin -->

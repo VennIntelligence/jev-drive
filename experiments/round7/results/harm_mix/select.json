@@ -1,0 +1,158 @@
+{
+ "frac": {
+  "launch": 0.5,
+  "rest": 0.4,
+  "bend": 0.3,
+  "stop_nolead": 0.3,
+  "turn_sharp": 0.3
+ },
+ "scenes_eligible": 717,
+ "scenes": 246,
+ "per_class": {
+  "bend": {
+   "eligible": 111,
+   "picked": 33
+  },
+  "launch": {
+   "eligible": 68,
+   "picked": 34
+  },
+  "rest": {
+   "eligible": 172,
+   "picked": 69
+  },
+  "stop_nolead": {
+   "eligible": 186,
+   "picked": 56
+  },
+  "turn_sharp": {
+   "eligible": 180,
+   "picked": 54
+  }
+ },
+ "pools": {
+  "PAIH": {
+   "rows": 135793,
+   "rows_eligible": 114453,
+   "rows_picked": 39299,
+   "share": 0.3433636514551825,
+   "strata": {
+    "launch": {
+     "eligible": 3899,
+     "picked": 1566,
+     "share": 0.4016414465247499
+    },
+    "stop": {
+     "eligible": 3846,
+     "picked": 1260,
+     "share": 0.32761310452418096
+    },
+    "turn": {
+     "eligible": 9611,
+     "picked": 2633,
+     "share": 0.273956924357507
+    },
+    "curve": {
+     "eligible": 9944,
+     "picked": 2917,
+     "share": 0.29334271922767496
+    },
+    "straight": {
+     "eligible": 20994,
+     "picked": 8540,
+     "share": 0.4067828903496237
+    },
+    "other": {
+     "eligible": 66159,
+     "picked": 22383,
+     "share": 0.3383213168276425
+    }
+   }
+  },
+  "PAIH05": {
+   "rows": 123879,
+   "rows_eligible": 104415,
+   "rows_picked": 35855,
+   "share": 0.3433893597663171,
+   "strata": {
+    "launch": {
+     "eligible": 3497,
+     "picked": 1458,
+     "share": 0.41692879611095224
+    },
+    "stop": {
+     "eligible": 3603,
+     "picked": 1227,
+     "share": 0.3405495420482931
+    },
+    "turn": {
+     "eligible": 9001,
+     "picked": 2501,
+     "share": 0.27785801577602487
+    },
+    "curve": {
+     "eligible": 9187,
+     "picked": 2727,
+     "share": 0.29683248067922063
+    },
+    "straight": {
+     "eligible": 18875,
+     "picked": 7713,
+     "share": 0.40863576158940396
+    },
+    "other": {
+     "eligible": 60252,
+     "picked": 20229,
+     "share": 0.3357398924517028
+    }
+   }
+  },
+  "PAIH15": {
+   "rows": 99269,
+   "rows_eligible": 83671,
+   "rows_picked": 28750,
+   "share": 0.3436077015931446,
+   "strata": {
+    "launch": {
+     "eligible": 3075,
+     "picked": 1277,
+     "share": 0.41528455284552845
+    },
+    "stop": {
+     "eligible": 3039,
+     "picked": 1045,
+     "share": 0.34386311286607435
+    },
+    "turn": {
+     "eligible": 7648,
+     "picked": 2093,
+     "share": 0.2736663179916318
+    },
+    "curve": {
+     "eligible": 7008,
+     "picked": 2016,
+     "share": 0.2876712328767123
+    },
+    "straight": {
+     "eligible": 14501,
+     "picked": 6030,
+     "share": 0.4158333908006344
+    },
+    "other": {
+     "eligible": 48400,
+     "picked": 16289,
+     "share": 0.3365495867768595
+    }
+   }
+  }
+ },
+ "chunks": 10,
+ "offcheck": [
+  "clipgt-1182b9c0-56b4-4c28-b7c3-5c9de0256699",
+  "clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530",
+  "clipgt-4ce9f18b-d251-4bfc-a72d-58bac48fd525",
+  "clipgt-51f8799f-cb4a-44b8-9c27-2af8b9d30f2a",
+  "clipgt-7f34da5c-9ef6-44a9-a5bd-194adbbd3b31",
+  "clipgt-9c351bef-84b8-4a7f-bad8-9df0f50d0ded"
+ ]
+}
