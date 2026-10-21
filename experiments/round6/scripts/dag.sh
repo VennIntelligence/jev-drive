@@ -187,7 +187,7 @@ dry) echo "R6DAG s0: $(argv dag $N R6DAG-L18-s0 0 | xargs) --save-at 2500,5000,7
   echo "== R5LC -> R6DAG s1"; diff <(argv lc $N R5LC-L18-s0) <(argv dag $N R6DAG-L18-s1 1); echo "== identity lc -> d0"; diff <(argv lc 60 R6IDLC-L18-s0) <(argv d0 60 R6IDD0-L18-s0); true ;;
 launch)  # (main session, after BUILT and T1 / T2) the two trainings in parallel, each one's PAI 281 --after it; r281 + verdict after both; the ruler
   [[ -f $O/BUILT && ! -f $O/VERDICT ]] || die "not built (or VERDICT)"
-  python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/t1.json'))['passed']['all'] and json.load(open('$RES/t2.json'))['passed'] else 1)" || die "T1 / T2 not passed"
+  python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/t1.json'))['passed']['all'] and json.load(open('$RES/t2.json'))['in_canvas']['passed'] else 1)" || die "T1 / T2 (in-canvas, amendment 1) not passed"
   for s in 0 1; do for X in R6DAG-L18-s$s R6DAGx2500-L18-s$s R6DAGx5000-L18-s$s R6DAGx7500-L18-s$s; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done; done
   for f in $F_/NTV0-L18-s0-281ag.csv $F_/R5LC-L18-s0-281ag.csv $F_/R5LC-L18-s1-281ag.csv; do [[ -s $f ]] || die "no stored $f"; done
   h=$(git rev-parse --short HEAD); echo "$h launch" >> $O/code.txt; x=()
