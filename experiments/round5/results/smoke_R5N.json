@@ -1,0 +1,123 @@
+{
+ "tag": "R5SMN-L18-s0",
+ "arm": "N",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R5SMN-L18-s0/20261021-071410",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "/root/autodl-tmp/ujs/runs/round5/r5/w/R5N.npz",
+   "R5N",
+   true
+  ],
+  "no_road_pai": [
+   false,
+   false,
+   true
+  ],
+  "batch_rows": [
+   [
+    "51",
+    "13",
+    "64"
+   ],
+   [
+    "51",
+    "13",
+    "64"
+   ],
+   true
+  ],
+  "pool_imit_rows_without_hinge": [
+   0.0,
+   0,
+   true
+  ],
+  "agent_ho_zero": [
+   0.0,
+   0,
+   true
+  ],
+  "pool_imit_rows": [
+   31.486666666666665,
+   32,
+   true
+  ],
+  "share_S": [
+   0.49999999999936234,
+   0.49999999999936234,
+   true
+  ],
+  "share_ph": [
+   0.2500000000003314,
+   0.2500000000003314,
+   true
+  ],
+  "share_ph05": [
+   0.12499999999992534,
+   0.12499999999992532,
+   true
+  ],
+  "share_ph15": [
+   0.12499999999994517,
+   0.12499999999994517,
+   true
+  ]
+ },
+ "expected": {
+  "base": "R3MV",
+  "out": "R5N",
+  "rule": "R3MV, every PAI human row with a lead (LEAD rule) -> 0, each part renormalised to its R3MV share",
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.2500000000003314,
+   "ph05": 0.12499999999992532,
+   "ph15": 0.12499999999994517
+  },
+  "pai_drawable": 140823
+ },
+ "steps": 0,
+ "road": {
+  "road_ho": 0.0,
+  "road_pos": 0.0,
+  "road_posmean": 0.18593096174823587,
+  "n_hinge": 0.0,
+  "n_imit": 31.486666666666665
+ },
+ "draw_shares": {
+  "on_wfile": "/root/autodl-tmp/ujs/runs/round5/r5/w/R5N.npz",
+  "rows_w0": 318785,
+  "group_share": {
+   "S": 0.49999999999936234,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.2500000000003314,
+   "ph05": 0.12499999999992534,
+   "ph05_held": 0.0,
+   "ph15": 0.12499999999994517,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

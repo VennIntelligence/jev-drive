@@ -54,6 +54,14 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
   launch only slightly faster than A, so their realised futures cannot carry a human-like launch. L1: the controller runs about 2x the plan's
   path at standstill launches, 1.00x when moving; 4 s position error median 1.89 m. 11 360 / 51 443 rows (22 %) lack a complete 4 s future (all
   at the rollout end). Pre-flight only (CPU, minutes); no on1_PAIOR / on1_JTPHOR built.
+- R5-N, stage 4 (prereg addendum 3; [results/lead_rows.md](results/lead_rows.md), [results/lead_281.md](results/lead_281.md),
+  [results/gate_r5n.md](results/gate_r5n.md), [results/paifix_r5n_vl_vs_R3MV.md](results/paifix_r5n_vl_vs_R3MV.md)): R3MV's argv with draw R5N =
+  every PAI human row whose state has a lead at weight 0 (r5.py LEAD rule: in-path object with L >= 1.5 m, within hw + W/2 + 0.3 m of the human's 4 s
+  path, heading < 60 deg, gap in [-1, max(40 m, 4 s x v0)]; stretched rows take their plain row's flag), parts renormalised (32 PAI rows a batch).
+  Offline: 39.8 / 38.5 / 41.2 % of MV's rows removed (mostly cruise; stop-approach 1.63 -> 1.54 a batch); PAI 281 launches lead 26 / 37, R2J loses
+  8 lead / 4 no-lead launches (not lead-specific); G-LAUNCH 6 / 6 lead; overshoot zeros 3 / 23 lead. **Fails**: G-LAUNCH 0.670 vs R2C 0.865
+  (launched 4 / 6, rear-hit 2; vs R3MV +0.101 [-0.032, +0.335], one scene fixed); class guard fails on offroad (7 vs 3); TARGET 0.532 (ok; vs R3MV
+  -0.043, TURN -0.095 [-0.204, -0.005], 4 new TURN zeros); T281 route-turn 3. Inertia 0.753 / 0.960. No s1, no PAI 281 read. About 1.9 GPU job-h.
 
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 

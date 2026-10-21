@@ -1,0 +1,57 @@
+{
+ "report": "round5n",
+ "ctl": "R2C-L18-s0",
+ "arms": {
+  "R2C-L18-s0": {
+   "stop_ratio": 0.89169103534953,
+   "turn_ratio": 0.9061332510345554,
+   "open_v24": 0.7771408751690831,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "R5N-L18-s0": {
+   "stop_ratio": 0.7528209484593544,
+   "turn_ratio": 0.9596093273573124,
+   "open_v24": 0.9365174211090916,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "R3MV-L18-s0": {
+   "stop_ratio": 0.7440058314649958,
+   "turn_ratio": 0.9480932599925078,
+   "open_v24": 0.9386876803704877,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": false
+  },
+  "NTV0-L18-s0": {
+   "stop_ratio": 0.8949043954839871,
+   "turn_ratio": 0.9208861196803877,
+   "open_v24": 0.7756524704014788,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  },
+  "RSG-L18-s0": {
+   "stop_ratio": 0.8864418630351998,
+   "turn_ratio": 0.9398568523271701,
+   "open_v24": 0.7947088871460553,
+   "stop": "inertia",
+   "turn": "inertia",
+   "open": "copy",
+   "pass_": null
+  }
+ },
+ "lines": {
+  "stop": 0.6,
+  "turn": 0.6,
+  "drop": 0.15,
+  "open": 0.7
+ }
+}
