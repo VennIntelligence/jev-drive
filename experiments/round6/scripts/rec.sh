@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ROUND6 line B: perturbation-recovery rows (plans/2026-10-21-recovery-rows.md). Box, repo root; every job through the pool at PRIO 22 (PRIO env).
 # State in $O = $DATA_DIR/runs/round6/rec (jobs.txt, stages.txt, eps/, roll/<pass>/<chunk>/, rows/, cache/, select/, fwd/, checks/, flags).
-# Passes: A and B = two rollouts of every eligible on1_PAIH scene with different episodes (lib/rec_driver.py, REC_EPS = $O/eps/eps_<pass>.json),
+# Passes: A, B, C = three rollouts of every eligible on1_PAIH scene with different episodes (lib/rec_driver.py, REC_EPS = $O/eps/eps_<pass>.json),
 # Z = the 11 probe scenes with A's episodes at zero offset (G1). Rollouts as pai_rows' H read (NTV0-L18-s0, A0 serve, log driver, g10, ground
 # truth on, KEEP_ASL, CONC 4) -> onp_rows rows / cold -> clean -> onp_cache build -> rec.py select -> rf_pai_pool --select.
-#   rec.sh sched            one CPU job: rec.py sched A then B -> $O/SCHED (episodes, chunk lists)
+#   rec.sh sched            one CPU job: rec.py sched A, B, C -> $O/SCHED (episodes, chunk lists)
 #   rec.sh chain            (after SCHED) staged: a000 / z000 (1 scene) -> check -> a001 / z001 (10) -> check -> rows -> probe job (cache, select,
 #                           pools PRECAT / PRECZT, fwd + R1, G1 / G2 / G3 -> results/rec/gates_probe.md; PROBE_OK or STOP) -> rest job (the other
-#                           chunks of A and all of B, window W, then the tail: cache / select / pools RECA / RECB / fwd + R1 / G2 G3 on the full
+#                           chunks of A and all of B / C, window W, then the tail: cache / select / pools RECA-C / fwd + R1 / G2 G3 on the full
 #                           pools / merge on1_JTPHREC + xfix / draw files / rows report -> smoke + identity (G4) -> trainings s0 / s1 -> PAI 281
 #                           ACC + GAP each -> report + new breaks -> local PCS ruler -> verdict -> DONE)
 #   rec.sh wait <FLAG>      one blocking waiter (run_in_background): returns at $O/<FLAG>, $O/STOP or a failed / cancelled job of this lane
@@ -74,9 +74,9 @@ read281() {  # read281 <tag> [after]: PAI 281 ACC + GAP as round 5's read281 (NT
   echo "$x pai_fix-tax-$t-281ag" >> $O/jobs.txt; echo $ids $x; }
 case ${1:-} in
 sched)
-  if [[ ${2:-} != run ]]; then j=$(sub rec-sched --vram 0.1 --cpu 32 --ram 64 --timeout-h 2 -- bash $ME sched run) || exit 1
+  if [[ ${2:-} != run ]]; then j=$(sub rec-sched --vram 0.1 --cpu 32 --ram 64 --timeout-h 2 -- bash $ME sched run "${2:-A B C}") || exit 1
     echo "$(date '+%F %T') sched (code $(git rev-parse --short HEAD)): $j" | tee -a $O/stages.txt; exit 0; fi
-  for p in A B; do $TR $PY sched --pass $p --jobs 32 > $O/sched_$p.log 2>&1 || die "sched $p (log $O/sched_$p.log)"; done; date '+%F %T' > $O/SCHED ;;
+  for p in ${3:-A B C}; do $TR $PY sched --pass $p --jobs 32 > $O/sched_$p.log 2>&1 || die "sched $p (log $O/sched_$p.log)"; done; date '+%F %T' > $O/SCHED ;;
 chain)
   [[ -f $O/SCHED && ! -f $O/STOP ]] || die "no SCHED (or STOP)"; [[ -z $(grep -E ' (pai-A-a000|rec-probe)$' $O/jobs.txt 2>/dev/null) ]] || die "already chained"
   h=$(git rev-parse --short HEAD); echo "$h chain" >> $O/code.txt
@@ -129,34 +129,32 @@ probejob)  # probe gates on the 11 probe scenes (A: perturbed, Z: zero offset)
   git rev-parse --short HEAD > $O/PROBE_OK; echo "$(date '+%F %T') probe gates passed" | tee -a $O/stages.txt ;;
 rest)  # the remaining chunks (A after the probe, all of B; window W) and the tail
   [[ -f $O/PROBE_OK && ! -f $O/STOP ]] || exit 2; h=$(git rev-parse --short HEAD); echo "$h rest" >> $O/code.txt
-  ch=(); for c in $(chunks A); do [[ $c == a000 || $c == a001 ]] || ch+=("A $c"); done; for c in $(chunks B); do ch+=("B $c"); done
-  ra=(); rb=(); cl=()
+  ch=(); for c in $(chunks A); do [[ $c == a000 || $c == a001 ]] || ch+=("A $c"); done; for p in B C; do for c in $(chunks $p); do ch+=("$p $c"); done; done
+  declare -A rw=(); cl=()
   for i in "${!ch[@]}"; do set -- ${ch[$i]}; a=""; (( i >= W )) && a=${cl[$((i - W))]}
-    u=($(unit $1 $2 "$a")) || exit 1; cl+=(${u[2]}); [[ $1 == A ]] && ra+=(${u[1]}) || rb+=(${u[1]}); done
-  echo "$(date '+%F %T') rest: ${#ch[@]} chunks (A ${#ra[@]}, B ${#rb[@]}), window $W" | tee -a $O/stages.txt
-  ca=$(sub rec-cache-A --after $(csv ${ra[@]}) --vram 20 --cpu 8 --ram 64 --timeout-h 6 -- bash $ME cache A) || exit 1
-  cb=$(sub rec-cache-B --after $(csv ${rb[@]}) --vram 20 --cpu 8 --ram 64 --timeout-h 6 -- bash $ME cache B) || exit 1
-  qa=$(sub rec-pool-A --after $ca --vram 0.1 --cpu 16 --ram 96 --timeout-h 3 -- bash -c "bash $ME select A && bash $ME pool A RECA") || exit 1
-  qb=$(sub rec-pool-B --after $cb --vram 0.1 --cpu 16 --ram 96 --timeout-h 3 -- bash -c "bash $ME select B && bash $ME pool B RECB") || exit 1
-  f=(); for x in "A RECA $qa" "B RECB $qb"; do set -- $x; for rs in train-rec dev-rec; do
-    f+=($(sub rec-fwd-$2-$rs --after $3 --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME fwd $2 $rs)) || exit 1; done; done
+    u=($(unit $1 $2 "$a")) || exit 1; cl+=(${u[2]}); rw[$1]="${rw[$1]:-} ${u[1]}"; done
+  echo "$(date '+%F %T') rest: ${#ch[@]} chunks, window $W" | tee -a $O/stages.txt
+  q=(); f=()
+  for p in A B C; do c=$(sub rec-cache-$p --after $(csv ${rw[$p]}) --vram 20 --cpu 8 --ram 64 --timeout-h 6 -- bash $ME cache $p) || exit 1
+    q+=($(sub rec-pool-$p --after $c --vram 0.1 --cpu 16 --ram 96 --timeout-h 3 -- bash -c "bash $ME select $p && bash $ME pool $p REC$p")) || exit 1
+    for rs in train-rec dev-rec; do f+=($(sub rec-fwd-REC$p-$rs --after ${q[-1]} --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME fwd REC$p $rs)) || exit 1; done; done
   g=$(sub rec-gfull --after $(csv ${f[@]}) --vram 0.1 --cpu 16 --ram 96 --timeout-h 2 -- bash $ME gfull) || exit 1
-  m=$(sub rec-merge --after $qa,$qb --vram 0.1 --cpu 8 --ram 120 --timeout-h 3 -- bash $ME merge) || exit 1
+  m=$(sub rec-merge --after $(csv ${q[@]}) --vram 0.1 --cpu 8 --ram 120 --timeout-h 3 -- bash $ME merge) || exit 1
   s=$(sub rec-smoke --after $m "${FT[@]}" --timeout-h 1 -- bash $ME smoketrain) || exit 1
   i1=$(sub rec-ident-lc --after $m "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun lc) || exit 1
   i2=$(sub rec-ident-rec0 --after $m "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun rec0) || exit 1
   i=$(sub rec-ident --after $i1,$i2 --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident) || exit 1
   l=$(sub rec-launch --after $s,$i,$g --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 --env PRIO=$PRIO -- bash $ME launch) || exit 1
-  echo "$(date '+%F %T') tail: cache $ca $cb select+pool $qa $qb fwd ${f[*]} gfull $g merge $m smoke $s identity $i1 $i2 bitcmp $i launch $l" | tee -a $O/stages.txt ;;
+  echo "$(date '+%F %T') tail: select+pool ${q[*]} fwd ${f[*]} gfull $g merge $m smoke $s identity $i1 $i2 bitcmp $i launch $l" | tee -a $O/stages.txt ;;
 gfull)  # R1 and G2 / G3 on the full pools (reported; the registered gate is the probe's)
-  for p in A B; do bash $ME r1 $p REC$p; $TR $PY g2 --pool REC$p --pass $p --jobs 16 > $O/g2${p,,}.log 2>&1
+  for p in A B C; do bash $ME r1 $p REC$p; $TR $PY g2 --pool REC$p --pass $p --jobs 16 > $O/g2${p,,}.log 2>&1
     $TR $PY g3 --pool REC$p --pass $p --r1 $O/checks/r1_REC$p.json --jobs 16 > $O/g3${p,,}.log 2>&1; done
-  $TR $PY rows --pool RECA,RECB --pass A,B > $O/rows.log 2>&1; true ;;
+  $TR $PY rows --pool RECA,RECB,RECC --pass A,B,C > $O/rows.log 2>&1; true ;;
 merge)
   [[ ! -e $CRC/on1_JTPHREC || -f $O/merge_started ]] || die "on1_JTPHREC exists: never overwritten"; touch $O/merge_started
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 150 )) || die "free $free GB < 150 GB"
-  $TR $RF/rf_pait.py merge --pools $PARTS on1_RECA:reca:both on1_RECB:recb:both --out JTPHREC --nan-keys fut_reg || die merge
-  $TR $PRPY xfix --pool JTPHREC --ref JTPH --parts reca,recb --out $O/checks || die "xfix (prefix differs from on1_JTPH: $O/checks/xfix_JTPHREC.json)"
+  $TR $RF/rf_pait.py merge --pools $PARTS on1_RECA:reca:both on1_RECB:recb:both on1_RECC:recc:both --out JTPHREC --nan-keys fut_reg || die merge
+  $TR $PRPY xfix --pool JTPHREC --ref JTPH --parts reca,recb,recc --out $O/checks || die "xfix (prefix differs from on1_JTPH: $O/checks/xfix_JTPHREC.json)"
   cp $O/checks/xfix_JTPHREC.json $RES/
   $TR $PY weights --pool on1_JTPHREC --k 0 --out R6REC0 > $O/w0.log 2>&1 || die "R6REC0 weights"
   $TR $PY weights --pool on1_JTPHREC --k $K --out R6REC > $O/w.log 2>&1 || die "R6REC weights" ;;

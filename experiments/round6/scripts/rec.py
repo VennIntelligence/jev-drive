@@ -2,15 +2,15 @@
 """ROUND6 line B: perturbation-recovery rows (ChauffeurNet-style; plans/2026-10-21-recovery-rows.md). Lane script: scripts/rec.sh. Box,
 repo root, envs/op-train python (CPU subcommands; the GPU work is the pool jobs rec.sh submits). Geometry: lib/rec_geom.py; driver: lib/rec_driver.py.
 
-  sched  --pass A|B   episodes on the plain PAI human pool's scenes (on1_PAIH, pai-rows scenes.tsv, held scenes out): candidate decisions k0
+  sched  --pass A|B|C   episodes on the plain PAI human pool's scenes (on1_PAIH, pai-rows scenes.tsv, held scenes out): candidate decisions k0
          (k0 >= 37 so the 2 s ramp starts after the runtime's 1.7 s log window; rows k0 - 4 .. k0 + 4 in on1_PAIH; log speed >= 2 m/s over
          t0 - 2 .. t0 + 2 s; plain raster ok_primary), class by the human's 4 s yaw (turn >= 30 deg, curve >= 8, straight), weighted random order
-         (weight 1 / class share of the moving PAIH rows), greedy with >= 43 decisions between episodes (B: also >= 10 from A's); per episode a
+         (weight 1 / class share of the moving PAIH rows), greedy with >= 43 decisions between episodes (B: also >= 10 from A's, C: from A's and B's); per episode a
          perturbation drawn (type lat / head / both, |e0| in 0.5 / 1 / 1.5 m, |psi0| in 3 / 6 / 10 deg, signs at random) until it passes:
          added lateral acceleration v^2 |E''| <= 3 m/s^2 over ramp and recovery, the perturbed t0 footprint inside the plain row's road_pai
          raster (min SDF >= 0), no overlap with an actor box at t0 .. t0 + 2 s (0.5 s steps) -> $O/eps/{eps_<pass>.json, episodes_<pass>.csv,
          sched_<pass>.json}; A also the probe (11 scenes), eps_Z.json (the probe's episodes at e0 = psi0 = 0) and every pass's chunk lists
-  select --pass A|B|Z [--prefix P]  the rows k0 - 4 .. k0 + 4 of every episode in the pass's row files, label = the recovery merge (rec_geom.merge
+  select --pass A|B|C|Z [--prefix P]  the rows k0 - 4 .. k0 + 4 of every episode in the pass's row files, label = the recovery merge (rec_geom.merge
          from the driven offset at the row's time; = log_fut bit for bit at zero offset), rows at / after an at-fault collision dropped
          -> $O/select/<pass>.npz (names on:<prefix>:<scene>:<k>, fut, per-row meta) for rf_pai_pool --select
   g1     --pool PRECZT   G1: the zero pass reproduces on1_PAIH: row files (frames, slots, inputs, anchors, model plans, log_fut) and pool rows
@@ -252,8 +252,8 @@ def cmd_sched(a):
     _load_globals()
     S = [r["scene_id"] for r in csv.DictReader(open(TSV), delimiter="\t") if not held(r["scene_id"]) and r["scene_id"] in _G["pk"]]
     avoid = defaultdict(list)
-    if a.pas == "B":
-        for r in csv.DictReader(open(O / "eps" / "episodes_A.csv")):
+    for q in {"B": "A", "C": "AB"}.get(a.pas, ""):                       # later passes: other states than the earlier passes'
+        for r in csv.DictReader(open(O / "eps" / f"episodes_{q}.csv")):
             avoid[r["scene"]].append(int(r["k0"]))
     with ProcessPoolExecutor(a.jobs) as ex:
         res = list(ex.map(_sched_scene, [(s, a.pas, avoid[s]) for s in S], chunksize=4))
@@ -573,7 +573,7 @@ def cmd_weights(a):
     names, n0 = T["names"].astype(str), len(B["names"])
     assert np.array_equal(names[:n0], B["names"].astype(str)), f"{a.pool}: prefix != R5LC's rows"
     part = T["pool"].astype(str)
-    tail = np.isin(part[n0:], ["reca", "recb"])
+    tail = np.isin(part[n0:], ["reca", "recb", "recc"])
     assert tail.all(), f"{a.pool}: tail parts {sorted(set(part[n0:]))}"
     nt = len(names) - n0
     w = np.zeros(len(names))
@@ -677,8 +677,8 @@ def main():
         nj = n_cpus()
     except Exception:
         pass
-    p = sp.add_parser("sched"); p.add_argument("--pass", dest="pas", required=True, choices=("A", "B")); p.add_argument("--jobs", type=int, default=nj)
-    p = sp.add_parser("select"); p.add_argument("--pass", dest="pas", required=True, choices=("A", "B", "Z")); p.add_argument("--prefix", default="")
+    p = sp.add_parser("sched"); p.add_argument("--pass", dest="pas", required=True, choices=("A", "B", "C")); p.add_argument("--jobs", type=int, default=nj)
+    p = sp.add_parser("select"); p.add_argument("--pass", dest="pas", required=True, choices=("A", "B", "C", "Z")); p.add_argument("--prefix", default="")
     p.add_argument("--jobs", type=int, default=nj)
     p = sp.add_parser("g1"); p.add_argument("--pool", required=True)
     p = sp.add_parser("g2"); p.add_argument("--pool", required=True); p.add_argument("--pass", dest="pas", required=True); p.add_argument("--jobs", type=int, default=nj)
