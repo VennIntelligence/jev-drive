@@ -143,6 +143,17 @@ Cosmos-Reason2 / Qwen3.5 (about 45G) and the top-level scratch files. Tier 2 of 
 
 2026-10-21c (user-asked whole-disk inventory, certain-only deletion, forecast to 10-31; manifest [20261021c](../experiments/cl_infra/cleanup/20261021c.md), scan in `tmp/cleanup_1021c/` on the data disk): 356.5 -> 393.0 GB free (36.7 GB: 18 old-rev git worktrees under `runs/route_follow/` and `tmp/`, the ROUTE v2 arm-c pool `on1_L18RB0J` (d302), `long_contact/{native,priv,read,train}` (d256; `ctx` stays), `op_adapt/train-lam*` (op_adapt_r1, d55)). The DAgger lane removed `round6/dag2/s*/{rows,cache}` (129 GB) the same hour. The USER DECISION table (navsim trainval blobs 471, closed-arm PAI read asl 106, `ap2/cache` 129, HUGSIM outputs, B2D / CARLA 100; `b2dc-train@v2` was already deleted 10-10) and the 10-31 forecast are in the manifest.
 
+2026-10-21c Part 2 (user-approved, same manifest; lists and `delete2.log` in `tmp/cleanup_1021c/`): 394 -> 1305 GB free (+911).
+Gone from the box, with how to get it back: `datasets/navsim/sensor_blobs/trainval` (466 GB, navtrain camera blobs; the Cinque
+navtrain token caches and metric caches stay, so only a re-encode of navtrain needs it: `scripts/download_navsim.sh navtrain` from
+hf-mirror, no login, about 7-8 h); `datasets/nuscenes` (35 GB; `scripts/extract_nuscenes.sh` from `/autodl-pub`, minutes);
+`datasets/waymo_perception` + `womd` (15 GB; Waymo bucket login, under 1 h); `third_party/carla` and the B2D leaderboard envs
+`bridgedrive`, `scout-tfv6`, `blue`, `simlingo`, `b2d-tcp` (`scripts/download_carla.sh`, about 1 h; Tokyo keeps its own CARLA);
+`third_party/alpamayo1.5`. Outputs gone: `runs/alpasim/ap2/cache` (129, `ap2_prep.py`), `runs/op_route_ft`, `op_wide_ft`,
+`op_parity/b2d_plan_smooth`, `checkpoints/scout`, the VT checkpoints `op_parity/runs/{VT-*,VTCP2-*}`, old HUGSIM episode dirs /
+30 unlinked ONNX of `op_parity/hugsim` (results.csv, routes.json and the 15 ONNX the bench links stay), `opctrl{,_long}/closed`,
+the `bench/hugsim` mp4, and rollout.asl beyond one sample in 15 closed-arm PAI reads (64 GB).
+
 Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank,samples,bank2}` non-CARLA parts ~300G (H line, last trained 2026-10-03, no live reader; `runs/`
 and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 52G (`t/H`, `gate_curve/*.npy`, `readout`),
