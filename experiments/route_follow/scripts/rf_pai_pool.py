@@ -21,6 +21,8 @@ so route_mem/scripts/rm_train.py can train on it (--on on1_<name> --on-mode self
             poses log_fut (rows need all 8 inside the log), names on:<prefix>:<scene>:<k>, tab `src`; defaults (imit, pai, none) = as before
   --fut poses --prefix paio --src outcome (experiments/round5 S3, outcome rows): fut = the decision's served plan (drive.jsonl `poses`, after
             ACC / TTS), i.e. fut = served
+  --select F.npz (experiments/round6 rec.py select, recovery rows): only the rows named in F (`names`, on:<prefix>:<scene>:<k>) and fut =
+            F's `fut` for them (the scorer-event filter is off: the lane picks its rows itself); with --fut log_fut the 4 s log rule stays
 
   rf_pai_pool.py --name PAIRB0 --rows /data/runs/route_night/rows/pol --cache /data/runs/route_night/cache/pol \
       --runs '/data/runs/route_night/roll/*/runs/*' --split experiments/onpol_pai/results/split/train160.tsv
@@ -69,12 +71,19 @@ def main():
     ap.add_argument("--fut", default="imit", choices=("imit", "log_fut", "poses"))
     ap.add_argument("--prefix", default="pai")
     ap.add_argument("--src", default="")
+    ap.add_argument("--select", default="")
     a = ap.parse_args()
     keep_sc = {l.split("\t")[0] for l in Path(a.split).read_text().splitlines() if l.startswith("clipgt-")}
     T = np.load(Path(a.cache) / "tab.npz")
     scenes = T["scenes"][T["sid"]]
     fok = T["log_fut_ok"].all(1) if a.fut == "log_fut" else True
-    sel = np.flatnonzero(T["usable"] & ~T["after_event"] & ~T["after_end"] & fok & np.isin(scenes, list(keep_sc)))
+    if a.select:                                                      # recovery rows: the listed rows, their own label
+        Zs = np.load(a.select)
+        want = {x: i for i, x in enumerate(Zs["names"].astype(str).tolist())}
+        pick = np.array([f"on:{a.prefix}:{s}:{int(k)}" in want for s, k in zip(scenes, T["k"])], bool)
+        sel = np.flatnonzero(T["usable"] & ~T["after_end"] & fok & pick & np.isin(scenes, list(keep_sc)))
+    else:
+        sel = np.flatnonzero(T["usable"] & ~T["after_event"] & ~T["after_end"] & fok & np.isin(scenes, list(keep_sc)))
     n = len(sel)
     sc, kk, t0 = scenes[sel], T["k"][sel].astype(int), T["t0_us"][sel].astype(np.int64)
     names = np.array([f"on:{a.prefix}:{s}:{k}" for s, k in zip(sc, kk)])
@@ -113,6 +122,9 @@ def main():
     pool.mkdir(parents=True, exist_ok=True), warp.mkdir(parents=True, exist_ok=True), FEAT.mkdir(parents=True, exist_ok=True)
     imit = np.nan_to_num(T[a.fut][sel]).astype(np.float32)
     assert a.fut == "imit" or np.isfinite(T[a.fut][sel]).all(), "log_fut not finite on a kept row"
+    if a.select:
+        imit = Zs["fut"][[want[x] for x in names.tolist()]].astype(np.float32)
+        assert np.isfinite(imit).all(), "select fut not finite on a kept row"
     np.savez(pool / "tab.npz", names=names, log=sc, ego=T["ego_in"][sel].astype(np.float32), fut=imit, cam=T["cam_t"][sel].astype(np.float32),
              lht=T["lht"][sel].astype(bool), speed=T["v0"][sel].astype(np.float32), served=T["poses"][sel].astype(np.float32),
              **({"src": np.full(n, a.src)} if a.src else {}))
@@ -132,7 +144,8 @@ def main():
     rec = dict(name=a.name, fut=a.fut, prefix=a.prefix, rows=n, scenes=int(len(np.unique(sc))), rows_cached=int(len(scenes)), route_in_ok=float(ok.mean()), rows_without_messages=nomsg,
                served_compared=ncmp, served_max_abs_diff=dmax, c20=float(sm["c20"][ok].mean()) if ok.any() else 0.0, route_ok=float(rok.mean()),
                route_pts_med=float(np.median(fin.sum(1))) if len(fin) else 0.0,
-               route_lat0_med=float(np.nanmedian(np.abs(poly[rok, 5, 1]))) if rok.any() else float("nan"), road_rows=0, pool=str(pool))
+               route_lat0_med=float(np.nanmedian(np.abs(poly[rok, 5, 1]))) if rok.any() else float("nan"), road_rows=0, pool=str(pool),
+               **({"select": a.select, "select_rows": len(want), "select_missing": len(want) - n} if a.select else {}))
     (pool / "build.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec))
 
