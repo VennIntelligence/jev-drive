@@ -268,7 +268,11 @@ def human_ref(ref, P, yaw):
     if yaw is None:
         yaw = np.unwrap(np.arctan2(np.gradient(P[:, 1]), np.gradient(P[:, 0])))
     pr = [ref.project(np.r_[P[i, :2], yaw[i]]) for i in range(len(P))]
-    sd = np.array([(p[0], p[1]) for p in pr if p is not None])
+    sd = np.array([(p[0], p[1]) for p in pr if p is not None]).reshape(-1, 2)
+    if len(sd) < 2:                                                             # no heading-consistent log pose (e.g. a parked log): lane centre
+        rh = Ref(np.c_[ref.x, ref.y], ref.s_rec)
+        rh.b = np.zeros(len(ref.s))
+        return rh, dict(h_offset_med=float("nan"), h_clip_share=0.0, h_offset_abs_med_used=0.0, h_no_projection=True)
     o = np.argsort(sd[:, 0])
     s_, d_ = sd[o, 0], sd[o, 1]
     inside = (ref.s >= s_[0]) & (ref.s <= s_[-1])
