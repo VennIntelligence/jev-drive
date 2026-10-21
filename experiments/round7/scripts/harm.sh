@@ -10,6 +10,7 @@
 #   harm.sh redo <V> <chunk> [ids]  re-roll a chunk that lost a scene, then that variant's tail and compare -> png after [ids]
 #   harm.sh refix V:c ...       a redo chunk with rows and route from different rolls: re-roll, rows --redo, cache, pool, fwd, compare -> png
 #   harm.sh plans               route-memory checkpoints: pool (rf_pai_pool -> on1_HARM<V>) -> fwd (rf_recov) per variant, then compare -> png
+#   harm.sh addtag <tag>        one more route checkpoint on the existing pools: fwd per variant, then compare (all tags)
 #   harm.sh wait [ids]          blocks until $O/DONE or a failed job of this lane (or of the given ids) (one run_in_background waiter)
 #   job bodies: rows <V> | clean <V> | cache <V> | pool <V> | fwd <V> | rowsredo <V> <c> | fwdredo <V> | compare | png
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -17,7 +18,7 @@ O=$DATA_DIR/runs/round7/harm; ME=experiments/round7/scripts/harm.sh; PY=experime
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; V=.venv/bin/python; T=NTV0-L18-s0; PRIO=${PRIO:-16}
 LOGSERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7 PAI_DUMP=100000 DRV_PY=../../onpol_pai/lib/onp_log_driver.py"
 WIZ="controller.gains.rel_front_steering_angle_weight=10 runtime.simulation_config.send_recording_ground_truth=true"
-VARS="OFFA OFFB ON"; RF=experiments/route_follow/scripts; TAGS=NTV0-L18-s0,R5LC-L18-s0
+VARS="OFFA OFFB ON"; RF=experiments/route_follow/scripts; TAGS=${TAGS:-NTV0-L18-s0,R5LC-L18-s0}
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round7-harm --name "$name" --tries 1 --priority $PRIO --no-check \
      --log-dir $O/pool/$name.$(date +%m%d%H%M%S) "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
@@ -79,6 +80,10 @@ rowsredo)  # rowsredo <V> <chunk>: the chunk's scenes rebuilt (--redo) from the 
   rm -rf $G; n=0; for s in $sc; do [[ $O/rows/$v/$s.npz -nt $O/roll/$v/runs/ntv0-l18-s0_$3/DONE ]] && n=$((n + 1)); done
   echo "$(date '+%F %T') rowsredo $v $3: $n / $(wc -w <<< "$sc") scenes rebuilt from the current roll" | tee -a $O/stages.txt; (( n == $(wc -w <<< "$sc") )) || die "rowsredo $v $3" ;;
 fwdredo) d=$O/fwd/HARM$2-train-rec; [[ -d $d ]] && mv $d $d.prev.$(date +%m%d%H%M%S); bash $ME fwd $2 ;;
+addtag)  # addtag <tag>: fwd of one more checkpoint on the three existing pools (no renders, no new pools; existing plans are kept), then compare over all tags
+  ff=(); for v in $VARS; do f=$(sub harm-fwd-$2-$v --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- env TAGS=$2 bash $ME fwd $v) || exit 1; ff+=($f); done
+  m=$(sub harm-compare-$2 --after $(IFS=,; echo "${ff[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- env CTAGS="NTV0-L18-s0 R5LC-L18-s0 $2 P0 served" bash $ME compare) || exit 1
+  echo "$(date '+%F %T') addtag $2: fwd ${ff[*]} compare $m" | tee -a $O/stages.txt; echo "$m" ;;
 rows)
   v=$2; G=$DATA_DIR/tmp/harm_stage/$v; mkdir -p $G $O/rows
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $v \
@@ -101,7 +106,7 @@ plans)  # pool -> fwd per variant, then compare -> png
   m=$(sub harm-compare3 --after $(IFS=,; echo "${ff[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
   p=$(sub harm-png3 --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
   echo "$(date '+%F %T') plans: fwd ${ff[*]} compare $m png $p" | tee -a $O/stages.txt; echo "$m $p" ;;
-compare) $TR $PY compare --out $O --cache $O/cache --rows $O/rows ;;
+compare) $TR $PY compare --out $O --cache $O/cache --rows $O/rows ${CTAGS:+--tags $CTAGS} ;;
 png) $TR $PY png --out $O --rows $O/rows && date '+%F %T' > $O/DONE ;;
 wait)
   until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt $O/roll "${@:2}" <<'PY'
