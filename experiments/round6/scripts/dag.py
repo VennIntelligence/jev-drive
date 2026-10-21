@@ -78,9 +78,9 @@ T_J = 0.5 * np.arange(1, 9)                     # label times (s)
 A_LAT = 4.0                                     # T4 line (m/s^2, 99 %)
 TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
-H_SIG, H_CLIP = 10.0, 0.5                       # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station,
-                                                # |offset| > 0.5 m -> 0 (lane change / transient: plain lane centre), the mask smoothed the same way
-TEACHER_V = "b1"                                # teacher version stamped into every teach file (label refuses other versions)
+H_SIG, H_CLIP = 10.0, 0.5                       # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
+                                                # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
+TEACHER_V = "b2"                                # teacher version stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -261,9 +261,9 @@ def route_ref(ds):
 
 
 def human_ref(ref, P, yaw):
-    """Amendment 1 (b): the lane-centre reference shifted by the human's own lateral offset from it at the matched station: the log poses projected
-    onto ref, offset interpolated on the station grid inside the recorded span (0 outside), Gaussian H_SIG; where |offset| > H_CLIP the offset is 0
-    (lane change / transient -> plain lane centre) and that mask is smoothed the same way. -> (Ref, info with the clip share)."""
+    """Amendments 1 (b) / 2: the lane-centre reference shifted by the human's own lateral offset from it at the matched station: the log poses
+    projected onto ref, offset interpolated on the station grid inside the recorded span (0 outside), Gaussian H_SIG, saturated at +-H_CLIP.
+    -> (Ref, info with the share of stations at the bound, left / right)."""
     from scipy.ndimage import gaussian_filter1d
     if yaw is None:
         yaw = np.unwrap(np.arctan2(np.gradient(P[:, 1]), np.gradient(P[:, 0])))
@@ -279,13 +279,14 @@ def human_ref(ref, P, yaw):
     b = np.where(inside, np.interp(ref.s, s_, d_), 0.0)
     sg = H_SIG / DS
     b = gaussian_filter1d(b, sg, mode="nearest")
-    keep = (np.abs(b) <= H_CLIP) & inside
-    b = gaussian_filter1d(np.where(keep, b, 0.0), sg, mode="nearest")
+    hi_, lo_ = inside & (b > H_CLIP), inside & (b < -H_CLIP)
+    b = np.clip(b, -H_CLIP, H_CLIP)                                             # amendment 2: saturate at +-H_CLIP, never replaced by 0
     X, Y = ref.x - b * np.sin(ref.th), ref.y + b * np.cos(ref.th)
     rh = Ref(np.c_[X, Y], ref.s_rec)
     rh.b = b
-    return rh, dict(h_offset_med=float(np.median(d_)), h_clip_share=float(1 - keep[inside].mean()) if inside.any() else 0.0,
-                    h_offset_abs_med_used=float(np.median(np.abs(b[inside]))) if inside.any() else 0.0)
+    ni = max(int(inside.sum()), 1)
+    return rh, dict(h_offset_med=float(np.median(d_)), h_clip_share=float((hi_.sum() + lo_.sum()) / ni), h_clip_left=float(hi_.sum() / ni),
+                    h_clip_right=float(lo_.sum() / ni), h_offset_abs_med_used=float(np.median(np.abs(b[inside]))) if inside.any() else 0.0)
 
 
 def scene_cfgs(patterns):
@@ -391,6 +392,8 @@ def cmd_t1(a):
                           ext_points_med=float(np.median([r["n_ext"] for r in ri])) if ri else None,
                           h_clip_share_med=float(np.median([r["h_clip_share"] for r in ri])) if ri else None,
                           h_clip_share_mean=float(np.mean([r["h_clip_share"] for r in ri])) if ri else None,
+                          h_clip_left_mean=float(np.mean([r.get("h_clip_left", 0) for r in ri])) if ri else None,
+                          h_clip_right_mean=float(np.mean([r.get("h_clip_right", 0) for r in ri])) if ri else None,
                           h_offset_med=float(np.median([r["h_offset_med"] for r in ri])) if ri else None))
     dump(RES / "t1.json", rec)
     import pandas as pd
@@ -402,7 +405,7 @@ def cmd_t1(a):
          "Classes: turn = the human turns >= 30 deg in 4 s; lane-change = D1's shape (v > 5 m/s, |y4| > 2.5 m, |yaw4| < 12 deg in the human's "
          "frame; the teacher keeps the route lane, so these are expected to differ); other = the rest.", "",
          "Two teachers: the registered lane-centre teacher (the teacher-geometry check), and amendment 1 (b), lane centre + the human's own "
-         f"lateral offset (sigma {H_SIG:.0f} m, |offset| > {H_CLIP} m -> lane centre), the teacher the rows use. On human states (b) is close to the "
+         f"lateral offset (sigma {H_SIG:.0f} m, saturated at +-{H_CLIP} m: amendment 2), the teacher the rows use. On human states (b) is close to the "
          "human by construction: its column is a construction check, not a pass.", "",
          "| states | n | labelled | lane centre: median abs lat at 2 s (m) | at 4 s | p90 at 2 s | p90 at 4 s | median abs d0 | (b): at 2 s | at 4 s |",
          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
@@ -413,8 +416,9 @@ def cmd_t1(a):
     L += ["", f"Line (plan, lane-centre teacher): all states median <= 0.30 m at 2 s and <= 0.50 m at 4 s -> **{'PASS' if passed['all'] else 'FAIL'}** "
           "(the miss is the human's offset from the NuRec lane centre, signed median left; amendment 1). "
           f"Turns over 2x the line (inspect before rows): {passed['turn_inspect']}.", "",
-          f"Amendment 1 (b): per-scene human offset median {rec['route']['h_offset_med']}; share of the recorded route stations clipped to the plain "
-          f"lane centre (|offset| > {H_CLIP} m): median {rec['route']['h_clip_share_med']}, mean {rec['route']['h_clip_share_mean']}.", "",
+          f"Amendments 1 (b) / 2: per-scene human offset median {rec['route']['h_offset_med']:.3f} m (+ = left); share of the recorded route stations "
+          f"at the +-{H_CLIP} m bound: median {rec['route']['h_clip_share_med']:.3f}, mean {rec['route']['h_clip_share_mean']:.3f} (left bound "
+          f"{rec['route']['h_clip_left_mean']:.3f}, right bound {rec['route']['h_clip_right_mean']:.3f}).", "",
           f"No label: {dict(why)}. Route: lateral lane switches in {rec['route']['switch_scenes']} scenes ({rec['route']['switches']}; step median "
           f"{rec['route']['steps_med']} m); the generator's points vs the replayed lane projections max {rec['route']['gen_vs_lanes_max']} m. "
           f"Failed scenes: {len(fail)}."]
