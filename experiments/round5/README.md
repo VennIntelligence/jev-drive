@@ -94,6 +94,28 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
   - More GO-NOW rows hurt: R5-G2 - R5-G -0.166 [-0.280, -0.063], launched -6.
   - No PAI 281 read (rule: gate + LAUNCH-37 >= 30). About 1.7 card-h (VRAM-booked share; 6.1 pool job-hours).
 
+- MV-LC (R5-LC), stage 6 (prereg addenda 5 / 5a; [results/lc_rows.md](results/lc_rows.md), [results/pai281_R5LC_ag.md](results/pai281_R5LC_ag.md),
+  [results/pcs_r5l.md](results/pcs_r5l.md)). R3MV's argv; PAI human rows whose 4 s label is a lane change off the route lane (D1's rule: v0 > 5,
+  |y4| > 2.5 m, |yaw4| < 12 deg, route polyline not within 1.2 m of the 4 s point) at weight 0, parts renormalised. Offline: 10 986 rows (ph 4 219,
+  ph05 365, ph15 6 402; nearly all cruise, median 26-36 m/s); lane-change share of drawn moving PAI rows 12.0 -> 6.2 % (navtrain 8.0 %).
+  Arms MV-LC s0 / s1 + R3MV s1; exam PAI 281 ACC + GAP (275 common scenes).
+
+    | read | mean | zeros | route-turn | offroad | zero-other | AF-front | rear-hit | slow | launched / 37 | ruler PCS (vs NTV0) |
+    |:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+    | NTV0 | 0.745 | 58 | 15 | 12 | 6 | 3 | 25 | 11 | 33 | 2195 |
+    | R2C | 0.742 | 59 | 15 | 11 | 7 | 4 | 24 | 10 | 33 | -29 [-95, +19] |
+    | R3MV s0 | 0.741 | 61 | 2 | 20 | 14 | 3 | 24 | 5 | 35 | -276 [-375, -217] |
+    | R3MV s1 | 0.712 | 70 | 3 | 21 | 21 | 3 | 21 | 4 | 34 | -282 [-384, -225] |
+    | MV-LC s0 | 0.746 | 61 | 3 | 21 | 10 | 6 | 18 | 7 | 34 | -266 [-366, -189] |
+    | MV-LC s1 | 0.724 | 67 | 4 | 24 | 11 | 6 | 22 | 6 | 35 | -285 [-394, -208] |
+
+  - **Not an adopt-candidate** (s1 below NTV0; offroad + zero-other 31 / 35 vs the cap 21) and both seeds fail the ruler rule.
+  - The filter removes drift / lane-change zeros (vs same-seed R3MV: zero-other -4 [-10, +1] s0, -10 [-17, -4] s1), but offroad stays
+    +9 / +12 over NTV0 and AF-front +3; mean vs R3MV +0.005 / +0.012 (n.s.); ruler vs R3MV +17 [-25, +62] / -5 [-50, +36].
+  - Seed noise on 281: R3MV s1 - s0 -0.029 [-0.062, +0.003] (zero-other +7). New zeros / partials on the 181 scenes NTV0 scores 1.0:
+    R2C 6 / 2, R3MV 21 / 9 and 28 / 8, MV-LC 19 / 8 and 23 / 10 (offroad now the largest class).
+  - About 10.6 GPU pool job-hours (trainings 1.18, 281 chunks 9.32, smoke / identity 0.12); ruler about 20 CPU jobs at PRIO 15.
+
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 
 **Read more.** [plans/2026-10-21-round5-framework-draft.md](plans/2026-10-21-round5-framework-draft.md) (Chinese working note).
