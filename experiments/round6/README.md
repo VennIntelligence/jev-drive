@@ -2,7 +2,7 @@
 
 status: live
 decisions: none yet
-index: line A DAgger map teacher on MV-LC's own states (rows building)
+index: A DAgger: PAI 281 0.775 / 0.815 vs NTV0 0.743; ruler -213 / -155, not adopted
 
 **Question.** The PAI-human-row recipe (MV-LC, d430) fixes route-turn zeros but adds 9-12 offroad zeros on PAI 281 over NTV0, mostly on scenes NTV0
 solves: can rows on the student's own drifted states, labelled with a way back, remove them without losing the turn fixes?
@@ -14,10 +14,30 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
   [scripts/dag.py](scripts/dag.py); results [results/dagger/](results/dagger/)). The student R5LC-L18-s0 is rolled under the submission serve on the
   719 non-held curated train scenes with frame dumps. A privileged map teacher labels its own states (fed >= 2 m/s):
   - route = AlpaSim's MAP route rebuilt on the log (the polyline the driver's route messages come from);
-  - path = a quintic merge over clip(2 s x v0, 6, 80) m onto the route lane, then along it;
+  - target = the route lane centre + the human's own lateral offset from it (sigma 10 m, saturated at +-0.5 m; amendments 1-2);
+    reference smoothed at sigma 3 m; quintic merge over clip(3 s x v0, 6, 80) m (amendment 3), then along it;
   - label points sit at the arc lengths of the student's own served plan (lateral only, no speed change).
-  - Pool `on1_PAID`, merged `on1_JTPHD`; arm R6DAG = MV-LC's argv + 8 DAgger rows a batch, seeds 0 / 1; exam PAI 281 ACC + GAP + the local PCS ruler.
-  - Gates T1-T4 (teacher on human states, teacher inside the road before the MV offroad events, weight-0 identity, label lateral acceleration) are in the plan.
+  - Pool `on1_PAID` 110 981 rows (718 scenes), 90 300 drawn (fed >= 2 m/s, teacher ok, 1 902 over-line rows at weight 0); merged `on1_JTPHD`;
+    arm R6DAG = MV-LC's argv + 8 DAgger rows a batch, seeds 0 / 1. Student |d0| median 0.31 m, > 1 m on 18 452 rows (10 511 left, 7 941 right).
+  - Gates ([results/dagger/](results/dagger/): t1.md, t2.md, rows.md, identity.json; earlier teachers in gates_b0 / gates_b2):
+    - T1 lane-centre check 0.299 / 0.369 m at 2 / 4 s (b0: 0.365, failed; the human sits left of the NuRec centre).
+    - T2 in-canvas 62 / 65 (raw 74 / 85).
+    - T3 bit-identical.
+    - T4 position read p99 4.88, over-line share 2.1 % -> fallback.
+  - **Read** ([results/dagger/pai281_DAG_ag.md](results/dagger/pai281_DAG_ag.md), 279 scenes, PAI 281 ACC + GAP):
+
+    | read | mean | zeros | route-turn | offroad | zero-other | ruler PCS vs NTV0 |
+    |:--|--:|--:|--:|--:|--:|--:|
+    | NTV0 | 0.743 | 59 | 15 | 12 | 6 | 0 |
+    | MV-LC s0 / s1 | 0.746 / 0.725 | 62 / 68 | 3 / 4 | 21 / 24 | 10 / 11 | -264 / -291 |
+    | DAG s0 / s1 | 0.775 / 0.815 | 53 / 43 | 2 / 2 | 20 / 12 | 5 / 4 | -213 [-305, -57] / -155 [-260, +36] |
+
+    - Mean vs NTV0: +0.032 [-0.011, +0.076] / +0.072 [+0.034, +0.111].
+    - Mean vs same-seed MV-LC: +0.029 / +0.091 [+0.053, +0.130].
+    - New zeros / partials on the 183 scenes NTV0 solves: 12 / 11 and 5 / 7 (MV-LC 19 / 8 and 23 / 10).
+    - **Not an adopt-candidate.** s0 fails the offroad + zero-other cap (25 > 21). The ruler fails for s0 (CI upper -57); s1 passes it (+36).
+    - Not "clearly better than MV-LC" on both seeds: s0's ruler gain over MV-LC is +51 against the +100 line.
+    - Seed spread is large: s1 - s0 is +0.040, with 8 fewer offroad zeros.
 - Line B, REC: perturbation-recovery rows, ChauffeurNet style ([plans/2026-10-21-recovery-rows.md](plans/2026-10-21-recovery-rows.md); code
   [scripts/rec.sh](scripts/rec.sh) / [scripts/rec.py](scripts/rec.py), [lib/rec_driver.py](lib/rec_driver.py), [lib/rec_geom.py](lib/rec_geom.py); results
   [results/rec/](results/rec/)). The on1_PAIH rollouts again (NTV0 in the loop, the log driver), but the reference handed to the MPC is the log plus a
@@ -58,7 +78,7 @@ Results: [results/route_mem_curv.md](results/route_mem_curv.md) + `route_mem_cur
 - `dag.sh` (scripts): the student R5LC-L18-s0 rolled under …
 - `dag.py` (scripts): DAgger rows for the LATERAL part of the …
 
-[plans/](plans/) 1 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 4 entry points
+[results/](results/) 60 result files · [plans/](plans/) 4 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 8 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `results/` small result files, `plans/` live plan notes.

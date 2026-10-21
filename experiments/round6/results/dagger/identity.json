@@ -1,0 +1,21 @@
+{
+ "a": "R6IDLC-L18-s0",
+ "b": "R6IDD0-L18-s0",
+ "note": "R5LC-L18-s0 argv 60 steps eager: on1_JTPH / R5LC vs on1_JTPHD / R6D0 (on1_PAID rows at weight 0)",
+ "scalars": 275,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5364934206008911,
+  0.5364934206008911
+ ],
+ "on_hash_60": [
+  "46b730f1ef3bcbf9",
+  "46b730f1ef3bcbf9"
+ ],
+ "want_hash": null,
+ "identical": true
+}

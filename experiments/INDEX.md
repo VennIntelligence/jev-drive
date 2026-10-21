@@ -21,7 +21,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [phone_wheel](phone_wheel/README.md): live; phone page -> Tokyo daemon -> UDP reader -> human_agent on Bench2Drive; route 24721 driven by hand: DS 100, RC 100 [dnone]
 - [round2](round2/README.md): live; J + ACC + GAP PAI 281 0.689 vs NTV0 0.744 (-0.056); launches 21 / 37; gates FAIL [dnone,yet]
 - [round5](round5/README.md): live; D3: 42 % of train scenes informative; faster wins launches +0.124; S3 rows on1_PAIO built (51 443, gates R1-R3 pass) [dnone,yet]
-- [round6](round6/README.md): live; line A DAgger map teacher on MV-LC's own states (rows building) [dnone,yet]
+- [round6](round6/README.md): live; A DAgger: PAI 281 0.775 / 0.815 vs NTV0 0.743; ruler -213 / -155, not adopted [dnone,yet]
 - [round3](round3/README.md): live; offline: J's launch loss tracks PAI standing rows (2.5 / batch vs 0.16), not the flattening [dnone,yet]
 - [practice_nuplan](practice_nuplan/README.md): closed; new start-state S rows; static rows cause the right bias; full-length arms without them not adopted [d368-369,377,385]
 - [self_iter](self_iter/README.md): live; round 1 pilot STOP: trainval rows teach standstill holds, launches lag [d338]

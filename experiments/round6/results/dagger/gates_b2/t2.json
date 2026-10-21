@@ -1,0 +1,42 @@
+{
+ "events": 86,
+ "lead_s": 2.5,
+ "results": {
+  "all": {
+   "events": 86,
+   "t0_inside": 85,
+   "labelled": 85,
+   "teacher_inside": 73,
+   "teacher_inside_share": 0.8588235294117647,
+   "served_inside": 67,
+   "model_inside": 68,
+   "no_label": {},
+   "label_in_canvas": 65,
+   "teacher_m_med": 0.583,
+   "served_m_med": 0.113
+  },
+  "NTV0 not offroad": {
+   "events": 51,
+   "t0_inside": 50,
+   "labelled": 50,
+   "teacher_inside": 46,
+   "teacher_inside_share": 0.92,
+   "served_inside": 43,
+   "model_inside": 43,
+   "no_label": {},
+   "label_in_canvas": 34,
+   "teacher_m_med": 0.7915,
+   "served_m_med": 0.3745
+  }
+ },
+ "in_canvas": {
+  "events": 65,
+  "teacher_inside": 61,
+  "served_inside": 55,
+  "beyond": 20,
+  "share": 0.9384615384615385,
+  "passed": true
+ },
+ "line": "teacher label footprint min SDF >= 0 on >= 90 % of the events whose t0 footprint is inside (and >= 80 % of those labelled)",
+ "passed": false
+}

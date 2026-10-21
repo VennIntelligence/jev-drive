@@ -1,0 +1,94 @@
+{
+ "tag": "R6SM-L18-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R6SM-L18-s0/20261021-134240",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "/root/autodl-tmp/ujs/runs/round6/dag/w/R6DAG.npz",
+   "R6DAG",
+   true
+  ],
+  "batch_rows": [
+   [
+    "51",
+    "13",
+    "72"
+   ],
+   [
+    "51",
+    "13",
+    "72"
+   ],
+   true
+  ],
+  "pool_imit_rows": [
+   40.56,
+   40,
+   true
+  ],
+  "share_S": [
+   0.4444444444441303,
+   0.4444444444441303,
+   true
+  ],
+  "share_pd": [
+   0.11111111111099063,
+   0.11111111111099063,
+   true
+  ],
+  "share_ph": [
+   0.22222222222191867,
+   0.22222222222191867,
+   true
+  ],
+  "share_ph05": [
+   0.11111111111120149,
+   0.11111111111120149,
+   true
+  ],
+  "share_ph15": [
+   0.11111111111100815,
+   0.11111111111100815,
+   true
+  ]
+ },
+ "steps": 0,
+ "draw_shares": {
+  "on_wfile": "/root/autodl-tmp/ujs/runs/round6/dag/w/R6DAG.npz",
+  "rows_w0": 257299,
+  "group_share": {
+   "S": 0.4444444444441303,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "pd": 0.11111111111099063,
+   "ph": 0.22222222222191867,
+   "ph05": 0.11111111111120149,
+   "ph05_held": 0.0,
+   "ph15": 0.11111111111100815,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}
