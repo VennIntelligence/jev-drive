@@ -22,6 +22,14 @@ Stage N (prereg addendum 3): R5-N = R3MV with every PAI human row whose state ha
         (NTV0's 37, at the human's launch t_L) and overshoot zeros (NTV0 / R2C / R2J, at the human's rest and 4 s before)
         -> results/lead_281.{csv,md}
   r5.py split281 --read K=FACTS.csv .. --out F.md   launches of the 37 and overshoot zeros per read, split lead / no-lead by lead_281.csv
+Stage G (prereg addendum 4): R5-G = R3MV's argv with draw R5G ("stand, then go promptly").
+  r5.py gonow                   (box, CPU) GO-NOW rows (fed < 0.5 m/s and the 4 s label's path reaches 0.5 m by its 1.0 s pose: the human
+        starts within 1 s; launch_rows.md's "leaves 0.5 m" rule on the first 1 s) in the three PAI parts and navtrain; R5G = R2JF with every
+        PAI human row fed < 2 m/s that is not GO-NOW at weight 0, each part renormalised to its share (MV's rule with the GO-NOW rows kept;
+        the same code with no GO-NOW row is asserted bit-equal to R3MV) + R3MVL's navtrain weights (launch rows x 3, bit-equal arrays)
+        -> w/R5G.npz + results/w_R5G.json; rows a batch by source, 4 s label distance, LEAD share -> results/gonow_rows.{md,json}
+  r5.py l37 --read K=FACTS.csv .. --pair A:B .. --target A:B ..   LAUNCH-37 (lead_281.csv's 37 launch scenes): launched, rear-hit, mean, zeros,
+        lead / no-lead split per read; paired A - B over the 37 (mean, launched) and over PAI-FIX TARGET (vl facts) -> results/launch37.{md,json}
 """
 from __future__ import annotations
 
@@ -55,6 +63,7 @@ GUARD_TOL = 3
 # (40 m, 60 deg, hw + W / 2 + 0.3) plus the 4 s headway reach; the PAI ego box is the rollouts' (tax dims front 4.071 m, half width 1.0785 m).
 FRONT, HW = 4.071, 1.0785
 LEAD_G, LEAD_T, LEAD_PSI, LEAD_LAT, LEAD_MINL, LEAD_EXT = 40.0, 4.0, np.radians(60.0), 0.3, 1.5, 200.0
+GO_T, GO_L = 1.0, 0.5                                                     # GO-NOW (addendum 4): fed < r3.V_LROW, label path >= GO_L by GO_T s
 
 
 def wpath(name):
@@ -106,7 +115,7 @@ def cmd_smoke(a):
                    road_fires=(mean("loss/on/road_pos"), "> 0", mean("loss/on/road_pos") > 0 and mean("loss/on/road_ho") > 0),
                    road_pai_rows=(int(m.group(1)) if m else None, ex["index_ok_rows"], bool(m) and int(m.group(1)) == ex["index_ok_rows"]),
                    road_pai_w=(float(m.group(2)) if m else None, 1.0, bool(m) and float(m.group(2)) == 1.0))
-    elif a.arm == "N":                                             # R5-N (addendum 3): R3MV's argv, draw R5N (lead rows -> 0)
+    elif a.arm in ("N", "G"):                                      # R5-N / R5-G (addenda 3 / 4): R3MV's argv, draw R5N / R5G
         ex = json.loads((RES / f"w_{a.wfile}.json").read_text())
         k_both = 32
         b = re.search(r"per batch (\d+) normal, (\d+) yaw-rate, (\d+) on-policy", (d / "log.txt").read_text())
@@ -114,6 +123,11 @@ def cmd_smoke(a):
                    batch_rows=(b.groups() if b else None, ("51", "13", str(r3.K_ON)), bool(b) and b.groups() == ("51", "13", str(r3.K_ON))),
                    pool_imit_rows_without_hinge=(max(S.get("loss/on/n_hinge", [np.nan])), 0, max(S.get("loss/on/n_hinge", [1])) == 0),
                    agent_ho_zero=(max(S.get("loss/on/agent_ho", [0])), 0, max(S.get("loss/on/agent_ho", [0])) == 0))
+        if a.arm == "G":                                           # R3MVL's navtrain weights ride along (launch rows x 3)
+            ck |= dict(nav_listed=(ds.get("nav_listed"), ds.get("nav_rows"), ds.get("nav_listed", 0) >= 0.99 * ds.get("nav_rows", 1)),
+                       nav_up_w=(ds.get("nav_up_w"), [r3.NAV_UP], ds.get("nav_up_w") == [r3.NAV_UP]),
+                       nav_up_share=(ds.get("nav_up_share"), ex["nav_launch_share_after"],
+                                     abs(ds.get("nav_up_share", -1) - ex["nav_launch_share_after"]) < 0.1 * ex["nav_launch_share_after"]))
     else:                                                          # R5-A (addendum 1): R3MV's argv + S3 rows, no road hinge
         ex = json.loads((RES / f"w_{a.wfile}.json").read_text())
         k_both = 32 + a.k_s3                                       # the 32 PAI human rows (64 x 0.5) + the S3 rows, all imitation rows (mode both)
@@ -448,9 +462,199 @@ def cmd_split281(a):
     print("\n".join(L))
 
 
+def go_now(v0, fut):
+    """(n,) fed speed, (n, 8, 3) label poses at 0.5 .. 4 s -> GO-NOW mask (fed < 0.5 m/s, label path >= GO_L by GO_T), path by GO_T, 4 s path."""
+    fut = np.asarray(fut, np.float64)
+    P = np.concatenate([np.zeros((len(fut), 1, 2)), fut[:, :, :2]], 1)
+    seg = np.linalg.norm(np.diff(P, axis=1), axis=-1)
+    L1 = seg[:, :int(round(GO_T / 0.5))].sum(1)
+    return (np.asarray(v0, np.float64) < r3.V_LROW) & (L1 >= GO_L), L1, seg.sum(1)
+
+
+def cmd_gonow(a):
+    """R5G draw file and the offline GO-NOW tables (addendum 4)."""
+    S = r3.pai_states()
+    B = np.load(W3 / "R2JF.npz")
+    names, w0, grp = B["names"].astype(str), B["w"].astype(np.float64), B["grp"]
+    idx = {x: i for i, x in enumerate(names)}
+    MV, MVL = np.load(W3 / "R3MV.npz"), np.load(W3 / "R3MVL.npz")
+    assert np.array_equal(MV["names"], B["names"]) and np.array_equal(MVL["w"], MV["w"]), "R3MV / R3MVL rows"
+    LR = np.load(DATA / "runs/round5/r5/N/lead_rows.npz")
+    G, X = {}, {}
+    for p, d in S.items():
+        g, L1, L4 = go_now(d["speed"], d["fut"])
+        assert np.array_equal(LR[f"{p}_names"].astype(str), d["names"]), f"{p}: lead_rows order"
+        G[p], X[p] = g, dict(ix=np.array([idx[x] for x in d["names"]]), L1=L1, L4=L4, v0=d["speed"].astype(np.float64),
+                             lead=LR[f"{p}_lead"].astype(bool), gap=LR[f"{p}_gap"])
+
+    def draw(keep_go):                                             # r3.cmd_weights' MV arithmetic, GO-NOW rows exempt from the < 2 m/s cut
+        w = w0.copy()
+        for p, d in S.items():
+            ix = X[p]["ix"]
+            sh = w[ix].sum()
+            drop = (d["speed"].astype(np.float64) < r3.V_MV) & ~(G[p] if keep_go else np.zeros(len(ix), bool)) & (w[ix] > 0)
+            keep = (w[ix] > 0) & ~drop
+            w[ix[drop]] = 0.0
+            if keep.any():
+                w[ix[keep]] *= sh / w[ix[keep]].sum()
+        return w
+
+    assert np.array_equal(draw(False), MV["w"]), "R5G's code without GO-NOW rows != R3MV"
+    w = draw(True)
+    pai = np.zeros(len(w), bool)
+    pai[np.concatenate([x["ix"] for x in X.values()])] = True
+    assert abs(w.sum() - 1) < 1e-9 and np.array_equal(w[~pai], MV["w"][~pai]), "non-PAI weights changed"
+    q = lambda x, p_: float(np.percentile(x, p_)) if len(x) else float("nan")  # noqa: E731
+    rec = dict(rule=(f"GO-NOW row: fed < {r3.V_LROW} m/s and the row's own label path reaches {GO_L} m by its {GO_T} s pose (the human starts "
+                     "within 1 s; launch_rows.md's 'leaves 0.5 m' on the first second). R5G = R2JF with every PAI human row fed < "
+                     f"{r3.V_MV} m/s that is not GO-NOW at weight 0, each part renormalised to its share (MV's rule, GO-NOW rows kept) + "
+                     "R3MVL's navtrain weights (launch rows x 3)"), GO_T=GO_T, GO_L=GO_L, parts={})
+    for p, x in X.items():
+        ix, g, v0, L4 = x["ix"], G[p], x["v0"], x["L4"]
+        dr0 = w0[ix] > 0
+        gd = g & dr0
+        low = dr0 & (v0 < r3.V_MV) & ~g
+        r = dict(drawable_r2jf=int(dr0.sum()), drawable_mv=int((MV["w"][ix] > 0).sum()), drawable_g=int((w[ix] > 0).sum()), gonow=int(gd.sum()),
+                 gonow_share_of_fed_lt05=float(gd.sum() / max((dr0 & (v0 < r3.V_LROW)).sum(), 1)),
+                 zeroed=dict(stand=int((low & (v0 < r3.V_LROW) & (L4 < r3.L_STAND)).sum()), go_later=int((low & (v0 < r3.V_LROW) & (L4 >= r3.L_STAND)).sum()),
+                             slow_05_2=int((low & (v0 >= r3.V_LROW)).sum())),
+                 per_batch=float(r3.K_ON * w[ix][g].sum()), per_batch_lead=float(r3.K_ON * w[ix][g & x["lead"]].sum()),
+                 L4=[q(L4[gd], 25), q(L4[gd], 50), q(L4[gd], 75)], L1_med=q(x["L1"][gd], 50), v0_med=q(v0[gd], 50),
+                 lead=int((gd & x["lead"]).sum()), lead_share=float((gd & x["lead"]).sum() / max(gd.sum(), 1)), lead_gap_med=q(x["gap"][gd & x["lead"]], 50),
+                 L4_lead_med=q(L4[gd & x["lead"]], 50), L4_nolead_med=q(L4[gd & ~x["lead"]], 50), scenes=int(len(set(S[p]["log"][gd]))))
+        rec["parts"][p] = r
+    nwm = dict(zip(MVL["nav_names"].astype(str).tolist(), MVL["nav_w"].astype(np.float64).tolist()))
+    nn = dict(rows=0, launch=0, gonow=0, wsum=0.0, wl=0.0, wg=0.0, L4g=[], L4l=[], L1g=[])
+    for i in range(12):
+        t = np.load(CR / f"navtrain_full.s{i}of12/tab.npz")
+        ok = ~np.isnan(t["fut"]).any((1, 2))
+        g, L1, L4 = go_now(t["speed"][ok], t["fut"][ok])
+        lr = (t["speed"][ok].astype(np.float64) < r3.V_LROW) & (L4 >= r3.L_STAND)
+        nw = np.array([nwm.get(x, np.nan) for x in t["names"][ok].astype(str)])
+        assert np.isfinite(nw).all(), "navtrain rows missing from R3MVL nav_w"
+        nn["rows"] += int(ok.sum()); nn["launch"] += int(lr.sum()); nn["gonow"] += int(g.sum())
+        nn["wsum"] += nw.sum(); nn["wl"] += nw[lr].sum(); nn["wg"] += nw[g].sum()
+        nn["L4g"].append(L4[g]), nn["L4l"].append(L4[lr]), nn["L1g"].append(L1[g])
+    L4g, L4l, L1g = (np.concatenate(nn.pop(k)) for k in ("L4g", "L4l", "L1g"))
+    rec["navtrain"] = dict(rows=nn["rows"], launch=nn["launch"], gonow=nn["gonow"], gonow_share_of_launch=nn["gonow"] / max(nn["launch"], 1),
+                           per_batch_launch=51 * nn["wl"] / nn["wsum"], per_batch_gonow=51 * nn["wg"] / nn["wsum"],
+                           per_batch_launch_r3mv=51 * nn["launch"] / nn["rows"], L4_gonow=[q(L4g, 25), q(L4g, 50), q(L4g, 75)],
+                           L4_launch=[q(L4l, 25), q(L4l, 50), q(L4l, 75)], L1_gonow_med=q(L1g, 50))
+    up = MVL["nav_w"] > 1
+    rec |= dict(nav_rows=int(len(MVL["nav_w"])), nav_launch_rows=int(up.sum()), nav_up_w=r3.NAV_UP,
+                nav_launch_share_after=json.loads((REPO / "experiments/round3/results/w_R3MVL.json").read_text())["nav_launch_share_after"])
+    gs = defaultdict(float)
+    for g_, x in zip(grp.astype(str), w):
+        gs[g_] += x
+    rec["group_share"] = {k: float(v) for k, v in sorted(gs.items()) if v > 0}
+    rec["pai_drawable"] = int(sum(r["drawable_g"] for r in rec["parts"].values()))
+    rec["pai_gonow_per_batch"] = float(sum(r["per_batch"] for r in rec["parts"].values()))
+    W5.mkdir(parents=True, exist_ok=True)
+    np.savez(W5 / "R5G.npz", names=B["names"], w=w, grp=grp, nav_names=MVL["nav_names"], nav_w=MVL["nav_w"])
+    r3.dump(RES / "w_R5G.json", rec | dict(base="R2JF", out="R5G"))
+    r3.dump(RES / "gonow_rows.json", rec)
+    f = lambda v: f"{v[1]:.2f} [{v[0]:.2f}, {v[2]:.2f}]"  # noqa: E731
+    nv = rec["navtrain"]
+    L = ["# R5-G: GO-NOW rows (offline, before training)", "", rec["rule"] + ".", "",
+         "PAI rows: drawable = R2JF weight > 0 (outside held and the exam links); stretch rows on their own label and fed speed, LEAD flag of their "
+         "base plain row (lead_rows.npz, addendum 3). `per batch` = expected rows a batch under R5G (64 pool rows; navtrain 51 rows under R3MVL's "
+         "nav_w). 4 s dist = the label's 4 s path (median [p25, p75]).", "",
+         "| source | GO-NOW rows | of fed < 0.5 | per batch | 4 s dist (m) | 1 s path med (m) | lead | lead share | per batch behind a lead | 4 s lead / no-lead (m) | scenes |",
+         "|:--|--:|--:|--:|:--|--:|--:|--:|--:|:--|--:|"]
+    for p, r in rec["parts"].items():
+        L.append(f"| PAI {p} | {r['gonow']} | {r['gonow_share_of_fed_lt05']:.1%} | {r['per_batch']:.2f} | {f(r['L4'])} | {r['L1_med']:.2f} | {r['lead']} | "
+                 f"{r['lead_share']:.0%} | {r['per_batch_lead']:.2f} | {r['L4_lead_med']:.2f} / {r['L4_nolead_med']:.2f} | {r['scenes']} |")
+    L += [f"| navtrain GO-NOW | {nv['gonow']} | {nv['gonow_share_of_launch']:.1%} of launch rows | {nv['per_batch_gonow']:.2f} | {f(nv['L4_gonow'])} | "
+          f"{nv['L1_gonow_med']:.2f} | n/a | n/a | n/a | | |",
+          f"| navtrain launch rows (x 3) | {nv['launch']} | | {nv['per_batch_launch']:.2f} (R3MV {nv['per_batch_launch_r3mv']:.2f}) | {f(nv['L4_launch'])} | | n/a | | | | |",
+          "", "navtrain: the cache holds no agent boxes, so no LEAD flag. PAI GO-NOW rows a batch in total: "
+          f"{rec['pai_gonow_per_batch']:.2f} (R3MV / R3MVL 0).", "",
+          "PAI rows fed < 2 m/s still at weight 0 (as MV): stand (fed < 0.5, 4 s path < 0.5 m) / go later (fed < 0.5, leaves 0.5 m after 1 s) / fed 0.5-2 m/s:", "",
+          "| part | R2JF drawable | MV drawable | R5G drawable | stand | go later | 0.5-2 m/s |", "|:--|--:|--:|--:|--:|--:|--:|"]
+    for p, r in rec["parts"].items():
+        z = r["zeroed"]
+        L.append(f"| {p} | {r['drawable_r2jf']} | {r['drawable_mv']} | {r['drawable_g']} | {z['stand']} | {z['go_later']} | {z['slow_05_2']} |")
+    L += ["", "Identity: the same code with no GO-NOW row reproduces R3MV.npz bit for bit; non-PAI weights unchanged; nav_names / nav_w = R3MVL's arrays."]
+    (RES / "gonow_rows.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
+def cmd_l37(a):
+    """LAUNCH-37 read-out (addendum 4). The registered comparison is the first --pair (LAUNCH-37) and the first --target (TARGET)."""
+    import pandas as pd
+    sys.path[:0] = [str(REPO / "experiments/pai_fix/scripts")]
+    import pai_fix as PF
+    from jevdrive import stats
+    D = pd.read_csv(RES / "lead_281.csv")
+    la = D[D.kind == "launch"].set_index("scene")
+    sc, lead = la.index, la.lead.astype(bool).to_numpy()
+    R, rec = {}, dict(scenes=len(sc), lead=int(lead.sum()), reads={}, pairs={}, target={})
+    L = [f"# LAUNCH-37: the {len(sc)} PAI 281 launch scenes, ACC + GAP (g10, FAST=1, CONC 4)", "",
+         f"Scenes: lead_281.csv launch rows (NTV0's launch scenes; LEAD rule at the human's t_L: {int(lead.sum())} lead, {int((~lead).sum())} no lead). "
+         "Stored NTV0 / R2C / R2J = their PAI 281 ACC + GAP reads restricted to these scenes (not re-read); the others read LAUNCH-37 alone "
+         "(the same 4 chunk lists). launched = pai_fix.py launched (dist >= 2 m and >= 0.3 x the log's); scenes with an RPC error are left out.", "",
+         "| read | n | launched | rear-hit | mean | zeros | launched lead / no-lead | rear-hit lead / no-lead | mean lead / no-lead |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for r in a.read:
+        k, f = r.split("=", 1)
+        x = pd.read_csv(f).set_index("scene").reindex(sc)
+        ok = (x.score.notna() & ~x.rpc.fillna(False).astype(bool)).to_numpy()
+        lz = PF.launched(x).fillna(False).astype(bool).to_numpy() & ok
+        rh = (x.fclass == "rear-hit").to_numpy() & ok
+        s = np.where(ok, x.score.to_numpy(float), np.nan)
+        R[k] = dict(s=s, lz=lz, ok=ok)
+        m = dict(n=int(ok.sum()), launched=int(lz.sum()), rear_hit=int(rh.sum()), mean=float(np.nanmean(s)), zeros=int((s == 0).sum()),
+                 launched_lead=int((lz & lead).sum()), launched_nolead=int((lz & ~lead).sum()), rear_lead=int((rh & lead).sum()),
+                 rear_nolead=int((rh & ~lead).sum()), mean_lead=float(np.nanmean(s[lead])), mean_nolead=float(np.nanmean(s[~lead])))
+        rec["reads"][k] = m
+        L.append(f"| {k} | {m['n']} | {m['launched']} | {m['rear_hit']} | {m['mean']:.3f} | {m['zeros']} | {m['launched_lead']} / {m['launched_nolead']} | "
+                 f"{m['rear_lead']} / {m['rear_nolead']} | {m['mean_lead']:.3f} / {m['mean_nolead']:.3f} |")
+    L += ["", "## Paired over LAUNCH-37 (A - B; scenes both reads scored)", "",
+          "| pair | n | mean (95 % CI) | launched (count, 95 % CI) | launched A only / B only | mean lead / no-lead |", "|:--|--:|:--|:--|--:|:--|"]
+    for pr in a.pair:
+        A, B = pr.split(":")
+        m = R[A]["ok"] & R[B]["ok"]
+        u, v = R[A]["s"][m], R[B]["s"][m]
+        dm, n = stats.paired(u, v), int(m.sum())
+        dl = stats.paired(R[A]["lz"][m].astype(float), R[B]["lz"][m].astype(float))
+        ld, nl = lead[m], ~lead[m]
+        rec["pairs"][pr] = dict(n=n, mean=dm, launched=dict(diff=n * dl["mean"], lo=n * dl["lo"], hi=n * dl["hi"]),
+                                a_only=int((R[A]["lz"][m] & ~R[B]["lz"][m]).sum()), b_only=int((~R[A]["lz"][m] & R[B]["lz"][m]).sum()),
+                                mean_lead=float((u - v)[ld].mean()), mean_nolead=float((u - v)[nl].mean()))
+        p = rec["pairs"][pr]
+        L.append(f"| {A} - {B} | {n} | {stats.fmt(dm, '+.3f')} | {p['launched']['diff']:+.0f} [{p['launched']['lo']:+.0f}, {p['launched']['hi']:+.0f}] | "
+                 f"{p['a_only']} / {p['b_only']} | {p['mean_lead']:+.3f} / {p['mean_nolead']:+.3f} |")
+    if a.target:
+        E = pd.read_csv(REPO / "experiments/pai_fix/scenes/exam.csv").set_index("scene")
+        FA = DATA / "runs/pai_fix/facts"
+        L += ["", "## Paired over PAI-FIX TARGET (val160 STOP + STOP-L + TURN, native VC + LEAD reads; scenes both scored without RPC)", "",
+              "| pair | n | A / B | mean (95 % CI) | zeros A / B (new / fixed) |", "|:--|--:|:--|:--|:--|"]
+        for pr in a.target:
+            A, B = pr.split(":")
+            F, C = (pd.read_csv(FA / f"{t}-vl.csv").set_index("scene").reindex(E.index) for t in (A, B))
+            m = (E.subset.isin(["STOP", "STOP-L", "TURN"]) & F.score.notna() & C.score.notna() & ~F.rpc.fillna(False).astype(bool)
+                 & ~C.rpc.fillna(False).astype(bool))
+            u, v = F.score[m].to_numpy(float), C.score[m].to_numpy(float)
+            d = stats.paired(u, v)
+            rec["target"][pr] = dict(n=int(m.sum()), a=float(u.mean()), b=float(v.mean()), mean=d, zeros=(int((u == 0).sum()), int((v == 0).sum())),
+                                     new=int(((u == 0) & (v > 0)).sum()), fixed=int(((u > 0) & (v == 0)).sum()))
+            t = rec["target"][pr]
+            L.append(f"| {A} - {B} | {t['n']} | {t['a']:.3f} / {t['b']:.3f} | {stats.fmt(d, '+.3f')} | {t['zeros'][0]} / {t['zeros'][1]} ({t['new']} / {t['fixed']}) |")
+    excl = lambda d: bool(d["lo"] > 0 or d["hi"] < 0)  # noqa: E731
+    if a.pair and a.target:
+        p0, t0 = rec["pairs"][a.pair[0]]["mean"], rec["target"][a.target[0]]["mean"]
+        rec["separated"] = dict(pair=a.pair[0], target=a.target[0], launch37=excl(p0), target_=excl(t0), any=excl(p0) or excl(t0))
+        s = rec["separated"]
+        L += ["", f"**Registered comparison {a.pair[0]} (addendum 4): separated = {'yes' if s['any'] else 'no'}** (paired CI excludes 0 on "
+              f"LAUNCH-37: {'yes' if s['launch37'] else 'no'}, on TARGET: {'yes' if s['target_'] else 'no'})."]
+    r3.dump(RES / "launch37.json", rec)
+    (RES / "launch37.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 def cmd_gate(a):
     import pandas as pd
-    r3.RES = RES                                                   # round 3's gate, written into round 5's results
+    r3.RES = RES                                                  # round 3's gate, written into round 5's results
     import contextlib
     with contextlib.redirect_stdout(sys.stderr):                   # r3's passing list is not the answer here
         r3.cmd_gate(argparse.Namespace(arms=a.arms, ctrl=a.ctrl, stem=a.stem))
@@ -495,7 +699,7 @@ def main():
     p = sub.add_parser("expect")
     p.add_argument("--pool", default="on1_JTPH"), p.add_argument("--wfile", default="R3MV"), p.add_argument("--index", default="road_on1_JTPH.npz")
     p = sub.add_parser("smoke")
-    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("R", "A", "N"), required=True)
+    p.add_argument("--tag", required=True), p.add_argument("--arm", choices=("R", "A", "N", "G"), required=True)
     p.add_argument("--wfile", default="R3MV"), p.add_argument("--index", default="road_on1_JTPH.npz"), p.add_argument("--pool", default="on1_JTPHO")
     p.add_argument("--k-s3", type=int, default=9), p.add_argument("--s3-hinged", type=float, default=0.0, help="road-hinged share of the S3 rows")
     p.add_argument("--suffix", default="")
@@ -504,12 +708,14 @@ def main():
     p.add_argument("--k-on", type=int, default=64), p.add_argument("--k-s3", type=int, default=9), p.add_argument("--out", default="R5A")
     p = sub.add_parser("gate")
     p.add_argument("--arms", nargs="+", required=True), p.add_argument("--ctrl", default="R2C-L18-s0"), p.add_argument("--stem", default="gate_r5r")
-    sub.add_parser("leadrows"), sub.add_parser("lead281")
+    sub.add_parser("leadrows"), sub.add_parser("lead281"), sub.add_parser("gonow")
     p = sub.add_parser("split281")
     p.add_argument("--read", nargs="+", required=True), p.add_argument("--out", required=True)
+    p = sub.add_parser("l37")
+    p.add_argument("--read", nargs="+", required=True), p.add_argument("--pair", nargs="*", default=[]), p.add_argument("--target", nargs="*", default=[])
     a = ap.parse_args()
     dict(expect=cmd_expect, smoke=cmd_smoke, weights=cmd_weights, gate=cmd_gate, leadrows=cmd_leadrows, lead281=cmd_lead281,
-         split281=cmd_split281)[a.cmd](a)
+         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37)[a.cmd](a)
 
 
 if __name__ == "__main__":
