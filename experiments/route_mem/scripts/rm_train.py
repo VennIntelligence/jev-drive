@@ -919,6 +919,14 @@ def cmd_train(a):
         hrec = dict(res=a.on_hold_res, pct=a.on_hold_pct, logs=len(ul_), held_logs=held_l, held_rows=int(held_m.sum()), drawn_rows=int((~held_m).sum()),
                     scored_held=len(HR), scored_fit=len(FR), eligible_rows=int(el_.sum()), held_weight_before=hwb_)
 
+    TW = None
+    if a.twin:                                                        # HARM-MIX (round7): twin (Harmonizer ON) tokens of pool rows at p; off: nothing added
+        import twin_tokens
+        from jevdrive.common import data_dir as _dt
+        assert k_on, "--twin: needs --on"
+        TW = twin_tokens.Twin(a.twin, _dt() / "runs/op_parity/cache", np.load(_dt() / "runs/op_parity/cache" / a.on / "tab.npz"), ns.on0, S.n, cfg.seed)
+        TW.rec["draw_mass_with_twin"] = TW.mass(w=pw) if pw is not None else TW.mass(rows=onx)
+        TW.rec["twin_rows_per_batch"] = TW.rec["draw_mass_with_twin"] * k_on
     lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
     des_on, d2_on = bool(a.desire_rows), a.d2_lam > 0                # DESIRE D1 / D2 (docstring); both off: no operation below is added
     k_d1 = a.d1_k if des_on else 0
@@ -1009,7 +1017,7 @@ def cmd_train(a):
         return r, an, sha.hexdigest()[:16]
 
     def fetch(dr):
-        return dr, S.front[dr[0]]
+        return dr, S.front[dr[0]] if TW is None else TW.swap(dr[0], dr[2], S.front[dr[0]])
     S.front.pin = a.prefetch > 1
     Sd = T.dev_store(S, ns.dv_rows, a.dev_card_gb)
 
@@ -1273,6 +1281,8 @@ def cmd_train(a):
             run.info("pool slices @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
         if a.lr_floor or a.diag:
             run.info(f"lr floor {a.lr_floor}; diag {a.diag} (per-term gradients every {a.diag_every} steps)")
+        if TW is not None:
+            run.info(f"--twin (round7 HARM-MIX): {json.dumps(TW.rec)}")
         if ns.cmd_rec:
             run.info(f"--cmd-rule (round7 joint arm): {json.dumps(ns.cmd_rec)}")
             run.summary.update(cmd_rule=ns.cmd_rec)
@@ -1540,6 +1550,9 @@ def cmd_train(a):
         if ST is not None:
             run.summary.update(stack=ST.summary(), **({"rx_feats": ns.rx_rec} if ns.rx else {}))
             run.info(f"stack: {json.dumps(ST.summary())}")
+        if TW is not None:
+            run.summary.update(twin=TW.summary())
+            run.info(f"--twin realised: {json.dumps(TW.summary())}")
         rr = rely(model, Sd, dv_o, LS.W, JD, TU, S.tab["log"])
         run.info(f"reliance: {json.dumps(rr)}")
         (_pl.Path(run.dir) / "rely.json").write_text(json.dumps(rr, indent=1))
@@ -1687,6 +1700,8 @@ if __name__ == "__main__":
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
         p.add_argument("--cmd-rule", default="", choices=("", "heading"), help="round7 joint arm: pool rows' command from the route memory (cmd_rule)")
+        p.add_argument("--twin", default="", help="round7 HARM-MIX: <twin store>:<p>, a drawn pool row with a twin takes the twin's tokens with "
+                       "probability p (lib/twin_tokens.py; '' = off)")
         p.add_argument("--on-wfile", default="", help="NR1: per-row draw weights of the pool rows (npz names, w; '' = off)")
         p.add_argument("--on-normal", action="store_true", help="NR1: pool rows are imitation rows for --rm-drop / --ego-scale-speed")
         p.add_argument("--lat-onc", type=float, default=0.0, help="NR1: weight of the opposite-lane point term (nr1_lat; 0 = off)")
