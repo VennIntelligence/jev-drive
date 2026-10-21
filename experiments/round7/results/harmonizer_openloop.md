@@ -70,6 +70,48 @@ explains most of the difference. A closed-loop paired read ON costs about 2.2x a
 error ("tensors on cuda:0 and cpu") lost one scene each in OFF-A c003 and OFF-B c002 (both OFF, not ON). Those chunks were re-rolled; row files and
 route messages were then rebuilt from the same roll (harm.sh `refix`).
 
+## R6DAG-L18-s1 (added 10-21, decision 439 follow-up)
+
+Same 300 states, same three renders and pools (`on1_HARM{OFFA,OFFB,ON}`), no new renders; only `rf_recov.py fwd` for the R6DAG-L18-s1 checkpoint
+on each pool, then `harm.py compare` over all tags (`harm.sh addtag R6DAG-L18-s1`) and `harm.py signed` for the table below. NTV0 / R5LC numbers are
+unchanged by the re-run (same cmp.json values); the CIs below are re-drawn by `harm.py signed` (seed 0), so they differ in the last digit from the CIs above.
+Matched 300 / 300; floor 0 again, so the same absolute lines apply (R6DAG: not small, lon 2 s 0.181 m and lon 4 s 0.425 m over the line, lat 4 s 0.070 m under it).
+
+**Signed longitudinal shift ON - OFF at 4 s, median [95 % CI] in m** (+ = ON plans go further; n = 60 per stratum):
+
+| Stratum | NTV0 lon 4 s | R5LC lon 4 s | R6DAG-s1 lon 4 s | R6DAG-s1 lon 2 s | R6DAG-s1 lon 0.5 s |
+|---|--:|--:|--:|--:|--:|
+| all (300) | +0.06 [-0.04, +0.15] | -0.12 [-0.21, -0.06] | **-0.10 [-0.21, -0.04]** | -0.03 [-0.06, +0.00] | -0.01 [-0.02, -0.00] |
+| launch | +0.03 [-0.12, +0.29] | -0.16 [-0.32, +0.17] | -0.07 [-0.31, +0.18] | +0.03 [-0.02, +0.05] | -0.00 [-0.00, +0.00] |
+| stop | +0.03 [-0.27, +0.14] | -0.08 [-0.26, +0.13] | -0.11 [-0.33, +0.10] | -0.02 [-0.10, +0.04] | +0.00 [-0.02, +0.02] |
+| turn | -0.01 [-0.14, +0.14] | -0.25 [-0.45, -0.11] | **-0.21 [-0.43, -0.07]** | -0.02 [-0.07, +0.07] | -0.01 [-0.02, +0.03] |
+| curve | +0.33 [+0.06, +0.57] | +0.09 [-0.12, +0.39] | +0.06 [-0.08, +0.33] | +0.01 [-0.13, +0.08] | -0.01 [-0.05, +0.01] |
+| straight | +0.05 [-0.29, +0.32] | -0.22 [-0.46, -0.02] | **-0.24 [-0.47, -0.08]** | -0.19 [-0.26, -0.10] | -0.07 [-0.09, -0.04] |
+
+**Signed lateral shift ON - OFF at 4 s toward the side the OFF plan turns to, median [95 % CI] in m** (+ = ON turns tighter):
+
+| Stratum | NTV0 lat 4 s | R5LC lat 4 s | R6DAG-s1 lat 4 s | R6DAG-s1 lat 2 s | R6DAG-s1 lat 0.5 s |
+|---|--:|--:|--:|--:|--:|
+| all | +0.02 [+0.00, +0.03] | +0.01 [-0.00, +0.02] | +0.02 [+0.01, +0.03] | +0.00 [-0.00, +0.01] | -0.00 [-0.00, -0.00] |
+| launch | +0.02 [+0.01, +0.04] | +0.02 [+0.00, +0.03] | +0.02 [+0.01, +0.04] | +0.01 [+0.00, +0.01] | +0.00 [-0.00, +0.00] |
+| stop | -0.02 [-0.03, -0.00] | -0.01 [-0.03, +0.00] | -0.01 [-0.02, +0.01] | -0.00 [-0.01, +0.01] | +0.00 [-0.00, +0.00] |
+| turn | **+0.50 [+0.30, +0.64]** | **+0.33 [+0.21, +0.53]** | **+0.34 [+0.20, +0.55]** | +0.04 [+0.00, +0.08] | -0.01 [-0.01, -0.01] |
+| curve | +0.00 [-0.04, +0.08] | +0.02 [-0.01, +0.07] | +0.03 [-0.02, +0.08] | -0.00 [-0.01, +0.01] | -0.00 [-0.00, -0.00] |
+| straight | -0.00 [-0.02, +0.02] | -0.02 [-0.04, -0.00] | -0.00 [-0.02, +0.02] | -0.00 [-0.02, +0.01] | -0.00 [-0.00, +0.00] |
+
+R6DAG-s1 |delta| ON vs OFF-A, median (p90) in m, pooled: lat 0.5 / 2 / 4 s 0.004 (0.015) / 0.022 (0.110) / 0.070 (0.605); lon 0.040 (0.141) / 0.181 (0.592) / 0.425 (1.613);
+pooled 4 s median CI lat [0.055, 0.089], lon [0.386, 0.485]. Per stratum 4 s lon: launch 0.390, stop 0.379, turn 0.422, curve 0.538, straight 0.526; turn lat 0.496. The full R6DAG table is in the appendix.
+
+**Does "ON makes this family plan shorter, especially at launch" hold for R6DAG-s1?** Partly. R6DAG-s1 plans shorter with the Harmonizer ON, pooled
+(-0.10 m at 4 s, CI [-0.21, -0.04], the same size as R5LC's -0.12 and opposite in sign to NTV0's +0.06), and the shift is concentrated on straights
+(-0.24 [-0.47, -0.08], already -0.07 m at 0.5 s and -0.19 m at 2 s) and junction turns (-0.21 [-0.43, -0.07]); the junction turn also tightens laterally
+by 0.34 m, as for R5LC (0.33) and NTV0 (0.50). The launch part does not hold: the launch point estimate is shorter (-0.07 m, less than R5LC's -0.16) but
+its CI [-0.31, +0.18] spans zero and the 2 s shift is +0.03 m, so open loop gives no evidence that ON shortens launch plans for this checkpoint. The
+open-loop shifts are small next to the plan-to-plan spread of the same state (median |delta| 0.4 m at 4 s with either sign), so a -0.1 m mean shift
+cannot by itself account for the closed-loop loss of launches (35 -> 32) or the rear-hit partials; if the closed-loop launch loss is real it comes
+from how a tiny, consistent shortening interacts with the stop/go decision and the follower (compounding over a rollout), which this single-state
+check does not measure. Open loop therefore shows the same family-level direction as R5LC (shorter on straights and turns), without a launch-specific effect.
+
 ## Images
 
 OFF-A | ON | 4 x |diff| of the newest model-input frame (driver camera, 512 x 256), one state per stratum plus the state with the largest NTV0 4 s lateral
@@ -136,6 +178,20 @@ Plan |delta| median (p90) in m, ON vs OFFA against the floor OFFB vs OFFA. Lat =
 
 Pooled 4 s median, 95 % bootstrap CI: ON lat [0.05072161555290222, 0.08026164025068283], lon [0.37450599670410156, 0.48005199432373047]; floor lat [0.0, 0.0], lon [0.0, 0.0].
 Verdict cells: lat 0.5 s 0.004 vs line 0.050 (abs) ok; lat 2 s 0.022 vs line 0.150 (abs) ok; lat 4 s 0.067 vs line 0.300 (abs) ok; lon 0.5 s 0.039 vs line 0.050 (abs) ok; lon 2 s 0.176 vs line 0.150 (abs) OVER; lon 4 s 0.429 vs line 0.300 (abs) OVER; lateral 4 s median 0.067 < 0.2 ok. Stratum flags: launch: longitudinal 4 s median 0.357 m > 2 x floor 0.000 and > 0.3; stop: longitudinal 4 s median 0.315 m > 2 x floor 0.000 and > 0.3; turn: lateral 4 s median 0.535 m >= 0.2; turn: longitudinal 4 s median 0.463 m > 2 x floor 0.000 and > 0.3; curve: longitudinal 4 s median 0.550 m > 2 x floor 0.000 and > 0.3; straight: longitudinal 4 s median 0.529 m > 2 x floor 0.000 and > 0.3.
+
+### R6DAG-L18-s1: NOT small
+Plan |delta| median (p90) in m, ON vs OFFA against the floor OFFB vs OFFA. Lat = rear-axle y, lon = rear-axle x.
+| Stratum | n | lat 0.5 s ON / floor | lat 2 s ON / floor | lat 4 s ON / floor | lon 0.5 s ON / floor | lon 2 s ON / floor | lon 4 s ON / floor |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| all | 300 | 0.004 (0.015) / 0.000 (0.000) | 0.022 (0.110) / 0.000 (0.000) | 0.070 (0.605) / 0.000 (0.000) | 0.040 (0.141) / 0.000 (0.000) | 0.181 (0.592) / 0.000 (0.000) | 0.425 (1.613) / 0.000 (0.000) |
+| launch | 60 | 0.002 (0.008) / 0.000 (0.000) | 0.013 (0.032) / 0.000 (0.000) | 0.036 (0.105) / 0.000 (0.000) | 0.010 (0.038) / 0.000 (0.000) | 0.073 (0.244) / 0.000 (0.000) | 0.390 (0.997) / 0.000 (0.000) |
+| stop | 60 | 0.004 (0.011) / 0.000 (0.000) | 0.019 (0.043) / 0.000 (0.000) | 0.032 (0.122) / 0.000 (0.000) | 0.037 (0.096) / 0.000 (0.000) | 0.159 (0.502) / 0.000 (0.000) | 0.379 (1.407) / 0.000 (0.000) |
+| turn | 60 | 0.008 (0.024) / 0.000 (0.000) | 0.081 (0.247) / 0.000 (0.000) | 0.496 (1.042) / 0.000 (0.000) | 0.051 (0.118) / 0.000 (0.000) | 0.197 (0.521) / 0.000 (0.000) | 0.422 (0.972) / 0.000 (0.000) |
+| curve | 60 | 0.004 (0.016) / 0.000 (0.000) | 0.030 (0.120) / 0.000 (0.000) | 0.116 (0.539) / 0.000 (0.000) | 0.069 (0.213) / 0.000 (0.000) | 0.276 (0.897) / 0.000 (0.000) | 0.538 (1.891) / 0.000 (0.000) |
+| straight | 60 | 0.003 (0.007) / 0.000 (0.000) | 0.020 (0.043) / 0.000 (0.000) | 0.051 (0.129) / 0.000 (0.000) | 0.077 (0.181) / 0.000 (0.000) | 0.247 (0.722) / 0.000 (0.000) | 0.526 (1.777) / 0.000 (0.000) |
+
+Pooled 4 s median, 95 % bootstrap CI: ON lat [0.05496745556592941, 0.08855672180652618], lon [0.3862771987915039, 0.4852258265018463]; floor lat [0.0, 0.0], lon [0.0, 0.0].
+Verdict cells: lat 0.5 s 0.004 vs line 0.050 (abs) ok; lat 2 s 0.022 vs line 0.150 (abs) ok; lat 4 s 0.070 vs line 0.300 (abs) ok; lon 0.5 s 0.040 vs line 0.050 (abs) ok; lon 2 s 0.181 vs line 0.150 (abs) OVER; lon 4 s 0.425 vs line 0.300 (abs) OVER; lateral 4 s median 0.070 < 0.2 ok. Stratum flags: launch: longitudinal 4 s median 0.390 m > 2 x floor 0.000 and > 0.3; stop: longitudinal 4 s median 0.379 m > 2 x floor 0.000 and > 0.3; turn: lateral 4 s median 0.496 m >= 0.2; turn: longitudinal 4 s median 0.422 m > 2 x floor 0.000 and > 0.3; curve: longitudinal 4 s median 0.538 m > 2 x floor 0.000 and > 0.3; straight: longitudinal 4 s median 0.526 m > 2 x floor 0.000 and > 0.3.
 
 ### P0 (reference, not judged): NOT small
 Plan |delta| median (p90) in m, ON vs OFFA against the floor OFFB vs OFFA. Lat = rear-axle y, lon = rear-axle x.
