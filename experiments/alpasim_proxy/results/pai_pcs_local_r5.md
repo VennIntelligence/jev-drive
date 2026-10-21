@@ -47,6 +47,7 @@ Items by discrimination a (zeros / partials / ones of each read), and what perfe
 - Fixing only R3MV's 13 high-a zeros moves it +45 (ability 1.11 -> 1.44) because 4 partials remain on those items and the ruler charges them as heavily; making every imperfect a >= 3 item a 1 gives +164, and every a >= 1 item +341 (to about NTV0's level).
 - Decision 427's trade (route-turn zeros -13, offroad +8, other zeros +8, slow -6) is therefore paid in the wrong currency on this ruler: the 13 route-turn scenes R3MV fixed
   sit on a < 1 items (NTV0's 15 route-turn zeros have a 0.05-0.40, median 0.19: the whole family fails them together), while 10 of the 23 lateral zeros R3MV has and NTV0 does not (offroad / drift / lane change / side) are on a >= 3 items.
+
 ### Zeros on the a >= 3 items, by cause (garage 0014 and go-straight scores for reference)
 
 | read | scene | a | fclass | garage | go-straight |
