@@ -46,6 +46,7 @@ BASE, POOL_K, POOL_I, SRC_D = "on1_JTPHD", "on1_JTPHDK", "on1_JTPHDI", "on1_PAID
 T_J = 0.5 * np.arange(1, 9)
 # change 1 (registered)
 H_WIN, H_VMIN, LAG_MAX, D_ARC = 6.0, 1.0, 3.0, 0.05   # human keeps >= 1 m/s over t_h .. t_h + 6 s; |student - human clock| <= 3 s; floor binds > 5 cm
+A_ACC = 2.0                                           # amendment 1: the floor is reached from the fed speed at <= 2 m/s^2 (v0 t + A t^2 / 2)
 A_LAT = 4.0                                           # T4 line (position estimator); floored labels over it revert to b3
 F2_V0, F2_VSTOP, F2_FRAC, F2_H = 4.0, 0.5, 0.6, 20.0   # fix.py F2
 # change 2 (registered)
@@ -160,8 +161,9 @@ def _teach_one(job):
         th[i] = human_t(ref, s0)
         lag[i] = (Z["t0_us"][i] - ts0) * 1e-6 - th[i]
         hmin[i] = human_minrate(ref, float(th[i]))
-        c = bool(np.isfinite(ah).all() and hmin[i] >= H_VMIN and abs(lag[i]) <= LAG_MAX and ah[-1] > a[-1] + D_ARC)
-        af = np.maximum(a, ah) if c else a
+        fl = np.minimum(ah, float(Z["v0"][i]) * T_J + 0.5 * A_ACC * T_J ** 2)   # amendment 1: the human's pace, reached at <= A_ACC
+        c = bool(np.isfinite(ah).all() and hmin[i] >= H_VMIN and abs(lag[i]) <= LAG_MAX and fl[-1] > a[-1] + D_ARC)
+        af = np.maximum(a, fl) if c else a
         fut3[i] = D.place(path, a, A)[0]
         fut5[i] = D.place(path, af, A)[0]
         a_s[i], a_h[i], a_f[i] = a, np.where(np.isfinite(ah), ah, np.nan), af
@@ -281,7 +283,7 @@ def cmd_label(a):
     inc = (arc(fut5[fl])[:, -1] - arc(fut_b3[fl])[:, -1]) if fl.any() else np.zeros(0)
     reasons = dict(drawable=int(draw.sum()), teach_found=int((draw & Z["found"]).sum()), no_window=int((draw & Z["found"] & ~np.isfinite(Z["a_h"]).all(1)).sum()),
                    human_slows=int((draw & Z["found"] & (Z["hmin"] < H_VMIN)).sum()), lag=int((draw & Z["found"] & (np.abs(Z["lag"]) > LAG_MAX)).sum()),
-                   not_slower=int((draw & Z["found"] & np.isfinite(Z["a_h"]).all(1) & (Z["a_h"][:, -1] <= Z["a_s"][:, -1] + D_ARC)).sum()),
+                   not_slower=int((draw & Z["found"] & np.isfinite(Z["a_h"]).all(1) & (np.minimum(Z["a_h"][:, -1], Z["v0t"] * 4 + 8 * A_ACC) <= Z["a_s"][:, -1] + D_ARC)).sum()),
                    candidates=int(cand.sum()), lead=int((cand & lead).sum()), t4_revert=int(rev.sum()), floored=int(fl.sum()))
     spd = np.digitize(v0, [5, 10, 15, 20, 25])
     sb = ["2-5", "5-10", "10-15", "15-20", "20-25", ">=25"]
@@ -289,8 +291,8 @@ def cmd_label(a):
     bys = {sb[b]: [int((fl & (spd == b)).sum()), int((draw & (spd == b)).sum())] for b in range(6)}
     straight = draw & (np.degrees(np.abs(wrap(fut_b3[:, -1, 2]))) < 5)
     g = dict(G1a=bool(g1a <= 1e-3 and g1a_cov >= 0.99), G1b=g1b, G1c=bool(lag0 <= 0.5), T4=bool(t4 <= A_LAT))
-    rec = dict(rule=dict(floor=f"arc_j = max(student served, human from the matched station) iff the human's 8 arcs exist, the human keeps >= {H_VMIN} m/s over "
-                         f"t_h .. t_h + {H_WIN} s, |student clock - t_h| <= {LAG_MAX} s, the human's 4 s arc exceeds the student's by > {D_ARC} m and no object "
+    rec = dict(rule=dict(floor=f"arc_j = max(student served, min(human from the matched station, v0 t + {A_ACC} t^2 / 2)) iff the human's 8 arcs exist, the human keeps >= {H_VMIN} m/s over "
+                         f"t_h .. t_h + {H_WIN} s, |student clock - t_h| <= {LAG_MAX} s, that floor's 4 s arc exceeds the student's by > {D_ARC} m and no object "
                          "leads on the floored label path (r5 LEAD rule, t0 boxes); floored labels over the T4 line (4 m/s^2) revert to b3",
                          f2="F2 on the final labels: v0 >= 4, 0.5 <= v_end < 0.6 v0, max |heading| < 20 deg, no lead -> weight 0"),
                reasons=reasons, share_floored=float(fl.sum() / max(draw.sum(), 1)), arc4_increase_q=q3(inc), by_class=by, by_speed=bys,
