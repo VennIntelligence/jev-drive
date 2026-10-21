@@ -1,0 +1,1413 @@
+{
+ "n": 281,
+ "rpc_dropped": [],
+ "mean": {
+  "R6DAG-s0": 0.7767,
+  "R6DAG-s1": 0.8165
+ },
+ "lost": {
+  "R6DAG-s0": 62.75,
+  "R6DAG-s1": 51.56
+ },
+ "ag_reads": [
+  "BNC2K-s1+AG",
+  "JTN-s0+AG",
+  "JTN-s1+AG",
+  "JTXS-s1+AG",
+  "NTV0-s0+AG",
+  "NTV0-s1+AG",
+  "NTVX-s0+AG",
+  "NTVXS-s0+AG",
+  "R2C-s0+AG",
+  "R2J-s0+AG",
+  "R3MV-s0+AG",
+  "R3MV-s1+AG",
+  "R5LC-s0+AG",
+  "R5LC-s1+AG",
+  "RSG+AG",
+  "STANDFMX-s0+AG",
+  "STANDFMX-s1+AG",
+  "STANDFMXH-s0+AG",
+  "R5A-s0",
+  "R6FIX-s0",
+  "R6FIX-s1"
+ ],
+ "band": [
+  "BNC2K-s1+AG",
+  "JTN-s0+AG",
+  "JTN-s1+AG",
+  "JTXS-s1+AG",
+  "NTV0-s0+AG",
+  "NTV0-s0+AG+hl",
+  "NTV0-s1+AG",
+  "NTVX-s0+AG",
+  "NTVXS-s0+AG",
+  "RSG+AG",
+  "STANDFMX-s0+AG",
+  "STANDFMX-s1+AG",
+  "STANDFMXH-s0+AG"
+ ],
+ "classes": {
+  "overshoot": {
+   "label": "停车点冲过（无前车停止线 / 红灯）",
+   "R6DAG-s0": {
+    "scenes": 20,
+    "zeros": 20,
+    "pts": 20.0,
+    "mean_eq": 0.0712,
+    "ntv0_solves": 1,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.0,
+    "any_solves": 5,
+    "never": 15,
+    "imperfect_a1": 1,
+    "a3": 1,
+    "a1": 0,
+    "a0": 19,
+    "band_pass": 0.05,
+    "garage_solves": 3
+   },
+   "R6DAG-s1": {
+    "scenes": 19,
+    "zeros": 19,
+    "pts": 19.0,
+    "mean_eq": 0.0676,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 4,
+    "never": 15,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 19,
+    "band_pass": 0.0,
+    "garage_solves": 3
+   },
+   "union": 20,
+   "both": 19,
+   "scenes": {
+    "054b5901": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "127c4f85": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "1a050ead": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 3.06
+    },
+    "2d10a08d": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "35e082a4": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "3fe2bac8": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.07
+    },
+    "444fca69": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.09
+    },
+    "44df49fe": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "47db2eb6": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "4cb7f7ac": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "4ecc114d": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "559d4ad6": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "62cfe9d3": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "68c3be44": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.18
+    },
+    "7d994ed3": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "9b6c68b4": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "9f8acd00": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "ba40be62": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.09
+    },
+    "bc309fd6": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.09
+    },
+    "fc9fde87": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    }
+   }
+  },
+  "off-turn-in": {
+   "label": "出路：转弯切内侧 / 蹭内侧路沿",
+   "R6DAG-s0": {
+    "scenes": 10,
+    "zeros": 10,
+    "pts": 10.0,
+    "mean_eq": 0.0356,
+    "ntv0_solves": 4,
+    "ag_solves": 9,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 9.0,
+    "any_solves": 10,
+    "never": 0,
+    "imperfect_a1": 2,
+    "a3": 0,
+    "a1": 2,
+    "a0": 8,
+    "band_pass": 0.37,
+    "garage_solves": 0
+   },
+   "R6DAG-s1": {
+    "scenes": 7,
+    "zeros": 7,
+    "pts": 7.0,
+    "mean_eq": 0.0249,
+    "ntv0_solves": 3,
+    "ag_solves": 6,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 6.0,
+    "any_solves": 7,
+    "never": 0,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 7,
+    "band_pass": 0.35,
+    "garage_solves": 0
+   },
+   "union": 10,
+   "both": 7,
+   "scenes": {
+    "1e8e939e": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.19
+    },
+    "4e4a2a51": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.41
+    },
+    "68e53160": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.4
+    },
+    "94c1d722": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.98,
+     "ntv0": 0.96,
+     "best_ag": 1.0,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 1.04
+    },
+    "a1b166cc": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.9,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.15
+    },
+    "b680a689": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.82
+    },
+    "d8bfaaf2": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "de9db5dc": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.41
+    },
+    "e848c843": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTVXS-s0+AG",
+     "a": 0.25
+    },
+    "ea468790": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTV0-s0+AG",
+     "a": 0.86
+    }
+   }
+  },
+  "off-turn-out": {
+   "label": "出路：转弯外侧过宽",
+   "R6DAG-s0": {
+    "scenes": 3,
+    "zeros": 3,
+    "pts": 3.0,
+    "mean_eq": 0.0107,
+    "ntv0_solves": 0,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.0,
+    "any_solves": 1,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 3,
+    "band_pass": 0.0,
+    "garage_solves": 0
+   },
+   "R6DAG-s1": {
+    "scenes": 1,
+    "zeros": 1,
+    "pts": 1.0,
+    "mean_eq": 0.0036,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 0,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 1,
+    "band_pass": 0.0,
+    "garage_solves": 0
+   },
+   "union": 3,
+   "both": 1,
+   "scenes": {
+    "33c8976b": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "7381c9fa": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "abd45a30": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    }
+   }
+  },
+  "off-junc-straight": {
+   "label": "出路：路口内直行段",
+   "R6DAG-s0": {
+    "scenes": 3,
+    "zeros": 3,
+    "pts": 3.0,
+    "mean_eq": 0.0107,
+    "ntv0_solves": 1,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.85,
+    "any_solves": 2,
+    "never": 1,
+    "imperfect_a1": 1,
+    "a3": 1,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.33,
+    "garage_solves": 0
+   },
+   "R6DAG-s1": {
+    "scenes": 2,
+    "zeros": 2,
+    "pts": 2.0,
+    "mean_eq": 0.0071,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.85,
+    "any_solves": 1,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.0,
+    "garage_solves": 0
+   },
+   "union": 3,
+   "both": 2,
+   "scenes": {
+    "a5599793": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "a68ad579": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.85,
+     "best_ag_read": "R5A-s0",
+     "a": 0.19
+    },
+    "e1c6ae9f": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 3.08
+    }
+   }
+  },
+  "off-straight": {
+   "label": "出路：直路 / 车道边漂出",
+   "R6DAG-s0": {
+    "scenes": 4,
+    "zeros": 4,
+    "pts": 4.0,
+    "mean_eq": 0.0142,
+    "ntv0_solves": 1,
+    "ag_solves": 3,
+    "other_seed_solves": 2,
+    "ag_rec_pts": 2.99,
+    "any_solves": 3,
+    "never": 1,
+    "imperfect_a1": 1,
+    "a3": 0,
+    "a1": 1,
+    "a0": 3,
+    "band_pass": 0.25,
+    "garage_solves": 2
+   },
+   "R6DAG-s1": {
+    "scenes": 2,
+    "zeros": 2,
+    "pts": 2.0,
+    "mean_eq": 0.0071,
+    "ntv0_solves": 0,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.0,
+    "any_solves": 1,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.04,
+    "garage_solves": 1
+   },
+   "union": 5,
+   "both": 1,
+   "scenes": {
+    "4f7cb072": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.09
+    },
+    "596af0c7": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.62,
+     "ntv0": 0.61,
+     "best_ag": 0.99,
+     "best_ag_read": "NTV0-s1+AG",
+     "a": 0.12
+    },
+    "7750265d": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "b661da67": {
+     "R6DAG-s0": 1.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.26
+    },
+    "baabc57d": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.96
+    }
+   }
+  },
+  "drift": {
+   "label": "漂移 / 变道出走廊",
+   "R6DAG-s0": {
+    "scenes": 5,
+    "zeros": 5,
+    "pts": 5.0,
+    "mean_eq": 0.0178,
+    "ntv0_solves": 2,
+    "ag_solves": 4,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 4.0,
+    "any_solves": 4,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 5,
+    "band_pass": 0.43,
+    "garage_solves": 2
+   },
+   "R6DAG-s1": {
+    "scenes": 4,
+    "zeros": 4,
+    "pts": 4.0,
+    "mean_eq": 0.0142,
+    "ntv0_solves": 1,
+    "ag_solves": 3,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 3.0,
+    "any_solves": 3,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 4,
+    "band_pass": 0.29,
+    "garage_solves": 1
+   },
+   "union": 5,
+   "both": 4,
+   "scenes": {
+    "0e05cb0c": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "R3MV-s0+AG",
+     "a": 0.19
+    },
+    "26004ca8": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "404cc92f": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.31
+    },
+    "4cb05d65": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTV0-s0+AG",
+     "a": 0.2
+    },
+    "7dc59d0d": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.16
+    }
+   }
+  },
+  "coll-front": {
+   "label": "我方碰撞：撞前车 / 对向 / 静止物（AF-front）",
+   "R6DAG-s0": {
+    "scenes": 4,
+    "zeros": 4,
+    "pts": 4.0,
+    "mean_eq": 0.0142,
+    "ntv0_solves": 1,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.85,
+    "any_solves": 2,
+    "never": 2,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 4,
+    "band_pass": 0.1,
+    "garage_solves": 1
+   },
+   "R6DAG-s1": {
+    "scenes": 3,
+    "zeros": 3,
+    "pts": 3.0,
+    "mean_eq": 0.0107,
+    "ntv0_solves": 0,
+    "ag_solves": 1,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.0,
+    "any_solves": 2,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 3,
+    "band_pass": 0.03,
+    "garage_solves": 0
+   },
+   "union": 5,
+   "both": 2,
+   "scenes": {
+    "09528162": {
+     "R6DAG-s0": 1.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 1.0,
+     "best_ag_read": "R3MV-s1+AG",
+     "a": 0.25
+    },
+    "0feb3afa": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "JTXS-s1+AG",
+     "a": 0.7
+    },
+    "3ce13eed": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "403d558a": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "6e6cbe67": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.82,
+     "best_ag": 0.85,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.12
+    }
+   }
+  },
+  "coll-side": {
+   "label": "我方碰撞：侧碰 / 骑车人",
+   "R6DAG-s0": {
+    "scenes": 2,
+    "zeros": 2,
+    "pts": 2.0,
+    "mean_eq": 0.0071,
+    "ntv0_solves": 2,
+    "ag_solves": 2,
+    "other_seed_solves": 2,
+    "ag_rec_pts": 2.0,
+    "any_solves": 2,
+    "never": 0,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.46,
+    "garage_solves": 1
+   },
+   "R6DAG-s1": {
+    "scenes": 3,
+    "zeros": 3,
+    "pts": 3.0,
+    "mean_eq": 0.0107,
+    "ntv0_solves": 1,
+    "ag_solves": 1,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 1.85,
+    "any_solves": 2,
+    "never": 1,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 3,
+    "band_pass": 0.13,
+    "garage_solves": 1
+   },
+   "union": 5,
+   "both": 0,
+   "scenes": {
+    "268949d2": {
+     "R6DAG-s0": 0.61,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTV0-s0+AG",
+     "a": 0.52
+    },
+    "6e6cbe67": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.82,
+     "best_ag": 0.85,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.12
+    },
+    "abd45a30": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "af85ffdb": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "JTN-s0+AG",
+     "a": 0.78
+    },
+    "e904e9c0": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "JTN-s0+AG",
+     "a": 0.26
+    }
+   }
+  },
+  "route-turn": {
+   "label": "路线该转未转",
+   "R6DAG-s0": {
+    "scenes": 2,
+    "zeros": 2,
+    "pts": 2.0,
+    "mean_eq": 0.0071,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 0,
+    "never": 2,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.0,
+    "garage_solves": 0
+   },
+   "R6DAG-s1": {
+    "scenes": 2,
+    "zeros": 2,
+    "pts": 2.0,
+    "mean_eq": 0.0071,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 0,
+    "never": 2,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 2,
+    "band_pass": 0.0,
+    "garage_solves": 0
+   },
+   "union": 2,
+   "both": 2,
+   "scenes": {
+    "302c5c99": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    },
+    "e5e47fd2": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.19
+    }
+   }
+  },
+  "rear-launch": {
+   "label": "部分分：起步慢被追尾",
+   "R6DAG-s0": {
+    "scenes": 10,
+    "zeros": 0,
+    "pts": 4.43,
+    "mean_eq": 0.0158,
+    "ntv0_solves": 3,
+    "ag_solves": 5,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 2.3,
+    "any_solves": 5,
+    "never": 5,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 10,
+    "band_pass": 0.21,
+    "garage_solves": 1
+   },
+   "R6DAG-s1": {
+    "scenes": 8,
+    "zeros": 0,
+    "pts": 3.55,
+    "mean_eq": 0.0126,
+    "ntv0_solves": 1,
+    "ag_solves": 3,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 1.42,
+    "any_solves": 3,
+    "never": 5,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 8,
+    "band_pass": 0.09,
+    "garage_solves": 1
+   },
+   "union": 10,
+   "both": 8,
+   "scenes": {
+    "132ae6cb": {
+     "R6DAG-s0": 0.1,
+     "R6DAG-s1": 0.1,
+     "ntv0": 0.08,
+     "best_ag": 0.11,
+     "best_ag_read": "R2J-s0+AG",
+     "a": 0.26
+    },
+    "21829be5": {
+     "R6DAG-s0": 0.62,
+     "R6DAG-s1": 0.64,
+     "ntv0": 0.64,
+     "best_ag": 0.7,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 0.58
+    },
+    "268949d2": {
+     "R6DAG-s0": 0.61,
+     "R6DAG-s1": 0.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTV0-s0+AG",
+     "a": 0.52
+    },
+    "2b577fc2": {
+     "R6DAG-s0": 0.87,
+     "R6DAG-s1": 0.88,
+     "ntv0": 0.83,
+     "best_ag": 1.0,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 0.3
+    },
+    "788c4ad9": {
+     "R6DAG-s0": 0.68,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.62
+    },
+    "7c6529f6": {
+     "R6DAG-s0": 0.45,
+     "R6DAG-s1": 0.43,
+     "ntv0": 0.5,
+     "best_ag": 0.5,
+     "best_ag_read": "RSG+AG",
+     "a": 0.06
+    },
+    "cbb22323": {
+     "R6DAG-s0": 0.68,
+     "R6DAG-s1": 0.71,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "NTV0-s0+AG",
+     "a": 0.53
+    },
+    "ce161092": {
+     "R6DAG-s0": 0.43,
+     "R6DAG-s1": 0.43,
+     "ntv0": 0.46,
+     "best_ag": 1.0,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 0.46
+    },
+    "d641893f": {
+     "R6DAG-s0": 0.57,
+     "R6DAG-s1": 0.66,
+     "ntv0": 0.58,
+     "best_ag": 0.87,
+     "best_ag_read": "RSG+AG",
+     "a": 0.76
+    },
+    "f18c6340": {
+     "R6DAG-s0": 0.56,
+     "R6DAG-s1": 0.6,
+     "ntv0": 0.11,
+     "best_ag": 0.68,
+     "best_ag_read": "R6FIX-s1",
+     "a": 0.56
+    }
+   }
+  },
+  "rear-move": {
+   "label": "部分分：行驶 / 减速中被追尾",
+   "R6DAG-s0": {
+    "scenes": 13,
+    "zeros": 0,
+    "pts": 4.38,
+    "mean_eq": 0.0156,
+    "ntv0_solves": 3,
+    "ag_solves": 6,
+    "other_seed_solves": 2,
+    "ag_rec_pts": 2.04,
+    "any_solves": 8,
+    "never": 5,
+    "imperfect_a1": 1,
+    "a3": 0,
+    "a1": 1,
+    "a0": 11,
+    "band_pass": 0.27,
+    "garage_solves": 6
+   },
+   "R6DAG-s1": {
+    "scenes": 13,
+    "zeros": 0,
+    "pts": 4.23,
+    "mean_eq": 0.0151,
+    "ntv0_solves": 2,
+    "ag_solves": 6,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 1.87,
+    "any_solves": 8,
+    "never": 5,
+    "imperfect_a1": 1,
+    "a3": 0,
+    "a1": 1,
+    "a0": 11,
+    "band_pass": 0.23,
+    "garage_solves": 6
+   },
+   "union": 15,
+   "both": 11,
+   "scenes": {
+    "1089758a": {
+     "R6DAG-s0": 0.74,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.56
+    },
+    "300465f7": {
+     "R6DAG-s0": 0.89,
+     "R6DAG-s1": 0.89,
+     "ntv0": 0.0,
+     "best_ag": 0.89,
+     "best_ag_read": "R5LC-s1+AG",
+     "a": 0.19
+    },
+    "596af0c7": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.62,
+     "ntv0": 0.61,
+     "best_ag": 0.99,
+     "best_ag_read": "NTV0-s1+AG",
+     "a": 0.12
+    },
+    "5ddb96bd": {
+     "R6DAG-s0": 0.67,
+     "R6DAG-s1": 0.62,
+     "ntv0": 0.69,
+     "best_ag": 1.0,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 0.37
+    },
+    "6250146a": {
+     "R6DAG-s0": 0.94,
+     "R6DAG-s1": 0.94,
+     "ntv0": 0.94,
+     "best_ag": 0.94,
+     "best_ag_read": "R3MV-s0+AG",
+     "a": 0.23
+    },
+    "6fd8cf30": {
+     "R6DAG-s0": 0.32,
+     "R6DAG-s1": 0.32,
+     "ntv0": 0.27,
+     "best_ag": 0.35,
+     "best_ag_read": "R6FIX-s0",
+     "a": 0.12
+    },
+    "7c346fd5": {
+     "R6DAG-s0": 0.73,
+     "R6DAG-s1": 0.81,
+     "ntv0": 0.85,
+     "best_ag": 0.85,
+     "best_ag_read": "RSG+AG",
+     "a": 0.18
+    },
+    "7cfa81de": {
+     "R6DAG-s0": 0.69,
+     "R6DAG-s1": 1.0,
+     "ntv0": 0.0,
+     "best_ag": 0.0,
+     "best_ag_read": "-",
+     "a": 0.06
+    },
+    "91d84204": {
+     "R6DAG-s0": 0.87,
+     "R6DAG-s1": 0.9,
+     "ntv0": 0.97,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": NaN
+    },
+    "98f88a4e": {
+     "R6DAG-s0": 0.57,
+     "R6DAG-s1": 0.57,
+     "ntv0": 0.56,
+     "best_ag": 0.57,
+     "best_ag_read": "STANDFMXH-s0+AG",
+     "a": 0.14
+    },
+    "a174faed": {
+     "R6DAG-s0": 0.52,
+     "R6DAG-s1": 0.53,
+     "ntv0": 0.56,
+     "best_ag": 0.57,
+     "best_ag_read": "NTVX-s0+AG",
+     "a": 0.2
+    },
+    "bd97de34": {
+     "R6DAG-s0": 0.46,
+     "R6DAG-s1": 0.48,
+     "ntv0": 0.49,
+     "best_ag": 0.49,
+     "best_ag_read": "NTV0-s1+AG",
+     "a": 0.66
+    },
+    "ca481583": {
+     "R6DAG-s0": 0.56,
+     "R6DAG-s1": 0.55,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.31
+    },
+    "d90fe123": {
+     "R6DAG-s0": 0.65,
+     "R6DAG-s1": 0.65,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.96
+    },
+    "fbf97438": {
+     "R6DAG-s0": 0.99,
+     "R6DAG-s1": 0.89,
+     "ntv0": 0.9,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.82
+    }
+   }
+  },
+  "slow": {
+   "label": "部分分：偏慢 / 无故减速（未被撞）",
+   "R6DAG-s0": {
+    "scenes": 6,
+    "zeros": 0,
+    "pts": 0.91,
+    "mean_eq": 0.0032,
+    "ntv0_solves": 3,
+    "ag_solves": 3,
+    "other_seed_solves": 2,
+    "ag_rec_pts": 0.6,
+    "any_solves": 4,
+    "never": 2,
+    "imperfect_a1": 2,
+    "a3": 1,
+    "a1": 1,
+    "a0": 4,
+    "band_pass": 0.5,
+    "garage_solves": 3
+   },
+   "R6DAG-s1": {
+    "scenes": 6,
+    "zeros": 0,
+    "pts": 0.77,
+    "mean_eq": 0.0027,
+    "ntv0_solves": 2,
+    "ag_solves": 3,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.47,
+    "any_solves": 4,
+    "never": 2,
+    "imperfect_a1": 3,
+    "a3": 0,
+    "a1": 3,
+    "a0": 3,
+    "band_pass": 0.37,
+    "garage_solves": 2
+   },
+   "union": 8,
+   "both": 4,
+   "scenes": {
+    "2a0efada": {
+     "R6DAG-s0": 0.81,
+     "R6DAG-s1": 0.99,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 4.11
+    },
+    "478d6ec4": {
+     "R6DAG-s0": 0.9,
+     "R6DAG-s1": 0.9,
+     "ntv0": 0.9,
+     "best_ag": 0.9,
+     "best_ag_read": "R2J-s0+AG",
+     "a": 0.22
+    },
+    "94c1d722": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.98,
+     "ntv0": 0.96,
+     "best_ag": 1.0,
+     "best_ag_read": "STANDFMX-s0+AG",
+     "a": 1.04
+    },
+    "a1b166cc": {
+     "R6DAG-s0": 0.0,
+     "R6DAG-s1": 0.9,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.15
+    },
+    "a2c5ae46": {
+     "R6DAG-s0": 0.81,
+     "R6DAG-s1": 0.8,
+     "ntv0": 0.82,
+     "best_ag": 0.82,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.21
+    },
+    "b44a4a44": {
+     "R6DAG-s0": 0.97,
+     "R6DAG-s1": 0.92,
+     "ntv0": 0.77,
+     "best_ag": 0.97,
+     "best_ag_read": "STANDFMX-s1+AG",
+     "a": 0.88
+    },
+    "bbc53aa8": {
+     "R6DAG-s0": 0.74,
+     "R6DAG-s1": 0.74,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 2.27
+    },
+    "e87c973b": {
+     "R6DAG-s0": 0.87,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 0.3
+    }
+   }
+  },
+  "partial-other": {
+   "label": "部分分：其他",
+   "R6DAG-s0": {
+    "scenes": 0,
+    "zeros": 0,
+    "pts": 0.0,
+    "mean_eq": 0.0,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 0,
+    "never": 0,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 0,
+    "band_pass": null,
+    "garage_solves": 0
+   },
+   "R6DAG-s1": {
+    "scenes": 0,
+    "zeros": 0,
+    "pts": 0.0,
+    "mean_eq": 0.0,
+    "ntv0_solves": 0,
+    "ag_solves": 0,
+    "other_seed_solves": 0,
+    "ag_rec_pts": 0.0,
+    "any_solves": 0,
+    "never": 0,
+    "imperfect_a1": 0,
+    "a3": 0,
+    "a1": 0,
+    "a0": 0,
+    "band_pass": null,
+    "garage_solves": 0
+   },
+   "union": 0,
+   "both": 0,
+   "scenes": {}
+  },
+  "near1": {
+   "label": "近满分 0.98–1（进度 / 舒适度微损）",
+   "R6DAG-s0": {
+    "scenes": 3,
+    "zeros": 0,
+    "pts": 0.04,
+    "mean_eq": 0.0001,
+    "ntv0_solves": 2,
+    "ag_solves": 3,
+    "other_seed_solves": 2,
+    "ag_rec_pts": 0.04,
+    "any_solves": 3,
+    "never": 0,
+    "imperfect_a1": 2,
+    "a3": 0,
+    "a1": 2,
+    "a0": 1,
+    "band_pass": 0.77,
+    "garage_solves": 1
+   },
+   "R6DAG-s1": {
+    "scenes": 2,
+    "zeros": 0,
+    "pts": 0.02,
+    "mean_eq": 0.0001,
+    "ntv0_solves": 2,
+    "ag_solves": 2,
+    "other_seed_solves": 1,
+    "ag_rec_pts": 0.02,
+    "any_solves": 2,
+    "never": 0,
+    "imperfect_a1": 2,
+    "a3": 1,
+    "a1": 1,
+    "a0": 0,
+    "band_pass": 1.0,
+    "garage_solves": 1
+   },
+   "union": 4,
+   "both": 1,
+   "scenes": {
+    "2a0efada": {
+     "R6DAG-s0": 0.81,
+     "R6DAG-s1": 0.99,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 4.11
+    },
+    "37d660b1": {
+     "R6DAG-s0": 0.99,
+     "R6DAG-s1": 0.99,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.94
+    },
+    "8a143cb2": {
+     "R6DAG-s0": 0.99,
+     "R6DAG-s1": 1.0,
+     "ntv0": 1.0,
+     "best_ag": 1.0,
+     "best_ag_read": "BNC2K-s1+AG",
+     "a": 1.58
+    },
+    "fbf97438": {
+     "R6DAG-s0": 0.99,
+     "R6DAG-s1": 0.89,
+     "ntv0": 0.9,
+     "best_ag": 1.0,
+     "best_ag_read": "R2C-s0+AG",
+     "a": 0.82
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,493 @@
+{
+ "clips": [
+  {
+   "scene8": "ea468790",
+   "cls": "off-turn-in",
+   "file": "media/ea468790.mp4",
+   "mb": 2.33,
+   "rate": 2.0,
+   "t_ev": 10.3,
+   "clip": {
+    "t0": 2.3,
+    "t1": 13.3,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 6.11,
+     "event": [
+      10.3,
+      "offroad"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "r5",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 5.14,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "b680a689",
+   "cls": "off-turn-in",
+   "file": "media/b680a689.mp4",
+   "mb": 1.8,
+   "rate": 2.0,
+   "t_ev": 9.6,
+   "clip": {
+    "t0": 1.6,
+    "t1": 12.6,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 4.7,
+     "event": [
+      9.6,
+      "offroad"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "r5",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 4.68,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "bbc53aa8",
+   "cls": "slow",
+   "file": "media/bbc53aa8.mp4",
+   "mb": 1.28,
+   "rate": 2.0,
+   "t_ev": 12.0,
+   "clip": {
+    "t0": 4.0,
+    "t1": 15.0,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "rerun:dag1-ag",
+     "rerun": 0.739,
+     "stored": 0.7388806386675546,
+     "v_ev": 12.36,
+     "event": [
+      null,
+      ""
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "r5",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 29.74,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "d90fe123",
+   "cls": "rear-move",
+   "file": "media/d90fe123.mp4",
+   "mb": 3.2,
+   "rate": 2.0,
+   "t_ev": 13.3,
+   "clip": {
+    "t0": 5.3,
+    "t1": 16.3,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "rerun:dag1-ag",
+     "rerun": 0.654,
+     "stored": 0.6535603798889479,
+     "v_ev": 7.73,
+     "event": [
+      13.3,
+      "rear-ended"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "rerun:ntv0-ag",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 6.27,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "4cb05d65",
+   "cls": "drift",
+   "file": "media/4cb05d65.mp4",
+   "mb": 1.0,
+   "rate": 2.0,
+   "t_ev": 8.5,
+   "clip": {
+    "t0": 0.5,
+    "t1": 11.5,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 38.53,
+     "event": [
+      8.5,
+      "zero-other"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "rerun:ntv0-ag",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 38.53,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "127c4f85",
+   "cls": "overshoot",
+   "file": "media/127c4f85.mp4",
+   "mb": 1.25,
+   "rate": 2.0,
+   "t_ev": 11.9,
+   "clip": {
+    "t0": 3.9,
+    "t1": 14.9,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 2.99,
+     "event": [
+      11.9,
+      "overshoot"
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "47db2eb6",
+   "cls": "overshoot",
+   "file": "media/47db2eb6.mp4",
+   "mb": 1.5,
+   "rate": 2.0,
+   "t_ev": 15.5,
+   "clip": {
+    "t0": 7.5,
+    "t1": 18.5,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 4.35,
+     "event": [
+      15.5,
+      "overshoot"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "native",
+     "src": "rerun:ntv0-native",
+     "rerun": 1.0,
+     "stored": null,
+     "v_ev": 3.55,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "cbb22323",
+   "cls": "rear-launch",
+   "file": "media/cbb22323.mp4",
+   "mb": 0.97,
+   "rate": 2.0,
+   "t_ev": 14.9,
+   "clip": {
+    "t0": 6.9,
+    "t1": 17.9,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "rerun:dag1-ag",
+     "rerun": 0.715,
+     "stored": 0.7147163267751333,
+     "v_ev": 0.54,
+     "event": [
+      14.9,
+      "rear-ended"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "rerun:ntv0-ag",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 0.53,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "4f7cb072",
+   "cls": "off-straight",
+   "file": "media/4f7cb072.mp4",
+   "mb": 0.69,
+   "rate": 2.0,
+   "t_ev": 2.7,
+   "clip": {
+    "t0": 0.0,
+    "t1": 5.7,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 20.79,
+     "event": [
+      2.7,
+      "offroad"
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "a5599793",
+   "cls": "off-junc-straight",
+   "file": "media/a5599793.mp4",
+   "mb": 0.68,
+   "rate": 2.0,
+   "t_ev": 6.6,
+   "clip": {
+    "t0": 0.0,
+    "t1": 9.6,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 2.89,
+     "event": [
+      6.6,
+      "offroad"
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "7381c9fa",
+   "cls": "off-turn-out",
+   "file": "media/7381c9fa.mp4",
+   "mb": 0.7,
+   "rate": 2.0,
+   "t_ev": 3.9,
+   "clip": {
+    "t0": 0.0,
+    "t1": 6.9,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 6.13,
+     "event": [
+      3.9,
+      "offroad"
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "268949d2",
+   "cls": "coll-side",
+   "file": "media/268949d2.mp4",
+   "mb": 1.69,
+   "rate": 2.0,
+   "t_ev": 12.1,
+   "clip": {
+    "t0": 4.1,
+    "t1": 15.1,
+    "fps": 10.0
+   },
+   "n": 2,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 2.44,
+     "event": [
+      12.1,
+      "side"
+     ]
+    },
+    {
+     "tag": "NTV0-L18-s0",
+     "serve": "ag",
+     "src": "rerun:ntv0-ag",
+     "rerun": 1.0,
+     "stored": 1.0,
+     "v_ev": 7.63,
+     "event": [
+      null,
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "3ce13eed",
+   "cls": "coll-front",
+   "file": "media/3ce13eed.mp4",
+   "mb": 1.49,
+   "rate": 2.0,
+   "t_ev": 5.4,
+   "clip": {
+    "t0": 0.0,
+    "t1": 8.4,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 4.71,
+     "event": [
+      5.4,
+      "AF-front"
+     ]
+    }
+   ]
+  },
+  {
+   "scene8": "302c5c99",
+   "cls": "route-turn",
+   "file": "media/302c5c99.mp4",
+   "mb": 1.24,
+   "rate": 2.0,
+   "t_ev": 7.9,
+   "clip": {
+    "t0": 0.0,
+    "t1": 10.9,
+    "fps": 10.0
+   },
+   "n": 1,
+   "sides": [
+    {
+     "tag": "R6DAG-L18-s1",
+     "serve": "ag",
+     "src": "stored",
+     "rerun": 0.0,
+     "stored": 0.0,
+     "v_ev": 6.34,
+     "event": [
+      7.9,
+      "route-turn"
+     ]
+    }
+   ]
+  }
+ ],
+ "rerun_mismatch": []
+}

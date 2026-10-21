@@ -32,6 +32,7 @@
 - [route-follow/](route-follow/index.html)：ROUTE-NIGHT（决策 286）：从出厂权重重训的路线记忆底座 RB0-F 第一次在离线依赖路线记忆，唯一候选是只带 S 的温和一轮 RSG-L18（held 零分 34 / 34、底座 59，胜过 YS2G；公开 1491 与 YS2G 持平、护栏过）；路线 hinge 不采用：只用底座自身状态会让车在右转里切内侧（17–21 对 1–2），加回转过头状态的 RBSG2 在 held 上修好、公开集上零分 77.5；反事实行教会路口换路线、没教会变道；附出路诊断 [route-follow-offroad.md](route-follow-offroad.md)。
 - [jtn-diag/](jtn-diag/index.html)：JTN-L18-s0（决策 353）的零分 / 低分视频诊断，每窗并排同一 serve 下的 RSG-L18-s0（arena held stop3、held 460、不加 hold 三组，470 段重跑，视频不入库）：JTN 独有零分少（arena 20、held 11），多是弯道里更快、跑宽出路；共享零分基本是同一轨迹；stop3 下的低分大多是 serve 的 3 m leash；不加 hold 时 JTN 在静止窗原地不动。
 - [round5/offroad_videos/](round5/offroad_videos/index.html)：MV 系配方（R3MV / R5LC，含 PAI 人类行）在 PAI 281（ACC + GAP）上新增的出路零分视频页，每个事件并排同一场景的 NTV0-L18-s0（21 个事件、13 段代表视频，重读 42 个 rollout 得分全部与存档相同，视频不入库）：多数是同速下的侧向漂移 / 出弯不回正；另一类是计划收短、减速后低速转出路面；5 个事件是 NTV0 自己零分（路线转弯 / 冲过停车点）处 MV 转了却出路。
+- [round7/loss_diag/](round7/loss_diag/index.html)：R6DAG（当前最好的 PAI 臂）在 PAI 281（ACC + GAP）上还在哪里丢分（决策 436）：失分地图（按类的丢分、两种子稳定性、我们已有读数能否解、尺子权重、杠杆与估计收益）+ 每类 1–2 段代表视频（14 段，零分用存档 asl 离线渲染，视频不入库）：最大一块是停车点冲过但提交 serve 下无正例；最值得做的是转弯切内侧（DAgger 迭代）和无故减速部分分（尺子上的全部差距）。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。

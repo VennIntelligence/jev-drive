@@ -237,6 +237,7 @@ def cmd_collect(a):
 # ---------------------------------------------------------------- Mac
 W1, HD, BV, CH = 640, 64, 576, 360               # one side: width, header, bird's-eye panel (square, centred), camera height
 BEV, CAM = (slice(30, 504), slice(62, 536)), (slice(517, 992), slice(29, 872))   # panels of the 900 x 1000 DEFAULT eval frame
+EVT = {"bbc53aa8": 12.0}   # clip centre where no onset exists (slow partial: middle of the unforced slow-down, from the speed trace)
 WHY = {"offroad": "offroad", "collision_at_fault": "collision", "collision_rear": "rear-ended"}
 
 
@@ -325,7 +326,7 @@ def cmd_page(a):
         xs = [S[f"{s8}|{t}|{sr}"] for t, sr, _ in sides]
         if not all(x["video"] for x in xs):
             sys.exit(f"no video for {s8}")
-        te = t_event(xs[0])[0] or next((t_event(x)[0] for x in xs if t_event(x)[0] is not None), 10.0)
+        te = EVT.get(s8) or t_event(xs[0])[0] or next((t_event(x)[0] for x in xs if t_event(x)[0] is not None), 10.0)
         dst = M / f"{s8}.mp4"
         cj = json.loads((M / "clips.json").read_text()) if (M / "clips.json").exists() else {}
         w = clip(xs, src / "videos", dst, te) if a.force or not dst.exists() or s8 not in cj else cj[s8]

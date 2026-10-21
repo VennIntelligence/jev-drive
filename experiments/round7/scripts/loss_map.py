@@ -41,9 +41,10 @@ CLASSES = [
     ("rear-launch", "部分分：起步慢被追尾", lambda r: r.fclass == "rear-hit" and r.stratum == "launch"),
     ("rear-move", "部分分：行驶 / 减速中被追尾", lambda r: r.fclass == "rear-hit"),
     ("slow", "部分分：偏慢 / 无故减速（未被撞）", lambda r: r.fclass == "slow"),
-    ("partial-other", "部分分：其他（舒适度等）", lambda r: True),
+    ("partial-other", "部分分：其他", lambda r: True),
 ]
-LABEL = {k: v for k, v, _ in CLASSES}
+NEAR1 = ("near1", "近满分 0.98–1（进度 / 舒适度微损）")
+LABEL = {k: v for k, v, _ in CLASSES} | dict([NEAR1])
 
 
 def cmd_pull(a):
@@ -67,8 +68,10 @@ def load():
 
 
 def classify(r):
-    if r.score >= OK:
+    if r.score >= 1:
         return "ok"
+    if r.score >= OK:
+        return "near1"
     return next(k for k, _, f in CLASSES if f(r))
 
 
@@ -99,7 +102,7 @@ def cmd_table(a):
     n = len(D)
     out = dict(n=n, rpc_dropped=sorted(rpc), mean={t: round(D[f"{t}_score"].mean(), 4) for t in DAG},
                lost={t: round((1 - D[f"{t}_score"]).sum(), 2) for t in DAG}, ag_reads=list(ours_ag.columns), band=band, classes={})
-    for k, lab, _ in CLASSES:
+    for k, lab in [(k, lab) for k, lab, _ in CLASSES] + [NEAR1]:
         c = {}
         both = D[(D["R6DAG-s0_cls"] == k) & (D["R6DAG-s1_cls"] == k)]
         anyc = D[(D["R6DAG-s0_cls"] == k) | (D["R6DAG-s1_cls"] == k)]
@@ -107,31 +110,32 @@ def cmd_table(a):
             m = D[D[f"{t}_cls"] == k]
             sc = m[f"{t}_score"]
             oth = [u for u in DAG if u != t][0]
+            best = m[["best_ag", f"{oth}_score"]].max(axis=1)      # ours under ACC + GAP, the other R6DAG seed included
             c[t] = dict(scenes=len(m), zeros=int((sc == 0).sum()), pts=round(float((1 - sc).sum()), 2),
                         mean_eq=round(float((1 - sc).sum()) / n, 4),
-                        ntv0_solves=int((m.ntv0 >= OK).sum()), ag_solves=int((m.best_ag >= OK).sum()),
+                        ntv0_solves=int((m.ntv0 >= OK).sum()), ag_solves=int((best >= OK).sum()),
                         other_seed_solves=int((m[f"{oth}_score"] >= OK).sum()),
-                        ag_rec_pts=round(float((m.best_ag - sc).clip(lower=0).sum()), 2),
-                        any_solves=int((m.best_any >= OK).sum()), never=int((m[["best_ag", "best_any"]].max(axis=1) < OK).sum()),
-                        a3=int((m.a >= 3).sum()), a1=int(((m.a >= 1) & (m.a < 3)).sum()), a0=int((m.a < 1).sum()),
+                        ag_rec_pts=round(float((best - sc).clip(lower=0).sum()), 2),
+                        any_solves=int((m.best_any >= OK).sum()), never=int((pd.concat([best, m.best_any], axis=1).max(axis=1) < OK).sum()),
+                        imperfect_a1=int((m.a >= 1).sum()), a3=int((m.a >= 3).sum()), a1=int(((m.a >= 1) & (m.a < 3)).sum()), a0=int((m.a < 1).sum()),
                         band_pass=round(float(m.band_pass.mean()), 2) if len(m) else None,
                         garage_solves=int((m.garage >= OK).sum()))
         c["union"] = len(anyc)
         c["both"] = len(both)
         c["scenes"] = {s8: {t: round(float(D.loc[s, f"{t}_score"]), 2) for t in DAG} | dict(ntv0=round(float(D.loc[s, "ntv0"]), 2),
-                       best_ag=round(float(D.loc[s, "best_ag"]), 2), best_ag_read=D.loc[s, "best_ag_read"], a=round(float(D.loc[s, "a"]), 2))
+                       best_ag=round(float(D.loc[s, "best_ag"]), 2), best_ag_read=D.loc[s, "best_ag_read"] if D.loc[s, "best_ag"] > 0 else "-", a=round(float(D.loc[s, "a"]), 2))
                        for s, s8 in zip(anyc.index, anyc.s8)}
         out["classes"][k] = dict(label=lab, **c)
     (OUT / "loss_map.json").write_text(json.dumps(out, indent=1, ensure_ascii=False))
     hdr = ("| class | s0 scenes / zeros / pts | s1 scenes / zeros / pts | both seeds / union | NTV0 solves (s0 / s1) | any ours ACC+GAP solves "
-           "(s0 / s1) | recoverable pts (s0 / s1) | never solved, any serve (s0 / s1) | a >= 3 / 1-3 / < 1 (s1) | band pass | garage solves (s1) |")
+           "(s0 / s1) | recoverable pts (s0 / s1) | never solved, any serve (s0 / s1) | imperfect on a >= 1 (s0 / s1) | a >= 3 / 1-3 / < 1 (s1) | band pass | garage solves (s1) |")
     print(f"n = {n} scenes; mean s0 {out['mean']['R6DAG-s0']:.4f} / s1 {out['mean']['R6DAG-s1']:.4f}; lost pts {out['lost']}")
     print(hdr), print("|" + "---|" * (hdr.count("|") - 1))
     for k, c in out["classes"].items():
         a0, a1 = c["R6DAG-s0"], c["R6DAG-s1"]
         print(f"| {k} | {a0['scenes']} / {a0['zeros']} / {a0['pts']} | {a1['scenes']} / {a1['zeros']} / {a1['pts']} | {c['both']} / {c['union']} | "
               f"{a0['ntv0_solves']} / {a1['ntv0_solves']} | {a0['ag_solves']} / {a1['ag_solves']} | {a0['ag_rec_pts']} / {a1['ag_rec_pts']} | "
-              f"{a0['never']} / {a1['never']} | {a1['a3']} / {a1['a1']} / {a1['a0']} | {a1['band_pass']} | {a1['garage_solves']} |")
+              f"{a0['never']} / {a1['never']} | {a0['imperfect_a1']} / {a1['imperfect_a1']} | {a1['a3']} / {a1['a1']} / {a1['a0']} | {a1['band_pass']} | {a1['garage_solves']} |")
 
 
 if __name__ == "__main__":
