@@ -28,6 +28,14 @@
 - 采用线：两个 seed 均分 ≥ NTV0、出路 + 其他零分 ≤ NTV0 + 3、尺子对 NTV0 的 CI 上界 ≥ 0。
 - 提交：只有在 281 与尺子上都明确赢 NTV0 的配方才交；10 月剩余名额 vennai-org 2、lao-siji 1（PAI / nuPlan 共用）。
 
+## Harmonizer 风险（用户 10-21 提出：PAI 决赛复测会开 Harmonizer）
+
+公开榜与我们所有读数都关着 Harmonizer（`ec2.yaml`；`run_native.py` / `pai_run.sh` 默认去掉 `--enable-harmonizer`），所有 PAI 训练行与 token 都是未修过的 NuRec 画面；决赛复测开启后，冻结编码器的特征分布会移动，方向未知。10-09 的 10 场景对照（0.1539 / 0.1538）来自当时很弱的模型（8 / 10 零分），不能当参考。
+
+- **开环检查（已排，10-21）**：同一批 PAI 状态（人类行 + 自身状态行，覆盖直路 / 弯道 / 路口 / 停车 / 起步）分别渲染开 / 关两版，过编码器与适配器（NTV0 与当前最好的臂），比较 token 距离与 0.5 / 2 / 4 s 计划差（横向 / 纵向分开），并与「同一画面重渲」的噪声底比较。结果：`experiments/round7/results/harmonizer_openloop.md`。
+- **闭环配对（第 6 轮跑完、卡空出来后）**：NTV0 与当前最好的臂，在 PAI-FIX TARGET 60 场景 + LAUNCH-37 上，Harmonizer 开 / 关各读一次，逐场景配对（渲染慢约 7 倍，约 2–3 卡时）；权重在 Tokyo `/data/datasets/nurec/harmonizer`，盒子上需拷入并让 `run_native.py` 保留开关。
+- **若差异明显**：一部分训练行用 Harmonizer 渲染作增强（或全部重渲，PAI 人类行约几十卡时），需提前排期；最终提交前必须量过。
+
 ## 时间
 
 - 一轮（建数据 → 2 seed 训练 → 281 读数 + 尺子）约 4–6 h；离 10-31 还有 10 天，够 2–3 次迭代。
@@ -40,3 +48,4 @@
 - [ ] REC s0 / s1 对 R5LC：是否上恢复行
 - [ ] 路线诊断：是否开路线表示改造
 - [ ] 避撞 / 出路惩罚不对称的核实
+- [ ] Harmonizer 开环检查 → 是否需要闭环配对 / 增强
