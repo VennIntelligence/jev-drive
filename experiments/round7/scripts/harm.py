@@ -16,7 +16,8 @@ DiffusionHarmonizer), encoded by the normal cache path; token distances and plan
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
-_sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_parity/scripts"), str(_R / "experiments/onpol_pai/lib")]
+_sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_R / "experiments/op_parity/scripts"),
+                 str(_R / "experiments/body1/lib"), str(_R / "experiments/onpol_pai/lib")]   # = onp_cache.py's
 import argparse, csv, json  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
