@@ -1,7 +1,7 @@
 # round6: lateral recovery for the PAI-human-row recipe
 
 status: live
-decisions: 437
+decisions: 433, 434, 437, 438
 index: A DAgger: PAI 281 0.775 / 0.815, iter 2 0.789 / 0.794 vs NTV0 0.743; not adopted
 
 **Question.** The PAI-human-row recipe (MV-LC, d430) fixes route-turn zeros but adds 9-12 offroad zeros on PAI 281 over NTV0, mostly on scenes NTV0
@@ -52,7 +52,7 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
 
     - vs NTV0 +0.045 [+0.005, +0.088] / +0.051 [+0.007, +0.095]; vs same-seed R6DAG +0.014 / -0.021 [-0.049, +0.007].
     - Offroad + zero-other 23 / 25 (cap 21). 4 / 3 of the 9 stable offroad scenes solved (R6DAG 4 / 6).
-    - **Not an adopt-candidate** (both rules fail on both seeds). The second iteration narrows the seed spread (s1 - s0 +0.005, against +0.040)
+    - **Not an adopt-candidate** (both rules fail on both seeds; decisions 438; iteration 1 is decisions 434). The second iteration narrows the seed spread (s1 - s0 +0.005, against +0.040)
       but does not move the mean of the pair (0.792 against R6DAG's 0.795), and the ruler stays well below NTV0.
 - Line B, REC: perturbation-recovery rows, ChauffeurNet style ([plans/2026-10-21-recovery-rows.md](plans/2026-10-21-recovery-rows.md); code
   [scripts/rec.sh](scripts/rec.sh) / [scripts/rec.py](scripts/rec.py), [lib/rec_driver.py](lib/rec_driver.py), [lib/rec_geom.py](lib/rec_geom.py); results
