@@ -1,0 +1,277 @@
+{
+ "tag": "R5SMG2-L18-s0",
+ "arm": "G",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R5SMG2-L18-s0/20261021-081315",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "/root/autodl-tmp/ujs/runs/round5/r5/w/R5G2.npz",
+   "R5G2",
+   true
+  ],
+  "no_road_pai": [
+   false,
+   false,
+   true
+  ],
+  "batch_rows": [
+   [
+    "51",
+    "13",
+    "64"
+   ],
+   [
+    "51",
+    "13",
+    "64"
+   ],
+   true
+  ],
+  "pool_imit_rows_without_hinge": [
+   0.0,
+   0,
+   true
+  ],
+  "agent_ho_zero": [
+   0.0,
+   0,
+   true
+  ],
+  "nav_listed": [
+   101499,
+   101499,
+   true
+  ],
+  "nav_up_w": [
+   [
+    3.0
+   ],
+   [
+    3.0
+   ],
+   true
+  ],
+  "nav_up_share": [
+   0.20858744794008122,
+   0.20874935409131065,
+   true
+  ],
+  "pool_imit_rows": [
+   31.486666666666665,
+   32,
+   true
+  ],
+  "share_S": [
+   0.49999999999936234,
+   0.49999999999936234,
+   true
+  ],
+  "share_ph": [
+   0.25000000000025824,
+   0.25000000000025824,
+   true
+  ],
+  "share_ph05": [
+   0.12500000000005737,
+   0.12500000000005737,
+   true
+  ],
+  "share_ph15": [
+   0.12499999999988014,
+   0.12499999999988014,
+   true
+  ]
+ },
+ "expected": {
+  "rule": "GO-NOW row: fed < 0.5 m/s and the row's own label path reaches 0.5 m by its 1.0 s pose (the human starts within 1 s; launch_rows.md's 'leaves 0.5 m' on the first second). R5G = R2JF with every PAI human row fed < 2.0 m/s that is not GO-NOW at weight 0, each part renormalised to its share (MV's rule, GO-NOW rows kept) + R3MVL's navtrain weights (launch rows x 3)",
+  "GO_T": 1.0,
+  "GO_L": 0.5,
+  "parts": {
+   "ph": {
+    "drawable_r2jf": 114453,
+    "drawable_mv": 90631,
+    "drawable_g": 91502,
+    "gonow": 871,
+    "gonow_share_of_fed_lt05": 0.05402220430440985,
+    "zeroed": {
+     "stand": 9557,
+     "go_later": 5695,
+     "slow_05_2": 7699
+    },
+    "per_batch": 0.1523026819085922,
+    "per_batch_lead": 0.0688946689689843,
+    "L4": [
+     7.744619051945062,
+     10.749067282644369,
+     13.953791910158692
+    ],
+    "L1_med": 0.666925471738004,
+    "v0_med": 0.3657265603542328,
+    "lead": 394,
+    "lead_share": 0.452353616532721,
+    "lead_gap_med": 6.528011561691017,
+    "L4_lead_med": 9.666949187184956,
+    "L4_nolead_med": 11.646519623631256,
+    "scenes": 231,
+    "gonow_kept": 871,
+    "per_batch_up": 2.1396168956249975,
+    "passes_9500": 23.336808850100432,
+    "share_after": 0.25
+   },
+   "ph05": {
+    "drawable_r2jf": 104415,
+    "drawable_mv": 74250,
+    "drawable_g": 74475,
+    "gonow": 225,
+    "gonow_share_of_fed_lt05": 0.013355493559684217,
+    "zeroed": {
+     "stand": 11758,
+     "go_later": 4864,
+     "slow_05_2": 13318
+    },
+    "per_batch": 0.024169184290030215,
+    "per_batch_lead": 0.00590802282645183,
+    "L4": [
+     1.937720036707578,
+     5.233084396469176,
+     11.236584563854034
+    ],
+    "L1_med": 3.2488402699453696,
+    "v0_med": 9.167834269518949e-10,
+    "lead": 55,
+    "lead_share": 0.24444444444444444,
+    "lead_gap_med": 5.624232079692456,
+    "L4_lead_med": 1.3673262632082657,
+    "L4_nolead_med": 7.466501023275489,
+    "scenes": 48,
+    "gonow_kept": 0,
+    "per_batch_up": 0.0,
+    "passes_9500": 0.0,
+    "share_after": 0.12500000000000006
+   },
+   "ph15": {
+    "drawable_r2jf": 83671,
+    "drawable_mv": 69095,
+    "drawable_g": 70258,
+    "gonow": 1163,
+    "gonow_share_of_fed_lt05": 0.11636982189313588,
+    "zeroed": {
+     "stand": 4142,
+     "go_later": 4689,
+     "slow_05_2": 4582
+    },
+    "per_batch": 0.13242620057502347,
+    "per_batch_lead": 0.05693301830396538,
+    "L4": [
+     12.616732740652616,
+     18.227800926906486,
+     24.701884343028592
+    ],
+    "L1_med": 0.8867446139005368,
+    "v0_med": 0.25384092330932617,
+    "lead": 500,
+    "lead_share": 0.4299226139294927,
+    "lead_gap_med": 5.233814861394127,
+    "L4_lead_med": 16.03673715196667,
+    "L4_nolead_med": 19.08949183181231,
+    "scenes": 162,
+    "gonow_kept": 1163,
+    "per_batch_up": 1.8603831043750012,
+    "passes_9500": 15.196594575720129,
+    "share_after": 0.12499999999999999
+   }
+  },
+  "navtrain": {
+   "rows": 103288,
+   "launch": 8349,
+   "gonow": 3557,
+   "gonow_share_of_launch": 0.42603904659240627,
+   "per_batch_launch": 10.646217058656843,
+   "per_batch_gonow": 4.535704165485973,
+   "per_batch_launch_r3mv": 4.12244403996592,
+   "L4_gonow": [
+    8.273822427013284,
+    10.714995076387083,
+    13.074255126773256
+   ],
+   "L4_launch": [
+    6.0964432155194945,
+    8.281916424152636,
+    10.891733000570554
+   ],
+   "L1_gonow_med": 0.8019253413685759
+  },
+  "nav_rows": 103288,
+  "nav_launch_rows": 8349,
+  "nav_up_w": 3.0,
+  "nav_launch_share_after": 0.20874935409131065,
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.25000000000025824,
+   "ph05": 0.12500000000005737,
+   "ph15": 0.12499999999988014
+  },
+  "pai_drawable": 236010,
+  "pai_gonow_per_batch": 3.9999999999999987,
+  "go_batch": 4.0,
+  "go_drop": [
+   "ph05"
+  ],
+  "go_factor": 14.048451864486118,
+  "base": "R5G",
+  "out": "R5G2"
+ },
+ "steps": 0,
+ "road": {
+  "road_ho": 0.0,
+  "road_pos": 0.0,
+  "road_posmean": 0.18614027924845386,
+  "n_hinge": 0.0,
+  "n_imit": 31.486666666666665
+ },
+ "draw_shares": {
+  "on_wfile": "/root/autodl-tmp/ujs/runs/round5/r5/w/R5G2.npz",
+  "rows_w0": 223598,
+  "group_share": {
+   "S": 0.49999999999936234,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.25000000000025824,
+   "ph05": 0.12500000000005737,
+   "ph05_held": 0.0,
+   "ph15": 0.12499999999988014,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  },
+  "nav_rows": 101499,
+  "nav_listed": 101499,
+  "nav_up_rows": 8197,
+  "nav_up_w": [
+   3.0
+  ],
+  "nav_up_share": 0.20858744794008122,
+  "nav_up_per_batch": 10.637959844944142
+ }
+}

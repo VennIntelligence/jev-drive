@@ -62,6 +62,37 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
   8 lead / 4 no-lead launches (not lead-specific); G-LAUNCH 6 / 6 lead; overshoot zeros 3 / 23 lead. **Fails**: G-LAUNCH 0.670 vs R2C 0.865
   (launched 4 / 6, rear-hit 2; vs R3MV +0.101 [-0.032, +0.335], one scene fixed); class guard fails on offroad (7 vs 3); TARGET 0.532 (ok; vs R3MV
   -0.043, TURN -0.095 [-0.204, -0.005], 4 new TURN zeros); T281 route-turn 3. Inertia 0.753 / 0.960. No s1, no PAI 281 read. About 1.9 GPU job-h.
+- R5-G / R5-G2 and the LAUNCH-37 exam, stage 5 (prereg addenda 4 / 4b; [results/gonow_rows.md](results/gonow_rows.md),
+  [results/gate_r5g2.md](results/gate_r5g2.md) (both arms; R5-G alone: [results/gate_r5g.md](results/gate_r5g.md)),
+  [results/launch37_g2.md](results/launch37_g2.md)). Arms: R3MV's argv with one draw-file change each.
+  - R5-G: MV + PAI GO-NOW rows kept (fed < 0.5 m/s, label path >= 0.5 m by 1.0 s) + R3MVL's navtrain launch rows x 3. GO-NOW is only 0.31 rows
+    a batch (4 s 10.75 m, the same as navtrain GO-NOW 10.71 m; 45 % behind a lead).
+  - R5-G2: the GO-NOW rows of ph / ph15 x 14.05 = 4 rows a batch; ph05's 225 are dropped.
+  - **Neither passes**:
+    - R5-G is the first PAI-row arm over the G-LAUNCH line: 0.822, 5 / 6. It fails TARGET (0.493 vs the 0.503 line; TURN 0.552, 12 zeros)
+      and the offroad class guard (8 vs R2C 3).
+    - R5-G2 launches worse: G-LAUNCH 0.513 (3 / 6), TARGET 0.464, overshoot zeros 14.
+  - LAUNCH-37 = the 37 PAI 281 launch scenes, ACC + GAP, 4 chunks, about 0.13 card-h an arm. Stored NTV0 / R2C / R2J are reused.
+
+    | read | launched / 37 | rear-hit | mean |
+    |:--|--:|--:|--:|
+    | NTV0 | 33 | 9 | 0.774 |
+    | R2C | 33 | 11 | 0.734 |
+    | R2J | 21 | 19 | 0.528 |
+    | R3MV | 35 | 10 | 0.822 |
+    | R3MVL | 35 | 9 | 0.815 |
+    | R5-N | 32 | 11 | 0.729 |
+    | R5-G (36 scored) | 35 | 9 | 0.862 |
+    | R5-G2 | 29 | 12 | 0.677 |
+
+    Under ACC + GAP the MV-family arms launch as well as NTV0. The G-LAUNCH loss (native serve) does not show here.
+  - Registered comparisons, both separated:
+    - R5-G vs R5-N: LAUNCH-37 +0.113 [+0.037, +0.206] (launched +3), TARGET -0.039 [-0.130, +0.051].
+    - R5-G2 vs R5-N: LAUNCH-37 -0.052 [-0.143, +0.035], TARGET -0.067 [-0.138, -0.003].
+  - R5-G vs R3MVL is a null on LAUNCH-37: +0.024 [-0.007, +0.076], launched 0 / 0. So R5-G's G-LAUNCH 0.822 against MVL's 0.690 is one scene,
+    within noise. The separation R5-G > R5-N is R5-N losing launches (vs R3MV -0.093 [-0.174, -0.025]).
+  - More GO-NOW rows hurt: R5-G2 - R5-G -0.166 [-0.280, -0.063], launched -6.
+  - No PAI 281 read (rule: gate + LAUNCH-37 >= 30). About 1.7 card-h (VRAM-booked share; 6.1 pool job-hours).
 
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 
