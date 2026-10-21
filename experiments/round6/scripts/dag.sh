@@ -46,8 +46,9 @@ argv() {  # argv <variant> <steps> <tag> [seed]: one argument a line. lc = R5LC-
           # 51 navtrain + 13 yaw-rate + 64 pool rows unchanged)
   local M; M=$(ls -d $DATA_DIR/runs/route_mem/train-$T/*/ | tail -1)meta.json; [[ -f $M ]] || die "no $M"
   python3 - "$M" "$@" "$DATA_DIR/runs/round6/dag/w" <<'PY'
-import json, sys
+import json, os, sys
 m, var, steps, tag = sys.argv[1:5]
+nm, wf = os.environ.get("DAG_NM", "JTPHD"), dict(d0=os.environ.get("DAG_W0", "R6D0"), dag=os.environ.get("DAG_WF", "R6DAG"))   # amendment 4: DAG2's pool / draws
 seed, w6 = (sys.argv[5:-1] or [None])[0], sys.argv[-1]
 a = json.load(open(m))["argv"]
 last = lambda k: len(a) - 1 - a[::-1].index(k)  # noqa: E731
@@ -57,8 +58,8 @@ a[a.index("--tag") + 1] = tag
 a[last("--steps") + 1] = steps
 i = a.index("--save-at"); del a[i:i + 2]
 if var in ("d0", "dag"):
-    a[last("--on") + 1] = "on1_JTPHD"
-    a[last("--on-wfile") + 1] = f"{w6}/{dict(d0='R6D0', dag='R6DAG')[var]}.npz"
+    a[last("--on") + 1] = f"on1_{nm}"
+    a[last("--on-wfile") + 1] = f"{w6}/{wf[var]}.npz"
 if var == "dag":
     a[last("--on-k") + 1] = "72"
     a[last("--yr-mass") + 1] = "0.095"
@@ -191,6 +192,7 @@ build)
   python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/smoke.json'))['pass_'] and json.load(open('$RES/identity.json'))['identical'] else 1)" \
     || { echo "STOP smoke / identity (T3)" > $O/VERDICT; exit 1; }
   date '+%F %T' > $O/BUILT ;;
+printargv) argv "${@:2}" ;;
 dry) echo "R6DAG s0: $(argv dag $N R6DAG-L18-s0 0 | xargs) --save-at 2500,5000,7500"; echo "== R5LC -> R6DAG s0"; diff <(argv lc $N R5LC-L18-s0) <(argv dag $N R6DAG-L18-s0 0)
   echo "== R5LC -> R6DAG s1"; diff <(argv lc $N R5LC-L18-s0) <(argv dag $N R6DAG-L18-s1 1); echo "== identity lc -> d0"; diff <(argv lc 60 R6IDLC-L18-s0) <(argv d0 60 R6IDD0-L18-s0); true ;;
 launch)  # (main session, after BUILT and T1 / T2) the two trainings in parallel, each one's PAI 281 --after it; r281 + verdict after both; the ruler

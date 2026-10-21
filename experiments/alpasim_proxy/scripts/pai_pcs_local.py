@@ -85,6 +85,8 @@ SRC = {
     # round 6 line A, DAGGER-MAP (round6/scripts/dag.sh): R6DAG s0 / s1, out of pool
     "DAG-s0+AG": ("round6/dag/pai281/R6DAG-L18-s0-ag", "other"),
     "DAG-s1+AG": ("round6/dag/pai281/R6DAG-L18-s1-ag", "other"),
+    "DAG2-s0+AG": ("round6/dag2/pai281/R6DAG2-L18-s0-ag", "other"),
+    "DAG2-s1+AG": ("round6/dag2/pai281/R6DAG2-L18-s1-ag", "other"),
     # round 6 line C, FIX (round6/scripts/fix.sh): R6FIX s0 / s1 (MV-LC without the F1 / F2 rows), out of pool
     "R6FIX-s0+AG": ("round6/fix/pai281/R6FIX-L18-s0-ag", "other"),
     "R6FIX-s1+AG": ("round6/fix/pai281/R6FIX-L18-s1-ag", "other"),

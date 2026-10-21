@@ -80,7 +80,7 @@ TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
 H_SIG, H_CLIP = float(os.environ.get("DAG_HSIG", 10.0)), float(os.environ.get("DAG_HCLIP", 0.5))                      # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
                                                 # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
-TEACHER_V = "b3"                                # amendment 3: reference sigma 3 m, merge 3.0 s                                # teacher version stamped into every teach file (label refuses other versions)
+TEACHER_V = "b4"                                # amendment 3: reference sigma 3 m, merge 3.0 s; amendment 4: min(student, human) arc lengths                                # teacher version stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -180,6 +180,24 @@ def arcs_of(fut):
     return np.cumsum(np.hypot(*np.diff(P, axis=0).T))
 
 
+def human_arcs(ref, s0):
+    """Amendment 4: the human's arc lengths at 0.5 .. 4 s from the moment the human first reached station s0 of ref (inf where the window runs
+    past the log or s0 lies outside the human's recorded stations: no cap)."""
+    ht, hs = getattr(ref, "ht", None), getattr(ref, "hs", None)
+    if ht is None or not (hs[0] <= s0 <= hs[-1]):
+        return np.full(len(T_J), np.inf)
+    i = int(np.searchsorted(hs, s0, "left"))
+    th = ht[0] if i == 0 else ht[i - 1] + (s0 - hs[i - 1]) / max(hs[i] - hs[i - 1], 1e-9) * (ht[i] - ht[i - 1])
+    tq = th + T_J
+    return np.where(tq <= ht[-1], np.interp(tq, ht, hs) - s0, np.inf)
+
+
+def timed(ref, s0, a):
+    """Amendment 4: label arc lengths = min(student served arc lengths a, the human's from s0) -> (a', any finite human arc)."""
+    ah = human_arcs(ref, s0)
+    return np.minimum(a, ah), bool(np.isfinite(ah).any())
+
+
 def place(path, a, anchor):
     """path from teacher_path, arc lengths a (8,), anchor (3,) -> (fut (8, 3) rig frame, world points (8, 2), headings (8,))."""
     arc, X, Y, TH = path[:4]
@@ -255,12 +273,12 @@ def route_ref(ds):
     xy = np.concatenate([Wb, R1[len(R0):, :2]])
     s_rec = float(np.sum(np.hypot(*np.diff(Wb, axis=0).T)))
     ref = Ref(xy, s_rec)
-    refh, hinfo = human_ref(ref, P, yaw)
+    refh, hinfo = human_ref(ref, P, yaw, ts)
     return (ref, refh), dict(n_traj=len(P), n_route=len(R0), n_ext=len(R1) - len(R0), lanes=len(set(best)), switches=len(sw), steps=steps,
                              gen_vs_lanes_max=dmax, **hinfo)
 
 
-def human_ref(ref, P, yaw):
+def human_ref(ref, P, yaw, ts=None):
     """Amendments 1 (b) / 2: the lane-centre reference shifted by the human's own lateral offset from it at the matched station: the log poses
     projected onto ref, offset interpolated on the station grid inside the recorded span (0 outside), Gaussian H_SIG, saturated at +-H_CLIP.
     -> (Ref, info with the share of stations at the bound, left / right)."""
@@ -271,7 +289,7 @@ def human_ref(ref, P, yaw):
     sd = np.array([(p[0], p[1]) for p in pr if p is not None]).reshape(-1, 2)
     if len(sd) < 2:                                                             # no heading-consistent log pose (e.g. a parked log): lane centre
         rh = Ref(np.c_[ref.x, ref.y], ref.s_rec)
-        rh.b = np.zeros(len(ref.s))
+        rh.b, rh.ht, rh.hs = np.zeros(len(ref.s)), None, None
         return rh, dict(h_offset_med=float("nan"), h_clip_share=0.0, h_offset_abs_med_used=0.0, h_no_projection=True)
     o = np.argsort(sd[:, 0])
     s_, d_ = sd[o, 0], sd[o, 1]
@@ -284,6 +302,10 @@ def human_ref(ref, P, yaw):
     X, Y = ref.x - b * np.sin(ref.th), ref.y + b * np.cos(ref.th)
     rh = Ref(np.c_[X, Y], ref.s_rec)
     rh.b = b
+    tt = (np.asarray(ts, np.float64) - ts[0]) * 1e-6 if ts is not None and len(ts) == len(P) else np.arange(len(P)) * 0.1
+    st = np.array([np.nan if q is None else q[0] for q in (rh.project(np.r_[P[i, :2], yaw[i]]) for i in range(len(P)))])
+    f = np.isfinite(st)                                                         # amendment 4: the human's station on this reference over time
+    rh.ht, rh.hs = (tt[f], np.maximum.accumulate(st[f])) if f.sum() >= 2 else (None, None)
     ni = max(int(inside.sum()), 1)
     return rh, dict(h_offset_med=float(np.median(d_)), h_clip_share=float((hi_.sum() + lo_.sum()) / ni), h_clip_left=float(hi_.sum() / ni),
                     h_clip_right=float(lo_.sum() / ni), h_offset_abs_med_used=float(np.median(np.abs(b[inside]))) if inside.any() else 0.0)
@@ -443,7 +465,7 @@ def _t2_one(job):
     for e in evs:
         a = arcs_of(e["ps"])
         path, info = teacher_path(ref, e["pose"], e["v0"], a[-1])
-        fut = place(path, a, e["pose"])[0] if path is not None else np.full((8, 3), np.nan)
+        fut = place(path, timed(ref, info["s0"], a)[0], e["pose"])[0] if path is not None else np.full((8, 3), np.nan)
         sdf = RP.pai_raster(g, e["pose"])[0]
         out.append(dict(e, fut=fut, sdf=sdf, info=info, empty=g["U"] is None and not g["E"]))
     return out
@@ -564,6 +586,7 @@ def _teach_one(job):
     why = np.full(n, "", "U8")
     d0, psi0, L, alat, aref = (np.full(n, np.nan, np.float32) for _ in range(5))
     past_rec, past_ref = np.zeros(n, bool), np.zeros(n, bool)
+    cap4, capmax, hok = np.zeros(n, np.float32), np.zeros(n, np.float32), np.zeros(n, bool)
     for i in range(n):
         A = Z["anchor"][i].astype(np.float64)
         a = arcs_of(Z["poses"][i])
@@ -572,14 +595,16 @@ def _teach_one(job):
         d0[i], psi0[i] = info.get("d0", np.nan), info.get("psi0", np.nan)
         if path is None:
             continue
-        fut[i] = place(path, a, A)[0]
+        a2, hok[i] = timed(ref, info["s0"], a)
+        cap4[i], capmax[i] = a[-1] - a2[-1], float(np.max(a - a2))
+        fut[i] = place(path, a2, A)[0]
         L[i] = info["L"]
-        alat[i], aref[i] = lat_acc(path, a, float(Z["v0"][i]))
+        alat[i], aref[i] = lat_acc(path, a2, float(Z["v0"][i]))
         past_rec[i], past_ref[i] = info["past_rec"], info["past_ref"]
         ok[i] = np.isfinite(fut[i]).all()
     tmp = Path(out) / f"{scene}.tmp.npz"
     np.savez(tmp, k=Z["k"], fut=fut, ok=ok, why=why, d0=d0, psi0=psi0, L=L, alat=alat, alat_ref=aref, past_rec=past_rec, past_ref=past_ref,
-             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo),
+             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo), cap4=cap4, capmax=capmax, hok=hok,
              version=TEACHER_V)
     os.replace(tmp, Path(out) / f"{scene}.npz")
     return dict(scene=scene, n=n, ok=int(ok.sum()), switches=rinfo["switches"])
@@ -692,22 +717,43 @@ def pool_rows(pool):
     return tb, np.array([n.split(":")[2] for n in nm]), np.array([int(n.split(":")[3]) for n in nm])
 
 
+def copy_pool(src, dst):
+    """Amendment 4 (on1_PAIDL): a new pool with src's rows, files and tokens (zero-copy front), tab.fut to be relabelled."""
+    import shutil
+    from jevdrive.tokens import link_front
+    S, T_, W_ = CR / src, CR / dst, CR / f"{dst}@warp"
+    assert not (T_.exists() or W_.exists()), f"{T_} exists: never overwritten"
+    T_.mkdir(parents=True), W_.mkdir()
+    for f in S.glob("*.npz"):
+        if f.name != "dagger.npz":
+            shutil.copy2(f, T_ / f.name)
+    shutil.copy2(S / "build.json", T_ / "build.json")
+    shutil.copy2(CR / f"{src}@warp/teacher.npz", W_ / "teacher.npz")
+    feat = DATA / "runs/route_mem/feat"
+    shutil.copy2(feat / f"{src}.npz", feat / f"{dst}.npz")
+    link_front(W_, [CR / f"{src}@warp/front.npy"])
+
+
 def cmd_label(a):
     O = Path(a.root)
+    if a.copy_from:
+        copy_pool(a.copy_from, a.pool)
+    TD = Path(a.teach) if a.teach else O / "teach"
     tb, sc, kk = pool_rows(a.pool)
     n = len(sc)
     cls = {r["scene_id"]: r["cls"] for r in read_tsv(TSV)}
     X = dict(names=tb["names"], fut_t=np.full((n, 8, 3), np.nan, np.float32), ok=np.zeros(n, bool), why=np.full(n, "", "U8"),
              d0=np.full(n, np.nan, np.float32), psi0=np.full(n, np.nan, np.float32), alat=np.full(n, np.nan, np.float32),
-             alat_ref=np.full(n, np.nan, np.float32), past_rec=np.zeros(n, bool), cls=np.array([cls.get(s, "?") for s in sc]))
+             alat_ref=np.full(n, np.nan, np.float32), past_rec=np.zeros(n, bool), cls=np.array([cls.get(s, "?") for s in sc]),
+             cap4=np.zeros(n, np.float32), capmax=np.zeros(n, np.float32), hok=np.zeros(n, bool))
     dv0 = 0.0
     for s in np.unique(sc):
         j = np.flatnonzero(sc == s)
-        with np.load(O / "teach" / f"{s}.npz") as z:
+        with np.load(TD / f"{s}.npz") as z:
             assert "version" in z.files and str(z["version"]) == TEACHER_V, f"{s}: teacher file is not version {TEACHER_V}"
             pos = {int(k): i for i, k in enumerate(z["k"])}
             i = np.array([pos[int(k)] for k in kk[j]])
-            for key in ("ok", "why", "d0", "psi0", "alat", "alat_ref", "past_rec"):
+            for key in ("ok", "why", "d0", "psi0", "alat", "alat_ref", "past_rec", "cap4", "capmax", "hok"):
                 X[key][j] = z[key][i]
             X["fut_t"][j] = z["fut"][i]
             dv0 = max(dv0, float(np.abs(z["v0"][i] - tb["speed"][j]).max()), float(np.abs(z["served"][i] - tb["served"][j]).max()))
@@ -741,6 +787,12 @@ def cmd_label(a):
     rec = dict(pool=a.pool, rows=n, scenes=int(len(np.unique(sc))), drawable=int(draw.sum()), slow=int((v0 < V_ROW).sum()),
                no_label=dict(Counter(X["why"][(v0 >= V_ROW) & ~X["ok"]].tolist())), past_rec=int((draw & X["past_rec"]).sum()),
                lon_arc_err_max=float(np.nanmax(lon[draw])) if draw.any() else None, teach_vs_pool_max=dv0,
+               cap=dict(rows_capped=int((draw & (X["capmax"] > 0.05)).sum()), share=float((draw & (X["capmax"] > 0.05)).sum() / max(draw.sum(), 1)),
+                        human_window=int((draw & X["hok"]).sum()),
+                        by_cls={c: [int((draw & (X["capmax"] > 0.05) & (X["cls"] == c)).sum()), int((draw & (X["cls"] == c)).sum())] for c in CLS},
+                        cut4_q=np.percentile(X["cap4"][draw & (X["capmax"] > 0.05)], [10, 50, 90]).round(2).tolist() if (draw & (X["capmax"] > 0.05)).any() else None,
+                        cut4_rel_med=float(np.median((X["cap4"] / np.maximum(arcs_of_n(sv)[:, -1], 0.1))[draw & (X["capmax"] > 0.05)])) if (draw & (X["capmax"] > 0.05)).any() else None,
+                        dropped_t4_capped=int((hi & (X["capmax"] > 0.05)).sum())),
                d0_sign=dict(left_gt_05=int((draw & (X["d0"] > 0.5)).sum()), right_gt_05=int((draw & (X["d0"] < -0.5)).sum()),
                             left_gt_1=int((draw & (X["d0"] > 1)).sum()), right_gt_1=int((draw & (X["d0"] < -1)).sum()),
                             median_signed=float(np.median(X["d0"][draw])) if draw.any() else None),
@@ -752,8 +804,8 @@ def cmd_label(a):
     fut = np.where(draw[:, None, None], X["fut_t"], tb["served"]).astype(np.float32)
     np.savez(CR / a.pool / "dagger.npz", **X)
     np.savez(CR / a.pool / "tab.npz", **(tb | dict(fut=fut)))
-    dump(RES / "rows.json", rec)
-    dump(O / "checks/label.json", rec)
+    dump(RES / f"rows_{a.pool}.json", rec)
+    dump(O / "checks" / f"label_{a.pool}.json", rec)
     L = [f"# DAgger rows: pool {a.pool} (generated by dag.py label)", "",
          f"Rows = the student's ({STUDENT}) usable 10 Hz decisions before its first scorer event and the log's end (rf_pai_pool's rule) on "
          f"{rec['scenes']} scenes: {n}. Drawable = fed speed >= {V_ROW} m/s and a teacher label: **{rec['drawable']}** "
@@ -765,7 +817,11 @@ def cmd_label(a):
     for c, v in tabs.items():
         L.append(f"| {c} | {v['rows']} | {v['drawable']} | {f2(v['d0_med'])} | {f2(v['d0_p90'])} | {v['d0_gt_05']} | {v['d0_gt_1']} | "
                  f"{f2(v['lat4_med'])} | {f2(v['lat4_p90'])} | {f2(v['alat_p99'])} |")
-    ds_ = rec["d0_sign"]
+    ds_, cp = rec["d0_sign"], rec["cap"]
+    L += ["", f"Amendment 4 timing, min(student served, human from the matched station): {cp['rows_capped']} drawable rows slowed by > 5 cm "
+          f"({cp['share']:.1%}; human window available on {cp['human_window']}); by class (slowed / drawable) "
+          + ", ".join(f"{c} {v[0]} / {v[1]}" for c, v in cp["by_cls"].items())
+          + f"; 4 s arc-length cut p10 / p50 / p90 {cp['cut4_q']} m, median relative cut {cp['cut4_rel_med']}; over-line T4 rows that are slowed rows {cp['dropped_t4_capped']}."]
     L += ["", f"Signed d0 of the drawable rows (left +): median {ds_['median_signed']:+.2f} m; |d0| > 0.5 m left {ds_['left_gt_05']} / right {ds_['right_gt_05']}, "
           f"> 1 m left {ds_['left_gt_1']} / right {ds_['right_gt_1']} (both drift sides are covered).", "",
           f"T4 estimators: position read (amendment 3, 8 label points at 0.5 s, speed x heading rate; the human-row read: PAIH p99 4.06) p99 {t4:.2f}, "
@@ -775,7 +831,7 @@ def cmd_label(a):
           f"{rec['T4']['alat_ref_p99']:.2f}), {rec['T4']['over']} rows over -> **{'PASS' if rec['T4']['passed'] else 'FAIL'}**"
           f"{f' (fallback: {hi.sum()} rows <= 3 % set to weight 0)' if t4_fallback else ''}. "
           f"Labels reaching past the recorded route (generator extension): {rec['past_rec']}."]
-    (RES / "rows.md").write_text("\n".join(L) + "\n")
+    (RES / f"rows_{a.pool}.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
     if not rec["T4"]["go_on"]:
         (O / "VERDICT").write_text(f"STOP T4: lateral acceleration p99 {t4:.2f} > {A_LAT}\n")
@@ -860,9 +916,9 @@ def cmd_weights(a):
     names = np.load(CR / a.pool / "tab.npz")["names"].astype(str)
     n0 = len(B["names"])
     assert np.array_equal(names[:n0], B["names"].astype(str)), f"{a.pool}: prefix != {a.base}'s rows"
-    src = a.pool.replace("JTPH", "PA") if not a.src else a.src
-    X = np.load(CR / src / "dagger.npz")
-    assert len(names) == n0 + len(X["names"]) and all(x.endswith(y[2:]) for x, y in zip(names[n0:], X["names"].astype(str))), "tail != the DAgger pool"
+    Xs = [np.load(CR / q / "dagger.npz") for q in a.src.split(",")]            # the DAgger parts in merge order (amendment 4: the union)
+    X = {k: np.concatenate([x[k] for x in Xs]) for k in ("names", "draw", "cls")}
+    assert len(names) == n0 + len(X["names"]) and all(x.endswith(y[2:]) for x, y in zip(names[n0:], X["names"].astype(str))), "tail != the DAgger pools"
     k_all = a.k_on + a.k_dag
     w = np.zeros(len(names))
     w[:n0] = B["w"].astype(np.float64) * (a.k_on / k_all if a.k_dag else 1.0)
@@ -876,7 +932,9 @@ def cmd_weights(a):
     gs = defaultdict(float)
     for g_, x in zip(grp, w):
         gs[str(g_)] += x
-    rec = dict(base=a.base, pool=a.pool, k_on=a.k_on, k_dag=a.k_dag, k_all=k_all, dag_rows=int(len(dr)), group_share={k: float(v) for k, v in sorted(gs.items()) if v > 0},
+    sizes = np.cumsum([0] + [len(x["names"]) for x in Xs])
+    split = {q: float(a.k_dag * X["draw"][lo:hi].sum() / max(len(dr), 1)) for q, lo, hi in zip(a.src.split(","), sizes[:-1], sizes[1:])}
+    rec = dict(base=a.base, pool=a.pool, k_on=a.k_on, k_dag=a.k_dag, k_all=k_all, dag_rows=int(len(dr)), dag_rows_per_batch_by_part=split, group_share={k: float(v) for k, v in sorted(gs.items()) if v > 0},
                by_cls={c: int((X["cls"][dr] == c).sum()) for c in CLS}, out=a.out)
     W6.mkdir(parents=True, exist_ok=True)
     np.savez(W6 / f"{a.out}.npz", names=names, w=w, grp=grp)
@@ -915,11 +973,18 @@ def cmd_smoke(a):
 
 
 # ---------------------------------------------------------------- verdict and ruler rows
+STABLE = {"6e7b42a3": "over-speed drift", "dc401449": "slow-down drift", "a2b415d5": "straight: lateral offset", "596af0c7": "curve: cut inside",
+          "94c1d722": "turn: cut inside", "e1c6ae9f": "curve (fork): cut inside", "ea468790": "turn: cut inside", "0f4b8753": "slow-down drift",
+          "7750265d": "straight: lateral offset"}                         # fix.py STABLE (offroad_mv.md section 1)
+
+
 def cmd_verdict(a):
-    """The registered rule (plan section 6) on r2.py r281's json + new zeros / partials on the scenes NTV0 scores 1.0 -> appended to the md."""
+    """The registered rule (plan section 6 / amendment 4) on r2.py r281's json for arm prefix --arm (reads <arm>-s0-ag / -s1-ag); same-seed
+    columns vs every --ctrl prefix; new zeros / partials on the scenes NTV0 scores 1.0; the 9 stable OFFROAD-MV scenes -> appended to the md."""
     import pandas as pd
     J = json.loads(Path(a.json).read_text())
     R, P = J["reads"], J["pairs"]
+    arm, ctrl = a.arm or "DAG", (a.ctrl or "R5LC").split(",")
     lat = lambda k: R[k]["z_offroad"] + R[k]["z_zero-other"]  # noqa: E731
     cap = lat("NTV0-ag") + 3
     F = {k: pd.read_csv(f).set_index("scene") for k, f in (x.split("=", 1) for x in a.read)}
@@ -930,31 +995,36 @@ def cmd_verdict(a):
         y, c = X.score.reindex(com)[solved], X.fclass.reindex(com)[solved]
         sol[k] = dict(zeros=int((y <= 1e-4).sum()), partials=int(((y > 1e-4) & (y < 1 - 1e-4)).sum()),
                       by_class={str(q): int(n) for q, n in c[y < 1 - 1e-4].value_counts().items()})
+    f3 = lambda d: f"{d.get('mean', float('nan')):+.3f} [{d.get('lo', float('nan')):+.3f}, {d.get('hi', float('nan')):+.3f}]"  # noqa: E731
     rows, ok = [], True
-    for s in ("s0", "s1"):
-        k = f"DAG-{s}-ag"
+    for sd in ("s0", "s1"):
+        k = f"{arm}-{sd}-ag"
         if k not in R:
             continue
         d = P[f"{k}:NTV0-ag"]["mean"]
         b, l_ = d["mean"] >= 0, lat(k) <= cap
         ok &= b and l_
-        m = P.get(f"{k}:R5LC-{s}-ag", {}).get("mean", {})
-        rows.append(f"| {k} | {d['mean']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}] | {'yes' if b else 'no'} | {lat(k)} (offroad {R[k]['z_offroad']}, "
-                    f"zero-other {R[k]['z_zero-other']}) | {'yes' if l_ else 'no'} | {m.get('mean', float('nan')):+.3f} [{m.get('lo', float('nan')):+.3f}, "
-                    f"{m.get('hi', float('nan')):+.3f}] | {lat(k) - lat(f'R5LC-{s}-ag'):+d} | {sol[k]['zeros']} / {sol[k]['partials']} |")
-    L = ["", "## Registered rule (plan section 6)", "",
-         f"adopt-candidate (primary) = both DAG seeds: mean - NTV0 >= 0 (paired point estimate) and offroad + zero-other <= NTV0's + 3 = {cap}; "
+        cc = " | ".join(f"{f3(P.get(f'{k}:{c}-{sd}-ag', {}).get('mean', {}))} / {lat(k) - lat(f'{c}-{sd}-ag'):+d}" for c in ctrl if f"{c}-{sd}-ag" in R)
+        rows.append(f"| {k} | {f3(d)} | {'yes' if b else 'no'} | {lat(k)} (offroad {R[k]['z_offroad']}, zero-other {R[k]['z_zero-other']}) | "
+                    f"{'yes' if l_ else 'no'} | {cc} | {sol[k]['zeros']} / {sol[k]['partials']} | {R[k].get('launch', '')} |")
+    L = ["", "## Registered rule", "",
+         f"adopt-candidate (primary) = both {arm} seeds: mean - NTV0 >= 0 (paired point estimate) and offroad + zero-other <= NTV0's + 3 = {cap}; "
          "the ruler rule (CI upper bound of PCS - NTV0 >= 0) is appended by `dag.py pcs`.", "",
-         "| arm | - NTV0 mean [95 % CI] | >= NTV0 | offroad + zero-other | <= cap | - MV-LC same seed | offroad + zero-other - MV-LC | new zeros / partials on NTV0 1.0 |",
-         "|:--|--:|:-:|--:|:-:|--:|--:|--:|", *rows, "",
+         "| arm | - NTV0 mean [95 % CI] | >= NTV0 | offroad + zero-other | <= cap | " + " | ".join(f"- {c} same seed: mean / offroad + zero-other" for c in ctrl)
+         + " | new zeros / partials on NTV0 1.0 | launched |", "|:--|--:|:-:|--:|:-:|" + "--:|" * len(ctrl) + "--:|--:|", *rows, "",
          f"**Primary rule: {'both seeds pass' if ok else 'not both seeds'}.**", "",
          f"### New zeros / partials on the {int(solved.sum())} of {len(com)} common scenes NTV0 scores 1.0", "",
          "| read | new zeros | new partials | by class (zeros + partials) |", "|:--|--:|--:|:--|"]
     L += [f"| {k} | {v['zeros']} | {v['partials']} | " + ", ".join(f"{q} {n}" for q, n in sorted(v["by_class"].items(), key=lambda t: -t[1])) + " |"
           for k, v in sol.items() if k != "NTV0-ag"]
+    sc = {k: {h: next(((float(X.score[i]), str(X.fclass[i])) for i in X.index if h in i), (float("nan"), "?")) for h in STABLE} for k, X in F.items()}
+    L += ["", "### The 9 stable OFFROAD-MV scenes (fix.py STABLE): score / fclass", "", "| scene | mechanism | " + " | ".join(F) + " |",
+          "|:--|:--|" + "--:|" * len(F)]
+    L += [f"| {h} | {m} | " + " | ".join(f"{sc[k][h][0]:.2f} {sc[k][h][1]}" for k in F) + " |" for h, m in STABLE.items()]
+    L += ["| solved (>= 0.98) | | " + " | ".join(str(sum(v[0] >= 0.98 for v in sc[k].values())) for k in F) + " |"]
     with open(a.md, "a") as f:
         f.write("\n".join(L) + "\n")
-    J["verdict"] = dict(primary=bool(ok), cap=cap, ntv0_solved=dict(scenes=int(solved.sum()), reads=sol))
+    J["verdict"] = dict(primary=bool(ok), cap=cap, ntv0_solved=dict(scenes=int(solved.sum()), reads=sol), stable9={k: {h: list(v) for h, v in d.items()} for k, d in sc.items()})
     Path(a.json).write_text(json.dumps(J, indent=1, default=float))
     print("\n".join(L))
 
@@ -962,33 +1032,33 @@ def cmd_verdict(a):
 def cmd_pcs(a):
     Q = json.loads(Path(a.pcs).read_text())
     J = json.loads(Path(a.json).read_text())
+    arm, ctrl = a.arm or "DAG", (a.ctrl or "R5LC").split(",")
     L = ["", "### Local PAI PCS ruler (d392 pool / anchors, out of pool, paired vs NTV0-s0+AG on the same bootstrap draws)", "",
          f"NTV0-s0+AG {Q['NTV0-s0+AG']['pcs']:.0f} [{Q['NTV0-s0+AG']['ci'][0]:.0f}, {Q['NTV0-s0+AG']['ci'][1]:.0f}].", "",
          "| read | PCS [95 % CI] | - NTV0 median (point) [95 % CI] | P(> 0) |", "|:--|--:|--:|--:|"]
-    for k in ("R5LC-s0+AG", "R5LC-s1+AG", "DAG-s0+AG", "DAG-s1+AG"):
+    for k in [f"{c}-{sd}+AG" for c in ctrl + [arm] for sd in ("s0", "s1")]:
         if k in Q:
             q = Q[k]
             L.append(f"| {k} | {q['pcs']:.0f} [{q['ci'][0]:.0f}, {q['ci'][1]:.0f}] | {q['diff_median']:+.0f} ({q['diff_point']:+.0f}) "
                      f"[{q['diff_ci'][0]:+.0f}, {q['diff_ci'][1]:+.0f}] | {q['p_pos']:.2f} |")
-    sp = {k: Q[k]["diff_ci"][1] >= 0 for k in ("DAG-s0+AG", "DAG-s1+AG") if k in Q}
+    sp = {k: Q[k]["diff_ci"][1] >= 0 for k in (f"{arm}-s0+AG", f"{arm}-s1+AG") if k in Q}
     prim = J.get("verdict", {}).get("primary", False)
     cand = bool(prim and len(sp) == 2 and all(sp.values()))
     better = {}
-    for s in ("s0", "s1"):
-        k, m = f"DAG-{s}+AG", f"R5LC-{s}+AG"
-        if k in Q and m in Q:
+    m0 = ctrl[-1] if arm == "DAG" else None                                    # iteration 1's "clearly better than MV-LC" (plan section 6)
+    for sd in ("s0", "s1"):
+        k, m = f"{arm}-{sd}+AG", f"{m0}-{sd}+AG"
+        if m0 and k in Q and m in Q:
             r = J["reads"]
-            dl = (r[f"DAG-{s}-ag"]["z_offroad"] + r[f"DAG-{s}-ag"]["z_zero-other"]) - (r[f"R5LC-{s}-ag"]["z_offroad"] + r[f"R5LC-{s}-ag"]["z_zero-other"])
-            better[s] = bool(dl <= -5 and Q[k]["diff_point"] - Q[m]["diff_point"] >= 100)
-    clearly = bool(len(better) == 2 and all(better.values()))
-    L += ["", "Ruler rule: each DAG seed's ruler difference to NTV0 has a 95 % CI upper bound >= 0: " + ", ".join(f"{k} {'pass' if v else 'fail'}" for k, v in sp.items()),
-          "", f"**DAG: {'adopt-candidate' if cand else 'not an adopt-candidate'}** (primary rule {'pass' if prim else 'fail'}; ruler rule "
-          f"{'pass' if sp and all(sp.values()) else 'fail'}). Clearly better than MV-LC (both seeds: offroad + zero-other <= MV-LC - 5 and ruler "
-          f"point >= MV-LC + 100): {better} -> {'yes' if clearly else 'no'}."]
+            dl = (r[f"{arm}-{sd}-ag"]["z_offroad"] + r[f"{arm}-{sd}-ag"]["z_zero-other"]) - (r[f"{m0}-{sd}-ag"]["z_offroad"] + r[f"{m0}-{sd}-ag"]["z_zero-other"])
+            better[sd] = bool(dl <= -5 and Q[k]["diff_point"] - Q[m]["diff_point"] >= 100)
+    L += ["", "Ruler rule: each seed's ruler difference to NTV0 has a 95 % CI upper bound >= 0: " + ", ".join(f"{k} {'pass' if v else 'fail'}" for k, v in sp.items()),
+          "", f"**{arm}: {'adopt-candidate' if cand else 'not an adopt-candidate'}** (primary rule {'pass' if prim else 'fail'}; ruler rule "
+          f"{'pass' if sp and all(sp.values()) else 'fail'})." + (f" Clearly better than MV-LC: {better}." if better else "")]
     with open(a.md, "a") as f:
         f.write("\n".join(L) + "\n")
     J.setdefault("verdict", {})["pcs"] = dict({k: Q[k] for k in Q if k.endswith("+AG")}, ruler_pass=sp)
-    J["verdict"] |= dict(adopt_candidate=cand, clearly_better_than_mvlc=clearly, better_by_seed=better)
+    J["verdict"] |= dict(adopt_candidate=cand, clearly_better_than_mvlc=bool(better) and all(better.values()), better_by_seed=better)
     Path(a.json).write_text(json.dumps(J, indent=1, default=float))
     print("\n".join(L))
 
@@ -1022,10 +1092,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
     for name, args in dict(lists=["root"], t1=["cfg_glob", "limit:int", "workers:int"], t2=["workers:int"],
-                           teach=["rows", "cfg_glob", "out", "chunk_list?", "workers:int", "stale_only:int"], chk1=["root"], label=["root", "pool"],
+                           teach=["rows", "cfg_glob", "out", "chunk_list?", "workers:int", "stale_only:int"], chk1=["root"], label=["root", "pool", "teach?", "copy_from?"],
                            r1in=["root", "pool", "fwd", "tag", "control"], mfix=["root", "pool", "ref"],
-                           weights=["pool", "base", "k_on:int", "k_dag:int", "out", "src?"], smoke=["tag", "wfile", "k_dag:int"],
-                           verdict=["json", "md", "read+"], alatpos=["dirs+", "out?"], pcs=["pcs", "json", "md"], report=["root"]).items():
+                           weights=["pool", "base", "k_on:int", "k_dag:int", "out", "src"], smoke=["tag", "wfile", "k_dag:int"],
+                           verdict=["json", "md", "read+", "arm?", "ctrl?"], alatpos=["dirs+", "out?"], pcs=["pcs", "json", "md", "arm?", "ctrl?"], report=["root"]).items():
         p = sp.add_parser(name)
         for x in args:
             k, _, t = x.partition(":")
