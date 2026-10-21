@@ -70,8 +70,8 @@ cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $2 --rows $O/
 pool)  # pool <V>: rf_pai_pool on the variant's cache (pai_rows H's recipe: fut = log_fut, human rows) -> on1_HARM<V> + its route features
   cat $O/chunks/*.txt > $O/scenes.txt
   $TR $RF/rf_pai_pool.py --name HARM$2 --rows $O/rows/$2 --cache $O/cache/$2 --runs "$O/roll/$2/runs/*" --split $O/scenes.txt --fut log_fut --prefix harm --src human ;;
-fwd)   # fwd <V>: the route checkpoints' plans on every row of on1_HARM<V> (rf_recov fwd, the trainer's forward) -> $O/fwd/HARM<V>-{train,dev}-rec/
-  for rs in train-rec dev-rec; do $TR $RF/rf_recov.py fwd --pool HARM$2 --rows $rs --tags $TAGS --out $O/fwd || exit 1; done ;;
+fwd)   # fwd <V>: the route checkpoints' plans on every row of on1_HARM<V> (rf_recov fwd, the trainer's forward) -> $O/fwd/HARM<V>-train-rec/
+  $TR $RF/rf_recov.py fwd --pool HARM$2 --rows train-rec --tags $TAGS --out $O/fwd ;;   # dev-rec is empty: every scene is a train scene
 plans)  # pool -> fwd per variant, then compare -> png
   ff=(); for v in $VARS; do q=$(sub harm-pool-$v --vram 0.1 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME pool $v) || exit 1
     f=$(sub harm-fwd-$v --after $q --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME fwd $v) || exit 1; ff+=($f); done
