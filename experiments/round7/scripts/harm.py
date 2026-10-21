@@ -266,6 +266,24 @@ def cmd_png(a):
     print(json.dumps(lst))
 
 
+def cmd_signed(a):
+    """Signed ON - OFFA shifts per stratum from cmp_states.npz: lon = x(ON) - x(OFFA) (+ = ON plans go further), lat = (y(ON) - y(OFFA)) * sign(y(OFFA) at 4 s)
+    (+ = ON turns tighter toward the side the OFF plan turns to). Median [95 % bootstrap CI] over states, per tag, stratum and horizon."""
+    z, rng = np.load(_pl.Path(a.out) / "cmp_states.npz"), np.random.default_rng(0)
+    o = ["| Tag | Stratum | n | " + " | ".join(f"lon {h} s | lat {h} s" for h in H_IDX) + " |\n|---|---|--:|" + "--:|" * 6 + "\n"]
+    for tag in a.tags:
+        P0, P1 = z[f"{tag}_OFFA"], z[f"{tag}_ON"]
+        sg = np.where(P0[:, 7, 1] >= 0, 1.0, -1.0)
+        for g, mk in [("all", np.ones(len(sg), bool))] + [(s_, z["stratum"] == i) for i, s_ in enumerate(STRATA)]:
+            c = []
+            for h, i in H_IDX.items():
+                for d in (P1[mk, i, 0] - P0[mk, i, 0], (P1[mk, i, 1] - P0[mk, i, 1]) * sg[mk]):
+                    lo, hi = boot_med(d, rng)
+                    c.append(f"{np.median(d):+.2f} [{lo:+.2f}, {hi:+.2f}]")
+            o.append(f"| {tag} | {g} | {int(mk.sum())} | " + " | ".join(c) + " |\n")
+    print("".join(o))
+
+
 def cmd_report(a):
     r = json.load(open(a.cmp))
     f = lambda x: f"{x:.3f}"  # noqa: E731
@@ -308,6 +326,9 @@ if __name__ == "__main__":
     p.add_argument("--cache", required=True)
     p.add_argument("--rows", required=True, help="dir with <variant>/<scene>.npz")
     p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "R5LC-L18-s0", "P0", "served"], help="route checkpoints read from <out>/fwd; P0 forward here; served = the driver's logged NTV0 plan")
+    p = sub.add_parser("signed")
+    p.add_argument("--out", required=True)
+    p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "R5LC-L18-s0", "R6DAG-L18-s1"])
     p = sub.add_parser("report")
     p.add_argument("--cmp", required=True)
     p = sub.add_parser("png")
@@ -315,4 +336,4 @@ if __name__ == "__main__":
     p.add_argument("--rows", required=True)
     p.add_argument("--tag", default="NTV0-L18-s0")
     a = ap.parse_args()
-    {"select": cmd_select, "compare": cmd_compare, "report": cmd_report, "png": cmd_png}[a.cmd](a)
+    {"select": cmd_select, "compare": cmd_compare, "report": cmd_report, "signed": cmd_signed, "png": cmd_png}[a.cmd](a)
