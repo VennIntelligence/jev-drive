@@ -10,6 +10,7 @@
 #                           chunks of A and all of B / C, window W, then the tail: cache / select / pools RECA-C / fwd + R1 / G2 G3 on the full
 #                           pools / merge on1_JTPHREC + xfix / draw files / rows report -> smoke + identity (G4) -> trainings s0 / s1 -> PAI 281
 #                           ACC + GAP each -> report + new breaks -> local PCS ruler -> verdict -> DONE)
+#   rec.sh resume           after a probe STOP fixed in code: the probe job and the rest job again
 #   rec.sh wait <FLAG>      one blocking waiter (run_in_background): returns at $O/<FLAG>, $O/STOP or a failed / cancelled job of this lane
 #   job bodies: sched | check <pass> <chunk> <n> <min> | rows <pass> <chunk> | clean <pass> <chunk> | probejob | rest | cache <pass> |
 #               select <pass> | pool <pass> <name> | fwd <name> <rows> | r1 <pass> <name> | gfull | merge | prep | smoketrain | identrun <v> |
@@ -115,7 +116,8 @@ pool)   # pool <pass> <name>
   p=$2; for x in $CRC/on1_$3 $CRC/on1_$3@warp; do [[ ! -e $x ]] || rm -rf $x; done                          # this lane's own pool (a rerun of this job)
   $TR $RF/rf_pai_pool.py --name $3 --rows $O/rows/$p --cache $O/cache/$p --runs "$O/roll/$p/*/runs/*" --split $TSV --fut log_fut \
       --prefix prec${p,,} --src recovery --select $O/select/$p.npz ;;
-fwd)    rm -rf $O/fwd/$2-$3; $TR $RF/rf_recov.py fwd --pool $2 --rows $3 --tags $T,$WRONG --out $O/fwd ;;
+fwd)    # fwd <pool> <rows>; an empty dev-rec set (no row in the trainer's dev split) is not an error: train-rec then holds every row (R1 checks)
+  rm -rf $O/fwd/$2-$3; $TR $RF/rf_recov.py fwd --pool $2 --rows $3 --tags $T,$WRONG --out $O/fwd || [[ $3 == dev-rec ]] ;;
 r1)     $TR $PP r1 --pool $3 --cache $O/cache/$2 --fwd $O/fwd --tag $T --control $WRONG --out $O/checks/r1_$3.json; cp $O/checks/r1_$3.json $RES/ ;;
 probejob)  # probe gates on the 11 probe scenes (A: perturbed, Z: zero offset)
   [[ ! -f $O/STOP ]] || exit 2; rm -f $O/PROBE_OK
@@ -127,6 +129,11 @@ probejob)  # probe gates on the 11 probe scenes (A: perturbed, Z: zero offset)
   $TR $PY g3 --pool PRECAT --pass A --r1 $O/checks/r1_PRECAT.json --jobs 16 > $O/g3p.log 2>&1
   $TR $PY gates --pool PRECAT > $O/gates.log 2>&1 || stop "probe gates failed ($RES/gates_probe.md)"
   git rev-parse --short HEAD > $O/PROBE_OK; echo "$(date '+%F %T') probe gates passed" | tee -a $O/stages.txt ;;
+resume)  # after a probe STOP fixed in code: probe job -> rest job again (rolls / rows / caches are reused)
+  [[ -f $O/STOP ]] || die "no STOP"; mv $O/STOP $O/STOP.$(date +%m%d%H%M%S); h=$(git rev-parse --short HEAD); echo "$h resume" >> $O/code.txt
+  pb=$(sub rec-probe --vram 20 --cpu 16 --ram 96 --timeout-h 3 -- bash $ME probejob) || exit 1
+  rs=$(sub rec-rest --after $pb --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME rest) || exit 1
+  echo "$(date '+%F %T') resume (code $h): probe $pb rest $rs" | tee -a $O/stages.txt ;;
 rest)  # the remaining chunks (A after the probe, all of B; window W) and the tail
   [[ -f $O/PROBE_OK && ! -f $O/STOP ]] || exit 2; h=$(git rev-parse --short HEAD); echo "$h rest" >> $O/code.txt
   ch=(); for c in $(chunks A); do [[ $c == a000 || $c == a001 ]] || ch+=("A $c"); done; for p in B C; do for c in $(chunks $p); do ch+=("$p $c"); done; done
