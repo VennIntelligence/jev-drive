@@ -279,6 +279,7 @@ def row_table(v0, fut, Lc, Rc, ml, m0):
     T = pd.DataFrame(F)
     sg = np.sign(F["h4"])
     T["ml"], T["m0"] = ml, m0
+    T["inr"] = (fut[:, :, 0].max(1) < 52.0) & (np.abs(fut[:, :, 1]).max(1) < 20.0)       # label inside the raster (x < 56, |y| < 24 m)
     T["r_end"], T["l_end"], T["r0"], T["l0"] = Rc[:, 8], Lc[:, 8], Rc[:, 0], Lc[:, 0]
     T["r_min"], T["l_min"] = Rc[:, 1:].min(1), Lc[:, 1:].min(1)
     ins, out = np.where(sg[:, None] >= 0, Lc, Rc), np.where(sg[:, None] >= 0, Rc, Lc)          # inside = the side the label turns to
@@ -294,6 +295,18 @@ STATES = {  # state classes on the label (v0 = fed speed, m/s; y4 left +; h = ma
     "pull right while slowing (v_end < 0.6 v0, y4 < -0.8 m, h < 20 deg)": lambda T: (T.vend < 0.6 * T.v0) & (T.y4 < -0.8) & (T.hmax < 20),
     "pull left while slowing (v_end < 0.6 v0, y4 > 0.8 m, h < 20 deg)": lambda T: (T.vend < 0.6 * T.v0) & (T.y4 > 0.8) & (T.hmax < 20),
     "fast (v0 >= 25)": lambda T: T.v0 >= 25,
+    "fast (v0 >= 30)": lambda T: T.v0 >= 30,
+    "slow-down to a stop (v0 >= 4, v_end < 0.5, h < 20 deg)": lambda T: (T.v0 >= 4) & (T.vend < 0.5) & (T.hmax < 20),
+    "slow-down, no stop (v0 >= 4, 0.5 <= v_end < 0.6 v0, h < 20 deg)": lambda T: (T.v0 >= 4) & (T.vend >= 0.5) & (T.vend < 0.6 * T.v0) & (T.hmax < 20),
+}
+FIX = {  # candidate data-only fixes: rows set to weight 0 (part renormalised)
+    "F1 stretch-1.5 rows with label lat. accel > 3 m/s^2 or fed v0 > 30 m/s": ("ph15", lambda T: (T.alat > 3) | (T.v0 > 30)),
+    "F1a stretch-1.5 rows with label lat. accel > 3 m/s^2": ("ph15", lambda T: T.alat > 3),
+    "F1b stretch-1.5 rows fed v0 > 30 m/s": ("ph15", lambda T: T.v0 > 30),
+    "F2 PAI rows slowing without a lead and without stopping (v0 >= 4, 0.5 <= v_end < 0.6 v0, h < 20 deg, no LEAD)": (
+        "ph ph05 ph15", lambda T: (T.v0 >= 4) & (T.vend >= 0.5) & (T.vend < 0.6 * T.v0) & (T.hmax < 20) & ~T.lead),
+    "F2a PAI rows slowing and pulling right (v_end < 0.6 v0, y4 < -0.8 m, h < 20 deg)": (
+        "ph ph05 ph15", lambda T: (T.vend < 0.6 * T.v0) & (T.y4 < -0.8) & (T.hmax < 20)),
 }
 
 
@@ -312,11 +325,24 @@ def wstats(T, w, m):
 
     def sh(b):
         return float((ww * np.asarray(b, float)).sum())
-    return dict(n=int(m.sum()), alat50=q(X.alat, 0.5), alat90=q(X.alat, 0.9), alat99=q(X.alat, 0.99), alat_gt2=sh(X.alat > 2), alat_gt3=sh(X.alat > 3),
+    r = X.inr.values                                   # margin / clearance read-outs only on labels inside the raster (border clamp beyond)
+    wr = ww * r / max((ww * r).sum(), 1e-12)
+
+    def shr(b):
+        return float((wr * np.asarray(b, float)).sum())
+
+    def qr(x, p):
+        x, w_ = x.values[r], wr[r]
+        if not len(x):
+            return np.nan
+        i = np.argsort(x)
+        c = np.cumsum(w_[i])
+        return float(x[i][min(np.searchsorted(c, p), len(c) - 1)])
+    lead = dict(lead=sh(X.lead)) if "lead" in X else {}
+    return lead | dict(in_raster=sh(r), ml_lt03=shr(X.ml < 0.3), ml_lt0=shr(X.ml < 0), r_end_lt05=shr(X.r_end < 1.6), l_end_lt05=shr(X.l_end < 1.6),
+                       ins_min50=qr(X.ins_min, 0.5), ins_tight=shr(X.ins_min < 1.6), ins_drop50=qr(X.ins0 - X.ins_min, 0.5), out_min50=qr(X.out_min, 0.5)) | dict(n=int(m.sum()), alat50=q(X.alat, 0.5), alat90=q(X.alat, 0.9), alat99=q(X.alat, 0.99), alat_gt2=sh(X.alat > 2), alat_gt3=sh(X.alat > 3),
                 y4_mean=float((ww * X.y4).sum()), y4_right08=sh(X.y4 < -0.8), y4_left08=sh(X.y4 > 0.8), absy4_90=q(X.y4.abs(), 0.9),
-                ml_lt03=sh(X.ml < 0.3), ml_lt0=sh(X.ml < 0), r_end_lt05=sh(X.r_end < 0.5 + 1.1), l_end_lt05=sh(X.l_end < 0.5 + 1.1),
-                r_end50=q(X.r_end, 0.5), r_drop50=q(X.r0 - X.r_end, 0.5), ins_min50=q(X.ins_min, 0.5), ins_tight=sh(X.ins_min < 1.6),
-                ins_drop50=q(X.ins0 - X.ins_min, 0.5), out_min50=q(X.out_min, 0.5), vend_v0=q(X.vend / X.v0.clip(lower=0.5), 0.5),
+                vend_v0=q(X.vend / X.v0.clip(lower=0.5), 0.5),
                 acc_gt115=sh(X.vend > 1.15 * X.v0), v50=q(X.v0, 0.5))
 
 
@@ -348,6 +374,9 @@ def cmd_data(a):
         sc = np.array([x.split(":")[2] for x in nm])
         kmax = pd.Series(k).groupby(sc).transform("max").values
         T["kpos"] = k / np.maximum(kmax, 1)
+        LR = np.load(DATA / "runs/round5/r5/N/lead_rows.npz")
+        lp = {x: i for i, x in enumerate(LR[f"{p}_names"].astype(str))}
+        T["lead"] = LR[f"{p}_lead"][np.array([lp[f"on:{p}:{x[3:]}"] for x in nm])]
         tabs[p] = T
         mv = T.v0 >= 2
         res[p] = {"all moving": wstats(T, T.w3.values, mv)} | {s: wstats(T, T.w3.values, mv & f(T)) for s, f in STATES.items()}
@@ -358,6 +387,20 @@ def cmd_data(a):
         res[p]["pull right: rows a batch (64 x draw mass)"] = float(r3.K_ON * T.w3[pr].sum())
         res[p]["pull right MV-LC: rows a batch"] = float(r3.K_ON * T.w5[pr].sum())
         print(p, json.dumps(res[p]["all moving"]), flush=True)
+    fx = {}
+    for fn, (parts, rule) in FIX.items():
+        r_ = dict(rows=0, drawn_rows=0, per_batch=0.0, per_batch_of_part={}, scenes=0)
+        sc_ = set()
+        for p in parts.split():
+            T = tabs[p]
+            m = (T.v0 >= 2) & rule(T) & (T.w3 > 0)
+            r_["drawn_rows"] += int(m.sum())
+            r_["per_batch"] += float(r3.K_ON * T.w3[m].sum())
+            r_["per_batch_of_part"][p] = float(T.w3[m].sum() / T.w3[T.v0 >= 2].sum())
+            sc_ |= set(x.split(":")[2] for x in T.name[m])
+        r_["scenes"] = len(sc_)
+        fx[fn] = r_
+    res["fixes"] = fx
     # stretch f = 1.5 rows against their plain base row (same t0 pose, the base row's 6 s path in 4 s)
     ph, p15 = tabs["ph"], tabs["ph15"]
     base = {x.split(":", 2)[2]: i for i, x in enumerate(ph.name)}
@@ -367,7 +410,7 @@ def cmd_data(a):
     res["stretch15"] = dict(paired=int(m.sum()), v_ratio_med=float(np.median(A.v0 / Bp.v0.clip(lower=0.1))),
                             alat_ratio_med=float(np.median(A.alat[Bp.alat > 0.3] / Bp.alat[Bp.alat > 0.3])),
                             alat_gt3_ph15=float((A.alat > 3).mean()), alat_gt3_base=float((Bp.alat > 3).mean()),
-                            ml_lt03_ph15=float((A.ml < 0.3).mean()), ml_lt03_base=float((Bp.ml < 0.3).mean()),
+                            ml_lt03_ph15_inr=float((A.ml[A.inr] < 0.3).mean()), ml_lt03_base_same_rows=float((Bp.ml[A.inr] < 0.3).mean()),
                             v_gt30_ph15=float((A.v0 > 30).mean()), v_gt30_base=float((Bp.v0 > 30).mean()))
     # navtrain (uniform; the nuPlan road raster of the S rows' road hinge)
     nz = [np.load(CR / f"navtrain_full.s{i}of12" / "tab.npz") for i in range(12)]
