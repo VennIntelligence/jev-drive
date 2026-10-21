@@ -208,6 +208,13 @@ def arc_interp(F, a):
 
 
 def state_metrics(L, pose, z, F, fut=None):
+    try:
+        return _state_metrics(L, pose, z, F, fut)
+    except Exception as e:                                                     # a degenerate lane chain: the state keeps its id fields only
+        return dict(err=f"{type(e).__name__}: {e}"[:120])
+
+
+def _state_metrics(L, pose, z, F, fut=None):
     """pose (x, y, yaw) local; F (40, 5) the route block in the pose's frame; fut = (8, >= 2) ego-frame plan / label (4 s point used).
     -> dict of the read-outs (module docstring of `scenes`)."""
     import rmem as RM
@@ -289,21 +296,27 @@ def _scene(job):
     dec = []
     if decs:
         import dag as _d
-        lref = _d.Ref(P[:, :2])                                                 # station of a decision's ego on the human log
+        try:
+            lref = _d.Ref(P[:, :2])                                             # station of a decision's ego on the human log
+        except Exception:
+            lref = None
         for k, d in decs.items():
             G = R
             for j in range(len(d["t0"])):
                 pose = d["anchor"][j]
                 F = d["rm"][j].astype(np.float64)
                 r = dict(read=k, scene=scene, j=j, t0=int(d["t0"][j]), v0=float(d["v0"][j]), cmd=int(d["cmd"][j]))
-                pr = lref.project(np.asarray(pose, np.float64))
+                pr = lref.project(np.asarray(pose, np.float64)) if lref is not None else None
                 r["st_log"], r["d_log"] = (pr[0], pr[1]) if pr is not None else (np.nan, np.nan)
                 r.update(state_metrics(L, pose, zz(pose), F, d["pm"][j]))
                 if F[23, 0] > 0.5:                                              # fed +40 m point vs the generator's polyline (sanity)
                     q = to_local(pose, F[23, 1:3] * 20)[0]
-                    r["fed_vs_gen"] = float(np.sqrt(((G - q) ** 2).sum(1)).min())
+                    a_, b_ = G[:-1], G[1:]
+                    ab = b_ - a_
+                    tt = np.clip(((q - a_) * ab).sum(1) / np.maximum((ab ** 2).sum(1), 1e-12), 0, 1)
+                    r["fed_vs_gen"] = float(np.hypot(*(a_ + tt[:, None] * ab - q).T).min())   # point to segment
                 # the human log's lateral against the ego's lane at the plan's 4 s station (does the human stay in this lane there)
-                if "arc4" in r and "d_ego" in r:
+                if "arc4" in r and "d_ego" in r and "err" not in r and np.isfinite(r["st_log"]):
                     ln, _, _ = L.current(pose, zz(pose))
                     ref = L.ref(ln, pose)
                     s_e = ref.project(np.asarray(pose, np.float64))[0]
@@ -591,6 +604,61 @@ def cmd_report(a):
                                                                      d_hl4=("d_hl4", "median")).reset_index()
     L += ["Per event scene (median over its reads and the three leads; `d_hl4` = the human log's offset from the ego lane's centre at the "
           "plan's 4 s station):", "", md(S.sort_values(["fclass", "reads"], ascending=[True, False])), ""]
+    # ---- 3b. precursor: the route just before the ego leaves the human's lane
+    def cat(r):
+        if not np.isfinite(r.d_rt40):
+            return "no route point"
+        if abs(r.d_rt40) < 1:
+            return "lane-centred"
+        if not np.isfinite(r.d_hl4):
+            return "off lane, human unknown"
+        if abs(r.d_hl4) < 1:
+            return "off lane, human in ego lane"
+        if abs(r.d_hl4 - r.d_rt40) < 1.2:
+            return "off lane, human in route lane"
+        return "off lane, other"
+    CATS = ["lane-centred", "off lane, human in ego lane", "off lane, human in route lane", "off lane, other", "off lane, human unknown",
+            "no route point"]
+    pr_, lv_ = [], []
+    for e in ev.itertuples():
+        g, n = by.get((e.read, e.scene)), by.get(("NTV0", e.scene))
+        if g is None:
+            continue
+        thr = 1.75 if e.fclass == "zero-other" else 1.0
+        lv = g[(np.abs(g.d_log) > thr) & (g.t0 <= e.te)]
+        tl = float(lv.t0.iloc[0]) if len(lv) else e.te
+        side = float(np.sign(lv.d_log.iloc[0])) if len(lv) else np.nan
+        lv_.append(dict(fclass=e.fclass, lead_s=(e.te - tl) / 1e6, left_lane=bool(len(lv)), side=side))
+        for Ld in (2.0, 1.0, 0.5):
+            r = g.iloc[min(int(np.searchsorted(g.t0.to_numpy(), tl - Ld * 1e6)), len(g) - 1)]
+            pr_.append(dict(fclass=e.fclass, lead=Ld, who="MV", cat=cat(r), cmd=r.cmd, side=side,
+                            same_side=bool(np.isfinite(r.d_rt40) and abs(r.d_rt40) > 1 and np.sign(r.d_rt40) == side)))
+            if n is not None and np.isfinite(r.st_log):
+                dd = np.abs(n.st_log.to_numpy() - r.st_log)
+                if np.nanmin(dd) < 3.0:
+                    rn = n.iloc[int(np.nanargmin(dd))]
+                    pr_.append(dict(fclass=e.fclass, lead=Ld, who="NTV0 same station", cat=cat(rn), cmd=rn.cmd, side=side,
+                                    same_side=bool(np.isfinite(rn.d_rt40) and abs(rn.d_rt40) > 1 and np.sign(rn.d_rt40) == side)))
+    PR, LV = pd.DataFrame(pr_), pd.DataFrame(lv_)
+    T = PR.groupby(["fclass", "lead", "who"]).apply(lambda g: pd.Series(
+        {"n": len(g), **{c + " %": 100 * float((g.cat == c).mean()) for c in CATS[:4]},
+         "route off on the side the ego leaves to %": 100 * float(g.same_side.mean()), "cmd R %": 100 * float((g.cmd == 2).mean()),
+         "cmd L %": 100 * float((g.cmd == 0).mean())})).reset_index()
+    cl = DC[(DC.v0 >= 4) & np.array([FA[r].fclass.get(s, "") == "ok" for r, s in zip(DC.read, DC.scene)])]
+    cc = cl.assign(c=[cat(r) for r in cl.itertuples()])
+    for k, nm in (("NTV0", "NTV0 clean scenes"), ("MV", "MV clean scenes")):
+        x = cc[cc.read == "NTV0"] if k == "NTV0" else cc[cc.read.isin(MV)]
+        T = pd.concat([T, pd.DataFrame([{"fclass": nm, "lead": np.nan, "who": "all moving", "n": len(x), **{c + " %": 100 * float((x.c == c).mean()) for c in CATS[:4]},
+                         "route off on the side the ego leaves to %": np.nan, "cmd R %": 100 * float((x.cmd == 2).mean()),
+                         "cmd L %": 100 * float((x.cmd == 0).mean())}])], ignore_index=True)
+    T.to_csv(RES / "route_mem_curv_precursor.csv", index=False, float_format="%.3f")
+    lvs = LV.groupby("fclass").agg(n=("lead_s", "size"), left_lane=("left_lane", "mean"), lead_med=("lead_s", "median"),
+                                    to_right=("side", lambda x: float((x < 0).sum())), to_left=("side", lambda x: float((x > 0).sum()))).reset_index()
+    L += ["### 3b. Before the ego leaves the human's lane", "",
+          "Leave time = the first decision whose ego is more than 1.75 m (zero-other) / 1.0 m (offroad) from the human log (d_log), else the "
+          "event; the route at 2 / 1 / 0.5 s before it. Classes of the fed route against the ego's lane at 40 m: lane-centred (|off| < 1 m); off "
+          "lane with the human (log, at the plan's 4 s station) still in the ego's lane = a route-lane artefact; off lane with the human in the "
+          "route's lane = the human's own lane change ahead.", "", md(lvs), "", md(T), ""]
     # ---- 4. who follows the route
     FO = []
     for k in READS:
