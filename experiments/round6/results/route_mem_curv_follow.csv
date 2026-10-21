@@ -1,0 +1,36 @@
+who,route_vs_lane_at_4s,n,d_route_med,d_f4_med,follow_ratio,stays_in_lane_pct,goes_to_route_pct
+NTV0 plan,route >= 2.5 m right of lane,1641,-3.604,-0.873,0.242,47.410,12.371
+NTV0 plan,1-2.5 m right,264,-2.169,0.157,-0.072,89.015,4.545
+NTV0 plan,within 1 m (lane-centred),24251,0.000,0.345,,76.199,76.154
+NTV0 plan,1-2.5 m left,50,2.175,0.959,0.441,56.000,24.000
+NTV0 plan,>= 2.5 m left,1018,3.506,1.497,0.427,30.648,23.576
+R3MV-s0 plan,route >= 2.5 m right of lane,1782,-3.513,-0.962,0.274,48.934,15.320
+R3MV-s0 plan,1-2.5 m right,244,-2.163,0.140,-0.065,95.902,2.459
+R3MV-s0 plan,within 1 m (lane-centred),21871,0.000,0.320,,72.617,72.594
+R3MV-s0 plan,1-2.5 m left,42,2.261,1.223,0.541,19.048,35.714
+R3MV-s0 plan,>= 2.5 m left,1408,3.460,0.701,0.203,57.031,17.116
+R3MV-s1 plan,route >= 2.5 m right of lane,1454,-3.570,-0.928,0.260,48.281,13.480
+R3MV-s1 plan,1-2.5 m right,241,-2.160,0.181,-0.084,88.797,3.734
+R3MV-s1 plan,within 1 m (lane-centred),21600,0.000,0.300,,72.676,72.681
+R3MV-s1 plan,1-2.5 m left,101,2.261,1.192,0.527,28.713,31.683
+R3MV-s1 plan,>= 2.5 m left,1200,3.452,0.933,0.270,48.250,17.167
+MVLC-s0 plan,route >= 2.5 m right of lane,1751,-3.501,-0.747,0.213,55.168,9.480
+MVLC-s0 plan,1-2.5 m right,246,-2.160,0.131,-0.061,86.992,2.846
+MVLC-s0 plan,within 1 m (lane-centred),22043,0.000,0.319,,74.123,74.191
+MVLC-s0 plan,1-2.5 m left,94,2.256,1.162,0.515,32.979,24.468
+MVLC-s0 plan,>= 2.5 m left,1310,3.493,0.844,0.242,51.450,20.305
+MVLC-s1 plan,route >= 2.5 m right of lane,1733,-3.518,-0.761,0.216,51.529,11.368
+MVLC-s1 plan,1-2.5 m right,249,-2.158,0.204,-0.094,81.526,4.819
+MVLC-s1 plan,within 1 m (lane-centred),21881,0.000,0.308,,73.479,73.507
+MVLC-s1 plan,1-2.5 m left,81,2.296,1.249,0.544,9.877,38.272
+MVLC-s1 plan,>= 2.5 m left,1197,3.445,0.859,0.249,52.047,18.045
+human test,route >= 2.5 m right of lane,94,-3.342,-0.098,0.029,68.085,21.277
+human test,1-2.5 m right,50,-2.162,0.044,-0.020,88.000,2.000
+human test,within 1 m (lane-centred),3815,-0.000,0.230,,80.498,80.446
+human test,1-2.5 m left,2,1.365,-0.683,-0.500,50.000,0.000
+human test,>= 2.5 m left,123,3.293,0.452,0.137,66.667,21.951
+human train,route >= 2.5 m right of lane,550,-3.249,-0.197,0.061,64.364,18.000
+human train,1-2.5 m right,77,-2.062,-0.791,0.384,74.026,16.883
+human train,within 1 m (lane-centred),8631,0.000,0.170,,81.648,81.682
+human train,1-2.5 m left,26,1.773,0.671,0.378,30.769,30.769
+human train,>= 2.5 m left,471,3.285,0.576,0.175,62.208,17.410

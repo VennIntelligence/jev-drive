@@ -1,0 +1,9 @@
+rows,set,n,cmd_L_pct,cmd_R_pct,cmd_unk_pct,route_lat4_gt175_pct,label_minus_route_abs_med,label_off_route_gt175_pct,when_route_gt175_label_follows_pct,when_route_gt175_label_straight_pct
+ph,moving,69952,20.022,26.564,0.000,46.272,0.427,18.084,55.555,18.283
+ph,"moving, label and route heading < 10 deg",46077,9.567,13.078,0.000,26.445,0.346,16.600,41.108,43.644
+ph05,moving,56526,15.628,22.880,0.000,31.202,0.362,18.623,39.956,45.558
+ph05,"moving, label and route heading < 10 deg",45631,11.992,13.232,0.000,22.776,0.332,19.485,18.070,71.798
+ph15,moving,45886,22.168,28.366,0.000,50.748,0.474,19.553,53.302,11.973
+ph15,"moving, label and route heading < 10 deg",26742,8.189,13.058,0.000,26.393,0.307,15.107,44.092,35.237
+navtrain,moving,34990,19.000,8.520,0.000,49.065,0.282,16.545,61.248,8.953
+navtrain,"moving, label and route heading < 10 deg",20560,1.819,1.177,0.000,24.334,0.205,10.554,59.165,23.706

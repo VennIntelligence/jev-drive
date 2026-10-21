@@ -699,7 +699,9 @@ def cmd_report(a):
         L += ["## 5. Training rows (map-free): does the label go where the fed route points?", "",
               "Rows fed v0 >= 4 m/s with the route covering the label's 4 s arc; `route lat4` = the fed route's lateral (ego frame) at the label's "
               "4 s arc; `label - route` = the label's 4 s lateral minus it. PAI parts unweighted (not the draw weights).", "", md(TR), ""]
-    (RES / "route_mem_curv.md").write_text("\n".join(L) + "\n<!-- generated end -->\n")
+    f, M = RES / "route_mem_curv.md", "<!-- generated end -->"
+    tail = f.read_text().split(M, 1)[1] if f.exists() and M in f.read_text() else "\n"   # the hand-written reading below the marker stays
+    f.write_text("\n".join(L) + "\n" + M + tail)
     print("\n".join(L))
 
 

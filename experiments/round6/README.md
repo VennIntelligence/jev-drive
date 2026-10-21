@@ -34,6 +34,17 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
   - F2: PAI human rows that slow down with no lead and do not stop.
   - Seeds 0 / 1 from NTV0-L18-s0, 9 500 steps; controls = stored R5LC s0 / s1; exam PAI 281 ACC + GAP + the local PCS ruler + the 9 stable offroad scenes.
 
+**ROUTE-CURV (diagnosis, 2026-10-21, 0 card-h).** Question: is the route input a disguised lateral intent? (user review of 596af0c7 / 6e7b42a3.)
+Results: [results/route_mem_curv.md](results/route_mem_curv.md) + `route_mem_curv_*.csv`; code [scripts/rmc.py](scripts/rmc.py) / [scripts/rmc.sh](scripts/rmc.sh)
+(pool CPU, PRIO 15; box `$DATA_DIR/runs/round6/route_curv/`); sketch [plans/2026-10-21-route-frenet-sketch.md](plans/2026-10-21-route-frenet-sketch.md).
+- The fed route memory (projected layout, 40 points at -6..+72 m in the rear-axle frame) is lane-centred on the ego's lane: NuRec lane offset p50 0.00 m.
+- AlpaSim's generator puts it in an adjacent lane on 10-14 % of straight human states.
+- The PAI command rule (the route's ~42 m point beyond +-2 m) turns curvature, pose and that artefact into L / R on 23 % of non-turn PAI human
+  rows, against 3 % in navtrain.
+- Before the MV family's 92 offroad / zero-other zeros the route is lane-centred as often as on clean scenes or for NTV0 (82-88 %). Zero-others are
+  leftward lane departures (37 / 41).
+- A misplaced route precedes and is followed in 5 / 92 events (3 scenes). The hypothesis is not the main cause; Lines A-C stay first.
+
 **Read more.** [plans/](plans/) (Chinese working notes).
 
 <!-- files:begin -->
