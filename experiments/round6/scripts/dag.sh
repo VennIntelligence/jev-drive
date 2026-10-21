@@ -13,10 +13,10 @@
 #   job bodies: chk1 | rest | rows <c> | teach <c> | clean <c> | link | cache | pool | label | fwd | r1in | merge | weights | smoke | identrun <v> |
 #               ident | build | launch | train <seed> | r281 | pcsrep
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
-O=$DATA_DIR/runs/round6/dag; ME=experiments/round6/scripts/dag.sh; PY=experiments/round6/scripts/dag.py; V=.venv/bin/python
+O=${DAG_O:-$DATA_DIR/runs/round6/dag}; ME=experiments/round6/scripts/dag.sh; PY=experiments/round6/scripts/dag.py; V=.venv/bin/python
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; RF=experiments/route_follow/scripts
-CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; RES=experiments/round6/results/dagger
-T=R5LC-L18-s0; L=${T,,}; WRONG=RB0-F-s1; PRIO=${PRIO:-22}; NP=PAID; NM=JTPHD; N=9500; KDAG=8; R2PY=experiments/round2/scripts/r2.py
+CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; RES=${DAG_RES:-experiments/round6/results/dagger}; export DAG_RES=$RES DAG_O=$O
+T=${DAG_T:-R5LC-L18-s0}; L=${T,,}; WRONG=RB0-F-s1; PRIO=${PRIO:-22}; NP=${DAG_NP:-PAID}; export DAG_T=$T DAG_NP=$NP; NM=JTPHD; N=9500; KDAG=8; R2PY=experiments/round2/scripts/r2.py
 SERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both on1_PAIH:ph:both on1_PAIH05:ph05:both on1_PAIH15:ph15:both"
 TCFG="$DATA_DIR/runs/round5/s3/roll/A/runs/*/sim/generated-user-config-0.yaml,$DATA_DIR/runs/round5/d3/roll/A/runs/*/sim/generated-user-config-0.yaml"
@@ -26,7 +26,7 @@ FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
 mkdir -p $O/pool $O/checks $RES
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round6-dag --name "$name" --tries 1 --priority $PRIO --no-check \
-     --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
+     --log-dir $O/pool/$name --env DAG_O=$O --env DAG_T=$T --env DAG_NP=$NP --env DAG_RES=$RES ${DAG_IT2:+--env DAG_IT2=1} "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 csv() { local IFS=,; echo "$*"; }
 roll() {  # roll [after] -> "<id> <chunk>" lines of the chunks submitted now (pai_box.sh skips finished / pending chunks)
   local f=$O/roll/submit.$(date +%s%N).txt
@@ -104,6 +104,10 @@ rest)
   lb=$(sub dag-label --after $po --vram 0.1 --cpu 4 --ram 64 --timeout-h 1 -- bash $ME label) || exit 1
   fw=$(sub dag-fwd --after $lb --vram 16 --cpu 8 --ram 120 --timeout-h 3 -- bash $ME fwd) || exit 1
   gi=$(sub dag-r1in --after $fw --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME r1in) || exit 1
+  if [[ -n ${DAG_IT2:-} ]]; then                                   # iteration 2 (amendment 4): this student's pool only; dag2.sh joins
+    d=$(sub dag-rowsdone --after $gi --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/ROWSDONE") || exit 1
+    echo "$(date '+%F %T') rest (code $h, iteration 2): rolls ${ro[*]} chunk tails ${w[*]} link $l cache $ca pool $po label $lb fwd $fw r1in $gi done $d" | tee -a $O/stages.txt
+    exit 0; fi
   m=$(sub dag-merge --after $gi --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME merge) || exit 1
   wt=$(sub dag-weights --after $m --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME weights) || exit 1
   sm=$(sub dag-smoke --after $wt "${FT[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1
@@ -131,7 +135,7 @@ cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $NP --rows $O
 pool)
   [[ ! -e $CR/on1_$NP ]] || die "on1_$NP exists: never overwritten"
   $TR $RF/rf_pai_pool.py --name $NP --rows $O/rows/$NP --cache $O/cache/$NP --runs "$O/roll/runs/*" --split experiments/round5/results/s3_scenes.tsv \
-      --fut poses --prefix paid --src dagger ;;
+      --fut poses --prefix ${NP,,} --src dagger ;;
 reteach) "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $O/teach --workers ${2:-16} --stale-only 1 ;;   # amendment 1: files of an older teacher
 tail)  # amendment 3: resubmit the build tail from the label step (after the T4 stop); the stop record kept as VERDICT.t4
   [[ -f $CR/on1_$NP/tab.npz && ! -e $CR/on1_$NM ]] || die "no on1_$NP or on1_$NM exists"; [[ -f $O/VERDICT ]] && mv $O/VERDICT $O/VERDICT.t4.$(date +%H%M%S)
@@ -139,6 +143,10 @@ tail)  # amendment 3: resubmit the build tail from the label step (after the T4 
   lb=$(sub dag-label --vram 0.1 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME label) || exit 1
   fw=$(sub dag-fwd --after $lb --vram 16 --cpu 8 --ram 120 --timeout-h 3 -- bash $ME fwd) || exit 1
   gi=$(sub dag-r1in --after $fw --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME r1in) || exit 1
+  if [[ -n ${DAG_IT2:-} ]]; then                                   # iteration 2 (amendment 4): this student's pool only; dag2.sh joins
+    d=$(sub dag-rowsdone --after $gi --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/ROWSDONE") || exit 1
+    echo "$(date '+%F %T') rest (code $h, iteration 2): rolls ${ro[*]} chunk tails ${w[*]} link $l cache $ca pool $po label $lb fwd $fw r1in $gi done $d" | tee -a $O/stages.txt
+    exit 0; fi
   m=$(sub dag-merge --after $gi --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME merge) || exit 1
   wt=$(sub dag-weights --after $m --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME weights) || exit 1
   sm=$(sub dag-smoke --after $wt "${FT[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1

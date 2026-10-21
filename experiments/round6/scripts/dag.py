@@ -61,7 +61,7 @@ DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 O_DEF = DATA / "runs/round6/dag"
 CR = DATA / "runs/op_parity/cache"
 W5, W6 = DATA / "runs/round5/r5/w", DATA / "runs/round6/dag/w"
-RES = REPO / "experiments/round6/results/dagger"
+RES = REPO / os.environ.get("DAG_RES", "experiments/round6/results/dagger")
 TSV = REPO / "experiments/round5/results/s3_scenes.tsv"
 CLS = ("stop_nolead", "turn_sharp", "launch", "other")
 STUDENT = "R5LC-L18-s0"
@@ -653,7 +653,7 @@ def cmd_chk1(a):
     want = (O / "lists/c000.txt").read_text().split()
     sm = sorted(glob.glob(str(O / "roll/runs/*_c000/sim/aggregate/results-summary.json")))
     scored = {r["clipgt_id"]: r for f in sm for r in json.loads(Path(f).read_text())["rollouts"]}
-    rows = sorted(p.stem for p in (O / "rows/PAID").glob("clipgt-*.npz"))
+    rows = sorted(p.stem for p in (O / "rows" / os.environ.get("DAG_NP", "PAID")).glob("clipgt-*.npz"))
     T = [np.load(O / "teach" / f"{s}.npz") for s in want if (O / "teach" / f"{s}.npz").exists()]
     v0 = np.concatenate([t["v0"] for t in T]) if T else np.zeros(0)
     pre = np.concatenate([t["pre"] for t in T]) if T else np.zeros(0, bool)
@@ -795,7 +795,7 @@ def cmd_r1in(a):
     ref = np.full((len(sc), 8, 2), np.nan)
     for s in np.unique(sc):
         j = np.flatnonzero(sc == s)
-        with np.load(O / "rows/PAID" / f"{s}.npz") as z:
+        with np.load(O / "rows" / a.pool[4:] / f"{s}.npz") as z:
             pos = {int(k): i for i, k in enumerate(z["k"])}
             ref[j] = z["poses_model"][[pos[int(k)] for k in kk[j]]][:, :, :2]
     tol = np.maximum(4 * 2.0 ** (np.floor(np.log2(np.maximum(np.abs(ref), 2.0 ** -14))) - 10), 0.03)
