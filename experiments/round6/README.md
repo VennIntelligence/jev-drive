@@ -33,6 +33,10 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
   - F1: ph15 stretch rows whose label peak lateral acceleration is above 3 m/s^2 or whose fed speed is above 30 m/s.
   - F2: PAI human rows that slow down with no lead and do not stop.
   - Seeds 0 / 1 from NTV0-L18-s0, 9 500 steps; controls = stored R5LC s0 / s1; exam PAI 281 ACC + GAP + the local PCS ruler + the 9 stable offroad scenes.
+  - Read (10-21, [results/fix/pai281_FIX_ag.md](results/fix/pai281_FIX_ag.md)): **not an adopt-candidate**. Offroad zeros 21 / 20 against R5LC's
+    21 / 24 and NTV0's 12. Offroad + zero-other 39 / 31 against a cap of 21. Mean vs NTV0 -0.031 / -0.005. Ruler -280 / -265.
+    Route-turn zeros are kept (4 / 3). On the 9 stable scenes only 94c1d722 recovers (in both seeds). Removing the out-of-envelope stretch rows and the
+    no-lead slow-downs does not remove the MV offroad excess.
 
 **ROUTE-CURV (diagnosis, 2026-10-21, 0 card-h).** Question: is the route input a disguised lateral intent? (user review of 596af0c7 / 6e7b42a3.)
 Results: [results/route_mem_curv.md](results/route_mem_curv.md) + `route_mem_curv_*.csv`; code [scripts/rmc.py](scripts/rmc.py) / [scripts/rmc.sh](scripts/rmc.sh)

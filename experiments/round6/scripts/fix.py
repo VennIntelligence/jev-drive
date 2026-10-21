@@ -223,7 +223,7 @@ def cmd_verdict(a):
          "difference to NTV0 with a 95 % CI upper bound >= 0.", "",
          "| arm | - NTV0 mean [95 % CI] | >= NTV0 | offroad + zero-other | <= cap | ruler - NTV0 [95 % CI] | CI upper >= 0 |", "|:--|--:|:-:|--:|:-:|--:|:-:|",
          *rows, "", f"**FIX: {'adopt-candidate' if ok else 'not an adopt-candidate'}.**", "",
-         "## Summary (275-scene common set; new = on the scenes NTV0 scores 1.0)", "",
+         f"## Summary ({J['scenes']}-scene common set; new = on the scenes NTV0 scores 1.0)", "",
          "| read | mean | - R5LC same seed [95 % CI] | offroad | zero-other | route-turn | rear-hit | slow | launch | new zeros / partials | ruler PCS - NTV0 |",
          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     nb = J.get("newbreaks", {}).get("reads", {})
