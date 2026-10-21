@@ -8,14 +8,15 @@
 #   harm.sh smoketail           rows -> cache per variant on c000, then compare on its states (the whole tail once, before chain)
 #   harm.sh chain               submit the other chunks, then rows -> clean, cache per variant, compare -> png (DONE)
 #   harm.sh redo <V> <chunk> [ids]  re-roll a chunk that lost a scene, then that variant's tail and compare -> png after [ids]
+#   harm.sh plans               route-memory checkpoints: pool (rf_pai_pool -> on1_HARM<V>) -> fwd (rf_recov) per variant, then compare -> png
 #   harm.sh wait [ids]          blocks until $O/DONE or a failed job of this lane (or of the given ids) (one run_in_background waiter)
-#   job bodies: rows <V> | clean <V> | cache <V> | compare | png
+#   job bodies: rows <V> | clean <V> | cache <V> | pool <V> | fwd <V> | compare | png
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/harm; ME=experiments/round7/scripts/harm.sh; PY=experiments/round7/scripts/harm.py
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; V=.venv/bin/python; T=NTV0-L18-s0; PRIO=${PRIO:-16}
 LOGSERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7 PAI_DUMP=100000 DRV_PY=../../onpol_pai/lib/onp_log_driver.py"
 WIZ="controller.gains.rel_front_steering_angle_weight=10 runtime.simulation_config.send_recording_ground_truth=true"
-VARS="OFFA OFFB ON"
+VARS="OFFA OFFB ON"; RF=experiments/route_follow/scripts; TAGS=NTV0-L18-s0,R5LC-L18-s0
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round7-harm --name "$name" --tries 1 --priority $PRIO --no-check \
      --log-dir $O/pool/$name.$(date +%m%d%H%M%S) "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
@@ -66,6 +67,17 @@ rows)
   (( n >= m - 2 )) || die "rows $v: $n of $m scenes" ;;
 clean) r=$O/roll/$2; find $r/runs -name rollout.asl -delete; rm -rf $r/runs/*/sim/driver-logs/dump; echo "$(date '+%F %T') clean $2: $(du -sh $r | cut -f1) left" >> $O/stages.txt ;;
 cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $2 --rows $O/rows/$2 --out $O/cache ;;
+pool)  # pool <V>: rf_pai_pool on the variant's cache (pai_rows H's recipe: fut = log_fut, human rows) -> on1_HARM<V> + its route features
+  cat $O/chunks/*.txt > $O/scenes.txt
+  $TR $RF/rf_pai_pool.py --name HARM$2 --rows $O/rows/$2 --cache $O/cache/$2 --runs "$O/roll/$2/runs/*" --split $O/scenes.txt --fut log_fut --prefix harm --src human ;;
+fwd)   # fwd <V>: the route checkpoints' plans on every row of on1_HARM<V> (rf_recov fwd, the trainer's forward) -> $O/fwd/HARM<V>-{train,dev}-rec/
+  for rs in train-rec dev-rec; do $TR $RF/rf_recov.py fwd --pool HARM$2 --rows $rs --tags $TAGS --out $O/fwd || exit 1; done ;;
+plans)  # pool -> fwd per variant, then compare -> png
+  ff=(); for v in $VARS; do q=$(sub harm-pool-$v --vram 0.1 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME pool $v) || exit 1
+    f=$(sub harm-fwd-$v --after $q --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME fwd $v) || exit 1; ff+=($f); done
+  m=$(sub harm-compare3 --after $(IFS=,; echo "${ff[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
+  p=$(sub harm-png3 --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
+  echo "$(date '+%F %T') plans: fwd ${ff[*]} compare $m png $p" | tee -a $O/stages.txt; echo "$m $p" ;;
 compare) $TR $PY compare --out $O --cache $O/cache --rows $O/rows ;;
 png) $TR $PY png --out $O --rows $O/rows && date '+%F %T' > $O/DONE ;;
 wait)

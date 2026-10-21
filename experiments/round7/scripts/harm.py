@@ -124,10 +124,29 @@ def cmd_compare(a):
         ix = {(s, int(k)): i for i, (s, k) in enumerate(zip(R[v].scene, R[v].k))}
         rows[v] = np.array([ix.get(x, -1) for x in key])
     have = np.all([rows[v] >= 0 for v in VARIANTS], 0)
+    # route-memory checkpoints: plans from rf_recov.py fwd on the pools on1_HARM<V> (rf_pai_pool: the driver's route messages -> rmem features)
+    from jevdrive.common import data_dir
+    fp = {}
+    for tag in [t for t in a.tags if t not in ("P0", "served")]:
+        fp[tag] = {}
+        for v in VARIANTS:
+            nm = np.load(data_dir() / "runs/op_parity/cache" / f"on1_HARM{v}" / "tab.npz")["names"].astype(str)
+            P = np.full((len(nm), 8, 3), np.nan, np.float32)
+            for rs in ("train-rec", "dev-rec"):
+                f = out / "fwd" / f"HARM{v}-{rs}" / f"plans_{tag}.npz"
+                if f.exists():
+                    z = np.load(f)
+                    P[z["rows"]] = z["poses"]
+            ix = {x: i for i, x in enumerate(nm)}
+            j = np.array([ix.get(f"on:harm:{s}:{k}", -1) for s, k in key])
+            fp[tag][v] = np.where((j >= 0)[:, None, None], P[np.maximum(j, 0)], np.nan)
+            have &= np.isfinite(fp[tag][v]).all((1, 2))
     res = dict(states=len(key), matched=int(have.sum()), missing=[f"{s} {k}" for (s, k), h in zip(key, have) if not h][:20])
     key, lab = [x for x, h in zip(key, have) if h], lab[have]
     for v in VARIANTS:
         rows[v] = rows[v][have]
+        for tag in fp:
+            fp[tag][v] = fp[tag][v][have]
     n = len(key)
     # ---- frame bytes (the model input), newest slot
     fb = {"OFFB": [], "ON": []}
@@ -163,7 +182,13 @@ def cmd_compare(a):
     W = torch.as_tensor(R2.t_weights(T.T8), device=dev)
     plans = {}
     for tag in a.tags:
-        m = T.load_pmodel(tag, dev)
+        if tag in fp:
+            plans[tag] = fp[tag]
+            continue
+        if tag == "served":                                            # NTV0-L18-s0 as the driver served it in each render (drive.jsonl poses_model)
+            plans[tag] = {v: R[v].poses_model[torch.as_tensor(rows[v], device=dev)].cpu().numpy() for v in VARIANTS}
+            continue
+        m = T.load_pmodel(tag, dev)                                    # P0: shipped Cinque, no route input
         pi = torch.as_tensor(np.arange(m.net.slices["plan"].start, m.net.slices["plan"].start + 495), device=dev)
         plans[tag] = {}
         with torch.no_grad():
@@ -171,10 +196,9 @@ def cmd_compare(a):
                 r = torch.as_tensor(rows[v], device=dev)
                 o = m(R[v].tokens(rows[v]).to(dev), R[v].ego[r], R[v].tc[r]).float()
                 plans[tag][v] = torch.stack(OL.rear_xy(o[:, pi].view(-1, 33, 15), R[v].cam[r, :2], W), -1).cpu().numpy()   # (n, 8, 3)
-        if tag == a.tags[0]:                                           # the served model: the training-path forward against the logged plan
-            ref = R["OFFA"].poses_model[torch.as_tensor(rows["OFFA"], device=dev)].cpu().numpy()
-            res["gid_max_m"] = float(np.hypot(*(plans[tag]["OFFA"][..., :2] - ref[..., :2]).transpose(2, 0, 1)).max())
         del m
+    if "served" in plans and "NTV0-L18-s0" in plans:                   # the fwd path against what the driver served, per render
+        res["fwd_vs_served_max_m"] = {v: float(np.hypot(*(plans["NTV0-L18-s0"][v][..., :2] - plans["served"][v][..., :2]).transpose(2, 0, 1)).max()) for v in VARIANTS}
     groups = [("all", np.ones(n, bool))] + [(s, lab == i) for i, s in enumerate(STRATA)]
     res["n"] = {g: int(mk.sum()) for g, mk in groups}
     res["tokens"] = {g: {b: {k: dict(med=q(x[mk], 0.5), p90=q(x[mk], 0.9)) for k, x in tok[b].items()} for b in tok} for g, mk in groups}
@@ -204,7 +228,7 @@ def cmd_compare(a):
             if on > max(2 * fl, 0.3 if fl >= 0.01 else ABS_LINE["4"]) and on > 0.3:
                 flags.append(f"{s}: longitudinal 4 s median {on:.3f} m > 2 x floor {fl:.3f} and > 0.3")
         res["verdict"][tag] = dict(cells=cells, cells_ok=bool(ok), lat4_med=lat4, lat4_ok=bool(lat4 < 0.2), small=bool(ok and lat4 < 0.2), stratum_flags=flags)
-    judged = [t for t in a.tags if t != "P0"]
+    judged = [t for t in a.tags if t not in ("P0", "served")]
     res["overall"] = "small" if all(res["verdict"][t]["small"] for t in judged) else "closed-loop paired read"
     # per-state deltas for png choice and later looks
     np.savez(out / "cmp_states.npz", scene=np.array([x[0] for x in key]), k=np.array([x[1] for x in key]), stratum=lab,
@@ -249,10 +273,10 @@ def cmd_report(a):
          "| Render pair | Mean abs grey diff (newest frame, model input) | Share of bytes differing | States bit-identical |\n|---|--:|--:|--:|\n"
          + "".join(f"| {b} vs OFFA | {v['mean_abs_grey']:.3f} | {v['share_bytes_diff']:.4f} | {v['states_identical']} |\n" for b, v in r["frame"].items()),
          f"Ego input max abs difference vs OFFA: OFFB {r['ego_maxabs']['OFFB']:.2e}, ON {r['ego_maxabs']['ON']:.2e}. "
-         f"Training-path forward vs logged plan (NTV0, OFFA): max {r['gid_max_m']:.4f} m.\n"]
+         f"NTV0 fwd path vs the plan the driver served, max per render: {r.get('fwd_vs_served_max_m')}.\n"]
     for tag, V in r["verdict"].items():
         P = r["plans"][tag]
-        o.append(f"### {tag}{' (reference, not judged)' if tag == 'P0' else ''}: {'small' if V['small'] else 'NOT small'}\n")
+        o.append(f"### {tag}{' (reference, not judged)' if tag in ('P0', 'served') else ''}: {'small' if V['small'] else 'NOT small'}\n")
         o.append("Plan |delta| median (p90) in m, ON vs OFFA against the floor OFFB vs OFFA. Lat = rear-axle y, lon = rear-axle x.\n")
         o.append("| Stratum | n | " + " | ".join(f"{ax} {h} s ON / floor" for ax in ("lat", "lon") for h in H_IDX) + " |\n|---|--:|" + "--:|" * 6 + "\n")
         for g in ("all",) + STRATA:
@@ -283,7 +307,7 @@ if __name__ == "__main__":
     p.add_argument("--out", required=True)
     p.add_argument("--cache", required=True)
     p.add_argument("--rows", required=True, help="dir with <variant>/<scene>.npz")
-    p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "R5LC-L18-s0", "P0"])
+    p.add_argument("--tags", nargs="+", default=["NTV0-L18-s0", "R5LC-L18-s0", "P0", "served"], help="route checkpoints read from <out>/fwd; P0 forward here; served = the driver's logged NTV0 plan")
     p = sub.add_parser("report")
     p.add_argument("--cmp", required=True)
     p = sub.add_parser("png")
