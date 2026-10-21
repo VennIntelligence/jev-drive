@@ -8,9 +8,10 @@
 #   harm.sh smoketail           rows -> cache per variant on c000, then compare on its states (the whole tail once, before chain)
 #   harm.sh chain               submit the other chunks, then rows -> clean, cache per variant, compare -> png (DONE)
 #   harm.sh redo <V> <chunk> [ids]  re-roll a chunk that lost a scene, then that variant's tail and compare -> png after [ids]
+#   harm.sh refix V:c ...       a redo chunk with rows and route from different rolls: re-roll, rows --redo, cache, pool, fwd, compare -> png
 #   harm.sh plans               route-memory checkpoints: pool (rf_pai_pool -> on1_HARM<V>) -> fwd (rf_recov) per variant, then compare -> png
 #   harm.sh wait [ids]          blocks until $O/DONE or a failed job of this lane (or of the given ids) (one run_in_background waiter)
-#   job bodies: rows <V> | clean <V> | cache <V> | pool <V> | fwd <V> | compare | png
+#   job bodies: rows <V> | clean <V> | cache <V> | pool <V> | fwd <V> | rowsredo <V> <c> | fwdredo <V> | compare | png
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/harm; ME=experiments/round7/scripts/harm.sh; PY=experiments/round7/scripts/harm.py
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; V=.venv/bin/python; T=NTV0-L18-s0; PRIO=${PRIO:-16}
@@ -56,6 +57,28 @@ redo)  # redo <V> <chunk> [compare after ids]: a chunk whose roll lost a scene (
   m=$(sub harm-compare-redo --after $k${4:+,$4} --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
   p=$(sub harm-png-redo --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
   echo "$(date '+%F %T') redo $v $c: roll $x rows $w cache $k compare $m png $p" | tee -a $O/stages.txt ;;
+refix)  # refix <V>:<chunk>...: a redo chunk whose row files came from the first roll and its route messages from the re-roll (sessions differ):
+        # re-roll it again, rebuild exactly its scenes' rows from that roll (rowsredo), then cache -> pool -> fwd (stale plans moved aside) per
+        # variant, compare -> png after all of them
+  ff=(); for vc in "${@:2}"; do v=${vc%%:*} c=${vc##*:} r=$O/roll/${vc%%:*}/runs/ntv0-l18-s0_${vc##*:}
+    for f in DONE SUBMITTED ERROR; do [[ -f $r/$f ]] && mv $r/$f $r/$f.prev.$(date +%m%d%H%M%S); done
+    x=$(roll $v $c) || exit 1; [[ -n $x ]] || die "refix $v $c: no new job"
+    w=$(sub harm-rowsredo-$v --after $x --vram 0.5 --cpu 8 --ram 40 --timeout-h 2 -- bash $ME rowsredo $v $c) || exit 1
+    k=$(sub harm-cache-$v-fix --after $w --vram 20 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME cache $v) || exit 1
+    q=$(sub harm-pool-$v-fix --after $k --vram 0.1 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME pool $v) || exit 1
+    f=$(sub harm-fwd-$v-fix --after $q --vram 16 --cpu 8 --ram 120 --timeout-h 2 -- bash $ME fwdredo $v) || exit 1; ff+=($f)
+    sub harm-clean-$v-fix --after $w --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $ME clean $v > /dev/null || exit 1; done
+  m=$(sub harm-compare-fix --after $(IFS=,; echo "${ff[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
+  p=$(sub harm-png-fix --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
+  echo "$(date '+%F %T') refix ${*:2}: fwd ${ff[*]} compare $m png $p" | tee -a $O/stages.txt; echo "${ff[*]} $m $p" ;;
+rowsredo)  # rowsredo <V> <chunk>: the chunk's scenes rebuilt (--redo) from the chunk's current roll
+  v=$2; G=$DATA_DIR/tmp/harm_stage/$v-redo; mkdir -p $G; sc=$(cat $O/chunks/$3.txt)
+  env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $v --redo --scenes $sc \
+      --runs "$O/roll/$v/runs/ntv0-l18-s0_$3" --out $O/rows --stage $G --tag $T --jobs 8 || exit 1
+  env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $v --out $O/rows --stage $G --jobs 8 || exit 1
+  rm -rf $G; n=0; for s in $sc; do [[ $O/rows/$v/$s.npz -nt $O/roll/$v/runs/ntv0-l18-s0_$3/DONE ]] && n=$((n + 1)); done
+  echo "$(date '+%F %T') rowsredo $v $3: $n / $(wc -w <<< "$sc") scenes rebuilt from the current roll" | tee -a $O/stages.txt; (( n == $(wc -w <<< "$sc") )) || die "rowsredo $v $3" ;;
+fwdredo) d=$O/fwd/HARM$2-train-rec; [[ -d $d ]] && mv $d $d.prev.$(date +%m%d%H%M%S); bash $ME fwd $2 ;;
 rows)
   v=$2; G=$DATA_DIR/tmp/harm_stage/$v; mkdir -p $G $O/rows
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $v \
