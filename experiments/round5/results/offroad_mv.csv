@@ -1,0 +1,22 @@
+scene,n_of_4,reads,mech,d1_class,v_ego,v_human,lat_ev,turn60,ctx,NTV0,R2J
+6e7b42a3,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,over-speed drift,straight: edge (|lat| < 3 m),36.585,26.453,-0.424,0.127,-,ok,offroad
+dc401449,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,slow-down drift,bend cut,1.448,9.295,-0.884,20.093,-,ok,ok
+a2b415d5,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,straight: lateral offset,straight: edge (|lat| < 3 m),16.632,18.639,-0.885,0.090,-,ok,offroad
+596af0c7,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,turn / curve: cut inside,straight: both crossed,18.273,26.284,-3.487,-14.826,-,rear-hit,offroad
+94c1d722,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,turn / curve: cut inside,curve turn cut,6.067,3.478,-0.881,-81.355,-,slow,slow
+e1c6ae9f,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,turn / curve: cut inside,straight: edge (|lat| < 3 m),13.742,11.434,-0.766,-11.327,-,ok,offroad
+ea468790,4,MVLC-s0 MVLC-s1 R3MV-s0 R3MV-s1,turn / curve: cut inside,curve turn cut,6.155,7.422,-1.583,-83.282,stood before,ok,offroad
+0f4b8753,3,MVLC-s0 MVLC-s1 R3MV-s1,slow-down drift,straight: edge (|lat| < 3 m),4.322,10.367,-1.617,1.380,-,ok,offroad
+7750265d,3,MVLC-s0 R3MV-s0 R3MV-s1,straight: lateral offset,straight: edge (|lat| < 3 m),11.307,14.404,0.334,8.554,-,overshoot,offroad
+13d646af,2,MVLC-s0 R3MV-s0,slow-down drift,straight: both crossed,1.598,15.864,-3.120,11.743,-,ok,zero-other
+bbc53aa8,2,MVLC-s1 R3MV-s0,slow-down drift,straight: ego left its lane,5.835,34.713,-3.641,2.167,-,ok,ok
+4e4a2a51,2,MVLC-s1 R3MV-s1,turn / curve: cut inside,bend cut,3.806,2.319,-0.841,-15.333,-,overshoot,offroad
+b680a689,2,MVLC-s0 MVLC-s1,turn / curve: cut inside,junction turn cut,4.666,2.691,2.356,87.462,-,ok,offroad
+abd45a30,2,MVLC-s0 R3MV-s0,turn / curve: wide outside,junction turn wide,5.224,6.479,-0.663,89.245,-,route-turn,offroad
+3c2822d9,1,MVLC-s1,slow-down drift,straight: edge (|lat| < 3 m),3.752,10.313,-1.197,1.554,-,ok,slow
+c92137b4,1,R3MV-s1,slow-down drift,straight: edge (|lat| < 3 m),3.015,12.308,-2.344,6.224,-,ok,ok
+db8693db,1,MVLC-s1,straight: lateral offset,straight: edge (|lat| < 3 m),5.968,8.630,0.058,-5.239,-,ok,offroad
+f7ded74f,1,MVLC-s1,straight: lateral offset,straight: edge (|lat| < 3 m),26.604,26.905,1.184,-0.837,-,ok,ok
+1e8e939e,1,MVLC-s1,turn / curve: cut inside,straight: edge (|lat| < 3 m),6.149,3.517,-1.382,-30.928,-,route-turn,ok
+68e53160,1,R3MV-s0,turn / curve: cut inside,junction turn cut,9.610,6.681,2.161,113.700,stood before,route-turn,rear-hit
+de9db5dc,1,R3MV-s1,turn / curve: cut inside,curve turn cut,5.177,2.248,-1.722,-80.569,stood before,ok,rear-hit

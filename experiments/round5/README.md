@@ -116,6 +116,15 @@ with class-balanced shares, beat NTV0-L18-s0 + ACC + GAP on PAI 281?
     R2C 6 / 2, R3MV 21 / 9 and 28 / 8, MV-LC 19 / 8 and 23 / 10 (offroad now the largest class).
   - About 10.6 GPU pool job-hours (trainings 1.18, 281 chunks 9.32, smoke / identity 0.12); ruler about 20 CPU jobs at PRIO 15.
 
+- OFFROAD-MV, diagnosis of the MV family's extra offroad zeros on PAI 281 ACC + GAP ([results/offroad_mv.md](results/offroad_mv.md);
+  code [scripts/offroad_mv.py](scripts/offroad_mv.py) / [scripts/offroad_mv.sh](scripts/offroad_mv.sh)). R3MV s0 / s1 and MV-LC s0 / s1: 51 zeros on
+  21 scenes, 9 scenes in >= 3 of the 4 reads. Not lane changes (MV-LC keeps all 9).
+  - Mechanisms: corner cutting on curves and turns (23 events), unforced slow-down then drift to the right edge (13), over-speed on a highway
+    (4), and a steady lateral offset on straights (9).
+  - Read-wide, every PAI-row arm makes about 2.3 x NTV0's / R2C's unforced slow plans.
+  - On curves, the f = 1.5 stretch rows put 60 % of labels above 3 m/s^2 lateral (navtrain 0.3 %). The human paths themselves are not tight.
+  - Two draw-file fixes ranked: F1 stretch rows with a_lat > 3 m/s^2 or v0 > 30 m/s; F2 PAI slow-downs with no LEAD and no stop.
+
 **Next.** The framework draft's slots get filled from 3b and D1-D3. The S3 sketch is [plans/d3_awr_sketch.md](plans/d3_awr_sketch.md).
 
 **Read more.** [plans/2026-10-21-round5-framework-draft.md](plans/2026-10-21-round5-framework-draft.md) (Chinese working note).

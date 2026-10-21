@@ -454,7 +454,7 @@ def md_table(df, cols=None, fmt="{:.2f}"):
     import pandas as pd
     out = ["| " + " | ".join(cols) + " |", "|" + "|".join("--:" if pd.api.types.is_numeric_dtype(df[c]) else ":--" for c in cols) + "|"]
     for _, r in df.iterrows():
-        out.append("| " + " | ".join(fmt.format(r[c]) if isinstance(r[c], (float, np.floating)) else str(r[c]) for c in cols) + " |")
+        out.append("| " + " | ".join(fmt.format(r[c]) if isinstance(r[c], (float, np.floating)) else str(r[c]).replace("|", "\\|") for c in cols) + " |")
     return out
 
 
