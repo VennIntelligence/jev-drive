@@ -1,0 +1,48 @@
+{
+ "pool": "PRECAT",
+ "passes": [
+  "A"
+ ],
+ "rows": 243,
+ "rows_conditioned": 243,
+ "inside_share": 1.0,
+ "inside_share_all_raster": 1.0,
+ "twin_inside_share_all_raster": 1.0,
+ "acc_ok_share": 1.0,
+ "acc_le4_share": 1.0,
+ "twin_acc_le4_share": 1.0,
+ "a_rec_pct": {
+  "50": 0.62614399485855,
+  "90": 1.6767144087489882,
+  "99": 3.32039535723553
+ },
+ "a_twin_pct": {
+  "50": 0.12407372641497022,
+  "90": 1.681769907647327,
+  "99": 3.345041122207243
+ },
+ "m_rec_pct": {
+  "1": 0.23807700006856503,
+  "5": 0.5546458748403242,
+  "50": 2.8553172036033416
+ },
+ "line": 0.99,
+ "by_type": {
+  "both": {
+   "rows": 18,
+   "inside": 1.0,
+   "acc_ok": 1.0
+  },
+  "head": {
+   "rows": 72,
+   "inside": 1.0,
+   "acc_ok": 1.0
+  },
+  "lat": {
+   "rows": 153,
+   "inside": 1.0,
+   "acc_ok": 1.0
+  }
+ },
+ "pass_": true
+}

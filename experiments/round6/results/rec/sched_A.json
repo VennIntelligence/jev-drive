@@ -1,0 +1,90 @@
+{
+ "pass_": "A",
+ "scenes_eligible": 717,
+ "scenes_with_episodes": 677,
+ "episodes": 1380,
+ "candidates": 58372,
+ "rows_expected": 12420,
+ "why": {
+  "slow": 24764,
+  "accel": 1089,
+  "offroad": 119,
+  "agent": 81,
+  "raster": 1920,
+  "no_draw": 3
+ },
+ "class_weight": {
+  "turn": 2.825665986287748,
+  "curve": 2.12764280506788,
+  "straight": 0.459538248749867
+ },
+ "class_share_moving_paih": {
+  "turn": 0.11796629005371365,
+  "curve": 0.15666790146323392,
+  "straight": 0.7253658084830524
+ },
+ "by_cls": {
+  "straight": 952,
+  "turn": 180,
+  "curve": 248
+ },
+ "by_type": {
+  "lat": 691,
+  "both": 211,
+  "head": 478
+ },
+ "by_e0": {
+  "1.5": 209,
+  "0.5": 396,
+  "1.0": 297,
+  "0.0": 478
+ },
+ "by_psi": {
+  "0.0": 691,
+  "3.0": 356,
+  "10.0": 95,
+  "6.0": 238
+ },
+ "chunks_Z": [
+  "z000",
+  "z001"
+ ],
+ "probe": [
+  "clipgt-e742759b-9403-4d6c-9c52-704b81bc5ba9",
+  "clipgt-626d4b3b-18ef-4de1-8b19-6c72f4e79e4e",
+  "clipgt-58467d6b-de3b-4eb0-9080-8d97b88ba714",
+  "clipgt-738f3e44-120e-4a27-be44-b114795ab3cb",
+  "clipgt-167f9d8c-812a-48d1-98b9-c9fd29feb860",
+  "clipgt-95a8ccb7-cd00-4995-b2d9-83a8987b57d0",
+  "clipgt-1370aa93-94e4-4dcb-9855-ede07046cbff",
+  "clipgt-027a5570-83b3-4ebe-b332-ba4f054636ce",
+  "clipgt-fdc8aa11-35f3-41e3-863d-1faa9860f049",
+  "clipgt-f2379a9a-79be-4106-93e6-7e02a84ff04f",
+  "clipgt-2d1728e8-10c1-4735-9b0d-e5ac198cf6d3"
+ ],
+ "chunks": [
+  "a000",
+  "a001",
+  "a002",
+  "a003",
+  "a004",
+  "a005",
+  "a006",
+  "a007",
+  "a008",
+  "a009",
+  "a010",
+  "a011",
+  "a012",
+  "a013",
+  "a014",
+  "a015",
+  "a016",
+  "a017",
+  "a018",
+  "a019",
+  "a020",
+  "a021",
+  "a022"
+ ]
+}

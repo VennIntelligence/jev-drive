@@ -1,0 +1,33 @@
+{
+ "pool": "PRECAT",
+ "rows": 243,
+ "r1": {
+  "model": {
+   "share_over": 0.053497942386831275,
+   "median_m": 0.015043258666992188,
+   "p99_m": 0.06126068115234374,
+   "rows": 243,
+   "missing": 0
+  },
+  "wrong": {
+   "share_over": 1.0,
+   "median_m": 0.7026596069335938,
+   "p99_m": 2.025564651489258,
+   "rows": 243,
+   "missing": 0
+  },
+  "pass_": true
+ },
+ "ego_frame_diff_median": 1.2241020202636719,
+ "world_end_median": 0.9531738828777198,
+ "world_end_p90": 2.294602519195241,
+ "len_ratio_median": 0.9928721346190652,
+ "len_ratio_p10_p90": [
+  0.9586874347012008,
+  1.0316242698307398
+ ],
+ "ego_offset_ge05_rows": 68,
+ "recovering_share": 0.9117647058823529,
+ "end_offset_over_ego_median": 0.4493570227421506,
+ "pass_": true
+}

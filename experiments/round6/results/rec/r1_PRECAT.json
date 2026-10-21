@@ -1,0 +1,20 @@
+{
+ "pool": "PRECAT",
+ "tag": "NTV0-L18-s0",
+ "control": "RB0-F-s1",
+ "model": {
+  "share_over": 0.053497942386831275,
+  "median_m": 0.015043258666992188,
+  "p99_m": 0.06126068115234374,
+  "rows": 243,
+  "missing": 0
+ },
+ "wrong": {
+  "share_over": 1.0,
+  "median_m": 0.7026596069335938,
+  "p99_m": 2.025564651489258,
+  "rows": 243,
+  "missing": 0
+ },
+ "pass_": true
+}
