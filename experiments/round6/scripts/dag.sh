@@ -133,6 +133,12 @@ pool)
   $TR $RF/rf_pai_pool.py --name $NP --rows $O/rows/$NP --cache $O/cache/$NP --runs "$O/roll/runs/*" --split experiments/round5/results/s3_scenes.tsv \
       --fut poses --prefix paid --src dagger ;;
 reteach) "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $O/teach --workers ${2:-16} --stale-only 1 ;;   # amendment 1: files of an older teacher
+t4pilot)  # T4 pilot (CPU): teacher variants on c001 + c002 (50 scenes) -> position-based label lateral acceleration
+  P=$O/pilot; mkdir -p $P; cat $O/lists/c001.txt $O/lists/c002.txt > $P/scenes.txt; d=()
+  for v in "A:" "B:DAG_SIG=3" "C:DAG_SIG=3 DAG_TM=3" "D:DAG_SIG=3 DAG_HCLIP=0" "E:DAG_SIG=3 DAG_HSIG=20 DAG_TM=3" "F:DAG_SIG=3 DAG_HSIG=20 DAG_TM=2.5"; do
+    n=${v%%:*}; rm -rf $P/$n; mkdir -p $P/$n
+    env ${v#*:} "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $P/$n --chunk-list $P/scenes.txt --workers 16 || die "pilot $n"; d+=($P/$n); done
+  $V $PY alatpos --dirs ${d[@]} --out $RES/t4_pilot.json ;;
 label) bash $ME reteach 4 || die "reteach"; $V $PY label --root $O --pool on1_$NP ;;
 fwd)  $TR $RF/rf_recov.py fwd --pool $NP --rows train-rec --tags $T,$WRONG --out $O/fwd ;;
 r1in) $V $PY r1in --root $O --pool on1_$NP --fwd $O/fwd/$NP-train-rec --tag $T --control $WRONG ;;

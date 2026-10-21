@@ -68,17 +68,17 @@ STUDENT = "R5LC-L18-s0"
 CARD_STACKS = 3
 
 # teacher (registered in the plan before any roll)
-T_MERGE, L_MIN, L_MAX = 2.0, 6.0, 80.0          # merge length = clip(T_MERGE x v0, L_MIN, L_MAX) m
+T_MERGE, L_MIN, L_MAX = float(os.environ.get("DAG_TM", 2.0)), 6.0, 80.0   # merge length = clip(T_MERGE x v0, L_MIN, L_MAX) m (DAG_*: T4 pilot only)
 D_MAX, PSI_MAX = 5.0, np.radians(60.0)          # no label beyond these
 V_ROW = 2.0                                     # DAgger rows: fed speed >= 2 m/s
 SW_T, SW_MIN, SW_MAX = 3.0, 15.0, 60.0          # lateral lane switch in the route: blend length = clip(3 s x human speed, 15, 60) m
-DS, SIG = 0.25, 1.0                             # reference resampling and Gaussian smoothing (m)
+DS, SIG = 0.25, float(os.environ.get("DAG_SIG", 1.0))   # reference resampling and Gaussian smoothing (m)
 ROUTE_OFFSET = 40.0                             # the rollouts' route_start_offset_m
 T_J = 0.5 * np.arange(1, 9)                     # label times (s)
 A_LAT = 4.0                                     # T4 line (m/s^2, 99 %)
 TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
-H_SIG, H_CLIP = 10.0, 0.5                       # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
+H_SIG, H_CLIP = float(os.environ.get("DAG_HSIG", 10.0)), float(os.environ.get("DAG_HCLIP", 0.5))                      # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
                                                 # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
 TEACHER_V = "b2"                                # teacher version stamped into every teach file (label refuses other versions)
 
@@ -606,6 +606,36 @@ def cmd_teach(a):
     print(json.dumps(dict(scenes=len(v), rows=sum(x["n"] for x in v), ok=sum(x["ok"] for x in v), no_cfg=miss)))
 
 
+def alat_pos(f):
+    """Lateral acceleration from the 8 label positions (n, 8, >= 2) at 0.5 s: max over interior points of speed x heading rate of the
+    segments (segments < 0.2 m ignored); the estimator offroad_mv used on training rows, comparable across teacher / served / human labels."""
+    P = np.concatenate([np.zeros((len(f), 1, 2)), np.asarray(f, np.float64)[:, :, :2]], 1)
+    sg = np.diff(P, axis=1)
+    L = np.hypot(sg[..., 0], sg[..., 1])
+    h = np.unwrap(np.arctan2(sg[..., 1], sg[..., 0]), axis=1)
+    v, w = (L[:, 1:] + L[:, :-1]) / 2 / 0.5, np.diff(h, axis=1) / 0.5
+    return np.where((L[:, 1:] > 0.2) & (L[:, :-1] > 0.2), np.abs(v * w), 0.0).max(1)
+
+
+def cmd_alatpos(a):
+    """T4 pilot: position-based label lateral acceleration of teach dirs (rows fed >= 2 m/s, before the first event, teacher ok) vs the served plans."""
+    out = {}
+    for d in a.dirs:
+        F, S, D0 = [], [], []
+        for f in sorted(Path(d).glob("clipgt-*.npz")):
+            with np.load(f) as z:
+                m = z["ok"] & z["pre"] & (z["v0"] >= V_ROW)
+                F.append(z["fut"][m]), S.append(z["served"][m]), D0.append(np.abs(z["d0"][m]))
+        F, S, D0 = np.concatenate(F), np.concatenate(S), np.concatenate(D0)
+        at, as_ = alat_pos(F), alat_pos(S)
+        q = lambda x: [round(float(np.percentile(x, k)), 2) for k in (50, 90, 99)]  # noqa: E731
+        out[d] = dict(rows=len(at), teacher=q(at), served=q(as_), teacher_over4=round(float((at > A_LAT).mean()), 4), served_over4=round(float((as_ > A_LAT).mean()), 4),
+                      by_d0={f"{lo}-{hi}": q(at[(D0 >= lo) & (D0 < hi)]) for lo, hi in ((0, 0.3), (0.3, 1), (1, 2), (2, 9))})
+        print(Path(d).name, json.dumps(out[d]), flush=True)
+    if a.out:
+        dump(a.out, out)
+
+
 # ---------------------------------------------------------------- stage-1 check
 def runtimes(root):
     out = []
@@ -981,7 +1011,7 @@ if __name__ == "__main__":
                            teach=["rows", "cfg_glob", "out", "chunk_list?", "workers:int", "stale_only:int"], chk1=["root"], label=["root", "pool"],
                            r1in=["root", "pool", "fwd", "tag", "control"], mfix=["root", "pool", "ref"],
                            weights=["pool", "base", "k_on:int", "k_dag:int", "out", "src?"], smoke=["tag", "wfile", "k_dag:int"],
-                           verdict=["json", "md", "read+"], pcs=["pcs", "json", "md"], report=["root"]).items():
+                           verdict=["json", "md", "read+"], alatpos=["dirs+", "out?"], pcs=["pcs", "json", "md"], report=["root"]).items():
         p = sp.add_parser(name)
         for x in args:
             k, _, t = x.partition(":")
