@@ -8,6 +8,8 @@
 #   paused 10-21 18:20 (plan amendment 1): R6DAG-s1 c003-c007 cancelled by the main session; partial path:
 #   harmcl.sh ptax      CPU-only tax of R6DAG-s1's finished chunks (c000-c002) -> facts R6DAG-L18-s1-281agH-p3
 #   harmcl.sh waitp     one waiter: both the NTV0 tax and the partial tax finished (done / failed / cancelled)
+#   harmcl.sh resume    (when the main session says so) R6DAG-s1's unfinished chunks (SUBMITTED of a cancelled job -> .cancelled), the full tax,
+#                       then report -> $O/DONE; wait with `harmcl.sh wait`
 #   harmcl.sh partial   (direct, seconds) NTV0 ON - OFF on all its scenes, R6DAG and the DiD on c000-c002 -> results/harmonizer_closedloop_p3.*
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/harmcl; ME=experiments/round7/scripts/harmcl.sh; V=.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
@@ -46,6 +48,17 @@ ptax)
   R=$O/R6DAG-L18-s1-agH; ids=$(awk '$2 ~ /^pai-r6dag-l18-s1-c00[012]$/ {print $1}' $O/jobs.txt | paste -sd,)
   t=$(PRIO=$PRIO AFTER=$ids bash experiments/pai_fix/scripts/pai_fix.sh tax R6DAG-L18-s1-281agH-p3 $R | tail -1) && [[ -n $t ]] || die "ptax"
   echo "$t pai_fix-tax-R6DAG-L18-s1-281agH-p3" >> $O/jobs.txt; echo "$(date '+%F %T') partial tax $t after $ids" | tee -a $O/stages.txt ;;
+resume)
+  T=R6DAG-L18-s1; R=$O/$T-agH; for r in $R/runs/*; do [[ -f $r/DONE || ! -f $r/SUBMITTED ]] || mv $r/SUBMITTED $r/SUBMITTED.cancelled; done
+  sed -i '/ harmcl-report$/d; / pai_fix-tax-R6DAG-L18-s1-281agH$/d; / pai-r6dag-l18-s1-c00[3-7]$/d' $O/jobs.txt   # the cancelled ids: not failures
+  CHUNKS_FROM=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks SERVE="$SERVE" WIZ=$WIZ CONC=4 ALPASIM_FAST=1 PRIO=$PRIO VRAM=30 RAM=40 \
+    bash experiments/alpasim/scripts/pai_box.sh submit $R $T > $R.resume.txt || die "pai resume $T"
+  ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.resume.txt); [[ -n $ids ]] || die "$T: nothing resubmitted"; awk '$2 ~ /^pai-/ {print $1, $2}' $R.resume.txt >> $O/jobs.txt
+  t=$(PRIO=$PRIO AFTER=$(paste -sd, <<< "$ids") bash experiments/pai_fix/scripts/pai_fix.sh tax $T-281agH $R | tail -1) && [[ -n $t ]] || die "tax $T"
+  echo "$t pai_fix-tax-$T-281agH" >> $O/jobs.txt
+  r=$($V -m jevdrive.cl submit --owner round7-harmcl --name harmcl-report --tries 1 --priority $PRIO --no-check --after $t \
+      --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 --log-dir $O/pool/report -- bash $ME report < /dev/null | awk '{print $NF}') && [[ -n $r ]] || die "submit report"
+  echo "$r harmcl-report" >> $O/jobs.txt; echo "$(date '+%F %T') resume $T: chunks $(echo $ids) tax $t report $r" | tee -a $O/stages.txt ;;
 waitp)
   until $V - $O/jobs.txt <<'PY'
 import sys
