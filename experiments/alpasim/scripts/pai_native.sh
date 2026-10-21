@@ -7,6 +7,8 @@
 # Env: CONC (concurrent rollouts, default 4), STAGE (rows of the tsv with stage <= this, default 1), SH30_TAG (checkpoint, default P2H10-F-s0),
 #   NUREC (scene cache, default $DATA_DIR/datasets/nurec), NRE_ROOT (default $DATA_DIR/tools/nre-rootfs), JEV_VCONT / JEV_LEAD / PAI_* (drivers/pai.sh).
 #   ALPASIM_FAST (default 1: lib/sim_fast.py through run_native.py; 0 = the official camera set and eval video).
+#   HARMONIZER (default 0 = the leaderboard's renderer, flag dropped; 1 = keep the dev preset's `--enable-harmonizer`, weights from
+#   $NUREC/harmonizer/harmonizer_nontemporal.pt via `--harmonizer-cache`: the renderer cannot fetch them; about 7x slower on Tokyo).
 #   PAI_DRV (run.sh driver, default pai = our driver; e.g. garage with GARAGE_RIG=sensor_rig_2.yaml, or starter = the go-straight kit).
 # The pool sets CUDA_VISIBLE_DEVICES: the card is index 0 inside the run.
 set -euo pipefail
@@ -15,10 +17,15 @@ here=$(cd "$(dirname "$0")" && pwd); source "$here/env.sh"
 OUT=$1 LIST=$2; shift 2
 SRC=${ALPASIM_SRC:-$DATA_DIR/third_party/alpasim}; NUREC=${NUREC:-$DATA_DIR/datasets/nurec}; ROOT=${NRE_ROOT:-$DATA_DIR/tools/nre-rootfs}; CONC=${CONC:-4}
 mkdir -p "$OUT"
+HARM=" --enable-harmonizer="
+if [[ ${HARMONIZER:-0} == 1 ]]; then
+  [[ -f $NUREC/harmonizer/harmonizer_nontemporal.pt ]] || { echo "HARMONIZER=1: no $NUREC/harmonizer/harmonizer_nontemporal.pt" >&2; exit 1; }
+  HARM=" --enable-harmonizer= --enable-harmonizer --harmonizer-cache=$NUREC/harmonizer"
+fi
 if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1}" 'NR > 1 && $8 <= s {print $1}' "$LIST"); else ids=$(grep . "$LIST"); fi
 echo "$ids" > "$OUT/scene_ids.txt"
 exec bash "$here/run.sh" "$OUT" "${PAI_DRV:-pai}" --scene-list "$OUT/scene_ids.txt" --rewrite-configs \
-  --sub "/app=$ROOT/app" --sub " --enable-harmonizer=" --sub "/tmp/nre-cache-dir=$OUT/nre-cache" \
+  --sub "/app=$ROOT/app" --sub "$HARM" --sub "/tmp/nre-cache-dir=$OUT/nre-cache" \
   +e2e_challenge=dev scenes.scene_cache="$NUREC" "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" \
   "services.renderer.gpus=[0]" "services.physics.gpus=[0]" \
   "runtime.endpoints.renderer.n_concurrent_rollouts=$CONC" "runtime.endpoints.driver.n_concurrent_rollouts=$CONC" \
