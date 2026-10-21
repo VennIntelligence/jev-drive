@@ -1,0 +1,86 @@
+{
+ "tag": "R8KSM-L18-s0",
+ "ctrl": "R8KSC-L18-s0",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "batch": [
+   [
+    "51",
+    "13",
+    "72"
+   ],
+   [
+    "51",
+    "13",
+    "72"
+   ]
+  ],
+  "shares": true,
+  "grad_ratio": {
+   "arm": 0.25092781021075145,
+   "control": 0.24464410313194965,
+   "rel": 1.0256850951989334,
+   "band": [
+    0.7,
+    1.3
+   ]
+  },
+  "dev_ade": {
+   "step": 300,
+   "arm": 0.5547630190849304,
+   "control": 0.5554351806640625,
+   "line": 0.5662
+  },
+  "twin": {
+   "setup": {
+    "store": "on1_PAIHTW",
+    "p": 1.0,
+    "stream": [
+     0,
+     0,
+     223,
+     "pool-draw hash"
+    ],
+    "twin_rows": 103904,
+    "pool_rows_with_twin": 103904,
+    "twin_rows_unmatched": 0,
+    "draw_mass_with_twin": 0.15450375969696467,
+    "twin_rows_per_batch": 11.124270698181457
+   },
+   "realised": {
+    "store": "on1_PAIHTW",
+    "p": 1.0,
+    "stream": [
+     0,
+     0,
+     223,
+     "pool-draw hash"
+    ],
+    "twin_rows": 103904,
+    "pool_rows_with_twin": 103904,
+    "twin_rows_unmatched": 0,
+    "draw_mass_with_twin": 0.15450375969696467,
+    "twin_rows_per_batch": 11.124270698181457,
+    "drawn_with_twin": 3358,
+    "swapped": 3358,
+    "swap_share": 1.0
+   },
+   "steps": 300,
+   "expected_drawn": 3337.281209454437
+  },
+  "cmd_rule_logged": false
+ },
+ "ok": {
+  "done": true,
+  "finite": true,
+  "batch": true,
+  "shares": true,
+  "grad": true,
+  "dev": true,
+  "twin_swap": true,
+  "twin_drawn": true,
+  "no_cmd": true
+ },
+ "pass_": true
+}

@@ -1,0 +1,21 @@
+{
+ "a": "R8IDA-L18-s0",
+ "b": "R8IDB-L18-s0",
+ "note": "R6DAG-L18-s0 argv 60 steps eager: code ba54017b on on1_JTPHD / R6DAG vs HEAD with every R8K switch off (on1_JTPHDI / R7J0, no --twin)",
+ "scalars": 274,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5382360219955444,
+  0.5382360219955444
+ ],
+ "on_hash_60": [
+  "f5368348b47e2019",
+  "f5368348b47e2019"
+ ],
+ "want_hash": null,
+ "identical": true
+}
