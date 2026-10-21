@@ -1,13 +1,13 @@
 # round6: lateral recovery for the PAI-human-row recipe
 
 status: live
-decisions: none yet
+decisions: 437
 index: A DAgger: PAI 281 0.775 / 0.815 vs NTV0 0.743; ruler -213 / -155, not adopted
 
 **Question.** The PAI-human-row recipe (MV-LC, d430) fixes route-turn zeros but adds 9-12 offroad zeros on PAI 281 over NTV0, mostly on scenes NTV0
 solves: can rows on the student's own drifted states, labelled with a way back, remove them without losing the turn fixes?
 
-**Conclusion.** Not read yet.
+**Conclusion.** Line B (REC, perturbation-recovery rows): not adopted; PAI 281 0.735 / 0.727 vs MV-LC 0.746 / 0.725 and NTV0 0.743, offroad 26 / 22 (MV-LC 21 / 24, NTV0 12), ruler -288 / -242 (decision 437).
 
 **Next.**
 - Line A, DAGGER-MAP ([plans/2026-10-21-dagger-map.md](plans/2026-10-21-dagger-map.md); code [scripts/dag.sh](scripts/dag.sh) /
@@ -47,6 +47,8 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
     footprint off the road_pai raster, actor overlap.
   - Gates: G1 zero offset = on1_PAIH bit for bit, G2 label inside the raster / lateral acceleration, G3 R1 + NTV0 plans not degenerate, G4 weight-0 identity.
   - Arm R6REC = MV-LC's argv + 8 recovery rows a batch (on1_JTPHREC), seeds 0 / 1; exam PAI 281 ACC + GAP + the local PCS ruler.
+  - Result (decision 437): gates G1 / G3 / G4 pass, G2 passes on the probe (full pools: lateral acceleration 98.6-98.8 % vs the 99 % line, report only);
+    33 250 rows, 3 692 episodes. PAI 281: not adopted, offroad not reduced ([results/rec/pai281_REC_ag.md](results/rec/pai281_REC_ag.md)). Closed.
 - Line C, FIX: one joint data-filter arm from the OFFROAD-MV anatomy (d431; plan [plans/2026-10-21-fix-rows.md](plans/2026-10-21-fix-rows.md); code
   [scripts/fix.sh](scripts/fix.sh) / [scripts/fix.py](scripts/fix.py); results [results/fix/](results/fix/)). Arm R6FIX = MV-LC's recorded argv with
   one more draw-file change: R5LC with two row sets at weight 0, each PAI part renormalised to its R5LC share (still 32 PAI human rows a batch).

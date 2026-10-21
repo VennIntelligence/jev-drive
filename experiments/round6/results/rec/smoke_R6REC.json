@@ -1,0 +1,206 @@
+{
+ "tag": "R6RECSM-L18-s0",
+ "arm": "A",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-R6RECSM-L18-s0/20261021-163040",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "no_flat": [
+   NaN,
+   0,
+   true
+  ],
+  "wfile": [
+   "/root/autodl-tmp/ujs/runs/round6/rec/w/R6REC.npz",
+   "R6REC",
+   true
+  ],
+  "no_road_pai": [
+   false,
+   false,
+   true
+  ],
+  "k_on": [
+   72,
+   72,
+   true
+  ],
+  "batch_rows": [
+   [
+    "51",
+    "13",
+    "72"
+   ],
+   [
+    "51",
+    "13",
+    "72"
+   ],
+   true
+  ],
+  "pool_imit_rows": [
+   40.56,
+   40,
+   true
+  ],
+  "share_S": [
+   0.4444444444441303,
+   0.4444444444441303,
+   true
+  ],
+  "share_S_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_braking": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_cruising": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_starting": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_stopped": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_c_turning": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_launch": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph": [
+   0.22222222222191867,
+   0.22222222222191867,
+   true
+  ],
+  "share_ph05": [
+   0.11111111111120149,
+   0.11111111111120149,
+   true
+  ],
+  "share_ph05_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph15": [
+   0.11111111111100815,
+   0.11111111111100815,
+   true
+  ],
+  "share_ph15_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_ph_held": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_rec": [
+   0.11111111111110052,
+   0.11111111111110052,
+   true
+  ],
+  "share_stand_r": [
+   0.0,
+   0.0,
+   true
+  ],
+  "share_stand_u": [
+   0.0,
+   0.0,
+   true
+  ]
+ },
+ "expected": {
+  "base": "R5LC",
+  "pool": "on1_JTPHREC",
+  "k_on": 64,
+  "k_rec": 8,
+  "k_all": 72,
+  "rec_rows": 33250,
+  "rec_parts": {
+   "reca": 12039,
+   "recb": 11296,
+   "recc": 9915
+  },
+  "rec_per_batch": 8,
+  "group_share": {
+   "S": 0.4444444444441303,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.22222222222191867,
+   "ph05": 0.11111111111120149,
+   "ph05_held": 0.0,
+   "ph15": 0.11111111111100815,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "rec": 0.11111111111110052,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  },
+  "out": "/root/autodl-tmp/ujs/runs/round6/rec/w/R6REC.npz"
+ },
+ "steps": 0,
+ "road": {
+  "road_ho": 0.0,
+  "road_pos": 0.0,
+  "road_posmean": 0.25967723144451155,
+  "n_hinge": 0.0,
+  "n_imit": 40.56
+ },
+ "draw_shares": {
+  "on_wfile": "/root/autodl-tmp/ujs/runs/round6/rec/w/R6REC.npz",
+  "rows_w0": 236618,
+  "group_share": {
+   "S": 0.4444444444441303,
+   "S_held": 0.0,
+   "c_braking": 0.0,
+   "c_cruising": 0.0,
+   "c_starting": 0.0,
+   "c_stopped": 0.0,
+   "c_turning": 0.0,
+   "launch": 0.0,
+   "ph": 0.22222222222191867,
+   "ph05": 0.11111111111120149,
+   "ph05_held": 0.0,
+   "ph15": 0.11111111111100815,
+   "ph15_held": 0.0,
+   "ph_held": 0.0,
+   "rec": 0.11111111111110052,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

@@ -1,0 +1,96 @@
+{
+ "pool": "RECA,RECB,RECC",
+ "rows": 33250,
+ "episodes": 3692,
+ "scenes": 676,
+ "by_type": {
+  "lat": 1870,
+  "both": 527,
+  "head": 1295
+ },
+ "by_cls_rows": {
+  "straight": 23395,
+  "turn": 4263,
+  "curve": 5592
+ },
+ "by_cls_episodes": {
+  "straight": 2598,
+  "turn": 473,
+  "curve": 621
+ },
+ "by_e0": {
+  "1.5": 522,
+  "0.5": 1061,
+  "1.0": 814,
+  "0.0": 1295
+ },
+ "by_psi": {
+  "0.0": 1870,
+  "3.0": 962,
+  "10.0": 243,
+  "6.0": 617
+ },
+ "v0_pct": {
+  "10": 5.031355333328247,
+  "50": 9.85978651046753,
+  "90": 24.916693687438965
+ },
+ "realised_e_err_median": 0.021358645747717536,
+ "realised_e_err_p90": 0.062334448166180494,
+ "realised_over_intended_median_d0": 0.9809727668762207,
+ "dpsi_err_median_deg": 0.32298028529389355,
+ "by_speed_bin": {
+  "2-5": {
+   "episodes": 358,
+   "mean_abs_e0": 0.4106145251396648,
+   "mean_abs_psi": 4.466480446927374
+  },
+  "5-10": {
+   "episodes": 1517,
+   "mean_abs_e0": 0.478246539222149,
+   "mean_abs_psi": 3.2887277521423863
+  },
+  "10-20": {
+   "episodes": 1263,
+   "mean_abs_e0": 0.615993665874901,
+   "mean_abs_psi": 1.7387173396674585
+  },
+  ">=20": {
+   "episodes": 554,
+   "mean_abs_e0": 0.8610108303249098,
+   "mean_abs_psi": 0.4223826714801444
+  }
+ },
+ "select_A": {
+  "pass_": "A",
+  "prefix": "preca",
+  "scenes": 677,
+  "scenes_with_rows": 676,
+  "rows": 12393,
+  "dropped": {
+   "collision": 27
+  }
+ },
+ "select_B": {
+  "pass_": "B",
+  "prefix": "precb",
+  "scenes": 658,
+  "scenes_with_rows": 656,
+  "rows": 11602,
+  "dropped": {
+   "collision": 44,
+   "missing_scene": 18
+  }
+ },
+ "select_C": {
+  "pass_": "C",
+  "prefix": "precc",
+  "scenes": 621,
+  "scenes_with_rows": 617,
+  "rows": 10181,
+  "dropped": {
+   "collision": 61,
+   "missing_scene": 9
+  }
+ }
+}

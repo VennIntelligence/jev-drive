@@ -1,0 +1,33 @@
+{
+ "pool": "RECC",
+ "rows": 9915,
+ "r1": {
+  "model": {
+   "share_over": 0.04639435199193142,
+   "median_m": 0.01515960693359375,
+   "p99_m": 0.07969619750976564,
+   "rows": 9915,
+   "missing": 0
+  },
+  "wrong": {
+   "share_over": 0.999697428139183,
+   "median_m": 0.8069419860839844,
+   "p99_m": 4.102450103759765,
+   "rows": 9915,
+   "missing": 0
+  },
+  "pass_": true
+ },
+ "ego_frame_diff_median": 1.4715003967285156,
+ "world_end_median": 1.0585998751394299,
+ "world_end_p90": 2.8374975763218795,
+ "len_ratio_median": 0.997733013906185,
+ "len_ratio_p10_p90": [
+  0.9555082387415588,
+  1.04578922479619
+ ],
+ "ego_offset_ge05_rows": 4224,
+ "recovering_share": 0.7220643939393939,
+ "end_offset_over_ego_median": 0.5710186869780305,
+ "pass_": true
+}

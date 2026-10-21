@@ -1,0 +1,28 @@
+{
+ "pool": "JTPHREC",
+ "ref": "JTPH",
+ "ref_rows": 528547,
+ "rows": 561797,
+ "parts": {
+  "ph": 135793,
+  "ph05": 123879,
+  "ph15": 99269,
+  "rb0": 17429,
+  "reca": 12039,
+  "recb": 11296,
+  "recc": 9915,
+  "rtb1": 17489,
+  "tv": 82594,
+  "y": 17306,
+  "ys": 34788
+ },
+ "agent_ok_prefix_fixed": 135793,
+ "agent_ok_new_before": 33250,
+ "agent_ok_new_after": 0,
+ "road_ok_new": 0,
+ "new_rows_mode": [
+  "both"
+ ],
+ "mismatch": [],
+ "pass_": true
+}

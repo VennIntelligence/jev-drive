@@ -1,0 +1,33 @@
+{
+ "pool": "RECA",
+ "rows": 12039,
+ "r1": {
+  "model": {
+   "share_over": 0.05565246282913863,
+   "median_m": 0.014799118041992188,
+   "p99_m": 0.08633724212646486,
+   "rows": 12039,
+   "missing": 0
+  },
+  "wrong": {
+   "share_over": 0.9992524296037877,
+   "median_m": 0.8085899353027344,
+   "p99_m": 4.242025604248047,
+   "rows": 12039,
+   "missing": 0
+  },
+  "pass_": true
+ },
+ "ego_frame_diff_median": 1.508300058543682,
+ "world_end_median": 1.0782560721138699,
+ "world_end_p90": 2.851885281004409,
+ "len_ratio_median": 0.9984816018849896,
+ "len_ratio_p10_p90": [
+  0.9563779167034775,
+  1.0553226512198195
+ ],
+ "ego_offset_ge05_rows": 4906,
+ "recovering_share": 0.7013860578883,
+ "end_offset_over_ego_median": 0.5888045653104493,
+ "pass_": true
+}

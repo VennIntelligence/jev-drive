@@ -1,0 +1,33 @@
+{
+ "pool": "RECB",
+ "rows": 11296,
+ "r1": {
+  "model": {
+   "share_over": 0.05426699716713881,
+   "median_m": 0.015061378479003906,
+   "p99_m": 0.08039875030517578,
+   "rows": 11296,
+   "missing": 0
+  },
+  "wrong": {
+   "share_over": 0.9990262039660056,
+   "median_m": 0.8174824714660645,
+   "p99_m": 4.304149246215819,
+   "rows": 11296,
+   "missing": 0
+  },
+  "pass_": true
+ },
+ "ego_frame_diff_median": 1.4829501062631607,
+ "world_end_median": 1.0601373982548923,
+ "world_end_p90": 2.8719200879417084,
+ "len_ratio_median": 0.9979765418564432,
+ "len_ratio_p10_p90": [
+  0.9570097687537049,
+  1.0523244473729423
+ ],
+ "ego_offset_ge05_rows": 4625,
+ "recovering_share": 0.6957837837837838,
+ "end_offset_over_ego_median": 0.6092588851616595,
+ "pass_": true
+}

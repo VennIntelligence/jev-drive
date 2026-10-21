@@ -1,0 +1,34 @@
+{
+ "base": "R5LC",
+ "pool": "on1_JTPHREC",
+ "k_on": 64,
+ "k_rec": 0,
+ "k_all": 64,
+ "rec_rows": 33250,
+ "rec_parts": {
+  "reca": 12039,
+  "recb": 11296,
+  "recc": 9915
+ },
+ "rec_per_batch": 0,
+ "group_share": {
+  "S": 0.49999999999936234,
+  "S_held": 0.0,
+  "c_braking": 0.0,
+  "c_cruising": 0.0,
+  "c_starting": 0.0,
+  "c_stopped": 0.0,
+  "c_turning": 0.0,
+  "launch": 0.0,
+  "ph": 0.25000000000047345,
+  "ph05": 0.12500000000022465,
+  "ph05_held": 0.0,
+  "ph15": 0.12499999999999016,
+  "ph15_held": 0.0,
+  "ph_held": 0.0,
+  "rec": 0.0,
+  "stand_r": 0.0,
+  "stand_u": 0.0
+ },
+ "out": "/root/autodl-tmp/ujs/runs/round6/rec/w/R6REC0.npz"
+}
