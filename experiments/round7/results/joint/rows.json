@@ -1,0 +1,110 @@
+{
+ "rule": {
+  "floor": "arc_j = max(student served, min(human from the matched station, v0 t + 2.0 t^2 / 2)) iff the human's 8 arcs exist, the human keeps >= 1.0 m/s over t_h .. t_h + 6.0 s, |student clock - t_h| <= 3.0 s, that floor's 4 s arc exceeds the student's by > 0.05 m and no object leads on the floored label path (r5 LEAD rule, t0 boxes); floored labels over the T4 line (4 m/s^2) revert to b3",
+  "f2": "F2 on the final labels: v0 >= 4, 0.5 <= v_end < 0.6 v0, max |heading| < 20 deg, no lead -> weight 0"
+ },
+ "reasons": {
+  "drawable": 90300,
+  "teach_found": 90300,
+  "no_window": 12850,
+  "human_slows": 7817,
+  "lag": 9540,
+  "not_slower": 36991,
+  "candidates": 30704,
+  "lead": 14808,
+  "t4_revert": 1219,
+  "floored": 14677
+ },
+ "share_floored": 0.1625359911406423,
+ "arc4_increase_q": [
+  0.79,
+  5.71,
+  22.73
+ ],
+ "by_class": {
+  "launch": [
+   493,
+   6020
+  ],
+  "other": [
+   8331,
+   44697
+  ],
+  "stop_nolead": [
+   1866,
+   19275
+  ],
+  "turn_sharp": [
+   3987,
+   20308
+  ]
+ },
+ "by_speed": {
+  "2-5": [
+   1652,
+   14108
+  ],
+  "5-10": [
+   4682,
+   32158
+  ],
+  "10-15": [
+   4052,
+   21314
+  ],
+  "15-20": [
+   2178,
+   8886
+  ],
+  "20-25": [
+   626,
+   5171
+  ],
+  ">=25": [
+   1487,
+   8663
+  ]
+ },
+ "straight": {
+  "floored": 8660,
+  "drawable": 59827,
+  "inc_q": [
+   0.77,
+   5.3,
+   22.77
+  ]
+ },
+ "f2_pd": 7177,
+ "f2_pd_b3": 11443,
+ "G1a": {
+  "max_abs_m": 0.0,
+  "coverage": 1.0
+ },
+ "G1b": {
+  "min_arc_change": -0.003179710494812582,
+  "max_change_over_floor": 0.006561495238109671,
+  "max_floor_over_human": 0.0,
+  "b3_start_offset_rows": 1000
+ },
+ "G1c": {
+  "k0_rows": 664,
+  "median_abs_lag_s": 2.0097494779491853e-09,
+  "lag_q_all": [
+   -2.34,
+   -0.0,
+   1.1
+  ]
+ },
+ "T4": {
+  "p99_b5": 3.75717859470992,
+  "p99_b3": 3.6266268141931617,
+  "over": 0
+ },
+ "gates": {
+  "G1a": true,
+  "G1b": true,
+  "G1c": true,
+  "T4": true
+ },
+ "passed": true
+}

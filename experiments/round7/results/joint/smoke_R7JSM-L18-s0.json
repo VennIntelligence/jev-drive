@@ -1,0 +1,108 @@
+{
+ "tag": "R7JSM-L18-s0",
+ "ctrl": "R7JSC-L18-s0",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "batch": [
+   [
+    "25",
+    "13",
+    "98"
+   ],
+   [
+    "25",
+    "13",
+    "98"
+   ]
+  ],
+  "shares": true,
+  "grad_ratio": {
+   "joint": 0.23700763672724487,
+   "control": 0.24464410313194965,
+   "rel": 0.9687854057917512,
+   "band": [
+    0.7,
+    1.3
+   ]
+  },
+  "dev_ade": {
+   "step": 300,
+   "joint": 0.5599027872085571,
+   "line": 0.5662
+  },
+  "cmd_rule": {
+   "rule": "heading",
+   "rows": 556934,
+   "changed": 128459,
+   "parts": {
+    "ph": {
+     "rows": 135793,
+     "old_lr": 0.4455,
+     "new_lr": 0.2434,
+     "old_unk": 0.0,
+     "changed": 0.2223
+    },
+    "ph05": {
+     "rows": 123879,
+     "old_lr": 0.4493,
+     "new_lr": 0.2459,
+     "old_unk": 0.0,
+     "changed": 0.2241
+    },
+    "ph15": {
+     "rows": 99269,
+     "old_lr": 0.4557,
+     "new_lr": 0.2551,
+     "old_unk": 0.0,
+     "changed": 0.2203
+    },
+    "pd": {
+     "rows": 110981,
+     "old_lr": 0.4163,
+     "new_lr": 0.2171,
+     "old_unk": 0.0,
+     "changed": 0.224
+    },
+    "rb0": {
+     "rows": 17429,
+     "old_lr": 0.5407,
+     "new_lr": 0.3027,
+     "old_unk": 0.0,
+     "changed": 0.2648
+    },
+    "rtb1": {
+     "rows": 17489,
+     "old_lr": 0.5256,
+     "new_lr": 0.2965,
+     "old_unk": 0.0,
+     "changed": 0.2559
+    },
+    "y": {
+     "rows": 17306,
+     "old_lr": 0.5563,
+     "new_lr": 0.3083,
+     "old_unk": 0.0,
+     "changed": 0.2769
+    },
+    "ys": {
+     "rows": 34788,
+     "old_lr": 0.5593,
+     "new_lr": 0.3038,
+     "old_unk": 0.0,
+     "changed": 0.2845
+    }
+   }
+  }
+ },
+ "ok": {
+  "done": true,
+  "finite": true,
+  "batch": true,
+  "shares": true,
+  "grad": true,
+  "dev": true,
+  "cmd": true
+ },
+ "pass_": true
+}
