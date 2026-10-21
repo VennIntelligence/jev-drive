@@ -322,6 +322,30 @@ def turn_dist(f):
     return np.where(c.any(-1), OFFS[np.argmax(c, -1)], np.where(v[..., I60], TURN_CAP, np.nan))
 
 
+CMD_LOOK, CMD_DEG = 40.0, 20.0                   # round7 joint arm (change 3, decision 432): the command from the route's heading change
+
+
+def cmd_heading(f):
+    """Old-layout features (..., DIM), as fed (training rows: the stored float16 features; the PAI driver rounds its fed memory to float16
+    first, so both sides see the same numbers) -> (..., 4) NAVSIM one-hot [left, straight, right, unknown]. The route's own heading change
+    against the +0 m slot's heading (the ego's heading in the near gap, as turn_dist): the first slot in 0 .. CMD_LOOK m whose change is
+    >= CMD_DEG and persists 4 m on (turn_dist's merge-kink rule) gives LEFT (change > 0) or RIGHT; none (or no valid slot at all) gives
+    STRAIGHT, never unknown. Replaces the shipped rule (first waypoint >= 5 m, about 42 m ahead, |y| > 2 m),
+    which turns gentle curvature and the ego's own pose into turn commands (route_mem_curv.md)."""
+    P = np.asarray(f, np.float32).reshape(*np.shape(f)[:-1], N_PT, NF)
+    v = P[..., 0] > 0.5
+    h = np.arctan2(P[..., 4], P[..., 3])
+    ref = np.where(v[..., I0], h[..., I0], 0.0)
+    d = (h - ref[..., None] + np.pi) % (2 * np.pi) - np.pi
+    c = v & (np.abs(d) >= np.radians(CMD_DEG))
+    c[..., :-2] &= c[..., 2:] | ~v[..., 2:]
+    c &= (OFFS >= 0.0) & (OFFS <= CMD_LOOK)
+    j = np.argmax(c, -1)
+    dj = np.take_along_axis(d, j[..., None], -1)[..., 0]
+    k = np.where(c.any(-1), np.where(dj > 0, 0, 2), 1)
+    return np.eye(4, dtype=np.float32)[k]
+
+
 def to_order(f, trav):
     """Old-layout features (..., DIM) and travelled arc (...,) -> ordered features (..., DIM_O) float32."""
     f = np.asarray(f, np.float32)

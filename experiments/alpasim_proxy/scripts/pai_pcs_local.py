@@ -90,6 +90,9 @@ SRC = {
     # round 6 line C, FIX (round6/scripts/fix.sh): R6FIX s0 / s1 (MV-LC without the F1 / F2 rows), out of pool
     "R6FIX-s0+AG": ("round6/fix/pai281/R6FIX-L18-s0-ag", "other"),
     "R6FIX-s1+AG": ("round6/fix/pai281/R6FIX-L18-s1-ag", "other"),
+    # round 7 joint arm (round7/scripts/joint.sh): R7J s0 / s1 under ACC + GAP + JEV_CMD=heading, out of pool
+    "R7J-s0+AG": ("round7/joint/pai281/R7J-L18-s0-ag", "other"),
+    "R7J-s1+AG": ("round7/joint/pai281/R7J-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }

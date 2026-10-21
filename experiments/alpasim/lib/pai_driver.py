@@ -41,7 +41,9 @@ the rule expert's plan replaces the model's, rule_expert.py, mounted by pai_run.
 `expert` its state; off by default), JEV_INTENT_HOLD / JEV_IH_A (1 / <a>: the served path held to the policy's own earlier intent while the
 route memory or the command shows a turn, intent_hold.py, a diagnostic, imported only when set; logged as `ih`, and `poses_ih` while it holds,
 `poses` stays the plan; off by default), JEV_TTS (1: the best of K structured candidates of the model's own plan, lib/tts.py, after VH.observe and before
-serve_fix, so every later switch acts on the chosen plan; logged as `tts`, and `poses_own` when it switched; off by default: not imported).
+serve_fix, so every later switch acts on the chosen plan; logged as `tts`, and `poses_own` when it switched; off by default: not imported), JEV_CMD (heading:
+the command fed in the ego row = route_mem/lib/rmem.cmd_heading on the fed route memory, the route's own heading change, instead of the shipped
+rule on the latest route message; the round7 joint arm's training rows carry the same rule; logged `cmd`, the message rule as `cmd_msg`; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -90,6 +92,9 @@ RXM = None                                           # lib/reflex_mem.py, set in
 ACCR = None                                          # rmem (its Tracker.polyline) for JEV_ACC's route, set in main() when JEV_ACC=1
 RM_SC = (os.environ.get("JEV_RM_SC", "") or "").strip().lower()   # ordered-memory scalar diagnostic (route v2 prereg Amendment 16), off by default
 assert RM_SC == "" or RM_SC == "zero" or RM_SC.startswith("clip:"), f"JEV_RM_SC={RM_SC!r}: clip:<m> | zero"
+CMD_RULE = (os.environ.get("JEV_CMD", "") or "").strip().lower()  # round7 joint arm: `heading` = rmem.cmd_heading on the fed memory; off by default
+assert CMD_RULE in ("", "0", "heading"), f"JEV_CMD={CMD_RULE!r}: heading"
+CMD_RULE = CMD_RULE if CMD_RULE != "0" else ""
 
 
 def rm_scalars(rf):
@@ -296,6 +301,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 acc = dict(route=s.racc.polyline(t0, s.rpose.get, p0), t_s=(now - s.t_first) * 1e-6) if FX.ACC else {}
                 if RM_SC and rf is not None and len(rf) == RMEM.DIM_O:   # JEV_RM_SC: the ordered memory's 3 scalars changed (diagnostic)
                     rf = rm_scalars(rf)
+                cmd_msg = None
+                if CMD_RULE:                                 # JEV_CMD=heading: the command from the fed memory (float16, as the training rows store it)
+                    assert rf is not None and len(rf) == RMEM.DIM, "JEV_CMD=heading: a ROUTE-MEM checkpoint (old layout) with the memory on"
+                    cmd_msg, cmd = cmd, RMEM.cmd_heading(np.asarray(rf, np.float16))
                 dq = dlog = None
                 if s.rd is not None:                         # JEV_DESIRE: the route's lane-change desire on the fed memory and the measured vx
                     dq, dlog = RDS.serve(s.rd, t0 * 1e-6, float(V[-1][0]), rf)
@@ -385,6 +394,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(ih=ihr, **({"poses_ih": np.round(served, 4).tolist()} if ihr["on"] else {}))
             if tgr is not None:
                 rec.update(tg=tgr, **({"poses_branch": np.round(served, 4).tolist()} if tgr["on"] else {}))
+            if cmd_msg is not None:
+                rec.update(cmd_msg=int(np.argmax(cmd_msg)))
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
             if dlog is not None:
@@ -409,7 +420,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}{TS.SUFFIX if TS else ''}{RDS.SUFFIX if RDS else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}{XP.SUFFIX}{IH.SUFFIX if IH is not None else ''}{TS.SUFFIX if TS else ''}{RDS.SUFFIX if RDS else ''}{'-cmdh' if CMD_RULE else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 

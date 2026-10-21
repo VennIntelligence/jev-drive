@@ -165,6 +165,9 @@ SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) =
             gives the S rows (`pool` s) the mass --si-k-s / --on-k and the new rows the rest (ranked inside them; `hold` 1 rows weight 0), and
             --rm-drop treats the new rows as normal rows. --si-mult 1: the uniform draw over the same rows.
 
+ROUND7 joint arm (2026-10-22, experiments/round7/plans/2026-10-22-joint-arm.md); off (default) = nothing touched:
+  --cmd-rule heading   the command (ego cols 1:4) of the pool rows of CMD_PARTS (PAI human, DAgger, S) := rmem.cmd_heading on the row's own fed
+            route memory, the rule the PAI driver serves with JEV_CMD=heading; navtrain rows keep NAVSIM's command (cmd_rule).
 NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every flag off = the recipe above operation for operation:
   --on-wfile FILE   per-row draw weights of the --on pool rows from FILE (npz: `names` = the pool's tab names in order, `w`; defect_fix df.py
             weights): numpy's weighted choice on the pool stream [seed, 0, 53], as --on-weight; refused with --on-weight / --on-cap-scene / --si-scan.
@@ -433,6 +436,7 @@ def build(a, dev):
     lane = getattr(a, "lane_lam", 0) > 0 or getattr(a, "lc_cf", False)
     F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane, anchor=head.get("anchor", False))
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
+    ns.cmd_rec = cmd_rule(ns, a.cmd_rule) if getattr(a, "cmd_rule", "") else None   # round7 joint arm: off (default) = nothing touched
     rp = list(ns.model.adapter.route.parameters())
     ns.rxp = list(ns.model.adapter.rx.parameters()) if ns.rx else []
     ids = {id(p) for p in rp + ns.rxp}
@@ -440,6 +444,36 @@ def build(a, dev):
     if ns.rx:
         ns.S.ego, ns.rx_rec = rx_feats(ns, dev)
     return ns, rp, JD, TU, okc
+
+
+CMD_PARTS = ("ph", "ph05", "ph15", "pd", "rb0", "rtb1", "y", "ys")   # pool parts whose command came from AlpaSim's route (PAI human, DAgger, S)
+
+
+def cmd_rule(ns, rule):
+    """--cmd-rule heading (round7 joint arm, change 3, decision 432): the command of the fed row (ego cols 1:4) of every pool row of CMD_PARTS
+    := rmem.cmd_heading on the row's own fed route memory (the stored float16 features, as the PAI driver's JEV_CMD=heading computes it at
+    serve). navtrain rows (NAVSIM's own driving command) and the other pool parts keep theirs. In place on S.ego; -> record."""
+    import torch
+    assert rule == "heading", f"--cmd-rule {rule}: heading"
+    assert not ns.head.get("order") and not ns.head.get("anchor"), "--cmd-rule: the old (projected) memory layout only"
+    S = ns.S
+    part = np.array([x.split(":")[1] for x in S.tab["names"][ns.on0:].astype(str)])
+    r = torch.as_tensor(ns.on0 + np.flatnonzero(np.isin(part, CMD_PARTS)), device=S.ego.device)
+    f = S.ego[r, RM.EGO_DIM:RM.EGO_DIM + RM.DIM].cpu().numpy()
+    assert np.array_equal(f.astype(np.float16).astype(np.float32), f), "--cmd-rule: the fed memory is not the stored float16 features"
+    old = S.ego[r, 1:4].cpu().numpy()
+    new = RM.cmd_heading(f.astype(np.float16))[:, :3]
+    S.ego[r, 1:4] = torch.as_tensor(new, device=S.ego.device, dtype=S.ego.dtype)
+    pr = part[(r - ns.on0).cpu().numpy()]
+    lab = lambda c: np.where(c.max(1) > 0.5, c.argmax(1), 3)  # noqa: E731
+    lo, ln = lab(old), lab(new)
+    rec = dict(rule=rule, rows=int(len(r)), changed=int((lo != ln).sum()), parts={})
+    for p in CMD_PARTS:
+        m = pr == p
+        if m.any():
+            rec["parts"][p] = dict(rows=int(m.sum()), old_lr=round(float(np.isin(lo[m], [0, 2]).mean()), 4), new_lr=round(float(np.isin(ln[m], [0, 2]).mean()), 4),
+                                   old_unk=round(float((lo[m] == 3).mean()), 4), changed=round(float((lo[m] != ln[m]).mean()), 4))
+    return rec
 
 
 def rx_feats(ns, dev):
@@ -1239,6 +1273,9 @@ def cmd_train(a):
             run.info("pool slices @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
         if a.lr_floor or a.diag:
             run.info(f"lr floor {a.lr_floor}; diag {a.diag} (per-term gradients every {a.diag_every} steps)")
+        if ns.cmd_rec:
+            run.info(f"--cmd-rule (round7 joint arm): {json.dumps(ns.cmd_rec)}")
+            run.summary.update(cmd_rule=ns.cmd_rec)
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -1649,6 +1686,7 @@ if __name__ == "__main__":
         p.add_argument("--kd-nav-k", type=int, default=0, help="RETAIN: navtrain approach rows per step, fed the constant-velocity history")
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
+        p.add_argument("--cmd-rule", default="", choices=("", "heading"), help="round7 joint arm: pool rows' command from the route memory (cmd_rule)")
         p.add_argument("--on-wfile", default="", help="NR1: per-row draw weights of the pool rows (npz names, w; '' = off)")
         p.add_argument("--on-normal", action="store_true", help="NR1: pool rows are imitation rows for --rm-drop / --ego-scale-speed")
         p.add_argument("--lat-onc", type=float, default=0.0, help="NR1: weight of the opposite-lane point term (nr1_lat; 0 = off)")
