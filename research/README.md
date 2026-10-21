@@ -37,6 +37,7 @@
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
 - [knowing-vs-doing.md](knowing-vs-doing.md)：论文主线候选（2026-10-19）：驾驶智能（看懂、知道该做什么）与驾驶能力（在自己身体上做到）分开，能力取决于可归因的试次；与第 286–363 条读数逐条对照。
+- [s-rows-and-paper.md](s-rows-and-paper.md)：S 行审计与论文候选（2026-10-21）：当前 R6DAG 配方的 batch 构成与梯度、S 池按来源 / 结局 / 情境的激活与可学性（只有 12 % 的抽取是可学的激活行）、改过 S 剂量 / 构成 / 抽样的全部实验与从未测过的项、文献位置、三个实验提议与论文候选排序；脚本 [s-rows/audit.py](s-rows/audit.py)。
 - [next-round/practice-plan.md](next-round/practice-plan.md)：按可归因试次改训练管线的方案（2026-10-19）：trainval 抽样修偏置、nuPlan 换起点、PAI 练习池、自我前向模型、纵向后果项，标直接做 / 先诊断 / 耗时长。
 - [next-round/plan.md](next-round/plan.md)：下一轮方向与计划（2026-10-09 改写）：论文线与比赛线分开，后果监督的轻量表征支路，判定线、日历。
 - [next-round/closed-loop.md](next-round/closed-loop.md)：闭环训练线方案：全长（18–20 决策）训练、估算与排期。
