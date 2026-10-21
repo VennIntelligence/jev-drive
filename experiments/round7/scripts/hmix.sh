@@ -8,7 +8,7 @@
 #                        window of W, then the tail)
 #   hmix.sh ident        identity: R6DAG-L18-s0 argv 60 steps eager at $PRE (worktree) vs HEAD without --twin -> results/harm_mix/identity.json
 #   hmix.sh tident       after DONE: HEAD without --twin vs HEAD --twin PAIHTW:0 (identity), and a --twin PAIHTW:0.5 smoke -> results/harm_mix/
-#   hmix.sh wait [M]     blocks until $O/<M> (default DONE), $O/STOP or a failed job of this lane (one run_in_background waiter)
+#   hmix.sh wait [M]     blocks until $O/<M> (glob; default DONE; IDENT_<out>.<rc>, SMOKE), $O/STOP or a failed job of this lane (one run_in_background waiter)
 #   job bodies: check <c> | rows <V> <c> | clean <V> <c> | rest "<chunks>" <after> | cache <V> | pool | poolc | stretch <f> | gates | twin |
 #               identrun a|b|c|s | identcmp <x> <y> <out> | smokechk
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -111,7 +111,7 @@ identrun)  # identrun a | b | b2 | c | s: 60 steps eager, R6DAG-L18-s0's argv; a
 identcmp)  # identcmp <tag a> <tag b> <out>
   $TR experiments/defect_fix/scripts/df.py bitcmp --a $2 --b $3 --out round7_hmix_$4 --note "R6DAG-L18-s0 argv 60 steps eager: $2 vs $3 (rm_train --twin)"; r=$?
   cp experiments/defect_fix/results/round7_hmix_$4.json $RES/$4.json || r=4
-  (( r == 0 )) && rm -rf $RUNS/$2 $RUNS/$3; exit $r ;;
+  date '+%F %T' > $O/IDENT_$4.$r; (( r == 0 )) && rm -rf $RUNS/$2 $RUNS/$3; exit $r ;;
 smokechk)  # the p = 0.5 smoke: finished, swap share near 0.5, twin rows drawn
   $TR - $DATA_DIR/runs/route_mem/train-HMSM-L18-s0 $RES/smoke.json <<'PY' || die "smoke check"
 import glob, json, sys
@@ -123,10 +123,10 @@ json.dump(dict(run=d, twin=tw, steps=s.get("steps"), pass_=ok), open(sys.argv[2]
 print(json.dumps(dict(twin=tw, pass_=ok)))
 sys.exit(0 if ok else 1)
 PY
-  rm -rf $RUNS/HMSM-L18-s0 ;;
+  rm -rf $RUNS/HMSM-L18-s0; date '+%F %T' > $O/SMOKE ;;
 wait)
   M=${2:-DONE}
-  until [[ -f $O/$M || -f $O/STOP ]] || ! $V - $O/jobs.txt <<'PY'
+  until compgen -G "$O/$M" > /dev/null || [[ -f $O/STOP ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
 from jevdrive.cl import pool as P
 last = {}
@@ -139,6 +139,6 @@ print("failed:", *bad, sep="\n  ", file=sys.stderr) if bad else None
 sys.exit(1 if bad else 0)
 PY
   do sleep 900; done
-  [[ -f $O/$M ]] && echo "$M $(cat $O/$M)"; [[ -f $O/STOP ]] && echo "STOP $(cat $O/STOP)"; true ;;
+  for f in $O/$M; do [[ -f $f ]] && echo "$(basename $f) $(cat $f)"; done; [[ -f $O/STOP ]] && echo "STOP $(cat $O/STOP)"; tail -3 $O/stages.txt; true ;;
 *) sed -n 2,13p "$0"; exit 2 ;;
 esac
