@@ -54,10 +54,16 @@ def main(a):
         d["launch"] = dict(scenes=int(L37.sum()), on=int((PF.launched(A).to_numpy() & L37).sum()), off=int((PF.launched(B).to_numpy() & L37).sum()))
         out["models"][m] = d
     g = lambda m, v: R[f"{m}-{v}"].score.to_numpy(float)  # noqa: E731
+    if a.arm not in off or a.base not in off:
+        return finish(a, out, n, turn, L37)
     don, doff = g(a.arm, "on") - g(a.base, "on"), g(a.arm, "off") - g(a.base, "off")
     out["did"] = dict(arm_minus_base_on=stats.paired(g(a.arm, "on"), g(a.base, "on")),
                       arm_minus_base_off=stats.paired(g(a.arm, "off"), g(a.base, "off")), did=stats.paired(don, doff),
                       did_turn=stats.paired(don[turn], doff[turn]))
+    finish(a, out, n, turn, L37)
+
+
+def finish(a, out, n, turn, L37):
     Path(a.out).write_text(json.dumps(out, indent=1, default=float) + "\n")
     f = lambda r: stats.fmt(r, "+.3f")  # noqa: E731
     print(f"{n} common scenes, {int(turn.sum())} junction-turn, {int(L37.sum())} launch")

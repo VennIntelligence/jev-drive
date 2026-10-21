@@ -5,6 +5,10 @@
 #   harmcl.sh check     the first started chunk's renderer log: harmonizer enabled and the checkpoint loaded (exit 1 if not)
 #   harmcl.sh wait      one run_in_background waiter: $O/DONE or a failed job of this lane
 #   harmcl.sh report    (job body)
+#   paused 10-21 18:20 (plan amendment 1): R6DAG-s1 c003-c007 cancelled by the main session; partial path:
+#   harmcl.sh ptax      CPU-only tax of R6DAG-s1's finished chunks (c000-c002) -> facts R6DAG-L18-s1-281agH-p3
+#   harmcl.sh waitp     one waiter: both the NTV0 tax and the partial tax finished (done / failed / cancelled)
+#   harmcl.sh partial   (direct, seconds) NTV0 ON - OFF on all its scenes, R6DAG and the DiD on c000-c002 -> results/harmonizer_closedloop_p3.*
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/harmcl; ME=experiments/round7/scripts/harmcl.sh; V=.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
 F_=$DATA_DIR/runs/pai_fix/facts; RES=experiments/round7/results; PRIO=${PRIO:-21}; TAGS="NTV0-L18-s0 R6DAG-L18-s1"
@@ -38,6 +42,32 @@ report)
   $TR experiments/round7/scripts/harmcl.py --off NTV0=${off[0]#*=} R6DAG=${off[1]#*=} --on NTV0=${on[0]#*=} R6DAG=${on[1]#*=} \
       --out $RES/harmonizer_closedloop.json > $RES/harmonizer_closedloop.txt || die harmcl
   date '+%F %T' > $O/DONE ;;
+ptax)
+  R=$O/R6DAG-L18-s1-agH; ids=$(awk '$2 ~ /^pai-r6dag-l18-s1-c00[012]$/ {print $1}' $O/jobs.txt | paste -sd,)
+  t=$(PRIO=$PRIO AFTER=$ids bash experiments/pai_fix/scripts/pai_fix.sh tax R6DAG-L18-s1-281agH-p3 $R | tail -1) && [[ -n $t ]] || die "ptax"
+  echo "$t pai_fix-tax-R6DAG-L18-s1-281agH-p3" >> $O/jobs.txt; echo "$(date '+%F %T') partial tax $t after $ids" | tee -a $O/stages.txt ;;
+waitp)
+  until $V - $O/jobs.txt <<'PY'
+import sys
+from jevdrive.cl import pool as P
+jobs = P.snapshot()[0]["jobs"]
+ids = [l.split()[0] for l in open(sys.argv[1]) if l.split() and l.split()[1] in ("pai_fix-tax-NTV0-L18-s0-281agH", "pai_fix-tax-R6DAG-L18-s1-281agH-p3")]
+st = [jobs.get(i, {}).get("state") for i in ids]
+print(dict(zip(ids, st)), file=sys.stderr)
+sys.exit(0 if len(ids) == 2 and all(s in ("done", "failed", "cancelled") for s in st) else 1)
+PY
+  do sleep 300; done; tail -2 $O/stages.txt ;;
+partial)
+  F0=$F_/NTV0-L18-s0-281ag.csv; F1=$F_/R6DAG-L18-s1-281ag.csv; N1=$F_/NTV0-L18-s0-281agH.csv; R1=$F_/R6DAG-L18-s1-281agH-p3.csv
+  $TR experiments/round2/scripts/r2.py r281 --read NTV0-off=$F0 NTV0-on=$N1 --pairs NTV0-on:NTV0-off --out $RES/pai281_harm_ntv0.md \
+      --title "PAI 281, ACC + GAP, Harmonizer ON vs stored OFF: NTV0-L18-s0, all finished scenes (partial read, plan amendment 1)" || die r281-ntv0
+  $TR experiments/round2/scripts/r2.py r281 --read NTV0-off=$F0 R6DAG-off=$F1 NTV0-on=$N1 R6DAG-on=$R1 \
+      --pairs NTV0-on:NTV0-off R6DAG-on:R6DAG-off R6DAG-on:NTV0-on R6DAG-off:NTV0-off --out $RES/pai281_harm_p3.md \
+      --title "PAI 281, ACC + GAP, Harmonizer ON vs stored OFF on chunks c000-c002 (partial read, plan amendment 1)" || die r281-p3
+  $TR experiments/round7/scripts/harmcl.py --off NTV0=$F0 --on NTV0=$N1 --out $RES/harmonizer_closedloop_ntv0.json > $RES/harmonizer_closedloop_ntv0.txt || die ntv0
+  $TR experiments/round7/scripts/harmcl.py --off NTV0=$F0 R6DAG=$F1 --on NTV0=$N1 R6DAG=$R1 --out $RES/harmonizer_closedloop_p3.json \
+      > $RES/harmonizer_closedloop_p3.txt || die p3
+  cat $RES/harmonizer_closedloop_ntv0.txt $RES/harmonizer_closedloop_p3.txt ;;
 wait)
   until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt <<'PY'
 import sys

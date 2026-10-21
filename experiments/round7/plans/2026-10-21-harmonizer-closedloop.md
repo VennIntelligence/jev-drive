@@ -52,3 +52,11 @@ Harmonizer，公开榜与我们所有读数都关着。问题：开 Harmonizer �
 
 开渲染约 99 s / 场景（第 435 条，FAST，CONC 4），2 × 281 ≈ 15.5 job-h 的栈时间（每卡 2 栈，约 8 卡时），CPU 侧 tax 两个小 job。
 rollout 产出按 `pai_box.sh` 默认保留（零分场景留 rollout.asl，视频不留），作为新的开 Harmonizer 参照读数，不另 dump。
+
+## 补记 1（10-21 18:20，暂停；读数之前）
+
+主会话按用户决定让 DAgger 第 2 次迭代的 281 读数优先：R6DAG-s1 开读数的排队块 c003–c007 与 harmcl-report 已被主会话取消（c003 已确认渲染日志
+载入 Harmonizer 权重，18:13）。在跑的 11 块（NTV0 c000–c007、R6DAG-s1 c000–c002）照跑完。先写**部分报告**：NTV0 ON − OFF 用它全部完成的场景；
+R6DAG-s1 ON − OFF 只用 c000–c002；DiD 只在 c000–c002 的共同场景上；明确标「部分」（n、宽 CI）。部分报告需要的 R6DAG c000–c002 facts 由一个
+只用 CPU 的 tax job（`R6DAG-L18-s1-281agH-p3`，vram 0.1）补出，原 tax 因依赖被取消而失败。读法规则不变，但部分结果不按「提交读法」下结论，
+不写 decisions 行。主会话通知后补交 R6DAG-s1 c003–c007（先删这些块的 `SUBMITTED` 标记，`pai_box.sh submit` 只补未完成块）+ tax + 报告。
