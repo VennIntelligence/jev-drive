@@ -432,14 +432,164 @@ def cmd_data(a):
 
 
 # ---------------------------------------------------------------- report
+GEN, MARK = "<!-- generated: offroad_mv.py report -->", "<!-- end generated -->"
+MECH = ("slow-down drift", "over-speed drift", "turn / curve: cut inside", "turn / curve: wide outside", "straight: lateral offset")
+
+
+def mechanism(r):
+    """one event -> mechanism (order matters): the ego far below the human's speed with the model's own speed winning; far above it on a
+    straight road; on a turn / curve (the log turns >= 10 deg over the 60 m around the event) inside or outside; else a straight-road offset."""
+    tsum = r.turn_prev40 + r.turn_next20
+    if r.v_ego < 0.6 * r.v_human and r.vp1 < 0.6 * r.vh1:
+        return MECH[0]
+    if abs(tsum) < 10 and r.v_ego > 1.2 * r.v_human:
+        return MECH[1]
+    if abs(tsum) >= 10:
+        return MECH[2] if np.sign(r.lat_ev) == np.sign(tsum) else MECH[3]
+    return MECH[4]
+
+
+def md_table(df, cols=None, fmt="{:.2f}"):
+    cols = cols or list(df.columns)
+    out = ["| " + " | ".join(cols) + " |", "|" + "|".join(":--" if df[c].dtype == object else "--:" for c in cols) + "|"]
+    for _, r in df.iterrows():
+        out.append("| " + " | ".join(fmt.format(r[c]) if isinstance(r[c], (float, np.floating)) else str(r[c]) for c in cols) + " |")
+    return out
+
+
 def cmd_report(a):
     import pandas as pd
     stage()
     D = _d1()
     E = pd.read_csv(RES / "offroad_mv_events.csv")
     P = pd.read_csv(RES / "offroad_mv_plan.csv")
-    X = json.loads((O / "data.json").read_text()) if (O / "data.json").exists() else None
-    print(len(E), len(P), X is not None)
+    S = pd.read_csv(RES / "offroad_mv_pullscan.csv")
+    X = json.loads((O / "data.json").read_text())
+    for d in (E, P, S):
+        d["sc"] = d.scene.str[7:15]
+    q = P[(P.who == "read") & (P.lead == 1.0)].set_index(["read", "scene"])
+    E["vp1"] = [q.v_plan.get((r.read, r.scene), np.nan) for r in E.itertuples()]
+    E["vh1"] = [q.v_h.get((r.read, r.scene), np.nan) for r in E.itertuples()]
+    E["mech"] = [mechanism(r) for r in E.itertuples()]
+    FJ = D.facts("R2J-L18-s0-281ag")
+    E["R2J"] = [FJ.fclass.get(s, "rpc") for s in E.scene]
+    n4 = E.groupby("scene").read.nunique()
+    E["n_of_4"] = E.scene.map(n4)
+    E.to_csv(RES / "offroad_mv_events.csv", index=False, float_format="%.3f")
+    # per scene
+    g = E.groupby("scene")
+    SC = pd.DataFrame(dict(n_of_4=n4, reads=g.read.agg(lambda x: " ".join(sorted(x))), mech=g.mech.agg(lambda x: x.mode()[0]),
+                           d1_class=g.cls.agg(lambda x: x.mode()[0]), v_ego=g.v_ego.median(), v_human=g.v_human.median(),
+                           lat_ev=g.lat_ev.median(), turn60=(g.turn_prev40.median() + g.turn_next20.median()), ctx=g.ctx.agg(lambda x: x.mode()[0]),
+                           NTV0=g.ntv0.first(), R2J=g.R2J.first())).reset_index()
+    SC["scene"] = SC.scene.str[7:15]
+    SC = SC.sort_values(["n_of_4", "mech"], ascending=[False, True])
+    SC.to_csv(RES / "offroad_mv.csv", index=False, float_format="%.3f")
+    L = ["# OFFROAD-MV: the PAI-human-row family's extra offroad zeros on PAI 281 ACC + GAP (ROUND5, diagnosis)", "",
+         "Stored reads only, no GPU. Reads: R3MV-L18 s0 / s1, MV-LC (R5LC-L18) s0 / s1, PAI 281 under ACC + GAP; NTV0-L18-s0 the same serve "
+         "as reference. Event = an offroad zero (pai_fix fclass) on a scene where NTV0 is not offroad. Code: `scripts/offroad_mv.py` "
+         "(`events`, `data`, `report`), lane `scripts/offroad_mv.sh` (pool CPU jobs, PRIO 15). Files: per event "
+         "[offroad_mv_events.csv](offroad_mv_events.csv), per scene [offroad_mv.csv](offroad_mv.csv), plans at 3 / 2 / 1 s "
+         "[offroad_mv_plan.csv](offroad_mv_plan.csv), read-wide plan scan [offroad_mv_pullscan.csv](offroad_mv_pullscan.csv).", ""]
+    # 1. events
+    L += ["## 1. Events", "", f"{len(E)} offroad zeros on {E.scene.nunique()} scenes (R3MV s0 / s1 / MV-LC s0 / s1: "
+          + " / ".join(str((E.read == k).sum()) for k in READS) + "). Recurrence across the four reads (scenes): "
+          + ", ".join(f"{k} of 4: {int((n4 == k).sum())}" for k in (4, 3, 2, 1)) + ".", "",
+          "Mechanism per event (rule, in this order): **slow-down drift** = ego speed < 0.6 x the human's at the event and the model plan 1 s "
+          "before < 0.6 x the human's speed there; **over-speed drift** = straight (log turns < 10 deg over the 60 m around the event) and ego "
+          "> 1.2 x the human; **turn / curve** = the log turns >= 10 deg over those 60 m, inside / outside by the sign of the ego's lateral "
+          "offset; else **straight: lateral offset**. `d1_class` = D1's geometry class (d1_mac.lateral_one; its 10-15 deg bends are always "
+          "called `cut`). Lateral: + left of the human log.", ""]
+    L += md_table(SC, ["scene", "n_of_4", "mech", "d1_class", "v_ego", "v_human", "lat_ev", "turn60", "ctx", "NTV0", "R2J", "reads"])
+    M = pd.crosstab(E.mech, E.n_of_4.map(lambda k: "stable (3-4 of 4)" if k >= 3 else "2 of 4" if k == 2 else "1 of 4"))
+    M["events"] = M.sum(1)
+    M["scenes"] = E.groupby("mech").scene.nunique()
+    L += ["", "Events by mechanism and recurrence (count of events; `scenes` = distinct scenes):", ""] + md_table(M.reset_index().rename(columns={"mech": "mechanism"}), fmt="{:.0f}")
+    # 2. stable anatomy
+    st = sorted(set(E.scene[E.n_of_4 >= 3]))
+    rows = []
+    for s in st:
+        for L_ in LEADS:
+            for who in ("read", "NTV0"):
+                x = P[(P.scene == s) & (P.lead == L_) & (P.who == who)]
+                if not len(x):
+                    continue
+                ts = np.sign(x.turn_log.median()) if abs(x.turn_log.median()) >= 5 else 0
+                rows.append(dict(scene=s[7:15], mech=E.mech[E.scene == s].mode()[0], t=f"-{L_:.0f} s", who="MV (4 reads)" if who == "read" else "NTV0",
+                                 v0=x.v0.median(), v_h=x.v_h.median(), v_plan=x.v_plan.median(), lat_ego=x.lat0.median(), lat_plan4=x.lat4.median(),
+                                 hdg_ego=x.hdg0.median(), turn_plan=x.turn_plan.median(), turn_log=x.turn_log.median(),
+                                 curv_ratio=(x.turn_plan / x.turn_log).median() if ts else np.nan, won=x.won.mode()[0], lead_d=x.lead_d.median()))
+    A = pd.DataFrame(rows)
+    L += ["", "## 2. Stable events (offroad in >= 3 of the 4 reads): plan vs the human log and vs NTV0 at the same log station", "",
+          "Plan = the model plan (`poses_model`) at the decision 3 / 2 / 1 s before the event (MV: median over the reads that have the event); "
+          "NTV0 = its decision whose ego is closest to the same log station (within 3 m). `lat_ego` / `lat_plan4` = lateral offset of the ego / "
+          "the plan's 4 s point from the human log (m, + left); `hdg_ego` = ego heading minus the log's (deg); `turn_plan` / `turn_log` = the "
+          "plan's 4 s heading change and the log's over the same arc from the ego's station (deg); `curv_ratio` = their ratio when the log "
+          "turns >= 5 deg; `won` = the ACC term that set the speed (model = the model plan's own speed); `lead_d` = ACC lead gap (m, blank = no lead).", ""]
+    L += md_table(A)
+    # 3. read-wide scan
+    G = S.groupby("read").agg(scenes=("scene", "size"), decisions=("n_dec", "sum"), slow=("slow", "sum"), right=("right", "sum"), both=("both", "sum"),
+                              scenes_slow5=("slow", lambda x: int((x >= 5).sum())), scenes_both3=("both", lambda x: int((x >= 3).sum())))
+    for c in ("slow", "right", "both"):
+        G[c + " %"] = 100 * G[c] / G.decisions
+    G = G.reindex(["NTV0", "R2C", "R2J"] + list(READS)).reset_index()
+    L += ["", "## 3. Read-wide: unforced slow-down plans", "",
+          "Every 0.5 s decision with ego v0 >= 4 m/s where the human, at the ego's log station, keeps >= 0.8 of its speed (>= 3 m/s) over the "
+          "next 4 s: `slow` = the model plan's end speed < 0.6 v0; `right` = the plan's 4 s point > 0.8 m right with |yaw| < 20 deg; `both`. "
+          "`scenes_slow5` = scenes with >= 5 such slow plans (>= 2.5 s of them).", ""]
+    L += md_table(G, fmt="{:.2f}")
+    # 4. data
+    parts = ["ph", "ph05", "ph15", "navtrain"]
+    L += ["", "## 4. Training rows by state (moving rows, fed v0 >= 2 m/s; PAI parts under R3MV's draw weights, navtrain uniform)", "",
+          "`alat` = peak lateral acceleration of the label path (v^2 x curvature of consecutive label points, m/s^2); `y4 R / L` = share of "
+          "rows whose 4 s point is > 0.8 m right / left; `lead` = r5 LEAD flag (PAI only). Road read-outs only on labels inside the raster "
+          "(x < 52 m, |y| < 20 m; `in raster` share): `ml<0` = the label footprint leaves the road surface (PAI: round 5 road_pai raster = "
+          "the evaluator's NuRec surface; navtrain: the nuPlan road raster of the S rows' hinge, a different surface: compare PAI parts with "
+          "each other first); `ins tight` = the car centre comes within 1.6 m of the inside edge on the label (bends / turns).", ""]
+    cols = [("n", "{:.0f}"), ("v50", "{:.1f}"), ("alat50", "{:.2f}"), ("alat90", "{:.2f}"), ("alat_gt3", "{:.1%}"), ("y4_right08", "{:.1%}"),
+            ("y4_left08", "{:.1%}"), ("vend_v0", "{:.2f}"), ("lead", "{:.0%}"), ("in_raster", "{:.0%}"), ("ml_lt0", "{:.1%}"), ("ins_tight", "{:.1%}"),
+            ("ins_min50", "{:.2f}")]
+    for stn in ["all moving"] + X["states"]:
+        L += ["", f"**{stn}**", "", "| part | " + " | ".join(c for c, _ in cols) + " |", "|:--|" + "--:|" * len(cols)]
+        for p in parts:
+            r = X[p].get(stn, {})
+            cells = [(f.format(r[c]) if c in r and r[c] is not None and not (isinstance(r[c], float) and np.isnan(r[c])) else "") for c, f in cols]
+            L.append(f"| {p} | " + " | ".join(cells) + " |")
+    s15 = X["stretch15"]
+    L += ["", f"Stretch f = 1.5 rows vs their plain base row ({s15['paired']} drawn pairs): fed speed x {s15['v_ratio_med']:.2f}, label peak lateral "
+          f"acceleration x {s15['alat_ratio_med']:.2f} (median); > 3 m/s^2 {s15['alat_gt3_ph15']:.1%} vs {s15['alat_gt3_base']:.1%}; fed v0 > 30 m/s "
+          f"{s15['v_gt30_ph15']:.1%} vs {s15['v_gt30_base']:.1%}; label footprint within 0.3 m of the edge (in-raster ph15 rows) "
+          f"{s15['ml_lt03_ph15_inr']:.1%} vs the same base rows {s15['ml_lt03_base_same_rows']:.1%}.", ""]
+    for p in ("ph", "ph15"):
+        k = [x for x in X[p] if x.startswith("pull right: row position")]
+        if k:
+            v = X[p][k[0]]
+            L.append(f"- {p}: pull-right-while-slowing rows sit at clip position k / k_max median {v[0]:.2f}; {v[1]:.0%} in the last 20 % of the clip "
+                     f"(all drawn moving rows {v[2]:.0%}): not an end-of-clip pull-over; {X[p]['pull right: rows a batch (64 x draw mass)']:.2f} rows a batch.")
+    L += ["", "Candidate fixes (rows at weight 0 under R3MV's draw; drawn moving rows, rows a batch of 64, share of the part's drawn moving mass):", "",
+          "| rule | drawn rows | rows a batch | share of part | scenes |", "|:--|--:|--:|--:|--:|"]
+    for fn, r in X["fixes"].items():
+        L.append(f"| {fn} | {r['drawn_rows']} | {r['per_batch']:.2f} | " + " / ".join(f"{p} {v:.1%}" for p, v in r["per_batch_of_part"].items())
+                 + f" | {r['scenes']} |")
+    # 5. R5-R
+    fr, fm, fn_ = D.facts("R5R-L18-s0-vl"), D.facts("R3MV-L18-s0-vl"), D.facts("NTV0-L18-s0-vl")
+    ex = pd.read_csv(REPO / "experiments/pai_fix/scenes/exam.csv").set_index("scene")
+    o_r, o_m, o_n = (set(f.index[f.fclass == "offroad"]) for f in (fr, fm, fn_))
+    common = set(fr.index) & set(fm.index)
+    ev = set(E.scene)
+    L += ["", "## 5. R5-R (R3MV + PAI road hinge, PAI-FIX native VC + LEAD, 118 scenes)", "",
+          f"- offroad zeros: R5-R {len(o_r)}, R3MV {len(o_m)}, NTV0 {len(o_n)} (same 118-scene read, native serve); R5-R and R3MV share "
+          f"{len(o_r & o_m)}; new in R5-R {len(o_r - o_m)} ({', '.join(sorted(f'{s[7:15]} ({ex.subset.get(s, chr(63))}, {fr.primary[s]})' for s in o_r - o_m))}); "
+          f"fixed {len(o_m - o_r)} ({', '.join(sorted(s[7:15] for s in o_m - o_r))}).",
+          f"- of the {len(ev)} OFFROAD-MV event scenes, {len(ev & common)} are in the PAI-FIX exam; R5-R offroad on {len(ev & o_r)} of them, R3MV-vl on "
+          f"{len(ev & o_m)}: {', '.join(sorted(s[7:15] for s in ev & common)) or 'none'}.",
+          f"- R5-R's offroads are {sum(ex.subset.get(s, '').endswith('TURN') for s in o_r)} / {len(o_r)} on TURN-subset scenes: the PAI-FIX exam samples "
+          "turns and stops, not the straight-road / slow-down scenes where the 281 events sit, so R5-R cannot say whether the hinge would touch them."]
+    md = RES / "offroad_mv.md"                         # hand-written reading below the marker is kept across re-runs
+    keep = md.read_text().split(MARK, 1) if md.exists() else []
+    head = keep[0].split(GEN, 1)[0] if keep and GEN in keep[0] else ""
+    md.write_text(head + GEN + "\n\n" + "\n".join(L[1:]) + "\n\n" + MARK + (keep[1] if len(keep) == 2 else "\n"))
+    print("\n".join(L))
 
 
 def main():
