@@ -224,7 +224,7 @@ d = max(abs(float(x[k]) - float(y[k])) for x, y in zip(a, b) for k in x if x[k] 
 print("old draws repeat:", len(a), "draws,", len(a[0]), "subjects, max |diff|", d, "PCS")
 assert len(a) == len(b) == 100 and d < 0.5, "boot mismatch"
 PY
-  sj="R5LC-s0+AG=R5LC-L18-s0-281ag.csv,R5LC-s1+AG=R5LC-L18-s1-281ag.csv,DAG-s0+AG=R6DAG-L18-s0-281ag.csv,DAG-s1+AG=R6DAG-L18-s1-281ag.csv"
+  sj="R3MV-s0+AG=R3MV-L18-s0-281ag.csv,R5LC-s0+AG=R5LC-L18-s0-281ag.csv,R5LC-s1+AG=R5LC-L18-s1-281ag.csv,DAG-s0+AG=R6DAG-L18-s0-281ag.csv,DAG-s1+AG=R6DAG-L18-s1-281ag.csv"
   $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ --subjects "$sj" \
       --pairs DAG-s0+AG:R5LC-s0+AG,DAG-s1+AG:R5LC-s1+AG,DAG-s1+AG:DAG-s0+AG > $PT/out/r5.log 2>&1 || die "ruler report (log $PT/out/r5.log)"
   cp $PT/out/r5_report.md $RES/pcs_dag.md && cp $PT/out/pai_pcs_local_r5.json $RES/pcs_dag.json || die "copy ruler report"
