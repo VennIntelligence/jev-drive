@@ -68,11 +68,11 @@ STUDENT = "R5LC-L18-s0"
 CARD_STACKS = 3
 
 # teacher (registered in the plan before any roll)
-T_MERGE, L_MIN, L_MAX = float(os.environ.get("DAG_TM", 2.0)), 6.0, 80.0   # merge length = clip(T_MERGE x v0, L_MIN, L_MAX) m (DAG_*: T4 pilot only)
+T_MERGE, L_MIN, L_MAX = float(os.environ.get("DAG_TM", 3.0)), 6.0, 80.0   # merge length = clip(T_MERGE x v0, L_MIN, L_MAX) m (DAG_*: T4 pilot only)
 D_MAX, PSI_MAX = 5.0, np.radians(60.0)          # no label beyond these
 V_ROW = 2.0                                     # DAgger rows: fed speed >= 2 m/s
 SW_T, SW_MIN, SW_MAX = 3.0, 15.0, 60.0          # lateral lane switch in the route: blend length = clip(3 s x human speed, 15, 60) m
-DS, SIG = 0.25, float(os.environ.get("DAG_SIG", 1.0))   # reference resampling and Gaussian smoothing (m)
+DS, SIG = 0.25, float(os.environ.get("DAG_SIG", 3.0))   # reference resampling and Gaussian smoothing (m)
 ROUTE_OFFSET = 40.0                             # the rollouts' route_start_offset_m
 T_J = 0.5 * np.arange(1, 9)                     # label times (s)
 A_LAT = 4.0                                     # T4 line (m/s^2, 99 %)
@@ -80,7 +80,7 @@ TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
 H_SIG, H_CLIP = float(os.environ.get("DAG_HSIG", 10.0)), float(os.environ.get("DAG_HCLIP", 0.5))                      # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
                                                 # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
-TEACHER_V = "b2"                                # teacher version stamped into every teach file (label refuses other versions)
+TEACHER_V = "b3"                                # amendment 3: reference sigma 3 m, merge 3.0 s                                # teacher version stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -718,8 +718,12 @@ def cmd_label(a):
     fut = None
     lat = X["fut_t"][:, :, 1] - tb["served"][:, :, 1]
     lon = np.abs(arcs_of_n(X["fut_t"]) - arcs_of_n(sv))
-    al = X["alat"][draw]
+    X["alat_curv"] = X["alat"].copy()                                          # the registered curvature read (kept, reported)
+    X["alat"] = np.where(np.isfinite(X["fut_t"]).reshape(n, -1).all(1), alat_pos(np.nan_to_num(X["fut_t"])), np.nan).astype(np.float32)
+    al = X["alat"][draw]                                                       # amendment 3: T4 = the position estimator (as the human-row read)
     t4 = float(np.percentile(al, 99)) if draw.any() else float("inf")
+    t4_curv = float(np.percentile(X["alat_curv"][draw], 99)) if draw.any() else float("inf")
+    a_sv = alat_pos(tb["served"][draw])
     hi = draw & (X["alat"] > A_LAT)
     t4_fallback = bool(t4 > A_LAT and hi.sum() <= 0.03 * draw.sum())             # plan section 4: over-line rows <= 3 % -> weight 0, go on
     if t4_fallback:
@@ -737,7 +741,11 @@ def cmd_label(a):
     rec = dict(pool=a.pool, rows=n, scenes=int(len(np.unique(sc))), drawable=int(draw.sum()), slow=int((v0 < V_ROW).sum()),
                no_label=dict(Counter(X["why"][(v0 >= V_ROW) & ~X["ok"]].tolist())), past_rec=int((draw & X["past_rec"]).sum()),
                lon_arc_err_max=float(np.nanmax(lon[draw])) if draw.any() else None, teach_vs_pool_max=dv0,
-               T4=dict(line=A_LAT, alat_p99=t4, alat_ref_p99=float(np.percentile(X["alat_ref"][draw], 99)) if draw.any() else None,
+               d0_sign=dict(left_gt_05=int((draw & (X["d0"] > 0.5)).sum()), right_gt_05=int((draw & (X["d0"] < -0.5)).sum()),
+                            left_gt_1=int((draw & (X["d0"] > 1)).sum()), right_gt_1=int((draw & (X["d0"] < -1)).sum()),
+                            median_signed=float(np.median(X["d0"][draw])) if draw.any() else None),
+               T4=dict(line=A_LAT, estimator="positions (amendment 3)", alat_p99=t4, curvature_read_p99=t4_curv, served_pos_p99=float(np.percentile(a_sv, 99)),
+                       served_pos_over=float((a_sv > A_LAT).mean()), over_share=float(hi.sum() / max(draw.sum(), 1)), alat_ref_p99=float(np.percentile(X["alat_ref"][draw], 99)) if draw.any() else None,
                        over=int((al > A_LAT).sum()), passed=bool(t4 <= A_LAT), fallback_rows_dropped=int(hi.sum()) if t4_fallback else 0,
                        go_on=bool(t4 <= A_LAT or t4_fallback)), classes=tabs)
     assert dv0 < 1e-4, f"teacher inputs differ from the pool's speed / served ({dv0})"
@@ -757,7 +765,13 @@ def cmd_label(a):
     for c, v in tabs.items():
         L.append(f"| {c} | {v['rows']} | {v['drawable']} | {f2(v['d0_med'])} | {f2(v['d0_p90'])} | {v['d0_gt_05']} | {v['d0_gt_1']} | "
                  f"{f2(v['lat4_med'])} | {f2(v['lat4_p90'])} | {f2(v['alat_p99'])} |")
-    L += ["", f"**T4** (label lateral acceleration at the served speeds, p99 <= {A_LAT} m/s^2): p99 {t4:.2f} (route curvature alone "
+    ds_ = rec["d0_sign"]
+    L += ["", f"Signed d0 of the drawable rows (left +): median {ds_['median_signed']:+.2f} m; |d0| > 0.5 m left {ds_['left_gt_05']} / right {ds_['right_gt_05']}, "
+          f"> 1 m left {ds_['left_gt_1']} / right {ds_['right_gt_1']} (both drift sides are covered).", "",
+          f"T4 estimators: position read (amendment 3, 8 label points at 0.5 s, speed x heading rate; the human-row read: PAIH p99 4.06) p99 {t4:.2f}, "
+          f"over-line share {rec['T4']['over_share']:.1%}; the student's served plans on the same rows p99 {rec['T4']['served_pos_p99']:.2f}. Registered "
+          f"curvature read (path curvature x served speed^2) p99 {t4_curv:.2f}: dominated by NuRec lane-polyline kinks, kept for the record.", ""]
+    L += ["", f"**T4** (position read, p99 <= {A_LAT} m/s^2): p99 {t4:.2f} (curvature read, route curvature alone "
           f"{rec['T4']['alat_ref_p99']:.2f}), {rec['T4']['over']} rows over -> **{'PASS' if rec['T4']['passed'] else 'FAIL'}**"
           f"{f' (fallback: {hi.sum()} rows <= 3 % set to weight 0)' if t4_fallback else ''}. "
           f"Labels reaching past the recorded route (generator extension): {rec['past_rec']}."]

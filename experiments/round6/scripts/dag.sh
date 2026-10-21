@@ -133,13 +133,27 @@ pool)
   $TR $RF/rf_pai_pool.py --name $NP --rows $O/rows/$NP --cache $O/cache/$NP --runs "$O/roll/runs/*" --split experiments/round5/results/s3_scenes.tsv \
       --fut poses --prefix paid --src dagger ;;
 reteach) "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $O/teach --workers ${2:-16} --stale-only 1 ;;   # amendment 1: files of an older teacher
+tail)  # amendment 3: resubmit the build tail from the label step (after the T4 stop); the stop record kept as VERDICT.t4
+  [[ -f $CR/on1_$NP/tab.npz && ! -e $CR/on1_$NM ]] || die "no on1_$NP or on1_$NM exists"; [[ -f $O/VERDICT ]] && mv $O/VERDICT $O/VERDICT.t4.$(date +%H%M%S)
+  h=$(git rev-parse --short HEAD); echo "$h tail" >> $O/code.txt
+  lb=$(sub dag-label --vram 0.1 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME label) || exit 1
+  fw=$(sub dag-fwd --after $lb --vram 16 --cpu 8 --ram 120 --timeout-h 3 -- bash $ME fwd) || exit 1
+  gi=$(sub dag-r1in --after $fw --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME r1in) || exit 1
+  m=$(sub dag-merge --after $gi --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME merge) || exit 1
+  wt=$(sub dag-weights --after $m --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME weights) || exit 1
+  sm=$(sub dag-smoke --after $wt "${FT[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1
+  ia=$(sub dag-ident-lc --after $wt "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun lc) || exit 1
+  ib=$(sub dag-ident-d0 --after $wt "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun d0) || exit 1
+  ic=$(sub dag-ident --after $ia,$ib --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident) || exit 1
+  bd=$(sub dag-build --after $sm,$ic --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME build) || exit 1
+  echo "$(date '+%F %T') tail (code $h): label $lb fwd $fw r1in $gi merge $m weights $wt smoke $sm identity $ia $ib $ic build $bd" | tee -a $O/stages.txt ;;
 t4pilot)  # T4 pilot (CPU): teacher variants on c001 + c002 (50 scenes) -> position-based label lateral acceleration
   P=$O/pilot; mkdir -p $P; cat $O/lists/c001.txt $O/lists/c002.txt > $P/scenes.txt; d=()
   for v in "A:" "B:DAG_SIG=3" "C:DAG_SIG=3 DAG_TM=3" "D:DAG_SIG=3 DAG_HCLIP=0" "E:DAG_SIG=3 DAG_HSIG=20 DAG_TM=3" "F:DAG_SIG=3 DAG_HSIG=20 DAG_TM=2.5"; do
     n=${v%%:*}; rm -rf $P/$n; mkdir -p $P/$n
     env ${v#*:} "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $P/$n --chunk-list $P/scenes.txt --workers 16 || die "pilot $n"; d+=($P/$n); done
   $V $PY alatpos --dirs ${d[@]} --out $RES/t4_pilot.json ;;
-label) bash $ME reteach 4 || die "reteach"; $V $PY label --root $O --pool on1_$NP ;;
+label) bash $ME reteach 16 || die "reteach"; $V $PY label --root $O --pool on1_$NP ;;
 fwd)  $TR $RF/rf_recov.py fwd --pool $NP --rows train-rec --tags $T,$WRONG --out $O/fwd ;;
 r1in) $V $PY r1in --root $O --pool on1_$NP --fwd $O/fwd/$NP-train-rec --tag $T --control $WRONG ;;
 merge)
