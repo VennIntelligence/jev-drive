@@ -18,6 +18,15 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
   - label points sit at the arc lengths of the student's own served plan (lateral only, no speed change).
   - Pool `on1_PAID`, merged `on1_JTPHD`; arm R6DAG = MV-LC's argv + 8 DAgger rows a batch, seeds 0 / 1; exam PAI 281 ACC + GAP + the local PCS ruler.
   - Gates T1-T4 (teacher on human states, teacher inside the road before the MV offroad events, weight-0 identity, label lateral acceleration) are in the plan.
+- Line B, REC: perturbation-recovery rows, ChauffeurNet style ([plans/2026-10-21-recovery-rows.md](plans/2026-10-21-recovery-rows.md); code
+  [scripts/rec.sh](scripts/rec.sh) / [scripts/rec.py](scripts/rec.py), [lib/rec_driver.py](lib/rec_driver.py), [lib/rec_geom.py](lib/rec_geom.py); results
+  [results/rec/](results/rec/)). The on1_PAIH rollouts again (NTV0 in the loop, the log driver), but the reference handed to the MPC is the log plus a
+  lateral offset ramped in over 2 s (|e0| 0.5-1.5 m and / or |psi0| 3-10 deg), so frames and ego history come from an ego that really drove off the
+  human's path; label = a 2 s Hermite merge back onto the human's path at the human's speed.
+  - 3 rollout passes over 717 train scenes, 3 815 episodes, 9 rows each (about 34 k rows); rejected draws: added lateral acceleration > 3 m/s^2, t0
+    footprint off the road_pai raster, actor overlap.
+  - Gates: G1 zero offset = on1_PAIH bit for bit, G2 label inside the raster / lateral acceleration, G3 R1 + NTV0 plans not degenerate, G4 weight-0 identity.
+  - Arm R6REC = MV-LC's argv + 8 recovery rows a batch (on1_JTPHREC), seeds 0 / 1; exam PAI 281 ACC + GAP + the local PCS ruler.
 
 **Read more.** [plans/](plans/) (Chinese working notes).
 
