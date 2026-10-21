@@ -323,10 +323,6 @@ def cmd_leadrows(a):
     for p, r in rec["parts"].items():
         L.append(f"| {p} | {r['drawable']} | {r['lead_drawable']} | {r['lead_share']:.1%} | {r['lead_share_drawweighted']:.1%} | {r['gap_le15']} | "
                  f"{r['gap_q'][2]:.1f} | {r['v0_q_removed'][1]:.1f} / {r['v0_q_kept'][1]:.1f} | {r['scenes_with_kept']} / {r['scenes_drawable']} |")
-    r = rec["parts"]["ph"]
-    L += ["", f"Check against D1 (all plain rows, any draw): lane-change shaped {r['all_rows_lc']} ({r['lc_share_moving_all_rows']:.1%} of moving), "
-          f"with a route {r['all_rows_lc_route_ok']}, off the route lane {r['all_rows_off']} ({r['all_rows_off'] / max(r['all_rows_lc_route_ok'], 1):.0%}); "
-          "D1: 10 710 (11.9 %), 10 703, 44 %."]
     L += ["", "Removed / drawable by label class (r3.label_class; launch and stand are 0 under MV's >= 2 m/s cut):", "",
           "| part | " + " | ".join(r3.CLASSES) + " |", "|:--|" + "--:|" * len(r3.CLASSES)]
     for p, r in rec["parts"].items():
@@ -736,6 +732,10 @@ def cmd_lcrows(a):
           "| part | " + " | ".join(r3.CLASSES) + " |", "|:--|" + "--:|" * len(r3.CLASSES)]
     for p, r in rec["parts"].items():
         L.append(f"| {p} | " + " | ".join(f"{r['by_class'][c]['removed']} / {r['by_class'][c]['drawable']}" for c in r3.CLASSES) + " |")
+    r = rec["parts"]["ph"]
+    L += ["", f"Check against D1 (all plain rows, any draw): lane-change shaped {r['all_rows_lc']} ({r['lc_share_moving_all_rows']:.1%} of moving), "
+          f"with a route {r['all_rows_lc_route_ok']}, off the route lane {r['all_rows_off']} ({r['all_rows_off'] / max(r['all_rows_lc_route_ok'], 1):.0%}); "
+          "D1: 10 710 (11.9 %), 10 703, 44 %."]
     L += ["", "PAI human rows a batch (64 pool rows x draw mass) by class, and the lane-change-shaped share of the drawn moving (> 5 m/s) rows "
           "(draw-weighted):", "", "| draw | PAI rows | " + " | ".join(r3.CLASSES) + " | lane-change shaped | share of moving | ph / ph05 / ph15 | unique PAI rows |",
           "|:--|--:|" + "--:|" * len(r3.CLASSES) + "--:|--:|--:|--:|"]
