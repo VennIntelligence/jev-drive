@@ -1,0 +1,225 @@
+{
+ "parts": {
+  "ph": {
+   "rows": 135793,
+   "drawable": 90631,
+   "moving_drawable": 75862,
+   "lc_drawable": 9150,
+   "lc_route_undecided": 7,
+   "removed": 4219,
+   "removed_route_nan": 0,
+   "lc_share_moving_all_rows": 0.11885605211466113,
+   "off_share_of_lc": 0.4610928961748634,
+   "all_rows_lc": 10710,
+   "all_rows_lc_route_ok": 10703,
+   "all_rows_off": 4708,
+   "removed_drawweighted": 0.046551400734847904,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stop-approach": {
+     "drawable": 4564,
+     "removed": 0
+    },
+    "turn": {
+     "drawable": 18092,
+     "removed": 90
+    },
+    "cruise": {
+     "drawable": 67975,
+     "removed": 4129
+    }
+   },
+   "v0_q_removed": [
+    9.852485847473144,
+    26.403762817382812,
+    35.52921905517578
+   ],
+   "y4_abs_q_removed": [
+    2.779663324356079,
+    4.173810958862305,
+    7.618615341186532
+   ],
+   "scenes_removed": 142,
+   "scenes_drawable": 705
+  },
+  "ph05": {
+   "rows": 123879,
+   "drawable": 74250,
+   "moving_drawable": 38891,
+   "lc_drawable": 1036,
+   "lc_route_undecided": 0,
+   "removed": 365,
+   "removed_route_nan": 0,
+   "lc_share_moving_all_rows": 0.02793592794017675,
+   "off_share_of_lc": 0.35231660231660233,
+   "all_rows_lc": 1315,
+   "all_rows_lc_route_ok": 1315,
+   "all_rows_off": 384,
+   "removed_drawweighted": 0.004915824915824916,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stop-approach": {
+     "drawable": 376,
+     "removed": 0
+    },
+    "turn": {
+     "drawable": 9369,
+     "removed": 2
+    },
+    "cruise": {
+     "drawable": 64505,
+     "removed": 363
+    }
+   },
+   "v0_q_removed": [
+    6.586240673065186,
+    11.189665794372559,
+    11.976348876953125
+   ],
+   "y4_abs_q_removed": [
+    2.5988065242767333,
+    3.32323956489563,
+    4.541350936889649
+   ],
+   "scenes_removed": 19,
+   "scenes_drawable": 680
+  },
+  "ph15": {
+   "rows": 99269,
+   "drawable": 69095,
+   "moving_drawable": 61643,
+   "lc_drawable": 10607,
+   "lc_route_undecided": 0,
+   "removed": 6402,
+   "removed_route_nan": 0,
+   "lc_share_moving_all_rows": 0.1726585319247673,
+   "off_share_of_lc": 0.6035636843593853,
+   "all_rows_lc": 12650,
+   "all_rows_lc_route_ok": 12650,
+   "all_rows_off": 7399,
+   "removed_drawweighted": 0.09265504016209565,
+   "by_class": {
+    "launch": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stand": {
+     "drawable": 0,
+     "removed": 0
+    },
+    "stop-approach": {
+     "drawable": 6749,
+     "removed": 14
+    },
+    "turn": {
+     "drawable": 18367,
+     "removed": 136
+    },
+    "cruise": {
+     "drawable": 43979,
+     "removed": 6252
+    }
+   },
+   "v0_q_removed": [
+    14.330583858489991,
+    35.67998695373535,
+    52.848601531982425
+   ],
+   "y4_abs_q_removed": [
+    2.881995153427124,
+    6.024421691894531,
+    11.707240104675293
+   ],
+   "scenes_removed": 200,
+   "scenes_drawable": 707
+  }
+ },
+ "rule": {
+  "text": "lane-change-shaped label: fed v0 > 5.0 m/s, the 4 s label point |y| > 2.5 m and |yaw| < 12.0 deg (row frame); off the route lane: the row's route.npz polyline (lateral interpolated at the 4 s point's x, flat past its ends) does not pass within 1.2 m of the 4 s point (d1.py labels' rule; route not ok -> kept; route lateral nan -> off, as D1 counted). Every part on its own rows: own label, fed speed and route.npz (stretched rows on their own clock)",
+  "LC_V": 5.0,
+  "LC_Y": 2.5,
+  "LC_YAW": 12.0,
+  "LC_ROUTE": 1.2
+ },
+ "R5LC": {
+  "base": "R3MV",
+  "out": "R5LC",
+  "rule": "R3MV, every PAI human row whose 4 s label is a lane change off the route lane (D1 rule) -> 0, each part renormalised to its R3MV share",
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.25000000000047345,
+   "ph05": 0.12500000000022465,
+   "ph15": 0.12499999999999016
+  },
+  "pai_drawable": 222990
+ },
+ "R5LCI": {
+  "base": "R3MV",
+  "out": "R5LCI",
+  "rule": "identity: R5LC's code with no row dropped (bit-equal to R3MV)",
+  "group_share": {
+   "S": 0.49999999999936234,
+   "ph": 0.24999999999968056,
+   "ph05": 0.12500000000005737,
+   "ph15": 0.12500000000017902
+  },
+  "pai_drawable": 233976
+ },
+ "per_batch": {
+  "R3MV": {
+   "pai": 31.999999999999996,
+   "by_class": {
+    "launch": 0.0,
+    "stand": 0.0,
+    "stop-approach": 1.6276573984684322,
+    "turn": 6.32999622349986,
+    "cruise": 24.042346378031706
+   },
+   "lc": 2.9550704553008296,
+   "lc_share_moving": 0.11954098760444239,
+   "lc_share_moving_by_part": {
+    "ph": 0.12061374601249637,
+    "ph05": 0.026638553907073616,
+    "ph15": 0.17207144363512483
+   },
+   "unique_pai_rows": 233976
+  },
+  "R5LC": {
+   "pai": 32.0,
+   "by_class": {
+    "launch": 0.0,
+    "stand": 0.0,
+    "stop-approach": 1.745205824051147,
+    "turn": 6.673849688243031,
+    "cruise": 23.58094448770582
+   },
+   "lc": 1.52225781915301,
+   "lc_share_moving": 0.06216871062065886,
+   "lc_share_moving_by_part": {
+    "ph": 0.06882738020462571,
+    "ph05": 0.017416809427399673,
+    "ph15": 0.07612099708549809
+   },
+   "unique_pai_rows": 222990
+  }
+ },
+ "navtrain": {
+  "moving": 44512,
+  "lc": 3549,
+  "lc_share_moving": 0.07973130841121495
+ }
+}

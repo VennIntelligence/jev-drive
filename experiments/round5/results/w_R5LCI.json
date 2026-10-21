@@ -1,0 +1,12 @@
+{
+ "base": "R3MV",
+ "out": "R5LCI",
+ "rule": "identity: R5LC's code with no row dropped (bit-equal to R3MV)",
+ "group_share": {
+  "S": 0.49999999999936234,
+  "ph": 0.24999999999968056,
+  "ph05": 0.12500000000005737,
+  "ph15": 0.12500000000017902
+ },
+ "pai_drawable": 233976
+}
