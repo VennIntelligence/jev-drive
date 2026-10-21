@@ -363,6 +363,27 @@ def cmd_r5(a):
     for name, _ in CLASSES + [("all partials", 0), ("all zeros", 0)]:
         P(f"| {name} | " + " | ".join(f"{N[s][name][0]} sc, {N[s][name][1]:.1f} pt: **{V[s][name]:+.0f}**" for s in subs_) + " |")
     J["class_values"] = V; J["class_counts"] = N
+    # pool sensitivity and the items that carry the gap
+    Z = {v: Ruler(dict(np.load(out / f"fits/{v}.npz", allow_pickle=True)), sc) for v in VARIANTS if v != "allours" and (out / f"fits/{v}.npz").exists()}
+    ks = [ref, *subs, "garage", "go-straight", "RSG+AG"]
+    P("\n## Pool sensitivity (PCS)\n")
+    P("| variant | anchor RMSE | " + " | ".join(ks) + " | R3MV - NTV0 |"); P("|---|--:|" + "--:|" * (len(ks) + 1))
+    for v, Zv in Z.items():
+        rm = np.sqrt(np.mean([(Zv.pcs[k] - ANCHORS[k]) ** 2 for k in ANCHORS]))
+        P(f"| {v} | {rm:.0f} | " + " | ".join(f"{Zv.pcs[k]:.0f}" for k in ks) + f" | {Zv.pcs['R3MV-s0+AG'] - Zv.pcs[ref]:+.0f} |")
+    J["variants"] = {v: {k: Zv.pcs[k] for k in ks} for v, Zv in Z.items()}
+    it = z.items; aa = pd.Series(z.f["a"], index=it)
+    top = aa.sort_values(ascending=False).index[:12]
+    band = [s for s in sc.index if fam[s] == "band"]
+    P("\n## The 12 most discriminating items (a >= " + f"{aa[top].min():.1f}" + "): scores of the reads and of the 13 pool band reads\n")
+    P("| scene | a | b | NTV0 | R2C | R2J | R3MV | R3MV class | band reads scoring 1 (of 13) |"); P("|---|--:|--:|--:|--:|--:|--:|---|--:|")
+    bb = pd.Series(z.f["b"], index=it)
+    for sname in top:
+        P(f"| {sname[-8:]} | {aa[sname]:.2f} | {bb[sname]:+.1f} | " + " | ".join(f"{sc.loc[k, sname]:.2f}" for k in (ref, *subs)) +
+          f" | {facts['R3MV-s0+AG'].fclass.get(sname, '?')} | {int((sc.loc[band, sname] >= 1 - 1e-4).sum())} |")
+    lo = aa[aa >= 3].index
+    P(f"\n{len(lo)} items have a >= 3. Scored 0 on them: " + ", ".join(f"{k} {int((sc.loc[k, lo] <= 1e-4).sum())}" for k in (ref, *subs)) +
+      "; mean score on them: " + ", ".join(f"{k} {sc.loc[k, lo].mean():.3f}" for k in (ref, *subs)) + ".")
     # R3MV minus NTV0 class counts are in round5/results/pai281_R3MV_ag.md
     (out / "r5_report.md").write_text("\n".join(L) + "\n")
     (out / "pai_pcs_local_r5.json").write_text(json.dumps(J, indent=1, default=float))

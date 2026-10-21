@@ -16,6 +16,8 @@ submit)
   ids=()
   for v in paimix paimix-s1 paimix-s2; do
     ids+=($(sub pcs-r5-fit-$v -- env $ENVV $PY $X fit --rows $T/rows.csv.gz --out $T/out --variants $v)); done
+  for v in garagex0.5 garagex2 bandx0.5 bandx2 gsx0.5 gsx2 low-as-gs dedup paimix-1pl; do      # pool sensitivity (allours skipped: it would pool the new reads)
+    ids+=($(sub pcs-r5-fit-$v -- env $ENVV $PY $X fit --rows $T/rows.csv.gz --out $T/out --variants $v)); done
   for b in $(seq 0 5 95); do
     ids+=($(sub pcs-r5-boot-$b -- env $ENVV $PY $X fit --rows $T/rows.csv.gz --out $T/out --variants - --boot 5 --boot0 $b)); done
   printf '%s\n' "${ids[@]}" > $T/jobs.txt
