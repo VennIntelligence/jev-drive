@@ -119,11 +119,18 @@ rest)
   echo "$(date '+%F %T') rest (code $h): rolls ${ro[*]} chunk tails ${w[*]} link $l cache $ca pool $po label $lb fwd $fw r1in $gi merge $m" \
        "weights $wt smoke $sm identity $ia $ib $ic build $bd" | tee -a $O/stages.txt ;;
 rows)  # rows <chunk>: the chunk's rollouts -> $O/rows/<chunk>/<scene>.npz, linked into $O/rows/PAID/
-  c=$2; G=$DATA_DIR/tmp/dag_stage/$c; R=$O/rows; mkdir -p $G $R/$NP
+  c=$2; G=$DATA_DIR/tmp/dag_stage/${L}_$c; R=$O/rows; mkdir -p $G $R/$NP          # stage per student and chunk (two chains run at once)
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $c \
       --runs "$O/roll/runs/${L}_$c" --out $R --stage $G --tag $T --jobs 8 || exit 1
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $c --out $R --stage $G --jobs 8 || exit 1
-  rm -rf $G; for f in $R/$c/*.npz; do [[ -e $f ]] && ln -sfn $f $R/$NP/$(basename $f); done
+  rm -rf $G
+  bad=$($V - $R/$c $T <<'PY'
+import glob, sys
+import numpy as np
+print(sum(str(np.load(f)["tag"]) != sys.argv[2] for f in glob.glob(sys.argv[1] + "/*.npz")))
+PY
+) && [[ $bad == 0 ]] || die "rows $c: $bad row files are not $T's (dumps kept)"
+  for f in $R/$c/*.npz; do [[ -e $f ]] && ln -sfn $f $R/$NP/$(basename $f); done
   n=$(ls $R/$c/*.npz 2>/dev/null | wc -l); m=$(wc -w < $O/roll/chunks/$c.txt); echo "$(date '+%F %T') rows $c: $n / $m scene files" | tee -a $O/stages.txt
   (( n >= m * 9 / 10 )) || die "rows $c: $n of $m scenes" ;;
 teach) "${EA[@]}" $AP $PY teach --rows $O/rows/$2 --cfg-glob "$RCFG" --out $O/teach --workers 8 ;;
