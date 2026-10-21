@@ -137,7 +137,7 @@ train) s=$2; run j $N R7J-L18-s$s $s; echo "$(date '+%F %T') train s$s: ${A[*]} 
   exec $TR "${A[@]}" --save-at 2500,5000,7500 ;;
 report)
   P0=$DATA_DIR/tmp/pcs_r6d; PT=$DATA_DIR/tmp/pcs_r7j; X=experiments/alpasim_proxy/scripts/pai_pcs_local.py
-  sj="DAG-s0+AG=R6DAG-L18-s0-281ag.csv,DAG-s1+AG=R6DAG-L18-s1-281ag.csv,R7J-s0+AG=R7J-L18-s0-281ag.csv,R7J-s1+AG=R7J-L18-s1-281ag.csv"
+  sj="R3MV-s0+AG=R3MV-L18-s0-281ag.csv,DAG-s0+AG=R6DAG-L18-s0-281ag.csv,DAG-s1+AG=R6DAG-L18-s1-281ag.csv,R7J-s0+AG=R7J-L18-s0-281ag.csv,R7J-s1+AG=R7J-L18-s1-281ag.csv"
   $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ --subjects "$sj" --pairs R7J-s0+AG:DAG-s0+AG,R7J-s1+AG:DAG-s1+AG > $PT/out/r5.log 2>&1 \
     || die "ruler report (log $PT/out/r5.log)"
   cp $PT/out/r5_report.md $RES/pcs_joint.md && cp $PT/out/pai_pcs_local_r5.json $RES/pcs_joint.json || die "copy ruler report"
