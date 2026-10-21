@@ -14,8 +14,9 @@
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/hmix; ME=experiments/round7/scripts/hmix.sh; PY=experiments/round7/scripts/hmix.py; PR=experiments/pai_rows/scripts/pr.py
 TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_party/alpasim; AP=$AS/.venv/bin/python; V=.venv/bin/python; RF=experiments/route_follow/scripts
-T=NTV0-L18-s0; PRIO=${PRIO:-24}; W=${W:-6}; RES=experiments/round7/results/harm_mix; RUNS=$DATA_DIR/runs/op_parity/runs; DS=experiments/round6/scripts/dag.sh
+T=NTV0-L18-s0; PRIO=${PRIO:-24}; W=${W:-6}; RES=$O/res; RUNS=$DATA_DIR/runs/op_parity/runs; DS=experiments/round6/scripts/dag.sh
 PRE=${HMIX_PRE:-287194b8}                                          # the last commit before rm_train --twin (identity run a)
+# RES: result files stay outside the repo tree on the box (copied into results/harm_mix/ on the Mac), so box pulls are never blocked
 LOGSERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7 PAI_DUMP=100000 DRV_PY=../../onpol_pai/lib/onp_log_driver.py"
 WIZ="controller.gains.rel_front_steering_angle_weight=10 runtime.simulation_config.send_recording_ground_truth=true"
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
@@ -98,32 +99,38 @@ tident)
   ib=$(sub hmix-tident-b "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun b2) || exit 1
   ic=$(sub hmix-tident-c "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun c) || exit 1
   is=$(sub hmix-tsmoke "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun s) || exit 1
+  i1=$(sub hmix-tsmoke1 "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun s1) || exit 1
   ix=$(sub hmix-tident-cmp --after $ib,$ic --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME identcmp HMIDB2-L18-s0 HMIDC-L18-s0 identity_p0) || exit 1
-  sk=$(sub hmix-tsmoke-chk --after $is --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME smokechk) || exit 1
-  echo "$(date '+%F %T') tident (code $(git rev-parse --short HEAD)): $ib $ic $is cmp $ix smoke $sk" | tee -a $O/stages.txt ;;
-identrun)  # identrun a | b | b2 | c | s: 60 steps eager, R6DAG-L18-s0's argv; a from a worktree at $PRE; c = --twin PAIHTW:0; s = --twin PAIHTW:0.5
-  declare -A IX=([a]=HMIDA [b]=HMIDB [b2]=HMIDB2 [c]=HMIDC [s]=HMSM); X=${IX[$2]}-L18-s0; run 60 $X 0
-  [[ $2 == c ]] && A+=(--twin PAIHTW:0); [[ $2 == s ]] && A+=(--twin PAIHTW:0.5)
+  sk=$(sub hmix-tsmoke-chk --after $is,$i1 --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME smokechk) || exit 1
+  echo "$(date '+%F %T') tident (code $(git rev-parse --short HEAD)): $ib $ic $is $i1 cmp $ix smoke $sk" | tee -a $O/stages.txt ;;
+identrun)  # identrun a | b | b2 | c | s | s1: 60 steps eager, R6DAG-L18-s0's argv; a from a worktree at $PRE; c / s / s1 = --twin PAIHTW:0 / 0.5 / 1
+  declare -A IX=([a]=HMIDA [b]=HMIDB [b2]=HMIDB2 [c]=HMIDC [s]=HMSM [s1]=HMSM1); X=${IX[$2]}-L18-s0; run 60 $X 0
+  [[ $2 == c ]] && A+=(--twin PAIHTW:0); [[ $2 == s ]] && A+=(--twin PAIHTW:0.5); [[ $2 == s1 ]] && A+=(--twin PAIHTW:1.0)
   if [[ $2 == a ]]; then WT=$DATA_DIR/tmp/hmix_wt_$PRE; [[ -d $WT ]] || git worktree add --detach $WT $PRE || die "worktree $PRE"
     [[ $(git -C $WT rev-parse --short HEAD) == ${PRE:0:8} ]] || die "worktree is not at $PRE"; cd $WT; fi
   [[ ! -e $RUNS/$X ]] || die "$X exists"
   echo "$(date '+%F %T') identity $2 ($(git rev-parse --short HEAD)): ${A[*]}" | tee -a $O/stages.txt; $TR "${A[@]}" > $O/ident_$2.log 2>&1 || die "identity run $2 (log $O/ident_$2.log)" ;;
 identcmp)  # identcmp <tag a> <tag b> <out>
   $TR experiments/defect_fix/scripts/df.py bitcmp --a $2 --b $3 --out round7_hmix_$4 --note "R6DAG-L18-s0 argv 60 steps eager: $2 vs $3 (rm_train --twin)"; r=$?
-  cp experiments/defect_fix/results/round7_hmix_$4.json $RES/$4.json || r=4
+  mv experiments/defect_fix/results/round7_hmix_$4.json $RES/$4.json || r=4
   date '+%F %T' > $O/IDENT_$4.$r; (( r == 0 )) && rm -rf $RUNS/$2 $RUNS/$3; exit $r ;;
-smokechk)  # the p = 0.5 smoke: finished, swap share near 0.5, twin rows drawn
-  $TR - $DATA_DIR/runs/route_mem/train-HMSM-L18-s0 $RES/smoke.json <<'PY' || die "smoke check"
+smokechk)  # the p = 0.5 / 1 smokes: finished 60 steps, swap share within 0.05 of p, twin rows drawn within 25 % of the expected 60 x rows a batch
+  $TR - $DATA_DIR/runs/route_mem $RES/smoke.json <<'PY' || die "smoke check"
 import glob, json, sys
-d = sorted(glob.glob(sys.argv[1] + "/*/"))[-1]
-s = json.load(open(d + "DONE")) if glob.glob(d + "DONE") else {}            # jevdrive.run: DONE = wall time + the run's summary
-tw = s.get("twin", {})
-ok = bool(tw) and tw["drawn_with_twin"] > 0 and abs(tw["swap_share"] - 0.5) < 0.05 and s.get("steps") == 60
-json.dump(dict(run=d, twin=tw, steps=s.get("steps"), pass_=ok), open(sys.argv[2], "w"), indent=1)
-print(json.dumps(dict(twin=tw, pass_=ok)))
-sys.exit(0 if ok else 1)
+out = {}
+for tag, p in (("HMSM", 0.5), ("HMSM1", 1.0)):
+    d = sorted(glob.glob(f"{sys.argv[1]}/train-{tag}-L18-s0/*/"))[-1]
+    s = json.load(open(d + "DONE")) if glob.glob(d + "DONE") else {}        # jevdrive.run: DONE = wall time + the run's summary
+    tw = s.get("twin", {})
+    exp = 60 * tw.get("twin_rows_per_batch", 0)
+    ok = bool(tw) and tw["drawn_with_twin"] > 0 and abs(tw["swap_share"] - p) < 0.05 and abs(tw["drawn_with_twin"] / exp - 1) < 0.25 and s.get("steps") == 60
+    out[tag] = dict(run=d, p=p, twin=tw, expected_drawn=exp, steps=s.get("steps"), loss_last=s.get("loss"), pass_=ok)
+out["pass_"] = all(v["pass_"] for v in out.values())
+json.dump(out, open(sys.argv[2], "w"), indent=1)
+print(json.dumps(out))
+sys.exit(0 if out["pass_"] else 1)
 PY
-  rm -rf $RUNS/HMSM-L18-s0; date '+%F %T' > $O/SMOKE ;;
+  rm -rf $RUNS/HMSM-L18-s0 $RUNS/HMSM1-L18-s0; date '+%F %T' > $O/SMOKE ;;
 wait)
   M=${2:-DONE}
   until compgen -G "$O/$M" > /dev/null || [[ -f $O/STOP ]] || ! $V - $O/jobs.txt <<'PY'

@@ -1,0 +1,1 @@
+{"name": "PAIHTW", "rows": 103904, "per_pool": {"PAIH": 39299, "PAIH05": 35855, "PAIH15": 28750}, "on_pools": ["PAIHON", "PAIHON05", "PAIHON15"], "front_shape": [103904, 8, 32, 512], "harmonizer": "ON (HARMONIZER=1, ALPASIM_FAST=1, pai_rows H recipe)", "gates": "/root/autodl-tmp/ujs/runs/round7/hmix/gates.json"}

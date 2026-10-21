@@ -1,0 +1,724 @@
+{
+ "A": {
+  "PAIH": {
+   "off": "PAIH",
+   "on": "PAIHON",
+   "rows_on": 39299,
+   "rows_matched": 39299,
+   "missing_in_off": [],
+   "n_missing": 0,
+   "fields": {
+    "tab.cam": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.ego": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.fut": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.lht": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.log": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.names": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.served": {
+     "equal": false,
+     "token_dependent": true
+    },
+    "tab.speed": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.src": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "agent.tokens": {
+     "equal": true
+    },
+    "agent.ok": {
+     "equal": true
+    },
+    "agent.box": {
+     "equal": true
+    },
+    "agent.valid": {
+     "equal": true
+    },
+    "road.tokens": {
+     "equal": true
+    },
+    "road.ok": {
+     "equal": true
+    },
+    "road.sdf": {
+     "equal": true
+    },
+    "route.tokens": {
+     "equal": true
+    },
+    "route.ok": {
+     "equal": true
+    },
+    "route.poly": {
+     "equal": true
+    },
+    "route.seglen": {
+     "equal": true
+    },
+    "route.dz": {
+     "equal": true
+    },
+    "route.cov20": {
+     "equal": true
+    },
+    "feat.names": {
+     "equal": true
+    },
+    "feat.f": {
+     "equal": true
+    },
+    "feat.k": {
+     "equal": true
+    },
+    "feat.ok": {
+     "equal": true
+    },
+    "teacher.out": {
+     "equal": false,
+     "token_dependent": true,
+     "max_abs": 110.9375,
+     "med_abs": 0.03387451171875
+    },
+    "teacher.di": {
+     "equal": true
+    },
+    "teacher.pi": {
+     "equal": true
+    }
+   },
+   "off_rows_in_on_scenes": 39299,
+   "pass": true,
+   "unequal": []
+  },
+  "PAIH05": {
+   "off": "PAIH05",
+   "on": "PAIHON05",
+   "rows_on": 35855,
+   "rows_matched": 35855,
+   "missing_in_off": [],
+   "n_missing": 0,
+   "fields": {
+    "tab.base": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.cam": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.ego": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.f": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.fut": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.lht": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.log": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.names": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.served": {
+     "equal": false,
+     "token_dependent": true
+    },
+    "tab.speed": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.src": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "agent.ok": {
+     "equal": true
+    },
+    "agent.box": {
+     "equal": true
+    },
+    "agent.valid": {
+     "equal": true
+    },
+    "agent.tokens": {
+     "equal": true
+    },
+    "road.ok": {
+     "equal": true
+    },
+    "road.sdf": {
+     "equal": true
+    },
+    "road.tokens": {
+     "equal": true
+    },
+    "route.ok": {
+     "equal": true
+    },
+    "route.poly": {
+     "equal": true
+    },
+    "route.seglen": {
+     "equal": true
+    },
+    "route.dz": {
+     "equal": true
+    },
+    "route.cov20": {
+     "equal": true
+    },
+    "route.tokens": {
+     "equal": true
+    },
+    "feat.f": {
+     "equal": true
+    },
+    "feat.k": {
+     "equal": true
+    },
+    "feat.ok": {
+     "equal": true
+    },
+    "feat.names": {
+     "equal": true
+    },
+    "teacher.out": {
+     "equal": false,
+     "token_dependent": true,
+     "max_abs": 112.875,
+     "med_abs": 0.0322265625
+    },
+    "teacher.di": {
+     "equal": true
+    },
+    "teacher.pi": {
+     "equal": true
+    }
+   },
+   "off_rows_in_on_scenes": 35855,
+   "pass": true,
+   "unequal": []
+  },
+  "PAIH15": {
+   "off": "PAIH15",
+   "on": "PAIHON15",
+   "rows_on": 28750,
+   "rows_matched": 28750,
+   "missing_in_off": [],
+   "n_missing": 0,
+   "fields": {
+    "tab.base": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.cam": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.ego": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.f": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.fut": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.lht": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.log": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.names": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.served": {
+     "equal": false,
+     "token_dependent": true
+    },
+    "tab.speed": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "tab.src": {
+     "equal": true,
+     "token_dependent": false
+    },
+    "agent.ok": {
+     "equal": true
+    },
+    "agent.box": {
+     "equal": true
+    },
+    "agent.valid": {
+     "equal": true
+    },
+    "agent.tokens": {
+     "equal": true
+    },
+    "road.ok": {
+     "equal": true
+    },
+    "road.sdf": {
+     "equal": true
+    },
+    "road.tokens": {
+     "equal": true
+    },
+    "route.ok": {
+     "equal": true
+    },
+    "route.poly": {
+     "equal": true
+    },
+    "route.seglen": {
+     "equal": true
+    },
+    "route.dz": {
+     "equal": true
+    },
+    "route.cov20": {
+     "equal": true
+    },
+    "route.tokens": {
+     "equal": true
+    },
+    "feat.f": {
+     "equal": true
+    },
+    "feat.k": {
+     "equal": true
+    },
+    "feat.ok": {
+     "equal": true
+    },
+    "feat.names": {
+     "equal": true
+    },
+    "teacher.out": {
+     "equal": false,
+     "token_dependent": true,
+     "max_abs": 122.125,
+     "med_abs": 0.03759765625
+    },
+    "teacher.di": {
+     "equal": true
+    },
+    "teacher.pi": {
+     "equal": true
+    }
+   },
+   "off_rows_in_on_scenes": 28750,
+   "pass": true,
+   "unequal": []
+  }
+ },
+ "B": {
+  "ntv0-l18-s0_c000": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c001": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c002": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c003": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c004": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c005": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c006": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c007": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c008": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "ntv0-l18-s0_c009": {
+   "logs": 1,
+   "enabled": true,
+   "loaded": true
+  },
+  "OFF:ntv0-l18-s0_x000": {
+   "enabled": false
+  }
+ },
+ "C": {
+  "off": "PAIH",
+  "on": "PAIHOFFC",
+  "rows_on": 957,
+  "rows_matched": 957,
+  "missing_in_off": [],
+  "n_missing": 0,
+  "fields": {
+   "tab.cam": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.ego": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.fut": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.lht": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.log": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.names": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.served": {
+    "equal": true,
+    "token_dependent": true
+   },
+   "tab.speed": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "tab.src": {
+    "equal": true,
+    "token_dependent": false
+   },
+   "agent.tokens": {
+    "equal": true
+   },
+   "agent.ok": {
+    "equal": true
+   },
+   "agent.box": {
+    "equal": true
+   },
+   "agent.valid": {
+    "equal": true
+   },
+   "road.tokens": {
+    "equal": true
+   },
+   "road.ok": {
+    "equal": true
+   },
+   "road.sdf": {
+    "equal": true
+   },
+   "route.tokens": {
+    "equal": true
+   },
+   "route.ok": {
+    "equal": true
+   },
+   "route.poly": {
+    "equal": true
+   },
+   "route.seglen": {
+    "equal": true
+   },
+   "route.dz": {
+    "equal": true
+   },
+   "route.cov20": {
+    "equal": true
+   },
+   "feat.names": {
+    "equal": true
+   },
+   "feat.f": {
+    "equal": true
+   },
+   "feat.k": {
+    "equal": true
+   },
+   "feat.ok": {
+    "equal": true
+   },
+   "teacher.out": {
+    "equal": true,
+    "token_dependent": true,
+    "max_abs": 0.0,
+    "med_abs": 0.0
+   },
+   "teacher.di": {
+    "equal": true
+   },
+   "teacher.pi": {
+    "equal": true
+   }
+  },
+  "off_rows_in_on_scenes": 957,
+  "pass": true,
+  "unequal": [],
+  "tokens_equal_rows": 957,
+  "scenes": [
+   "clipgt-1182b9c0-56b4-4c28-b7c3-5c9de0256699",
+   "clipgt-1bc5e591-0f30-4d73-a7e9-fa04fa160530",
+   "clipgt-4ce9f18b-d251-4bfc-a72d-58bac48fd525",
+   "clipgt-51f8799f-cb4a-44b8-9c27-2af8b9d30f2a",
+   "clipgt-7f34da5c-9ef6-44a9-a5bd-194adbbd3b31",
+   "clipgt-9c351bef-84b8-4a7f-bad8-9df0f50d0ded"
+  ]
+ },
+ "D": {
+  "PAIH": {
+   "rows": 39299,
+   "rows_identical": 0,
+   "all": {
+    "n": 39299,
+    "rl2_7_med": 0.2729073464870453,
+    "rl2_7_p10": 0.20794571936130524,
+    "rl2_7_p90": 0.3566969633102417,
+    "cos_7_med": 0.03726053237915039,
+    "rl2_8_med": 0.2667853832244873
+   },
+   "launch": {
+    "n": 1566,
+    "rl2_7_med": 0.2743697762489319,
+    "rl2_7_p10": 0.21401722729206085,
+    "rl2_7_p90": 0.3645974397659302,
+    "cos_7_med": 0.03693363070487976,
+    "rl2_8_med": 0.26871705055236816
+   },
+   "stop": {
+    "n": 1260,
+    "rl2_7_med": 0.2775995135307312,
+    "rl2_7_p10": 0.21520626544952393,
+    "rl2_7_p90": 0.35870540142059326,
+    "cos_7_med": 0.03877055644989014,
+    "rl2_8_med": 0.2743644118309021
+   },
+   "turn": {
+    "n": 2633,
+    "rl2_7_med": 0.23282946646213531,
+    "rl2_7_p10": 0.17387203872203827,
+    "rl2_7_p90": 0.3089963495731354,
+    "cos_7_med": 0.026877641677856445,
+    "rl2_8_med": 0.23481552302837372
+   },
+   "curve": {
+    "n": 2917,
+    "rl2_7_med": 0.2598140835762024,
+    "rl2_7_p10": 0.19419121742248535,
+    "rl2_7_p90": 0.3357488811016083,
+    "cos_7_med": 0.033893883228302,
+    "rl2_8_med": 0.25270554423332214
+   },
+   "straight": {
+    "n": 8540,
+    "rl2_7_med": 0.2804972529411316,
+    "rl2_7_p10": 0.2152428925037384,
+    "rl2_7_p90": 0.36208462715148926,
+    "cos_7_med": 0.03964468836784363,
+    "rl2_8_med": 0.27180999517440796
+   },
+   "other": {
+    "n": 22383,
+    "rl2_7_med": 0.2757543921470642,
+    "rl2_7_p10": 0.21394506096839905,
+    "rl2_7_p90": 0.3590589165687561,
+    "cos_7_med": 0.03804659843444824,
+    "rl2_8_med": 0.26937201619148254
+   },
+   "pass": true
+  },
+  "PAIH05": {
+   "rows": 35855,
+   "rows_identical": 0,
+   "all": {
+    "n": 35855,
+    "rl2_7_med": 0.2777865529060364,
+    "rl2_7_p10": 0.21892406046390533,
+    "rl2_7_p90": 0.35225242376327515,
+    "cos_7_med": 0.03858470916748047,
+    "rl2_8_med": 0.27034899592399597
+   },
+   "launch": {
+    "n": 1458,
+    "rl2_7_med": 0.2712465822696686,
+    "rl2_7_p10": 0.2117655873298645,
+    "rl2_7_p90": 0.36229783296585083,
+    "cos_7_med": 0.036257773637771606,
+    "rl2_8_med": 0.26435720920562744
+   },
+   "stop": {
+    "n": 1227,
+    "rl2_7_med": 0.28654804825782776,
+    "rl2_7_p10": 0.22814829647541046,
+    "rl2_7_p90": 0.35568708181381226,
+    "cos_7_med": 0.041245996952056885,
+    "rl2_8_med": 0.2796581983566284
+   },
+   "turn": {
+    "n": 2501,
+    "rl2_7_med": 0.2599829137325287,
+    "rl2_7_p10": 0.19387008249759674,
+    "rl2_7_p90": 0.3307809829711914,
+    "cos_7_med": 0.03353780508041382,
+    "rl2_8_med": 0.2581190764904022
+   },
+   "curve": {
+    "n": 2727,
+    "rl2_7_med": 0.26568686962127686,
+    "rl2_7_p10": 0.2098713517189026,
+    "rl2_7_p90": 0.3340373635292053,
+    "cos_7_med": 0.03553277254104614,
+    "rl2_8_med": 0.2579353451728821
+   },
+   "straight": {
+    "n": 7713,
+    "rl2_7_med": 0.27959415316581726,
+    "rl2_7_p10": 0.22238072752952576,
+    "rl2_7_p90": 0.3512095510959625,
+    "cos_7_med": 0.03926801681518555,
+    "rl2_8_med": 0.26995983719825745
+   },
+   "other": {
+    "n": 20229,
+    "rl2_7_med": 0.2804792523384094,
+    "rl2_7_p10": 0.22422945499420166,
+    "rl2_7_p90": 0.3562360107898712,
+    "cos_7_med": 0.0392460823059082,
+    "rl2_8_med": 0.27313464879989624
+   },
+   "pass": true
+  },
+  "PAIH15": {
+   "rows": 28750,
+   "rows_identical": 0,
+   "all": {
+    "n": 28750,
+    "rl2_7_med": 0.2665340006351471,
+    "rl2_7_p10": 0.19507558643817902,
+    "rl2_7_p90": 0.35954272747039795,
+    "cos_7_med": 0.0355226993560791,
+    "rl2_8_med": 0.2636323571205139
+   },
+   "launch": {
+    "n": 1277,
+    "rl2_7_med": 0.2745392620563507,
+    "rl2_7_p10": 0.21421927213668823,
+    "rl2_7_p90": 0.36332690715789795,
+    "cos_7_med": 0.03711515665054321,
+    "rl2_8_med": 0.2702060639858246
+   },
+   "stop": {
+    "n": 1045,
+    "rl2_7_med": 0.2829855680465698,
+    "rl2_7_p10": 0.2273033857345581,
+    "rl2_7_p90": 0.3803727328777313,
+    "cos_7_med": 0.040261030197143555,
+    "rl2_8_med": 0.28402993083000183
+   },
+   "turn": {
+    "n": 2093,
+    "rl2_7_med": 0.22045327723026276,
+    "rl2_7_p10": 0.16364045441150665,
+    "rl2_7_p90": 0.31440311670303345,
+    "cos_7_med": 0.0240476131439209,
+    "rl2_8_med": 0.231267511844635
+   },
+   "curve": {
+    "n": 2016,
+    "rl2_7_med": 0.24841812252998352,
+    "rl2_7_p10": 0.18263092637062073,
+    "rl2_7_p90": 0.33713793754577637,
+    "cos_7_med": 0.030955344438552856,
+    "rl2_8_med": 0.24601781368255615
+   },
+   "straight": {
+    "n": 6030,
+    "rl2_7_med": 0.2750004231929779,
+    "rl2_7_p10": 0.19926892220973969,
+    "rl2_7_p90": 0.36757466197013855,
+    "cos_7_med": 0.037831783294677734,
+    "rl2_8_med": 0.2671709656715393
+   },
+   "other": {
+    "n": 16289,
+    "rl2_7_med": 0.2693071663379669,
+    "rl2_7_p10": 0.19954538345336914,
+    "rl2_7_p90": 0.35977619886398315,
+    "cos_7_med": 0.03620189428329468,
+    "rl2_8_med": 0.26644477248191833
+   },
+   "pass": true
+  }
+ },
+ "B_pass": true,
+ "pass": {
+  "A": true,
+  "B": true,
+  "C": true,
+  "D": true
+ }
+}
