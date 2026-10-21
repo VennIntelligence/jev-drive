@@ -27,14 +27,17 @@
 #   r5.sh chainG G          one submission: LAUNCH-37 reads of R3MV / R3MVL / R5N (exist) + smoke G -> launchG: train R5G -> PAI-FIX (vl) ->
 #                           report + gate (no 281 here); LAUNCH-37 read of R5G -> l37fin: results/launch37.md, R5G vs R5N; R5-G passing the
 #                           gate and launching >= 30 / 37 -> its PAI 281 ACC + GAP (PRIO 30) -> r281 -> DONE
+# Stage G2 (addendum 4b): R5-G2 = R5-G with the GO-NOW rows (ph, ph15; ph05's dropped) at 4 rows a batch (draw R5G2).
+#   r5.sh gonow G2          (CPU) r5.py gonow --go-batch 4 --go-drop ph05 --out R5G2;  r5.sh chainG2 G2: smoke G2 -> launchG G2 (as G; its
+#                           l37fin waits for stage G's gate and LAUNCH-37, writes results/launch37_g2.md with R5-G2 and R5-G vs R5-N)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 R5=$DATA_DIR/runs/round5/r5; ME=experiments/round5/scripts/r5.sh; PY=experiments/round5/scripts/r5.py; R2PY=experiments/round2/scripts/r2.py
 RES=experiments/round5/results; TR=$DATA_DIR/envs/op-train/bin/python; V=.venv/bin/python; RPD=$DATA_DIR/runs/round5/road_pai; S3O=$DATA_DIR/runs/round5/s3
 IN=experiments/defect_fix/scripts/inertia.py; LA=experiments/defect_fix/scripts/lon_anchor.py; DFR=experiments/defect_fix/results
 RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; CTRL=R2C-L18-s0; MV=R3MV-L18-s0; RT=R5R-L18-s0; N=9500
-declare -A TAGS=([R]="$RT" [A]="R5A-L18-s0 R5A-L18-s1" [B]="R5B-L18-s0" [B1]="R5B-L18-s1" [N]="R5N-L18-s0" [N1]="R5N-L18-s1" [G]="R5G-L18-s0")
-declare -A NAME=([R]=round5r [A]=round5a [B]=round5b [B1]=round5b1 [N]=round5n [N1]=round5n1 [G]=round5g)
-declare -A SMK=([R]=R [A]=R5A [B]=R5B [B1]=R5B [N]=R5N [N1]=R5N [G]=R5G) IDN=([R]=r [A]=a [B]=b [B1]=b [N]=n [N1]=n [G]=g); A0=R5A-L18-s0; B0=R5B-L18-s0; N0=R5N-L18-s0
+declare -A TAGS=([R]="$RT" [A]="R5A-L18-s0 R5A-L18-s1" [B]="R5B-L18-s0" [B1]="R5B-L18-s1" [N]="R5N-L18-s0" [N1]="R5N-L18-s1" [G]="R5G-L18-s0" [G2]="R5G2-L18-s0")
+declare -A NAME=([R]=round5r [A]=round5a [B]=round5b [B1]=round5b1 [N]=round5n [N1]=round5n1 [G]=round5g [G2]=round5g2)
+declare -A SMK=([R]=R [A]=R5A [B]=R5B [B1]=R5B [N]=R5N [N1]=R5N [G]=R5G [G2]=R5G2) IDN=([R]=r [A]=a [B]=b [B1]=b [N]=n [N1]=n [G]=g [G2]=g2); A0=R5A-L18-s0; B0=R5B-L18-s0; N0=R5N-L18-s0
 MVL=R3MVL-L18-s0; GT=R5G-L18-s0; L37=experiments/round5/results/launch37.txt
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train); PRIO=${PRIO:-20}
 ST=${2:-R}; [[ -n ${TAGS[$ST]:-} ]] || { sed -n 2,30p "$0"; exit 2; }; O=$R5/$ST; mkdir -p $O/pool $R5/w $RES
@@ -62,8 +65,8 @@ if var in ("r", "r0"):
 if var in ("ro", "a", "bo", "b"):                                       # stages A / B (addenda 1 / 2): R3MV's argv, no road hinge
     a[last("--on") + 1] = "on1_JTPHOR" if var in ("bo", "b") else "on1_JTPHO"
     a[last("--on-wfile") + 1] = f"{w5}/{dict(ro='R5R0', a='R5A', bo='R5B0', b='R5B')[var]}.npz"
-if var in ("n", "ni", "g"):                                            # stages N / G (addenda 3 / 4): only the draw file changes
-    a[last("--on-wfile") + 1] = f"{w5}/{dict(n='R5N', ni='R5NI', g='R5G')[var]}.npz"
+if var in ("n", "ni", "g", "g2"):                                            # stages N / G (addenda 3 / 4): only the draw file changes
+    a[last("--on-wfile") + 1] = f"{w5}/{dict(n='R5N', ni='R5NI', g='R5G', g2='R5G2')[var]}.npz"
 if var in ("a", "b"):
     a[last("--on-k") + 1] = "73"
     a[last("--yr-mass") + 1] = "0.095"
@@ -160,11 +163,19 @@ chainN)  # stage N in one submission: smoke + identity -> launch (the draw files
   l=$(sub r5-launch-N --after $s,$i --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME launch N) || exit 1
   echo "$(date '+%F %T') chainN (code $h): smoke $s identity $a $b bitcmp $i launch $l" | tee -a $O/stages.txt ;;
 gonow)
-  [[ $ST == G ]] || die "gonow is stage G"
+  [[ $ST == G* ]] || die "gonow is stage G / G2"
   if [[ ${3:-} != run ]]; then h=$(git rev-parse --short HEAD); echo "$h gonow" >> $O/code.txt
-    j=$(sub r5-gonow --vram 0.1 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME gonow G run) || exit 1
-    echo "$(date '+%F %T') gonow (code $h): $j" | tee -a $O/stages.txt; exit 0; fi
-  $TR $PY gonow > $O/gonow.log 2>&1 || die "gonow (log $O/gonow.log)"; date '+%F %T' > $O/GODONE ;;
+    j=$(sub r5-gonow-$ST --vram 0.1 --cpu 8 --ram 96 --timeout-h 2 -- bash $ME gonow $ST run) || exit 1
+    echo "$(date '+%F %T') gonow $ST (code $h): $j" | tee -a $O/stages.txt; exit 0; fi
+  if [[ $ST == G ]]; then $TR $PY gonow > $O/gonow.log 2>&1; else $TR $PY gonow --go-batch 4 --go-drop ph05 --out R5G2 > $O/gonow.log 2>&1; fi \
+    || die "gonow (log $O/gonow.log)"; date '+%F %T' > $O/GODONE ;;
+chainG2)  # stage G2: smoke -> launchG G2 (LAUNCH-37 references come from stage G)
+  [[ $ST == G2 ]] || die "chainG2 is stage G2"; [[ ! -s $O/jobs.txt || -z $(grep -v gonow $O/jobs.txt) ]] || die "stage G2 already submitted"
+  for f in $R5/w/R5G2.npz $RES/w_R5G2.json $R5/G/l37_ref_tax.txt; do [[ -s $f ]] || die "no $f"; done; [[ ! -e $RUNS/R5SMG2-L18-s0 ]] || die "R5SMG2-L18-s0 exists"
+  h=$(git rev-parse --short HEAD); echo "$h chainG2" >> $O/code.txt
+  s=$(sub r5-smoke-G2 "${FT[@]}" --timeout-h 1 -- bash $ME smoketrain G2) || exit 1
+  l=$(sub r5-launch-G2 --after $s --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME launchG G2) || exit 1
+  echo "$(date '+%F %T') chainG2 (code $h): smoke $s launch $l" | tee -a $O/stages.txt ;;
 chainG)  # stage G in one submission (see the header)
   [[ $ST == G ]] || die "chainG is stage G"; [[ ! -s $O/jobs.txt || -z $(grep -v gonow $O/jobs.txt) ]] || die "stage G already submitted"
   for f in $R5/w/R5G.npz $RES/w_R5G.json $L37; do [[ -s $f ]] || die "no $f (run gonow)"; done
@@ -177,31 +188,40 @@ chainG)  # stage G in one submission (see the header)
   l=$(sub r5-launch-G --after $s --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME launchG G) || exit 1
   echo "$(date '+%F %T') chainG (code $h): LAUNCH-37 refs facts ${x[*]} smoke $s launch $l" | tee -a $O/stages.txt ;;
 launchG)
-  for X in $GT ${GT/-L18-/x2500-L18-} ${GT/-L18-/x5000-L18-} ${GT/-L18-/x7500-L18-}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
-  python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/smoke_R5G.json'))['pass_'] else 1)" || die "smoke not passed"
+  T=${TAGS[$ST]}; [[ $ST == G* ]] || die "launchG is stage G / G2"
+  for X in $T ${T/-L18-/x2500-L18-} ${T/-L18-/x5000-L18-} ${T/-L18-/x7500-L18-}; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done
+  python3 -c "import json, sys; sys.exit(0 if json.load(open('$RES/smoke_${SMK[$ST]}.json'))['pass_'] else 1)" || die "smoke not passed"
   for f in $F_/$CTRL-vl.csv $F_/$MV-vl.csv $F_/$MVL-vl.csv $F_/$N0-vl.csv $F_/NTV0-L18-s0-281ag.csv $F_/$CTRL-281ag.csv $F_/R2J-L18-s0-281ag.csv; do
     [[ -s $f ]] || die "no stored $f"; done
-  [[ -s $O/l37_ref_tax.txt ]] || die "no LAUNCH-37 reference reads"
+  [[ -s $R5/G/l37_ref_tax.txt ]] || die "no LAUNCH-37 reference reads"
+  ga=(); if [[ $ST == G2 ]]; then                                  # stage G's PAI-FIX facts and LAUNCH-37 read feed G2's references
+    for n in pai_fix-tax-$GT-vl pai_fix-tax-$GT-l37ag; do i=$(awk -v n=$n '$2 == n {print $1}' $R5/G/jobs.txt | tail -1); [[ -n $i ]] || die "stage G: no $n"; ga+=($i); done; fi
   rm -f $O/DONE $O/PAIDONE; h=$(git rev-parse --short HEAD); echo "$h launchG" >> $O/code.txt
-  t=$(sub r5-train-$GT "${FT[@]}" --timeout-h 4 -- bash $ME train G $GT) || exit 1
-  o=$(PRIO=$PRIO AFTER=$t bash experiments/pai_fix/scripts/pai_fix.sh read $GT vl "v t" | tail -1) || die "pai_fix read $GT"
-  x=${o%% *}; echo "$x pai_fix-tax-$GT-vl" >> $O/jobs.txt; awk '{print $1, $2}' $DATA_DIR/runs/pai_fix/reads/$GT-vl/jobs.txt >> $O/jobs.txt
-  p=$(sub r5-paifix-G --after $x --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME paifix G) || exit 1
-  y=($(l37read $GT $t)) || exit 1
-  f=$(sub r5-l37-G --after $(csv $p ${y[-1]} $(cat $O/l37_ref_tax.txt)) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME l37fin G) || exit 1
-  echo "$(date '+%F %T') launchG (code $h): train $t PAI-FIX $x report + gate $p LAUNCH-37 chunks ${y[*]:0:4} facts ${y[-1]} l37fin $f" | tee -a $O/stages.txt ;;
-l37fin)  # LAUNCH-37 report (registered comparison R5G vs R5N first); R5-G passing the gate and launching >= 30 / 37 -> its PAI 281 (PRIO 30)
+  t=$(sub r5-train-$T "${FT[@]}" --timeout-h 4 -- bash $ME train $ST $T) || exit 1
+  o=$(PRIO=$PRIO AFTER=$t bash experiments/pai_fix/scripts/pai_fix.sh read $T vl "v t" | tail -1) || die "pai_fix read $T"
+  x=${o%% *}; echo "$x pai_fix-tax-$T-vl" >> $O/jobs.txt; awk '{print $1, $2}' $DATA_DIR/runs/pai_fix/reads/$T-vl/jobs.txt >> $O/jobs.txt
+  p=$(sub r5-paifix-$ST --after $(csv $x ${ga[@]:0:1}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME paifix $ST) || exit 1
+  y=($(l37read $T $t)) || exit 1
+  f=$(sub r5-l37-$ST --after $(csv $p ${y[-1]} $(cat $R5/G/l37_ref_tax.txt) ${ga[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME l37fin $ST) || exit 1
+  echo "$(date '+%F %T') launchG $ST (code $h): train $t PAI-FIX $x report + gate $p LAUNCH-37 chunks ${y[*]:0:4} facts ${y[-1]} l37fin $f" | tee -a $O/stages.txt ;;
+l37fin)  # LAUNCH-37 report (registered comparisons R5G vs R5N, G2: also R5G2 vs R5N); the stage's arm passing its gate and launching >= 30 / 37 -> its PAI 281
+  T=${TAGS[$ST]}; k=${T%-L18-*}
   rd=(NTV0=$F_/NTV0-L18-s0-281ag.csv R2C=$F_/$CTRL-281ag.csv R2J=$F_/R2J-L18-s0-281ag.csv R3MV=$F_/$MV-l37ag.csv R3MVL=$F_/$MVL-l37ag.csv
       R5N=$F_/$N0-l37ag.csv R5G=$F_/$GT-l37ag.csv)
-  $V $PY l37 --read "${rd[@]}" --pair R5G:R5N R5G:R3MVL R5G:R3MV R5N:R3MV R3MVL:R3MV R5G:NTV0 R5N:NTV0 R3MV:NTV0 R5G:R2C \
-      --target $GT:$N0 $GT:$MVL $GT:$MV $N0:$MV > $O/l37.log 2>&1 || die "l37 report (log $O/l37.log)"
-  go=$(python3 -c "import json; g=json.load(open('$RES/gate_r5g.json'))['arms']['$GT']['pass_']; n=json.load(open('$RES/launch37.json'))['reads']['R5G']['launched']; print(int(bool(g) and n >= 30))") \
+  if [[ $ST == G ]]; then
+    $V $PY l37 --read "${rd[@]}" --pair R5G:R5N R5G:R3MVL R5G:R3MV R5N:R3MV R3MVL:R3MV R5G:NTV0 R5N:NTV0 R3MV:NTV0 R5G:R2C \
+        --target $GT:$N0 $GT:$MVL $GT:$MV $N0:$MV > $O/l37.log 2>&1 || die "l37 report (log $O/l37.log)"; js=$RES/launch37.json
+  else
+    $V $PY l37 --read "${rd[@]}" R5G2=$F_/$T-l37ag.csv --pair R5G2:R5N R5G:R5N R5G2:R5G R5G2:R3MVL R5G:R3MVL R5N:R3MV R5G2:NTV0 R5G2:R2C \
+        --target $T:$N0 $GT:$N0 $T:$GT $T:$MVL --sep R5G2:R5N=$T:$N0 R5G:R5N=$GT:$N0 --stem launch37_g2 > $O/l37.log 2>&1 || die "l37 report (log $O/l37.log)"
+    js=$RES/launch37_g2.json; fi
+  go=$(python3 -c "import json; g=json.load(open('$RES/gate_r5${ST,,}.json'))['arms']['$T']['pass_']; n=json.load(open('$js'))['reads']['$k']['launched']; print(int(bool(g) and n >= 30))") \
     || die "decision"
-  echo "$(date '+%F %T') l37fin: R5-G gate + LAUNCH-37 >= 30 -> PAI 281: $go" | tee -a $O/stages.txt
-  if [[ $go == 1 ]]; then y=($(read281 $GT 30)) || exit 1
-    r=$(PRIO=30 sub r5-r281-$GT --after ${y[-1]} --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME r281 G $GT) || exit 1
-    PRIO=30 sub r5-done-G --after $r --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/DONE" > /dev/null
-    echo "$(date '+%F %T') PAI 281 ag $GT: chunks ${y[*]:0:${#y[@]}-1} facts ${y[-1]} report $r" | tee -a $O/stages.txt
+  echo "$(date '+%F %T') l37fin $ST: $k gate + LAUNCH-37 >= 30 -> PAI 281: $go" | tee -a $O/stages.txt
+  if [[ $go == 1 ]]; then y=($(read281 $T 30)) || exit 1
+    r=$(PRIO=30 sub r5-r281-$T --after ${y[-1]} --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME r281 $ST $T) || exit 1
+    PRIO=30 sub r5-done-$ST --after $r --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/DONE" > /dev/null
+    echo "$(date '+%F %T') PAI 281 ag $T: chunks ${y[*]:0:${#y[@]}-1} facts ${y[-1]} report $r" | tee -a $O/stages.txt
   else date '+%F %T' > $O/DONE; fi ;;
 leadrows)
   [[ $ST == N ]] || die "leadrows is stage N"
@@ -224,7 +244,7 @@ smoketrain)
   echo "$(date '+%F %T') smoke $ST: ${A[*]} --diag-every 20 --save-at 20,40" | tee -a $O/stages.txt
   $TR "${A[@]}" --diag-every 20 --save-at 20,40 > $O/smoke.log 2>&1 || die "smoke run $ST (log $O/smoke.log)"
   if [[ $ST == R ]]; then $TR $PY smoke --tag $X --arm R; elif [[ $ST == N ]]; then $TR $PY smoke --tag $X --arm N --wfile R5N
-  elif [[ $ST == G ]]; then $TR $PY smoke --tag $X --arm G --wfile R5G
+  elif [[ $ST == G* ]]; then $TR $PY smoke --tag $X --arm G --wfile ${SMK[$ST]}
   else $TR $PY smoke --tag $X --arm A --wfile ${SMK[$ST]} --k-s3 9; fi; r=$?
   for k in 20 40; do [[ -s $RUNS/R5SM${ST}x$k-L18-s0/ckpt-final.pt ]] || { echo "$(date '+%F %T') ERROR smoke $ST: no snapshot x$k" | tee -a $O/stages.txt; r=3; }; done
   rm -rf $RUNS/$X $RUNS/R5SM${ST}x20-L18-s0 $RUNS/R5SM${ST}x40-L18-s0; exit $r ;;
@@ -259,19 +279,20 @@ train)
   echo "$(date '+%F %T') train $T: ${A[*]} --save-at 2500,5000,7500" | tee -a $O/stages.txt; exec $TR "${A[@]}" --save-at 2500,5000,7500 ;;
 paifix)  # reports vs CTRL and vs the stage's reference (R: R3MV, A: R5-R); the gate; every passing tag's PAI 281 ACC + GAP (PRIO 30) -> r281 -> PAIDONE
   rd=(NTV0-L18-s0-vl=$F_/NTV0-L18-s0-vl.csv $CTRL-vl=$F_/$CTRL-vl.csv R2J-L18-s0-vl=$F_/R2J-L18-s0-vl.csv $MV-vl=$F_/$MV-vl.csv)
-  [[ $ST == A ]] && rd+=($RT-vl=$F_/$RT-vl.csv); [[ $ST == G ]] && rd+=($MVL-vl=$F_/$MVL-vl.csv $N0-vl=$F_/$N0-vl.csv); [[ $ST == B* ]] && rd+=($A0-vl=$F_/$A0-vl.csv); [[ $ST == B1 ]] && rd+=($B0-vl=$F_/$B0-vl.csv); [[ $ST == N1 ]] && rd+=($N0-vl=$F_/$N0-vl.csv)
+  [[ $ST == A ]] && rd+=($RT-vl=$F_/$RT-vl.csv); [[ $ST == G* ]] && rd+=($MVL-vl=$F_/$MVL-vl.csv $N0-vl=$F_/$N0-vl.csv); [[ $ST == G2 ]] && rd+=($GT-vl=$F_/$GT-vl.csv); [[ $ST == B* ]] && rd+=($A0-vl=$F_/$A0-vl.csv); [[ $ST == B1 ]] && rd+=($B0-vl=$F_/$B0-vl.csv); [[ $ST == N1 ]] && rd+=($N0-vl=$F_/$N0-vl.csv)
   for T in ${TAGS[$ST]}; do rd+=($T-vl=$F_/$T-vl.csv); done
   REF=$MV; s=${ST,,}                                              # every stage pairs against R3MV (addendum 1); B / B1 also against R5A-s0 (addendum 2)
   $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $CTRL-vl --out $RES/paifix_r5${s}_vl_vs_ctrl.md --scores $RES/paifix_r5${s}_vl.csv > /dev/null \
     || die "pai_fix report vs CTRL"
   $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $REF-vl --out $RES/paifix_r5${s}_vl_vs_${REF%%-*}.md > /dev/null || die "pai_fix report vs $REF"
-  [[ $ST == G ]] && { $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $MVL-vl --out $RES/paifix_r5g_vl_vs_R3MVL.md > /dev/null || die "pai_fix report vs $MVL"; }
+  [[ $ST == G* ]] && { $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $MVL-vl --out $RES/paifix_r5${s}_vl_vs_R3MVL.md > /dev/null || die "pai_fix report vs $MVL"; }
+  [[ $ST == G2 ]] && { $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $GT-vl --out $RES/paifix_r5g2_vl_vs_R5G.md > /dev/null || die "pai_fix report vs $GT"; }
   [[ $ST == B* ]] && { $V experiments/pai_fix/scripts/pai_fix.py report --read "${rd[@]}" --ref $A0-vl --out $RES/paifix_r5${s}_vl_vs_R5A.md > /dev/null || die "pai_fix report vs $A0"; }
-  ref=($REF); [[ $ST == B* ]] && ref+=($A0); [[ $ST == B1 ]] && ref+=($B0); [[ $ST == N1 ]] && ref+=($N0); [[ $ST == G ]] && ref+=($MVL $N0)
+  ref=($REF); [[ $ST == B* ]] && ref+=($A0); [[ $ST == B1 ]] && ref+=($B0); [[ $ST == N1 ]] && ref+=($N0); [[ $ST == G* ]] && ref+=($MVL $N0); [[ $ST == G2 ]] && ref+=($GT)
   ps=$($V $PY gate --arms ${TAGS[$ST]} ${ref[@]} --ctrl $CTRL --stem gate_r5$s) || die "gate"
   ps=$(tr ' ' '\n' <<< "$ps" | grep -xF -f <(tr ' ' '\n' <<< "${TAGS[$ST]}") | xargs)   # the references are listed for comparison only
   echo "$(date '+%F %T') gate: passing [${ps}]" | tee -a $O/stages.txt
-  [[ $ST == G ]] && { date '+%F %T' > $O/PAIDONE; exit 0; }           # stage G: the 281 decision is l37fin's (gate + LAUNCH-37)
+  [[ $ST == G* ]] && { date '+%F %T' > $O/PAIDONE; exit 0; }           # stage G: the 281 decision is l37fin's (gate + LAUNCH-37)
   [[ -z $ps ]] && { date '+%F %T' > $O/PAIDONE; bash $ME fin $ST; exit 0; }
   if [[ $ST == B || $ST == N ]]; then b1=$(bash $ME launch ${ST}1 2>&1 | tail -1); echo "$(date '+%F %T') s0 passes: stage ${ST}1 (s1) $b1" | tee -a $O/stages.txt; fi
   r=(); for T in $ps; do y=($(read281 $T 30)) || exit 1
@@ -282,7 +303,7 @@ r281)
   T=$3; rd=(NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R2C-ag=$F_/$CTRL-281ag.csv R2J-ag=$F_/R2J-L18-s0-281ag.csv); pr=($T-ag:NTV0-ag $T-ag:R2C-ag $T-ag:R2J-ag)
   $TR $R2PY r281 --read "${rd[@]}" $T-ag=$F_/$T-281ag.csv --pairs "${pr[@]}" --out $RES/pai281_${T%-L18-*}${T##*-L18}_ag.md \
       --title "PAI 281, ACC + GAP: $T vs stored NTV0-L18-s0 and R2C-L18-s0 (and R2J)" || die "r281 $T"
-  if [[ $ST == N* || $ST == G ]]; then $V $PY split281 --read "${rd[@]}" $T-ag=$F_/$T-281ag.csv --out $RES/pai281_${T%-L18-*}${T##*-L18}_lead.md || die "split281 $T"; fi ;;
+  if [[ $ST == N* || $ST == G* ]]; then $V $PY split281 --read "${rd[@]}" $T-ag=$F_/$T-281ag.csv --out $RES/pai281_${T%-L18-*}${T##*-L18}_lead.md || die "split281 $T"; fi ;;
 cf)  $TR $IN cf --tags NTV0-L18-s0,$CTRL,$MV,$([[ $ST == A ]] && echo $RT,)$([[ $ST == B* ]] && echo $A0,)$([[ $ST == B1 ]] && echo $B0,)$([[ $ST == N1 ]] && echo $N0,)$(csv ${TAGS[$ST]}),RSG-L18-s0 --gate-tag RSG-L18-s0 --name ${NAME[$ST]} ;;
 inreport)
   n=${NAME[$ST]}; $TR $IN report --name $n > $O/inertia_report.log 2>&1 || die "inertia report"

@@ -28,8 +28,11 @@ Stage G (prereg addendum 4): R5-G = R3MV's argv with draw R5G ("stand, then go p
         PAI human row fed < 2 m/s that is not GO-NOW at weight 0, each part renormalised to its share (MV's rule with the GO-NOW rows kept;
         the same code with no GO-NOW row is asserted bit-equal to R3MV) + R3MVL's navtrain weights (launch rows x 3, bit-equal arrays)
         -> w/R5G.npz + results/w_R5G.json; rows a batch by source, 4 s label distance, LEAD share -> results/gonow_rows.{md,json}
+  r5.py gonow --go-batch 4 --go-drop ph05 --out R5G2   (addendum 4b) R5G with the GO-NOW rows of the listed parts at 0 and the others
+        scaled by one common factor to 4 rows a batch, the rest of each part renormalised so every part keeps its share -> w/R5G2.npz + w_R5G2.json
   r5.py l37 --read K=FACTS.csv .. --pair A:B .. --target A:B ..   LAUNCH-37 (lead_281.csv's 37 launch scenes): launched, rear-hit, mean, zeros,
         lead / no-lead split per read; paired A - B over the 37 (mean, launched) and over PAI-FIX TARGET (vl facts) -> results/launch37.{md,json}
+        (--stem); --sep PAIR=TARGET: further registered comparisons (default: the first --pair with the first --target)
 """
 from __future__ import annotations
 
@@ -550,6 +553,30 @@ def cmd_gonow(a):
     rec["pai_drawable"] = int(sum(r["drawable_g"] for r in rec["parts"].values()))
     rec["pai_gonow_per_batch"] = float(sum(r["per_batch"] for r in rec["parts"].values()))
     W5.mkdir(parents=True, exist_ok=True)
+    if a.go_batch > 0:                                             # R5G2 (addendum 4b): GO-NOW rows up to go_batch rows a batch
+        gm = {p: G[p] & (w[X[p]["ix"]] > 0) & (p not in a.go_drop) for p in X}
+        k = a.go_batch / r3.K_ON / sum(w[X[p]["ix"]][gm[p]].sum() for p in X)
+        for p, x in X.items():
+            ix = x["ix"]
+            sh = w[ix].sum()
+            w[ix[G[p] & (w[ix] > 0) & ~gm[p]]] = 0.0
+            w[ix[gm[p]]] *= k
+            rest = (w[ix] > 0) & ~gm[p]
+            w[ix[rest]] *= (sh - w[ix[gm[p]]].sum()) / w[ix[rest]].sum()
+            rec["parts"][p] |= dict(gonow_kept=int(gm[p].sum()), per_batch_up=float(r3.K_ON * w[ix][gm[p]].sum()),
+                                    passes_9500=float(9500 * r3.K_ON * w[ix][gm[p]].sum() / max(gm[p].sum(), 1)), share_after=float(w[ix].sum()))
+        assert abs(w.sum() - 1) < 1e-9 and np.array_equal(w[~pai], MV["w"][~pai]), "R5G2: weights"
+        gs = defaultdict(float)
+        for g_, x in zip(grp.astype(str), w):
+            gs[g_] += x
+        rec |= dict(group_share={k_: float(v) for k_, v in sorted(gs.items()) if v > 0}, go_batch=a.go_batch, go_drop=a.go_drop, go_factor=float(k),
+                    pai_gonow_per_batch=float(sum(r3.K_ON * w[X[p]["ix"]][gm[p]].sum() for p in X)),
+                    pai_drawable=int(sum((w[x["ix"]] > 0).sum() for x in X.values())))
+        np.savez(W5 / f"{a.out}.npz", names=B["names"], w=w, grp=grp, nav_names=MVL["nav_names"], nav_w=MVL["nav_w"])
+        r3.dump(RES / f"w_{a.out}.json", rec | dict(base="R5G", out=a.out))
+        print(json.dumps({p: {q: r[q] for q in ("gonow", "gonow_kept", "per_batch_up", "passes_9500", "share_after")} for p, r in rec["parts"].items()}
+                         | dict(factor=k, total=rec["pai_gonow_per_batch"], group_share=rec["group_share"]), indent=1))
+        return
     np.savez(W5 / "R5G.npz", names=B["names"], w=w, grp=grp, nav_names=MVL["nav_names"], nav_w=MVL["nav_w"])
     r3.dump(RES / "w_R5G.json", rec | dict(base="R2JF", out="R5G"))
     r3.dump(RES / "gonow_rows.json", rec)
@@ -641,14 +668,15 @@ def cmd_l37(a):
             t = rec["target"][pr]
             L.append(f"| {A} - {B} | {t['n']} | {t['a']:.3f} / {t['b']:.3f} | {stats.fmt(d, '+.3f')} | {t['zeros'][0]} / {t['zeros'][1]} ({t['new']} / {t['fixed']}) |")
     excl = lambda d: bool(d["lo"] > 0 or d["hi"] < 0)  # noqa: E731
-    if a.pair and a.target:
-        p0, t0 = rec["pairs"][a.pair[0]]["mean"], rec["target"][a.target[0]]["mean"]
-        rec["separated"] = dict(pair=a.pair[0], target=a.target[0], launch37=excl(p0), target_=excl(t0), any=excl(p0) or excl(t0))
-        s = rec["separated"]
-        L += ["", f"**Registered comparison {a.pair[0]} (addendum 4): separated = {'yes' if s['any'] else 'no'}** (paired CI excludes 0 on "
-              f"LAUNCH-37: {'yes' if s['launch37'] else 'no'}, on TARGET: {'yes' if s['target_'] else 'no'})."]
-    r3.dump(RES / "launch37.json", rec)
-    (RES / "launch37.md").write_text("\n".join(L) + "\n")
+    rec["separated"] = {}
+    for e in a.sep or ([f"{a.pair[0]}={a.target[0]}"] if a.pair and a.target else []):
+        pr, tg = e.split("=")
+        p0, t0 = rec["pairs"][pr]["mean"], rec["target"][tg]["mean"]
+        s = rec["separated"][pr] = dict(target=tg, launch37=excl(p0), target_=excl(t0), any=excl(p0) or excl(t0))
+        L += ["", f"**Registered comparison {pr.replace(':', ' vs ')} (addendum 4 / 4b): separated = {'yes' if s['any'] else 'no'}** (paired CI "
+              f"excludes 0 on LAUNCH-37: {'yes' if s['launch37'] else 'no'}, on TARGET: {'yes' if s['target_'] else 'no'})."]
+    r3.dump(RES / f"{a.stem}.json", rec)
+    (RES / f"{a.stem}.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -708,11 +736,14 @@ def main():
     p.add_argument("--k-on", type=int, default=64), p.add_argument("--k-s3", type=int, default=9), p.add_argument("--out", default="R5A")
     p = sub.add_parser("gate")
     p.add_argument("--arms", nargs="+", required=True), p.add_argument("--ctrl", default="R2C-L18-s0"), p.add_argument("--stem", default="gate_r5r")
-    sub.add_parser("leadrows"), sub.add_parser("lead281"), sub.add_parser("gonow")
+    sub.add_parser("leadrows"), sub.add_parser("lead281")
+    p = sub.add_parser("gonow")
+    p.add_argument("--go-batch", type=float, default=0.0), p.add_argument("--go-drop", nargs="*", default=[]), p.add_argument("--out", default="R5G")
     p = sub.add_parser("split281")
     p.add_argument("--read", nargs="+", required=True), p.add_argument("--out", required=True)
     p = sub.add_parser("l37")
     p.add_argument("--read", nargs="+", required=True), p.add_argument("--pair", nargs="*", default=[]), p.add_argument("--target", nargs="*", default=[])
+    p.add_argument("--sep", nargs="*", default=[]), p.add_argument("--stem", default="launch37")
     a = ap.parse_args()
     dict(expect=cmd_expect, smoke=cmd_smoke, weights=cmd_weights, gate=cmd_gate, leadrows=cmd_leadrows, lead281=cmd_lead281,
          split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37)[a.cmd](a)
