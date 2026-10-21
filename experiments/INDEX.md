@@ -22,6 +22,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [round2](round2/README.md): live; J + ACC + GAP PAI 281 0.689 vs NTV0 0.744 (-0.056); launches 21 / 37; gates FAIL [dnone,yet]
 - [round5](round5/README.md): live; D3: 42 % of train scenes informative; faster wins launches +0.124; S3 rows on1_PAIO built (51 443, gates R1-R3 pass) [dnone,yet]
 - [round6](round6/README.md): live; A DAgger: PAI 281 0.775 / 0.815, iter 2 0.789 / 0.794 vs NTV0 0.743; not adopted [d433-434,437-438]
+- [round8](round8/README.md): live; R8K (R6DAG + keep-pace/F2 + Harmonizer twins) and the Harmonizer render-noise check [d439-441]
 - [round7](round7/README.md): live; loss map: R6DAG loses 52 / 63 pts on 281; Harmonizer turns plans tighter [d435-436]
 - [round3](round3/README.md): live; offline: J's launch loss tracks PAI standing rows (2.5 / batch vs 0.16), not the flattening [dnone,yet]
 - [practice_nuplan](practice_nuplan/README.md): closed; new start-state S rows; static rows cause the right bias; full-length arms without them not adopted [d368-369,377,385]
