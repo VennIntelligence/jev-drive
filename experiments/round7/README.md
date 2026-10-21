@@ -1,14 +1,14 @@
 # round7: PAI recipe after DAgger, Harmonizer risk
 
 status: live
-decisions: 435, 436
-index: loss map: R6DAG loses 52 / 63 pts on 281; Harmonizer turns plans tighter
+decisions: 435, 436, 439
+index: loss map: R6DAG loses 52 / 63 pts on 281; Harmonizer turns plans tighter, closed loop halves R6DAG lead (NTV0 flat)
 
 **Question.** Which recipe, built on the round-6 DAgger map teacher, beats NTV0 on PAI 281 (ACC + GAP) on both seeds and on the PCS ruler, and does the Harmonizer (on in the PAI finals) change our plans?
 
-**Conclusion.** Loss map (decision 436): R6DAG loses 51.6 (s1) / 62.8 (s0) points; the most recoverable are turn-inside offroad and unforced slow-down partials (which carry the whole ruler gap to NTV0); stop-line overshoot is the largest block but never solved under ACC + GAP. Harmonizer open-loop (decision 435): lateral within the line, longitudinal over it, junction plans 0.3-0.5 m tighter at 4 s from the frozen encoder. Harmonizer closed loop, PARTIAL ([results/harmonizer_closedloop.md](results/harmonizer_closedloop.md)): NTV0 full 281 ON - OFF +0.002 [-0.032, +0.035] (route-turn zeros -6, offroad +5); R6DAG-s1 on 108 scenes -0.014, DiD +0.005 [-0.064, +0.077]; R6DAG-s1 c003-c007 paused behind DAG2 reads.
+**Conclusion.** Loss map (decision 436): R6DAG loses 51.6 (s1) / 62.8 (s0) points; the most recoverable are turn-inside offroad and unforced slow-down partials (which carry the whole ruler gap to NTV0); stop-line overshoot is the largest block but never solved under ACC + GAP. Harmonizer open-loop (decision 435): lateral within the line, longitudinal over it, junction plans 0.3-0.5 m tighter at 4 s from the frozen encoder. Harmonizer closed loop (decision 439, [results/harmonizer_closedloop.md](results/harmonizer_closedloop.md)): ON - OFF NTV0 +0.002 [-0.031, +0.035] (route-turn zeros -6, offroad +5, cancel), R6DAG-s1 -0.035 [-0.066, -0.005] (longitudinal: rear-hit +5, launches 35 -> 32); R6DAG - NTV0 +0.072 OFF -> +0.035 [-0.006, +0.078] ON, DiD -0.037 [-0.078, +0.005]: the Harmonizer halves R6DAG's lead, does not flip it.
 
-**Next.** Fill the recipe from DAG2 / REC results; resume the Harmonizer closed-loop read of R6DAG-s1 (`harmcl.sh resume`) when the main session frees cards, then the decisions row.
+**Next.** Fill the recipe from DAG2 / REC results; judge PAI candidates on Harmonizer-ON 281 reads (or both); check R6DAG's ON longitudinal shift open-loop (harm.py forward on the stored 300 states) before any ON-render augmentation.
 
 **Read more.** [plans/2026-10-21-round7-framework-draft.md](plans/2026-10-21-round7-framework-draft.md) (Chinese working draft), the review page research/round7/loss_diag/index.html.
 
