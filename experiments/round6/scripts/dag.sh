@@ -95,6 +95,13 @@ chain)
   r=$(sub dag-rest --after $k --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- bash $ME rest) || exit 1
   echo "$(date '+%F %T') chain (code $(cat $O/code.txt)): c000 roll $id rows $x teach $y clean $z chk1 $k rest $r" | tee -a $O/stages.txt ;;
 chk1) $V $PY chk1 --root $O ;;
+redo)  # redo <chunk>: a chunk whose rows are not this student's (the 10-21 staging collision): its run dir, rows and teacher files moved to
+       # $O/bad/<chunk>, then the chunk rolled again with dumps and its tail (rows -> teach, clean)
+  c=$2; B=$O/bad/$c.$(date +%H%M%S); mkdir -p $B/teach; mv $O/roll/runs/${L}_$c $B/run && mv $O/rows/$c $B/rows || die "redo $c: move"
+  for s in $(cat $O/roll/chunks/$c.txt); do [[ -e $O/teach/$s.npz ]] && mv $O/teach/$s.npz $B/teach/; rm -f $O/rows/$NP/$s.npz; done
+  read -r id cc < <(roll) || exit 1; [[ $cc == $c ]] || die "redo $c: roll submitted $cc"
+  read -r x y z < <(chunk_tail $id $c) || exit 1
+  echo "$(date '+%F %T') redo $c: moved to $B; roll $id rows $x teach $y clean $z" | tee -a $O/stages.txt ;;
 rest)
   cp $O/lists/c[0-9][0-9][0-9].txt $O/roll/chunks/; out=$(roll) || exit 1; w=(); ro=()
   while read -r id c; do [[ -n $id ]] || continue; ro+=($id); w+=($(chunk_tail $id $c)) || exit 1; done <<< "$out"
