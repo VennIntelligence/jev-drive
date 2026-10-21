@@ -104,8 +104,17 @@ smokerun)  # smokerun j | r6: 300 steps, diag every 20, dev every 100 (j = the j
   echo "$(date '+%F %T') smoke $2: ${A[*]} --diag-every 20 --eval-every 100" | tee -a $O/stages.txt
   $TR "${A[@]}" --diag-every 20 --eval-every 100 > $O/smoke_$2.log 2>&1 || die "smoke $2 (log $O/smoke_$2.log)" ;;
 smoke)
-  $V $PY smoke --tag R7JSM-L18-s0 --ctrl R7JSC-L18-s0 --wfile $J_WF --nav $((136 - 13 - J_K)) --cmd $([[ -n $J_CMD ]] && echo 1 || echo 0); r=$?
-  rm -rf $RUNS/R7JSM-L18-s0 $RUNS/R7JSC-L18-s0; exit $r ;;
+  $V $PY smoke --tag R7JSM-L18-s0 --ctrl R7JSC-L18-s0 --wfile $J_WF --nav $((136 - 13 - J_K)) --cmd-on $([[ -n $J_CMD ]] && echo 1 || echo 0); r=$?
+  (( r == 0 )) && rm -rf $RUNS/R7JSM-L18-s0 $RUNS/R7JSC-L18-s0; exit $r ;;                  # kept for inspection when a check fails
+resmoke)  # the smokes and their check again (after a smoke-check fix), then PREP after them and the serve gate already submitted
+  [[ -f $O/GATES && ! -f $O/PREP ]] || die "gates not done (or PREP)"; h=$(git rev-parse --short HEAD); echo "$h resmoke" >> $O/code.txt
+  rm -rf $RUNS/R7JSM-L18-s0 $RUNS/R7JSC-L18-s0
+  sj=$(sub joint-smoke-j "${FT[@]}" --timeout-h 1 -- bash $ME smokerun j) || exit 1
+  sc=$(sub joint-smoke-c "${FT[@]}" --timeout-h 1 -- bash $ME smokerun r6) || exit 1
+  sk=$(sub joint-smoke --after $sj,$sc --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME smoke) || exit 1
+  sg=$(awk '$2 == "joint-serve" {x = $1} END {print x}' $O/jobs.txt); ic=$(awk '$2 == "joint-ident" {x = $1} END {print x}' $O/jobs.txt)
+  d=$(sub joint-prep-done --after $ic,$sk,$sg --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash -c "date '+%F %T' > $O/PREP") || exit 1
+  echo "$(date '+%F %T') resmoke (code $h): smoke $sj $sc $sk done $d (after identity $ic serve $sg)" | tee -a $O/stages.txt ;;
 launch)
   [[ -f $O/PREP && ! -f $O/VERDICT ]] || die "prep not done (or VERDICT)"
   for s in 0 1; do for X in R7J-L18-s$s R7Jx2500-L18-s$s R7Jx5000-L18-s$s R7Jx7500-L18-s$s; do [[ ! -e $RUNS/$X/ckpt-final.pt ]] || die "$X exists"; done; done

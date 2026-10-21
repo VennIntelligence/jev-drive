@@ -475,7 +475,7 @@ def cmd_smoke(a):
               dev_ade=dict(step=last, joint=ade[last], line=0.5362 + 0.03),
               cmd_rule=json.loads(cmdr.group(1)) if cmdr else None)
     ok = dict(done=ck["done"], finite=ck["finite"], batch=bool(b) and b.groups() == ck["batch"][1], shares=ck["shares"],
-              grad=0.7 <= rj / rc <= 1.3, dev=ade[last] <= 0.5362 + 0.03, cmd=(ck["cmd_rule"] is not None) == bool(a.cmd))
+              grad=0.7 <= rj / rc <= 1.3, dev=ade[last] <= 0.5362 + 0.03, cmd=(ck["cmd_rule"] is not None) == bool(a.cmd_on))
     res = dict(tag=a.tag, ctrl=a.ctrl, checks=ck, ok=ok, pass_=bool(all(ok.values())))
     dump(RES / f"smoke_{a.tag}.json", res)
     print(json.dumps(res, indent=1, default=float))
@@ -603,7 +603,7 @@ def main():
     p.add_argument("--ctrl", required=True)
     p.add_argument("--wfile", required=True)
     p.add_argument("--nav", type=int, default=25)
-    p.add_argument("--cmd", type=int, default=1)
+    p.add_argument("--cmd-on", type=int, default=1)
     p = sp.add_parser("serve")
     for k in ("--ref", "--ident", "--on"):
         p.add_argument(k, required=True)
