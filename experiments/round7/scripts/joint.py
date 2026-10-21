@@ -333,7 +333,7 @@ def cmd_label(a):
     link_pool(POOL_K, tk)
     link_pool(POOL_I, tb)
     chk = np.load(CR / POOL_I / "tab.npz")
-    assert all(np.array_equal(chk[k], tb[k]) for k in tb), "identity pool tab != on1_JTPHD's"
+    assert all(np.array_equal(chk[k], tb[k], equal_nan=chk[k].dtype.kind == "f") for k in tb), "identity pool tab != on1_JTPHD's"
     print(f"pools {POOL_K} (pd fut := b5 on {fl.sum()} rows) and {POOL_I} (identical tab) built")
 
 
