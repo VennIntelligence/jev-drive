@@ -1,0 +1,187 @@
+{
+ "scenes": 72,
+ "scenes_with_plans": 72,
+ "plan_identical_scenes": 0,
+ "first_plan_diff_k": {
+  "median": 0.0,
+  "min": 0
+ },
+ "inferences_compared": 14233,
+ "inferences_identical": 14,
+ "score_identical": 58,
+ "score_diff_scenes": 14,
+ "mean_stored": 0.7840254250301688,
+ "mean_new": 0.8008116569002982,
+ "new_minus_stored": [
+  0.016786231870129373,
+  0.0005516844520341423,
+  0.037556493916209556
+ ],
+ "mean_abs_diff": 0.01741267409975585,
+ "sd_scene_diff": 0.07846965013622204,
+ "zero_flips": {
+  "total": 1,
+  "stored_zero_new_not": 1,
+  "new_zero_stored_not": 0
+ },
+ "big_moves": 0,
+ "per_read_mean_sd_279": 0.003321885177653571,
+ "per_read_mean_sd_these": 0.006539137511351836,
+ "on_minus_off_stored": [
+  -0.0063552176248970905,
+  -0.07308348202950003,
+  0.06198055367374271
+ ],
+ "on_minus_off_new": [
+  0.01043101424523228,
+  -0.05638377359575065,
+  0.07850576770096748
+ ],
+ "var_share_noise": 0.036393828789466835,
+ "classes": {
+  "stored": {
+   "ok": 48,
+   "overshoot": 7,
+   "rear-hit": 7,
+   "offroad": 4,
+   "slow": 4,
+   "side": 2
+  },
+  "new": {
+   "ok": 50,
+   "overshoot": 7,
+   "rear-hit": 6,
+   "offroad": 4,
+   "slow": 4,
+   "AF-front": 1
+  }
+ },
+ "moved": [
+  {
+   "scene": "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e",
+   "stored": 0.6200994272180138,
+   "new": 0.6200751217463348,
+   "off": 0.6200102819147137,
+   "c_stored": "rear-hit",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7",
+   "stored": 0.6199159543787006,
+   "new": 1.0,
+   "off": 0.6200313545600888,
+   "c_stored": "rear-hit",
+   "c_new": "ok",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-6250146a-7f9f-4508-851e-e25b7d9dc36a",
+   "stored": 0.9366403679048396,
+   "new": 0.9376048174836982,
+   "off": 0.940956228864824,
+   "c_stored": "rear-hit",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-6e6cbe67-bccd-4d4d-9943-933a272b7bf0",
+   "stored": 0.0,
+   "new": 0.3587098752750995,
+   "off": 0.0,
+   "c_stored": "side",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-7c346fd5-4223-40da-8785-c49fe69f06a1",
+   "stored": 0.8301092653462162,
+   "new": 0.8301117824984041,
+   "off": 0.8080699331648257,
+   "c_stored": "rear-hit",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+   "stored": 1.0,
+   "new": 0.9865696276283122,
+   "off": 1.0,
+   "c_stored": "ok",
+   "c_new": "ok",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-91d84204-d511-464e-b986-6cab844794cc",
+   "stored": 0.932333820275114,
+   "new": 0.9498780561395824,
+   "off": 0.904608947681392,
+   "c_stored": "rear-hit",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac",
+   "stored": 0.9717957546864072,
+   "new": 0.970869882094397,
+   "off": 0.9776283982056316,
+   "c_stored": "slow",
+   "c_new": "slow",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c",
+   "stored": 0.9278470840115244,
+   "new": 0.9245015813687428,
+   "off": 1.0,
+   "c_stored": "slow",
+   "c_new": "slow",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+   "stored": 0.5739337164255076,
+   "new": 1.0,
+   "off": 1.0,
+   "c_stored": "rear-hit",
+   "c_new": "ok",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2",
+   "stored": 0.801201165713379,
+   "new": 0.7973373444413452,
+   "off": 0.9157467729238368,
+   "c_stored": "slow",
+   "c_new": "slow",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-b65e55e9-f3d5-4445-bdbd-325b07a5c493",
+   "stored": 0.9983219515605356,
+   "new": 0.9978647135588956,
+   "off": 1.0,
+   "c_stored": "ok",
+   "c_new": "ok",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+   "stored": 0.7566442743778784,
+   "new": 0.8044334822273403,
+   "off": 0.7388806386675546,
+   "c_stored": "slow",
+   "c_new": "slow",
+   "first_plan_diff": 0
+  },
+  {
+   "scene": "clipgt-bd97de34-6f59-455a-93c5-9f469f243b4a",
+   "stored": 0.4809878202740356,
+   "new": 0.4804830123593147,
+   "off": 0.4827641165548966,
+   "c_stored": "rear-hit",
+   "c_new": "rear-hit",
+   "first_plan_diff": 0
+  }
+ ]
+}
