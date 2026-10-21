@@ -548,7 +548,7 @@ def cmd_verdict(a):
         qq, q6 = Q.get(f"R7J-{sd}+AG"), Q.get(f"DAG-{sd}+AG")              # pai_pcs_local r5: diff_point / diff_ci vs NTV0-s0+AG, same draws
         pk = dict(mean=qq["diff_point"], lo=qq["diff_ci"][0], hi=qq["diff_ci"][1]) if qq and "diff_point" in qq else None
         PCS_R6[sd] = q6["diff_point"] if q6 and "diff_point" in q6 else PCS_R6[sd]
-        ok = dict(mean_vs_r6=dr["mean"] >= 0, ntv0_ci=dn["lo"] > 0, lat=lat(k) <= lat(c), launch=R[k].get("launch", 0) >= 34,
+        ok = dict(mean_vs_r6=dr["mean"] >= 0, ntv0_ci=dn["lo"] > 0, lat=lat(k) <= lat(c), launch=int(str(R[k].get("launch", "0/37")).split("/")[0]) >= 34,
                   ruler=pk is not None and pk["mean"] >= PCS_R6[sd], harm_on=bool(hon) and hon["mean"] >= 0)
         ver[sd] = ok
         ok_all &= all(ok.values())
