@@ -80,7 +80,7 @@ TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
 H_SIG, H_CLIP = float(os.environ.get("DAG_HSIG", 10.0)), float(os.environ.get("DAG_HCLIP", 0.5))                      # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
                                                 # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
-TEACHER_V = "b4"                                # amendment 3: reference sigma 3 m, merge 3.0 s; amendment 4: min(student, human) arc lengths                                # teacher version stamped into every teach file (label refuses other versions)
+TEACHER_V = "b4c"                               # amendment 3: reference sigma 3 m, merge 3.0 s; amendment 4: min(student, human) arc lengths                                # teacher version stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -192,10 +192,29 @@ def human_arcs(ref, s0):
     return np.where(tq <= ht[-1], np.interp(tq, ht, hs) - s0, np.inf)
 
 
-def timed(ref, s0, a):
-    """Amendment 4: label arc lengths = min(student served arc lengths a, the human's from s0) -> (a', any finite human arc)."""
+CAP_KAP, CAP_DV = 0.02, 3.0                     # amendment 4b: cap only where the route curvature over the label > 0.02 1/m or v0 - human speed > 3 m/s
+
+
+def human_speed(ref, s0):
+    """The human's station rate (m/s) around the moment it first reached s0 (nan without a human window)."""
+    ht, hs = getattr(ref, "ht", None), getattr(ref, "hs", None)
+    if ht is None or not (hs[0] <= s0 <= hs[-1]):
+        return float("nan")
+    i = int(np.searchsorted(hs, s0, "left"))
+    th = ht[0] if i == 0 else ht[i - 1] + (s0 - hs[i - 1]) / max(hs[i] - hs[i - 1], 1e-9) * (ht[i] - ht[i - 1])
+    return float((np.interp(th + 0.5, ht, hs) - np.interp(th - 0.5, ht, hs)) / 1.0)
+
+
+def timed(ref, s0, a, v0):
+    """Amendments 4 / 4b: label arc lengths = min(student served arc lengths a, the human's from s0) where the route curvature over the label
+    exceeds CAP_KAP or the student is faster than the human at s0 by more than CAP_DV; elsewhere the student's own.
+    -> (a', any finite human arc, curve flag, over-speed flag)."""
     ah = human_arcs(ref, s0)
-    return np.minimum(a, ah), bool(np.isfinite(ah).any())
+    m = (ref.s >= s0) & (ref.s <= s0 + a[-1])
+    curv = bool(m.any() and np.abs(ref.kap[m]).max() > CAP_KAP)
+    vh = human_speed(ref, s0)
+    fast = bool(np.isfinite(vh) and v0 - vh > CAP_DV)
+    return (np.minimum(a, ah) if curv or fast else a), bool(np.isfinite(ah).any()), curv, fast
 
 
 def place(path, a, anchor):
@@ -465,7 +484,7 @@ def _t2_one(job):
     for e in evs:
         a = arcs_of(e["ps"])
         path, info = teacher_path(ref, e["pose"], e["v0"], a[-1])
-        fut = place(path, timed(ref, info["s0"], a)[0], e["pose"])[0] if path is not None else np.full((8, 3), np.nan)
+        fut = place(path, timed(ref, info["s0"], a, e["v0"])[0], e["pose"])[0] if path is not None else np.full((8, 3), np.nan)
         sdf = RP.pai_raster(g, e["pose"])[0]
         out.append(dict(e, fut=fut, sdf=sdf, info=info, empty=g["U"] is None and not g["E"]))
     return out
@@ -586,7 +605,7 @@ def _teach_one(job):
     why = np.full(n, "", "U8")
     d0, psi0, L, alat, aref = (np.full(n, np.nan, np.float32) for _ in range(5))
     past_rec, past_ref = np.zeros(n, bool), np.zeros(n, bool)
-    cap4, capmax, hok = np.zeros(n, np.float32), np.zeros(n, np.float32), np.zeros(n, bool)
+    cap4, capmax, hok, fcurv, ffast = np.zeros(n, np.float32), np.zeros(n, np.float32), np.zeros(n, bool), np.zeros(n, bool), np.zeros(n, bool)
     for i in range(n):
         A = Z["anchor"][i].astype(np.float64)
         a = arcs_of(Z["poses"][i])
@@ -595,7 +614,7 @@ def _teach_one(job):
         d0[i], psi0[i] = info.get("d0", np.nan), info.get("psi0", np.nan)
         if path is None:
             continue
-        a2, hok[i] = timed(ref, info["s0"], a)
+        a2, hok[i], fcurv[i], ffast[i] = timed(ref, info["s0"], a, float(Z["v0"][i]))
         cap4[i], capmax[i] = a[-1] - a2[-1], float(np.max(a - a2))
         fut[i] = place(path, a2, A)[0]
         L[i] = info["L"]
@@ -604,7 +623,7 @@ def _teach_one(job):
         ok[i] = np.isfinite(fut[i]).all()
     tmp = Path(out) / f"{scene}.tmp.npz"
     np.savez(tmp, k=Z["k"], fut=fut, ok=ok, why=why, d0=d0, psi0=psi0, L=L, alat=alat, alat_ref=aref, past_rec=past_rec, past_ref=past_ref,
-             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo), cap4=cap4, capmax=capmax, hok=hok,
+             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo), cap4=cap4, capmax=capmax, hok=hok, fcurv=fcurv, ffast=ffast,
              version=TEACHER_V)
     os.replace(tmp, Path(out) / f"{scene}.npz")
     return dict(scene=scene, n=n, ok=int(ok.sum()), switches=rinfo["switches"])
@@ -745,7 +764,7 @@ def cmd_label(a):
     X = dict(names=tb["names"], fut_t=np.full((n, 8, 3), np.nan, np.float32), ok=np.zeros(n, bool), why=np.full(n, "", "U8"),
              d0=np.full(n, np.nan, np.float32), psi0=np.full(n, np.nan, np.float32), alat=np.full(n, np.nan, np.float32),
              alat_ref=np.full(n, np.nan, np.float32), past_rec=np.zeros(n, bool), cls=np.array([cls.get(s, "?") for s in sc]),
-             cap4=np.zeros(n, np.float32), capmax=np.zeros(n, np.float32), hok=np.zeros(n, bool))
+             cap4=np.zeros(n, np.float32), capmax=np.zeros(n, np.float32), hok=np.zeros(n, bool), fcurv=np.zeros(n, bool), ffast=np.zeros(n, bool))
     dv0 = 0.0
     for s in np.unique(sc):
         j = np.flatnonzero(sc == s)
@@ -753,7 +772,7 @@ def cmd_label(a):
             assert "version" in z.files and str(z["version"]) == TEACHER_V, f"{s}: teacher file is not version {TEACHER_V}"
             pos = {int(k): i for i, k in enumerate(z["k"])}
             i = np.array([pos[int(k)] for k in kk[j]])
-            for key in ("ok", "why", "d0", "psi0", "alat", "alat_ref", "past_rec", "cap4", "capmax", "hok"):
+            for key in ("ok", "why", "d0", "psi0", "alat", "alat_ref", "past_rec", "cap4", "capmax", "hok", "fcurv", "ffast"):
                 X[key][j] = z[key][i]
             X["fut_t"][j] = z["fut"][i]
             dv0 = max(dv0, float(np.abs(z["v0"][i] - tb["speed"][j]).max()), float(np.abs(z["served"][i] - tb["served"][j]).max()))
@@ -788,7 +807,9 @@ def cmd_label(a):
                no_label=dict(Counter(X["why"][(v0 >= V_ROW) & ~X["ok"]].tolist())), past_rec=int((draw & X["past_rec"]).sum()),
                lon_arc_err_max=float(np.nanmax(lon[draw])) if draw.any() else None, teach_vs_pool_max=dv0,
                cap=dict(rows_capped=int((draw & (X["capmax"] > 0.05)).sum()), share=float((draw & (X["capmax"] > 0.05)).sum() / max(draw.sum(), 1)),
-                        human_window=int((draw & X["hok"]).sum()),
+                        human_window=int((draw & X["hok"]).sum()), cond_curve=int((draw & X["fcurv"]).sum()), cond_fast=int((draw & X["ffast"]).sum()),
+                        cond_both=int((draw & X["fcurv"] & X["ffast"]).sum()),
+                        capped_curve=int((draw & (X["capmax"] > 0.05) & X["fcurv"]).sum()), capped_fast=int((draw & (X["capmax"] > 0.05) & X["ffast"]).sum()),
                         by_cls={c: [int((draw & (X["capmax"] > 0.05) & (X["cls"] == c)).sum()), int((draw & (X["cls"] == c)).sum())] for c in CLS},
                         cut4_q=np.percentile(X["cap4"][draw & (X["capmax"] > 0.05)], [10, 50, 90]).round(2).tolist() if (draw & (X["capmax"] > 0.05)).any() else None,
                         cut4_rel_med=float(np.median((X["cap4"] / np.maximum(arcs_of_n(sv)[:, -1], 0.1))[draw & (X["capmax"] > 0.05)])) if (draw & (X["capmax"] > 0.05)).any() else None,
@@ -819,7 +840,9 @@ def cmd_label(a):
                  f"{f2(v['lat4_med'])} | {f2(v['lat4_p90'])} | {f2(v['alat_p99'])} |")
     ds_, cp = rec["d0_sign"], rec["cap"]
     L += ["", f"Amendment 4 timing, min(student served, human from the matched station): {cp['rows_capped']} drawable rows slowed by > 5 cm "
-          f"({cp['share']:.1%}; human window available on {cp['human_window']}); by class (slowed / drawable) "
+          f"({cp['share']:.1%}; human window available on {cp['human_window']}). Amendment 4b conditions on drawable rows: route curvature over the "
+          f"label > {CAP_KAP} 1/m {cp['cond_curve']} (slowed {cp['capped_curve']}), v0 - human > {CAP_DV} m/s {cp['cond_fast']} (slowed {cp['capped_fast']}), "
+          f"both {cp['cond_both']}; by class (slowed / drawable) "
           + ", ".join(f"{c} {v[0]} / {v[1]}" for c, v in cp["by_cls"].items())
           + f"; 4 s arc-length cut p10 / p50 / p90 {cp['cut4_q']} m, median relative cut {cp['cut4_rel_med']}; over-line T4 rows that are slowed rows {cp['dropped_t4_capped']}."]
     L += ["", f"Signed d0 of the drawable rows (left +): median {ds_['median_signed']:+.2f} m; |d0| > 0.5 m left {ds_['left_gt_05']} / right {ds_['right_gt_05']}, "
