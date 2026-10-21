@@ -139,6 +139,8 @@ Cosmos-Reason2 / Qwen3.5 (about 45G) and the top-level scratch files. Tier 2 of 
 
 2026-10-21 inventory (nothing deleted; [disk_inventory_20261021.md](../experiments/cl_infra/results/disk_inventory_20261021.md)): 558 G free at the scan, 864 G after the user-approved zero-copy swap of five merged pools (316 GB). Candidates ranked for per-item approval: safe 35 GB, probably safe 289, ask 975. No NuRec or dataset duplicates; since the swap, `python -m jevdrive.tokens refs` pins the L18 / NR1TV / PN / PAIH / CPAI570 / PPAI160 source pools.
 
+2026-10-21 cleanups (user-approved S3 pass, then a certain-only pass; manifests [S3 rows](../experiments/cl_infra/cleanup/20261021_s3.md), [S3 roll + certain-only](../experiments/cl_infra/cleanup/20261021b.md), lists in `tmp/cleanup_1021b/` on the data disk): 629 -> 704 G (S3 rows, cache, on1_PAIO / JTPHO), then 182 -> 277 GB free: `round5/s3/roll` 54 GB and the `round5/d3/roll` asl / jsonl 14 GB (both keep every yaml: round6 dag.sh / rmc.py use `A/runs/*/sim/generated-user-config-0.yaml` as templates), the CURATED-PAI material of the closed d402 line (`on1_JTCP`, `on1_CPAI570` + `@warp`, `practice_pai/curated/rows`, 72 GB; CPAI570 is no longer a pinned source) and the PAI-ROWS-N gate copy `on1_PAIHN10` 2.7 GB. The NOT CERTAIN list (REC rows / cache 174 GB, DAgger, JTPHD, JTPHX, diagnostics dumps, reads) is in the manifest.
+
 Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank,samples,bank2}` non-CARLA parts ~300G (H line, last trained 2026-10-03, no live reader; `runs/`
 and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 52G (`t/H`, `gate_curve/*.npy`, `readout`),
