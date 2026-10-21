@@ -270,9 +270,13 @@ def cmd_label(a):
     # G1b: one-sided
     arc = lambda f: np.cumsum(np.hypot(*np.diff(np.concatenate([np.zeros((len(f), 1, 2)), np.asarray(f, np.float64)[:, :, :2]], 1), axis=1).transpose(2, 0, 1)), 1)  # noqa: E731
     d_lo = float((arc(fut5[draw]) - arc(fut_b3[draw])).min())
-    up = np.maximum(np.nan_to_num(Z["a_s"][fl], nan=0.0), np.nan_to_num(Z["a_h"][fl], nan=0.0))
-    d_hi = float((arc(fut5[fl]) - up).max()) if fl.any() else 0.0
-    g1b = bool(d_lo >= -1e-3 and d_hi <= 0.05 and not (fl & ~cand).any())
+    # amendment 2: the bound on the change against b3 (label arc - b3 label arc <= floor - student arc, and floor <= the human's), not on the
+    # absolute chord length (b3's own labels start up to ~6 m ahead of the origin where the anchor lies before the route's start, k = 0 / 1)
+    d_hi = float(((arc(fut5[fl]) - arc(fut_b3[fl])) - (Z["a_f"][fl] - Z["a_s"][fl])).max()) if fl.any() else 0.0
+    d_h = float((Z["a_f"][fl] - np.maximum(Z["a_s"][fl], Z["a_h"][fl])).max()) if fl.any() else 0.0
+    g1b = bool(d_lo >= -5e-3 and d_hi <= 0.05 and d_h <= 1e-3 and not (fl & ~cand).any())
+    a3 = arc(fut_b3[draw])
+    start_off = int((a3[:, 0] - Z["a_s"][draw, 0] > 1.0).sum())
     # G1c: the clocks (student decision time vs the human's at the matched station) agree at k = 0
     k0 = (kk == 0) & np.isfinite(Z["lag"])
     lag0 = float(np.median(np.abs(Z["lag"][k0]))) if k0.any() else float("inf")
@@ -299,7 +303,7 @@ def cmd_label(a):
                straight=dict(floored=int((fl & straight).sum()), drawable=int(straight.sum()), inc_q=q3((arc(fut5[fl & straight])[:, -1] - arc(fut_b3[fl & straight])[:, -1])) if (fl & straight).any() else None),
                f2_pd=int(f2.sum()), f2_pd_b3=int((draw & (v0 >= F2_V0) & (label_feats(v0, fut_b3)["vend"] >= F2_VSTOP) & (label_feats(v0, fut_b3)["vend"] < F2_FRAC * v0)
                                                   & (label_feats(v0, fut_b3)["hmax"] < F2_H)).sum()),
-               G1a=dict(max_abs_m=g1a, coverage=g1a_cov), G1b=dict(min_arc_change=d_lo, max_over_bound=d_hi), G1c=dict(k0_rows=int(k0.sum()), median_abs_lag_s=lag0,
+               G1a=dict(max_abs_m=g1a, coverage=g1a_cov), G1b=dict(min_arc_change=d_lo, max_change_over_floor=d_hi, max_floor_over_human=d_h, b3_start_offset_rows=start_off), G1c=dict(k0_rows=int(k0.sum()), median_abs_lag_s=lag0,
                lag_q_all=q3(Z["lag"][draw & np.isfinite(Z["lag"])])), T4=dict(p99_b5=t4, p99_b3=float(np.percentile(al3[draw], 99)), over=int((al5[draw] > A_LAT).sum())),
                gates=g, passed=bool(all(g.values())))
     (O / "k").mkdir(parents=True, exist_ok=True)
@@ -314,7 +318,8 @@ def cmd_label(a):
          f"By class (floored / drawable): {json.dumps(by)}; by speed (m/s): {json.dumps(bys)}.",
          f"F2 on the b5 labels: {f2.sum()} pd rows to weight 0 (on b3 labels the same rule, lead ignored, would take {rec['f2_pd_b3']}).", "",
          f"G1a b3 reproduced: max |diff| {g1a:.2e} m over {g1a_cov:.1%} of the drawable rows -> {'PASS' if g['G1a'] else 'FAIL'}; "
-         f"G1b one-sided: min arc change {d_lo:+.4f} m, max over max(student, human) {d_hi:+.4f} m -> {'PASS' if g1b else 'FAIL'}; "
+         f"G1b one-sided: min arc change vs b3 {d_lo:+.4f} m, change minus (floor - student) max {d_hi:+.4f} m, floor minus max(student, human) max {d_h:+.4f} m "
+         f"(b3 labels starting > 1 m ahead of the student's first arc: {start_off} rows) -> {'PASS' if g1b else 'FAIL'}; "
          f"G1c clocks at k = 0: median |lag| {lag0:.3f} s ({k0.sum()} rows; all drawable lag p10 / p50 / p90 {rec['G1c']['lag_q_all']}) -> {'PASS' if g['G1c'] else 'FAIL'}; "
          f"T4 p99 {t4:.2f} (b3 {rec['T4']['p99_b3']:.2f}) -> {'PASS' if g['T4'] else 'FAIL'}.", "",
          f"**G1: {'PASS' if rec['passed'] else 'FAIL'}.**"]
