@@ -282,7 +282,7 @@ def cmd_report(a):
         for g in ("all",) + STRATA:
             o.append(f"| {g} | {r['n'][g]} | " + " | ".join(f"{f(P[g]['ON'][ax][h]['med'])} ({f(P[g]['ON'][ax][h]['p90'])}) / {f(P[g]['OFFB'][ax][h]['med'])} ({f(P[g]['OFFB'][ax][h]['p90'])})"
                                                           for ax in ("lat", "lon") for h in H_IDX) + " |\n")
-        o.append(f"\nPooled 4 s median, 95 % bootstrap CI: ON lat {P['ci_all_on_4s']['lat']}, lon {P['ci_all_on_4s']['lon']}; floor lat {P['ci_all_floor_4s']['lat']}, lon {P['ci_all_floor_4s']['lon']}.\n")
+        o.append(f"Pooled 4 s median, 95 % bootstrap CI: ON lat {P['ci_all_on_4s']['lat']}, lon {P['ci_all_on_4s']['lon']}; floor lat {P['ci_all_floor_4s']['lat']}, lon {P['ci_all_floor_4s']['lon']}.\n")
         o.append("Verdict cells: " + "; ".join(f"{c['ax']} {c['h']} s {f(c['on'])} vs line {f(c['line'])} ({c['rule']}) {'ok' if c['ok'] else 'OVER'}" for c in V["cells"])
                  + f"; lateral 4 s median {f(V['lat4_med'])} {'< 0.2 ok' if V['lat4_ok'] else '>= 0.2 OVER'}. Stratum flags: {'; '.join(V['stratum_flags']) or 'none'}.\n")
     o.append("### Tokens (newest pair, 32 x 512)\n\n| Stratum | n | 1 - cos ON | 1 - cos floor | rel L2 ON | rel L2 floor | rel L2 ON, mean of 8 slots | rel L2 floor, mean of 8 |\n|---|--:|--:|--:|--:|--:|--:|--:|\n")
@@ -291,7 +291,7 @@ def cmd_report(a):
         o.append(f"| {g} | {r['n'][g]} | {t['ON']['cos7']['med']:.4f} ({t['ON']['cos7']['p90']:.4f}) | {t['OFFB']['cos7']['med']:.4f} ({t['OFFB']['cos7']['p90']:.4f}) | "
                  f"{t['ON']['rl27']['med']:.4f} ({t['ON']['rl27']['p90']:.4f}) | {t['OFFB']['rl27']['med']:.4f} ({t['OFFB']['rl27']['p90']:.4f}) | "
                  f"{t['ON']['rl2_all']['med']:.4f} | {t['OFFB']['rl2_all']['med']:.4f} |\n")
-    print("\n".join(o))
+    print("".join(x if x.startswith(("|", "Verdict", "Plan |")) else "\n" + x for x in o))
 
 
 if __name__ == "__main__":

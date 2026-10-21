@@ -1,0 +1,50 @@
+[
+ {
+  "png": "0_launch_dc21dc72_k62.png",
+  "scene": "clipgt-dc21dc72-bb36-4ad4-a758-1c39db316deb",
+  "k": 62,
+  "stratum": "launch",
+  "lat4_delta_m": 0.007107804529368877,
+  "largest": false
+ },
+ {
+  "png": "1_stop_702366ca_k85.png",
+  "scene": "clipgt-702366ca-58ac-470d-8900-7ed4b2880462",
+  "k": 85,
+  "stratum": "stop",
+  "lat4_delta_m": 0.01981532573699951,
+  "largest": false
+ },
+ {
+  "png": "2_turn_97d6b1d4_k109.png",
+  "scene": "clipgt-97d6b1d4-2d03-423e-b423-78c0139baa9a",
+  "k": 109,
+  "stratum": "turn",
+  "lat4_delta_m": 0.3064765930175781,
+  "largest": false
+ },
+ {
+  "png": "3_curve_11e26412_k140.png",
+  "scene": "clipgt-11e26412-dfa2-404f-a163-c2c8743821ff",
+  "k": 140,
+  "stratum": "curve",
+  "lat4_delta_m": 0.04048871994018555,
+  "largest": false
+ },
+ {
+  "png": "4_straight_1920170b_k39.png",
+  "scene": "clipgt-1920170b-0317-4211-9b7c-1002c9925d7a",
+  "k": 39,
+  "stratum": "straight",
+  "lat4_delta_m": 0.03712156414985657,
+  "largest": false
+ },
+ {
+  "png": "5_curve_cc289222_k69.png",
+  "scene": "clipgt-cc289222-8a2c-486d-9b4f-0db31d1165b7",
+  "k": 69,
+  "stratum": "curve",
+  "lat4_delta_m": 3.2593414783477783,
+  "largest": true
+ }
+]

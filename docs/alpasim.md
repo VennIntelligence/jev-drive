@@ -472,6 +472,13 @@ cache) + `--rewrite-configs` (the generated runtime config names `/mnt/nre-data/
 A scene list is one simulator launch: the simulator reproduces only for an identical list, so reuse the chunk files in
 `experiments/alpasim/results/pai/chunks/` (`a10`, `b1`, `b2a`, `b2b` = Tokyo's chunks of the 40; `e1`..`e6` = the extension).
 
+**Harmonizer on the box (2026-10-21).** `HARMONIZER=1` (env of `pai_native.sh`, or in `SERVE` of `pai_box.sh` / `harm.sh`) keeps the dev preset's
+`--enable-harmonizer` and adds `--harmonizer-cache=$NUREC/harmonizer`. The renderer loads `harmonizer_nontemporal.pt` from there, because it cannot
+fetch it (1.45 GB, sha256 `ece8e2da...`, copied from Tokyo `/data/datasets/nurec/harmonizer`). Unset or 0 behaves as before: flag dropped. The
+default stays off, matching the public board. Measured with `ALPASIM_FAST=1`, CONC 4: 99 s against 46 s runtime per scene (2.2x), renderer peak
+16.7 against 14.8 GiB. The unharmonised renderer is bit-deterministic (300 / 300 frames identical on a re-render). Effect on our models:
+[experiments/round7/results/harmonizer_openloop.md](../experiments/round7/results/harmonizer_openloop.md).
+
 Scenes: the curated validation split has 441 scenes (the challenge's local evaluation set; `sim_suites_curated.csv`, the train split has 1 761
 more, 2 202 in the public catalogue). `pai_scenes.py` takes N scenes, one per quantile bin of the organisers' reference difficulty (mean of
 8 subjects x 3 rollouts), seed 0: `pai_scenes_40.tsv` is `--n 40`; `pai_scenes_ext120.tsv` is `--n 120 --exclude pai_scenes_40.tsv --shuffle`
