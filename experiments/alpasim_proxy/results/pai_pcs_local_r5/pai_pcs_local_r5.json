@@ -1,0 +1,399 @@
+{
+ "NTV0-s0+AG": {
+  "pcs": 2195.3726432313,
+  "ci": [
+   2138.2647319481493,
+   2299.0685359500044
+  ]
+ },
+ "R2C-s0+AG": {
+  "pcs": 2161.1718016528994,
+  "ci": [
+   2088.890071117621,
+   2238.680914159224
+  ],
+  "diff_median": -28.874929612864435,
+  "diff_point": -34.20084157840074,
+  "diff_ci": [
+   -95.12672553130157,
+   18.932139966948665
+  ],
+  "p_pos": 0.17
+ },
+ "R2J-s0+AG": {
+  "pcs": 1885.1297448333607,
+  "ci": [
+   1797.4429748194023,
+   1937.6522100848808
+  ],
+  "diff_median": -307.4726937059396,
+  "diff_point": -310.24289839793937,
+  "diff_ci": [
+   -420.2294499014765,
+   -226.91376789214704
+  ],
+  "p_pos": 0.0
+ },
+ "R3MV-s0+AG": {
+  "pcs": 1917.9336921525874,
+  "ci": [
+   1848.5494829663505,
+   1959.5270814944238
+  ],
+  "diff_median": -276.46943004174886,
+  "diff_point": -277.43895107871276,
+  "diff_ci": [
+   -374.77256057014756,
+   -217.24315052722693
+  ],
+  "p_pos": 0.0
+ },
+ "class_values": {
+  "NTV0-s0+AG": {
+   "partial rear-hit": 168.23440965054124,
+   "partial slow": 52.20423911560147,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 38.12202849518417,
+   "zero route-turn": 28.324881903372443,
+   "zero offroad": 21.84614359080524,
+   "zero other (AF-front, side, drift / lane change)": 18.91639337891138,
+   "all partials": 507.8858170928338,
+   "all zeros": 116.6482356339061
+  },
+  "R2C-s0+AG": {
+   "partial rear-hit": 100.85610075379645,
+   "partial slow": 33.3520296149386,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 33.77904410133851,
+   "zero route-turn": 46.083003504103544,
+   "zero offroad": 27.644898512366126,
+   "zero other (AF-front, side, drift / lane change)": 46.34782856781749,
+   "all partials": 277.02298336421427,
+   "all zeros": 176.6024125434069
+  },
+  "R2J-s0+AG": {
+   "partial rear-hit": 31.016447920796054,
+   "partial slow": 25.405451157449534,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 6.459269637099851,
+   "zero route-turn": 0.2565897898327876,
+   "zero offroad": 16.652934518312122,
+   "zero other (AF-front, side, drift / lane change)": 14.656845235640503,
+   "all partials": 95.54722016047072,
+   "all zeros": 36.55884974381479
+  },
+  "R3MV-s0+AG": {
+   "partial rear-hit": 20.38509309462188,
+   "partial slow": 15.284728368168544,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 11.717139426414178,
+   "zero route-turn": 0.3435706010507147,
+   "zero offroad": 21.007904462359875,
+   "zero other (AF-front, side, drift / lane change)": 25.32959232676467,
+   "all partials": 49.010534454042045,
+   "all zeros": 60.91069990487904
+  }
+ },
+ "class_counts": {
+  "NTV0-s0+AG": {
+   "partial rear-hit": [
+    25,
+    10.406640808354219
+   ],
+   "partial slow": [
+    11,
+    2.1636447533714036
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    22,
+    22.0
+   ],
+   "zero route-turn": [
+    15,
+    15.0
+   ],
+   "zero offroad": [
+    12,
+    12.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    9,
+    9.0
+   ],
+   "all partials": [
+    36,
+    12.570285561725624
+   ],
+   "all zeros": [
+    58,
+    58.0
+   ]
+  },
+  "R2C-s0+AG": {
+   "partial rear-hit": [
+    25,
+    10.834455347764422
+   ],
+   "partial slow": [
+    10,
+    1.6710028379104496
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    21,
+    21.0
+   ],
+   "zero route-turn": [
+    15,
+    15.0
+   ],
+   "zero offroad": [
+    11,
+    11.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    12,
+    12.0
+   ],
+   "all partials": [
+    35,
+    12.50545818567487
+   ],
+   "all zeros": [
+    59,
+    59.0
+   ]
+  },
+  "R2J-s0+AG": {
+   "partial rear-hit": [
+    33,
+    19.05111349673301
+   ],
+   "partial slow": [
+    12,
+    4.094417808361357
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    21,
+    21.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    20,
+    20.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    20,
+    20.0
+   ],
+   "all partials": [
+    45,
+    23.145531305094366
+   ],
+   "all zeros": [
+    63,
+    63.0
+   ]
+  },
+  "R3MV-s0+AG": {
+   "partial rear-hit": [
+    24,
+    9.46831897456555
+   ],
+   "partial slow": [
+    5,
+    0.6050180338569007
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    22,
+    22.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    19,
+    19.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    18,
+    18.0
+   ],
+   "all partials": [
+    29,
+    10.073337008422449
+   ],
+   "all zeros": [
+    61,
+    61.0
+   ]
+  }
+ },
+ "variants": {
+  "paimix": {
+   "NTV0-s0+AG": 2195.3726432313,
+   "R2C-s0+AG": 2161.1718016528994,
+   "R2J-s0+AG": 1885.1297448333607,
+   "R3MV-s0+AG": 1917.9336921525874,
+   "garage": 1783.2612445878199,
+   "go-straight": 1463.9865931536988,
+   "RSG+AG": 2106.752162258481
+  },
+  "paimix-s1": {
+   "NTV0-s0+AG": 2164.2229695431874,
+   "R2C-s0+AG": 2144.823654342385,
+   "R2J-s0+AG": 1930.5012150683392,
+   "R3MV-s0+AG": 1944.576431068374,
+   "garage": 1807.8745849098286,
+   "go-straight": 1450.961504286866,
+   "RSG+AG": 2095.163910803306
+  },
+  "paimix-s2": {
+   "NTV0-s0+AG": 2175.8677798521503,
+   "R2C-s0+AG": 2149.1279480586722,
+   "R2J-s0+AG": 1912.928829800418,
+   "R3MV-s0+AG": 1919.8807252316508,
+   "garage": 1804.3755958524735,
+   "go-straight": 1452.6412120839364,
+   "RSG+AG": 2096.983192063593
+  },
+  "garagex0.5": {
+   "NTV0-s0+AG": 2181.090175151854,
+   "R2C-s0+AG": 2146.8282790853395,
+   "R2J-s0+AG": 1904.586557119456,
+   "R3MV-s0+AG": 1924.7799692192357,
+   "garage": 1796.292829018692,
+   "go-straight": 1456.7389039699199,
+   "RSG+AG": 2100.9682670113875
+  },
+  "garagex2": {
+   "NTV0-s0+AG": 2188.1983298214363,
+   "R2C-s0+AG": 2170.0565311189034,
+   "R2J-s0+AG": 1870.2077326308226,
+   "R3MV-s0+AG": 1919.045802613198,
+   "garage": 1764.5454941480846,
+   "go-straight": 1475.8039425350944,
+   "RSG+AG": 2113.6505633168235
+  },
+  "bandx0.5": {
+   "NTV0-s0+AG": 2158.429800331615,
+   "R2C-s0+AG": 2146.4132374269066,
+   "R2J-s0+AG": 1856.3880375248946,
+   "R3MV-s0+AG": 1908.844711333146,
+   "garage": 1808.1734745459605,
+   "go-straight": 1450.8206605092962,
+   "RSG+AG": 2095.0058649447424
+  },
+  "bandx2": {
+   "NTV0-s0+AG": 2206.855994166991,
+   "R2C-s0+AG": 2147.504439495814,
+   "R2J-s0+AG": 1858.1952855469285,
+   "R3MV-s0+AG": 1871.4862979921788,
+   "garage": 1741.3030989294468,
+   "go-straight": 1492.910365290909,
+   "RSG+AG": 2119.7865357796445
+  },
+  "gsx0.5": {
+   "NTV0-s0+AG": 2220.7278285116736,
+   "R2C-s0+AG": 2156.4481475279354,
+   "R2J-s0+AG": 1866.4580842766554,
+   "R3MV-s0+AG": 1900.0316525968562,
+   "garage": 1739.5890830963458,
+   "go-straight": 1494.2850824988836,
+   "RSG+AG": 2120.125834404769
+  },
+  "gsx2": {
+   "NTV0-s0+AG": 2149.4236689991876,
+   "R2C-s0+AG": 2128.3939119954402,
+   "R2J-s0+AG": 1864.0052993098766,
+   "R3MV-s0+AG": 1907.2458644854892,
+   "garage": 1815.8584726984182,
+   "go-straight": 1447.3423336277715,
+   "RSG+AG": 2090.79919367381
+  },
+  "low-as-gs": {
+   "NTV0-s0+AG": 2134.980011506699,
+   "R2C-s0+AG": 2119.329981074025,
+   "R2J-s0+AG": 1855.3626332681392,
+   "R3MV-s0+AG": 1900.2809725316563,
+   "garage": 1822.2575212278446,
+   "go-straight": 1444.6571538561047,
+   "RSG+AG": 2087.0853249160505
+  },
+  "dedup": {
+   "NTV0-s0+AG": 2260.3426346179335,
+   "R2C-s0+AG": 2179.198338103826,
+   "R2J-s0+AG": 1853.8298354728317,
+   "R3MV-s0+AG": 1883.8677701136571,
+   "garage": 1717.0851350495157,
+   "go-straight": 1513.9197748023093,
+   "RSG+AG": 2122.9950901481743
+  },
+  "paimix-1pl": {
+   "NTV0-s0+AG": 2129.9930488204513,
+   "R2C-s0+AG": 2116.839739889374,
+   "R2J-s0+AG": 2015.2100838805577,
+   "R3MV-s0+AG": 2125.465422965626,
+   "garage": 1796.7135199501868,
+   "go-straight": 1456.5181367204489,
+   "RSG+AG": 2100.768343329365
+  }
+ },
+ "bands": {
+  "NTV0-s0+AG": {
+   "cells": [
+    "90 items: 0 / 0 / 90",
+    "26 items: 0 / 1 / 25",
+    "159 items: 58 / 35 / 66"
+   ],
+   "fix_a3": 0.0,
+   "fix_a1": 11.848065700967254
+  },
+  "R2C-s0+AG": {
+   "cells": [
+    "90 items: 0 / 0 / 90",
+    "26 items: 4 / 0 / 22",
+    "159 items: 55 / 35 / 69"
+   ],
+   "fix_a3": 0.0,
+   "fix_a1": 55.04162525623269
+  },
+  "R2J-s0+AG": {
+   "cells": [
+    "90 items: 11 / 6 / 73",
+    "26 items: 5 / 5 / 16",
+    "159 items: 47 / 37 / 75"
+   ],
+   "fix_a3": 114.16686003509335,
+   "fix_a1": 181.90007725106489
+  },
+  "R3MV-s0+AG": {
+   "cells": [
+    "90 items: 13 / 4 / 73",
+    "26 items: 3 / 2 / 21",
+    "159 items: 45 / 24 / 89"
+   ],
+   "fix_a3": 164.22060224442885,
+   "fix_a1": 341.3272176556702
+  }
+ }
+}
