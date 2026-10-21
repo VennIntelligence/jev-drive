@@ -144,8 +144,9 @@ report)
   rd=(NTV0-ag=$F_/NTV0-L18-s0-281ag.csv R6DAG-s0-ag=$F_/R6DAG-L18-s0-281ag.csv R6DAG-s1-ag=$F_/R6DAG-L18-s1-281ag.csv
       R7J-s0-ag=$F_/R7J-L18-s0-281ag.csv R7J-s1-ag=$F_/R7J-L18-s1-281ag.csv NTV0-agH=$F_/NTV0-L18-s0-281agH.csv R6DAG-s1-agH=$F_/R6DAG-L18-s1-281agH.csv
       R7J-s0-agH=$F_/R7J-L18-s0-281agH.csv R7J-s1-agH=$F_/R7J-L18-s1-281agH.csv)
+  pr=(); [[ -s $F_/R6DAG-L18-s0-281agH.csv ]] && { rd+=(R6DAG-s0-agH=$F_/R6DAG-L18-s0-281agH.csv); pr=(R7J-s0-agH:R6DAG-s0-agH R6DAG-s0-agH:R6DAG-s0-ag); }   # main session's same-seed ON reference
   $TR experiments/round2/scripts/r2.py r281 --read "${rd[@]}" --pairs R7J-s0-ag:R6DAG-s0-ag R7J-s1-ag:R6DAG-s1-ag R7J-s0-ag:NTV0-ag R7J-s1-ag:NTV0-ag \
-      R7J-s0-agH:R6DAG-s1-agH R7J-s1-agH:R6DAG-s1-agH R7J-s0-agH:NTV0-agH R7J-s1-agH:NTV0-agH R7J-s0-agH:R7J-s0-ag R7J-s1-agH:R7J-s1-ag R7J-s1-ag:R7J-s0-ag \
+      R7J-s0-agH:R6DAG-s1-agH R7J-s1-agH:R6DAG-s1-agH R7J-s0-agH:NTV0-agH R7J-s1-agH:NTV0-agH R7J-s0-agH:R7J-s0-ag R7J-s1-agH:R7J-s1-ag R7J-s1-ag:R7J-s0-ag "${pr[@]}" \
       --out $RES/pai281_R7J.md --title "PAI 281, ACC + GAP (+ JEV_CMD=heading for R7J): round7 joint arm R7J s0 / s1 vs stored R6DAG s0 / s1 and NTV0; Harmonizer OFF and ON" \
       || die r281
   $V $PY verdict --json $RES/pai281_R7J.json --md $RES/pai281_R7J.md --pcs $RES/pcs_joint.json --read "${rd[@]}" || die verdict

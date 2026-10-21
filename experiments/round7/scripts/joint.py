@@ -544,6 +544,7 @@ def cmd_verdict(a):
             continue
         dr, dn = P[f"{k}:{c}"]["mean"], P[f"{k}:NTV0-ag"]["mean"]
         hon = P.get(f"{h}:{ON_R6S1}", {}).get("mean", {})
+        hss = P.get(f"{h}:R6DAG-{sd}-agH", {}).get("mean", {})                      # same-seed ON reference (reported, not in the rule)
         qq, q6 = Q.get(f"R7J-{sd}+AG"), Q.get(f"DAG-{sd}+AG")              # pai_pcs_local r5: diff_point / diff_ci vs NTV0-s0+AG, same draws
         pk = dict(mean=qq["diff_point"], lo=qq["diff_ci"][0], hi=qq["diff_ci"][1]) if qq and "diff_point" in qq else None
         PCS_R6[sd] = q6["diff_point"] if q6 and "diff_point" in q6 else PCS_R6[sd]
@@ -553,14 +554,14 @@ def cmd_verdict(a):
         ok_all &= all(ok.values())
         rows.append(f"| {sd} | {R[k]['mean']:.3f} | {f3(dr)} | {f3(dn)} | {lat(k)} vs {lat(c)} | {R[k].get('launch', '')} | "
                     f"{pcs_txt(pk, PCS_R6[sd])} | "
-                    f"{R.get(h, {}).get('mean', float('nan')):.3f}, {f3(hon)} | {' '.join(q for q, v in ok.items() if not v) or 'all pass'} |")
+                    f"{R.get(h, {}).get('mean', float('nan')):.3f}, {f3(hon)} | {f3(hss) if hss else '-'} | {' '.join(q for q, v in ok.items() if not v) or 'all pass'} |")
     com = sorted(set.intersection(*[set(X.index[X.score.notna()]) for X in F.values()]))
     solved = F["NTV0-ag"].score.reindex(com) >= 1 - 1e-4
     L = ["", "## Registered adoption rule (plan section 6)", "",
          "Both seeds: OFF 281 mean - same-seed R6DAG >= 0; - NTV0 95 % CI > 0; offroad + zero-other <= same-seed R6DAG's; launches >= 34 / 37; "
          "local PCS ruler - NTV0 >= same-seed R6DAG's (d434: -213 / -155); Harmonizer-ON 281 - R6DAG-s1 ON (0.780) >= 0 (paired).", "",
-         "| seed | OFF mean | - R6DAG same seed | - NTV0 | offroad + zero-other | launched | ruler - NTV0 | ON mean, - R6DAG-s1 ON | failing |",
-         "|:--|--:|--:|--:|--:|--:|--:|--:|:--|", *rows, "", f"**Adopt: {'yes (both seeds pass)' if ok_all and len(ver) == 2 else 'no'}.**", "",
+         "| seed | OFF mean | - R6DAG same seed | - NTV0 | offroad + zero-other | launched | ruler - NTV0 | ON mean, - R6DAG-s1 ON | ON - same-seed R6DAG ON | failing |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|:--|", *rows, "", f"**Adopt: {'yes (both seeds pass)' if ok_all and len(ver) == 2 else 'no'}.**", "",
          f"### New zeros / partials on the {int(solved.sum())} scenes NTV0 scores 1.0", "", "| read | new zeros | new partials | classes |", "|:--|--:|--:|:--|"]
     for k, X in F.items():
         if k == "NTV0-ag":
