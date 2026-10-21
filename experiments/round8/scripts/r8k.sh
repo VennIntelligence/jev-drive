@@ -7,11 +7,13 @@
 #   r8k.sh noise          (PRIO 22) the two ON chunks -> pai_fix tax -> r8k.py noise -> $N_/DONE
 #   r8k.sh all            (PRIO 20) gates (identity A / B -> bitcmp; smokes R8KSM / R8KSC -> r8k.py smoke) -> $K/GATES, and chained on GATES:
 #                         R8K-L18-s0 / s1 -> PAI 281 OFF + ON each -> ruler (collect + 20 boots) -> report -> $K/DONE
-#   r8k.sh wait <K|N> [M] one run_in_background waiter: the marker (default DONE), $K/VERDICT or a failed / cancelled job of that lane
+#   r8k.sh s2             (PRIO 20, amendment 1) third seed of both recipes: R6DAG-L18-s2 (R6DAG argv) and R8K-L18-s2 (R8K argv), each -> PAI 281
+#                         OFF + ON -> r8k.py seeds (3-seed recipe means, after R8K-s1's ON tax too) -> $S2/DONE
+#   r8k.sh wait <K|N|S> [M] one run_in_background waiter: the marker (default DONE), $K/VERDICT or a failed / cancelled job of that lane
 #   r8k.sh printargv <variant> <steps> <tag> <seed>   r6 = R6DAG's argv; id = HEAD with every switch off (on1_JTPHDI / R7J0); k = the arm
 #   job bodies: identrun a|b | ident | smokerun k|r6 | smoke | train <seed> | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
-K=$DATA_DIR/runs/round8/r8k; N_=$DATA_DIR/runs/round8/noise; ME=experiments/round8/scripts/r8k.sh; PY=experiments/round8/scripts/r8k.py
+K=$DATA_DIR/runs/round8/r8k; N_=$DATA_DIR/runs/round8/noise; S2=$DATA_DIR/runs/round8/s2; ME=experiments/round8/scripts/r8k.sh; PY=experiments/round8/scripts/r8k.py
 DS=experiments/round6/scripts/dag.sh; V=.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
 RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; JW=$DATA_DIR/runs/round7/joint/w; N=9500
 CH=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks; ST=$DATA_DIR/runs/round7/harmcl/R6DAG-L18-s1-agH
@@ -19,7 +21,7 @@ PRE=${R8K_PRE:-ba54017b}; WT=$DATA_DIR/tmp/joint_wt_$PRE                # identi
 SERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10
 TWIN=${R8K_TWIN:-PAIHTW:1.0}
 FT=(--train --vram 40 --cpu 6 --ram 40 --env CL_HIST_KEY=rm-train)
-mkdir -p $K/pool $K/results $N_/pool $N_/results
+mkdir -p $K/pool $K/results $N_/pool $N_/results $S2/pool $S2/results
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a ${LANE:-$K}/stages.txt >&2; exit 1; }
 sub() {  # sub <lane dir> <prio> <name> <pool args...>
   local d=$1 p=$2 name=$3; shift 3; local id
@@ -48,14 +50,14 @@ PY
 }
 run() { local X; X=$(argv "$@") || die "argv $*"; mapfile -t A <<< "$X"; }
 read281() {  # read281 <tag> <ag|agH> <after> -> "<chunk ids...> <tax id>" (NTV0's chunk table, ACC + GAP, g10, FAST, CONC 4; agH: HARMONIZER=1)
-  local R=$K/pai281/$1-$2 ids t sv="$SERVE" ex=(); mkdir -p $K/pai281; [[ ! -e $R ]] || die "$R exists"
+  local L=${LD:-$K}; local R=$L/pai281/$1-$2 ids t sv="$SERVE" ex=(); mkdir -p $L/pai281; [[ ! -e $R ]] || die "$R exists"
   [[ $2 == agH ]] && { sv="$sv HARMONIZER=1"; ex=(VRAM=30 RAM=40); }
   env "${ex[@]}" AFTER=$3 CHUNKS_FROM=$CH SERVE="$sv" WIZ=$WIZ CONC=4 ALPASIM_FAST=1 PRIO=20 bash experiments/alpasim/scripts/pai_box.sh submit $R $1 \
     > $R.submit.txt || die "pai submit $1 $2"
   ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt); [[ $(wc -w <<< "$ids") == 8 ]] || die "$1 $2: not 8 chunks"
-  awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt | sed "s/\$/-$2/" >> $K/jobs.txt
+  awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt | sed "s/\$/-$2/" >> $L/jobs.txt
   t=$(PRIO=20 AFTER=$(paste -sd, <<< "$ids") bash experiments/pai_fix/scripts/pai_fix.sh tax $1-281$2 $R | tail -1) && [[ -n $t ]] || die "tax $1 $2"
-  echo "$t pai_fix-tax-$1-281$2" >> $K/jobs.txt; echo $ids $t; }
+  echo "$t pai_fix-tax-$1-281$2" >> $L/jobs.txt; echo $ids $t; }
 waiter() {  # waiter <lane dir> <marker>: returns at the marker, a VERDICT, or a failed / cancelled job (the last id of each name)
   local d=$1 m=$2
   until [[ -f $d/VERDICT || -f $d/$m ]] || ! $V - $d/jobs.txt <<'PY'
@@ -134,6 +136,21 @@ smokerun)  # smokerun k | r6: 300 steps, diag every 20, dev every 100 (k = the a
 smoke)
   $V $PY smoke --tag R8KSM-L18-s0 --ctrl R8KSC-L18-s0 --wjson $DATA_DIR/runs/round7/joint/results/w_R7JNS.json --out $K/results/smoke.json; r=$?
   (( r == 0 )) && rm -rf $RUNS/R8KSM-L18-s0 $RUNS/R8KSC-L18-s0; exit $r ;;               # kept for inspection when a check fails
+s2)
+  LANE=$S2; LD=$S2; [[ ! -e $S2/DONE ]] || die "s2 already ran"; for X in R6DAG-L18-s2 R8K-L18-s2; do [[ ! -e $RUNS/$X ]] || die "$X exists"; done
+  for f in R6DAG-L18-s2-281ag R8K-L18-s2-281ag; do [[ ! -e $F_/$f.csv ]] || die "$f exists"; done
+  t1=$(awk '$2 == "pai_fix-tax-R8K-L18-s1-281agH" {x = $1} END {print x}' $K/jobs.txt); [[ -n $t1 ]] || die "no R8K-s1 ON tax id"
+  h=$(git rev-parse --short HEAD); echo "$h s2" >> $S2/code.txt; x=($t1)
+  for v in r6:R6DAG k:R8K; do t=$(sub $S2 20 s2-train-${v#*:} "${FT[@]}" --timeout-h 4 -- bash $ME train2 ${v%:*}) || exit 1
+    y=($(read281 ${v#*:}-L18-s2 ag $t)) || exit 1; z=($(read281 ${v#*:}-L18-s2 agH $t)) || exit 1; x+=(${y[-1]} ${z[-1]})
+    echo "$(date '+%F %T') s2 ${v#*:} (code $h): train $t OFF ${y[*]} ON ${z[*]}" | tee -a $S2/stages.txt; done
+  r=$(sub $S2 20 s2-seeds --after $(csv ${x[@]}) --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME seeds) || exit 1
+  echo "$(date '+%F %T') s2: seeds report $r after ${x[*]}" | tee -a $S2/stages.txt ;;
+train2) declare -A TG=([r6]=R6DAG [k]=R8K); X=${TG[$2]}-L18-s2; run $2 $N $X 2; echo "$(date '+%F %T') train $X: ${A[*]} --save-at 2500,5000,7500" | tee -a $S2/stages.txt
+  exec $TR "${A[@]}" --save-at 2500,5000,7500 ;;
+seeds)
+  rd=(); for m in ag agH; do for a in R6DAG R8K; do for s in 0 1 2; do rd+=($a-s$s-$m=$F_/$a-L18-s$s-281$m.csv); done; done; done
+  $V $PY seeds --read "${rd[@]}" --out $S2/results/seeds3 || die seeds; date '+%F %T' > $S2/DONE ;;
 train) s=$2; run k $N R8K-L18-s$s $s; echo "$(date '+%F %T') train s$s: ${A[*]} --save-at 2500,5000,7500" | tee -a $K/stages.txt
   exec $TR "${A[@]}" --save-at 2500,5000,7500 ;;
 report)
@@ -151,6 +168,6 @@ report)
   $V $PY verdict --json $RES/pai281_R8K.json --md $RES/pai281_R8K.md --pcs $RES/pcs_r8k.json --read "${rd[@]}" || die verdict
   date '+%F %T' > $K/DONE ;;
 printargv) argv "${@:2}" ;;
-wait) case ${2:-K} in K) waiter $K ${3:-DONE} ;; N) waiter $N_ ${3:-DONE} ;; *) die "wait K|N" ;; esac ;;
-*) sed -n 2,14p "$0"; exit 2 ;;
+wait) case ${2:-K} in K) waiter $K ${3:-DONE} ;; N) waiter $N_ ${3:-DONE} ;; S) waiter $S2 ${3:-DONE} ;; *) die "wait K|N|S" ;; esac ;;
+*) sed -n 2,16p "$0"; exit 2 ;;
 esac

@@ -7,6 +7,8 @@
   r8k.py noise --stored D --new D --facts-stored F --facts-new F --facts-off F --out P
                                                       ON re-read vs the stored ON read: per-scene score diffs, zero flips, served-plan identity,
                                                       the implied per-read noise of a 279-scene mean, and the stored ON - OFF on the same scenes
+  r8k.py seeds --read K=F .. --out P                 (amendment 1, descriptive) 3-seed recipe means R8K vs R6DAG: per scene the seed mean of OFF, ON,
+                                                      (OFF + ON) / 2 on the scenes every read scored without RPC error, paired scene bootstrap CIs
   r8k.py verdict --json J --md M --pcs P --read K=F ..  the registered adoption rule on r2.py r281's json -> appended to M, verdict into J
 """
 from __future__ import annotations
@@ -134,6 +136,43 @@ def cmd_noise(a):
     print("\n".join(L))
 
 
+# ---------------------------------------------------------------- seeds (amendment 1)
+def cmd_seeds(a):
+    import pandas as pd
+    F = {k: pd.read_csv(f).set_index("scene") for k, f in (x.split("=", 1) for x in a.read)}
+    com = sorted(set.intersection(*[set(X.index[X.score.notna() & ~X.rpc.fillna(False).astype(bool)]) for X in F.values()]))
+    S = {k: X.score.reindex(com).to_numpy(float) for k, X in F.items()}
+    seeds = sorted({k.split("-")[1] for k in F})
+    rec = dict(scenes=len(com), seeds=seeds, per_read={k: float(v.mean()) for k, v in S.items()}, recipes={}, diff={}, seed_diff={})
+    M = {}
+    for r in ("R6DAG", "R8K"):
+        off = np.mean([S[f"{r}-{sd}-ag"] for sd in seeds], 0)
+        on = np.mean([S[f"{r}-{sd}-agH"] for sd in seeds], 0)
+        M[r] = dict(OFF=off, ON=on, AVG=(off + on) / 2)
+        rec["recipes"][r] = {q: float(v.mean()) for q, v in M[r].items()} | dict(
+            seed_sd_OFF=float(np.std([S[f"{r}-{sd}-ag"].mean() for sd in seeds], ddof=1)), seed_sd_ON=float(np.std([S[f"{r}-{sd}-agH"].mean() for sd in seeds], ddof=1)))
+    for q in ("OFF", "ON", "AVG"):
+        rec["diff"][q] = boot(M["R8K"][q] - M["R6DAG"][q])
+    for sd in seeds:                                                      # same-seed pairs (descriptive)
+        rec["seed_diff"][sd] = {m: boot(S[f"R8K-{sd}-{m}"] - S[f"R6DAG-{sd}-{m}"]) for m in ("ag", "agH")}
+    dump(f"{a.out}.json", rec)
+    f3 = lambda t: "%+.3f [%+.3f, %+.3f]" % t  # noqa: E731
+    L = [f"# 3-seed recipe means, R8K vs R6DAG (PAI 281, ACC + GAP; {len(com)} common scenes; amendment 1, descriptive, no adoption rule)", "",
+         "| | " + " | ".join(f"{r}-{sd}" for r in ("R6DAG", "R8K") for sd in seeds) + " |", "|:--|" + "--:|" * (2 * len(seeds))]
+    for m, lab in (("ag", "OFF"), ("agH", "ON")):
+        L.append(f"| {lab} | " + " | ".join(f"{S[f'{r}-{sd}-{m}'].mean():.3f}" for r in ("R6DAG", "R8K") for sd in seeds) + " |")
+    L.append("| (OFF + ON) / 2 | " + " | ".join(f"{(S[f'{r}-{sd}-ag'].mean() + S[f'{r}-{sd}-agH'].mean()) / 2:.3f}" for r in ("R6DAG", "R8K") for sd in seeds) + " |")
+    L += ["", "| recipe mean (3 seeds) | R6DAG | R8K | R8K - R6DAG (paired scene bootstrap of the seed means) |", "|:--|--:|--:|--:|"]
+    for q, lab in (("OFF", "OFF"), ("ON", "ON"), ("AVG", "(OFF + ON) / 2")):
+        L.append(f"| {lab} | {rec['recipes']['R6DAG'][q]:.3f} | {rec['recipes']['R8K'][q]:.3f} | {f3(rec['diff'][q])} |")
+    L.append(f"| seed sd of the read mean, OFF / ON | {rec['recipes']['R6DAG']['seed_sd_OFF']:.3f} / {rec['recipes']['R6DAG']['seed_sd_ON']:.3f} | "
+             f"{rec['recipes']['R8K']['seed_sd_OFF']:.3f} / {rec['recipes']['R8K']['seed_sd_ON']:.3f} | |")
+    L += ["", "| same-seed pair | OFF R8K - R6DAG | ON R8K - R6DAG |", "|:--|--:|--:|"]
+    L += [f"| {sd} | {f3(rec['seed_diff'][sd]['ag'])} | {f3(rec['seed_diff'][sd]['agH'])} |" for sd in seeds]
+    Path(f"{a.out}.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 # ---------------------------------------------------------------- verdict
 def cmd_verdict(a):
     import pandas as pd
@@ -212,13 +251,16 @@ def main():
     p = sp.add_parser("noise")
     for k in ("--stored", "--new", "--facts-stored", "--facts-new", "--facts-off", "--out"):
         p.add_argument(k, required=True)
+    p = sp.add_parser("seeds")
+    p.add_argument("--read", nargs="+", required=True)
+    p.add_argument("--out", required=True)
     p = sp.add_parser("verdict")
     p.add_argument("--json", required=True)
     p.add_argument("--md", required=True)
     p.add_argument("--pcs", default="")
     p.add_argument("--read", nargs="+", required=True)
     a = ap.parse_args()
-    dict(smoke=cmd_smoke, noise=cmd_noise, verdict=cmd_verdict)[a.cmd](a)
+    dict(smoke=cmd_smoke, noise=cmd_noise, seeds=cmd_seeds, verdict=cmd_verdict)[a.cmd](a)
 
 
 if __name__ == "__main__":
