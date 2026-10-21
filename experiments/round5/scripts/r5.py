@@ -626,10 +626,10 @@ def lane_change_off_route(v0, fut, route):
     route lateral nan: leaves, as D1 counted). -> (lc, off, undecided) masks."""
     y4, x4, h4 = fut[:, 7, 1].astype(np.float64), fut[:, 7, 0].astype(np.float64), np.degrees(fut[:, 7, 2].astype(np.float64))
     lc = (np.abs(y4) > LC_Y) & (np.abs(h4) < LC_YAW) & (np.asarray(v0, np.float64) > LC_V)
-    ok = route["ok"].astype(bool)
+    ok, poly = route["ok"].astype(bool), route["poly"]
     off = np.zeros(len(lc), bool)
     for i in np.flatnonzero(lc & ok):
-        off[i] = not abs(route_lat(route["poly"][i], x4[i]) - y4[i]) < LC_ROUTE
+        off[i] = not abs(route_lat(poly[i], x4[i]) - y4[i]) < LC_ROUTE
     return lc, off, lc & ~ok
 
 
@@ -668,7 +668,7 @@ def cmd_lcrows(a):
     for p in r3.PARTS:
         t = r3.load_part(p)
         nm = t["names"].astype(str)
-        rt = np.load(CR / r3.PARTS[p] / "route.npz")
+        rt = dict(np.load(CR / r3.PARTS[p] / "route.npz"))      # in memory: NpzFile re-reads an array on every access
         assert np.array_equal(rt["tokens"].astype(str), nm), f"{p}: route.npz rows != tab rows"
         ix = np.array([idx[f"on:{p}:{x[3:]}"] for x in nm])
         v0, fut = t["speed"].astype(np.float64), t["fut"].astype(np.float64)
