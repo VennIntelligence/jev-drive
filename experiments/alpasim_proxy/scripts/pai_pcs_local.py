@@ -160,7 +160,7 @@ def cmd_fit(a):
     sc, _, fam = table(a.rows)
     nb = bands(json.load(open(HERE.parent / "results/leaderboard_pai_20261019.json"))["leaderboard"])
     out = Path(a.out) / "fits"; out.mkdir(parents=True, exist_ok=True)
-    for v in (a.variants.split(",") if a.variants else VARIANTS):
+    for v in ([] if a.variants == "-" else a.variants.split(",") if a.variants else VARIANTS):
         base = v.split("-s")[0] if v.startswith("paimix-s") else "paimix" if v == "paimix-1pl" else v
         subs = pool(sc, fam, base, nb)
         cols = items_of(sc, subs)
@@ -384,7 +384,7 @@ def main():
     q = s.add_parser("r5"); q.add_argument("--rows", required=True); q.add_argument("--out", required=True); q.add_argument("--facts", required=True)
     q.add_argument("--subjects", required=True, help="label=facts file name,... (pai_fix facts csv with fclass per scene)")
     f = s.add_parser("fit"); f.add_argument("--rows", required=True); f.add_argument("--out", required=True)
-    f.add_argument("--variants", default=""); f.add_argument("--boot", type=int, default=0)
+    f.add_argument("--variants", default="", help="comma list; - = none (bootstrap shards only)"); f.add_argument("--boot", type=int, default=0)
     f.add_argument("--boot0", type=int, default=0, help="first bootstrap draw (seed), for parallel shards")
     r = s.add_parser("report"); r.add_argument("--rows", required=True); r.add_argument("--out", required=True); r.add_argument("--gap", default="")
     a = p.parse_args()
