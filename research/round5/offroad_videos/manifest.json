@@ -1,0 +1,469 @@
+{
+ "clips": [
+  {
+   "scene": "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+   "s8": "ea468790",
+   "cls": "弯道内侧切出 · 起步后",
+   "geo": "off_curve_inside",
+   "ctx": "launch",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/ea468790.mp4",
+   "mb": 2.31,
+   "rate": 2.0,
+   "t_ev": 10.4,
+   "v_ev": {
+    "R3MV-L18-s0": 6.15,
+    "NTV0-L18-s0": 5.19
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 3.4,
+    "t1": 13.4,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-94c1d722-1fce-46b4-9aa9-c78389fae1ac",
+   "s8": "94c1d722",
+   "cls": "弯道内侧切出 · 行驶中",
+   "geo": "off_curve_inside",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/94c1d722.mp4",
+   "mb": 1.11,
+   "rate": 2.0,
+   "t_ev": 9.0,
+   "v_ev": {
+    "R3MV-L18-s0": 5.71,
+    "NTV0-L18-s0": 4.85
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.9599635773183574
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.9599635773183574
+   },
+   "clip": {
+    "t0": 2.0,
+    "t1": 12.0,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-dc401449-4b7b-42da-86a1-76b903e2290d",
+   "s8": "dc401449",
+   "cls": "弯道外侧冲出 · 行驶中",
+   "geo": "off_curve_outside",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/dc401449.mp4",
+   "mb": 1.19,
+   "rate": 2.0,
+   "t_ev": 10.6,
+   "v_ev": {
+    "R3MV-L18-s0": 1.39,
+    "NTV0-L18-s0": 10.88
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 3.6,
+    "t1": 13.6,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633",
+   "s8": "b680a689",
+   "cls": "路口转弯内侧切角 · 停车 / 跟车场景",
+   "geo": "off_junc_inside",
+   "ctx": "stop",
+   "show": "R5LC-L18-s0",
+   "off": [
+    "R5LC-L18-s0",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/b680a689.mp4",
+   "mb": 1.66,
+   "rate": 2.0,
+   "t_ev": 10.5,
+   "v_ev": {
+    "R5LC-L18-s0": 4.75,
+    "NTV0-L18-s0": 4.59
+   },
+   "rerun": {
+    "R5LC-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R5LC-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 3.5,
+    "t1": 13.5,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+   "s8": "de9db5dc",
+   "cls": "路口转弯外侧过宽 · 起步后",
+   "geo": "off_junc_outside",
+   "ctx": "launch",
+   "show": "R3MV-L18-s1",
+   "off": [
+    "R3MV-L18-s1"
+   ],
+   "file": "media/de9db5dc.mp4",
+   "mb": 2.21,
+   "rate": 2.0,
+   "t_ev": 16.6,
+   "v_ev": {
+    "R3MV-L18-s1": 5.18,
+    "NTV0-L18-s0": 5.89
+   },
+   "rerun": {
+    "R3MV-L18-s1": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s1": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 9.6,
+    "t1": 19.6,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+   "s8": "abd45a30",
+   "cls": "路口转弯外侧过宽 · 停车 / 跟车场景",
+   "geo": "off_junc_outside",
+   "ctx": "stop",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0"
+   ],
+   "file": "media/abd45a30.mp4",
+   "mb": 1.7,
+   "rate": 2.0,
+   "t_ev": 10.8,
+   "v_ev": {
+    "R3MV-L18-s0": 4.58,
+    "NTV0-L18-s0": 6.78
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.0
+   },
+   "clip": {
+    "t0": 3.8,
+    "t1": 13.8,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+   "s8": "e1c6ae9f",
+   "cls": "路口内直行段出路 · 行驶中",
+   "geo": "off_junc_straight",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/e1c6ae9f.mp4",
+   "mb": 1.32,
+   "rate": 2.0,
+   "t_ev": 8.9,
+   "v_ev": {
+    "R3MV-L18-s0": 13.57,
+    "NTV0-L18-s0": 13.75
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 1.9,
+    "t1": 11.9,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-13d646af-4ff3-48e4-9a88-012a58eb6cd6",
+   "s8": "13d646af",
+   "cls": "路口内直行段出路 · 行驶中 · 计划收短、低速拐出",
+   "geo": "off_junc_straight",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0"
+   ],
+   "file": "media/13d646af.mp4",
+   "mb": 1.32,
+   "rate": 2.0,
+   "t_ev": 14.6,
+   "v_ev": {
+    "R3MV-L18-s0": 2.76,
+    "NTV0-L18-s0": 15.7
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 7.6,
+    "t1": 17.6,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e",
+   "s8": "596af0c7",
+   "cls": "直路车道边出路 · 停车 / 跟车场景",
+   "geo": "off_straight",
+   "ctx": "stop",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/596af0c7.mp4",
+   "mb": 1.74,
+   "rate": 2.0,
+   "t_ev": 6.7,
+   "v_ev": {
+    "R3MV-L18-s0": 17.93,
+    "NTV0-L18-s0": 18.71
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.6148452725049445
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.6148452725049445
+   },
+   "clip": {
+    "t0": 0.0,
+    "t1": 9.7,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55",
+   "s8": "7750265d",
+   "cls": "直路车道边出路 · 停车 / 跟车场景 · 车道平移没跟上",
+   "geo": "off_straight",
+   "ctx": "stop",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1"
+   ],
+   "file": "media/7750265d.mp4",
+   "mb": 1.46,
+   "rate": 2.0,
+   "t_ev": 10.5,
+   "v_ev": {
+    "R3MV-L18-s0": 11.06,
+    "NTV0-L18-s0": 11.28
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 0.0
+   },
+   "clip": {
+    "t0": 3.5,
+    "t1": 13.5,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231",
+   "s8": "6e7b42a3",
+   "cls": "直路车道边出路 · 行驶中 · 高速路上加速",
+   "geo": "off_straight",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/6e7b42a3.mp4",
+   "mb": 1.08,
+   "rate": 2.0,
+   "t_ev": 12.8,
+   "v_ev": {
+    "R3MV-L18-s0": 36.48,
+    "NTV0-L18-s0": 27.42
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 5.8,
+    "t1": 15.8,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-a2b415d5-2d72-4cc2-a77d-868248d0ba22",
+   "s8": "a2b415d5",
+   "cls": "直路车道边出路 · 行驶中",
+   "geo": "off_straight",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s0",
+    "R3MV-L18-s1",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/a2b415d5.mp4",
+   "mb": 0.61,
+   "rate": 2.0,
+   "t_ev": 15.7,
+   "v_ev": {
+    "R3MV-L18-s0": 16.63,
+    "NTV0-L18-s0": 16.63
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 8.7,
+    "t1": 18.7,
+    "fps": 10.0
+   }
+  },
+  {
+   "scene": "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+   "s8": "bbc53aa8",
+   "cls": "直路车道边出路 · 行驶中 · 高速路上计划收短、急减速",
+   "geo": "off_straight",
+   "ctx": "cruise",
+   "show": "R3MV-L18-s0",
+   "off": [
+    "R3MV-L18-s0",
+    "R5LC-L18-s1"
+   ],
+   "file": "media/bbc53aa8.mp4",
+   "mb": 1.18,
+   "rate": 2.0,
+   "t_ev": 13.2,
+   "v_ev": {
+    "R3MV-L18-s0": 7.08,
+    "NTV0-L18-s0": 30.78
+   },
+   "rerun": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "stored": {
+    "R3MV-L18-s0": 0.0,
+    "NTV0-L18-s0": 1.0
+   },
+   "clip": {
+    "t0": 6.2,
+    "t1": 16.2,
+    "fps": 10.0
+   }
+  }
+ ],
+ "rest": [
+  "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0",
+  "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8",
+  "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca",
+  "clipgt-3c2822d9-d103-46b9-b18a-8d30ea8e056b",
+  "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+  "clipgt-c92137b4-0ce7-4d65-a44c-414d7c104b76",
+  "clipgt-db8693db-cd5a-45ab-9bce-6092b8086e1c",
+  "clipgt-f7ded74f-fbd2-4e57-9ee6-fab842eda85c"
+ ],
+ "shared": [
+  "clipgt-2a882d89-eadc-42a4-a15c-5977361845f6",
+  "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14",
+  "clipgt-4f7cb072-89c6-40f5-b6a5-d8c775784c2a",
+  "clipgt-7381c9fa-1857-430f-aee9-22c59685656e",
+  "clipgt-a5599793-5d03-4104-ad6e-1925cefded72",
+  "clipgt-a68ad579-8a04-45b9-89f9-89ec3c1893bb",
+  "clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0",
+  "clipgt-d8bfaaf2-add3-4ed8-8fe6-744c059bbccf",
+  "clipgt-e848c843-d275-4f60-a194-61cc7f699124"
+ ],
+ "rerun_mismatch": []
+}

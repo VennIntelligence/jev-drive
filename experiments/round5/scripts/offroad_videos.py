@@ -182,7 +182,8 @@ def cmd_collect(a):
 
 
 # ---------------------------------------------------------------- Mac
-W1, HD = 640, 64                                   # one side's width (900 x 1000 eval frame scaled), header height
+W1, HD, BV, CH = 640, 64, 576, 360               # one side: width, header, bird's-eye panel (square, centred), camera height
+BEV, CAM = (slice(30, 504), slice(62, 536)), (slice(517, 992), slice(29, 872))   # panels of the 900 x 1000 DEFAULT eval frame
 
 
 def speed(f):
@@ -213,12 +214,13 @@ def clip(e, R, src, dst, pre=7.0, post=3.0):
     import numpy as np
     sides = [(e["show"], R[f"{e['scene']}|{e['show']}"]), (NT, R[f"{e['scene']}|{NT}"])]
     fr = [frames(src / x["video"]) for _, x in sides]
+    if not all(f for f, _ in fr):
+        sys.exit(f"no frames in {[x['video'] for _, x in sides]}")
     fps = fr[0][1]
     n = min(len(f) for f, _ in fr)
     t_ev = sides[0][1]["t_off"] if sides[0][1]["t_off"] is not None else e["t_ev"]
     i0, i1 = max(0, int(round((t_ev - pre) * fps))), min(n, int(round((t_ev + post) * fps)) + 1)
-    h1 = int(round(1000 * W1 / 900 / 2) * 2)
-    W, H = 2 * W1 + 8, h1 + HD
+    W, H = 2 * W1 + 8, HD + BV + CH
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", f"{fps:g}", "-i", "-",
                           "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "27", "-preset", "slow", "-movflags", "+faststart", str(dst)],
                          stdin=subprocess.PIPE)
@@ -227,7 +229,9 @@ def clip(e, R, src, dst, pre=7.0, post=3.0):
         im = np.full((H, W, 3), 255, np.uint8)
         for j, (t, x) in enumerate(sides):
             X0 = j * (W1 + 8)
-            im[HD:, X0:X0 + W1] = cv2.resize(fr[j][0][i], (W1, h1), interpolation=cv2.INTER_AREA)
+            f = fr[j][0][i]
+            im[HD:HD + BV, X0 + (W1 - BV) // 2:X0 + (W1 + BV) // 2] = cv2.resize(f[BEV], (BV, BV), interpolation=cv2.INTER_AREA)
+            im[HD + BV:, X0:X0 + W1] = cv2.resize(f[CAM], (W1, CH), interpolation=cv2.INTER_AREA)
             off = x["t_off"] is not None and ti >= x["t_off"]
             col = (0, 0, 200) if off else (40, 40, 40)
             cv2.rectangle(im, (X0, 0), (X0 + W1, HD - 4), col, -1)
@@ -241,10 +245,26 @@ def clip(e, R, src, dst, pre=7.0, post=3.0):
     return dict(t0=i0 / fps, t1=(i1 - 1) / fps, fps=fps)
 
 
-# One card per (geometry, context) class: the steadiest event (most MV reads offroad, then NTV0's score). SECOND: visibly different
-# sub-cases that get their own card; CAP: what to look at (filled after watching the clips).
-SECOND = {}
-CAP = {}
+# One card per (geometry, context) class: the steadiest event (most MV reads offroad, then NTV0's score; an event offroad in one read only
+# where NTV0 also scores 0 is not a representative), REP overrides the pick, SECOND = visibly different sub-cases with their own card.
+# CAP = what to look at, written after watching the clips (speeds from facts.json at the offroad onset).
+REP = {("off_straight", "cruise"): "a2b415d5"}
+SECOND = {"13d646af": "计划收短、低速拐出", "7750265d": "车道平移没跟上", "bbc53aa8": "高速路上计划收短、急减速", "6e7b42a3": "高速路上加速"}
+CAP = {
+    "94c1d722": "夜间 T 型路口右转：两车入弯速度相近（出路时 5.7 / 4.8 m/s），MV 出弯时切向右侧（内侧）压出路沿，NTV0 沿车道转完。",
+    "ea468790": "停止线起步右转进多车道路：MV 转完不回正，一直贴右侧，压上右侧路沿（出路时 6.2 m/s；NTV0 5.2 m/s，已回到车道中）。",
+    "dc401449": "夜间窄街左弯：MV 弯前计划收短（橙线变短）、减速到 1.4 m/s（NTV0 10.9 m/s），低速下计划指向右侧，从弯道外侧开出。",
+    "b680a689": "城区路口左转：两车轨迹和速度几乎相同（4.8 / 4.6 m/s），MV 出弯落点偏左约半个车宽，压到窄街左侧边线；差别很小，但两个 R5LC 种子都出路。",
+    "abd45a30": "路口左转：NTV0 直冲过路口（路线转弯零分）；MV 转了，但减速到 4.6 m/s 后转得大，压到外侧路沿。路线转弯的修复在这里换成了出路。",
+    "de9db5dc": "雪天起步右转（只有 R3MV-s1 出路）：MV 转后贴右、几乎停下，蹭上右侧交通岛和标志牌；NTV0 同一时刻 5.9 m/s，在车道内。",
+    "e1c6ae9f": "夜雾里直行穿过路口之后：两车同速（13.6 / 13.8 m/s），MV 几秒内慢慢向右漂，压到右侧停车带边线；NTV0 居中。",
+    "13d646af": "直行接近路口：MV 计划收短，从 16.6 m/s 降到 2.8 m/s（NTV0 保持 15.7 m/s），低速在路口里向右拐出路面。",
+    "596af0c7": "傍晚快速路右弯段：两车同速（17.9 / 18.7 m/s），MV 逐渐右漂到岩壁一侧的路肩，NTV0 保持车道。",
+    "7750265d": "路口前车道向左平移（路缘外凸）：MV 直着走、没跟上左移，压上右侧路缘；NTV0 跟上了左移（它的零分是冲过人类停车点，与出路无关）。",
+    "a2b415d5": "乡间双车道直路：两车同速 16.6 m/s，MV 一直贴着右侧边线走，几秒后压出；NTV0 居中。最纯的侧向漂移。",
+    "bbc53aa8": "高速路：MV 计划收短，从约 29 m/s 一路减速（出路时 7.1 m/s，NTV0 30.8 m/s），减速中右漂上路肩。",
+    "6e7b42a3": "高速路：MV 加速到 36.5 m/s（NTV0 维持交接速度 27.4 m/s）；出路时刻俯视图上本车仍在车道线内，看不出明显越界，是否是可行驶区地图的问题要逐帧确认。",
+}
 
 
 def cmd_page(a):
@@ -259,7 +279,9 @@ def cmd_page(a):
     for e in ev:
         by.setdefault((e["geo"], e["ctx"]), []).append(e)
     key = lambda e: (-len(e["off"]), -(e["scores"][NT] or 0), e["s8"])  # noqa: E731
-    show = [sorted(g, key=key)[0] for g in by.values()] + [e for e in ev if e["s8"] in SECOND]
+    ok = lambda e: len(e["off"]) > 1 or (e["scores"][NT] or 0) > 0  # noqa: E731
+    pick = {k: next((e for e in g if e["s8"] == REP.get(k)), None) or min(filter(ok, g), key=key, default=None) for k, g in by.items()}
+    show = [e for e in pick.values() if e] + [e for e in ev if e["s8"] in SECOND]
     order = list(GEO)
     show = sorted({e["s8"]: e for e in show}.values(), key=lambda e: (order.index(e["geo"]), list(CTX).index(e["ctx"]), key(e)))
     man, cards = [], []
@@ -270,7 +292,7 @@ def cmd_page(a):
             print("no video", e["s8"]), sys.exit(1)
         dst = M / f"{e['s8']}.mp4"
         if a.force or not dst.exists():
-            w = clip(e, R, src, dst)
+            w = clip(e, R, src / "videos", dst)
         else:
             w = json.loads((M / "clips.json").read_text())[e["s8"]] if (M / "clips.json").exists() else {}
         rate = speed(dst)
@@ -303,11 +325,51 @@ def cmd_page(a):
     tot = sum(m["mb"] for m in man)
     (D / "manifest.json").write_text(json.dumps(dict(clips=man, rest=[e["scene"] for e in rest], shared=[e["scene"] for e in S["shared"]],
                                                      rerun_mismatch=mism), indent=1, ensure_ascii=False))
-    intro = (D / "intro.html").read_text() if (D / "intro.html").exists() else ""
+    intro = make_intro(S, FX, ev, show)
     page = PAGE.format(intro=intro, cards="".join(cards), n_ev=len(ev), n_show=len(show), n_rest=len(rest), li=li, n_sh=len(S["shared"]), li2=li2,
                        n_clip=len(man), mb=tot)
     (D / "index.html").write_text(page)
     print(len(ev), "events,", len(man), "clips,", round(tot, 1), "MB; rerun mismatches", mism)
+
+
+# Offroad zero counts on the 275 common scenes, from experiments/round5/results/pai281_R5LC_ag.md (paired bootstrap vs NTV0, 95 % CI).
+OFF281 = {NT: (12, None), "R3MV-L18-s0": (20, "+8 [+1, +16]"), "R3MV-L18-s1": (21, "+9 [+2, +17]"), "R5LC-L18-s0": (21, "+9 [+2, +17]"),
+          "R5LC-L18-s1": (24, "+12 [+4, +20]")}
+FINDINGS = """<p><b>先看什么。</b></p><ol>
+<li><b>多数是侧向，不是速度。</b>21 个事件里 15 个出路时两车速度差在 3 m/s 以内：同样的速度下，MV 的计划慢慢偏向一侧边线（直路 a2b415d5、快速路 596af0c7、
+穿过路口之后 e1c6ae9f），或者转弯出弯时贴内侧、不回正（94c1d722、ea468790、b680a689）；NTV0 在同一场景居中。与第 427 条「短板是侧向」一致。
+直路 / 车道边是最大的一类（10 / 21）。</li>
+<li><b>第二种：计划收短、减速，然后在低速下转出路面。</b>5 个事件 MV 出路时的速度不到 NTV0 的一半（dc401449 1.4 对 10.9 m/s、13d646af 2.8 对 15.7、
+bbc53aa8 7.1 对 30.8、0f4b8753 4.3 对 10.3、c92137b4 3.0 对 12.8）：橙线先变短，车随之减速，NTV0 在同一场景保持原速；减速后的计划指向路边。
+出路的几何分类看不出这一类，它们分散在直路 / 弯道 / 路口直行下面。</li>
+<li><b>路线转弯的修复有一部分换成了出路。</b>5 个事件 NTV0 自己也是零分（路线转弯 3 个：abd45a30、68e53160、1e8e939e；冲过人类停车点 2 个：7750265d、4e4a2a51）：
+MV 转了弯或跟上了路形，却出路。这 5 个不是 MV 弄坏的满分场景。abd45a30 的 NTV0 顶条也有出路倒计时：它先被走廊判零，15.0 s 才压到路外。</li>
+<li><b>稳定。</b>7 个场景四个 MV 读数全出路，是配方本身的行为，不是种子噪声。只在一个读数出路的 7 个多半是噪声，只给 de9db5dc 一张卡（起步后路口转弯这一类只有它）。</li>
+<li>6e7b42a3 是唯一一个 MV 明显更快的（36.5 对 27.4 m/s），出路处俯视图上看不出越界，单独标出。</li>
+</ol>"""
+
+
+def make_intro(S, FX, ev, show):
+    from collections import Counter
+    nk = Counter(len(e["off"]) for e in ev)
+    nf = Counter(e["fclass"][NT] for e in ev)
+    R = FX["rollouts"]
+    need = [f"{e['scene']}|{t}" for e in ev for t in (e["show"], NT)]
+    got = [k for k in need if k in R]
+    mm = [k for k in got if k in FX["mismatch"]]
+    off = "，".join(f"{SHORT[t]} {n}" + (f"（{d}）" if d else "") for t, (n, d) in OFF281.items())
+    mmt = ("全部与存档读数相同（|差| &lt; 0.001）" if not mm else
+           f"{len(mm)} 个与存档不同：" + "；".join(f"<code>{k.split('|')[0][7:15]}</code> {SHORT[k.split('|')[1]]} 存档 {R[k]['stored']:.2f} → 重跑 {R[k]['score']:.2f}" for k in mm))
+    return (f"<p>PAI 281（ACC + GAP 提交 serve）上，含 PAI 人类行的 MV 系配方把出路零分从 NTV0 的 12 个抬到 20–24 个（275 个共同场景；{off}；"
+            f"<code>experiments/round5/results/pai281_R5LC_ag.md</code>，决策 427）。第 429 条的本地 PCS 尺子说明这些新零分很贵：R3MV 的 23 个新增侧向零分里 10 个落在 NTV0 一族都能过的高区分度场景上。"
+            f"这一页把这些出路逐个放出来，和 NTV0 在同一场景上的 rollout 并排看。</p>"
+            f"<p><b>怎么选的。</b>四个 MV 读数（R3MV-L18-s0 / s1、R5LC-L18-s0 / s1）中至少一个出路、NTV0 不出路的场景共 {len(ev)} 个："
+            f"四个读数都出路 {nk[4]} 个、三个 {nk[3]} 个、两个 {nk[2]} 个、只有一个 {nk[1]} 个。"
+            f"这些场景上 NTV0 满分 {nf['ok']} 个，其余是 NTV0 自己别的失分（" + "、".join(f"{FCL.get(k, k)} {v}" for k, v in nf.items() if k != "ok") + "）。"
+            f"几何类别取 <code>rf_tax.py</code> 在出路时刻的判定：路线前后各 20 m 的转角 ≥ 20° 算弯，路口标记在出路时刻附近算路口，偏向转弯一侧算内侧；"
+            f"情境：交接速度 &lt; 1 m/s 记「起步后」，stop / lead 层（人类在场景里停车或跟车）记「停车 / 跟车场景」。</p>"
+            f"<p><b>视频从哪来。</b>存档读数只给零分 rollout 留 rollout.asl、不留视频，所以每个场景用同一 checkpoint、同一 serve（ACC + GAP、g10、ALPASIM_FAST=1）重读一次，打开 AlpaSim 自带评测视频并保留 asl"
+            f"（每个事件一个 MV 读数 + NTV0，共 {len(got)} / {len(need)} 个 rollout，经 GPU 池 PRIO 18）。重读得分{mmt}，可以当原读数的录像看。</p>" + FINDINGS)
 
 
 PAGE = '''<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -316,14 +378,14 @@ body{{font:15px/1.6 -apple-system,"PingFang SC",sans-serif;max-width:1340px;marg
 #rb{{position:sticky;top:0;z-index:9;background:#fffffff2;padding:6px 0;border-bottom:1px solid #ddd;font-size:14px}}
 #rb button{{margin:0 2px;padding:1px 8px;border:1px solid #999;border-radius:4px;background:#fff}}#rb button.on{{background:#333;color:#fff}}
 #rb input{{vertical-align:middle;width:150px}}section{{border-top:1px solid #ddd;margin-top:1.2em;padding-top:.2em}}h3{{margin:.4em 0}}
-figure{{margin:0}}video{{width:100%;background:#000}}figcaption{{font-size:13px;color:#555}}.cap{{background:#f4f4fb;padding:3px 8px}}
+figure{{margin:0}}video{{width:100%;aspect-ratio:1288/1000;max-height:86vh;background:#000;display:block}}figcaption{{font-size:13px;color:#555}}.cap{{background:#f4f4fb;padding:3px 8px}}
 .rate{{background:#333;color:#fff;border-radius:4px;padding:0 5px;font-size:12px}}details{{margin:1em 0}}li{{font-size:14px}}code{{font-size:13px}}
 </style></head><body>
 <div id="rb">播放速度 <button data-r="0">自动</button><button data-r="1">1×</button><button data-r="2">2×</button><button data-r="3">3×</button><button data-r="5">5×</button><button data-r="10">10×</button><button data-r="16">16×</button> <input type="range" min="0.5" max="16" step="0.5"> <b id="rv"></b></div>
 <h1>MV 系配方新增的出路零分长什么样（PAI 281，ACC + GAP）</h1>
 {intro}
 <p>{n_ev} 个候选事件（至少一个 MV 读数出路、NTV0 不出路）按「几何 × 情境」归类，每类放一段代表视频（取出路读数最多、NTV0 得分最高的那个场景），共 {n_show} 张卡片、{n_clip} 段视频、{mb:.0f} MB。
-每段左边是出路的 MV 读数，右边是同一场景的 NTV0；画面是 AlpaSim 自带的评测视频（上：以本车为中心的俯视图，橙线是本车的计划轨迹；右上：指标表；下：模型输入的前视相机，叠加计划轨迹），剪到出路前 7 s 到出路后 3 s。
+每段左边是出路的 MV 读数，右边是同一场景的 NTV0；画面是 AlpaSim 自带的评测视频（上：以本车为中心的俯视图，橙线是本车的计划轨迹，绿线是路线，浅绿框是本车；右上：指标表；下：模型输入的前视相机，叠加计划轨迹），剪到出路前 7 s 到出路后 3 s。
 顶条显示读数、得分、时刻和车速，出路后变红。顶部速度条改全部视频（自动 = 每段 max(2, min(3, 30/fps, 时长/6))，选择记在浏览器里），滑到附近才加载，过半可见才播放。</p>
 {cards}
 <details><summary>其余 {n_rest} 个 MV 新增出路事件（不放视频）</summary><ul>{li}</ul></details>
