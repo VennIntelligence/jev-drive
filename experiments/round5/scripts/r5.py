@@ -40,6 +40,8 @@ Stage L (addendum 5): R5-LC (MV-LC) = R3MV's argv with draw R5LC (every PAI huma
   r5.py lcverdict --json J --md M --read K=F ..   the registered adopt-candidate rule on r2.py r281's json + the secondary column (new zeros /
         partials on the scenes NTV0 scores 1.0), appended to M
   r5.py lcpcs --pcs Q --json J --md M   the local PAI PCS ruler's per-read PCS and paired difference vs NTV0 + the secondary rule, appended to M
+  r5.py newbreaks --json J --md M --read K=F ..   lcverdict's new zeros / partials column alone, for any read set (r5_281.sh TGT=R5A)
+  r5.py pcsrow --pcs Q --json J --md M --subject S ..   the ruler's rows for the named subjects only, appended to M (r5_281.sh TGT=R5A)
 """
 from __future__ import annotations
 
@@ -821,6 +823,50 @@ def cmd_lcpcs(a):
     print("\n".join(L))
 
 
+def cmd_newbreaks(a):
+    """Any read set: the secondary column of lcverdict alone (new zeros / partials on the r281 common scenes NTV0-ag scores 1.0) -> appended to the md
+    and to the json under "newbreaks" (no adopt rule)."""
+    import pandas as pd
+    J = json.loads(Path(a.json).read_text())
+    F = {k: pd.read_csv(f).set_index("scene") for k, f in (x.split("=", 1) for x in a.read)}
+    com = sorted(set.intersection(*[set(X.index[X.score.notna() & ~X.rpc.fillna(False).astype(bool)]) for X in F.values()]))
+    assert len(com) == J["scenes"], (len(com), J["scenes"])
+    solved = (F["NTV0-ag"].score.reindex(com) >= 1 - 1e-4).to_numpy()
+    sol = {}
+    for k, X in F.items():
+        y, c = X.score.reindex(com)[solved], X.fclass.reindex(com)[solved]
+        sol[k] = dict(zeros=int((y <= 1e-4).sum()), partials=int(((y > 1e-4) & (y < 1 - 1e-4)).sum()),
+                      by_class={str(q): int(n) for q, n in c[y < 1 - 1e-4].value_counts().items()})
+    L = ["", f"## New zeros / partials on the {int(solved.sum())} of {len(com)} common scenes NTV0 scores 1.0", "",
+         "| read | new zeros | new partials | by class (zeros + partials) |", "|:--|--:|--:|:--|"]
+    L += [f"| {k} | {v['zeros']} | {v['partials']} | " + ", ".join(f"{q} {n}" for q, n in sorted(v["by_class"].items(), key=lambda t: -t[1])) + " |"
+          for k, v in sol.items() if k != "NTV0-ag"]
+    with open(a.md, "a") as f:
+        f.write("\n".join(L) + "\n")
+    J["newbreaks"] = dict(scenes=int(solved.sum()), reads=sol)
+    Path(a.json).write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
+def cmd_pcsrow(a):
+    """Any read set: rows of the local PAI PCS ruler (pai_pcs_local.py r5 json) for the named subjects, paired vs NTV0-s0+AG -> appended to the md / json."""
+    Q = json.loads(Path(a.pcs).read_text())
+    J = json.loads(Path(a.json).read_text())
+    L = ["", "## Local PAI PCS ruler (d392 pool / anchors, out-of-pool read, paired vs NTV0-s0+AG on the same bootstrap draws)", "",
+         f"NTV0-s0+AG {Q['NTV0-s0+AG']['pcs']:.0f} [{Q['NTV0-s0+AG']['ci'][0]:.0f}, {Q['NTV0-s0+AG']['ci'][1]:.0f}].", "",
+         "| read | PCS [95 % CI] | - NTV0 median (point) [95 % CI] | P(> 0) |", "|:--|--:|--:|--:|"]
+    for k in a.subject:
+        q = Q[k]
+        L.append(f"| {k} | {q['pcs']:.0f} [{q['ci'][0]:.0f}, {q['ci'][1]:.0f}] | {q['diff_median']:+.0f} ({q['diff_point']:+.0f}) "
+                 f"[{q['diff_ci'][0]:+.0f}, {q['diff_ci'][1]:+.0f}] | {q['p_pos']:.2f} |")
+    L += ["", f"Reference points (d429): R2C-s0+AG -29 [-95, +19], R3MV-s0+AG -276 [-375, -217]. Full ruler report: {a.report}."]
+    with open(a.md, "a") as f:
+        f.write("\n".join(L) + "\n")
+    J.setdefault("pcs", {}).update({k: Q[k] for k in ["NTV0-s0+AG", *a.subject]})
+    Path(a.json).write_text(json.dumps(J, indent=1, default=float))
+    print("\n".join(L))
+
+
 def cmd_l37(a):
     """LAUNCH-37 read-out (addendum 4). The registered comparison is the first --pair (LAUNCH-37) and the first --target (TARGET)."""
     import pandas as pd
@@ -964,9 +1010,15 @@ def main():
     p.add_argument("--json", required=True), p.add_argument("--md", required=True), p.add_argument("--read", nargs="+", required=True, help="K=FACTS.csv, r281's reads")
     p = sub.add_parser("lcpcs")
     p.add_argument("--pcs", required=True), p.add_argument("--json", required=True), p.add_argument("--md", required=True)
+    p = sub.add_parser("newbreaks")
+    p.add_argument("--json", required=True), p.add_argument("--md", required=True), p.add_argument("--read", nargs="+", required=True, help="K=FACTS.csv, r281's reads")
+    p = sub.add_parser("pcsrow")
+    p.add_argument("--pcs", required=True), p.add_argument("--json", required=True), p.add_argument("--md", required=True)
+    p.add_argument("--subject", nargs="+", required=True), p.add_argument("--report", default="pcs_report.md")
     a = ap.parse_args()
     dict(expect=cmd_expect, smoke=cmd_smoke, weights=cmd_weights, gate=cmd_gate, leadrows=cmd_leadrows, lead281=cmd_lead281,
-         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37, lcrows=cmd_lcrows, lcverdict=cmd_lcverdict, lcpcs=cmd_lcpcs)[a.cmd](a)
+         split281=cmd_split281, gonow=cmd_gonow, l37=cmd_l37, lcrows=cmd_lcrows, lcverdict=cmd_lcverdict, lcpcs=cmd_lcpcs,
+         newbreaks=cmd_newbreaks, pcsrow=cmd_pcsrow)[a.cmd](a)
 
 
 if __name__ == "__main__":
