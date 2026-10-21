@@ -394,7 +394,7 @@ def cmd_t1(a):
                           h_clip_share_mean=float(np.mean([r["h_clip_share"] for r in ri])) if ri else None,
                           h_clip_left_mean=float(np.mean([r.get("h_clip_left", 0) for r in ri])) if ri else None,
                           h_clip_right_mean=float(np.mean([r.get("h_clip_right", 0) for r in ri])) if ri else None,
-                          h_offset_med=float(np.median([r["h_offset_med"] for r in ri])) if ri else None))
+                          h_offset_med=float(np.nanmedian([r["h_offset_med"] for r in ri])) if ri else None))
     dump(RES / "t1.json", rec)
     import pandas as pd
     pd.DataFrame(st).to_csv(RES / "t1_states.csv.gz", index=False)
