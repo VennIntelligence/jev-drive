@@ -1,0 +1,26 @@
+{
+ "base": "R5LC",
+ "pool": "on1_JTPHD2",
+ "k_on": 64,
+ "k_dag": 0,
+ "k_all": 64,
+ "dag_rows": 277652,
+ "dag_rows_per_batch_by_part": {
+  "on1_PAIDL": 0.0,
+  "on1_PAID2A": 0.0,
+  "on1_PAID2B": 0.0
+ },
+ "group_share": {
+  "S": 0.49999999999936234,
+  "ph": 0.25000000000047345,
+  "ph05": 0.12500000000022465,
+  "ph15": 0.12499999999999016
+ },
+ "by_cls": {
+  "stop_nolead": 57956,
+  "turn_sharp": 64583,
+  "launch": 18478,
+  "other": 136635
+ },
+ "out": "R6D20"
+}

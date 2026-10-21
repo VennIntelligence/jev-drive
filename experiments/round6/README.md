@@ -2,7 +2,7 @@
 
 status: live
 decisions: 437
-index: A DAgger: PAI 281 0.775 / 0.815 vs NTV0 0.743; ruler -213 / -155, not adopted
+index: A DAgger: PAI 281 0.775 / 0.815, iter 2 0.789 / 0.794 vs NTV0 0.743; not adopted
 
 **Question.** The PAI-human-row recipe (MV-LC, d430) fixes route-turn zeros but adds 9-12 offroad zeros on PAI 281 over NTV0, mostly on scenes NTV0
 solves: can rows on the student's own drifted states, labelled with a way back, remove them without losing the turn fixes?
@@ -38,6 +38,22 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
     - **Not an adopt-candidate.** s0 fails the offroad + zero-other cap (25 > 21). The ruler fails for s0 (CI upper -57); s1 passes it (+36).
     - Not "clearly better than MV-LC" on both seeds: s0's ruler gain over MV-LC is +51 against the +100 line.
     - Seed spread is large: s1 - s0 is +0.040, with 8 fewer offroad zeros.
+  - **Iteration 2** (plan amendments 4 / 4b; code [scripts/dag2.sh](scripts/dag2.sh); results [results/dagger2/](results/dagger2/)):
+    - Students R6DAG s0 / s1 rolled again under the same serve (pools on1_PAID2A, 710 scenes; on1_PAID2B, 718 scenes).
+    - Teacher b4c = b3 lateral; the label's arc lengths become min(student, human from the matched station) only on curve entry (route curvature
+      > 0.02 1/m) or over-speed (> 3 m/s over the human). This slows 16 % of rows; 4 s arc cut p50 6 m.
+    - Union pool on1_JTPHD2 = iteration-1 states relabelled (on1_PAIDL) + PAID2A + PAID2B: 277 652 drawable rows, about 2.6 / 2.7 / 2.7 a batch (8 total).
+    - Arm DAG2 = R5LC's argv + the union, from NTV0. Gates: T3 bit-identical; T2 in-canvas 66 / 69; T4 fallback 1.3-1.6 % of rows.
+    - **Read** ([results/dagger2/pai281_DAG2_ag.md](results/dagger2/pai281_DAG2_ag.md)):
+
+      | read | mean | zeros | offroad | zero-other | rear-hit | launched / 37 | ruler PCS vs NTV0 |
+      |:--|--:|--:|--:|--:|--:|--:|--:|
+      | DAG2 s0 / s1 | 0.789 / 0.794 | 50 / 50 | 18 / 18 | 5 / 7 | 21 / 17 | 34 / 34 | -187 [-277, -83] / -224 [-326, -105] |
+
+    - vs NTV0 +0.045 [+0.005, +0.088] / +0.051 [+0.007, +0.095]; vs same-seed R6DAG +0.014 / -0.021 [-0.049, +0.007].
+    - Offroad + zero-other 23 / 25 (cap 21). 4 / 3 of the 9 stable offroad scenes solved (R6DAG 4 / 6).
+    - **Not an adopt-candidate** (both rules fail on both seeds). The second iteration narrows the seed spread (s1 - s0 +0.005, against +0.040)
+      but does not move the mean of the pair (0.792 against R6DAG's 0.795), and the ruler stays well below NTV0.
 - Line B, REC: perturbation-recovery rows, ChauffeurNet style ([plans/2026-10-21-recovery-rows.md](plans/2026-10-21-recovery-rows.md); code
   [scripts/rec.sh](scripts/rec.sh) / [scripts/rec.py](scripts/rec.py), [lib/rec_driver.py](lib/rec_driver.py), [lib/rec_geom.py](lib/rec_geom.py); results
   [results/rec/](results/rec/)). The on1_PAIH rollouts again (NTV0 in the loop, the log driver), but the reference handed to the MPC is the log plus a
@@ -80,7 +96,7 @@ Results: [results/route_mem_curv.md](results/route_mem_curv.md) + `route_mem_cur
 - `dag.sh` (scripts): the student R5LC-L18-s0 rolled under …
 - `dag.py` (scripts): DAgger rows for the LATERAL part of the …
 
-[results/](results/) 60 result files · [plans/](plans/) 4 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 8 entry points
+[results/](results/) 97 result files · [plans/](plans/) 4 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 9 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `results/` small result files, `plans/` live plan notes.
