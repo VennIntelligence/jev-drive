@@ -79,6 +79,12 @@ SRC = {
     "R3MV-s1+AG": ("round5/r5/pai281/R3MV-L18-s1-ag", "other"),
     # round 5 R5A (S3 outcome rows) s0, own 281 lane (round5/scripts/r5_281.sh TGT=R5A), out of pool
     "R5A-s0+AG": ("round5/r5_281_R5A/pai281/R5A-L18-s0-ag", "other"),
+    # round 6 line B (REC, perturbation-recovery rows; round6/scripts/rec.sh) s0 / s1, out of pool
+    "R6REC-s0+AG": ("round6/rec/pai281/R6REC-L18-s0-ag", "other"),
+    "R6REC-s1+AG": ("round6/rec/pai281/R6REC-L18-s1-ag", "other"),
+    # round 6 line A, DAGGER-MAP (round6/scripts/dag.sh): R6DAG s0 / s1, out of pool
+    "DAG-s0+AG": ("round6/dag/pai281/R6DAG-L18-s0-ag", "other"),
+    "DAG-s1+AG": ("round6/dag/pai281/R6DAG-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
