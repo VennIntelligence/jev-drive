@@ -27,6 +27,12 @@ solves: can rows on the student's own drifted states, labelled with a way back, 
     footprint off the road_pai raster, actor overlap.
   - Gates: G1 zero offset = on1_PAIH bit for bit, G2 label inside the raster / lateral acceleration, G3 R1 + NTV0 plans not degenerate, G4 weight-0 identity.
   - Arm R6REC = MV-LC's argv + 8 recovery rows a batch (on1_JTPHREC), seeds 0 / 1; exam PAI 281 ACC + GAP + the local PCS ruler.
+- Line C, FIX: one joint data-filter arm from the OFFROAD-MV anatomy (d431; plan [plans/2026-10-21-fix-rows.md](plans/2026-10-21-fix-rows.md); code
+  [scripts/fix.sh](scripts/fix.sh) / [scripts/fix.py](scripts/fix.py); results [results/fix/](results/fix/)). Arm R6FIX = MV-LC's recorded argv with
+  one more draw-file change: R5LC with two row sets at weight 0, each PAI part renormalised to its R5LC share (still 32 PAI human rows a batch).
+  - F1: ph15 stretch rows whose label peak lateral acceleration is above 3 m/s^2 or whose fed speed is above 30 m/s.
+  - F2: PAI human rows that slow down with no lead and do not stop.
+  - Seeds 0 / 1 from NTV0-L18-s0, 9 500 steps; controls = stored R5LC s0 / s1; exam PAI 281 ACC + GAP + the local PCS ruler + the 9 stable offroad scenes.
 
 **Read more.** [plans/](plans/) (Chinese working notes).
 

@@ -85,6 +85,9 @@ SRC = {
     # round 6 line A, DAGGER-MAP (round6/scripts/dag.sh): R6DAG s0 / s1, out of pool
     "DAG-s0+AG": ("round6/dag/pai281/R6DAG-L18-s0-ag", "other"),
     "DAG-s1+AG": ("round6/dag/pai281/R6DAG-L18-s1-ag", "other"),
+    # round 6 line C, FIX (round6/scripts/fix.sh): R6FIX s0 / s1 (MV-LC without the F1 / F2 rows), out of pool
+    "R6FIX-s0+AG": ("round6/fix/pai281/R6FIX-L18-s0-ag", "other"),
+    "R6FIX-s1+AG": ("round6/fix/pai281/R6FIX-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
