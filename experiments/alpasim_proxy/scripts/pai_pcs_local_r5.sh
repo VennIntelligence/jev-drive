@@ -9,7 +9,7 @@ export DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}
 T=$DATA_DIR/tmp/pcs_r5; PY=.venv/bin/python; X=experiments/alpasim_proxy/scripts/pai_pcs_local.py; PRIO=${PRIO:-15}
 ENVV="OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONPATH=$T/site"
 SUBJ="R2C-s0+AG=R2C-L18-s0-281ag.csv,R2J-s0+AG=R2J-L18-s0-281ag.csv,R3MV-s0+AG=R3MV-L18-s0-281ag.csv"
-sub() { local name=$1; shift; $PY -m jevdrive.cl submit --owner pcs-r5 --name "$name" --tries 1 --priority $PRIO --cpu 4 --ram 16 --vram 0 \
+sub() { local name=$1; shift; $PY -m jevdrive.cl submit --owner pcs-r5 --name "$name" --tries 1 --priority $PRIO --cpu 4 --ram 16 --vram 0.1 --cwd "$PWD" \
   --no-check --log-dir $T/pool/$name "$@" < /dev/null | awk '{print $NF}'; }
 case ${1:-} in
 submit)
