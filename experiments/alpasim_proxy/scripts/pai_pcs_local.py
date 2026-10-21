@@ -384,6 +384,11 @@ def cmd_r5(a):
     lo = aa[aa >= 3].index
     P(f"\n{len(lo)} items have a >= 3. Scored 0 on them: " + ", ".join(f"{k} {int((sc.loc[k, lo] <= 1e-4).sum())}" for k in (ref, *subs)) +
       "; mean score on them: " + ", ".join(f"{k} {sc.loc[k, lo].mean():.3f}" for k in (ref, *subs)) + ".")
+    P("\nZeros on the a >= 3 items (all 13 pool band reads score 1 on nearly all of them), by cause, and whether the garage 0014 scores 1 there:\n")
+    P("| read | scene | a | fclass | garage | go-straight |"); P("|---|---|--:|---|--:|--:|")
+    for k in subs:
+        for sname in [x for x in lo if sc.loc[k, x] <= 1e-4]:
+            P(f"| {k} | {sname[-8:]} | {aa[sname]:.2f} | {facts[k].fclass.get(sname, '?')} | {sc.loc['garage', sname]:.2f} | {sc.loc['go-straight', sname]:.2f} |")
     # R3MV minus NTV0 class counts are in round5/results/pai281_R3MV_ag.md
     (out / "r5_report.md").write_text("\n".join(L) + "\n")
     (out / "pai_pcs_local_r5.json").write_text(json.dumps(J, indent=1, default=float))
