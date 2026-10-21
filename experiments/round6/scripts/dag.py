@@ -78,6 +78,9 @@ T_J = 0.5 * np.arange(1, 9)                     # label times (s)
 A_LAT = 4.0                                     # T4 line (m/s^2, 99 %)
 TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
+H_SIG, H_CLIP = 10.0, 0.5                       # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station,
+                                                # |offset| > 0.5 m -> 0 (lane change / transient: plain lane centre), the mask smoothed the same way
+TEACHER_V = "b1"                                # teacher version stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -251,8 +254,34 @@ def route_ref(ds):
             Wb[j] = (1 - w) * frm + w * to
     xy = np.concatenate([Wb, R1[len(R0):, :2]])
     s_rec = float(np.sum(np.hypot(*np.diff(Wb, axis=0).T)))
-    return Ref(xy, s_rec), dict(n_traj=len(P), n_route=len(R0), n_ext=len(R1) - len(R0), lanes=len(set(best)), switches=len(sw), steps=steps,
-                                gen_vs_lanes_max=dmax)
+    ref = Ref(xy, s_rec)
+    refh, hinfo = human_ref(ref, P, yaw)
+    return (ref, refh), dict(n_traj=len(P), n_route=len(R0), n_ext=len(R1) - len(R0), lanes=len(set(best)), switches=len(sw), steps=steps,
+                             gen_vs_lanes_max=dmax, **hinfo)
+
+
+def human_ref(ref, P, yaw):
+    """Amendment 1 (b): the lane-centre reference shifted by the human's own lateral offset from it at the matched station: the log poses projected
+    onto ref, offset interpolated on the station grid inside the recorded span (0 outside), Gaussian H_SIG; where |offset| > H_CLIP the offset is 0
+    (lane change / transient -> plain lane centre) and that mask is smoothed the same way. -> (Ref, info with the clip share)."""
+    from scipy.ndimage import gaussian_filter1d
+    if yaw is None:
+        yaw = np.unwrap(np.arctan2(np.gradient(P[:, 1]), np.gradient(P[:, 0])))
+    pr = [ref.project(np.r_[P[i, :2], yaw[i]]) for i in range(len(P))]
+    sd = np.array([(p[0], p[1]) for p in pr if p is not None])
+    o = np.argsort(sd[:, 0])
+    s_, d_ = sd[o, 0], sd[o, 1]
+    inside = (ref.s >= s_[0]) & (ref.s <= s_[-1])
+    b = np.where(inside, np.interp(ref.s, s_, d_), 0.0)
+    sg = H_SIG / DS
+    b = gaussian_filter1d(b, sg, mode="nearest")
+    keep = (np.abs(b) <= H_CLIP) & inside
+    b = gaussian_filter1d(np.where(keep, b, 0.0), sg, mode="nearest")
+    X, Y = ref.x - b * np.sin(ref.th), ref.y + b * np.cos(ref.th)
+    rh = Ref(np.c_[X, Y], ref.s_rec)
+    rh.b = b
+    return rh, dict(h_offset_med=float(np.median(d_)), h_clip_share=float(1 - keep[inside].mean()) if inside.any() else 0.0,
+                    h_offset_abs_med_used=float(np.median(np.abs(b[inside]))) if inside.any() else 0.0)
 
 
 def scene_cfgs(patterns):
@@ -291,7 +320,7 @@ def cmd_lists(a):
 def _t1_one(job):
     scene, cfg = job
     ds = load_ds(scene, cfg)
-    ref, rinfo = route_ref(ds)
+    (ref, refh), rinfo = route_ref(ds)
     P, yaw, ts = traj_of(ds)
     t = ts * 1e-6
     out = []
@@ -318,6 +347,11 @@ def _t1_one(job):
             _, pts, ph = place(path, a_h, pose)
             e = ((H - pts) * np.c_[-np.sin(ph), np.cos(ph)]).sum(1)
             rec |= dict(e2=round(float(e[3]), 3), e4=round(float(e[7]), 3), past_rec=info["past_rec"])
+        path, info = teacher_path(refh, pose, v, a_h[-1])                       # amendment 1 (b): the teacher used for the rows (construction check)
+        if path is not None:
+            _, pts, ph = place(path, a_h, pose)
+            e = ((H - pts) * np.c_[-np.sin(ph), np.cos(ph)]).sum(1)
+            rec |= dict(e2h=round(float(e[3]), 3), e4h=round(float(e[7]), 3))
         out.append(rec)
     return dict(states=out, route=rinfo)
 
@@ -338,8 +372,11 @@ def cmd_t1(a):
         n_all = sum(1 for x in st if c == "all" or x["cls"] == c or (c == "all but lane-change" and x["cls"] != "lane-change"))
         if m:
             e2, e4 = np.abs([x["e2"] for x in m]), np.abs([x["e4"] for x in m])
+            mh = [x for x in m if "e2h" in x]
             tab[c] = dict(states=n_all, labelled=len(m), e2_med=float(np.median(e2)), e4_med=float(np.median(e4)), e2_p90=float(np.percentile(e2, 90)),
-                          e4_p90=float(np.percentile(e4, 90)), d0_med=float(np.median(np.abs([x["d0"] for x in m]))))
+                          e4_p90=float(np.percentile(e4, 90)), d0_med=float(np.median(np.abs([x["d0"] for x in m]))),
+                          e2h_med=float(np.median(np.abs([x["e2h"] for x in mh]))) if mh else None,
+                          e4h_med=float(np.median(np.abs([x["e4h"] for x in mh]))) if mh else None)
     why = Counter(x["why"] or "ok" for x in st)
     passed = dict(all=bool(tab["all"]["e2_med"] <= 0.3 and tab["all"]["e4_med"] <= 0.5),
                   turn_inspect=bool(tab.get("turn", {}).get("e2_med", 0) > 0.6 or tab.get("turn", {}).get("e4_med", 0) > 1.0))
@@ -347,7 +384,10 @@ def cmd_t1(a):
                route=dict(switch_scenes=sum(r["switches"] > 0 for r in ri), switches=sum(r["switches"] for r in ri),
                           steps_med=float(np.median([s for r in ri for s in r["steps"]])) if any(r["steps"] for r in ri) else None,
                           gen_vs_lanes_max=float(max(r["gen_vs_lanes_max"] for r in ri)) if ri else None,
-                          ext_points_med=float(np.median([r["n_ext"] for r in ri])) if ri else None))
+                          ext_points_med=float(np.median([r["n_ext"] for r in ri])) if ri else None,
+                          h_clip_share_med=float(np.median([r["h_clip_share"] for r in ri])) if ri else None,
+                          h_clip_share_mean=float(np.mean([r["h_clip_share"] for r in ri])) if ri else None,
+                          h_offset_med=float(np.median([r["h_offset_med"] for r in ri])) if ri else None))
     dump(RES / "t1.json", rec)
     import pandas as pd
     pd.DataFrame(st).to_csv(RES / "t1_states.csv.gz", index=False)
@@ -357,11 +397,20 @@ def cmd_t1(a):
          "Error = the human's future point minus the teacher point at the same time, along the teacher path's left normal.", "",
          "Classes: turn = the human turns >= 30 deg in 4 s; lane-change = D1's shape (v > 5 m/s, |y4| > 2.5 m, |yaw4| < 12 deg in the human's "
          "frame; the teacher keeps the route lane, so these are expected to differ); other = the rest.", "",
-         "| states | n | labelled | median abs lat at 2 s (m) | at 4 s | p90 at 2 s | p90 at 4 s | median abs d0 |", "|:--|--:|--:|--:|--:|--:|--:|--:|"]
+         "Two teachers: the registered lane-centre teacher (the teacher-geometry check), and amendment 1 (b), lane centre + the human's own "
+         f"lateral offset (sigma {H_SIG:.0f} m, |offset| > {H_CLIP} m -> lane centre), the teacher the rows use. On human states (b) is close to the "
+         "human by construction: its column is a construction check, not a pass.", "",
+         "| states | n | labelled | lane centre: median abs lat at 2 s (m) | at 4 s | p90 at 2 s | p90 at 4 s | median abs d0 | (b): at 2 s | at 4 s |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    f3 = lambda x: "-" if x is None else f"{x:.3f}"  # noqa: E731
     for c, v in tab.items():
-        L.append(f"| {c} | {v['states']} | {v['labelled']} | {v['e2_med']:.3f} | {v['e4_med']:.3f} | {v['e2_p90']:.2f} | {v['e4_p90']:.2f} | {v['d0_med']:.3f} |")
-    L += ["", f"Line (plan): all states median <= 0.30 m at 2 s and <= 0.50 m at 4 s -> **{'PASS' if passed['all'] else 'FAIL'}**. "
+        L.append(f"| {c} | {v['states']} | {v['labelled']} | {v['e2_med']:.3f} | {v['e4_med']:.3f} | {v['e2_p90']:.2f} | {v['e4_p90']:.2f} | {v['d0_med']:.3f} | "
+                 f"{f3(v['e2h_med'])} | {f3(v['e4h_med'])} |")
+    L += ["", f"Line (plan, lane-centre teacher): all states median <= 0.30 m at 2 s and <= 0.50 m at 4 s -> **{'PASS' if passed['all'] else 'FAIL'}** "
+          "(the miss is the human's offset from the NuRec lane centre, signed median left; amendment 1). "
           f"Turns over 2x the line (inspect before rows): {passed['turn_inspect']}.", "",
+          f"Amendment 1 (b): per-scene human offset median {rec['route']['h_offset_med']}; share of the recorded route stations clipped to the plain "
+          f"lane centre (|offset| > {H_CLIP} m): median {rec['route']['h_clip_share_med']}, mean {rec['route']['h_clip_share_mean']}.", "",
           f"No label: {dict(why)}. Route: lateral lane switches in {rec['route']['switch_scenes']} scenes ({rec['route']['switches']}; step median "
           f"{rec['route']['steps_med']} m); the generator's points vs the replayed lane projections max {rec['route']['gen_vs_lanes_max']} m. "
           f"Failed scenes: {len(fail)}."]
@@ -380,7 +429,7 @@ def _t2_one(job):
     import road_pai as RP
     scene, cfg, evs = job
     ds = load_ds(scene, cfg)
-    ref, _ = route_ref(ds)
+    (_, ref), _ = route_ref(ds)
     g = RP.scene_geom(scene, cfg, np.array([e["pose"][:2] for e in evs]))
     out = []
     for e in evs:
@@ -467,7 +516,12 @@ def cmd_t2(a):
                         teacher_m_med=float(pd.to_numeric(t_.m_teacher).median()) if len(t_) else None, served_m_med=float(b.m_served.median()) if len(b) else None)
     share = len(tin) and float(inside.mean())
     passed = bool(len(tin) >= 0.8 * len(base) and share >= 0.9)
-    rec = dict(events=len(E), lead_s=T2_LEAD, results=res_, line="teacher label footprint min SDF >= 0 on >= 90 % of the events whose t0 footprint is inside "
+    tc = tin[tin.label_in_canvas]                                              # amendment 1 (c): label poses all inside the raster canvas
+    canvas = dict(events=len(tc), teacher_inside=int((pd.to_numeric(tc.m_teacher) >= 0).sum()), served_inside=int((tc.m_served >= 0).sum()),
+                  beyond=len(tin) - len(tc))
+    canvas["share"] = canvas["teacher_inside"] / max(len(tc), 1)
+    canvas["passed"] = bool(canvas["share"] >= 0.9)
+    rec = dict(events=len(E), lead_s=T2_LEAD, results=res_, in_canvas=canvas, line="teacher label footprint min SDF >= 0 on >= 90 % of the events whose t0 footprint is inside "
                "(and >= 80 % of those labelled)", passed=passed)
     dump(RES / "t2.json", rec)
     L = ["# T2: the map teacher on the MV-family PAI 281 offroad zeros (generated by dag.py t2)", "",
@@ -481,7 +535,10 @@ def cmd_t2(a):
         sh = "-" if v["teacher_inside_share"] is None else f"{v['teacher_inside_share']:.0%}"
         L.append(f"| {nm} | {v['events']} | {v['t0_inside']} | {v['labelled']} | {v['teacher_inside']} | {sh} | "
                  f"{v['served_inside']} | {v['model_inside']} | {v['teacher_m_med']} / {v['served_m_med']} | {v['no_label']} |")
-    L += ["", f"Line (plan): {rec['line']} -> **{'PASS' if passed else 'FAIL'}**. Per event: t2.csv."]
+    L += ["", f"Line (plan): {rec['line']} -> **{'PASS' if passed else 'FAIL'}** (raw). Amendment 1 (c), the registered measurement fix: events "
+          f"whose label poses all lie inside the raster canvas (x <= 54 m; beyond it the margin reads border padding): teacher inside "
+          f"**{canvas['teacher_inside']} / {canvas['events']}** ({canvas['share']:.0%}; served plan {canvas['served_inside']}); {canvas['beyond']} labelled events "
+          f"reach past the canvas. Teacher = amendment 1 (b). Per event: t2.csv."]
     (RES / "t2.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
@@ -493,7 +550,7 @@ def _teach_one(job):
     with np.load(rowf) as z:
         Z = {k: z[k] for k in keys}
     ds = load_ds(scene, cfg)
-    ref, rinfo = route_ref(ds)
+    (_, ref), rinfo = route_ref(ds)
     n = len(Z["k"])
     fut, ok = np.full((n, 8, 3), np.nan, np.float32), np.zeros(n, bool)
     why = np.full(n, "", "U8")
@@ -514,7 +571,8 @@ def _teach_one(job):
         ok[i] = np.isfinite(fut[i]).all()
     tmp = Path(out) / f"{scene}.tmp.npz"
     np.savez(tmp, k=Z["k"], fut=fut, ok=ok, why=why, d0=d0, psi0=psi0, L=L, alat=alat, alat_ref=aref, past_rec=past_rec, past_ref=past_ref,
-             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo))
+             v0=Z["v0"], served=Z["poses"], anchor=Z["anchor"], pre=~Z["after_event"] & ~Z["after_end"], route=json.dumps(rinfo),
+             version=TEACHER_V)
     os.replace(tmp, Path(out) / f"{scene}.npz")
     return dict(scene=scene, n=n, ok=int(ok.sum()), switches=rinfo["switches"])
 
@@ -528,7 +586,13 @@ def cmd_teach(a):
     files = sorted(Path(a.rows).glob("clipgt-*.npz"))
     jobs = [(f.stem, cfg[f.stem], str(f), str(out)) for f in files if (want is None or f.stem in want) and f.stem in cfg]
     miss = [f.stem for f in files if (want is None or f.stem in want) and f.stem not in cfg]
-    res = par.pmap(_teach_one, jobs, workers=a.workers or None, desc="teach scenes")
+    def fresh(j):                                                              # --stale-only: skip scenes already taught by this teacher version
+        f = out / f"{j[0]}.npz"
+        if not (a.stale_only and f.exists()):
+            return False
+        with np.load(f) as z:
+            return "version" in z.files and str(z["version"]) == TEACHER_V
+    res = par.pmap(_teach_one, jobs, workers=a.workers or None, desc="teach scenes", skip=fresh)
     res.raise_if_failed()
     v = [x for x in res.values if x]
     print(json.dumps(dict(scenes=len(v), rows=sum(x["n"] for x in v), ok=sum(x["ok"] for x in v), no_cfg=miss)))
@@ -602,6 +666,7 @@ def cmd_label(a):
     for s in np.unique(sc):
         j = np.flatnonzero(sc == s)
         with np.load(O / "teach" / f"{s}.npz") as z:
+            assert "version" in z.files and str(z["version"]) == TEACHER_V, f"{s}: teacher file is not version {TEACHER_V}"
             pos = {int(k): i for i, k in enumerate(z["k"])}
             i = np.array([pos[int(k)] for k in kk[j]])
             for key in ("ok", "why", "d0", "psi0", "alat", "alat_ref", "past_rec"):
@@ -905,7 +970,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
     for name, args in dict(lists=["root"], t1=["cfg_glob", "limit:int", "workers:int"], t2=["workers:int"],
-                           teach=["rows", "cfg_glob", "out", "chunk_list?", "workers:int"], chk1=["root"], label=["root", "pool"],
+                           teach=["rows", "cfg_glob", "out", "chunk_list?", "workers:int", "stale_only:int"], chk1=["root"], label=["root", "pool"],
                            r1in=["root", "pool", "fwd", "tag", "control"], mfix=["root", "pool", "ref"],
                            weights=["pool", "base", "k_on:int", "k_dag:int", "out", "src?"], smoke=["tag", "wfile", "k_dag:int"],
                            verdict=["json", "md", "read+"], pcs=["pcs", "json", "md"], report=["root"]).items():

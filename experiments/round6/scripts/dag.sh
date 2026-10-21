@@ -132,7 +132,8 @@ pool)
   [[ ! -e $CR/on1_$NP ]] || die "on1_$NP exists: never overwritten"
   $TR $RF/rf_pai_pool.py --name $NP --rows $O/rows/$NP --cache $O/cache/$NP --runs "$O/roll/runs/*" --split experiments/round5/results/s3_scenes.tsv \
       --fut poses --prefix paid --src dagger ;;
-label) $V $PY label --root $O --pool on1_$NP ;;
+reteach) "${EA[@]}" $AP $PY teach --rows $O/rows/$NP --cfg-glob "$RCFG" --out $O/teach --workers ${2:-16} --stale-only 1 ;;   # amendment 1: files of an older teacher
+label) bash $ME reteach 4 || die "reteach"; $V $PY label --root $O --pool on1_$NP ;;
 fwd)  $TR $RF/rf_recov.py fwd --pool $NP --rows train-rec --tags $T,$WRONG --out $O/fwd ;;
 r1in) $V $PY r1in --root $O --pool on1_$NP --fwd $O/fwd/$NP-train-rec --tag $T --control $WRONG ;;
 merge)
