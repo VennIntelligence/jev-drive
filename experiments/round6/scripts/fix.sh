@@ -92,7 +92,7 @@ launch)  # smoke + identity passed -> the two trainings in parallel, each one's 
     y=($(read281 R6FIX-L18-s$s $t)) || exit 1; x+=(${y[-1]})
     echo "$(date '+%F %T') launch s$s (code $h): train $t PAI 281 ag chunks ${y[*]:0:${#y[@]}-1} facts ${y[-1]}" | tee -a $O/stages.txt; done
   r=$(sub fix-r281 --after $(csv ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME r281) || exit 1
-  P0=$DATA_DIR/tmp/pcs_r5; PB=$DATA_DIR/tmp/pcs_r5l; PT=$DATA_DIR/tmp/pcs_fix; [[ ! -e $PT ]] || die "$PT exists"
+  P0=$DATA_DIR/tmp/pcs_r5; PB=$DATA_DIR/tmp/pcs_r5l; PT=$DATA_DIR/tmp/pcs_fix; [[ ! -e $PT ]] || die "$PT exists"   # r5 report: R3MV-s0+AG must be a subject (hardcoded columns)
   mkdir -p $PT/out/fits && cp $P0/out/fits/*.npz $PT/out/fits/
   X=experiments/alpasim_proxy/scripts/pai_pcs_local.py; EV=(env OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONPATH=$P0/site)
   c=$(PRIO=15 sub fix-pcs-collect --after $(csv ${x[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- "${EV[@]}" $V $X collect --out $PT/rows.csv.gz \
@@ -121,7 +121,7 @@ d = max(abs(float(x[k]) - float(y[k])) for x, y in zip(a, b) for k in x if x[k] 
 print("old draws repeat:", len(a), "draws,", len(a[0]), "subjects, max |diff|", d, "PCS")
 assert len(a) == len(b) == 100 and d < 0.5, "boot mismatch"
 PY
-  sj="R2C-s0+AG=R2C-L18-s0-281ag.csv,R5LC-s0+AG=R5LC-L18-s0-281ag.csv,R5LC-s1+AG=R5LC-L18-s1-281ag.csv,R6FIX-s0+AG=R6FIX-L18-s0-281ag.csv,R6FIX-s1+AG=R6FIX-L18-s1-281ag.csv"
+  sj="R2C-s0+AG=R2C-L18-s0-281ag.csv,R3MV-s0+AG=R3MV-L18-s0-281ag.csv,R5LC-s0+AG=R5LC-L18-s0-281ag.csv,R5LC-s1+AG=R5LC-L18-s1-281ag.csv,R6FIX-s0+AG=R6FIX-L18-s0-281ag.csv,R6FIX-s1+AG=R6FIX-L18-s1-281ag.csv"
   $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ --subjects "$sj" --pairs R6FIX-s0+AG:R5LC-s0+AG,R6FIX-s1+AG:R5LC-s1+AG,R6FIX-s1+AG:R6FIX-s0+AG \
       > $PT/out/r5.log 2>&1 || die "ruler report (log $PT/out/r5.log)"
   cp $PT/out/r5_report.md $RES/pcs_fix.md && cp $PT/out/pai_pcs_local_r5.json $RES/pcs_fix.json || die "copy ruler report"
