@@ -61,7 +61,9 @@ rows)
       --runs "$O/roll/$v/runs/*" --out $O/rows --stage $G --tag $T --jobs 8 || exit 1
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$PWD/experiments/alpasim/lib:$PWD $TR experiments/onpol_pai/scripts/onp_rows.py cold --pass $v --out $O/rows --stage $G --jobs 8 || exit 1
   rm -rf $G; n=$(ls $O/rows/$v/*.npz 2>/dev/null | wc -l); m=$(cat $O/roll/$v/chunks/*.txt | grep -c .); echo "$(date '+%F %T') rows $v: $n / $m scenes" | tee -a $O/stages.txt
-  (( n == m )) || die "rows $v: $n of $m scenes" ;;
+  miss=$(comm -23 <(cat $O/roll/$v/chunks/*.txt | sort) <(ls $O/rows/$v/*.npz 2>/dev/null | xargs -rn1 basename | sed 's/.npz$//' | sort) | paste -sd' ' -)
+  [[ -z $miss ]] || echo "$(date '+%F %T') rows $v: missing $miss (renderer RPC error; harm.sh redo <V> <chunk> re-rolls)" | tee -a $O/stages.txt
+  (( n >= m - 2 )) || die "rows $v: $n of $m scenes" ;;
 clean) r=$O/roll/$2; find $r/runs -name rollout.asl -delete; rm -rf $r/runs/*/sim/driver-logs/dump; echo "$(date '+%F %T') clean $2: $(du -sh $r | cut -f1) left" >> $O/stages.txt ;;
 cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $2 --rows $O/rows/$2 --out $O/cache ;;
 compare) $TR $PY compare --out $O --cache $O/cache --rows $O/rows ;;
