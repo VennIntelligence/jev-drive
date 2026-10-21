@@ -1,0 +1,55 @@
+{
+ "HMSM": {
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-HMSM-L18-s0/20261022-012701/",
+  "p": 0.5,
+  "twin": {
+   "store": "on1_PAIHTW",
+   "p": 0.5,
+   "stream": [
+    0,
+    0,
+    223,
+    "pool-draw hash"
+   ],
+   "twin_rows": 103904,
+   "pool_rows_with_twin": 103904,
+   "twin_rows_unmatched": 0,
+   "draw_mass_with_twin": 0.15471694913306533,
+   "twin_rows_per_batch": 11.139620337580704,
+   "drawn_with_twin": 688,
+   "swapped": 361,
+   "swap_share": 0.5247093023255814
+  },
+  "expected_drawn": 668.3772202548422,
+  "steps": 60,
+  "loss_last": null,
+  "pass_": true
+ },
+ "HMSM1": {
+  "run": "/root/autodl-tmp/ujs/runs/route_mem/train-HMSM1-L18-s0/20261022-012701/",
+  "p": 1.0,
+  "twin": {
+   "store": "on1_PAIHTW",
+   "p": 1.0,
+   "stream": [
+    0,
+    0,
+    223,
+    "pool-draw hash"
+   ],
+   "twin_rows": 103904,
+   "pool_rows_with_twin": 103904,
+   "twin_rows_unmatched": 0,
+   "draw_mass_with_twin": 0.15471694913306533,
+   "twin_rows_per_batch": 11.139620337580704,
+   "drawn_with_twin": 688,
+   "swapped": 688,
+   "swap_share": 1.0
+  },
+  "expected_drawn": 668.3772202548422,
+  "steps": 60,
+  "loss_last": null,
+  "pass_": true
+ },
+ "pass_": true
+}
