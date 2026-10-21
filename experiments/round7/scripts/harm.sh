@@ -7,7 +7,8 @@
 #   harm.sh smoke               submit c000 (one scene) for the three variants
 #   harm.sh smoketail           rows -> cache per variant on c000, then compare on its states (the whole tail once, before chain)
 #   harm.sh chain               submit the other chunks, then rows -> clean, cache per variant, compare -> png (DONE)
-#   harm.sh wait                blocks until $O/DONE or a failed job of this lane (one run_in_background waiter)
+#   harm.sh redo <V> <chunk> [ids]  re-roll a chunk that lost a scene, then that variant's tail and compare -> png after [ids]
+#   harm.sh wait [ids]          blocks until $O/DONE or a failed job of this lane (or of the given ids) (one run_in_background waiter)
 #   job bodies: rows <V> | clean <V> | cache <V> | compare | png
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round7/harm; ME=experiments/round7/scripts/harm.sh; PY=experiments/round7/scripts/harm.py
@@ -44,6 +45,16 @@ chain)
   m=$(sub harm-compare --after $(IFS=,; echo "${cc[*]}") --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
   p=$(sub harm-png --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
   echo "$(date '+%F %T') chain (code $(git rev-parse --short HEAD)): caches ${cc[*]} compare $m png $p" | tee -a $O/stages.txt ;;
+redo)  # redo <V> <chunk> [compare after ids]: a chunk whose roll lost a scene (renderer RPC error): its marks moved to *.prev, re-rolled with the
+       # same list, then that variant's rows -> clean, cache, and compare -> png after the cache and the given ids (the other variants' caches)
+  v=$2 c=$3 r=$O/roll/$2/runs/ntv0-l18-s0_$3; for f in DONE SUBMITTED ERROR; do [[ -f $r/$f ]] && mv $r/$f $r/$f.prev.$(date +%m%d%H%M%S); done
+  x=$(roll $v $c) || exit 1; [[ -n $x ]] || die "redo $v $c: no new job"
+  w=$(sub harm-rows-$v-redo --after $x --vram 0.5 --cpu 8 --ram 40 --timeout-h 3 -- bash $ME rows $v) || exit 1
+  sub harm-clean-$v-redo --after $w --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $ME clean $v > /dev/null || exit 1
+  k=$(sub harm-cache-$v-redo --after $w --vram 20 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME cache $v) || exit 1
+  m=$(sub harm-compare-redo --after $k${4:+,$4} --vram 12 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME compare) || exit 1
+  p=$(sub harm-png-redo --after $m --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME png) || exit 1
+  echo "$(date '+%F %T') redo $v $c: roll $x rows $w cache $k compare $m png $p" | tee -a $O/stages.txt ;;
 rows)
   v=$2; G=$DATA_DIR/tmp/harm_stage/$v; mkdir -p $G $O/rows
   env PAI_DUMP=100000 JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD $AP experiments/onpol_pai/scripts/onp_rows.py rows --pass $v \
@@ -56,10 +67,10 @@ cache) $TR experiments/onpol_pai/scripts/onp_cache.py build --pass $2 --rows $O/
 compare) $TR $PY compare --out $O --cache $O/cache --rows $O/rows ;;
 png) $TR $PY png --out $O --rows $O/rows && date '+%F %T' > $O/DONE ;;
 wait)
-  until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt $O/roll <<'PY'
+  until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt $O/roll "${@:2}" <<'PY'
 import glob, sys
 from jevdrive.cl import pool as P
-ids = [l.split()[0] for l in open(sys.argv[1]) if l.split()] + [l.split()[0] for f in glob.glob(f"{sys.argv[2]}/*/jobs.txt") for l in open(f) if l.split()]
+ids = sys.argv[3:] or [l.split()[0] for l in open(sys.argv[1]) if l.split()] + [l.split()[0] for f in glob.glob(f"{sys.argv[2]}/*/jobs.txt") for l in open(f) if l.split()]
 jobs = P.snapshot()[0]["jobs"]
 bad = [f"{i} {jobs[i]['state']}" for i in ids if jobs.get(i, {}).get("state") in ("failed", "cancelled")]
 print("failed:", *bad, sep="\n  ", file=sys.stderr) if bad else None
