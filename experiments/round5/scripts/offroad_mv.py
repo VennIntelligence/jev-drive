@@ -52,12 +52,12 @@ def stage():
     S = O / "stage"
     for sub in ("facts", "tax", "dec"):
         (S / sub).mkdir(parents=True, exist_ok=True)
-    for n in list(READS.values()) + [NTV0, "R3MV-L18-s0-vl", "R5R-L18-s0-vl", "NTV0-L18-s0-vl"]:
+    for n in list(READS.values()) + [NTV0, "R2C-L18-s0-281ag", "R2J-L18-s0-281ag", "R3MV-L18-s0-vl", "R5R-L18-s0-vl", "NTV0-L18-s0-vl"]:
         for sub, ext in (("facts", "csv"), ("tax", "pkl")):
             src, dst = DATA / f"runs/pai_fix/{sub}/{n}.{ext}", S / sub / f"{n}.{ext}"
             if src.exists() and not dst.exists():
                 dst.symlink_to(src)
-    for f in list((O / "dec").glob("dec_*.pkl")) + [DATA / "runs/round5/d1/dec_NTV0-281ag.pkl"]:
+    for f in list((O / "dec").glob("dec_*.pkl")) + [DATA / f"runs/round5/d1/dec_{x}-281ag.pkl" for x in ("NTV0", "R2C", "R2J")]:
         dst = S / "dec" / f.name
         if not dst.exists():
             dst.symlink_to(f)
@@ -112,11 +112,40 @@ def plan_geom(D, C, Lg, d, k, U=None, dims=None):
     hdg = lambda x: float(np.degrees((x + np.pi) % (2 * np.pi) - np.pi))  # noqa: E731
     r = dict(t=tk, st=s0, v0=float(d["v0"][k]), v_h=vh, lat0=lat0, lat2=lat2, lat4=lat4, hdg0=hdg(a[2] - yl0),
              hdg4=hdg(yp4 - float(np.interp(s4, Sl, Yl))), turn_plan=float(np.degrees(pm[7, 2])), turn_log=float(np.degrees(dlog)),
-             arc=arc, v_plan=arc / 4.0, ds4=s4 - s0)
+             arc=arc, v_plan=arc / 4.0, ds4=s4 - s0, v_set=float(d["v_set"][k]), v_model=float(d["v_model"][k]), won=str(d["won"][k]),
+             lead_d=float(d["lead_d"][k]), lead_vl=float(d["lead_vl"][k]))
     if U is not None:
         r["m_plan"] = foot_margin(U, W, a[2] + pm[:, 2], dims)
         r["m_ego"] = foot_margin(U, a[None, :2], np.array([a[2]]), dims)
     return r
+
+
+def pull_scan(D, o, d, step=5):
+    """decisions every 0.5 s with v0 >= 4 m/s: the model plan slows (end speed < 0.6 v0), moves right (4 s point y < -0.8 m, |yaw| < 20 deg),
+    both, while the human at the ego's log station keeps >= 0.8 of its speed over the next 4 s (no human slow-down there)."""
+    C, Lg = o["ctrl"], o["log"]
+    Pl, Yl, Tl = np.asarray(Lg["P"], float), np.asarray(Lg["Y"], float), np.asarray(Lg["T"], float)
+    Sl = D.arclen(Pl)
+    vl = np.r_[0, np.diff(Sl) / np.maximum(np.diff(Tl) * 1e-6, 1e-3)]
+    n = slow = right = both = 0
+    for k in range(0, len(d["t0"]), step):
+        tk = float(d["t0"][k])
+        if tk > C["t"][-1] or d["v0"][k] < 4:
+            continue
+        a = D.ego_at(C, tk)
+        st = D.project(Pl, Sl, Yl, a[0], a[1])[0]
+        th = float(np.interp(st, Sl, Tl))
+        vh0, vh4 = float(np.interp(th, Tl, vl)), float(np.interp(th + 4e6, Tl, vl))
+        if vh0 < 3 or vh4 < 0.8 * vh0:
+            continue
+        pm = d["pm"][k]
+        ve = float(np.hypot(*(pm[7, :2] - pm[6, :2])) / 0.5)
+        sl, rt = ve < 0.6 * d["v0"][k], (pm[7, 1] < -0.8) and abs(np.degrees(pm[7, 2])) < 20
+        n += 1
+        slow += sl
+        right += rt
+        both += sl and rt
+    return dict(n_dec=n, slow=slow, right=right, both=both)
 
 
 def cmd_events(a):
@@ -164,6 +193,16 @@ def cmd_events(a):
                 if abs(sn[j] - g["st"]) < 3.0:
                     prow.append(dict(read=k, scene=s, who="NTV0", lead=L, **plan_geom(D, on["ctrl"], on["log"], dn, j, U, o["dims"])))
     E, P = pd.DataFrame(rows), pd.DataFrame(prow)
+    # read-wide scan: model plans that slow down and pull right while the human at that station keeps its speed
+    scan = []
+    for k, n in [("NTV0", NTV0), ("R2C", "R2C-L18-s0-281ag"), ("R2J", "R2J-L18-s0-281ag")] + list(READS.items()):
+        F, A, Dc = D.facts(n), D.load_tax(n), D.load_dec(DECS.get(k, f"{k}-281ag"))
+        for s in F.index:
+            if s not in A or s not in Dc or not len(Dc[s]["t0"]):
+                continue
+            scan.append(dict(read=k, scene=s, fclass=F.fclass[s], **pull_scan(D, A[s], Dc[s])))
+    S = pd.DataFrame(scan)
+    S.to_csv(RES / "offroad_mv_pullscan.csv", index=False, float_format="%.3f")
     E.to_csv(RES / "offroad_mv_events.csv", index=False, float_format="%.3f")
     P.to_csv(RES / "offroad_mv_plan.csv", index=False, float_format="%.3f")
     print(E[["read", "scene", "cls", "v_ego", "turn_deg", "lat_ev", "ntv0"]].to_string())
