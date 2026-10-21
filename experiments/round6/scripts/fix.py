@@ -117,7 +117,7 @@ def cmd_rows(a):
                   removed_per_batch=float(K * w0[ix][drop].sum()), f1_per_batch=float(K * w0[ix][f1].sum()), f2_per_batch=float(K * w0[ix][f2].sum()),
                   r3mv_f1=int((g("f1") & (w3[ix] > 0)).sum()), r3mv_f2=int((g("f2") & (w3[ix] > 0)).sum()),
                   by_class={c: dict(drawable=int((dr & (cls_all[ix] == c)).sum()), removed=int((drop & (cls_all[ix] == c)).sum())) for c in r3.CLASSES},
-                  scenes_removed=int(len({x.split(":")[2] for x in names[ix][drop]})))
+                  scenes_removed=int(len({x.split(":")[3] for x in names[ix][drop]})), scenes_drawable=int(len({x.split(":")[3] for x in names[ix][dr]})))
         for k in ("jt_label", "jt_ahead", "turn_ahead", "curve"):
             m = g(k) & dr
             rr[k] = dict(drawable=int(m.sum()), removed=int((m & drop).sum()), removed_f1=int((m & f1).sum()), removed_f2=int((m & f2).sum()))
@@ -156,10 +156,10 @@ def rows_md(rec):
          "32 PAI human rows a batch).", "",
          "## Removed rows (drawn under R5LC)", "",
          "| part | drawable | F1 | F1a (a_lat > 3) | F1b (v0 > 30) | F2 | F1 and F2 | removed | of part (draw-weighted) | rows a batch removed | "
-         "F1 / F2 a batch | scenes | under R3MV: F1 / F2 (offroad_mv: 23 693 / 9 735) |", "|:--|" + "--:|" * 12]
+         "F1 / F2 a batch | scenes removed / drawable | under R3MV: F1 / F2 (offroad_mv: 23 693 / 9 735) |", "|:--|" + "--:|" * 12]
     for p, r in P.items():
         L.append(f"| {p} | {r['drawable']} | {r['f1']} | {r['f1a']} | {r['f1b']} | {r['f2']} | {r['both']} | {r['removed']} | {r['removed_share_draw']:.1%} | "
-                 f"{r['removed_per_batch']:.2f} | {r['f1_per_batch']:.2f} / {r['f2_per_batch']:.2f} | {r['scenes_removed']} | {r['r3mv_f1']} / {r['r3mv_f2']} |")
+                 f"{r['removed_per_batch']:.2f} | {r['f1_per_batch']:.2f} / {r['f2_per_batch']:.2f} | {r['scenes_removed']} / {r['scenes_drawable']} | {r['r3mv_f1']} / {r['r3mv_f2']} |")
     tot = {k: sum(r[k] for r in P.values()) for k in ("drawable", "f1", "f1a", "f1b", "f2", "both", "removed", "r3mv_f1", "r3mv_f2")}
     tb = {k: sum(r[k] for r in P.values()) for k in ("removed_per_batch", "f1_per_batch", "f2_per_batch")}
     L.append(f"| all PAI | {tot['drawable']} | {tot['f1']} | {tot['f1a']} | {tot['f1b']} | {tot['f2']} | {tot['both']} | {tot['removed']} | | "
