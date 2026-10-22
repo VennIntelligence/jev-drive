@@ -1,0 +1,31 @@
+{
+ "name": "recog-lmh",
+ "tokens": 12146,
+ "balanced_accuracy": {
+  "blind": 0.5348451248854308,
+  "feat": 0.689487572989934,
+  "feat+blind": 0.694108375438498,
+  "plan": 0.713005748080206
+ },
+ "regression_r2": {
+  "dyaw_deg": {
+   "blind": 0.7496947840021968,
+   "feat+blind": 0.8235996088452128,
+   "plan": 0.9544593081884719
+  },
+  "lat_4s_m": {
+   "blind": 0.8262392054854714,
+   "feat+blind": 0.8524184117758826,
+   "plan": 0.9582354391355432
+  }
+ },
+ "verdicts": {
+  "straight": "does what it sees",
+  "left turn": "does what it sees",
+  "curve": "unclear",
+  "launch": "unclear",
+  "right turn": "does what it sees",
+  "stop": "sees but does not do",
+  "lane change": "unclear"
+ }
+}

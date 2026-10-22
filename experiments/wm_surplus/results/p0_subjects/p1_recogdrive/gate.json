@@ -1,0 +1,15 @@
+{
+ "model": "ReCogDrive-2B-RL",
+ "n": 24,
+ "G1_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "passed": true
+}

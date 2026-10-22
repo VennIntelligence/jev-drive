@@ -1,0 +1,21 @@
+{
+ "model": "ReCogDrive-2B-RL",
+ "n": 24,
+ "G1_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G3_sweep_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "R_fullrank_vs_plain_max_abs_m": 3.814697265625e-06,
+ "passed": true
+}
