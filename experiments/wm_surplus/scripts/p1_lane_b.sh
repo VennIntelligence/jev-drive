@@ -21,7 +21,7 @@ ok = abs(off - 91.71) <= 0.3 and abs(d512) <= 0.1
 print(f'level (a): off {off:.2f} (91.71 +- 0.3), k512 - off {d512:+.3f} (+- 0.1) -> ' + ('pass' if ok else 'STOP'))
 sys.exit(0 if ok else 1)")
 S=(); for i in $(seq 0 $((NS - 1))); do
-  S+=($(sub sweep-s$i --after "$G" --vram 24 --cpu 12 --ram 34 -- "$PY" $ME sweep --shard "$i" "$NS"))
+  S+=($(sub sweep-s$i --after "$G" --vram 45 --cpu 12 --ram 34 -- "$PY" $ME sweep --shard "$i" "$NS"))
 done
 M=$(sub merge --after "$(join "${S[@]}")" --vram 0.1 --cpu 2 --ram 16 -- "$PY" $ME merge)
 R=$(sub readout --after "$M" --vram 0.1 --cpu 1 --ram 8 -- .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
