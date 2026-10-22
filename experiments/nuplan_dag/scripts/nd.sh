@@ -81,11 +81,12 @@ p1sum)  # the arena extract (native_gap rule) of the PAI tags + B2 + NTV0 -> pai
   T=(${2:-$P1TAGS}); X=$O/p1/ext; mkdir -p $O/p1; rd=(); for t in ${T[@]} $B2 $NTV0; do rd+=($t=$J/arena/$t@off); done
   $TR $PY quick --tags ${T[@]} --refs $B2 $NTV0 --out $RES/p1_quick.md --title "Part 1: PAI checkpoints on nuPlan" || die "quick"
   date '+%F %T' > $O/P1QUICK
-  $AP $FM ext --read ${rd[@]} --out $X --workers 32 > $O/p1/ext.log 2>&1 || die "extract (log $O/p1/ext.log)"
-  for t in ${T[@]} $NTV0; do $V $FM arena --src $X --a $t --b $B2 --ref $NTV0 --out $O/p1/arena_$t.json > /dev/null || die "arena $t"; done
+  $AP -m jevdrive.facts ext --read ${rd[@]} --out $X > $O/p1/ext.log 2>&1 || die "extract (log $O/p1/ext.log)"   # from the per-read facts cache
+  pa=(); for t in ${T[@]} $NTV0; do $V $FM arena --src $X --a $t --b $B2 --ref $NTV0 --out $O/p1/arena_$t.json > /dev/null & pa+=($!); done
+  for p in ${pa[@]}; do wait $p || die "arena"; done
   $V -c "import pandas as pd; w = pd.read_parquet('$X/win.parquet'); w[['tag', 'id', 'score', 'type']].to_csv('$RES/p1_arena_windows.csv.gz', index=False)" || die windows
   $TR $PY held --tags ${T[@]} $NTV0 --refs $B2 $NTV0 --out $O/p1/held.json || die "held"
-  $AP $PY latsplit --ext $X --tags ${T[@]} $B2 $NTV0 --out $O/p1/latsplit.csv || die "latsplit"
+  $AP -m jevdrive.facts latsplit --read ${rd[@]} --out $O/p1/latsplit.csv || die "latsplit"     # = nd.py latsplit, cached per chunk
   $V $PY p1md --root $O/p1 --tags ${T[@]} --b2 $B2 --ntv0 $NTV0 --out $RES/p1.md || die "p1md"
   date '+%F %T' > $O/P1DONE ;;
 probe)   # c000 (6 scenes) -> rows NDP -> teacher -> T2 / T4 / plots; T1 on the 1031 train logs; chk1 -> rest (the full chain) on pass
@@ -282,12 +283,13 @@ p2sum)  # NDAG s0 / s1 against the same-seed B2 (s0 / s1) and NTV0: arena (extra
   T=(NDAG-L18-s0 NDAG-L18-s1); X=$O/p2/ext; mkdir -p $O/p2; rd=(); for t in ${T[@]} $B2S0 $B2 $NTV0; do rd+=($t=$J/arena/$t@off); done
   $TR $PY quick --tags ${T[@]} --refs $B2S0 $B2 $NTV0 --out $RES/p2_quick.md --title "Part 2: NDAG vs B2" || die "quick"
   date '+%F %T' > $O/P2QUICK
-  $AP $FM ext --read ${rd[@]} --out $X --workers 32 > $O/p2/ext.log 2>&1 || die "extract (log $O/p2/ext.log)"
-  $V $FM arena --src $X --a NDAG-L18-s0 --b $B2S0 --ref $B2 $NTV0 --out $O/p2/arena_NDAG-L18-s0.json > /dev/null || die "arena s0"
+  $AP -m jevdrive.facts ext --read ${rd[@]} --out $X > $O/p2/ext.log 2>&1 || die "extract (log $O/p2/ext.log)"   # from the per-read facts cache
+  $V $FM arena --src $X --a NDAG-L18-s0 --b $B2S0 --ref $B2 $NTV0 --out $O/p2/arena_NDAG-L18-s0.json > /dev/null & a0=$!
   $V $FM arena --src $X --a NDAG-L18-s1 --b $B2 --ref $B2S0 $NTV0 --out $O/p2/arena_NDAG-L18-s1.json > /dev/null || die "arena s1"
+  wait $a0 || die "arena s0"
   $V -c "import pandas as pd; w = pd.read_parquet('$X/win.parquet'); w[['tag', 'id', 'score', 'type']].to_csv('$RES/p2_arena_windows.csv.gz', index=False)" || die windows
   $TR $PY held --tags ${T[@]} --refs $B2S0 $B2 $NTV0 --out $O/p2/held.json || die "held"
-  $AP $PY latsplit --ext $X --tags ${T[@]} $B2S0 $B2 $NTV0 --out $O/p2/latsplit.csv || die "latsplit"
+  $AP -m jevdrive.facts latsplit --read ${rd[@]} --out $O/p2/latsplit.csv || die "latsplit"     # = nd.py latsplit, cached per chunk
   cp $O/p2/*.json $O/p2/latsplit.csv $RES/ 2>/dev/null; date '+%F %T' > $O/P2DONE ;;
 wait)  # returns when $O/<marker> or VERDICT exists or one of this lane's jobs failed / was cancelled
   M=${2:?marker}

@@ -37,7 +37,8 @@ PY
 }
 STAGE=${1:?stage}; shift
 case $STAGE in
-read)      T=$1; i=$2; n=$3; D=$W/read/$T${4:+-$4}/c$i/run; sim "$T" "$OL/lists/held_n$n/c$i.txt" "$D"; prune "$D" ;;
+read)      T=$1; i=$2; n=$3; D=$W/read/$T${4:+-$4}/c$i/run; sim "$T" "$OL/lists/held_n$n/c$i.txt" "$D"; prune "$D"
+           $P -m jevdrive.facts chunk --bench held460 --run "$D" || true ;;   # the chunk's facts cache (jevdrive/facts.py; never fails the read)
 readlist)  sim "$1" "$2" "$3"; prune "$3" ;;
 submit-build)
   ids=(); D=()

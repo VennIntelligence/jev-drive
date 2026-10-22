@@ -124,7 +124,7 @@ for r in json.load(open(f"{D}/aggregate/results-summary.json"))["rollouts"]:
             os.remove(f); n += 1
 print("pruned", n, "rollout.asl")
 PY
-  ;;
+  $AP -m jevdrive.facts chunk --bench arena --run $D || true ;;        # the chunk's facts cache (jevdrive/facts.py; never fails the read)
 merge)
   $TR experiments/route_follow/scripts/rf_pait.py merge --pools $PARTS --out JT --nan-keys fut_reg ;;
 weights)
