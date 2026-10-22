@@ -17,7 +17,12 @@
 #   HUMAN_FG (0; 1 = run in the foreground after the checks instead of tmux human:alpa-drive: scripts/human_loop.py),
 #   HUMAN_CONTROL (the desktop panel's control.json: pause; lib/human_driver.py),
 #   HUMAN_GT (1: the runtime sends the recorded log ego trajectory to the driver every step, send_recording_ground_truth, for the
-#   viewer's shadow; display only, scoring unchanged; 0 = as shipped).
+#   viewer's shadow; display only, scoring unchanged; 0 = as shipped). HUMAN_FAST_ABORT (default = HUMAN_SERVE): a skipped scene's
+#   next drive call fails, so the runtime ends that rollout at once (unscored) instead of running it out (lib/human_driver.py).
+# HUMAN_SERVE=1 (scripts/human_loop.py): a resident stack. The runtime runs in AlpaSim's shipped daemon mode (wizard.run_mode=SERVER,
+#   runtime port HUMAN_BASEPORT + 4); after `compose up -d` the services and the driver stay up and scripts/human_feed.py (in the
+#   driver image) sends one simulate request per scene from <out>/feed/req/ until <out>/feed/stop, SIGTERM, a dead service or
+#   HUMAN_IDLE_S (1200) with no client. <scenes> = every scene the stack may serve. Progress: <out>/phase.json {phase, msg, t0, t}.
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, run.json, usage.jsonl (card VRAM, 2 s), driver/{drive,start}.jsonl, driver.log,
 #   sim/ (aggregate/results-summary.json, rollouts/, txt-logs/), results.md / results.json (human_results.py)}.
 set -uo pipefail
@@ -37,7 +42,7 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
     echo "card $GPU runs CARLA (a B2D exam?)"; launcher refused "card $GPU runs CARLA" ""; exit 1; }
   (( free < ${HUMAN_MIN_FREE_MB:-8000} )) && { echo "card $GPU has $free MiB free"; launcher refused "card $GPU has only $free MiB free" ""; exit 1; }
   P0=${HUMAN_BASEPORT:-6700}
-  for p in $P0 $((P0 + 1)) $((P0 + 2)) $((P0 + 3)) ${HUMAN_DRV_PORT:-6790}; do
+  for p in $P0 $((P0 + 1)) $((P0 + 2)) $((P0 + 3)) $((P0 + 4)) ${HUMAN_DRV_PORT:-6790}; do
     ss -ltn | grep -q ":$p " && { echo "port $p is taken (another human run?)"; launcher refused "port $p taken" ""; exit 1; }
   done
   docker ps --format '{{.Names}}' | grep -q "^$PFX-" && { echo "a $PFX-* stack is running"; docker ps --format '{{.Names}}' | grep "^$PFX-"; exit 1; }
@@ -62,11 +67,15 @@ IMG=${HUMAN_IMG:-jev-alpasim:p2h10-f-s0-6f3d05d1}
 BASE=${BASE:-alpasim-base:$(sed -n 's/^version = "\(.*\)"/\1/p' "$SRC/pyproject.toml" | head -1)}
 P0=${HUMAN_BASEPORT:-6700}; DPORT=${HUMAN_DRV_PORT:-6790}; MODE=${HUMAN_MODE:-fast}
 NAME=$PFX-$(basename "$OUT" | tr -c 'a-zA-Z0-9\n' '-' | tr 'A-Z' 'a-z'); N=$NAME-drv; R=$OUT/sim
-rm -f "$OUT"/{DONE,ERROR,.stop}; mkdir -p "$R" "$OUT/driver" "$LIVE"; exec > >(tee -a "$OUT/log.txt") 2>&1
+SERVE=${HUMAN_SERVE:-0}; RT=$((P0 + 4)); T0=$(date +%s.%N)
+rm -f "$OUT"/{DONE,ERROR,.stop}; mkdir -p "$R" "$OUT/driver" "$LIVE"; exec > >(tee -a "$OUT/log.txt") 2>&1; echo $$ > "$OUT/pid"
 st() { echo "$(date '+%F %T') $*" | tee "$OUT/STATUS"; }
-stop_all() { [[ -f $R/docker-compose.yaml ]] && docker compose -p "$NAME" -f "$R/docker-compose.yaml" down >/dev/null 2>&1
+phase() { python3 -c 'import json,sys,time; print(json.dumps(dict(phase=sys.argv[1], msg=sys.argv[2], t0=float(sys.argv[3]), t=time.time())))' \
+            "$1" "$2" "$T0" > "$OUT/.phase.tmp" && mv "$OUT/.phase.tmp" "$OUT/phase.json"; }
+stop_all() { docker rm -f "$NAME-feed" >/dev/null 2>&1
+             [[ -f $R/docker-compose.yaml ]] && docker compose -p "$NAME" -f "$R/docker-compose.yaml" down -t 5 >/dev/null 2>&1
              docker logs "$N" > "$OUT/driver.log" 2>&1; docker rm -f "$N" >/dev/null 2>&1; touch "$OUT/.stop"; }
-die() { st "ERROR $*"; echo "$*" > "$OUT/ERROR"; stop_all; launcher error "$*" "$OUT"; exit 1; }
+die() { st "ERROR $*"; echo "$*" > "$OUT/ERROR"; phase error "$*"; stop_all; [[ $SERVE == 1 ]] || launcher error "$*" "$OUT"; exit 1; }
 trap 'die "interrupted"' INT TERM
 for i in "$IMG" "$BASE"; do docker image inspect "$i" >/dev/null 2>&1 || die "image $i missing"; done
 if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1}" 'NR > 1 && $8 <= s {print $1}' "$LIST"); else ids=$(grep . "$LIST"); fi
@@ -102,14 +111,16 @@ wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_r
      runtime.endpoints.controller.n_concurrent_rollouts=1 defines.nre_cache_size=2 "wizard.baseport=$P0" wizard.run_method=NONE
      "wizard.log_dir=$R" "${lever[@]}" "$@")
 [[ ${HUMAN_GT:-1} == 1 ]] && wiz+=(runtime.simulation_config.send_recording_ground_truth=true)
+[[ $SERVE == 1 ]] && wiz+=(wizard.run_mode=SERVER "wizard.runtime_server_port=$RT")
 
+phase driver "starting the driver container"
 st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM"
 docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
-  -e "HUMAN_N_SCENES=$n" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
+  -e "HUMAN_N_SCENES=$([[ $SERVE == 1 ]] && echo 0 || echo "$n")" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
   -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" -e "HUMAN_CONTROL=${HUMAN_CONTROL:-}" \
-  -e "HUMAN_HARMONIZER=$HARM" -e "HUMAN_TRACK_GATE=${HUMAN_TRACK_GATE:-1}" \
+  -e "HUMAN_HARMONIZER=$HARM" -e "HUMAN_TRACK_GATE=${HUMAN_TRACK_GATE:-1}" -e "HUMAN_FAST_ABORT=${HUMAN_FAST_ABORT:-$SERVE}" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)
 until docker logs "$N" 2>&1 | grep -q "listening on"; do
@@ -119,6 +130,7 @@ done
     u=$(nvidia-smi -i "$GPU" --query-gpu=memory.used --format=csv,noheader,nounits); (( u > peak )) && peak=$u
     echo "{\"t\": $(date +%s), \"card_mib\": $u, \"peak_mib\": $peak}" >> "$OUT/usage.jsonl"; sleep 2; done ) & sampler=$!
 
+phase wizard "wizard: writing the configs for $n scenes"
 st "wizard in $BASE (run_method NONE), render card $GPU, baseport $P0"
 printf '%q ' "${wiz[@]}" > "$OUT/wizard_cmd.txt"; echo >> "$OUT/wizard_cmd.txt"
 docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" "${mounts[@]}" -e "PYTHONPATH=$SRC/src/wizard:$SRC/src/utils" -e HF_HUB_OFFLINE=1 \
@@ -152,6 +164,47 @@ for k, s in d["services"].items():
 yaml.safe_dump(d, open(f, "w"), sort_keys=False)
 PY
 grep -A1 "device_ids:" "$R/docker-compose.yaml" | grep -E "^ *- '[0-9]+'" | grep -vq "'$GPU'" && die "compose puts a service on a card other than $GPU"
+
+if [[ $SERVE == 1 ]]; then                                         # resident: services up, scenes come one request at a time
+  dc() { docker compose -p "$NAME" -f "$R/docker-compose.yaml" "$@"; }
+  phase containers "starting the containers"; st "docker compose up -d ($NAME, resident; runtime daemon on $RT)"
+  dc up -d > "$OUT/compose.log" 2>&1 || die "compose up failed, see compose.log"
+  dc logs -f --no-color >> "$OUT/compose.log" 2>&1 & logger=$!
+  # service:port of every container (the gRPC port in its command line)
+  svc=$(python3 -c 'import re,sys,yaml
+for k, s in yaml.safe_load(open(sys.argv[1]))["services"].items():
+    m = re.search(r"(?:--port[= ]|listen-address=\S*:)(\d+)", " ".join(s.get("command") or []))
+    m and print("%s:%s" % (k.rsplit("-", 1)[0], m.group(1)))' "$R/docker-compose.yaml")
+  t1=$(date +%s)
+  while :; do
+    wait_on=(); for sp in $svc; do ss -ltn | grep -q ":${sp##*:} " || wait_on+=("${sp%%:*}"); done
+    dead=$(dc ps -a --status exited --format '{{.Service}}' | paste -sd' '); [[ -n $dead ]] && die "$dead exited during the start, see compose.log"
+    (( ${#wait_on[@]} )) || break
+    w=" ${wait_on[*]} "; why=""
+    [[ $w == *" renderer "* ]] && why=" (the renderer loads its model; the first start also compiles kernels)"
+    [[ $w != *" renderer "* && $w == *" runtime "* ]] && why=" (the runtime connects to the services)"
+    phase services "containers up; waiting for ${wait_on[*]}$why"
+    (( $(date +%s) - t1 > 900 )) && die "services not up after 900 s: ${wait_on[*]}"
+    sleep 1
+  done
+  st "services up after $(( $(date +%s) - t1 )) s; feeder on 127.0.0.1:$RT"
+  docker rm -f "$NAME-feed" >/dev/null 2>&1
+  docker run -d --name "$NAME-feed" --init --network host --user "$(id -u):$(id -g)" -v "$OUT:$OUT" -v "$REPO:$REPO:ro" -v "$LIVE:$LIVE" \
+    -e "HUMAN_IDLE_S=${HUMAN_IDLE_S:-1200}" --entrypoint python "$IMG" "$here/human_feed.py" "$OUT" "127.0.0.1:$RT" "$LIVE" >/dev/null || die "feeder docker run"
+  docker logs -f "$NAME-feed" > "$OUT/feed.log" 2>&1 &
+  phase ready "ready: renderer, controller, runtime and driver up"
+  launcher running "resident $TRACK stack ready$([[ $HARM == 1 ]] && echo ", harmonizer on")" "$OUT"
+  while [[ $(docker inspect -f '{{.State.Running}}' "$NAME-feed" 2>/dev/null) == true ]]; do
+    dead=$(dc ps -a --status exited --format '{{.Service}}' | paste -sd' '); [[ -n $dead ]] && die "$dead exited, see compose.log"
+    [[ $(docker inspect -f '{{.State.Running}}' "$N" 2>/dev/null) == true ]] || die "the driver exited, see driver.log"
+    sleep 2
+  done
+  frc=$(docker inspect -f '{{.State.ExitCode}}' "$NAME-feed" 2>/dev/null || echo 1)
+  kill "$logger" 2>/dev/null; trap - INT TERM
+  (( frc == 0 )) || die "the feeder exited with $frc, see feed.log"
+  phase stopped "stopped (idle or asked to stop)"; stop_all; wait "$sampler"; rm -f "$OUT/.stop"
+  date > "$OUT/DONE"; st "resident stack stopped"; exit 0
+fi
 
 st "docker compose up ($NAME): drive the scenes; tmux human:alpa-viewer shows them"
 launcher running "$n scenes$([[ $HARM == 1 ]] && echo ", harmonizer on")" "$OUT"

@@ -197,14 +197,35 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   when the order changes. AlpaSim picks the order inside a stack (clip-id order was observed), so the panel's order decides
   which scenes go in, not their sequence. Each scene loads and holds until the first throttle press. With Playlist off a
   stack gets one scene: a double-clicked one, or the next unfinished one when the throttle is pressed while the loop is idle.
-- Double-click (play): that scene is driven next. The running scene is not aborted; at the next hold point (the following
-  scene loaded and waiting for the throttle, nothing of it scored) the stack is stopped and a new one runs the chosen
-  scene alone; then the playlist resumes in another stack.
-- Next item: the driver skips the current scene: hold released, no pacing, full brake (`<live>/abort.json`). The rollout runs
-  out at the stack's own speed, about 10 s; it is not counted and the scene is not offered again in this session. Restart
-  item: the stack is stopped at once and a new one runs the same scene alone. Between two scenes (one closed, the next
-  loading) Next and Restart do nothing. Stop: the stack is taken down (`docker compose down`, driver container removed)
-  and the loop exits.
+- Resident stack (2026-10-22): the loop no longer starts a stack per scene list. `human_stack.sh` with `HUMAN_SERVE=1` runs
+  renderer / physics / controller / the runtime in AlpaSim's shipped daemon mode (`wizard.run_mode=SERVER`, as
+  `experiments/alpasim/scripts/queue_read.py`) plus the human driver, for every scene of the track (PAI 441, nuPlan 48), detached
+  from the loop and named in `<live>/resident.json` (dirs under `/data/runs/alpasim_human/resident/`, containers `hres-*`).
+  `scripts/human_feed.py` (in the driver image) sends one `simulate` request per scene; the loop decides the order itself.
+  A new loop (New batch, Continue) reuses it when track, harmonizer and card match. It stops after 20 min without a loop
+  (`HUMAN_IDLE_S`), on a harmonizer change or a track change (the renderer flag / scene set are fixed per process; the
+  progress text says so). Rollout dirs move into `stacks/<run>-sNN/` when their request returns, so scoring and the gallery
+  are unchanged.
+- Measured on Tokyo card 1 (fake wheel, `HUMAN_REALTIME=0`, 2026-10-22), loop click to the scene's first frame:
+  | case | before (stack per list) | resident |
+  |---|--:|--:|
+  | first start after the stack was down | 42-47 s (wizard 2-3 s, compose to first session 19-25 s, first frame +20 s) | about 43 s (ready after 19 s: wizard 3 s, services 15 s; first frame 24 s later) |
+  | new batch / Continue | same as first start | 5.7-6.1 s |
+  | restart item | ~55 s (new stack) | about 1 s (scene cached) |
+  | next item -> following scene | ~10 s run-out + 4-5 s | 6.6 s |
+  | play while a scene loads / is held | at least a new stack | the abort plus a 4-5 s load |
+  | scene to scene | 4-5 s | 4-5 s (request on return) |
+  The first two scenes of every renderer process take about 20 s more to their first frame (seen in old stacks and here); the
+  resident pays it once. Aborted scenes end at once: under the resident the driver fails the aborted session's next drive call
+  (`HUMAN_FAST_ABORT=1`, the runtime logs a CANCELLED rollout and continues), so Next / Restart / play-switch do not run out.
+- Double-click (play): that scene is driven next. A scene that is loading or held (not started) gives way at once, unscored and
+  not marked; a scene being driven finishes first.
+- Next item: the current scene ends at once (`<live>/abort.json`); not counted, "skipped (Next item)", not offered again in this
+  session. Restart item: the current scene ends and is requested again first. Stop: the current scene ends and the loop exits;
+  the resident stays warm.
+- Progress: while anything loads, the viewer shows "LOADING n s" with what is loading underneath (stack phase: driver, wizard,
+  containers, waiting for renderer / runtime; then "renderer loading the scene"), and the panel's status line has the same text
+  with the elapsed seconds (`<live>/launcher.json` state, msg, t0, batch).
 - Pause: the driver reads `paused` from `control.json` (`HUMAN_CONTROL`): a held scene stays held (the throttle does not
   start it), a running one is held inside its drive call, so the world does not advance; pacing re-anchors on Resume.
   Paused time is logged per scene (`paused_s`). Without a stack, no stack starts. The start hold is 1800 s under the panel
@@ -214,11 +235,10 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   (`<run>/scores/<rollout>/`), so scenes of a stack that was stopped early still count. The result goes to
   `done/<scene>.json` (latest attempt, attempt count) and `scores.jsonl` (all), then `results.md`. Checked on a copy of
   `pai_1013-2305_rt` with 3 scenes removed: the post-hoc scores equal the stack's own.
-- Diffusion Harmonizer (checkbox, PAI only, off by default): a stack renders with or without it for its whole life
-  (`HUMAN_HARMONIZER`). After a change the running scene finishes; at the next hold point the stack is stopped and a new
-  one starts with the new setting, the held scene first (with Playlist off it is queued again). The loop's message says
-  "harmonizer on: restarting the stack at the next scene" until then. The status column says "harmonized" and "Official
-  table" has a harmonizer column, so harmonized and unharmonized attempts stay apart.
+- Diffusion Harmonizer (checkbox, PAI only, off by default): the resident renders with or without it for its whole life
+  (`HUMAN_HARMONIZER`). After a change, once no scene is being driven, the resident is stopped and a new one starts with the new
+  setting (about a minute; the progress says "harmonizer on: restarting the render stack"); a loading or held scene is requested
+  again. The status column says "harmonized" and "Official table" has a harmonizer column.
 - Phone address and input: the panel's top line shows the phone page URL (from `tailscale status --json`, Copy button) and
   the live input status (phone connected / last frame, keyboard active, which source drives); phone_wheel README.
 - Shadow: human log (checkbox, off by default; viewer hotkey G, the last change wins): display only, it never touches control.
@@ -239,8 +259,8 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   every finished scene of the loop's batch, newest first, as the last front frame before it closed (the driver saves
   `stacks/<stack>/driver/thumbs/<rollout>.jpg`, 480 px, at close_session) with score and why; the mouse wheel scrolls it. The
   blue route keeps its 10 m dots but labels only the nearest visible one.
-- Viewer: shows "PAUSED: resume on the panel", "SKIPPING THIS SCENE" and a green "HARMONIZER ON" tag. Scene i of n counts
-  within the current stack. With the viewer window focused the keyboard drives too (arrows / WASD, Space; phone_wheel README).
+- Viewer: shows "PAUSED: resume on the panel", "SKIPPING THIS SCENE" and a green "HARMONIZER ON" tag. The top line shows "batch: n of m driven".
+  With the viewer window focused the keyboard drives too (arrows / WASD, Space; phone_wheel README).
 - Test without a GPU: `scripts/fake_stack.py` stands in for `human_stack.sh` (`HUMAN_STACK_SCRIPT=...`). It writes the same
   files, honours pause and skip, and copies real `metrics.parquet` files of an earlier run, so scoring is real.
 
@@ -308,7 +328,8 @@ Not verified:
 - `alpasim_exam.py` (lib): AlpaSim backend of the exam panel
 - `human_loop.py` (scripts): long-lived drive loop of the desktop panel
 - `human_panel.py` / `human_panel.sh` (scripts): the panel and its desktop entry
-- `fake_stack.py` (scripts): stand-in for human_stack.sh in loop tests
+- `fake_stack.py` (scripts): stand-in for a resident human_stack.sh in loop tests
+- `human_feed.py` (scripts): one simulate request per scene to the resident stack's runtime daemon
 - `replay_asl.py` (scripts): replays finished rollouts through the driver (shadow, thumbs, viewer tests without a GPU)
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026

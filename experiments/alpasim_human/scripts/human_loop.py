@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
-"""Long-lived AlpaSim human drive loop for the desktop panel: human_stack.sh stacks on Tokyo card 0, one scene list per stack.
+"""Long-lived AlpaSim human drive loop for the desktop panel: one scene at a time on a resident render stack (Tokyo card 0).
 
     /usr/bin/python3 experiments/alpasim_human/scripts/human_loop.py --run /data/runs/alpasim_human/exam_<track>_<stamp>
 
-Commands come from <live>/control.json (written only by the panel; protocol in lib/exam_panel.py); state goes to <live>/loop.json.
-A stack costs about a minute to start (compose up 18-27 s + the first scene's renderer start) against 4-5 s between scenes inside one
-stack, so a stack runs the whole remaining playlist and the loop only restarts it when the order changes. Inside a stack AlpaSim
-picks the scene order itself (observed: clip id order, not the list order), so the playlist order is the set of scenes per stack:
-- Playlist on: a stack gets every unfinished scene in the panel's order (control "order", else exam.json). Each scene loads and holds
-  until the first throttle press (lib/human_driver.py). Playlist off: a stack gets one scene (a double-clicked one, or the next
-  unfinished one when the driver presses the throttle while the loop is idle).
-- play <id>: drive it next (even if finished). If a stack is running, it is stopped at its next hold point (the next scene loaded and
-  waiting for the throttle; nothing of that scene is scored) and a new stack runs the played scene(s) alone; then the playlist resumes.
-- next: the driver skips the current scene (abort.json: no pacing, full brake, the rollout ends at the stack's own speed, about 10 s);
-  the skipped rollout is not counted and the scene is not offered again in this session. Without a running scene: nothing.
-- restart: the stack is stopped at once and a new one starts with the same scene first. Between two scenes (one closed, the next
-  still loading) next and restart do nothing.
-- stop: the stack is stopped, the loop exits.
-- Pause: no stack starts; inside a stack the driver holds (a waiting scene stays held, a running one stops advancing).
-- Option "harmonizer" (PAI only; human_stack.sh HUMAN_HARMONIZER): a stack renders with or without the diffusion harmonizer for its
-  whole life. When the option differs from the running stack's, the stack is stopped at its next hold point (never mid-scene) and a
-  new one starts with the option; the held scene is driven next (playlist off: it is queued again). done/<scene>.json records it.
-Scoring: every finished rollout (sim/rollouts/<scene>/<id>/_complete) that was not skipped is scored with AlpaSim's own aggregation
-(alpasim-aggregation in the alpasim-base image, CPU, ~7 s) on a copy of its metrics.parquet -> done/<scene>.json; results.md after each.
+Commands come from <live>/control.json (written only by the panel; protocol in lib/exam_panel.py); state goes to <live>/loop.json,
+progress to <live>/launcher.json (the viewer's banner: state, msg, t0 = start of the current wait, batch = [driven, total]).
+Resident stack (README "Resident stack"): human_stack.sh HUMAN_SERVE=1 runs renderer / physics / controller / the runtime daemon
+(AlpaSim's shipped wizard.run_mode=SERVER) / the human driver for every scene of the track, detached from this loop and registered
+in <live>/resident.json. A loop reuses it when track, harmonizer and card match, so only the first start after it went down costs
+the start (about 45 s); a new batch, Continue, play and restart do not. It stops itself after HUMAN_IDLE_S (1200) without a loop.
+The loop sends one scene per simulate request (scripts/human_feed.py protocol), so it decides the order itself:
+- Playlist on: the next unfinished scene in the panel's order (control "order", else exam.json). Each scene loads and holds until
+  the first throttle press (lib/human_driver.py). Playlist off: the next scene only on a double-click or a new throttle press.
+- play <id>: drive it next (even if finished). A scene that is loading or held (not started) is dropped for it (abort, the
+  rollout runs out unscored at the stack's speed, ~10 s); a scene being driven finishes first.
+- next: the driver skips the current scene (abort.json); not counted, not offered again in this session.
+- restart: the current scene is aborted and requested again first (~10 s run-out + the scene load, no stack start).
+- stop: the current scene is aborted and the loop exits; the resident stack stays warm.
+- Pause: no new scene is requested; inside a scene the driver holds.
+- Option "harmonizer" (PAI only): the renderer's flag for its whole life, so a change restarts the resident stack (about a minute)
+  once no scene is being driven; a loading or held scene is requested again on the new stack.
+Run dir layout per resident stack used: stacks/<run>-sNN/ with sim/rollouts/<scene>/<uuid>/ (moved out of the resident dir when its
+request returns), sim/eval-config.yaml, driver/{sessions,drive}.jsonl (that run's sessions) and driver/thumbs/, resident (its path).
+Scoring: every finished rollout that was not aborted is scored with AlpaSim's own aggregation (alpasim-aggregation in the
+alpasim-base image, CPU, ~7 s) on a copy of its metrics.parquet -> done/<scene>.json; results.md after each.
 """
 import argparse
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -38,13 +40,15 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "lib"), str(REPO / "experiments/alpasim_human/lib"), str(REPO / "experiments/phone_wheel/lib")]
 from exam_panel import Control, read_json, write_json  # noqa: E402
-from alpasim_exam import Scenes, stack_name, why, sh  # noqa: E402
+from alpasim_exam import Scenes, why, sh  # noqa: E402
 from wheel_client import WheelClient  # noqa: E402
 
 D = Path(os.environ.get("DATA_DIR", "/data"))
 LIVE = Path(os.environ.get("HUMAN_LIVE", str(D / "runs/alpasim_human/live")))
 SRC = Path(os.environ.get("ALPASIM_SRC", str(D / "third_party/alpasim")))
 STACK = Path(os.environ.get("HUMAN_STACK_SCRIPT", str(REPO / "experiments/alpasim_human/scripts/human_stack.sh")))  # fake_stack.py in tests
+RESIDENTS = Path(os.environ.get("HUMAN_RESIDENT_DIR", str(D / "runs/alpasim_human/resident")))
+GPU = os.environ.get("HUMAN_GPU", "0")
 
 
 def base_image():
@@ -59,47 +63,160 @@ def jsonl(p):
         return []
 
 
-class Stack(object):
-    """One human_stack.sh run (foreground, own process group) on a list of scenes."""
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    try:                                                        # a zombie child counts as gone
+        return Path("/proc/%d/stat" % pid).read_text().split(")")[-1].split()[0] != "Z"
+    except OSError:
+        return True
 
-    def __init__(self, run, k, track, ids, harm=False):
-        self.dir = run / "stacks" / ("%s-s%02d" % (run.name, k))
-        self.dir.mkdir(parents=True)
-        self.ids, self.name, self.killed, self.harm = list(ids), stack_name(self.dir), None, harm
-        (self.dir / "scenes.txt").write_text("\n".join(ids) + "\n")
-        env = dict(os.environ, HUMAN_FG="1", HUMAN_VIEWER="0", HUMAN_CONTROL=str(LIVE / "control.json"), HUMAN_LIVE=str(LIVE),
-                   HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU="0", HUMAN_HARMONIZER="1" if harm else "0")
-        self.log = open(str(self.dir / "stack.out"), "a")
-        self.proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(self.dir), str(self.dir / "scenes.txt")], env=env,
-                                     stdout=self.log, stderr=subprocess.STDOUT, start_new_session=True)
-        self.t0 = time.time()
+
+class Resident(object):
+    """A resident human_stack.sh (HUMAN_SERVE=1), detached from the loop that started it; <live>/resident.json names it."""
+    REG = LIVE / "resident.json"
+
+    def __init__(self, info, proc=None):
+        self.info, self.proc = info, proc
+        self.dir, self.pid, self.track, self.harm = Path(info["dir"]), info["pid"], info["track"], info["harm"]
+        self.ids, self.feed = set(info["ids"]), Path(info["dir"]) / "feed"
+
+    @classmethod
+    def start(cls, track, harm, ids):
+        d = RESIDENTS / ("%s%s-%s" % (track, "-harm" if harm else "", time.strftime("%m%d-%H%M%S")))
+        d.mkdir(parents=True)
+        (d / "scenes.txt").write_text("\n".join(ids) + "\n")
+        env = dict(os.environ, HUMAN_FG="1", HUMAN_VIEWER="0", HUMAN_SERVE="1", HUMAN_CONTROL=str(LIVE / "control.json"),
+                   HUMAN_LIVE=str(LIVE), HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU=GPU,
+                   HUMAN_HARMONIZER="1" if harm else "0", HUMAN_PREFIX=os.environ.get("HUMAN_PREFIX", "hres"))
+        with open(str(d / "stack.out"), "a") as log:
+            proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(d), str(d / "scenes.txt")],
+                                    env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "gpu": GPU, "ids": list(ids), "t": time.time(),
+                "prefix": env["HUMAN_PREFIX"]}
+        write_json(cls.REG, info)
+        return cls(info, proc)
+
+    @classmethod
+    def find(cls):
+        info = read_json(cls.REG)
+        r = cls(info) if info and info.get("dir") else None
+        return r if r and r.alive() else None
 
     def alive(self):
-        return self.proc.poll() is None
+        if self.proc is not None and self.proc.poll() is not None:
+            return False
+        return pid_alive(self.pid) and not (self.dir / "DONE").exists() and not (self.dir / "ERROR").exists()
+
+    def fits(self, track, harm, ids):
+        return (self.track, self.harm, self.info.get("gpu", "0")) == (track, harm, GPU) and set(ids) <= self.ids
+
+    def phase(self):
+        return read_json(self.dir / "phase.json", {}) or {}
+
+    def ready(self):
+        a = read_json(self.feed / "alive.json", {}) or {}
+        return self.phase().get("phase") == "ready" and (self.feed / "ready.json").exists() and time.time() - a.get("t", 0) < 10
+
+    def error(self):
+        if (self.dir / "ERROR").exists():
+            return (self.dir / "ERROR").read_text().strip()
+        tail = (self.dir / "stack.out").read_text().strip().splitlines()[-1:] if (self.dir / "stack.out").exists() else []
+        return tail[0] if tail else "exited"
+
+    def lease(self, owner, run):
+        self.feed.mkdir(parents=True, exist_ok=True)
+        write_json(self.feed / ("lease-%s.json" % owner), {"t": time.time(), "run": str(run)})
+
+    def release(self, owner):
+        try:
+            (self.feed / ("lease-%s.json" % owner)).unlink()
+        except OSError:
+            pass
+
+    def submit(self, scene, owner):
+        (self.feed / "req").mkdir(parents=True, exist_ok=True)
+        name = "%019d-%s.json" % (time.time_ns(), owner)
+        write_json(self.feed / "req" / name, {"scene": scene, "owner": owner, "t": time.time()})
+        return name
+
+    def result(self, name):
+        return read_json(self.feed / "res" / name)
+
+    def busy(self):
+        return read_json(self.feed / "busy.json", {}) or {}
+
+    def stop(self):
+        """SIGTERM to the stack script (its trap runs compose down); after 60 s its process group is killed and the stack removed."""
+        try:
+            os.kill(self.pid, signal.SIGTERM)
+        except OSError:
+            pass
+        for _ in range(120):
+            if not pid_alive(self.pid):
+                break
+            time.sleep(0.5)
+        else:
+            try:
+                os.killpg(self.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            name = "%s-%s" % (self.info.get("prefix", "hres"), re.sub(r"[^a-z0-9]", "-", self.dir.name.lower()))   # as human_stack.sh
+            sh("docker compose -p %s down -t 3 >/dev/null 2>&1; docker rm -f %s-drv %s-feed >/dev/null 2>&1" % (name, name, name))
+        if read_json(self.REG, {}).get("dir") == str(self.dir):
+            self.REG.unlink()
+
+
+class Batch(object):
+    """This run's share of a resident stack: stacks/<run>-sNN/, laid out as a one-shot human_stack.sh out dir (scoring, gallery)."""
+
+    def __init__(self, run, k, res):
+        self.dir, self.res, self.harm = run / "stacks" / ("%s-s%02d" % (run.name, k)), res, res.harm
+        for d in ("sim/rollouts", "driver/thumbs"):
+            (self.dir / d).mkdir(parents=True, exist_ok=True)
+        (self.dir / "resident").write_text(str(res.dir) + "\n")
+        self.off = {f: self._size(res.dir / "driver" / f) for f in ("sessions.jsonl", "drive.jsonl")}
+
+    @staticmethod
+    def _size(p):
+        try:
+            return p.stat().st_size
+        except OSError:
+            return 0
 
     def sessions(self):
         return jsonl(self.dir / "driver/sessions.jsonl")
 
-    def kill(self, why_):
-        """Stop the stack: SIGTERM to the script (its trap runs compose down), and compose down / driver rm here as well."""
-        self.killed = why_
-        try:
-            os.kill(self.proc.pid, signal.SIGTERM)
-        except OSError:
-            pass
-        compose = self.dir / "sim/docker-compose.yaml"
-        if compose.exists():
-            sh("docker compose -p %s -f %s down -t 3 >/dev/null 2>&1" % (self.name, compose))
-        sh("docker rm -f %s-drv >/dev/null 2>&1" % self.name)
-        for _ in range(120):
-            if not self.alive():
-                break
-            time.sleep(0.5)
-        else:
-            os.killpg(self.proc.pid, signal.SIGKILL)
-            if compose.exists():
-                sh("docker compose -p %s -f %s down -t 3 >/dev/null 2>&1" % (self.name, compose))
-        self.log.close()
+    def take(self, scene, rec):
+        """A returned request: its rollout dirs, driver log lines and thumbnails move / copy into this batch dir."""
+        rd = self.res.dir
+        if not (self.dir / "sim/eval-config.yaml").exists() and (rd / "sim/eval-config.yaml").exists():
+            shutil.copy(str(rd / "sim/eval-config.yaml"), str(self.dir / "sim/eval-config.yaml"))
+        uu = {x["uuid"] for x in rec.get("rollouts", []) if x.get("uuid")}
+        for f in ("sessions.jsonl", "drive.jsonl"):
+            try:
+                with open(str(rd / "driver" / f), "rb") as fh:
+                    fh.seek(self.off[f])
+                    data = fh.read()
+            except OSError:
+                continue
+            data = data[:data.rfind(b"\n") + 1]
+            self.off[f] += len(data)
+            mine = [ln for ln in data.decode("utf-8", "replace").splitlines() if ln.strip() and json.loads(ln).get("session") in uu]
+            if mine:
+                with open(str(self.dir / "driver" / f), "a") as fh:
+                    fh.write("\n".join(mine) + "\n")
+        for u in uu:
+            src = rd / "sim/rollouts" / scene / u
+            if src.is_dir():
+                (self.dir / "sim/rollouts" / scene).mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(self.dir / "sim/rollouts" / scene / u))
+            if (rd / "driver/thumbs" / (u + ".jpg")).is_file():
+                shutil.copy(str(rd / "driver/thumbs" / (u + ".jpg")), str(self.dir / "driver/thumbs" / (u + ".jpg")))
+        with open(str(self.dir / "scenes.txt"), "a") as fh:
+            fh.write(scene + "\n")
 
 
 class Scorer(object):
@@ -107,25 +224,28 @@ class Scorer(object):
 
     def __init__(self, run, sc, base):
         self.run, self.sc, self.base, self.seen, self.lock = run, sc, base, set(), threading.Lock()
+        self.abort_status = {}                                   # rollout id -> tried status of an aborted rollout (None: none)
         for r in jsonl(run / "scores.jsonl"):
             self.seen.add(r["rollout"])
 
     def pending(self, stack, final=False):
         """(scene, rollout dir, close record) of finished rollouts of this stack not yet handled."""
-        closes = {s["scene"]: s for s in stack.sessions() if s["kind"] == "close"}
+        closes = {s["session"]: s for s in stack.sessions() if s["kind"] == "close"}
         out = []
         for c in sorted((stack.dir / "sim/rollouts").glob("*/*/_complete")):
             rd, scene = c.parent, c.parent.parent.name
-            if rd.name in self.seen or (scene not in closes and not final):
+            if rd.name in self.seen or (rd.name not in closes and not final):
                 continue
-            out.append((scene, rd, closes.get(scene, {})))
+            out.append((scene, rd, closes.get(rd.name, {})))
         return out
 
     def score(self, stack, scene, rd, close):
         self.seen.add(rd.name)
         if close.get("aborted"):
-            write_json(self.run / "tried" / (scene + ".json"), {"status": "skipped (Next item)", "t": time.time()})
-            self.log({"rollout": rd.name, "scene": scene, "stack": stack.dir.name, "aborted": True})
+            status = self.abort_status.pop(rd.name, "skipped (Next item)")
+            if status:
+                write_json(self.run / "tried" / (scene + ".json"), {"status": status, "t": time.time()})
+            self.log({"rollout": rd.name, "scene": scene, "stack": stack.dir.name, "aborted": True, "status": status})
             return
         tmp = self.run / "scores" / rd.name
         shutil.rmtree(str(tmp), ignore_errors=True)
@@ -143,7 +263,7 @@ class Scorer(object):
             return
         r = summ["rollouts"][0]
         m, sm = r.get("metrics") or {}, r.get("score_metrics") or {}
-        drv = {x.get("scene"): x for x in jsonl(stack.dir / "driver/drive.jsonl") if x.get("kind") == "close"}.get(scene, {})
+        drv = {x.get("session"): x for x in jsonl(stack.dir / "driver/drive.jsonl") if x.get("kind") == "close"}.get(rd.name, {})
         prev = read_json(self.run / "done" / (scene + ".json"), {}) or {}
         rec = {"scene": scene, "score": r.get("score") or 0.0, "why": why(r), "rollout": rd.name, "stack": stack.dir.name,
                "progress": round(sm.get("progress_clipped_rel") or 0.0, 3), "driven_m": round(m.get("dist_traveled_m") or 0.0, 1),
@@ -177,9 +297,10 @@ def main():
         (run / d).mkdir(exist_ok=True)
     sc = Scenes()
     LIVE.mkdir(parents=True, exist_ok=True)
-    ctl, state_f = Control(LIVE), LIVE / "loop.json"
+    ctl, state_f, owner = Control(LIVE), LIVE / "loop.json", str(os.getpid())
     consumed = [a["id"] for a in ctl.read()["actions"]]          # actions older than this loop are not replayed
     st = {"run": str(run), "item": None, "state": "idle", "msg": "", "consumed": consumed, "pid": os.getpid()}
+    catalog = [i for i, m in sc.meta.items() if m.get("track") == track]
 
     def report(**kw):
         st.update(kw, t=time.time())
@@ -191,11 +312,18 @@ def main():
         with open(str(run / "notes.txt"), "a") as fh:
             fh.write("%s loop: %s\n" % (time.strftime("%F %T"), msg))
 
-    def launcher(state, msg):                                    # the viewer's status line between scenes
-        write_json(LIVE / "launcher.json", {"state": state, "msg": msg, "run": str(run), "t": time.time()})
+    def label(s):
+        return sc.meta.get(s, {}).get("label", s)
+
+    def progress(state, msg, t0=None, item=None):
+        """loop.json (the panel's status line, with the elapsed seconds) and launcher.json (the viewer's banner; it adds them itself)."""
+        el = "" if t0 is None else ", %.0f s" % (time.time() - t0)
+        report(item=item, state=state, msg=msg + el)
+        write_json(LIVE / "launcher.json", {"state": state, "msg": msg, "t0": t0, "run": str(run), "t": time.time(),
+                                            "batch": [sum(done(i) for i in ids), len(ids)]})
 
     scorer = Scorer(run, sc, base_image())
-    jobs = []                                                    # (stack, scene, rollout dir, close)
+    jobs = []                                                    # (batch, scene, rollout dir, close)
     wake = threading.Event()
 
     def score_worker():
@@ -210,8 +338,9 @@ def main():
     threading.Thread(target=score_worker, daemon=True).start()
 
     wheel = WheelClient()
-    plays, skipped, chosen, driven = [], set(), set(), set()       # driven: finished, not skipped, maybe not scored yet                    # chosen: scenes asked for by play / throttle (playlist off)
-    stack, k, hold_error = None, len(list((run / "stacks").glob("*"))), ""
+    plays, skipped, chosen, driven = [], set(), set(), set()     # driven: finished, not skipped, maybe not scored yet
+    res, batch, req, hold_error = None, None, None, ""          # req: the scene this loop asked for, until its request returns
+    k, armed, t_wait, restart_why = len(list((run / "stacks").glob("*"))), True, time.time(), ""
 
     def done(s):
         return s in driven or (run / "done" / (s + ".json")).exists()
@@ -220,127 +349,194 @@ def main():
         order = [i for i in ctl.read()["order"] if i in ids] or ids
         return [i for i in order if not done(i) and i not in skipped]
 
-    def collect(final=False):
-        for scene, rd, close in scorer.pending(stack, final):
+    def view():
+        """The driver's live state of this loop's scene (fresh, from the resident stack, that scene only)."""
+        s = read_json(LIVE / "state.json", {}) or {}
+        ok = res and req and s.get("run") == str(res.dir) and s.get("scene") == req["scene"] and time.time() - s.get("t", 0) < 5
+        return s if ok and not s.get("closed") else {}
+
+    def abort(why_, status=None):
+        """End this loop's scene: abort.json now, and again once its session exists (the driver ignores older aborts)."""
+        req.update(abort=why_, status=status, t_abort=0.0)
+
+    def push_abort(v):
+        if req and req.get("abort") and v and not v.get("aborted") and time.time() - req["t_abort"] > 2:
+            write_json(LIVE / "abort.json", {"scene": req["scene"], "t": time.time(), "by": req["abort"]})
+            req["t_abort"] = time.time()
+
+    def collect():
+        for scene, rd, close in scorer.pending(batch, final=True):
             if all(j[2] != rd for j in jobs):
-                jobs.append((stack, scene, rd, close))
+                jobs.append((batch, scene, rd, close))
                 if not close.get("aborted"):
                     driven.add(scene)
                     skipped.discard(scene)
         wake.set()
-
-    def view():
-        """The driver's live state of the running stack (fresh and from this stack only)."""
-        s = read_json(LIVE / "state.json", {}) or {}
-        return s if stack and s.get("run") == str(stack.dir) and time.time() - s.get("t", 0) < 5 else {}
-
-    def end_stack(why_):
-        nonlocal stack
-        if stack.alive():
-            note("stopping stack %s: %s" % (stack.dir.name, why_))
-            stack.kill(why_)
-        collect(final=True)
-        stack = None
 
     try:
         while True:
             c = ctl.read()
             harm = track == "pai" and bool(c["options"].get("harmonizer"))
             hs = "harmonizer %s" % ("on" if harm else "off")
-            for a in [a for a in ctl.pending(st["consumed"])]:
+            if res:
+                res.lease(owner, run)
+            v = view()
+            started = bool(v.get("started"))                     # the driver took over (first throttle press)
+            for a in ctl.pending(st["consumed"]):
                 st["consumed"].append(a["id"])
-                v = view()
-                cur = v.get("scene") if v and not v.get("closed") else None    # between scenes next / restart do nothing
                 if a["kind"] == "stop":
                     raise KeyboardInterrupt
                 if a["kind"] == "play" and a["item"] in ids:
                     plays.append(a["item"])
                     chosen.add(a["item"])
                     hold_error = ""
-                elif a["kind"] == "next" and stack and cur:
-                    write_json(LIVE / "abort.json", {"scene": cur, "t": time.time()})
-                    skipped.add(cur)
-                    note("next: skipping %s" % cur)
-                elif a["kind"] == "restart" and stack and cur:
-                    plays.insert(0, cur)
-                    chosen.add(cur)
-                    end_stack("restart %s" % cur)
-                    note("restart: %s" % cur)
-            if stack is not None:
-                collect()
-                v = view()
-                if not stack.alive():
-                    rc = stack.proc.returncode
-                    err = (stack.dir / "ERROR").read_text().strip() if (stack.dir / "ERROR").exists() else ""
-                    note("stack %s ended rc %s %s" % (stack.dir.name, rc, err))
-                    if rc and not stack.killed:                   # no automatic relaunch after a failure
-                        hold_error = "stack failed: %s (see %s)" % (err or rc, stack.dir)
-                    end_stack("ended")
+                    if req and not req.get("abort") and not started and req["scene"] != a["item"]:
+                        abort("play %s" % a["item"])               # a loading / held scene gives way, unscored
+                elif a["kind"] == "next" and req and v and not req.get("abort"):
+                    abort("next", "skipped (Next item)")
+                    skipped.add(req["scene"])
+                    note("next: skipping %s" % req["scene"])
+                elif a["kind"] == "restart" and req and v and not req.get("abort"):
+                    abort("restart")
+                    plays.insert(0, req["scene"])
+                    chosen.add(req["scene"])
+                    note("restart: %s" % req["scene"])
+            push_abort(v)
+            # ---- the resident stack ----
+            if res is not None and not res.alive():
+                err = res.error()
+                note("resident stack %s ended: %s" % (res.dir.name, err))
+                if req:
+                    hold_error = "the render stack stopped during %s: %s (see %s)" % (label(req["scene"]), err, res.dir)
+                    req = None
+                elif not res.ready():
+                    hold_error = "the render stack failed to start: %s (see %s)" % (err, res.dir)
+                res, batch = None, None
+            if res is not None and res.harm != harm and not started:
+                if req and not req.get("abort"):
+                    abort(hs, None)
+                    if req["scene"] not in plays and (c["playlist"] or req["scene"] in chosen):
+                        plays.insert(0, req["scene"])
+                if req is None:
+                    note("stopping resident stack %s: %s" % (res.dir.name, hs))
+                    progress("loading", "%s: stopping the render stack (the renderer restarts with the new setting)" % hs, time.time())
+                    res.stop()
+                    res, batch, restart_why = None, None, "%s: restarting the render stack (about a minute)" % hs
+            if res is None:
+                if hold_error:
+                    progress("idle", hold_error + "; double-click a row to try again")
+                    time.sleep(0.5)
                     continue
-                held = v.get("scene") if v.get("waiting") and not v.get("closed") else None
-                if held and held in stack.ids and stack.harm != harm:     # option changed: new stack at this hold point
-                    if held not in plays and (not c["playlist"] or done(held)):
-                        plays.insert(0, held)
-                        chosen.add(held)
-                    end_stack(hs)
-                    continue
-                if held and held in stack.ids:
-                    if held in plays:                          # AlpaSim picks the order inside a stack: any queued play counts
-                        plays.remove(held)
-                    elif plays:
-                        end_stack("play %s next" % plays[0])
-                        continue
-                    if not c["playlist"] and held not in chosen:
-                        end_stack("playlist off")
-                        continue
-                state = "paused" if c["paused"] else "loading" if not v or v.get("closed") else "driving"
-                msg = ("%s held: press throttle" % sc.meta.get(held, {}).get("label", held)) if held and not c["paused"] else \
-                    "resume on the panel" if c["paused"] else "stack %s, %d scenes" % (stack.dir.name, len(stack.ids))
-                msg = ("%s: restarting the stack at the next scene; " % hs + msg) if stack.harm != harm else \
-                    msg + ("   harmonizer on" if stack.harm else "")
-                report(item=v.get("scene") if v and not v.get("closed") else None, state=state, msg=msg)
+                res = Resident.find()
+                if res is not None and not res.fits(track, harm, ids):
+                    note("stopping resident stack %s (%s, harmonizer %s): this batch needs %s, %s" % (
+                        res.dir.name, res.track, res.harm, track, hs))
+                    progress("loading", "stopping the %s render stack for this batch (%s, %s)" % (res.track, track, hs), time.time())
+                    res.stop()
+                    res, restart_why = None, "switching the render stack to %s, %s (about a minute)" % (track.upper(), hs)
+                if res is None:
+                    res = Resident.start(track, harm, list(dict.fromkeys(catalog + ids)))
+                    note("resident stack %s: %s, %s, %d scenes" % (res.dir.name, track, hs, len(res.ids)))
+                else:
+                    note("reusing resident stack %s" % res.dir.name)
+                k += 1
+                batch = Batch(run, k, res)
+                res.lease(owner, run)
+            if not res.ready():
+                ph = res.phase()
+                why_ = restart_why or "starting the %s render stack (first start; about 45 s)" % track.upper()
+                progress("loading", "%s: %s" % (why_, ph.get("msg", "launching")), ph.get("t0") or res.info["t"])
                 time.sleep(0.3)
                 continue
-            # ---- no stack ----
+            restart_why = ""
+            # ---- this loop's scene ----
+            if req:
+                r = res.result(req["name"])
+                if r is not None:
+                    batch.take(req["scene"], r)
+                    bad = r.get("error") or not any(x.get("success") for x in r.get("rollouts", []))
+                    if req.get("abort"):                          # aborted: never scored (with or without a complete rollout)
+                        for x in r.get("rollouts", []):
+                            scorer.abort_status[x["uuid"]] = None
+                        if req.get("status"):
+                            write_json(run / "tried" / (req["scene"] + ".json"), {"status": req["status"], "t": time.time()})
+                    if bad and not req.get("abort"):
+                        err = (r.get("error") or "; ".join(x.get("error", "") for x in r.get("rollouts", [])))[:300]
+                        write_json(run / "tried" / (req["scene"] + ".json"), {"status": "rollout failed: %s" % err, "t": time.time()})
+                        hold_error = "%s failed: %s" % (label(req["scene"]), err)
+                        note(hold_error)
+                    note("%s returned after %.0f s%s" % (req["scene"], r.get("t_done", 0) - req["t"],
+                                                        " (aborted: %s)" % req["abort"] if req.get("abort") else ""))
+                    collect()
+                    req, armed, t_wait = None, False, time.time()
+                    continue
+                b = res.busy()
+                if req.get("abort"):
+                    progress("loading", "ending %s (%s): the rollout runs out unscored" % (label(req["scene"]), req["abort"]),
+                             req.get("t_abort_0") or req.setdefault("t_abort_0", time.time()), req["scene"])
+                elif b.get("name") != req["name"]:
+                    progress("loading", "%s: waiting for the previous scene to end" % label(req["scene"]), req["t"], req["scene"])
+                elif not v:
+                    progress("loading", "loading %s: renderer loading the scene" % label(req["scene"]), b.get("t_sent"), req["scene"])
+                elif v.get("waiting") and not started:
+                    progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else
+                             "%s held: press throttle" % label(req["scene"]), None, req["scene"])
+                else:
+                    state = "paused" if c["paused"] else "driving"
+                    progress(state, "resume on the panel" if c["paused"] else "%s%s" % (label(req["scene"]),
+                             "   harmonizer on" if res.harm else ""), None, req["scene"])
+                if res.harm != harm:
+                    st["msg"] = "%s: the render stack restarts after this scene; %s" % (hs, st["msg"])
+                    write_json(state_f, st)
+                time.sleep(0.3)
+                continue
+            # ---- no scene: pick the next ----
             if c["paused"]:
-                report(item=None, state="paused", msg="resume on the panel")
+                progress("paused", "resume on the panel")
                 time.sleep(0.5)
                 continue
-            todo = []
+            todo = None
             if plays:
-                todo = list(dict.fromkeys(plays))            # played scenes get a stack of their own (order inside a
-                plays.clear()                                # stack is AlpaSim's), the playlist resumes after it
+                todo = plays.pop(0)
             elif hold_error:
-                report(item=None, state="idle", msg=hold_error + "; double-click a row to try again")
+                progress("idle", hold_error + "; double-click a row to try again")
                 time.sleep(0.5)
                 continue
             elif c["playlist"]:
-                todo = unfinished()
+                todo = (unfinished() or [None])[0]
             else:
                 w = wheel.state()
-                if not w["stale"] and w["raw_throttle"] > 0.2 and unfinished():
-                    todo = unfinished()[:1]
-                    chosen.add(todo[0])
-            if not c["playlist"]:
-                todo = todo[:1]
-            if not todo:
+                if not w["stale"] and w["raw_throttle"] < 0.1:
+                    armed = True
+                if armed and not w["stale"] and w["raw_throttle"] > 0.2 and unfinished():
+                    todo = unfinished()[0]
+                    chosen.add(todo)
+            if todo is None:
                 left = sum(not done(i) for i in ids)
-                report(item=None, state="idle", msg=("%d of %d scenes left: double-click a row%s" % (
+                progress("idle", ("%d of %d scenes left: double-click a row%s" % (
                     left, len(ids), "" if c["playlist"] else " or press throttle")) if left else "all %d scenes driven" % len(ids))
                 time.sleep(0.3)
                 continue
-            k += 1
-            launcher("running", "starting a stack for %d scene(s)%s: about a minute" % (len(todo), ", harmonizer on" if harm else ""))
-            stack = Stack(run, k, track, todo, harm)
-            note("stack %s: %d scenes from %s, %s" % (stack.dir.name, len(todo), sc.meta.get(todo[0], {}).get("label", todo[0]), hs))
-            report(item=todo[0], state="loading", msg="starting the stack (%d scenes)" % len(todo))
+            req = {"name": res.submit(todo, owner), "scene": todo, "t": time.time()}
+            note("request %s (%s), %s, %.1f s after the previous scene" % (todo, label(todo), hs, time.time() - t_wait))
+            progress("loading", "loading %s" % label(todo), req["t"], todo)
     except KeyboardInterrupt:
         pass
     finally:
         report(item=None, state="stopped", msg="")
-        if stack is not None:
-            end_stack("stop")
-        launcher("stopped", "panel loop stopped")
+        if res is not None:
+            if req and res.result(req["name"]) is None:
+                if res.busy().get("name") == req["name"]:
+                    write_json(LIVE / "abort.json", {"scene": req["scene"], "t": time.time(), "by": "loop stop"})
+                else:
+                    try:
+                        (res.feed / "req" / req["name"]).unlink()
+                    except OSError:
+                        pass
+            res.release(owner)
+        write_json(LIVE / "launcher.json", {"state": "stopped", "msg": "panel loop stopped%s" % (
+            "; the render stack stays warm for %d min" % (int(os.environ.get("HUMAN_IDLE_S", "1200")) // 60) if res else ""),
+            "run": str(run), "t": time.time()})
         for _ in range(60):
             if not jobs:
                 break

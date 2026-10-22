@@ -343,20 +343,27 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
             c.blit(h, (xr + 10, 24 - h.get_height() // 2))
             xr -= 10
     waiting = st.get("waiting") and status == "LIVE"
+    try:                                                          # the loop's progress (scripts/human_loop.py): state, msg, t0, batch
+        L = json.load(open(os.path.join(live, "launcher.json")))
+    except (OSError, ValueError):
+        L = {}
+    fresh = time.time() - L.get("t", 0) < 10
+    loading = fresh and L.get("state") == "loading" and status != "LIVE"
+    el = " %.0f s" % (time.time() - L["t0"]) if loading and L.get("t0") else ""
     if status == "LIVE":
         line, col = ("SKIPPING", GREY) if st.get("aborted") else ("PAUSED", ORANGE) if st.get("paused") else ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
             ("PHONE OK, CLICK TO START" if st.get("start_mode") == "click" else "PHONE OK, PRESS THROTTLE TO START", ORANGE)
-    else:
-        try:
-            L = json.load(open(os.path.join(live, "launcher.json")))
-            line, col = "%s: %s" % (L["state"].upper(), L["msg"]), {"refused": RED, "error": RED, "finished": GREEN}.get(L["state"], ORANGE)
-        except (OSError, ValueError, KeyError):
-            line, col = "no run: start experiments/alpasim_human/scripts/human_pai.sh or human_nuplan.sh", GREY
-        if status == "BETWEEN":
+    elif L.get("state") and L.get("msg"):
+        line, col = "%s%s: %s" % (L["state"].upper(), el, L["msg"]), {"refused": RED, "error": RED, "finished": GREEN}.get(L["state"], ORANGE)
+        if status == "BETWEEN" and not loading and not L.get("batch"):   # a one-shot terminal stack (no loop progress)
             i, n = st.get("scene_i") or 0, st.get("n_scenes") or 0
             line, col = (("LOADING NEXT SCENE (%d/%d)" % (i + 1, n)) if i < n else "ALL %d SCENES DRIVEN, SCORING" % n), ORANGE
-    lab("%s   %s   scene %s of %s   %s" % (line, (st.get("track") or "").upper(), st.get("scene_i", "-"), st.get("n_scenes", "-"),
-                                          st.get("scene", "")[-24:]), (t.get_width() + 50, 12), col)
+    else:
+        line, col = "no run: start experiments/alpasim_human/scripts/human_pai.sh or human_nuplan.sh", GREY
+    count = "batch: %d of %d driven" % tuple(L["batch"]) if fresh and L.get("batch") else \
+        "scene %s of %s" % (st.get("scene_i", "-"), st.get("n_scenes", "-"))
+    lab("%s   %s   %s   %s" % (line, (st.get("track") or "").upper(), count, st.get("scene", "")[-24:] if status == "LIVE" else ""),
+        (t.get_width() + 50, 12), col)
     pygame.draw.rect(c, (0, 0, 0), R)
     if front is not None:
         f = front.copy()
@@ -407,6 +414,8 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
             ("CLICK TO START" if st.get("start_mode") == "click" else "PRESS THROTTLE TO START", ORANGE)
     elif status == "LIVE" and st.get("stale") and st.get("started"):
         msg = ("PHONE SILENT: BRAKING", RED)
+    elif loading:
+        msg = ("LOADING" + el, ORANGE)
     elif status != "LIVE":
         msg = (line[:60], col)
     if msg:
@@ -414,6 +423,9 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
         pygame.draw.rect(c, (0, 0, 0), (R.centerx - m.get_width() // 2 - 20, R.centery - m.get_height() // 2 - 10,
                                         m.get_width() + 40, m.get_height() + 20))
         c.blit(m, (R.centerx - m.get_width() // 2, R.centery - m.get_height() // 2))
+        if loading:                                               # what is loading, under the big LOADING n s
+            h = font.render(L["msg"][:110], True, ORANGE)
+            c.blit(h, (R.centerx - h.get_width() // 2, R.centery + 60))
         if waiting and not st.get("paused") and not st.get("aborted"):
             h = font.render("held %.0f s; the scene clock starts on your %s" % (st.get("wait_s", 0), "click (left mouse button, anywhere in "
                             "this window)" if st.get("start_mode") == "click" else "first throttle press"), True, ORANGE)

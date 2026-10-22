@@ -33,7 +33,8 @@ HUMAN_TRACK, HUMAN_N_SCENES, HUMAN_SIM_S (scene length for the progress bar). Ne
 Desktop panel (scripts/human_loop.py, protocol in lib/exam_panel.py): HUMAN_CONTROL = the panel's control.json. While "paused" is set,
 a held scene stays held (the throttle does not start it) and a running scene is held at its current drive call (the world does not
 advance); pacing re-anchors on resume. <live>/abort.json {"scene", "t"} from the loop (Next item) skips the current scene: the hold is
-released, pacing is off and the plan brakes to a stop, so the rollout ends at the stack's own speed; its close record says aborted and
+released, pacing is off and the plan brakes to a stop, so the rollout ends at the stack's own speed (HUMAN_FAST_ABORT=1, the resident
+stack's default: the next drive call fails with CANCELLED and the runtime ends the rollout at once); its close record says aborted and
 the loop does not count it. sessions.jsonl (log dir) has one start and one close record per session for the loop.
 
 Shadow (display only, never touches control): with runtime.simulation_config.send_recording_ground_truth=true (human_stack.sh,
@@ -73,6 +74,7 @@ SIDES = {"left": ("CAM_L0", "camera_cross_left_120fov"), "right": ("CAM_R0", "ca
 E = os.environ.get
 RT = float(E("HUMAN_REALTIME", "1.0"))
 HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "throttle")
+FAST_ABORT = E("HUMAN_FAST_ABORT", "0") == "1"
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
 CONTROL = Path(E("HUMAN_CONTROL", "")) if E("HUMAN_CONTROL") else None
 # HUMAN_TRACK_GATE=1: the plan goes through the model drivers' feasible-reference gate (experiments/alpasim/lib/track_ref.py, mode gate,
@@ -431,6 +433,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         if s.started is not None and not s.aborted and p.skip(s):
             s.aborted = True
             LOG.info("session %d %s: skipped by the panel", s.n, s.scene)
+        if s.aborted and FAST_ABORT:                               # HUMAN_FAST_ABORT: the runtime ends (fails) this rollout now, unscored
+            ctx.abort(grpc.StatusCode.CANCELLED, "skipped by the panel")
         if s.started is not None and not s.aborted and p.paused:   # hold mid-scene: this drive call does not return until resume
             t_p = time.time()
             while self.panel.poll().paused and not self.panel.skip(s):
