@@ -10,7 +10,7 @@ O=$DATA_DIR/runs/wm_surplus/p1_usage
 PY=$DATA_DIR/envs/wajepa/bin/python
 ME=experiments/wm_surplus/scripts/p1_wajepa_b.py
 NS=${NS:-$(nvidia-smi -L | wc -l)}; PRIO=${PRIO:-5}
-sub() { local n=$1; shift; .venv/bin/python -m jevdrive.cl submit --owner p1-usage --priority "$PRIO" --log-dir "$O/pool/$n" --name "p1b-$n" "$@" | awk '{print $NF}'; }
+sub() { local n=$1; shift; .venv/bin/python -m jevdrive.cl submit --owner p1-usage --priority "$PRIO" --log-dir "$O/pool/b-$n" --name "p1b-$n" "$@" | awk '{print $NF}'; }
 join() { local IFS=,; echo "$*"; }
 G=$(sub gate --after "$AFTER" --vram 0.1 --cpu 1 --ram 2 -- .venv/bin/python -c "
 import json, sys
