@@ -258,27 +258,18 @@ OK = 0.98
 
 
 def lclass(r):
-    """loss_map.py's classes (refined pai_fix fclass), coarse names."""
+    """loss_map.py's CLASSES (first match wins), with its offroad straight / junction-straight / turn-outside merged as in its row 4."""
     if r.score >= OK:
         return "ok"
-    fc, pr, stra = str(r.fclass), str(r.primary), str(r.stratum)
-    if fc == "offroad":
-        if pr in ("off_junc_inside", "off_curve_inside"):
-            return "off_turn_inside"
-        return "off_straight_junc_outside"
-    if fc in ("drift", "lanechange") or "drift" in fc or "lane" in fc:
-        return "drift_lc"
+    fc, pr = str(r.fclass), str(r.primary)
     if fc == "overshoot":
         return "overshoot"
-    if fc in ("AF-front", "side") or "front" in fc or "side" in fc or "collision" in fc:
-        return "collision"
-    if fc == "route-turn":
-        return "route_turn"
-    if fc == "rear-hit" or "rear" in fc:
-        return "rear_hit"
-    if fc == "slow" or "slow" in fc or "launch" in fc or "creep" in fc:
-        return "slow"
-    return "other:" + fc
+    if pr in ("off_junc_inside", "off_curve_inside"):
+        return "off_turn_inside"
+    if pr in ("off_junc_outside", "off_junc_straight") or fc == "offroad":
+        return "off_straight_junc_outside"
+    return dict({"zero-other": "drift_lc", "AF-front": "collision", "side": "collision", "route-turn": "route_turn", "rear-hit": "rear_hit",
+                 "slow": "slow"}).get(fc, "partial_other")
 
 
 def facts(tag):
