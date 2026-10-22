@@ -432,7 +432,9 @@ def agent_env(c: dict) -> dict:
     nav = data_dir() / "datasets" / "navsim"
     return {"NUPLAN_MAP_VERSION": "nuplan-maps-v1.0", "NUPLAN_MAPS_ROOT": str(nav / "maps"), "OPENSCENE_DATA_ROOT": str(nav),
             "NAVSIM_EXP_ROOT": str(data_dir() / "runs" / "navsim" / "eval"), "NAVSIM_DEVKIT_ROOT": c["repo"], "PYTHONPATH": c["repo"],
-            "OPENBLAS_CORETYPE": "Haswell", "HF_HUB_OFFLINE": "1", **c.get("env_vars", {})}
+            "OPENBLAS_CORETYPE": "Haswell", "HF_HUB_OFFLINE": "1",
+            "OMEGACONF_MAX_YAML_EXPANDED_NODES": "10000000",   # newer omegaconf caps alias expansion; the navtest token list exceeds it
+            **c.get("env_vars", {})}
 
 
 def agent_cmd(c: dict, tokens: Path, out: Path) -> list:
