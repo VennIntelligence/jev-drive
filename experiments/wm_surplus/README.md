@@ -114,6 +114,30 @@ seed, peak ~60 GB disk, ~5 agent-days of code, 2–3 calendar days (the 282 GB n
 table, risks and every unavoidable difference from NTV0: [results/p2_swap/estimate.md](results/p2_swap/estimate.md).
 
 <!-- files:begin -->
+## P0: third-party subjects on navtest (reproduction rows, P1 subjects; PD2, PD6)
+
+Camera-only subjects only (PD2). Shortlist: [results/p0_subjects/shortlist.md](results/p0_subjects/shortlist.md); setup log:
+[results/p0_subjects/setup.md](results/p0_subjects/setup.md). Subjects: ReCogDrive-2B-RL (LLM: InternVL3-2B / Qwen2.5 hidden state ->
+DiT planner, published 90.8 PDMS), AutoVLA (Qwen2.5-VL-3B action tokens, 89.1), DriveVLA-W0 (Emu3 world model + VLA, 87.2,
+stretch); camera-only non-foundation references SimScale-LTF / SimScale-DD (no published navtest number for these checkpoints:
+execution check only). The LiDAR subjects (hustvl DiffusionDrive, WoTE) are disabled in the registry.
+
+- **Bench**: one JSON per subject in `jevdrive/bench/agents/` (family `agent`; SimScale models keep their HUGSIM family and gain
+  navtest through their JSON). Runner `agent` = the fork's own NAVSIM agent via `jevdrive/bench/agent_poses.py` (hydra config +
+  eval-script overrides, `compute_trajectory`; per-model sensor-config overrides, e.g. ReCogDrive `lidar_pc=False`); runner `cmd`
+  = a thin input adapter (`scripts/simscale_navtest.py`). Poses in chunks of whole logs, one GPU job each -> v2 EPDMS + v1.1 PDMS
+  from the same poses; `summary.json` carries `PDMS_v1`, `published`, `delta_vs_published`.
+- **Gate** (`scripts/p0_repro.py submit --model M`): smoke on `navsim/p0-smoke-logs` (8 logs, 540 tokens; >= published - 3) ->
+  full navtest; `verdict` -> `results/p0_subjects/<M>_full.json`, reproduced iff |PDMS - published| <= 0.5. Not tuned on failure.
+- **P1 on the subjects** (`scripts/p1_agent.py`, P1 hook `lib/usage_probe.Probe`, outputs `$DATA_DIR/runs/wm_surplus/p1_agents/<M>/`):
+  ReCogDrive site = the LM's last hidden state handed to the DiT. **PCA fit differs from WA-JEPA's**: navtrain cameras are gone,
+  so the PCA is cross-fitted within navtest, 2 folds of whole logs (sorted navtest log names, `i % 2`; a token is projected
+  with the other fold's PCA). The `off` pass also stores pooled features + 20 blind inputs (`knowdo_feats.npz`) for
+  `scripts/p1_knowdo.py`. **Request to the P1 lane**: for comparability, also refit WA-JEPA with the same 2 log folds
+  (`p1_agent.fold_of_logs`) next to its navtrain fit; the subjects' rows will be labelled "navtest 2-fold cross-fit" either way.
+
+Results: pending (PD6).
+
 ## Files
 
 - `README.md` (README.md): do driving policies need grafted world …
