@@ -1,6 +1,6 @@
 # 「知道」与「会做」：驾驶智能和驾驶能力分开（论文主线候选，2026-10-19，工作笔记）
 
-> 2026-10-22：本笔记已并入论文骨架 [paper-outline/](paper-outline/index.html)（决策 452，标题 Do Driving Policies Need Foundation World Models Yet? Body Schema Learning ...）；主张以骨架页为准，本页留作证据对照。
+> 2026-10-22：本笔记已并入论文骨架 [paper-outline/](paper-outline/index.html)（论文决定 PD1，标题 Do Driving Policies Need Foundation World Models Yet? Body Schema Learning ...）；主张以骨架页为准，本页留作证据对照。
 
 来源：用户与另一个智能体讨论论文主线（10-18 夜），主会话把它和本仓库的读数逐条对上。这是论点草稿，不是结论；
 每条证据标了决策号，标「解释」的是我们的读法，不是测出来的机制。训练安排另见 [next-round/practice-plan.md](next-round/practice-plan.md)。

@@ -16,7 +16,7 @@
 - [onpol-long/zeros-ys-l18.html](onpol-long/zeros-ys-l18.html)：YS-L18-s1 在 held 读数上 43 个零分场景（走廊 19、出路 15、碰撞 9）的失败决策分布与 15 个片段。
 - [world-model/](world-model/index.html)：世界模型与反事实配对：因果效应闸门、WL-2 判格、no-go 汇总，以及分解世界模型（ego 精确、外生预训练）的设计与查新。
 - [literature/](literature/index.html)：文献现状：薄 head、反事实与视频生成。
-- [paper-outline/](paper-outline/index.html)：论文骨架（2026-10-22 重定，决策 452）：Do Driving Policies Need Foundation World Models Yet? Body Schema Learning for End-to-End Autonomous Driving。现阶段瓶颈是开不出来不是看不懂，嫁接通用基础世界模型过剩，方法是身体图式学习（S 行）；旧 trick or trade 骨架压成附录。
+- [paper-outline/](paper-outline/index.html)：论文骨架（2026-10-22 重定，论文决定 PD1）：Do Driving Policies Need Foundation World Models Yet? Body Schema Learning for End-to-End Autonomous Driving。现阶段瓶颈是开不出来不是看不懂，嫁接通用基础世界模型过剩，方法是身体图式学习（S 行）；旧 trick or trade 骨架压成附录。
 - [turn-gain/](turn-gain/index.html)：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪。
 - [hugsim-specplan/](hugsim-specplan/index.html)：用模型自己的 plan 转向：单点曲率更差，0.5 到 1.5 秒平均曲率更好。
 - [leaderboard-recipes/](leaderboard-recipes/index.html)：WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方。
@@ -35,6 +35,7 @@
 - [round7/loss_diag/](round7/loss_diag/index.html)：R6DAG（当前最好的 PAI 臂）在 PAI 281（ACC + GAP）上还在哪里丢分（决策 436）：失分地图（按类的丢分、两种子稳定性、我们已有读数能否解、尺子权重、杠杆与估计收益）+ 每类 1–2 段代表视频（14 段，零分用存档 asl 离线渲染，视频不入库）：最大一块是停车点冲过但提交 serve 下无正例；最值得做的是转弯切内侧（DAgger 迭代）和无故减速部分分（尺子上的全部差距）。
 
 ## 记录与工具
+- [paper/decisions.md](paper/decisions.md)：论文决定表（2026-10-23 起与打榜总表分开）：主线、标题、被测对象、论文实验结论、投稿事务，编号 PD N。
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`（第 356 条起多在行内链接的结果页）；页首「现状」块是当前候选与已提交成绩。
 - [knowing-vs-doing.md](knowing-vs-doing.md)：论文主线候选（2026-10-19）：驾驶智能（看懂、知道该做什么）与驾驶能力（在自己身体上做到）分开，能力取决于可归因的试次；与第 286–363 条读数逐条对照。
 - [s-rows-and-paper.md](s-rows-and-paper.md)：S 行审计与论文候选（2026-10-21）：当前 R6DAG 配方的 batch 构成与梯度、S 池按来源 / 结局 / 情境的激活与可学性（只有 12 % 的抽取是可学的激活行）、改过 S 剂量 / 构成 / 抽样的全部实验与从未测过的项、文献位置、三个实验提议与论文候选排序；脚本 [s-rows/audit.py](s-rows/audit.py)。
