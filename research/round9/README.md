@@ -145,7 +145,19 @@
 - **可写的创新点**：对每个线索（前车在动、停止线、红灯、路线）沿 checkpoint 与训练数据来源同时跟踪 (1) 特征里可读、(2) 策略因果使用（消融 / 反事实）、(3) 对应技能的闭环分，检验内部变化领先还是滞后于闭环变化。冻结编码器 + 只训 adapter 是最干净的设置——线索一直可读，变的只是 adapter 用不用。接上已有的「知道 vs 做到」（d362 / 373 / 383，[knowing-vs-doing.md](../knowing-vs-doing.md)）。
 - **验证先于使用**：约 25 个存档 checkpoint（NTV0、RSG、JTN、R2C/R2J、R3MV、R5LC、R6FIX、R6DAG ×3、R8K ×3、R7J、DAG2 …）都有 281 逐场景分与失分类别——先离线检验哪些内部信号能预测按类的闭环变化，过了才进循环当快反馈。
 
-## 9. 当前在跑与待定
+## 9. 两条赛道该不该分两个底座（用户 10-22 自己开过两条线后提出）
+
+用户观察：nuPlan 片段很短（约 5 s），PAI 长达 20 s；nuPlan 2 Hz 补帧（warp）后画面会朝转向方向拉伸，模型学到这个不利。
+
+事实：
+- nuPlan：8 个针孔相机 2 Hz，控制 0.5 s，公开场景窗口约 8 s（原样 10 个决策）；**主办方答复**（GitHub issue，maximilianigl）：私榜与公开同长度、1 000 个不同场景、没有按难度上采样、选场景没用 DriveIRT（记入 docs/alpasim.md）。PAI：6 个 f-theta 相机、10 Hz 真实渲染、20 s（200 步）。
+- 训练帧：navtrain 与 nuPlan serve 都用 2 Hz 关键帧 + 自车运动 warp 合成中间帧；warp 是平面假设，转向时画面拉伸剪切。模型确实靠它读速度：4 s plan 速度对 warp 轨迹速度的增益 0.69、对速度历史只有 0.07（d375）。PAI serve 是真实 10 Hz 帧；在 PAI 上故意模仿训练输入（关键帧 + warp）掉 0.070（d376）。
+- 现状：两个赛道已是两个模型（nuPlan B2、PAI NTV0 → R6DAG），但共用只见过 navtrain warp 帧的底座 RB0-F；R6DAG 每批 136 行里 51 行仍是 navtrain warp 帧。两边互相伤害（d367 / 385 / 391 / 444）。
+- 判断：应分两个底座，nuPlan 不动（B2 训练与 serve 都是 warp，自洽），只需要一个 PAI 底座。风险：PAI 场景多样性（约 700–900 个、高度相关）、PAI 人类行的标签风格、时间。
+- 分步：先看 RB0-P（30 / 50 / 70 % PAI 份额）底座闸；若份额越高越好 → 纯 PAI 底座 RB0-P100（无 navtrain warp 帧），续训阶段也降 / 去 navtrain 行。
+- 论文：「warp 合成帧让模型从伪影里读速度」是可写的发现，接「知道 vs 做到」。
+
+## 10. 当前在跑与待定
 
 在跑（10-22 晚）：(a)+(b) DAgger 迭代 R9DL（experiments/round9/results/dag_lane/：教师 b3L 闸全过，高速标签进「人没走过的车道」从 18–21 % 降到 0.7–4 %，读数待出）；PAI 底座 RB0-P（30 / 50 / 70 % PAI 份额三个底座并行，底座闸后接 L18 + DAgger，experiments/round9/results/pai_base/）；内部信号笔记合并。PAI 状态 S 行闸已出：不过（第 6 节）。
 
