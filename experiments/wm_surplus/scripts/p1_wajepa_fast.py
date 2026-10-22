@@ -150,12 +150,12 @@ def cmd_sweep(a):
     from jevdrive import par
     A_ = W.agent()
     L, toks = W.loader("navtest", A_.get_sensor_config())
-    done = set()
+    done = set()                                   # tokens in chunks of earlier rounds (other dir prefixes) are kept
     for f in (W.OUT / "sweep").glob("*/c*.npz"):
-        if not f.parent.name.startswith("f"):         # chunks of the batch-1 shards
+        if not f.parent.name.startswith(a.round):
             done |= set(np.load(f)["tokens"].tolist())
     mine = par.shards([t for t in toks if t not in done], a.shard[1], a.shard[0])
-    d = W.OUT / "sweep" / f"f{a.shard[0]}of{a.shard[1]}"
+    d = W.OUT / "sweep" / f"{a.round}{a.shard[0]}of{a.shard[1]}"
     d.mkdir(parents=True, exist_ok=True)
     (d / "tokens.txt").write_text("\n".join(mine) + "\n")
     pca = UP.PCA.load(W.OUT / "pca.npz")
@@ -190,6 +190,7 @@ def main():
     ap.add_argument("--batch", type=int, nargs="*", default=[1, 2, 4])
     ap.add_argument("--shard", type=int, nargs=2, default=(0, 1))
     ap.add_argument("--chunk", type=int, default=64)
+    ap.add_argument("--round", default="f", help="shard dir prefix of this round; chunks of other prefixes count as done")
     a = ap.parse_args()
     os.chdir(W.WJ)
     from jevdrive.run import Run
