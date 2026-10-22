@@ -98,7 +98,7 @@ def _teach_one(job):
             F_[i] = fut
             Hd[i] = seg_dist(H, pts[[3, 7]])
             if R_ is refL and refL.w is not None:
-                w0[i] = float(np.interp(info["s0"], refL.s, refL.w))
+                w0[i] = float(np.interp(info["s0"], ref.s, refL.w))          # w lives on the lane-centre reference's station grid
         ds0[i] = seg_dist(H, A[None, :2])[0]
     tmp = Path(out) / f"{scene}.tmp.npz"
     np.savez(tmp, k=Z["k"], fut3=f3, futL=fL, dh3=h3, dhL=hL, w=w0, dh0=ds0, v0=Z["v0"], served=Z["poses"], route=json.dumps(rinfo),
