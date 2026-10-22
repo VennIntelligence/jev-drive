@@ -579,7 +579,7 @@ class AlpaSimExam(Backend):
             if md:                                               # model drives, apart from the human score
                 status = "; ".join([status] * bool(status) + ["model %s %.2f %s" % (k, v["score"], v["why"]) for k, v in md.items()])
             ms, src = self.sc.model(sid)
-            sc = " \u00b7 ".join(x for x in (m.get("scenario", ""), notes.get(sid, "")) if x)
+            sc = " \u00b7 ".join(x for x in (notes.get(sid, ""), m.get("scenario", "")) if x)     # the note first: the row truncates
             out.append(dict(id=sid, label=m.get("label", sid), group=m.get("group", "?"), scenario=sc,
                             human=d["score"] if d else None, model=ms, model_src=src, status=status,
                             why=d["why"] if d else (t or {}).get("status", ""), attempts=d.get("attempt", 1) if d else 0,
