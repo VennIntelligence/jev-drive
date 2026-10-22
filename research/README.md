@@ -16,7 +16,7 @@
 - [onpol-long/zeros-ys-l18.html](onpol-long/zeros-ys-l18.html)：YS-L18-s1 在 held 读数上 43 个零分场景（走廊 19、出路 15、碰撞 9）的失败决策分布与 15 个片段。
 - [world-model/](world-model/index.html)：世界模型与反事实配对：因果效应闸门、WL-2 判格、no-go 汇总，以及分解世界模型（ego 精确、外生预训练）的设计与查新。
 - [literature/](literature/index.html)：文献现状：薄 head、反事实与视频生成。
-- [paper-outline/](paper-outline/index.html)：论文骨架 trick or trade：工业模型跨榜泛化与逐榜技巧归因。2026-10-08 起世界模型训练场一节废弃，候选主线见页首（决策 177）。
+- [paper-outline/](paper-outline/index.html)：论文骨架（2026-10-22 重定，决策 452）：Do Driving Policies Need Foundation World Models Yet? Body Schema Learning for End-to-End Autonomous Driving。现阶段瓶颈是开不出来不是看不懂，嫁接通用基础世界模型过剩，方法是身体图式学习（S 行）；旧 trick or trade 骨架压成附录。
 - [turn-gain/](turn-gain/index.html)：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪。
 - [hugsim-specplan/](hugsim-specplan/index.html)：用模型自己的 plan 转向：单点曲率更差，0.5 到 1.5 秒平均曲率更好。
 - [leaderboard-recipes/](leaderboard-recipes/index.html)：WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方。
