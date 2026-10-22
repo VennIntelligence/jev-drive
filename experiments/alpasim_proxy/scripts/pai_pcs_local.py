@@ -98,6 +98,9 @@ SRC = {
     "R8K-s1+AG": ("round8/r8k/pai281/R8K-L18-s1-ag", "other"),
     "DAG-s2+AG": ("round8/s2/pai281/R6DAG-L18-s2-ag", "other"),          # round 8 amendment 1: third seeds
     "R8K-s2+AG": ("round8/s2/pai281/R8K-L18-s2-ag", "other"),
+    # round 9 DAG-LANE (round9/scripts/dl.sh): R6DAG + heading command + the teacher's human-lane rule, ACC + GAP + JEV_CMD=heading, out of pool
+    "R9DL-s0+AG": ("round9/dag_lane/pai281/R9DL-L18-s0-ag", "other"),
+    "R9DL-s1+AG": ("round9/dag_lane/pai281/R9DL-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }

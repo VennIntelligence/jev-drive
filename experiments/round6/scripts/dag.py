@@ -58,7 +58,7 @@ REPO = HERE.parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/route_follow/scripts"), str(REPO / "experiments/op_probe/scripts"),
                 str(REPO / "experiments/round5/scripts"), str(REPO / "experiments/round3/scripts")]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-O_DEF = DATA / "runs/round6/dag"
+O_DEF = Path(os.environ.get("DAG_O", str(DATA / "runs/round6/dag")))   # dag.sh exports DAG_O (default the same); round9 dag_lane its own
 CR = DATA / "runs/op_parity/cache"
 W5, W6 = DATA / "runs/round5/r5/w", DATA / "runs/round6/dag/w"
 RES = REPO / os.environ.get("DAG_RES", "experiments/round6/results/dagger")
@@ -80,7 +80,12 @@ TURN_DEG, LC_V, LC_Y, LC_YAW = 30.0, 5.0, 2.5, 12.0
 T2_LEAD = 2.5
 H_SIG, H_CLIP = float(os.environ.get("DAG_HSIG", 10.0)), float(os.environ.get("DAG_HCLIP", 0.5))                      # amendment 1 (b): human lateral offset from the lane centre, Gaussian sigma 10 m along the station;
                                                 # amendment 2: saturated at +-0.5 m (never replaced by the lane centre)
-TEACHER_V = "b4c"                               # amendment 3: reference sigma 3 m, merge 3.0 s; amendment 4: min(student, human) arc lengths                                # teacher version stamped into every teach file (label refuses other versions)
+TEACHER_V = os.environ.get("DAG_TV", "b4c")      # round9 dag_lane (experiments/round9/plans/2026-10-22-dag-lane.md): b3 = b4c without the timing cap,
+assert TEACHER_V in ("b4c", "b3", "b3L"), TEACHER_V  # b3L = b3 + the human's-lane rule (human_lanes); default b4c = amendment 4b, unchanged
+LN_C, LN_HD, LN_TH, LN_BACK, LN_AHEAD, LN_RUN = (2.0, 5.0), 10.0, 15.0, 20.0, 60.0, 2.0   # b3L: |c| range (m), lane-vs-route heading (deg), route
+                                                # heading change over [s - 20, s + 60] m (deg), minimum qualifying run (s)
+# TEACHER_V b4c: amendment 3 (reference sigma 3 m, merge 3.0 s) + amendment 4 / 4b (min(student, human) arc lengths on curve entry / over-speed);
+# the version is stamped into every teach file (label refuses other versions)
 
 
 def dump(p, obj):
@@ -210,6 +215,8 @@ def timed(ref, s0, a, v0):
     exceeds CAP_KAP or the student is faster than the human at s0 by more than CAP_DV; elsewhere the student's own.
     -> (a', any finite human arc, curve flag, over-speed flag)."""
     ah = human_arcs(ref, s0)
+    if TEACHER_V in ("b3", "b3L"):                                              # round9 dag_lane: b3's timing (the student's own arc lengths)
+        return a, bool(np.isfinite(ah).any()), False, False
     m = (ref.s >= s0) & (ref.s <= s0 + a[-1])
     curv = bool(m.any() and np.abs(ref.kap[m]).max() > CAP_KAP)
     vh = human_speed(ref, s0)
@@ -292,12 +299,56 @@ def route_ref(ds):
     xy = np.concatenate([Wb, R1[len(R0):, :2]])
     s_rec = float(np.sum(np.hypot(*np.diff(Wb, axis=0).T)))
     ref = Ref(xy, s_rec)
-    refh, hinfo = human_ref(ref, P, yaw, ts)
+    refh, hinfo = human_ref(ref, P, yaw, ts, vm if TEACHER_V == "b3L" else None)
     return (ref, refh), dict(n_traj=len(P), n_route=len(R0), n_ext=len(R1) - len(R0), lanes=len(set(best)), switches=len(sw), steps=steps,
                              gen_vs_lanes_max=dmax, **hinfo)
 
 
-def human_ref(ref, P, yaw, ts=None):
+def human_lanes(ref, P, yaw, vm, ts=None):
+    """b3L: per recorded pose the human's own lane (the candidate of vm.get_current_lane, 4 m / pi / 8, whose centre is nearest), its centre's
+    signed lateral offset c from ref and the qualification (plans/2026-10-22-dag-lane.md section 2) -> dict of per-pose arrays."""
+    n = len(P)
+    tt = (np.asarray(ts, np.float64) - ts[0]) * 1e-6 if ts is not None and len(ts) == n else np.arange(n) * 0.1
+    c, st, q, found = np.full(n, np.nan), np.full(n, np.nan), np.zeros(n, bool), np.zeros(n, bool)
+    for i in range(n):
+        pr = ref.project(np.r_[P[i, :2], yaw[i]])
+        if pr is None:
+            continue
+        st[i] = pr[0]
+        cand = vm.get_current_lane(np.r_[P[i], yaw[i]], max_dist=4.0)
+        best = None
+        for ln in cand:
+            C = np.asarray(vm.get_road_lane(ln.id).center.points, np.float64)[:, :2]
+            if len(C) < 2:
+                continue
+            a_, b_ = C[:-1], C[1:]
+            ab = b_ - a_
+            t = np.clip(((P[i, :2] - a_) * ab).sum(1) / np.maximum((ab ** 2).sum(1), 1e-12), 0, 1)
+            Q = a_ + t[:, None] * ab
+            j = int(np.argmin(((Q - P[i, :2]) ** 2).sum(1)))
+            dd = float(np.hypot(*(Q[j] - P[i, :2])))
+            if best is None or dd < best[0]:
+                best = (dd, Q[j], float(np.arctan2(ab[j, 1], ab[j, 0])))
+        if best is None:
+            continue
+        found[i] = True
+        prl = ref.project(np.r_[best[1], best[2]])
+        if prl is None:
+            continue
+        c[i] = prl[1]
+        th0 = np.interp(pr[0], ref.s, ref.th)
+        win = (ref.s >= pr[0] - LN_BACK) & (ref.s <= pr[0] + LN_AHEAD)
+        q[i] = bool(LN_C[0] <= abs(c[i]) <= LN_C[1] and abs(np.degrees(wrap(best[2] - th0))) < LN_HD
+                    and win.any() and np.degrees(np.abs(ref.th[win] - th0).max()) < LN_TH)
+    if q.any():                                                                 # runs shorter than LN_RUN s do not qualify
+        e = np.flatnonzero(np.diff(np.r_[0, q.astype(int), 0]))
+        for lo, hi in zip(e[::2], e[1::2]):
+            if tt[hi - 1] - tt[lo] < LN_RUN:
+                q[lo:hi] = False
+    return dict(c=c, st=st, q=q, found=found)
+
+
+def human_ref(ref, P, yaw, ts=None, vm=None):
     """Amendments 1 (b) / 2: the lane-centre reference shifted by the human's own lateral offset from it at the matched station: the log poses
     projected onto ref, offset interpolated on the station grid inside the recorded span (0 outside), Gaussian H_SIG, saturated at +-H_CLIP.
     -> (Ref, info with the share of stations at the bound, left / right)."""
@@ -317,16 +368,40 @@ def human_ref(ref, P, yaw, ts=None):
     sg = H_SIG / DS
     b = gaussian_filter1d(b, sg, mode="nearest")
     hi_, lo_ = inside & (b > H_CLIP), inside & (b < -H_CLIP)
-    b = np.clip(b, -H_CLIP, H_CLIP)                                             # amendment 2: saturate at +-H_CLIP, never replaced by 0
+    lane = None
+    if vm is not None:                                                          # b3L: the human's own lane where it is the route lane's parallel neighbour
+        lane = human_lanes(ref, P, yaw, vm, ts)
+    if lane is not None and lane["q"].any():
+        qs = lane["st"][lane["q"]]
+        o2 = np.argsort(qs)
+        qi = np.zeros(len(ref.s))
+        qi[np.clip(np.searchsorted(ref.s, qs), 0, len(ref.s) - 1)] = 1.0      # qualifying stations on the grid, spread over the poses' spacing
+        span = np.zeros(len(ref.s))
+        ok_ = np.isfinite(lane["st"])
+        if ok_.sum() >= 2:                                                      # fill between consecutive qualifying poses of one run
+            stq = lane["st"].copy()
+            for i in range(len(stq) - 1):
+                if lane["q"][i] and lane["q"][i + 1] and np.isfinite(stq[i]) and np.isfinite(stq[i + 1]):
+                    lo, hi = sorted((stq[i], stq[i + 1]))
+                    span[(ref.s >= lo) & (ref.s <= hi)] = 1.0
+        w = np.clip(2.0 * gaussian_filter1d(np.maximum(qi, span), sg, mode="constant"), 0.0, 1.0) * inside
+        cq = gaussian_filter1d(np.interp(ref.s, qs[o2], lane["c"][lane["q"]][o2]), sg, mode="nearest")
+        b = (1 - w) * np.clip(b, -H_CLIP, H_CLIP) + w * np.clip(b, cq - H_CLIP, cq + H_CLIP)
+    else:
+        w = None
+        b = np.clip(b, -H_CLIP, H_CLIP)                                         # amendment 2: saturate at +-H_CLIP, never replaced by 0
     X, Y = ref.x - b * np.sin(ref.th), ref.y + b * np.cos(ref.th)
     rh = Ref(np.c_[X, Y], ref.s_rec)
     rh.b = b
+    rh.w = w                                                                    # b3L: the lane rule's weight on the station grid (None: not used)
     tt = (np.asarray(ts, np.float64) - ts[0]) * 1e-6 if ts is not None and len(ts) == len(P) else np.arange(len(P)) * 0.1
     st = np.array([np.nan if q is None else q[0] for q in (rh.project(np.r_[P[i, :2], yaw[i]]) for i in range(len(P)))])
     f = np.isfinite(st)                                                         # amendment 4: the human's station on this reference over time
     rh.ht, rh.hs = (tt[f], np.maximum.accumulate(st[f])) if f.sum() >= 2 else (None, None)
     ni = max(int(inside.sum()), 1)
-    return rh, dict(h_offset_med=float(np.median(d_)), h_clip_share=float((hi_.sum() + lo_.sum()) / ni), h_clip_left=float(hi_.sum() / ni),
+    ln = {} if lane is None else dict(lane_found=float(lane["found"].mean()), lane_q_poses=int(lane["q"].sum()),
+                                      lane_w_share=float((w > 0.5).sum() / ni) if w is not None else 0.0)
+    return rh, dict(**ln, h_offset_med=float(np.median(d_)), h_clip_share=float((hi_.sum() + lo_.sum()) / ni), h_clip_left=float(hi_.sum() / ni),
                     h_clip_right=float(lo_.sum() / ni), h_offset_abs_med_used=float(np.median(np.abs(b[inside]))) if inside.any() else 0.0)
 
 
