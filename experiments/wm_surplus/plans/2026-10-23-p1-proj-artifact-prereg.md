@@ -52,5 +52,5 @@ P0 `Projector('pca')` 与原 `_Basis.project` 逐位相同；R 各变体满秩�
 
 ## 成本
 
-由闸的计时估：见闸后补的一行。LM 隐状态原 sweep 没存（只存了汇聚特征），所以每个 token 重跑 LM 一次；不存隐状态（全量约 75 GB）。
+闸（10-23 07:27，通过，`variants/gate.json`）：无钩子 0.55 s / token，缓存臂 0.06 s / 臂（每 token 的输入读取与 InternVL 切图只做一次，只是 harness 级缓存，闸逐位复查）；44 个变体臂 + off ≈ 3.2 s / token 加装载开销，全 navtest 约 10–25 卡时（6 片，约 2–4 h 墙钟）；读出 CPU（46 + 9 个臂的 v2 打分与 v1.1 PDMS）。LM 隐状态原 sweep 没存（只存了汇聚特征），所以每个 token 重跑 LM 一次；不存隐状态（全量约 75 GB）。
 池作业：sweep 每卡一片（VRAM 申报 45 GB，避免两片同卡），与 WA-JEPA、DriveVLA-W0 探针共用卡；只存分数。
