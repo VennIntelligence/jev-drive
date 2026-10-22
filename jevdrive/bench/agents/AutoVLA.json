@@ -1,0 +1,50 @@
+{
+ "kind": "llm",
+ "note": "AutoVLA (ucla-mobility): Qwen2.5-VL-3B, 3 cameras x 4 frames as video + speed / accel / command in the prompt, adaptive CoT then discrete action tokens (codebook), RFT; run as shipped through their preprocessing JSON (runner cmd)",
+ "repo": "$DATA_DIR/third_party/autovla",
+ "commit": "ba34eed74ce6729e7986592d0e66cbaca397b4fa",
+ "env": "autovla",
+ "ckpt": "$DATA_DIR/models/autovla/AutoVLA_PDMS_89.ckpt",
+ "runner": "cmd",
+ "runner_note": "their eval (run_pdm_score_cot.py) feeds compute_trajectory the per-token JSON of their preprocessing (scripts/run_nuplan_preprocessing.sh, INCLUDE_COT=false, output $DATA_DIR/runs/wm_surplus/p0_autovla/navtest_nocot, built by experiments/wm_surplus/scripts/autovla_prep.py) and gets (trajectory, CoT text) back, so the generic AgentInput loop cannot run it; autovla_poses.py is that loop with their overrides",
+ "cmd": [
+  "{py}", "$DATA_DIR/jev-drive/experiments/wm_surplus/scripts/autovla_poses.py",
+  "--repo", "{repo}", "--tokens", "{tokens}", "--out", "{out}",
+  "--json-dir", "$DATA_DIR/runs/wm_surplus/p0_autovla/navtest_nocot",
+  "--base-model", "$DATA_DIR/models/autovla/Qwen2.5-VL-3B-Instruct",
+  "--",
+  "train_test_split=navtest",
+  "agent=autovla_agent",
+  "+agent.checkpoint_path=$DATA_DIR/models/autovla/AutoVLA_PDMS_89.ckpt",
+  "+agent.sensor_data_path=$DATA_DIR/datasets/navsim/sensor_blobs/test",
+  "+agent.lora_conf.use_lora=false"
+ ],
+ "inputs": [
+  "CAM_F0 / CAM_L1 / CAM_R1, 4 frames at 2 Hz each (their nuPlan mapping of front / front-left / front-right)",
+  "ego speed and acceleration magnitude in the prompt",
+  "command"
+ ],
+ "published": {
+  "metric": "PDMS v1",
+  "value": 89.11,
+  "source": "AutoVLA paper (Zhou et al., NeurIPS 2025, arXiv 2506.13757) Table 1, NAVSIM navtest, AutoVLA post-RFT; checkpoint name AutoVLA_PDMS_89 (HF Zewei-Zhou/AutoVLA, README: merged LoRA, LORA=false)"
+ },
+ "tolerance": 0.5,
+ "vram": 20,
+ "cpu": 6,
+ "ram": 32,
+ "chunks": 12,
+ "min_chunk": 200,
+ "licence": "UCLA Academic Software License (academic / non-profit research only, no redistribution)",
+ "deviations": [
+  "env: python 3.12, torch 2.8.0+cu128 (Blackwell); navsim/nuplan stack added from navsim/requirements.txt with hydra-core 1.3.2 (1.2.0 fails on 3.12), guppy3 / scikit-learn unpinned (no 3.12 build of the pins), numpy 1.26.4, peft 0.15.2 (<0.16 for transformers 4.49), lmdb 1.7.5; nuplan-devkit v1.2 from the local checkout",
+  "preprocessing: tensorflow / waymo_open_dataset stubbed (Waymo-only imports, no 3.12 wheels); config paths set per README ($DATA_DIR/runs/wm_surplus/p0_autovla/cfg/nuplan_navtest.yaml)",
+  "eval script's CONFIG_PATH has a typo ('$./config/...'); the intended config/training/qwen2.5-vl-3B-nuplan-grpo-cot.yaml is used, with model.pretrained_model_path set to the local Qwen2.5-VL-3B-Instruct",
+  "seed 0 set once per chunk (their generate() samples at T=0.01, their eval sets no seed)"
+ ],
+ "env_vars": {
+  "PYTHONPATH": "$DATA_DIR/third_party/autovla:$DATA_DIR/third_party/autovla/navsim",
+  "NAVSIM_DEVKIT_ROOT": "$DATA_DIR/third_party/autovla/navsim",
+  "TOKENIZERS_PARALLELISM": "false"
+ }
+}
