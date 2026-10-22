@@ -380,7 +380,10 @@ def cmd_gate(a):
     G2l = []
     for key, d in F.items():
         a_ = d.agent > 0
-        G2l.append(dict(src=key, agent_active=_sh(a_), label_also=_sh(d.agent_lab[a_] > 0), human_also=float((d.hum_agent[a_] > 0).mean())))
+        r_ = d.road.fillna(0) > 0
+        G2l.append(dict(src=key, agent_active=_sh(a_), label_also=_sh(d.agent_lab[a_] > 0), human_also=float((d.hum_agent[a_] > 0).mean()),
+                        road_active=_sh(r_), road_label_also=_sh(d.road_lab[r_] > 0), road_human_also=float((d.hum_road[r_] > 0).mean()),
+                        road_label_trig_all=_sh(d.road_lab > 0), road_human_trig_all=float((d.hum_road > 0).mean())))
     G["G2"]["by_source"] = G2l
     # ---- PAID2 (agent / side on the stored GPU plans of the students' own states)
     for k, (pool, f, ck) in STORED.items():
