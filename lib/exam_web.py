@@ -5,8 +5,9 @@ panel in lib/exam_panel.py (its docstring has the protocol); this module only re
 
 API (JSON): GET /api/state?run=<dir> (everything the page shows: phone address, input status, loop, batches, the items of the shown
 batch), GET /api/meta (title, sets, options), GET /api/catalog (backend.catalog(), for the custom pick), GET /api/official?run=,
-POST /api/control {paused | playlist | option + value}, /api/act {kind, item}, /api/order {run, order}, /api/new_batch {key, ids,
-force}, /api/continue {run, force}, /api/delete {run}, /api/ensure_side. new_batch / continue answer {"confirm": text} when
+POST /api/control {paused | playlist | option + value}, /api/act {kind, item} (refused when no loop runs), /api/order {run, order},
+/api/new_batch {key, ids, force}, /api/continue {run, force}, /api/play_start {run, item, force} (continue, then drive that item
+first), /api/delete {run}, /api/ensure_side. new_batch / continue answer {"confirm": text} when
 backend.busy_other() reports another run; the page asks and posts again with force (stop_other() first), as the Tk panel does.
 The shown batch is per request (?run=), so the desktop window and a phone can look at different batches.
 """
@@ -116,7 +117,7 @@ class App(object):
 
     def state(self, run):
         st = read_json(Path(self.b.live) / "loop.json", {}) or {}
-        alive = bool(st.get("pid")) and os.path.exists("/proc/%s" % st["pid"])
+        alive = bool(self.b.loop_run())        # a "stopped" loop only drains its scoring: not running for the page
         c = self.ctl.read()
         shown, items = self.items(run)
         cur = self.b.loop_run()
@@ -153,6 +154,8 @@ class App(object):
         ask = self.take_over(force)
         if ask:
             return ask
+        if self.ctl.read()["paused"]:
+            self.ctl.update(paused=False)
         before = set(self.b.runs())
         try:
             ok, msg = self.b.new_batch(key, ids=ids) if ids is not None else self.b.new_batch(key)
@@ -162,15 +165,37 @@ class App(object):
         new = [r for r in self.b.runs() if r not in before]
         return dict(ok=ok, msg=msg, run=new[0] if new else None)
 
-    def continue_batch(self, run, force=False):
+    def loop_pid(self):
+        st = read_json(Path(self.b.live) / "loop.json", {}) or {}
+        return st.get("pid") if self.b.loop_run() else None
+
+    def continue_batch(self, run, force=False, item=None):
+        """Continue `run`; with `item`, that item is driven first: its play action is posted once the new loop reports alive (a loop
+        ignores actions older than itself, so a play queued before it starts is lost)."""
         if run not in self.b.runs():
             return dict(ok=False, msg="%s is not a batch of this panel" % run)
         ask = self.take_over(force)
         if ask:
             return ask
+        old = self.loop_pid()
+        if self.ctl.read()["paused"]:          # a pause left over from an earlier loop would hold the new one
+            self.ctl.update(paused=False)
         ok, msg = self.b.continue_batch(run)
         self.cache.clear()
+        if ok and item:
+            threading.Thread(target=self.play_when_up, args=(run, item, old), daemon=True).start()
+            msg += "\n\nDriving %s first." % item
         return dict(ok=ok, msg=msg, run=run)
+
+    def play_when_up(self, run, item, old, wait=180):
+        t = time.time()
+        while time.time() - t < wait:
+            pid = self.loop_pid()
+            if pid and pid != old and self.b.loop_run() == run:
+                self.ctl.act("play", item)
+                return
+            time.sleep(0.3)
+        self.notice("the loop did not start within %d s; %s was not queued" % (wait, item), "bad")
 
     def delete(self, run):
         if run == self.b.loop_run():
@@ -212,6 +237,11 @@ class App(object):
         if path == "/api/act":
             if d.get("kind") not in ("play", "next", "restart", "stop"):
                 return dict(ok=False, msg="unknown action")
+            cur = self.b.loop_run()
+            if not cur:                       # never queue silently: a later loop drops actions older than itself
+                return dict(ok=False, msg="No loop is running: %s not sent. Continue a batch (or use an item's play button)." % d["kind"])
+            if d["kind"] == "play" and d.get("run") and d["run"] != cur:
+                return dict(ok=False, msg="The loop runs on another batch (%s)." % os.path.basename(cur))
             return dict(ok=True, id=self.ctl.act(d["kind"], d.get("item")))
         if path == "/api/order":
             return self.order(d.get("run"), d.get("order") or [])
@@ -219,6 +249,8 @@ class App(object):
             return self.new_batch(d.get("key"), d.get("ids"), bool(d.get("force")))
         if path == "/api/continue":
             return self.continue_batch(d.get("run"), bool(d.get("force")))
+        if path == "/api/play_start":
+            return self.continue_batch(d.get("run"), bool(d.get("force")), d.get("item"))
         if path == "/api/delete":
             return self.delete(d.get("run"))
         if path == "/api/ensure_side":

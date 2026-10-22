@@ -108,7 +108,7 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
 .dlg h2 { margin: 0; font-size: 1.2rem; }
 .dlg .body { overflow: auto; min-height: 0; }
 .dlg .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
-#confirmDlg { width: 640px; } #confirmDlg .body { white-space: pre-wrap; word-break: break-word; }
+#confirmDlg { width: 640px; max-height: 90vh; } #confirmDlg .dlg { max-height: 90vh; } #confirmDlg .body { white-space: pre-wrap; word-break: break-word; }
 #newDlg { width: 1240px; height: 92vh; } #newDlg .dlg { height: 100%; }
 #offDlg { width: 1240px; } #offDlg .body pre { white-space: pre-wrap; font-size: .85rem; }
 #offDlg table { table-layout: auto; } #offDlg td, #offDlg th { white-space: nowrap; }
@@ -260,19 +260,22 @@ const base = s => (s || "").split("/").pop();
 const S = {meta: null, st: null, run: null, sort: "group", folded: new Set(), sel: null, orderKey: null, noticeT: Date.now() / 1000,
            busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "sets", setKey: null, html: {}};
 
-async function api(path, body) {
-  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
-  const j = await r.json().catch(() => ({ok: false, msg: "HTTP " + r.status}));
-  if (!r.ok && j.ok === undefined) j.ok = false;
+async function api(path, body) {        // never throws: a network or server failure comes back as {ok: false, msg}
+  let r;
+  try { r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}); }
+  catch (e) { return {ok: false, msg: "panel server unreachable (" + path + "): " + e}; }
+  const j = await r.json().catch(() => ({ok: false, msg: "HTTP " + r.status + " from " + path}));
+  if (!r.ok) { j.ok = false; if (body !== undefined && !j.confirm) toast((j.msg || "HTTP " + r.status) + " (" + path + ")", "bad", 12000); }
   return j;
 }
+window.addEventListener("error", e => toast("Page error: " + e.message, "bad", 15000));
+window.addEventListener("unhandledrejection", e => toast("Page error: " + (e.reason && e.reason.message || e.reason), "bad", 15000));
 function toast(msg, level, ms) {
-  if (!msg) return;
   const d = document.createElement("div");
   d.className = "toast " + (level || "");
   d.textContent = msg;
   $("#toasts").appendChild(d);
-  setTimeout(() => d.remove(), ms || 7000);
+  if (msg || ms) setTimeout(() => d.remove(), ms || 7000);
   return d;
 }
 function confirmBox(title, body, yes, danger) {
@@ -294,7 +297,7 @@ function confirmBox(title, body, yes, danger) {
 async function work(label, fn) {        // long backend calls: one at a time, with a sticky toast
   if (S.busy) return toast("Still working on the previous action...", "bad");
   S.busy = true;
-  const t = toast("", "", 600000);
+  const t = toast("", "", 600000);       // toast("") still returns the element (the old early return made this throw)
   t.innerHTML = '<span class="spin"></span>' + esc(label);
   try { return await fn(); } finally { t.remove(); S.busy = false; }
 }
@@ -321,7 +324,10 @@ function render() {
   if (!note.hidden) note.textContent = "Showing " + base(st.shown) + "; the loop runs on " + base(L.run) + ".";
   $("#pauseBtn").textContent = C.paused ? "Resume" : "Pause";
   $("#pauseBtn").className = "btn big" + (C.paused ? " primary" : "");
-  for (const b of ["#restartBtn", "#nextBtn", "#stopBtn"]) $(b).disabled = !L.alive;
+  for (const [b, t] of [["#pauseBtn", "Pause / resume the loop"], ["#restartBtn", "Abort the running item and drive it again"],
+                        ["#nextBtn", "Skip the running item (not counted) and go on"], ["#stopBtn", "Abort the running item and stop the loop"]]) {
+    $(b).disabled = !L.alive; $(b).title = L.alive ? t : "no loop running: Continue a batch, New batch, or the play button of an item";
+  }
   // inputs
   setHTML($("#inputs"), "inputs", st.inputs.map(([t, l]) => `<span class="chip ${l}">${esc(t)}</span>`).join(""));
   if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#lan").textContent = "LAN fallback " + st.phone.lan; }
@@ -340,6 +346,8 @@ function render() {
   }).join("") || '<tr><td colspan="6" class="muted">no batch yet: New batch</td></tr>');
   const shownB = st.batches.find(b => b.run === st.shown);
   $("#contBtn").disabled = $("#delBtn").disabled = !shownB;
+  $("#contBtn").textContent = shownB ? (shownB.current ? "Restart loop on " : "Continue ") + shownB.label + " (" + shownB.name + ")" : "Continue this batch";
+  $("#contBtn").className = "btn" + (shownB && !L.alive ? " primary" : "");
   $("#delBtn").disabled = !shownB || shownB.current;
   $("#delBtn").title = shownB && shownB.current ? "The loop runs on this batch: Stop it first" : "Delete the shown batch";
   $("#itemHead").textContent = shownB ? `${shownB.label} · ${shownB.driven} / ${shownB.total} driven${shownB.mean_s ? " · mean " + shownB.mean_s : ""}` : "";
@@ -405,15 +413,18 @@ async function poll() {
 }
 
 // ---------- actions ----------
-async function control(d) { const r = await api("/api/control", d); if (S.st && r.control) { S.st.control = r.control; render(); } }
-async function act(kind, item) { const r = await api("/api/act", {kind, item}); if (!r.ok) toast(r.msg, "bad"); return r; }
+async function control(d) { const r = await api("/api/control", d); if (S.st && r.control) { S.st.control = r.control; render(); } return r; }
+async function act(kind, item) { const r = await api("/api/act", {kind, item}); if (!r.ok) toast(r.msg || "failed", "bad", 10000); return r; }
 
-$("#pauseBtn").onclick = () => control({paused: !S.st.control.paused});
-$("#restartBtn").onclick = () => act("restart").then(() => toast("Restart sent"));
-$("#nextBtn").onclick = () => act("next").then(() => toast("Next sent"));
+$("#pauseBtn").onclick = async () => {
+  const p = !S.st.control.paused, r = await control({paused: p});
+  if (r.ok) toast(p ? "Paused" : "Resumed", "ok", 2500);
+};
+$("#restartBtn").onclick = () => act("restart").then(r => r.ok && toast("Restart sent", "ok", 3000));
+$("#nextBtn").onclick = () => act("next").then(r => r.ok && toast("Next sent", "ok", 3000));
 $("#stopBtn").onclick = async () => {
   if (await confirmBox("Stop the loop?", "The current item is aborted (it can be driven again) and the loop exits.", "Stop", true))
-    act("stop").then(() => toast("Stop sent"));
+    act("stop").then(r => r.ok && toast("Stop sent: the loop ends the item and exits", "ok", 5000));
 };
 $("#toggles").onchange = e => {
   const k = e.target.dataset.k;
@@ -438,7 +449,7 @@ async function takeOver(path, body, label) {
     r = await work("Stopping the other run, then " + label.toLowerCase(), () => api(path, Object.assign({force: true}, body)));
   }
   if (!r) return;
-  toast(r.msg, r.ok ? "ok" : "bad", 12000);
+  toast(r.msg || (r.ok ? "done" : "failed"), r.ok ? "ok" : "bad", 12000);
   if (r.run) { S.run = r.run; S.sel = null; }
   poll1();
   return r;
@@ -490,9 +501,11 @@ itBody.onclick = e => {
 itBody.ondblclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) playItem(tr.dataset.id); };
 function playItem(id) {
   const it = S.st.items.find(i => i.id === id) || {label: id};
-  const L = S.st.loop;
-  if (L.alive && L.run && L.run !== S.st.shown) return toast("The loop runs on another batch (" + base(L.run) + "). Continue this batch first.", "bad");
-  act("play", id).then(r => r.ok && toast("Drive next: " + it.label + (L.alive ? "" : " (the loop is not running: Continue this batch)"), "ok"));
+  const L = S.st.loop, run = S.st.shown;
+  if (!L.alive)                          // no loop: start it on this batch and drive this item first (never queue silently)
+    return takeOver("/api/play_start", {run, item: id}, "Starting the loop on " + base(run) + " with " + it.label);
+  if (L.run && L.run !== run) return toast("The loop runs on another batch (" + base(L.run) + "). Continue this batch first.", "bad");
+  act("play", id).then(r => r.ok && toast("Drive next: " + it.label, "ok"));
 }
 document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
   S.sort = b.dataset.sort;
