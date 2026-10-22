@@ -1,0 +1,13 @@
+{
+ "reads": {
+  "R9DL-L18-s1-ag": {
+   "inferences": 55693,
+   "agree": 1.0
+  },
+  "R9DL-L18-s1-agH": {
+   "inferences": 55693,
+   "agree": 1.0
+  }
+ },
+ "passed": true
+}

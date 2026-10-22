@@ -1,0 +1,357 @@
+{
+ "common_scenes": 279,
+ "classes": {
+  "NTV0-ag": {
+   "n": 279,
+   "mean": 0.7433605965508718,
+   "zeros": 59,
+   "lanekeep_zeros": 12,
+   "lanekeep_hi_zeros": 8,
+   "other_zeros": 47,
+   "turn_inside_zeros": 3,
+   "coll_zeros": 3,
+   "straight_at_turn_zeros": 11,
+   "loss": {
+    "lanekeep": 12.0,
+    "lanekeep_hi": 8.0,
+    "turn_inside": 3.0,
+    "coll": 3.0,
+    "cor_drift": 5.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 4.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 1.0,
+    "7dc59d0d": 0.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R6DAG-s0-ag": {
+   "n": 279,
+   "mean": 0.7750739567920656,
+   "zeros": 53,
+   "lanekeep_zeros": 12,
+   "lanekeep_hi_zeros": 8,
+   "other_zeros": 41,
+   "turn_inside_zeros": 10,
+   "coll_zeros": 6,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 12.0,
+    "lanekeep_hi": 8.0,
+    "turn_inside": 10.0,
+    "coll": 6.0,
+    "cor_drift": 4.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 4.0,
+    "off_junc_straight": 3.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 0.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R6DAG-s1-ag": {
+   "n": 279,
+   "mean": 0.8151886295925221,
+   "zeros": 43,
+   "lanekeep_zeros": 8,
+   "lanekeep_hi_zeros": 6,
+   "other_zeros": 35,
+   "turn_inside_zeros": 7,
+   "coll_zeros": 6,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 8.0,
+    "lanekeep_hi": 6.0,
+    "turn_inside": 7.0,
+    "coll": 6.0,
+    "cor_drift": 3.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 2.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 0.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R6DAG-s2-ag": {
+   "n": 279,
+   "mean": 0.7909783178769527,
+   "zeros": 51,
+   "lanekeep_zeros": 12,
+   "lanekeep_hi_zeros": 9,
+   "other_zeros": 39,
+   "turn_inside_zeros": 8,
+   "coll_zeros": 6,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 12.0,
+    "lanekeep_hi": 9.0,
+    "turn_inside": 8.0,
+    "coll": 6.0,
+    "cor_drift": 3.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 5.0,
+    "off_junc_straight": 3.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 0.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R9DL-s0-ag": {
+   "n": 279,
+   "mean": 0.7860433129082256,
+   "zeros": 51,
+   "lanekeep_zeros": 10,
+   "lanekeep_hi_zeros": 7,
+   "other_zeros": 41,
+   "turn_inside_zeros": 9,
+   "coll_zeros": 5,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 10.0,
+    "lanekeep_hi": 7.0,
+    "turn_inside": 9.0,
+    "coll": 5.0,
+    "cor_drift": 2.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 6.0,
+    "off_junc_straight": 1.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R9DL-s1-ag": {
+   "n": 279,
+   "mean": 0.8002740348835577,
+   "zeros": 47,
+   "lanekeep_zeros": 7,
+   "lanekeep_hi_zeros": 4,
+   "other_zeros": 40,
+   "turn_inside_zeros": 7,
+   "coll_zeros": 7,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 7.0,
+    "lanekeep_hi": 4.0,
+    "turn_inside": 7.0,
+    "coll": 7.0,
+    "cor_drift": 2.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 3.0,
+    "off_junc_straight": 1.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "NTV0-agH": {
+   "n": 279,
+   "mean": 0.7448867581271774,
+   "zeros": 58,
+   "lanekeep_zeros": 13,
+   "lanekeep_hi_zeros": 8,
+   "other_zeros": 45,
+   "turn_inside_zeros": 5,
+   "coll_zeros": 5,
+   "straight_at_turn_zeros": 5,
+   "loss": {
+    "lanekeep": 13.0,
+    "lanekeep_hi": 8.0,
+    "turn_inside": 5.0,
+    "coll": 5.0,
+    "cor_drift": 5.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 5.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 0.0
+   }
+  },
+  "R6DAG-s0-agH": {
+   "n": 279,
+   "mean": 0.792461932654265,
+   "zeros": 46,
+   "lanekeep_zeros": 8,
+   "lanekeep_hi_zeros": 4,
+   "other_zeros": 38,
+   "turn_inside_zeros": 6,
+   "coll_zeros": 5,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 8.0,
+    "lanekeep_hi": 4.0,
+    "turn_inside": 6.0,
+    "coll": 5.0,
+    "cor_drift": 1.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 3.0,
+    "off_junc_straight": 3.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 1.0
+   }
+  },
+  "R6DAG-s1-agH": {
+   "n": 279,
+   "mean": 0.7801928772217871,
+   "zeros": 49,
+   "lanekeep_zeros": 10,
+   "lanekeep_hi_zeros": 6,
+   "other_zeros": 39,
+   "turn_inside_zeros": 8,
+   "coll_zeros": 6,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 10.0,
+    "lanekeep_hi": 6.0,
+    "turn_inside": 8.0,
+    "coll": 6.0,
+    "cor_drift": 4.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 3.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 0.0,
+    "0e05cb0c": 1.0
+   }
+  },
+  "R6DAG-s2-agH": {
+   "n": 279,
+   "mean": 0.7802286061197184,
+   "zeros": 48,
+   "lanekeep_zeros": 11,
+   "lanekeep_hi_zeros": 6,
+   "other_zeros": 37,
+   "turn_inside_zeros": 6,
+   "coll_zeros": 7,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 11.0,
+    "lanekeep_hi": 6.0,
+    "turn_inside": 6.0,
+    "coll": 7.0,
+    "cor_drift": 2.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 5.0,
+    "off_junc_straight": 3.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 1.0
+   }
+  },
+  "R9DL-s0-agH": {
+   "n": 279,
+   "mean": 0.773021916862758,
+   "zeros": 53,
+   "lanekeep_zeros": 10,
+   "lanekeep_hi_zeros": 5,
+   "other_zeros": 43,
+   "turn_inside_zeros": 9,
+   "coll_zeros": 6,
+   "straight_at_turn_zeros": 3,
+   "loss": {
+    "lanekeep": 10.0,
+    "lanekeep_hi": 5.0,
+    "turn_inside": 9.0,
+    "coll": 6.0,
+    "cor_drift": 2.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 5.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 1.0
+   }
+  },
+  "R9DL-s1-agH": {
+   "n": 279,
+   "mean": 0.76525932985541,
+   "zeros": 54,
+   "lanekeep_zeros": 11,
+   "lanekeep_hi_zeros": 6,
+   "other_zeros": 43,
+   "turn_inside_zeros": 10,
+   "coll_zeros": 7,
+   "straight_at_turn_zeros": 2,
+   "loss": {
+    "lanekeep": 11.0,
+    "lanekeep_hi": 6.0,
+    "turn_inside": 10.0,
+    "coll": 7.0,
+    "cor_drift": 3.0,
+    "cor_lane_change": 1.0,
+    "off_straight": 5.0,
+    "off_junc_straight": 2.0
+   },
+   "target": {
+    "26004ca8": 0.0,
+    "4cb05d65": 0.0,
+    "7dc59d0d": 1.0,
+    "0e05cb0c": 1.0
+   }
+  }
+ },
+ "r6dag_3seed": {
+  "mean": 0.7890207200428853,
+  "lanekeep_hi_zeros": 6.5,
+  "other_zeros": 38.166666666666664,
+  "lanekeep_zeros": 10.166666666666666,
+  "zeros": 48.333333333333336
+ },
+ "rule": {
+  "R9DL-s0": {
+   "mean_offon": 0.7795326148854917,
+   "lanekeep_hi": 6.0,
+   "other": 42.0,
+   "r1": false,
+   "r2": true,
+   "r3": false,
+   "passed": false
+  },
+  "R9DL-s1": {
+   "mean_offon": 0.7827666823694839,
+   "lanekeep_hi": 5.0,
+   "other": 41.5,
+   "r1": false,
+   "r2": true,
+   "r3": false,
+   "passed": false
+  }
+ },
+ "adopt": false
+}

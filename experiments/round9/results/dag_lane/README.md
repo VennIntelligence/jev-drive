@@ -13,8 +13,9 @@ Code: [../../scripts/dl.py](../../scripts/dl.py), [../../scripts/dl.sh](../../sc
 reference is the human's own lane centre plus the human's offset within that lane (saturated at ±0.5 m), not the route's lane. Scenes
 without such a stretch are bit-identical to b3.
 
-**Status (2026-10-22 14:00 box time).** All gates pass. Training and the PAI 281 reads (OFF and ON) are queued in one chain. The verdict
-will be appended below when it lands.
+**Verdict (2026-10-22 18:31 box time): not adopted.** Both seeds fail rule 1 ((OFF + ON) / 2 0.7795 / 0.7828 against R6DAG's 3-seed
+0.7890) and rule 3 (other zeros 42.0 / 41.5 against the line 38.2 + 2). They pass rule 2 by one zero (high-speed lane-keeping zeros 6.0 /
+5.0 against 6.5). Details are in [Reads and verdict](#reads-and-verdict) below.
 
 ## Gates (before training)
 
@@ -42,7 +43,65 @@ crashed the 125 scenes that have a qualifying stretch. No label had been written
 identity) passed with the same numbers. The fix is a3cc61bc, and the chain was resubmitted whole. Attempt 1's logs are in
 `$DATA_DIR/runs/round9/dag_lane/attempt1/`.
 
-## Reads
+## Reads and verdict
 
-Pending: PAI 281 ACC + GAP + `JEV_CMD=heading`, Harmonizer OFF and ON, for both seeds. Then `r2.py r281` against R6DAG s0 / s1 / s2 and
-NTV0, the per-class table and adoption rule (`dl.py verdict`), and the local PCS ruler.
+PAI 281 ACC + GAP + `JEV_CMD=heading`, NTV0's 8-chunk table, Harmonizer OFF and ON (`HARMONIZER=1`), 279 common scenes. Files:
+[pai281_R9DL.md](pai281_R9DL.md) (paired CIs, `r2.py r281`), [verdict.md](verdict.md) (per-class table, rule), [pcs_dl.md](pcs_dl.md)
+(local PCS ruler), [cmdagree_s0.json](cmdagree_s0.json) / [cmdagree_s1.json](cmdagree_s1.json).
+
+**Train / serve command agreement (G-C): pass.** On every inference of all four reads (4 x 55 693), the served command equals
+`rmem.cmd_heading` of the fed float16 memory, 100 %.
+
+| read | mean | zeros | lane-keep zeros | high-speed | other zeros | turn inside | collisions | offroad (fclass) |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|
+| R6DAG s0 / s1 / s2 OFF | 0.775 / 0.815 / 0.791 | 53 / 43 / 51 | 12 / 8 / 12 | 8 / 6 / 9 | 41 / 35 / 39 | 10 / 7 / 8 | 6 / 6 / 6 | 20 / 12 / 18 |
+| **R9DL s0 / s1 OFF** | 0.786 / 0.800 | 51 / 47 | 10 / 7 | 7 / 4 | 41 / 40 | 9 / 7 | 5 / 7 | 20 / 15 |
+| R6DAG s0 / s1 / s2 ON | 0.792 / 0.780 / 0.780 | 46 / 49 / 48 | 8 / 10 / 11 | 4 / 6 / 6 | 38 / 39 / 37 | 6 / 8 / 6 | 5 / 6 / 7 | 15 / 15 / 15 |
+| **R9DL s0 / s1 ON** | 0.773 / 0.765 | 53 / 54 | 10 / 11 | 5 / 6 | 43 / 43 | 9 / 10 | 6 / 7 | 20 / 20 |
+| NTV0 OFF / ON | 0.743 / 0.745 | 59 / 58 | 12 / 13 | 8 / 8 | 47 / 45 | 3 / 5 | 3 / 5 | 12 / 17 |
+
+Paired against the same seed of R6DAG:
+
+| seed | OFF | ON |
+|---|---|---|
+| s0 | +0.011 [-0.016, +0.039], zeros -2 | -0.019 [-0.045, +0.004], zeros +7 [+1, +14], offroad +5 [+1, +10] |
+| s1 | -0.015 [-0.041, +0.010], zeros +4 | -0.015 [-0.041, +0.010], zeros +5 |
+
+Against NTV0, OFF is +0.043 / +0.057 (CIs exclude 0) and ON is +0.028 / +0.020 (CIs include 0). R9DL's ON - OFF gap is -0.013 / -0.035.
+R6DAG's is +0.017 / -0.035 / -0.011.
+
+**Target scenes (route_check A, the route in the lane next to the human's).**
+- 7dc59d0d passes in all four R9DL reads. R6DAG passes it in 2 of its 6 reads (s0 and s2 ON). R7J, which used the same heading command,
+  also passed it on both seeds.
+- 26004ca8 and 4cb05d65 fail in every read of every arm.
+- 0e05cb0c passes in the ON reads only, as for R6DAG.
+
+**Local PCS ruler (OFF, out of pool).** R9DL scores -184 / -182 against NTV0, CI [-286, -56] / [-276, -22]. R6DAG scores -213 / -155 /
+-165 (3-seed mean -178). Paired with the same draws: R9DL-s0 - DAG-s0 +25 [-27, +83], R9DL-s1 - DAG-s1 -25 [-127, -1].
+
+**Adoption rule (plan section 6).** R6DAG's 3-seed (OFF + ON) / 2 is mean 0.7890, high-speed lane-keeping zeros 6.50, other zeros 38.17.
+
+| seed | rule 1: (OFF + ON) / 2 >= 0.7890 | rule 2: high-speed lane-keeping zeros < 6.50 | rule 3: other zeros <= 40.17 |
+|---|---|---|---|
+| s0 | 0.7795, fail | 6.0, pass | 42.0, fail |
+| s1 | 0.7828, fail | 5.0, pass | 41.5, fail |
+
+**Not adopted.**
+
+How to read it:
+1. The two changes do what they were built to do, but only in a small part of the score.
+   - The command rule recovers 7dc59d0d on every read.
+   - High-speed lane-keeping zeros fall by about 1 per read: 5.5 against 6.5.
+   - That block was 4-5 points per seed (route_check). The two widest-offset scenes (26004ca8, 4cb05d65) are not recovered: the route
+     geometry still pulls the car across.
+2. The loss is in the Harmonizer-ON reads and in offroad.
+   - ON offroad is 20 / 20 against R6DAG's 15 / 15 / 15, and ON zeros are +5 / +7.
+   - OFF is within R6DAG's seed spread.
+3. The cause cannot be separated: the arm bundles (a) and (b) by design.
+   - R7J also used the heading command. It also lost lateral (s1 offroad +9) and lost in the ON reads.
+   - R8K dropped the command and its offroad returned to R6DAG's level.
+   - That pattern is consistent with the heading command costing offroad and ON robustness. This has not been tested here.
+4. Untested next step: (b) alone, the same pool `on1_JTPHDL` without `--cmd-rule`, 2 seeds, about 6 card-h.
+
+Cost: about 13 card-h by VRAM share (2 trainings of about 40 min each, 2 x 8 OFF chunks at 3.4 job-h, 2 x 8 ON chunks at about 10 job-h).
+The chain ran 13:51-18:31 box time, sharing cards with other lanes from about 14:30.
