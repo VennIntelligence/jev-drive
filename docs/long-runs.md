@@ -4,6 +4,9 @@ Read this when you start anything on the box that takes more than about a minute
 
 ## Where it runs
 
+Lane jobs (GPU or CPU) run in the pool ([closed-loop-runbook.md](closed-loop-runbook.md#the-gpu-pool)); tmux is for
+what runs outside it (the dispatcher, viewers, downloads, a hand-started server declared with `cl hold`):
+
 - Always inside the box's tmux session `jev`, one window per job, named after the job.
   Never in a bare `ssh autodl '...'`: the job dies with the connection.
 - Start it with `scripts/tmux_run.sh <name> <command ...>`. It uses a bash login shell (a plain tmux
@@ -50,9 +53,9 @@ Check `git status` before committing, and `git pull --rebase` before pushing.
 
 ## Reporting while it runs
 
-An agent babysitting a long job reports on a **3-5 hour** cadence, not per file or per step.
-Report immediately only when something needs a decision: an error, a stall, a route or budget
-change, or the job finishing. A silent job that is making progress needs no message.
+Report every 3-5 hours while a job runs cleanly, not per file or step; at once only for an error, a stall, a decision
+or completion. Agents submit their jobs and stop; they wait only on their own DONE / ERROR with one `run_in_background`
+waiter (`P.wait`, or the lane script's `wait` stage). No polling loops in the agent.
 
 ## TensorBoard
 
@@ -82,72 +85,20 @@ as they ship: measure them, do not rewrite them.
   only then the full batch. A pilot that fails the checklist stops the batch; never find out after the full run.
 - Equality gates on fp16 plan points (identity, leakage, "same model through another path"): compare only the points
   inside the horizon the experiment uses (<= 4 s, the first ~15 plan points), and judge by the share of rows over the
-  tolerance plus a wrong-model control, not by the maximum over all rows and points. The far points reach ~190 m,
-  where one fp16 ulp is 0.125 m, so a max-over-everything rule fails on rounding once the run is large; three
-  op_parity lanes amended a registered gate for this on 2026-10-08 (margin-critic, turn-selnt, turn-selhug; values
-  in `experiments/op_parity/scripts/tsn_extract.py`: 0.03 m = two ulps at 32 m, wrong-fold median difference 0.07 m).
-- While a long job runs cleanly, report every 3-5 hours, not per file or step. Report at once only for an error,
-  a stall, a decision, or completion.
-- The box is elastic: cards, cgroup CPU quota, RAM and pids.max change between instances (7 cards / 175 cores /
-  644 GiB on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01; RTX 6000D, 83.6 GiB each; the host always shows
-  208 CPUs). Never hardcode them: read `python -m jevdrive.cl probe`, size pools with `jevdrive.common.n_cpus()`.
-  Run independent work in parallel across cores (one job per file/archive/shard), keep hot data in RAM, batch on
-  the GPU and overlap I/O with compute.
+  tolerance plus a wrong-model control, not by the maximum over all rows and points (far points reach ~190 m, where
+  one fp16 ulp is 0.125 m; values in `experiments/op_parity/scripts/tsn_extract.py`: 0.03 m = two ulps at 32 m).
+- Size everything from the live box (`python -m jevdrive.cl probe`, `jevdrive.common.n_cpus()`), never hardcoded; run
+  independent work in parallel (one job per file / shard / chunk), keep hot data in RAM, overlap I/O with compute.
 
-Last verified: 2026-09-20
+Last verified: 2026-10-22
 
 ## Sharing the box between several agents
 
-When more than one agent (or person) runs jobs on the box at the same time:
-- Every GPU job goes through the GPU pool ([closed-loop-runbook.md](closed-loop-runbook.md#the-gpu-pool)):
-  `python -m jevdrive.cl submit --name N --vram GB [--carla N] [--cpu N] [--train] [--after ID] -- cmd`. One
-  dispatcher (tmux `jev:pool`) starts each job on whichever card has room, sets `CUDA_VISIBLE_DEVICES`, allocates
-  CARLA server indices and cores, and writes `log.txt`, `STATUS`, `DONE` / `ERROR` into the job's log dir. Nobody picks
-  cards by hand; `queue`, `top`, `show ID`, `cancel ID` show and steer it. Work started outside the pool declares what
-  it uses with `python -m jevdrive.cl hold ... --pid PID` (ends by itself when that process exits).
-  CARLA sizing: about 6 servers per card is the GPU knee on the RTX 6000D box (docs/remote-box.md); the old
-  thread-cap limit (pids.max 20480, ~650 threads per worker) no longer binds with reduced thread pools
-  (docs/carla.md, "Budget with the reduced pools"); docs/bench2drive-cost.md has the 2026-09-25 measurements from the previous
-  instance.
-- **Fan-out rule.** Work that splits into independent runs (seeds, arms, variants, checkpoints, shards) is submitted
-  as one pool job per run, all at once, with the next stage chained by `--after`:
-  `python -m jevdrive.cl fanout --name N --arms a,b,c --vram GB --cpu N [--collect "cmd {arms}"] -- cmd ... {arm}`
-  (Python: `P.fanout`). Never one job that loops over the runs, and never "submit seed 1 when seed 0 is done": the
-  pool can only fill cards with jobs it has. A lane's whole remaining chain belongs in the queue, gated by `--after`
-  / `--when-exists`, not in an agent that submits the next piece when it next looks.
-- **Declare what the job uses.** `--vram`, `--cpu`, `--ram` are upper bounds, not safety margins on top of safety
-  margins: the pool books a job at what finished runs of the same name measured once it has three of them, and a new
-  name is booked at its declaration, so a first run declared at 24 GB that peaks at 6 keeps three more jobs off its
-  card for ten minutes. Keep job names stable across reruns (`<what>-<arm>-s<seed>`) so history applies.
-- **Look before you wait.** `python -m jevdrive.cl top` ends with the idle cards, the queued demand and an
-  `UNDER-USED` line; `python -m jevdrive.cl usage --hours 24` splits the idle card-hours by cause. An idle card with
-  work pending anywhere in a lane is a bug in how that lane submitted, or in the pool: fix it or report it.
+- Every job, GPU or CPU, goes through the GPU pool, and a lane submits its whole chain at once, one pipeline per chunk:
+  [closed-loop-runbook.md](closed-loop-runbook.md#pipelines-parallel-by-default) (the one place for pool commands,
+  declarations, fan-out and chain shape). Work started outside the pool declares itself with `cl hold ... --pid PID`.
 - `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
-- `scripts/boxwatch.sh` is the box-wide 5 s memory/process sampler (one per box, `$DATA_DIR/runs/boxwatch/`); read it
-  for a job that died by a signal. Unexplained SIGKILLs: experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
-- Agents submit their jobs and then stop; they watch only their own final DONE / ERROR (`P.wait` or a
-  `run_in_background` until-loop). No polling loops in the agent
-  and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
-- Waiters that look for a process with `pgrep -f <name>` must not carry `<name>` on their own command line
-  (e.g. inside `bash -c "... pgrep -f name ..."`): they match themselves and wait forever. Put the check in a
-  script file, or match on a sentinel file instead. (2026-09-25: a HUGSIM waiter matched itself and stalled
-  the WOD test download for ~7.5 h.)
-
-## Lane-script pattern: keep the queue fed
-
-Half the box's card-hours on 2026-10-16/17 had no GPU job at all, mostly with an empty queue or only `--after`-chained
-work waiting ([speed.md](speed.md#headroom-2026-10-17)). A lane script (`nx.sh`, `si.sh`, `aw.sh`, `wt.sh` are the
-models) keeps cards busy by the shape of its submits, not by an agent checking in:
-- **Every independent arm's training goes in at the start of the lane**, one job each, in the same call. An arm's
-  training waits (`--after`) only on what it consumes (an identity bitcmp, a pack, a scan, a pool gate), never on
-  another arm's reads: arm B trains while arm A reads.
-- **Backfill with the next base training at a lower priority** (`PRIO` below the lane's reads, e.g. the next seed or
-  the continuation the plan names next). It takes cards nothing else wants and never delays the lane's own reads;
-  cancel it when a gate stops the line.
-- **Gates are in-queue jobs**: a CPU-only job (`--vram 0.1`) `--after` the reads that decides and submits the next
-  stage itself (`nx.py acgate --submit`, `nx.py vgate`, `si.sh after`, `aw.sh gate-pilot`). Nobody has to be awake for
-  the chain to continue.
-- Trainings carry `--train`; `rm_train.py` trainings get the pool history key `rm-train` by themselves (also set in
-  the lane scripts' `FW` / `FK`), so they are booked at their measured RAM, not at `--ram 70`.
-- Check with `python -m jevdrive.cl usage --hours 24`: while a lane is live, "no work queued" and "serial" should be
-  near zero.
+- `scripts/boxwatch.sh` is the box-wide 5 s memory / process sampler (`$DATA_DIR/runs/boxwatch/`); read it for a job
+  that died by a signal ([sigkill.md](../experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md)).
+- A waiter that looks for a process must match a sentinel file, not `pgrep -f <name>` (it matches its own command line
+  and waits forever).

@@ -1,209 +1,176 @@
-# Closed-loop runbook (CARLA / Bench2Drive)
+# Closed-loop runbook (AlpaSim, CARLA / Bench2Drive, every GPU job)
 
-Read this first whenever you run anything closed-loop on the GPU box: a Bench2Drive exam, a CARLA data generation, a
-controller campaign. It is the authoritative entry point: which tool to launch with, how many workers per card, which
-thread settings, and the traps. Detail and history live in the docs it links; where they disagree, this page wins and
-says why.
+Read this first whenever you run anything on the GPU box: a read, a training, a Bench2Drive exam, a CARLA data generation.
+It gives the one way to do each thing. Detail and history live in the docs it links; where they disagree, this page wins.
 
 ## Entry points
 
 | Need | Use |
 |---|---|
-| run anything on a GPU (training, eval, render, CARLA) | `python -m jevdrive.cl submit --name N --vram GB [--carla N] [--cpu N] -- cmd` ([the GPU pool](#the-gpu-pool)) |
-| what runs / waits, and why | `python -m jevdrive.cl queue`, `top`, `show <id>` |
+| run anything (GPU or CPU job) | `python -m jevdrive.cl submit --name N --vram GB [--cpu N] [--ram GB] [--after IDS] -- cmd` ([the GPU pool](#the-gpu-pool)); CPU jobs `--vram 0.1` |
+| N independent runs (seeds, arms, chunks) | `python -m jevdrive.cl fanout --name N --arms a,b,c ... [--collect "cmd {arms}"] -- cmd {arm}` |
+| a lane (rolls, rows, training, reads, summary) | one lane script that submits the whole chain at once ([pipelines](#pipelines-parallel-by-default)) |
+| a nuPlan read (arena held / held 460 @18) | `jt.sh aread <tag> off <chunk>` / `rm_chain.sh read <tag> <i> 6`, one job per chunk; each writes its facts at the end |
+| a PAI read (281 / LAUNCH-37 / PAI-FIX) | `pai_fix.sh read <tag> <serve>` (chunks + `pai_fix.sh tax` -> `runs/pai_fix/facts/<name>.csv`) |
+| a summary of reads | join the facts cache: `python -m jevdrive.facts table ...` first, then lane tables ([facts](#read---facts-cache---summary)) |
+| a benchmark (navtest, navhard, HUGSIM, B2D) | `python -m jevdrive.bench` ([bench.md](bench.md)) |
+| what runs / waits, and why | `python -m jevdrive.cl queue`, `top`, `usage --hours 24`, `show <id>` |
 | stop a job | `python -m jevdrive.cl cancel <id>` (`--drain`: b2d_run finishes its routes first) |
-| what the box has right now (cards, quota, pids, NUMA, pool jobs per card) | `.venv/bin/python -m jevdrive.cl probe` |
-| one card's worth of routes (the command a CARLA job runs) | `scripts/b2d_run.py`; `jevdrive.cl.pool.b2d_cmd()` builds it on the pool's placeholders |
-| one CARLA server, by hand (debugging only; declare it with `hold`) | `scripts/carla_server.sh start <index>` (docs/carla.md) |
+| what the box has right now | `.venv/bin/python -m jevdrive.cl probe` (sizes derived from it: `cl plan`) |
+| one card's worth of CARLA routes | `scripts/b2d_run.py`; `jevdrive.cl.pool.b2d_cmd()` builds it on the pool's placeholders |
+| one CARLA server by hand (debugging; declare it with `hold`) | `scripts/carla_server.sh start <index>` ([carla.md](carla.md)) |
 
-The library is `jevdrive/cl/` (module map in its `__init__.py`); tests `python -m unittest tests.test_cl tests.test_pool`
-(the dispatcher tests start real processes and run on the box).
+Library: `jevdrive/cl/` (module map in its `__init__.py`); tests `python -m unittest tests.test_cl tests.test_pool`.
+
+## Pipelines: parallel by default
+
+Everything that can run in parallel runs in parallel; never leave a card idle.
+
+- **Pipeline per chunk.** Each GPU chunk is followed at once by its own CPU stages (extract, rows, tokens, labels, facts),
+  chained with `--after` on *that* chunk, so CPU and GPU work overlap. Only true joins (merge, train, summary) wait for
+  all chunks.
+- **Submit the whole chain in one go**, from one lane script, with `--after` between stages. Stages after a gate may be
+  submitted speculatively; the gate is an in-queue CPU job that fails (its dependents fail with it) or cancels them.
+  Nobody waits on a gate by hand.
+- **N independent runs are N jobs** (`fanout`), never one job that loops: a looping job holds one card while the others idle.
+- **Every independent arm's training goes in at the start**, waiting only on what it consumes; backfill with the next
+  base training at a lower priority, cancelled if a gate stops the line.
+- **Summaries join cached per-read facts and print the scores first** (next section).
+
+Canonical chain (nuplan_dag `nd.sh full` is the model):
+
+```bash
+sub() { .venv/bin/python -m jevdrive.cl submit --owner my-lane --priority $PRIO --log-dir $O/pool/$1 --name "$@" | awk '{print $NF}'; }
+for c in c000 c001 ...; do                                       # one pipeline per roll chunk
+  r=$(sub roll-$c --vram 32 --cpu 8 -- bash $ME roll $c)          # GPU: student rollout of the chunk
+  g=$(sub rows-$c --after $r --vram 0.1 --cpu 8 -- bash $ME rows $c)      # CPU: rows of that chunk, while other chunks roll
+  k=$(sub tok-$c  --after $g --vram 16 --cpu 8 -- bash $ME tok $c)        # tokens / labels of that chunk
+  K+=($k); done
+m=$(sub merge --after $(IFS=,; echo "${K[*]}") --vram 0.1 --cpu 4 -- bash $ME merge)   # join: all chunks
+gt=$(sub gate --after $m --vram 0.1 --cpu 2 -- bash $ME gate)                          # in-queue gate (exit != 0 stops the chain)
+for s in 0 1; do t=$(sub train-s$s --after $gt --train --vram 40 --cpu 6 -- bash $ME train $s)
+  for c in $(seq 0 17); do R+=($(sub ar-s$s-c$c --after $t --vram 20 --cpu 6 --env CL_HIST_KEY=alpasim-read4 -- bash $JT aread $TAG-s$s off $c)); done
+  for i in 0 1 2 3 4 5; do R+=($(sub held-s$s-$i --after $t --vram 20 --cpu 6 --env CL_HIST_KEY=alpasim-read4 -- bash $RM read $TAG-s$s $i 6)); done
+done                                                             # each read chunk writes its facts when it ends
+sub summary --after $(IFS=,; echo "${R[*]}") --vram 0.1 --cpu 8 -- bash $ME sum   # joins the facts cache: seconds
+```
+
+A lane script records job ids (`$O/jobs.txt`) and stages (`$O/stages.txt`) and offers one `wait` stage (a
+`run_in_background` waiter on a done marker or a failed job): agents submit, then stop. Check with `cl usage --hours 24`:
+while a lane is live, "no work queued" and "serial" stay near zero.
+
+## Read -> facts cache -> summary
+
+A read's per-window facts are extracted once, per chunk, when the chunk's read job ends; summaries concatenate and join
+them ([jevdrive/facts.py](../jevdrive/facts.py); measured and identity-checked in
+[read_summaries.md](../experiments/cl_infra/results/read_summaries.md): Part 1 of nuplan_dag in 23 s instead of 3 min).
+
+- **Cache** `$DATA_DIR/runs/facts/<bench>/<read key>/<chunk>/`: `scores.parquet` (every rollout: score, failure class,
+  metrics), the native_gap extract (`dec` per decision: fed speed, human speed at the same station, turn, lead gap,
+  plan; `win` per window; `steps` per scorer step; `hum.pkl`), `lat.pkl` (arena: the d395 lateral-zero split rows).
+  Benches: `arena` (key `<tag>@<serve>`, `jt.sh aread`), `held460` (key `<tag>`, `rm_chain.sh read`). PAI reads keep
+  their per-read facts in `runs/pai_fix/facts/<name>.csv` (`pai_fix.sh tax` after the read's chunks).
+- **Writing** is the last line of the read job: `$AP -m jevdrive.facts chunk --bench arena --run $D || true` (~9 s on
+  the read's cores; never fails the read). A re-read chunk is rebuilt (stamp of its results-summary); writers lock per read.
+- **Summaries**, scores first:
+  `python -m jevdrive.facts table --bench arena|held460|pai --tags A B --refs REF ... --out X.md` (means, zeros, zero
+  classes, paired CIs; seconds), then the mechanism tables from
+  `$AP -m jevdrive.facts ext --read LABEL=KEY.. --out DIR` (native_gap-format extract for `free_m.py arena` /
+  `native_gap_report`) and `$AP -m jevdrive.facts latsplit --read ... --out CSV`. A missing chunk is extracted and
+  cached by the summary itself (`fill`); backfill old reads with `$AP -m jevdrive.facts fill --bench B --keys K..` (one
+  CPU job). `AP` = `$DATA_DIR/third_party/alpasim/.venv/bin/python`.
 
 ## The box is elastic: never hardcode its size
 
-The instance changes between sessions: seven cards / 175 cores / 644 GiB on 2026-09-28, three cards / 75 cores /
-276 GiB on 2026-10-01. Every sizing number below is either measured live by `jevdrive.cl.box.probe()` (cgroup
-`cpu.max`, `pids.max`, `memory.max`, affinity, NUMA nodes, `nvidia-smi`, CARLA servers per card from `/proc`) or derived
-from it in `jevdrive.cl.capacity`, with our best defaults as fallback; the pool's caps live in
-`$DATA_DIR/runs/pool/config.json` (see below).
+Cards, cgroup CPU quota, RAM and `pids.max` change between instances (the host always shows 208 CPUs). Every sizing
+number comes from `jevdrive.cl.box.probe()` (cgroup `cpu.max`, `pids.max`, `memory.max`, affinity, NUMA, `nvidia-smi`)
+or `jevdrive.cl.capacity`; `python -m jevdrive.cl plan` prints them; Python sizes pools with `jevdrive.common.n_cpus()`.
+Per card: core slice = quota / cards, CARLA workers = min(GPU knee 6, slice / cores per worker, (VRAM - 8 GB) / 9 GB),
+PID plan cap 0.80 x `pids.max`, b2d_run start gate (`B2D_PIDS_WAIT`) 0.85 x `pids.max`, server indices 160-494.
 
-Defaults derived per card: core slice = quota / cards (25 on the 3-card box), workers per card = min(GPU knee 6, slice /
-cores per worker, (VRAM - 8 GB) / 9 GB), PID plan cap = 0.80 x `pids.max`, b2d_run's start gate (`B2D_PIDS_WAIT`) =
-0.85 x `pids.max`, server indices 160-494 (RPC port >= 10000, TM block below the ephemeral range).
-`python -m jevdrive.cl plan` prints them for the live box.
+## CARLA worker profile
 
-## Worker profiles and the chosen default
-
-A worker is one CARLA server plus one route client. Its thread settings live only in `jevdrive/cl/profiles.py`:
-
-| Profile | CARLA pools (`-RPCThreads/-StreamingThreads/-SecondaryThreads`) | `carla.Client` threads | OMP/MKL/OPENBLAS/NUMBA |
-|---|---|---|---|
-| `stock` | CARLA default: (host CPUs - 2) / 3 = 68 each on the 208-CPU host | default: one per host CPU (208) | unset |
-| **`reduced` (default)** | 4 each | 8 | 2 |
-
-**Decision (2026-10-01, pre-registered rule, [fc65452:todos/2026-10-01-cl-lib.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-10-01-cl-lib.md)): `reduced`
-with numeric threads 2 stays the default.** PDM-Lite on 40 fixed Bench2Drive routes (25 Town12, 5 Town13), one exclusive
-run per arm on a 25-core NUMA-local slice of an RTX 6000D, 3-card / 75-core box. Saturated throughput = 8 x mean over
-routes of (ticks / route wall); two repeats on two cards (card-to-card spread ~5%).
-
-| Stage A, 8 workers per card | stock T1 | stock T2 | stock T4 | reduced T1 | reduced T2 | reduced T4 |
-|---|---:|---:|---:|---:|---:|---:|
-| saturated sim ticks/s per card (rep a / b) | 61.9 / 59.0 | 60.2 / 58.1 | 58.5 / 61.1 | 57.8 / 56.7 | 63.6 / 58.3 | 56.8 / 61.3 |
-| threads per server / per route client | 346 / 213-219 | | | 154 / 13-19 | | |
-| starts that died before ticking | 0 of 48 servers | | | 1 of 49 (one RenderThread timeout) | | |
-| routes finished | 40/40 in all 12 runs | | | | | |
-
-- D1 profile: reduced / stock median ratio 0.988 (rule: >= 0.95); start failures 1 vs 0 (rule: <= stock + 2); DS
-  identical in 95.1% of stock-reduced route pairs vs 94.5% stock-stock and 94.0% reduced-reduced, every disagreement on
-  routes that also flip between identical runs (26408, 2201, 17563, 3564); a worker has ~169 threads instead of ~561.
-  So reduced: same throughput and outcomes, 3.3x fewer threads.
-- D2 numeric threads: reduced T1 / T2 / T4 = 57.3 / 60.9 / 59.1 ticks/s; T2 is the only one within 0.97 of the best.
-  Valid for PDM-Lite; torch agents may need their own T (override per job `env` or `--num-threads`).
-- Stage B, workers per card (reduced T2, one run each): 4 -> 31.5, 6 -> 47.4, 8 -> ~60, 10 -> 65.6, 12 -> 71.2
-  saturated ticks/s; the 25-core slice was only 8-12 cores busy at every W and GPU util low (no cameras), so for a
-  camera-less agent the card takes >= 12 workers (~2 cores per worker budgeted, ~1 used). 16 was not run (16 x 6 GB
-  exceeds the 75 GB card budget). Camera agents keep the GPU knee of 6 per card (bench2drive-cost.md).
-- **Open caveat:** at 12 workers one stock run gave 87.5 ticks/s against 71.2 for reduced (single runs on different
-  cards; reduced also had 2 early start failures there). Stage A at 8 workers showed no difference. Until a repeated
-  12-worker A/B says otherwise, prefer <= 10 workers per card with the reduced profile, or rerun the pair before a
-  dense CPU-light campaign.
-- Stage C, camera-bound (b2d_run stub, front3 1600x900, 6 workers, card 0): reduced 36.4 vs stock 35.9 ticks/s, GPU util
-  70 / 68%, 40/40 routes, no start failures: the profile does not cost throughput when the GPU binds either.
-- The 2026-10-01 harness reproduces `carla_threads_routes.sh`: 20/20 routes, mean DS 93.3 (old runs 90.6-95.3), DS
-  differences only on the known flaky routes 1956 / 3564 / 17563.
-
-
-`OPENBLAS_CORETYPE` is not a profile knob but a correctness setting of particular envs: `Haswell` for the NAVSIM devkit
-on the GPU box (without it NumPy's OpenBLAS returns wrong results there, research/decisions/073.md),
-`Barcelona` only to replay controller goldens recorded on Tokyo bit for bit (docs/b2d-controller.md). Put it in a job's
-`env`.
-
-## Capacity and thread numbers, with their conditions
-
-Every number here was measured under the conditions in its row; numbers from different rows are not interchangeable.
-"Slice" is the CPU affinity the server ran under: UE4 sizes its TaskGraph and PoolThread pools from it, CARLA sizes its
-three pools from the host CPU count regardless.
-
-| Quantity | Value | Box / date | Cards, cores | Affinity, flags, profile | Source |
-|---|---|---|---|---|---|
-| threads, one stock server | ~430 | 5-card RTX PRO 6000, 2026-09-25 | 125-core quota | unpinned (208 CPUs), stock | bench2drive-cost.md |
-| threads, one stock server | 374 | same | same | 45-CPU affinity, stock | bench2drive-cost.md |
-| threads, one stock server | 301 | 7-card box, 2026-09-27 | 175 | 16-CPU affinity, stock | carla.md "Threads per server" |
-| threads, one reduced server | 109 / 69 / 169 | same | same | 16 / 8 / 32-CPU affinity, pools 4 | carla.md |
-| threads, one reduced server | 149 / 263 | 7-card box, 2026-09-28 G lane | 175 | 24 / 128-core slice, pools 4 | carla.md "In production" |
-| threads, one reduced server | 154 | 3-card box, 2026-10-01 | 75 | 25-core NUMA-local slice, pools 4 | this experiment |
-| threads, one stock server | 346 | same | same | 25-core slice, stock | this experiment |
-| threads, route client | ~215 / ~16-29 | 2026-09-25 / 27 | - | client threads default (208) / 8 | bench2drive-cost.md, carla.md |
-| threads, route client, PDM-Lite | 13-19 (client 8) / 213-219 (default 208) | 2026-10-01 | 75 | profile per row of the experiment table | this experiment |
-| threads, route client, SimLingo | 69 | 2026-09-28 | 175 | 24-core slice, client 8 | carla.md |
-| threads per worker (admission) | 650 / 450 / 250 / 700 | 2026-09-25 / 25 / 28 / 27 | - | stock / client 8 / reduced SimLingo / stock (G lane) | superseded by `capacity.worker_threads()` |
-| cores per worker | 2.5 | 5-card box 2026-09-25 | 45-CPU NUMA slice | Town12, Alpamayo camera rig, 6 per card | bench2drive-cost.md "Recommended layout" |
-| cores per worker | ~3 | same | same | heaviest rig (5 cameras) | bench2drive-cost.md |
-| cores per worker | 2.0 / 1.2 | 7-card box 2026-09-28 | 24-core slice | SimLingo, TFv6, BLUE / PDM-Lite (G lane `CPU_A`) | experiments/night_queue_4/lib/nq4_g_lane.py |
-| cores per worker | ~1.0-1.4 used (11-12 of 25 cores busy at 8-12 workers) | 3-card box 2026-10-01 | 25-core slice | PDM-Lite, reduced, client 8 | this experiment |
-| servers per card (GPU knee) | 6 | 5-card RTX PRO 6000 2026-09-25 | - | Town12, Alpamayo camera rig: 34.8 aggregate ticks/s at 6, 38.2 at 12 | bench2drive-cost.md |
-| servers per card | 6 (45.8 FPS aggregate, 8.0 GB each) | 7-card RTX 6000D 2026-09-28 | 16 CPUs | six 1600x900 cameras, reduced | remote-box.md |
-| VRAM per server | 5.1-6.3 GB Town12, 8-10 GB six cameras | 2026-09-25 / 27 | - | - | bench2drive-cost.md, carla.md |
-| numeric threads (OMP...) | 1 / 2 / 4 used by different lanes | - | - | never compared before | this experiment |
-| `pids.max` | 20480 | every instance so far | - | counts threads | probe |
+A worker is one CARLA server plus one route client; thread settings live only in `jevdrive/cl/profiles.py`. Default
+`reduced`: CARLA pools 4 each, `carla.Client` 8 threads, OMP/MKL/OPENBLAS/NUMBA 2 (decision 83: same throughput and
+route outcomes as stock on 40 PDM-Lite routes, 3.3x fewer threads, ~169 per worker). Camera agents: 6 servers per card
+(GPU knee, 5-10 GB VRAM each); camera-less agents fit 10-12 per card; prefer <= 10 until a repeated 12-worker A/B
+exists. Torch agents may need their own numeric threads (job `env`). `OPENBLAS_CORETYPE=Haswell` is required for the
+NAVSIM devkit on the box (decision 073), in the job's `env`. Measurements and conditions: [carla.md](carla.md),
+[bench2drive-cost.md](bench2drive-cost.md); the 2026-10-01 profile experiment: decision 83.
 
 ## The GPU pool
 
-One dispatcher (`jevdrive/cl/pool.py`, tmux `jev:pool`) owns every card. Agents submit jobs; whichever card has room
-takes the next one. Nobody picks a card, a core list or a CARLA port by hand.
+One dispatcher (`jevdrive/cl/pool.py`, tmux `jev:pool`) owns every card and core. Jobs are submitted; whichever card
+has room takes the next one. Nobody picks a card, core list or CARLA port by hand.
 
 ```bash
 P=".venv/bin/python -m jevdrive.cl"
-$P dispatch                                   # once per box: scripts/tmux_run.sh pool $P dispatch (restart: below)
-$P submit --name dg-train --vram 35 --cpu 12 --train --log-dir $DATA_DIR/runs/x/train -- \
+$P submit --name dg-train --vram 35 --cpu 12 --ram 45 --train --log-dir $DATA_DIR/runs/x/train -- \
     $DATA_DIR/envs/op-train/bin/python experiments/x/train.py --steps 4000          # prints the job id
 $P submit --name dg-eval --vram 12 --cpu 8 --after <id> -- "bash experiments/x/eval.sh {gpu}"
-$P fanout --name wax --arms V1,V2,V3 --vram 7 --cpu 4 --collect "python collect.py {arms}" -- \
-    python run.py --arm {arm}                 # one job per arm (wax-V1 ...) + wax-collect after all of them
-$P queue            # running / queued jobs, the card, and why a job waits
-$P top              # per card: util, VRAM booked / used outside the pool / free, jobs; then idle capacity next to
-                    # queued demand, and an UNDER-USED line when a card idles
-$P usage --hours 24 # card-hours and core-hours used, idle card-hours split by cause
-$P vram             # declared against measured VRAM per name prefix, under-declared ones first
-$P trim --margin 120  # drop page cache until the working set is 120 GiB below the platform's kill line (--dry)
-$P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
-$P retarget <id>... --gpus 0,2   # change the allowed cards of queued jobs; ids and --after chains stay
+$P fanout --name wax --arms V1,V2,V3 --vram 7 --cpu 4 --collect "python collect.py {arms}" -- python run.py --arm {arm}
+$P queue | top | usage --hours 24 | vram | show <id> | cancel <id> [--drain]
+$P retarget <id>... --vram 26 [--ram 30] [--gpus 1,2]   # edit a queued job in place; id and --after chains stay
+$P trim --margin 120                                     # drop page cache until the working set is 120 GiB under the kill line
 ```
 
-**Under-declared VRAM.** The pool places a job by the VRAM it declares and samples what every job really uses each
-round (nvidia-smi per pid). Until 2026-10-09 a declaration only ever capped the booking: a job declared at 12 GB that
-used 29-42 GB was booked at 12 whenever it was not allocating, its failed runs left no history, and nothing was
-logged (149 of 3 600 jobs ran above their declaration in four days; 9 failed with a CUDA OOM in their log, none was
-retried). Now:
+From Python: `from jevdrive.cl import pool as P; jid = P.submit(cmd, name=..., vram_gb=..., cpu=..., after=[...]);
+P.wait([jid])`; `P.fanout(cmd, arms, name, collect=..., ...)`; a CARLA job `P.submit(P.b2d_cmd(out, route_ids,
+agent=..., agent_config=...), name=..., carla=6, cpu=12)`.
 
-- A job measured above 1.1 x declared + 1 GB gets a `vram_over` event (events.jsonl, with the card's other jobs) and a
-  line in its STATUS, and is booked at 1.2 x its peak + 1 GB for the rest of its life.
-- Its peak goes to history whatever its end state, and one recorded peak above the declaration is enough: the next
-  job of the name prefix is booked at that peak + 1 GB, queued or running. `cl vram` shows the table.
-- Such a job on a card with under 1 GB free is stopped (`vram_stop`) before a neighbour's allocation fails, and
-  requeued once; it then waits for a card with room for what it measured.
-- A job that exits non-zero with a CUDA out-of-memory error in its log is requeued once beyond `--tries`
-  (`oom` event; config `oom_retries`), whoever caused the OOM.
+**What a job declares** (upper bounds; keep names stable, `<what>-<arm>-s<seed>`, so history applies):
+`vram_gb` (required; peak VRAM; 9 per CARLA server by default), `cpu` (cores; pins with `taskset`, NUMA-local first),
+`ram_gb` (peak private memory of the tree: WOD eval 40, `pp_train.py --host` 45, AlpaSim stack 52), `carla`, `train`
+(at most `train_per_card` per card), `priority` (higher first, then submit order), `after` (ids that must end rc 0; a
+failed one fails the dependent), `when_exists` (file gate), `gpus`, `exclusive`, `tries`, `timeout_h`, `max_rss_gb`,
+`profile`, `env`, `cwd`, `log_dir`, history key env `CL_HIST_KEY`. AlpaSim reads: `--vram 20 --cpu 6 --env
+CL_HIST_KEY=alpasim-read4` (4 per card; [research/alpasim-read-profile.md](../research/alpasim-read-profile.md));
+rolls with frame dumps `--vram 32`. Fail fast: `submit` refuses missing scripts and `.py` files that do not compile
+(`--no-check` skips); `--preflight "<smoke cmd>"` runs a 1-2 item smoke first (shared by a batch).
 
-Declare the peak; the pool lowers the booking from history by itself, so a generous declaration costs nothing after
-three runs.
+**What the job gets.** `cmd` (argv or one `bash -c` string) and `env` may use `{gpu} {idx} {span} {carla} {workers}
+{cpus} {server_args} {client_threads} {pids_wait} {job_dir} {id}`. Env: `CUDA_VISIBLE_DEVICES`, `CL_GPU`, `CL_IDX`,
+`CL_SPAN`, `CL_CPUS`, `CL_POOL_JOB` (a job can submit its own next stage with `--after $CL_POOL_JOB`), `CL_JOB_DIR`,
+`B2D_DRAIN_FILE`, `B2D_PIDS_WAIT`, the profile's thread env, and `disk.job_env` (TMPDIR `$DATA_DIR/tmp/cl/<id>`,
+removed when the tree exits; shared compile caches under `$DATA_DIR/cache/`). Log dir (default
+`$DATA_DIR/runs/pool/jobs/<id>/`): `log.txt`, `STATUS` (also why it waits), `DONE` (JSON) or `ERROR`. Success is rc 0:
+put an output check into the command when rc alone is not enough.
 
-**Memory: the kill line.** The platform SIGKILLs the largest process of the container while `memory.current` -
-`inactive_file` (the working set: application memory + page cache that was read twice) is at or above 98 % of
-`memory.max`; a warm page cache alone keeps the box 10-40 GiB under that line ([remote-box.md](remote-box.md), "Host
-memory"). On 2026-10-10 this killed 28 tries of 18 jobs in 90 min (one WOD eval needed 14 starts). The pool now:
+**How it places a job** (every 20 s, measured live):
 
-- **holds a start** while working set + RAM that jobs younger than 5 min have not allocated yet + the job's RAM
-  (`--ram`, at most 1.2 x history's max + 1; undeclared: history, else `ram_default_gb` 8) + `ws_reserve_gb` (16)
-  would be above the line (`queue`: `memory working set ... > kill line`, cause `ram`). After `ws_wait_s` (10 min) of
-  that the job starts anyway, one per round (event `ws_override`): the cache could not be dropped.
-- **drops page cache** (`cl trim`, event `trim`; idle files first, oldest access first, then open files, whose mapped
-  pages stay) whenever the margin is under `ws_keep_gb` (80) + what young jobs still have to allocate, or under what
-  a held job needs. Files >= 16 MiB under `$DATA_DIR` (config `trim_roots`); the dispatcher has the list re-walked every hour (30 s),
-  so a trim takes about 3 s.
-- **retries a SIGKILLed job** (root rc 137 without a pool stop; event `kill` with the memory picture) `kill_retries`
-  (3) times beyond `--tries`. `top` prints working set, line, margin and the kills of today and yesterday;
-  `usage --hours H` the kills per day.
-- **retries a job whose child was SIGKILLed** at the line (since 2026-10-17): the platform kills the largest process by
-  RSS, often an AlpaSim runtime worker, and the read then fails with rc 1 ("Worker 0 died with exit code -9"). A job
-  that fails with such a line in its try's log (`KILL_RE`) within 10 min of the box being near the line (margin under
-  2 x `ws_reserve_gb`, or a root rc 137) is retried like a root kill (event `kill` with `child: true`).
-- **stops the job that broke its RAM declaration** (since 2026-10-17): a job whose tree's private memory is above
-  1.1 x `--ram` + 2 GB (undeclared: `ram_default_gb`) gets a `ram_over` event and a STATUS line, and its peak goes to
-  history (any end state; the next job of its key is booked at that peak). While the margin is under `ram_stop_gb`
-  (48) the one furthest above its declaration is stopped at once (event `ram_stop`) and requeued `ram_retries` (1)
-  times with `--ram` raised to its measured peak + 1 GB; rounds come every `fast_poll_s` (5 s) while the margin is
-  under 96. Otherwise the platform picks the largest process by RSS, which is a training (its mmapped tokens are
-  45-58 GB of RSS on 6 GB of anon), not the many-worker job that grew: two CPU jobs at 48 / 160 GB declared grew to
-  240 / 344 GB on 2026-10-17 and three trainings died twice. The `ws_override` start after `ws_wait_s` happens only when
-  the job fits with all page cache dropped (`memory.current - file`): an override started the 240 GB job.
+| Resource | Rule |
+|---|---|
+| VRAM | total - 4 GB headroom - VRAM outside the pool (at least what holds declare) - sum over the card's jobs of max(measured, booked) >= need. With >= 3 finished runs under the history key, need = min(declared, 1.2 x max peak + 1 GB); else the declaration for 10 min, then min(declared, 1.2 x own peak + 1 GB). CARLA / `exclusive` jobs book the declaration. Same-key jobs on one card are booked together from the key's measured concurrent VRAM per job (`cl vram`). |
+| VRAM over | a job above 1.1 x declared + 1 GB is booked at 1.2 x its peak + 1 GB from then on (`vram_over` event); its peak goes to history whatever its end state; on a card with < 1 GB free it is stopped and requeued once (`vram_stop`). A CUDA OOM exit is requeued once beyond `--tries`. |
+| CARLA, ports | <= 6 servers per card, one CARLA job starts per card per round; a free block of 2 x `carla` indices in 160-494 whose RPC / TM ports miss every job, hold and listening port, freed only when the tree has exited |
+| CPU | charged cores <= quota x `cpu_overcommit` (1.4). Charge = declared for 5 min (or from >= 3 runs' history), then max(1, 1.2 x peak measured cores over the last 5 min). Each job is pinned to cores nobody else holds; a GPU job that fits a card while CPU-only jobs hold every core is pinned to the least-pinned cores of the card's NUMA node. |
+| memory | see "The kill line" below; PIDs: threads now + young jobs' + the job's estimate <= 0.80 `pids.max` |
+| idle card | a card idle >= 120 s takes the highest-priority GPU job blocked only by the CPU budget or the PID cap (never VRAM, RAM, CARLA, ports; never CPU-only jobs) |
+| pinning watchdog | a job restricted by `gpus` whose cards are busy gets an idle card added (`--pin-strict` opts out) |
+| order | priority, then submit order; jobs that fit start out of order, but a head job blocked > 15 min by VRAM / CARLA / training cap reserves the card closest to fitting it. Among fitting cards the least loaded wins, VRAM best-fit breaks ties. |
 
-For lanes: declare `--ram` (the peak private memory of the job's process tree: WOD eval 40, `pp_train.py --host` 45,
-AlpaSim stack 52). The pool then spaces fast growers by itself; no cap on how many jobs of a kind may start together
-is needed beyond that, and four undeclared 30 GiB loaders started in one round are still the way to get killed.
-A killed training restarts from step 0: `pp_train.py` and `ap2_train.py` write no checkpoint before the end.
+**The kill line.** The platform SIGKILLs the largest process while the working set (`memory.current` - `inactive_file`)
+is at or above 98 % of `memory.max` ([remote-box.md](remote-box.md), "Host memory"). The pool: holds a start while
+working set + what young jobs have not allocated yet + the job's `--ram` + 16 GiB would cross the line (after 10 min
+it starts one such job anyway, only if it fits with all page cache dropped); drops page cache (`cl trim`) when the
+margin is under 80 GiB + young jobs' needs; stops at once the job furthest above its `--ram` (> 1.1 x + 2 GB) while
+the margin is under 48 GiB and requeues it once with `--ram` raised to its peak; retries a SIGKILLed job, or one whose
+child died with -9 near the line, 3 times beyond `--tries`. Declare `--ram`; a killed training restarts from step 0.
+`top` shows working set, line, margin and the day's kills.
 
-**Fixing a queued job's declaration.** `cl retarget <ids> --vram 26 [--ram 30] [--gpus 1,2]` edits a queued job in
-place (id and `--after` chains stay). The AlpaSim read family (`ol-read`, `rm-read`, `rg10`, `ro-*`, `sf-*`, `redg`) runs
-4 concurrent rollouts / renderer cache 5 with the expandable-segments allocator since 2026-10-13 (`c0b_chain.OVERRIDES`,
-profile `alpasim`): pool VRAM peak p50 12.5 / p95 = max 17.4 GB over 10 public chunks (was p50 19 / p95 26 / max 28-31 GB at 8 / 9),
-RSS 20 GB (was 28), same scores, wall +10 %. So reads declare `--vram 20 --cpu 6` (4 per card: 4 x 20 < 83.6) under
-history key `CL_HIST_KEY=alpasim-read4` (the old key `ol-fast-read` holds 8-concurrent peaks that would mark 20 as
-under-declared). A read queued before that change runs the new settings too, but keeps its old key and declaration: leave it at 26 (retargeting it to 20 alone gets it booked at its key's old peaks).
-Rollouts (`ol-roll`) keep 32 (frame dumps, more RAM). research/alpasim-read-profile.md.
+**History.** A job ending `done` (>= 60 s) adds its peak VRAM, cores and private memory to
+`runs/pool/history.json` under `CL_HIST_KEY`, else its name with trailing seed / index digits stripped (last 20 kept);
+`rm_train.py` trainings get `rm-train`. `submit` without `--vram` / `--cpu` defaults to 1.2 x p95 of that history.
 
-**Disk.** Every job's env carries `disk.job_env` (after the profile env, before the job's own env, which wins):
-TMPDIR = `$DATA_DIR/tmp/cl/<id>`, removed when the job's whole tree has exited (event `disk_release`), and shared
-`TORCHINDUCTOR_CACHE_DIR` / `TRITON_CACHE_DIR` / `CUDA_CACHE_PATH` under `$DATA_DIR/cache/`. When the system disk has
-less than 20 % free (at most every 10 min) and every 6 h the dispatcher starts a detached `python -m jevdrive.cl.disk
-prune` that removes only job temp dirs no live process holds, NVRTC pch dirs of dead pids and capped compile caches
-(oldest first), logging each path as a `disk_prune` event. Config key `disk` (default true) turns both off.
-Details and the rule: docs/remote-box.md "Disk", `jevdrive/cl/disk.py`.
+**Reading under-use.** `top` ends with `idle now`, `queued` (ready jobs by cause; jobs waiting on `--after` / gates) and
+`UNDER-USED`: no work submitted (submit the next stage with `--after`), a GPU job looping over runs (fan out), or ready
+jobs blocked by the named cause. `usage --hours H` splits idle card-hours by cause; `show ID` has each job's `waited`.
 
-**Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
-jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
-and queued jobs survive. Stop it with SIGTERM to its pid only (`status.json` has it): the handler lets the round
-finish and save. Ctrl-C or SIGKILL can land between a launch and the save and start that job twice.
+**Holds: GPU work outside the pool.** `$P hold --card 1 (--whole | --vram 20 [--carla 2]) [--idx 170-175] [--cpus
+52-76] [--cpu 6] [--train] --pid <PID> --note "..."` (ends when the pid exits); `holds`, `unhold <hid>`.
+
+**Restarting the dispatcher** (pool code takes effect only then; running and queued jobs survive, they are adopted
+from `state.json`). SIGTERM to its pid only, never Ctrl-C or SIGKILL (can start a job twice):
 
 ```bash
 kill -TERM $(python3 -c "import json;print(json.load(open('$DATA_DIR/runs/pool/status.json'))['pid'])")
@@ -211,141 +178,41 @@ tail -1 $DATA_DIR/runs/pool/events.jsonl      # wait for dispatcher_stop (up to 
 tmux send-keys -t jev:pool '.venv/bin/python -m jevdrive.cl dispatch' Enter
 ```
 
-**Fail fast.** `submit` refuses a command whose script paths are missing or whose `.py` files do not compile (`--no-check`
-skips). `--preflight "<smoke cmd>"` (the same job on 1-2 items) runs that smoke first at top priority with the job's
-resources; the job waits for it and fails with it. Jobs of a batch that pass the same smoke command share one run, so
-one broken script costs one 20 s smoke, not N launches. Smoke runs see `CL_PREFLIGHT=1`, log under `<log-dir>/preflight`.
-
-From Python (chains, guards): `from jevdrive.cl import pool as P; jid = P.submit(cmd, name=..., vram_gb=..., carla=...,
-cpu=..., after=[...]); P.wait([jid])`. A CARLA job: `P.submit(P.b2d_cmd(out, route_ids, agent=..., agent_config=...),
-name=..., carla=6, cpu=12)` (6 servers, 9 GB each unless `vram_gb` says otherwise).
-
-**N independent runs are N jobs.** Seeds, arms, variants and shards that do not need each other go in as one job each
-(`fanout`, or `P.fanout(cmd, arms, name, collect=..., vram_gb=..., cpu=...)` from Python: `{arm}` in the command, env
-values and `log_dir`; returns `{"arms": {arm: id}, "collect": id}`), never as one job that loops over them: that job
-holds one card while the others idle (2026-10-08: five 22-minute inference runs in one job took 91 min on one card
-with two cards at 0 %). `submit` prints a note when a GPU job's shell command chains several runs.
-
-**What a job declares.** `vram_gb` = its peak VRAM on the card (required; default 9 per CARLA server), `carla` = CARLA
-servers it starts, `cpu` = cores (> 0 pins it with `taskset` to free physical cores, NUMA-local first), `train` (at
-most `train_per_card` per card), `ram_gb`, `priority` (higher first, then submit order), `after` (ids that must end
-with rc 0; a failed one fails the dependent), `when_exists` (a file gate), `gpus` (allowed cards), `exclusive` (card
-alone), `tries`, `timeout_h`, `max_rss_gb` (stop the tree above it: the openpilot leak cap), `profile` (thread env from
-profiles.py; CARLA jobs get the default), `env`, `cwd`, `log_dir`.
-
-**What the job gets.** `cmd` (argv, or one shell string run by `bash -c`) and `env` values may use `{gpu} {idx} {span}
-{carla} {workers} {cpus} {server_args} {client_threads} {pids_wait} {job_dir} {id}`. The env carries
-`CUDA_VISIBLE_DEVICES`, `CL_GPU`, `CL_IDX`, `CL_SPAN`, `CL_CPUS`, `CL_POOL_JOB` (so a job can submit its own next stage
-with `--after $CL_POOL_JOB` or plain `submit`), `CL_JOB_DIR`, `B2D_DRAIN_FILE`, `B2D_PIDS_WAIT` and the profile's
-thread env. The log dir (default `$DATA_DIR/runs/pool/jobs/<id>/`) gets `log.txt` (all tries), `STATUS` (one line,
-also the reason it waits), `DONE` (JSON) or `ERROR` (reason + log tail). Success is rc 0: put an output check into the
-command when rc alone is not enough.
-
-**How it places a job** (every 20 s, measured live; nvidia-smi cached <= 15 s):
-
-| Resource | Rule |
-|---|---|
-| VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(measured now, booked) >= the job's need. A declaration is an upper bound: with >= 3 finished runs under the job's history key, need and booked are min(declared, 1.2 x their max peak + 1 GB); without history a job books its declaration for 10 min, then min(declared, 1.2 x its own peak + 1 GB). CARLA and `exclusive` jobs always book the declaration. **Same-key jobs on one card are booked together** (since 2026-10-17): m of them book max(what they use now, min(the sum of their own bookings, max(m x `conc_margin` (1.1) x share, one own booking))), share = the key's measured concurrent VRAM per job (largest p99 over job counts n of card VRAM used / n, card-minutes of `usage.jsonl` with only that key on the card, last 72 h, re-read every 30 min, >= 30 card-minutes per n), for up to the largest measured n + 1 per card. `top` shows used / booked per job, `cl vram` the shares. |
-| CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
-| ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
-| CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max peak cores). |
-| kill line | working set (`memory.current` - `inactive_file`) + unallocated RAM of jobs younger than 5 min + the job's RAM + 16 GiB <= 0.98 x `memory.max`; see "Memory: the kill line" |
-| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + what jobs younger than 5 min have not allocated yet (`ram_gb` - their tree's private memory, tapering to 0 at 5 min) + the job's `ram_gb` <= 0.85 memory.max; `ram_gb` counts as at most 1.2 x history's max + 1 GB. A tree's memory is anon + shmem (`/proc/<pid>/status` RssAnon + RssShmem), what the kill line counts; not RSS, which charged every job the shared file pages of its libraries (~5 GB per AlpaSim read until 2026-10-13). (Until 2026-10-08 the whole `ram_gb` of every young job was added on top of the measured memory: half of that day's GPU-job queueing.) |
-| idle card (work conservation) | A card with no pool job, no whole hold and <= 1 GB used outside the pool for >= `idle_s` (120 s, config) takes the highest-priority queued job with `vram_gb` > 1 that is blocked **only** by the CPU budget or the PID plan cap (event `admit_idle`). VRAM, RAM, CARLA and ports are never relaxed; CPU-only jobs (`vram_gb` <= 1) never use the rule. |
-| core pinning | Each job is pinned to `cpu` cores nobody else is pinned to. Under `cpu_overcommit` CPU-only stages can pin every host core while most of them idle; a job with `vram_gb` > 1 that fits a card is then pinned to the least-pinned cores of the card's NUMA node (event `pin_shared`) instead of waiting. CPU-only jobs wait for free cores. (2026-10-11: 4 cards idle 12 min behind bench scoring shards.) |
-| pinning watchdog | A queued job restricted by `gpus` whose allowed cards are busy gets an idle card (>= `idle_s`) outside `gpus` added to its `gpus` and starts there (event `auto_retarget`). `submit --pin-strict` opts out. |
-| order | priority, then submit order; jobs that fit start out of order (backfill), but a head job blocked > 15 min by a card-level reason (VRAM, CARLA, training cap) reserves the card closest to fitting it |
-
-Among the cards that fit, the least loaded (GPU jobs of the pool + foreign GPU processes; CPU-only jobs with `vram_gb` <= 1
-do not count and do not make a card busy) wins, VRAM best-fit breaks ties: spreading
-keeps every card computing (one serial chain per card left cards at 0-20% util with one CARLA server where six
-fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large job.
-
-**History.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM, peak cores and peak private memory to
-`runs/pool/history.json` under its history key: env `CL_HIST_KEY` when the submitter sets one (`jevdrive.bench` sets
-`bn-<stage kind>@<vram>gb`, so a new model's first run is already known; `submit` sets `rm-train` for every `--train`
-job of `rm_train.py`, named in the command or run by a lane script's `train` / `body-train` stage, `pool.TRAINER_KEYS`,
-since 2026-10-17: per-arm names never reached three runs, so `--ram 70` held starts for trainings that use 3-7 GB), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
-repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
-defaults to p95 x 1.2 of that history and prints the choice on stderr. An explicit value is kept in the spec, but the
-dispatcher books min(declared, measured) as in the table (VRAM cap from history = 1.1 x p95 of the prefix's peaks + 1 GB,
-since 2026-10-13: one spiky scene among 20 must not cost every later job a slot; cores and RAM use the max) (`submit` says so when a declaration is far above history);
-`"trust_measured": false` in the config books declarations only, as before 2026-10-08. Dispatcher config keys:
-`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`, `ws_kill_frac`,
-`ws_reserve_gb`, `ws_keep_gb`, `ws_wait_s`, `ram_default_gb`, `kill_retries`, `trim`, `trim_roots`, `conc`, `conc_margin`.
-
-**Reading under-use.** `top` ends with two lines: `idle now` (cards without a GPU job and for how long; cores measured
-/ charged / budget) and `queued` (ready GPU jobs and ready CPU-only jobs by what they wait on: vram, ram, cpu, train,
-carla, ports, reserved, ...; and jobs waiting on `--after` or a gate), then `UNDER-USED` when a card idles: either the
-pool has no work for it (nobody submitted any: submit the next stage with `--after` instead of waiting for a poll),
-or a GPU job older than 30 min runs next to it with nothing ready (several runs in one job: fan out), or ready jobs
-wait on the named cause. `usage --hours H` gives the same split over time from `runs/pool/usage.jsonl` (one line a
-minute: per card util, booked VRAM, GPU jobs; cores; the queue by cause): `computing`, `job, GPU idle` (a GPU job on
-the card at < 10 % util), `queued: <cause>`, `serial`, `no work queued`, `held`. Each job keeps
-`waited = {cause: seconds}` in `state.json` (`show ID`) and in its `launch` event, so a wait can be explained afterwards.
-One day's record replayed through old and new accounting: `experiments/cl_infra/scripts/pool_usage.py`
-([results](../experiments/cl_infra/results/pool-fix/README.md)).
-
-**Process safety.** Each job runs in its own session; its tree is recorded by (pid, start time) plus a `CL_TOKEN` env
-entry (`jevdrive.cl.procs`). When the root exits, members still alive (orphan CARLA servers, setsid children) are
-stopped through a pidfd; resources are freed only after the tree is empty. Cancel, timeout and the memory cap (`max_rss_gb`) stop the
-tree the same way. The dispatcher can be restarted at any time (`tmux` window closed, SIGTERM): running jobs keep
-running and are adopted from `state.json`.
-
-**Holds: GPU work outside the pool.** Anything not started by the pool (a hand-started server, a process from before
-the pool) is declared, or the pool will only see its current VRAM:
-`$P hold --card 1 (--whole | --vram 20 [--carla 2]) [--idx 170-175] [--cpus 52-76] [--cpu 6] [--train] --pid <PID> --note "..."`.
-With `--pid` the hold ends by itself when that process exits; `holds` lists, `unhold <hid>` drops one.
-
-**Config** (`$DATA_DIR/runs/pool/config.json`, re-read every round): `carla_per_card` (6), `train_per_card` (2),
-`headroom_gb` (4), `cpu_overcommit` (1.0) or `cpu_budget`, `max_starts` per round (4; jobs with `vram_gb` > 1 and CPU-only jobs are counted apart, so a scoring fan-out cannot keep cards idle), `hold_s` (900), `cards` (all),
-`poll_s` (20). The box runs `cpu_overcommit` 1.4 since 2026-10-08: charges are declared or 1.2 x peak cores, the measured
-mean was about 40 busy cores at 68 charged of a 75-core quota, and CPU contention only slows jobs (RAM and VRAM are never
-overcommitted). Spool layout: `inbox/`, `cancel/`, `holds.json`, `state.json`, `status.json`, `events.jsonl`, `usage.jsonl`, `history.json`, `jobs/<id>/`.
-
-**Chains.** A multi-stage chain is either all stages submitted at once with `after=`, or a small driver that submits a
-stage, `P.wait`s, checks its outputs and submits the next. Keep the driver itself off the GPU (it can run in tmux or
-as a `--vram 0.5` pool job). Resumable stages skip finished units, as before.
+**Config** `$DATA_DIR/runs/pool/config.json` (re-read every round): `carla_per_card` 6, `train_per_card` 2,
+`headroom_gb` 4, `cpu_overcommit` 1.4, `max_starts` 4 per round (GPU and CPU-only jobs counted apart), `hold_s` 900,
+`poll_s` 20, `idle_s` 120, `ws_reserve_gb` 16, `ws_keep_gb` 80, `ws_wait_s` 600, `ram_default_gb` 8, `kill_retries` 3,
+`oom_retries`, `ram_stop_gb` 48, `trim_roots`, `conc_margin` 1.1, `disk`. Processes are tracked by (pid, start time) +
+`CL_TOKEN`; cancel, timeout and `max_rss_gb` stop the whole tree. Disk pruning of job temp dirs and caches:
+[remote-box.md](remote-box.md) "Disk". Pool history and incidents: decisions 181, 222 and
+[pool-fix](../experiments/cl_infra/results/pool-fix/README.md).
 
 ## Traps checklist
 
-- [ ] **Ports.** Index i: RPC 2000 + 50i (+1, +2), TM 8000 + 50i .. +49 = the RPC block of i + 120. Keep indices in
-  160-494: below 160 the ports are < 10000 (Bench2Drive's README: unsafe), above 494 the TM block reaches the ephemeral
-  range 32768-60999, where an outgoing connection can hold a port and CARLA dies at start (`bind: Address already in
-  use`, Signal 11). A startup Signal 11 is a port problem until the server log says otherwise. (carla.md, "Traps")
-- [ ] **A TM port outlives its server.** b2d_run scans its own 50-port TM block for a free port each attempt.
-- [ ] **Stagger server starts.** Launching many at once costs throughput and wedges the NVIDIA driver (2026-09-28: ~50
-  starting servers, D-state on the device lock). The pool starts one CARLA job per card per round; b2d_run:
-  `--stagger-s 20` and `B2D_START_SLOTS=2` box-wide; cache `nvidia-smi` (the library does).
-- [ ] **RenderThread 60 s timeout + Signal 11 during route setup**: the commonest server death (712 of 1558 logs,
-  2026-09-24..27), cause open, not flags, not the thread cap. b2d_run retries it; report retries with every score.
-- [ ] **Threads, not only cores.** `pids.max` (20480) counts threads. The pool admits jobs from the thread
-  model; b2d_run holds a start above `B2D_PIDS_WAIT`. Symptom when exceeded: `RuntimeError: Resource temporarily
-  unavailable` at `carla.Client()`.
-- [ ] **CARLA ignores `CUDA_VISIBLE_DEVICES`**: the card is `-graphicsadapter` (= CUDA index on this box): pass `{gpu}`.
-  The pool still sets `CUDA_VISIBLE_DEVICES` so the agent's model lands on the same card.
-- [ ] **NUMA.** Cards 1 and 2 are on NUMA node 1 (CPUs 52-103, 156-207), card 0 on node 0. The pool pins
-  NUMA-local physical cores first (`nvidia-smi topo -m`).
-- [ ] **Never `pkill -f` / `pgrep -f`**, and never `os.getpgid()` of a recorded pid that may be reused: stop recorded
-  identities (`jevdrive.cl.procs`, `experiments/night_queue_4/archive/cx_owned_process.py`) or the process group b2d_run created.
-- [ ] **`SIGTERM` does not stop a server promptly**; kill the group, wait for it to empty, then `SIGKILL`.
+- [ ] **Never `pkill -f` / `pgrep -f`**: stop recorded identities (`jevdrive.cl.procs`) or the process group; `cl cancel` for pool jobs.
+- [ ] **Commit named paths only** (`git add <path>`; never `-a` / `-A`): the tree is shared ([long-runs.md](long-runs.md)).
+- [ ] **CARLA ports.** Index i: RPC 2000 + 50i (+1, +2), TM 8000 + 50i .. +49. Keep indices in 160-494 (ports >= 10000,
+  TM below the ephemeral range 32768-60999). A startup Signal 11 is a port problem until the log says otherwise.
+- [ ] **A TM port outlives its server**: b2d_run scans its own 50-port block each attempt.
+- [ ] **Stagger CARLA starts** (`--stagger-s 20`, `B2D_START_SLOTS=2`); many at once wedge the NVIDIA driver.
+- [ ] **RenderThread 60 s timeout + Signal 11 at route setup** is the commonest server death; b2d_run retries it; report
+  retries with every score.
+- [ ] **Threads count against `pids.max`** (20480): `RuntimeError: Resource temporarily unavailable` at `carla.Client()`.
+- [ ] **CARLA ignores `CUDA_VISIBLE_DEVICES`**: pass `-graphicsadapter={gpu}`.
+- [ ] **`SIGTERM` does not stop a CARLA server promptly**: kill the group, wait for it to empty, then `SIGKILL`.
 - [ ] **`-quality-level=Low` with `-RenderOffScreen` segfaults; `SDL_VIDEODRIVER=offscreen` breaks CARLA.**
-- [ ] **Closed loop is not bitwise deterministic.** Two identical runs differ; 3 of 20 PDM-Lite routes flip DS between
-  identical runs. Compare arms against the spread of identical baselines, not against zero.
-- [ ] **A score over the routes that happened to finish is a score on a selected subset**: read `summary.json`
-  (`routes_never_finished`, `restarts`) before quoting one.
-- [ ] **Memory.** A SIGKILL (rc 137, `Killed` in the log, kernel oom_kill 0) is the platform's working-set rule
-  (remote-box.md, "Host memory"): declare `--ram`, read the margin in `cl top`; `cl trim --margin 150` makes room by hand.
+- [ ] **Closed loop is not bitwise deterministic**: compare arms against the spread of identical baselines.
+- [ ] **A score over the routes that finished is a selected subset**: read `summary.json` (`routes_never_finished`,
+  `restarts`) before quoting it.
+- [ ] **rc 137 / `Killed`** is the kill line: declare `--ram`, read the margin in `cl top`.
 
 ## Where the detail lives
 
-- [carla.md](carla.md): Vulkan fix, server start/stop, traps with their incidents, the thread census and the 2026-09-27
-  stock/reduced equivalence test, Town12 / Large Maps.
-- [bench2drive-cost.md](bench2drive-cost.md): per-tick cost decomposition, the servers-per-GPU ladder (GPU knee),
-  the 220-route round, reliability and recycling.
+- [carla.md](carla.md): Vulkan fix, server start/stop, traps with their incidents, thread census, Town12 / Large Maps.
+- [bench2drive-cost.md](bench2drive-cost.md): per-tick cost, servers-per-GPU ladder, reliability and recycling.
 - [closed-loop-acceptance.md](closed-loop-acceptance.md): which controllers and harness parts are accepted.
-- [long-runs.md](long-runs.md): tmux, run directories, sharing the box.
-- [fc65452:todos/2026-10-01-cl-lib.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-10-01-cl-lib.md): the profile experiment's pre-registration, log and raw
-  tables.
+- [long-runs.md](long-runs.md): tmux, run directories, staged launch, reporting.
+- [remote-box.md](remote-box.md): box, memory, disk.
+- This page before the 2026-10-22 simplification (capacity table with conditions, profile experiment tables, incident
+  notes): `git show 354fd7d2:docs/closed-loop-runbook.md`.
 
-Last verified: 2026-10-05 (CARLA); pool memory rule 2026-10-10
+Last verified: 2026-10-22 (pool rules, facts cache); CARLA 2026-10-05

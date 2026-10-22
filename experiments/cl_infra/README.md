@@ -12,11 +12,16 @@ index: 220 routes take a measured 3.11 h; reduced profile
 instead of copying them. On on1_JTPH it is bitwise identical through every reader path, gives an identical 60-step training,
 and takes 85 s / 35 GB instead of about 10 min / 173 GB: [results/zero-copy](results/zero-copy/README.md).
 
+**Read summaries from a facts cache (2026-10-22).** Each AlpaSim read chunk writes its per-window facts at the end of
+the read (`jevdrive.facts`, ~9 s); summaries join them. nuplan_dag Part 1: 23 s on 4 cores instead of 179 s on 32,
+outputs identical: [results/read_summaries.md](results/read_summaries.md).
+
 **Read more.** research/b2d-closed-loop/index.html, docs/closed-loop-runbook.md, docs/bench2drive-cost.md
 
 <!-- files:begin -->
 ## Files
 
+- [`rs_bench.sh`](scripts/rs_bench.sh) (scripts): Read-summary timings, old path vs the facts cache, and the identity check; with `rs_check.py` ([results](results/read_summaries.md))
 - [`sigkill_trigger.py`](scripts/sigkill_trigger.py) (scripts): The SIGKILLs of one night against the box sampler; with `memwatch.py` (1 s sampler), `canary.py`, `canary_fork.py` ([results](results/sigkill-trigger/README.md), decision 222)
 - [`zc_merge.sh`](scripts/zc_merge.sh) (scripts): Zero-copy pool merge check lane; with `zc_check.py` (bitwise rows / pinned gather) ([results](results/zero-copy/README.md))
 - [`pool_usage.py`](scripts/pool_usage.py) (scripts): One day of the GPU pool: idle card-hours by cause, why jobs waited, old vs new accounting replay ([results](results/pool-fix/README.md), decision 181)

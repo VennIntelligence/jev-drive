@@ -9,6 +9,9 @@ strata) is `jevdrive.bench` ([bench.md](bench.md)): one command, all GPUs throug
 Scoring your own (N, 8, 3) navtest pose arrays with the devkit (per-token sub-scores + DAC diagnostics) is
 `python -m jevdrive.bench score-poses` ([bench.md](bench.md#pose-scoring-score-poses-posespy)): the whole box, no hand-picked `--cpu`.
 
+**Closed-loop reads and chains.** AlpaSim reads write per-read facts that summaries join (`jevdrive.facts`), and a lane
+submits its whole chain at once, one pipeline per chunk: [closed-loop-runbook.md](closed-loop-runbook.md#pipelines-parallel-by-default).
+
 **Rule.** Every new experiment runs inside `jevdrive.run.Run` and reads its train / val / test membership from
 `jevdrive.data.splits` (and calls `run.use_split` for each). `cache`, `par` and `stats` are the recommended defaults;
 deviate only with a stated reason. Old scripts are not migrated.
