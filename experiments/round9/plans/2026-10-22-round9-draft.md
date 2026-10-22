@@ -22,6 +22,33 @@ def k_adaptive(g_s, g_imit, k, target=0.4, lo=4, hi=64):
 
 配套：池层面的 PER 式刷新，每 N 步用当前模型重算激活 / 可学性、重定权（审计「没测过」第 1 条）。
 
+**用户 10-22 晚修订：不靠事后测出的目标比例，而是边训边推演、按跑分自适应。** 框架（替代上面的固定目标比例，
+目标比例只作初值）：
+
+- 推演者（actor）：每隔 K 步取学生快照，在训练场景（PAI 718 + nuPlan 1031，不含 281 / val160）上用提交 serve
+  开，产出新 S 行（road_pai + 他车框）、DAgger 地图教师标签和逐场景结局；场景按「当前模型失败 / 部分分、且可学」
+  优先抽（PLR 式），满分场景低频复查。
+- 缓冲区：聚合所有轮次的行；行权重 = 当前模型激活 × 可学性 × 新鲜度衰减；学习者每 N 步前向刷新。
+- 学习者（learner）：P 个并行（每张卡一个），各带一组混合参数 θ = (S 压力, DAgger 份额, PAI 人类份额, lr)。
+- 控制器（PBT 式）：每轮在固定练习切片（训练场景留出的 60–100 个，确定性关 Harmonizer 读，逐场景配对）上打分；
+  适应度 = 均分 − 惩罚 ×（在 NTV0 满分场景上新坏的数），并过 LAUNCH 护栏；末位复制首位的权重和 θ 再扰动。
+- 281 考场整轮不碰，只在最后读一次。
+
+```python
+for r in range(R):                                    # one round ~ 1 000-1 500 steps
+    snaps = [L.train(steps, theta=L.theta, buf=buf) for L in learners]       # P cards in parallel
+    rows, outc = rollout(snaps, scenes=plr.sample(n_train))                  # pool fan-out jobs
+    buf.add(rows); buf.reweight(model=best(snaps))                           # activation x learnable x age
+    plr.update(outc)                                                         # fail / partial scenes up
+    fit = [paired_score(s, practice) - lam * new_breaks(s) for s in snaps]   # deterministic OFF reads
+    exploit_explore(learners, fit)                                           # copy top, perturb theta
+```
+
+风险：(1) 练习切片的读数噪声——281 上 seed 噪声约 0.03，60–100 场景更大，选择可能是噪声；先用已存 281 读数
+估「多少场景能把差 0.03 的两个 checkpoint 排对」（CPU）。(2) 以前的迭代（YS2、YSAGG、DAG2）都到平台；新东西
+是高频小轮次、按跑分调 θ、按失败选场景。(3) 续训本身伤底座（第 259 / 264 条），要有同步数对照。
+(4) 编排：学习者是训练 job，推演每轮是 fan-out job，用 `--after` 串，不另起调度器。
+
 对照臂（1 000 步 pilot 上比，作同一联合臂的剂量维）：固定 2.4×（= R6DAG）、固定 5×、爬升（前 1 000 步以模仿为主，
 之后 S 线性加到上限）、自适应。周期式（高低交替、末段落低 S）放后面。先读转弯切内侧 / 出路小考场，过线的一个跑全长，
 读 281 Harmonizer 开 / 关。
