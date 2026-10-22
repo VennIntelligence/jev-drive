@@ -29,8 +29,9 @@ The loop sends one scene per simulate request (scripts/human_feed.py protocol), 
   takes effect at the next hold point (a loading scene is requested again). Model mode renders the front camera as the preset does
   (1080 px; PAI 10 Hz and the shipped harmonizer resolution also with the harmonizer) and, on PAI, with the submissions' steering weight
   (HUMAN_MODEL_WIZ, default controller.gains.rel_front_steering_angle_weight=10), all fixed per resident stack, so on PAI switching
-  between human and model restarts the stack once (nuPlan: only with a render size other than auto). Scores of a model drive go to
-  done/<scene>@<tag>.json ("driver" = tag), the human's to done/<scene>.json ("driver" = "human"): the two never mix.
+  between human and model restarts the stack once. Prefetch (README "Scene-to-scene gap") follows the driver: on for a model, off for
+  the human; it is a stack setting too, so on nuPlan the switch also restarts the stack (overrides: HUMAN_PREFETCH=0/1, prefetch.on).
+  Scores of a model drive go to done/<scene>@<tag>.json ("driver" = tag), the human's to done/<scene>.json ("driver" = "human"): the two never mix.
 Run dir layout per resident stack used: stacks/<run>-sNN/ with sim/rollouts/<scene>/<uuid>/ (moved out of the resident dir when its
 request returns), sim/eval-config.yaml, driver/{sessions,drive}.jsonl (that run's sessions) and driver/thumbs/, resident (its path).
 Scoring: every finished rollout that was not aborted is scored with AlpaSim's own aggregation (alpasim-aggregation in the
@@ -63,9 +64,17 @@ RESIDENTS = Path(os.environ.get("HUMAN_RESIDENT_DIR", str(D / "runs/alpasim_huma
 GPU = os.environ.get("HUMAN_GPU", "0")
 MODEL_SCRIPT = REPO / "experiments/alpasim_human/scripts/model_driver.sh"
 MODEL_PORT = os.environ.get("HUMAN_MODEL_PORT", "6791")
-# README "Scene-to-scene gap": the next scene loads and holds while one drives. Off by default; on with HUMAN_PREFETCH=1 or the flag file
-# /data/runs/alpasim_human/prefetch.on (read at loop start; the panel's loops then use it, and the resident stack restarts once).
-PREFETCH = os.environ.get("HUMAN_PREFETCH", "1" if (D / "runs/alpasim_human/prefetch.on").exists() else "0") == "1"
+# README "Scene-to-scene gap": the next scene loads and holds while one drives. It follows the driver: on for a model checkpoint, off for
+# the human (whose shown scene stutters while the next loads). Overrides, read at loop start: HUMAN_PREFETCH=1 or the flag file
+# /data/runs/alpasim_human/prefetch.on force it on, HUMAN_PREFETCH=0 forces it off. It is a stack setting (part of the resident key).
+PF_FORCE = os.environ.get("HUMAN_PREFETCH") or ("1" if (D / "runs/alpasim_human/prefetch.on").exists() else None)
+
+
+def prefetch_for(model):
+    """Prefetch for a driver: the override if set, else on exactly for a model driver."""
+    return PF_FORCE == "1" if PF_FORCE in ("0", "1") else bool(model)
+
+
 MODEL_WIZ = {"pai": os.environ.get("HUMAN_MODEL_WIZ", "controller.gains.rel_front_steering_angle_weight=10").split(), "nuplan": []}
 
 
@@ -593,8 +602,9 @@ def main():
             mm = drv != "human"
             if mm and (harm or size != "auto"):                  # model mode: the preset's front camera (auto unharmonised = 1080)
                 size = "1080"
-            key = (harm, size, tuple(MODEL_WIZ[track] if mm else ()), mm and track == "pai", PREFETCH)
-            hs = "harmonizer %s, render %s%s" % ("on" if harm else "off", size, ", driver %s" % drv if mm else "")
+            pf = prefetch_for(mm)
+            key = (harm, size, tuple(MODEL_WIZ[track] if mm else ()), mm and track == "pai", pf)
+            hs = "harmonizer %s, render %s%s%s" % ("on" if harm else "off", size, ", driver %s" % drv if mm else "", ", prefetch on" if pf else "")
             if res:
                 res.lease(owner, run)
             opn = live_sessions()
@@ -667,8 +677,8 @@ def main():
                     res.stop()
                     res, restart_why = None, "switching the render stack to %s, %s (about a minute)" % (track.upper(), hs)
                 if res is None:
-                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)), key[2], key[3], PREFETCH)
-                    note("resident stack %s: %s, %s, %d scenes%s" % (res.dir.name, track, hs, len(res.ids), ", prefetch" if PREFETCH else ""))
+                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)), key[2], key[3], pf)
+                    note("resident stack %s: %s, %s, %d scenes" % (res.dir.name, track, hs, len(res.ids)))
                 else:
                     note("reusing resident stack %s" % res.dir.name)
                 k += 1
@@ -716,8 +726,9 @@ def main():
                              "%s held: press throttle" % label(r0["scene"]), None, r0["scene"])
                 else:
                     model_req = r0.get("driver", "human") != "human"
-                    progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else "%s%s%s%s" % (label(r0["scene"]),
+                    progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else "%s%s%s%s%s" % (label(r0["scene"]),
                              "   harmonizer on" if res.harm else "", "   driver: model %s" % r0["driver"] if model_req else "",
+                             "   prefetch on" if res.prefetch else "",
                              "   (model + harmonizer at shipped settings: about 4 wall s per sim s, slow motion)" if model_req and res.harm else ""),
                              None, r0["scene"])
                 if res.key != key:
@@ -725,7 +736,7 @@ def main():
                     write_json(state_f, st)
                 # prefetch: one more request while the current scene's session exists (loaded), once nothing aborted is in flight
                 live_reqs = [r for r in reqs if not r.get("abort")]
-                if (PREFETCH and res.prefetch and len(reqs) == 1 and len(live_reqs) == 1 and (live_reqs[0].get("session") or live_reqs[0].get("seen"))
+                if (pf and res.prefetch and len(reqs) == 1 and len(live_reqs) == 1 and (live_reqs[0].get("session") or live_reqs[0].get("seen"))
                         and not hold_error and res.key == key and live_reqs[0].get("driver", "human") == drv and (not mm or model.ensure(track, drv))):
                     nxt = plays[0] if plays else (unfinished(exclude={live_reqs[0]["scene"]}) or [None])[0] if c["playlist"] else None
                     if nxt is not None and nxt != live_reqs[0]["scene"]:

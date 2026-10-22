@@ -175,8 +175,12 @@ Runtime load is the runtime-side scene load before it asks the renderer for came
 18 s on some scenes. NRE load is the renderer's backend creation. Dispatch (feeder + loop) is 0.6 s. There is no human-mode nuPlan
 data on a resident stack.
 
-**Prefetch** (`HUMAN_PREFETCH=1`, or the flag file `/data/runs/alpasim_human/prefetch.on` for the panel's loops; **off by default**).
-AlpaSim is unchanged; only the wizard settings and our scripts change. The resident runtime runs two rollouts at once:
+**Prefetch** follows the panel's Driver option (2026-10-22): **on for a model checkpoint, off for the human driver**. The panel
+status then reads "prefetch on" beside the model's tag. Prefetch is a resident-stack setting (part of its key, like harmonizer and
+render), so switching between human and model restarts the stack once no scene is being driven. On PAI that switch restarted the
+stack already; on nuPlan it now does too, because the two-rollout runtime, its workers and the driver's mode are fixed at stack start.
+Overrides, read at loop start: `HUMAN_PREFETCH=1` or the flag file `/data/runs/alpasim_human/prefetch.on` force it on for both
+drivers, and `HUMAN_PREFETCH=0` forces it off. AlpaSim is unchanged; only the wizard settings and our scripts change. The resident runtime runs two rollouts at once:
 `n_concurrent_rollouts` 2 on renderer / physics / controller / driver; `runtime.nr_workers` 2, so each rollout has its own worker
 process and one rollout's load or metrics never blocks the other's loop; `nre_cache_size` 3. The feeder keeps two requests in flight.
 The loop requests the next scene of the playlist (or the double-clicked one) once the current scene's session exists.
@@ -206,10 +210,9 @@ Measured on Tokyo card 1 (probe prefix `hpf`, `scripts/prefetch_probe.py`, scrat
   unpaced speed stays below real time (0.60-0.78 against 0.54-0.62 without a neighbour), but the neighbour's scene load stalls it.
   That gives 1-3 re-anchors per scene of more than 0.5 s each, so the paced wall / sim is 1.03-1.16 instead of 1.00. The user sees
   it as stutter while the next scene loads, about 5-10 s after each scene starts.
-- Default off because of that stutter. Also, semantics (Next / play / restart while a scene is prefetched) are implemented but were
+- Off for the human because of that stutter (on for a model since 2026-10-22). Also, semantics (Next / play / restart while a scene is prefetched) are implemented but were
   checked only in code, not on a live stack. The harmonizer case (renderer memory with two scenes, speed) is unmeasured. Model
-  mode, which is unpaced and watched like a recording, is the case that gains most. A possible next step: send the prefetch request
-  only after the shown scene has run a few seconds, or only in model mode.
+  mode, which is unpaced and watched like a recording, is the case that gains most, hence the per-driver default.
 
 ## Results
 
