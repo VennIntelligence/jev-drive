@@ -15,13 +15,17 @@ cards=$(nvidia-smi -L | wc -l)
 NF=${NF:-$cards}; NS=${NS:-$cards}; PRIO=${PRIO:-5}
 sub() { local n=$1; shift; .venv/bin/python -m jevdrive.cl submit --owner p1-usage --priority "$PRIO" --log-dir "$O/pool/$n" --name "p1-$n" "$@" | awk '{print $NF}'; }
 join() { local IFS=,; echo "$*"; }
-F=(); for i in $(seq 0 $((NF - 1))); do
-  F+=($(sub fit-s$i --when-exists "$O/dl/ALL_DONE" --vram 24 --cpu 14 --ram 48 -- "$PY" $ME fit --shard "$i" "$NF"))
-done
-P=$(sub pca --after "$(join "${F[@]}")" --vram 0.1 --cpu 2 --ram 8 -- "$PY" $ME pca)
-after=$P; [[ -n ${GATE:-} ]] && after="$P,$GATE"
+F=(); P=; after=
+if [[ ! -e $O/pca.npz ]]; then                  # a resubmission after a restart reuses the finished PCA
+  for i in $(seq 0 $((NF - 1))); do
+    F+=($(sub fit-s$i --when-exists "$O/dl/ALL_DONE" --vram 24 --cpu 14 --ram 34 -- "$PY" $ME fit --shard "$i" "$NF"))
+  done
+  P=$(sub pca --after "$(join "${F[@]}")" --vram 0.1 --cpu 2 --ram 8 -- "$PY" $ME pca)
+  after=$P
+fi
+[[ -n ${GATE:-} ]] && after="${after:+$after,}$GATE"
 S=(); for i in $(seq 0 $((NS - 1))); do
-  S+=($(sub sweep-s$i --after "$after" --vram 24 --cpu 14 --ram 48 -- "$PY" $ME sweep --shard "$i" "$NS"))
+  S+=($(sub sweep-s$i ${after:+--after "$after"} --vram 24 --cpu 14 --ram 34 -- "$PY" $ME sweep --shard "$i" "$NS"))
 done
 M=$(sub merge --after "$(join "${S[@]}")" --vram 0.1 --cpu 2 --ram 16 -- "$PY" $ME merge)
 R=$(sub readout --after "$M" --vram 0.1 --cpu 1 --ram 8 -- .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
