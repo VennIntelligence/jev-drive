@@ -882,6 +882,58 @@ def cmd_g5(a):
     (O / f"g5_{a.pool}.json").write_text(json.dumps(out, indent=1))
 
 
+def retime(G, S_new):
+    """Path knots G (n, 9, 3) (start + 8 poses) -> poses at arc lengths S_new (n, 8) along G's polyline (extended straight past its end)."""
+    out = np.zeros(S_new.shape + (3,))
+    for i in range(len(G)):
+        g = G[i].astype(float)
+        seg = np.hypot(*np.diff(g[:, :2], axis=0).T)
+        s = np.r_[0, np.cumsum(seg)]
+        yaw = np.unwrap(g[:, 2])
+        for k, sk in enumerate(S_new[i]):
+            if sk <= s[-1] and s[-1] > 1e-6:
+                j = min(np.searchsorted(s, sk, side="right") - 1, 7)
+                f = 0.0 if seg[j] < 1e-9 else (sk - s[j]) / seg[j]
+                out[i, k] = g[j] * (1 - f) + g[j + 1] * f
+                out[i, k, 2] = yaw[j] * (1 - f) + yaw[j + 1] * f
+            else:
+                e = sk - s[-1]
+                out[i, k] = [g[-1, 0] + e * np.cos(yaw[-1]), g[-1, 1] + e * np.sin(yaw[-1]), yaw[-1]]
+    return out
+
+
+def cmd_retime(a):
+    """PAID teacher label, shape vs speed: the agent / side terms of the teacher's path re-timed to the human's arc lengths (and to
+    min(teacher, human) arc lengths) on every candidate row where the label violates agent -> $O/retime_PAID.json."""
+    import torch
+    from agent_hinge import AgentHinge
+    from jevdrive.common import n_cpus
+    torch.set_num_threads(a.threads or n_cpus())
+    P = Pool("PAID", O / "steps_PAID.npz")
+    z = P.z
+    Vf = P.values("fut", "fixed")
+    Vl = P.values("log", "fixed")
+    rows = np.flatnonzero((Vf["agent"] > 0) & z["log__ok"] & z["draw"].astype(bool))
+    sp = pool_spec("PAID")
+    ah = AgentHinge(sp["agent"], z["names"][rows].astype(str), "cpu", MARGIN, 0.0)
+    F, L = z["fut__P9"][rows].astype(float), z["log__P9"][rows].astype(float)
+    arc = lambda G: np.cumsum(np.hypot(*np.diff(G[..., :2], axis=1).transpose(2, 0, 1)), 1)     # noqa: E731
+    sf, sl = arc(F), arc(L)
+    res = dict(rows=int(len(rows)), label_arc4_over_human_med=float(np.median(sf[:, -1] / np.maximum(sl[:, -1], 0.1))),
+               label_longer_than_human=float((sf[:, -1] > sl[:, -1] + 0.5).mean()), human_also_violates=float((Vl["agent"][rows] > 0).mean()))
+    for nm, S_new in (("human_timing", sl), ("min_timing", np.minimum(sf, sl))):
+        G = np.concatenate([F[:, :1], retime(F, S_new)], 1)
+        v = []
+        for i in range(0, len(rows), 1024):
+            rt = torch.arange(i, min(i + 1024, len(rows)))
+            with torch.no_grad():
+                q = box_terms(densify(G[rt.numpy()]), *boxes_at(ah.box[rt], ah.val[rt], T41))
+            v.append((np.maximum(np.maximum(MARGIN - q["ag_c"].numpy(), 0), np.maximum(-q["ag_s"].numpy(), 0)).mean(1) > 0))
+        res[f"{nm}_still_violates"] = float(np.concatenate(v).mean())
+    (O / "retime_PAID.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps(res), flush=True)
+
+
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -902,8 +954,10 @@ def main():
     g.add_argument("--designs", default="fixed,gate,ec_log,ec_wit,ctx")
     g.add_argument("--n", type=int, default=2000)
     g.add_argument("--threads", type=int, default=0)
+    r = sp.add_parser("retime")
+    r.add_argument("--threads", type=int, default=0)
     a = p.parse_args()
-    dict(fwd=cmd_fwd, steps=cmd_steps, report=cmd_report, g5=cmd_g5)[a.cmd](a)
+    dict(fwd=cmd_fwd, steps=cmd_steps, report=cmd_report, g5=cmd_g5, retime=cmd_retime)[a.cmd](a)
 
 
 if __name__ == "__main__":
