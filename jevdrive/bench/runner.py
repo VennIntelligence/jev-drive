@@ -181,6 +181,15 @@ def stage_cmd(env: str, fn: str, *args) -> list:
     return [py(env), "-m", "jevdrive.bench.stage", fn, *map(str, args)]
 
 
+def card_gb() -> float:
+    """VRAM (GB) one pool job may declare on the smallest card: total minus the pool's headroom (live probe; 80 off the box)."""
+    try:
+        from ..cl import box, capacity
+        return min(c.mem_total_mib for c in box.probe().cards) / 1024 - capacity.VRAM_HEADROOM_GB
+    except Exception:
+        return 80.0
+
+
 def box_cards() -> list:
     """Indices of the box's cards (live probe; [0] off the box)."""
     try:

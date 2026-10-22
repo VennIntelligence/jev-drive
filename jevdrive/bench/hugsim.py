@@ -164,7 +164,10 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     todo = [s for s in want if Path(s).stem not in done]
     for f in (run_dir / "claims").glob("*.failed") if (run_dir / "claims").is_dir() else []:
         f.unlink()                                                    # a new submit retries scenarios that failed before
-    w = max(1, min(workers, len(todo) or 1))
+    per = 12.5 if m.family == "wajepa" else 8.5                         # VRAM per scenario slot / per job (servers), GB
+    base = 6 if m.family == "wajepa" else 8
+    cap = max(1, int((R.card_gb() - base) // per))                    # slots that fit one card (6 WA-JEPA slots = 81 GB never placed)
+    w = max(1, min(workers, cap, len(todo) or 1))
     k = jobs or max(1, min(len(R.box_cards()), -(-len(todo) // w)))
     cfg = dict(model=m.spec, **identity, agent=agent_of(m), scenarios=want, workers=w, jobs=k, stall_s=stall_s,
                timeout_s=timeout_s, retries=retries, tag=TAG)
@@ -175,8 +178,6 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     S = []
     if m.family in ("parity", "adapt_h"):
         S.append(R.Stage("onnx", R.stage_cmd("jev", "hugsim-onnx", m.spec), done=str(onnx_path(m)), vram=10, cpu=4, ram=24))
-    per = 12.5 if m.family == "wajepa" else 8.5
-    base = 6 if m.family == "wajepa" else 8
     ram = (6 if m.family == "wajepa" else 4) * w + 8     # openpilot workers measured 22 GB at w = 6 (2026-10-08)
     if todo:
         for i in range(k):
