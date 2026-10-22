@@ -40,9 +40,9 @@ import numpy as np
 import torch
 
 REPO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(REPO / "experiments/wm_surplus/lib"), str(REPO), str(REPO / "jevdrive/bench")]
+sys.path[:0] = [str(REPO / "experiments/wm_surplus/lib"), str(REPO)]
 import usage_probe as UP  # noqa: E402
-import agent_poses as AP  # noqa: E402
+import jevdrive.bench.agent_poses as AP  # noqa: E402  (by package path: jevdrive/bench/navsim.py must not shadow the fork's navsim)
 from jevdrive.bench.models import agent_cfg, data_dir  # noqa: E402
 
 NAV = data_dir() / "datasets" / "navsim"

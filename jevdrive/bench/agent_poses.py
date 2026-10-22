@@ -23,6 +23,10 @@ from pathlib import Path
 
 import numpy as np
 
+# Run as a script, this file's directory (jevdrive/bench, which holds a navsim.py) would shadow the fork's `navsim` package.
+_HERE = str(Path(__file__).resolve().parent)
+sys.path[:] = [p for p in sys.path if str(Path(p or ".").resolve()) != _HERE]
+
 
 def build(repo: Path, config_dir: str, config_name: str, overrides) -> tuple:
     """(cfg, agent): the fork's scoring config composed with its eval overrides, agent instantiated, initialized, eval mode."""
