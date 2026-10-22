@@ -1,4 +1,5 @@
-"""Desktop control panel for a human taking a driving exam item by item (tkinter, Python 3.8+, stdlib only).
+"""Desktop control panel for a human taking a driving exam item by item (tkinter, Python 3.8+, stdlib only). The default front end
+is now the web page lib/exam_web.py over the same Backend and protocol; this Tk window stays as the fallback (human_panel.py --tk).
 
 Generic over a backend. Bench2Drive: experiments/phone_wheel/lib/b2d_exam.py (README of phone_wheel, section "Desktop panel");
 AlpaSim: experiments/alpasim_human/lib/alpasim_exam.py (README of alpasim_human, section "Desktop panel").

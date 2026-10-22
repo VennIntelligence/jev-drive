@@ -40,6 +40,7 @@ class B2DExam(Backend):
     title = "Bench2Drive human exam"
     live = os.environ.get("HUMAN_LIVE", "/data/runs/human_drive/live")
     options = {"stop_on_collision": ("Stop route at first collision", False)}
+    score_max = 100.0              # DS; the web panel colours a full score green
 
     def __init__(self):
         root = ET.parse(str(XML)).getroot()

@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exam panel</title>
+<style>
+/* Same visual language as the pygame viewers (human_viewer.py of alpasim_human / phone_wheel): dark slate, blue labels, orange tag. */
+:root {
+  --bg: #11151d; --card: #181d26; --card2: #202734; --line: #2b3341; --hover: #263042; --sel: #1d3550;
+  --text: #e6ebf0; --muted: #98a2ae; --label: #96c8ff; --blue: #46aafa; --orange: #ff963c; --red: #f0463c; --green: #50dc78;
+  --ghost: #ebd7ff; --r: 8px;
+}
+* { box-sizing: border-box; }
+html { font-size: 15px; }
+body { margin: 0; overflow-x: hidden; background: var(--bg); color: var(--text); font-family: "DejaVu Sans", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.35; -webkit-text-size-adjust: 100%; }
+button, input, select { font: inherit; color: inherit; }
+.app { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 12px; min-height: 100vh; }
+@media (min-width: 700px) and (min-height: 700px) { .app { height: 100vh; } }
+header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tag { background: var(--orange); color: #111; font-weight: 700; padding: 3px 12px; border-radius: var(--r); font-size: 1.15rem; }
+.card { background: var(--card); border-radius: var(--r); padding: 10px 12px; }
+.lbl { color: var(--label); text-transform: uppercase; letter-spacing: .04em; font-size: .85rem; }
+.muted { color: var(--muted); }
+.small { font-size: .87rem; }
+.mono { font-family: "DejaVu Sans Mono", ui-monospace, monospace; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+/* buttons */
+.btn { background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  white-space: nowrap; transition: background .1s; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #08131f; font-weight: 700; }
+.btn.primary:hover:not(:disabled) { background: #6cbcff; }
+.btn.danger { color: var(--red); border-color: #5a2a2a; }
+.btn.danger:hover:not(:disabled) { background: #3a1e22; }
+.btn.danger.solid { background: var(--red); color: #fff; border-color: var(--red); }
+.btn.big { padding: 9px 18px; font-size: 1.05rem; }
+.btn.icon { padding: 2px 10px; }
+/* chips and pills */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--card2);
+  font-size: .9rem; }
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.ok::before { background: var(--green); } .chip.warn::before { background: var(--orange); } .chip.bad::before { background: var(--red); }
+.chip.ok { color: var(--green); } .chip.warn { color: var(--orange); } .chip.bad { color: var(--red); }
+.pill { font-weight: 700; padding: 2px 10px; border-radius: 6px; text-transform: uppercase; font-size: .95rem; letter-spacing: .03em;
+  background: var(--card2); color: var(--muted); }
+.pill.driving { background: rgba(80,220,120,.15); color: var(--green); }
+.pill.loading, .pill.paused { background: rgba(255,150,60,.15); color: var(--orange); }
+.pill.idle { background: rgba(70,170,250,.15); color: var(--blue); }
+.pill.dead { background: rgba(240,70,60,.15); color: var(--red); }
+.badge { font-size: .72rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--green); color: #08130c;
+  vertical-align: 2px; margin-left: 6px; }
+/* phone */
+.url { color: var(--blue); font-weight: 700; font-size: 1.15rem; text-decoration: none; overflow-wrap: anywhere; min-width: 0; }
+/* switches */
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 4px 4px; }
+.switch input { display: none; }
+.switch .knob { width: 38px; height: 22px; border-radius: 11px; background: #3a4352; position: relative; transition: background .15s;
+  flex: none; }
+.switch .knob::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: #cfd6de; transition: left .15s; }
+.switch input:checked + .knob { background: var(--blue); }
+.switch input:checked + .knob::after { left: 19px; background: #fff; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 4px 12px; cursor: pointer; color: var(--muted); }
+.seg button.on { background: var(--sel); color: var(--text); }
+/* tables */
+.tw { overflow: auto; border-radius: 6px; border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+th { position: sticky; top: 0; z-index: 1; background: var(--card2); color: var(--label); font-weight: 400; text-align: left;
+  font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+td { padding: 5px 8px; border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  vertical-align: middle; }
+th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--hover); }
+tr.sel td { background: var(--sel) !important; }
+tr.cur td { background: rgba(255,150,60,.16); }
+tr.cur td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
+tr.done td { color: var(--green); }
+tr.done td.st { color: #8fd8a6; }
+tr.grp td { background: #1b2230; font-weight: 700; color: var(--text); cursor: pointer; }
+tr.grp td .caret { display: inline-block; width: 1em; color: var(--muted); }
+td.sub { padding-left: 24px; }
+.src { color: var(--muted); font-size: .8rem; margin-left: 4px; }
+.bar { height: 5px; background: #2d3544; border-radius: 3px; margin-top: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--blue); }
+td .two { display: block; overflow: hidden; text-overflow: ellipsis; }
+td .two + .two { color: var(--muted); font-size: .82rem; }
+.play { visibility: hidden; }
+tr:hover .play, tr.sel .play { visibility: visible; }
+.score-1 { color: var(--green); } .score-0 { color: var(--red); } .score-m { color: var(--orange); }
+/* layout of the main cards */
+#batchCard .tw { max-height: 15.5rem; }
+#itemCard { flex: 1; display: flex; flex-direction: column; min-height: 22rem; }
+#itemCard .tw { flex: 1; }
+.notebar { background: rgba(70,170,250,.1); border-left: 3px solid var(--blue); padding: 4px 10px; border-radius: 4px; }
+/* dialogs */
+dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 0;
+  max-width: 96vw; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+dialog::backdrop { background: rgba(5,8,12,.7); }
+.dlg { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; max-height: 92vh; }
+.dlg h2 { margin: 0; font-size: 1.2rem; }
+.dlg .body { overflow: auto; min-height: 0; }
+.dlg .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+#confirmDlg { width: 640px; } #confirmDlg .body { white-space: pre-wrap; word-break: break-word; }
+#newDlg { width: 1240px; height: 92vh; } #newDlg .dlg { height: 100%; }
+#offDlg { width: 1240px; } #offDlg .body pre { white-space: pre-wrap; font-size: .85rem; }
+#offDlg table { table-layout: auto; } #offDlg td, #offDlg th { white-space: nowrap; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 6px 14px; cursor: pointer; color: var(--muted); }
+.tabs button.on { color: var(--text); border-bottom-color: var(--blue); }
+.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 8px; }
+.setopt { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; text-align: left; }
+.setopt:hover { background: var(--hover); }
+.setopt.on { border-color: var(--blue); background: var(--sel); }
+.filters input[type=search] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 16rem; }
+.filters select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+#pickTable th { cursor: pointer; }
+#pickTable th.sorted::after { content: " \25BE"; } #pickTable th.sorted.asc::after { content: " \25B4"; }
+#pickTable td:first-child { text-overflow: clip; }
+#pickTable input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--blue); }
+.toast-wrap { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 50; max-width: min(560px, 92vw); }
+.toast { background: var(--card2); border-left: 4px solid var(--blue); padding: 9px 14px; border-radius: 6px; white-space: pre-wrap;
+  word-break: break-word; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.toast.bad { border-left-color: var(--red); } .toast.ok { border-left-color: var(--green); }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: transparent;
+  border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes s { to { transform: rotate(360deg); } }
+/* narrow (phone) */
+@media (max-width: 760px) {
+  html { font-size: 14px; }
+  .app { padding: 8px; }
+  td.hide-n, th.hide-n { padding: 0 !important; font-size: 0; }   /* columns collapse via col.hide-n (cells must stay for the column map) */
+  .btn { padding: 7px 11px; }
+  col.hide-n { width: 0 !important; }
+  #itemTable td:last-child { padding: 2px 4px; text-overflow: clip; }
+  #batchCard .tw { max-height: 13rem; }
+  .play { visibility: visible; }
+  .filters input[type=search] { min-width: 0; flex: 1 1 100%; }
+  #cItem { width: 32% !important; } #cScen { width: 0 !important; } #cHum { width: 15% !important; } #cMod { width: 15% !important; } #cStat { width: auto !important; }
+  #itemTable .src { display: none; }
+  td.sub { padding-left: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="tag" id="title">exam</span>
+    <span class="pill" id="loopPill">-</span>
+    <span id="loopItem" class="grow" style="font-weight:700"></span>
+  </header>
+
+  <section class="card">
+    <div class="row spread">
+      <div class="lbl">Phone</div>
+      <div class="row" id="inputs"></div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <a class="url" id="url" target="_blank"></a>
+      <button class="btn icon" id="copyBtn">Copy</button>
+      <span class="muted small" id="lan"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row spread"><div class="lbl">Loop</div><div class="muted small" id="loopRun"></div></div>
+    <div id="loopMsg" style="margin:6px 0 2px; min-height:1.35em; word-break:break-word"></div>
+    <div id="showNote" class="notebar small" hidden></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn big" id="pauseBtn">Pause</button>
+      <button class="btn big" id="restartBtn" title="Abort the running item and drive it again">Restart item</button>
+      <button class="btn big" id="nextBtn" title="Skip the running item (not counted) and go on">Next item</button>
+      <button class="btn big danger" id="stopBtn" title="Abort the running item and stop the loop">Stop</button>
+    </div>
+    <div class="row" style="margin-top:8px; gap:4px 18px" id="toggles"></div>
+  </section>
+
+  <section class="card" id="batchCard">
+    <div class="row spread" style="margin-bottom:8px">
+      <div class="lbl">Batches</div>
+      <div class="row">
+        <button class="btn primary" id="newBtn">New batch&hellip;</button>
+        <button class="btn" id="contBtn">Continue this batch</button>
+        <button class="btn danger" id="delBtn">Delete&hellip;</button>
+        <button class="btn" id="offBtn">Official table</button>
+      </div>
+    </div>
+    <div class="tw"><table id="batchTable">
+      <colgroup><col><col style="width:8.5rem" class="hide-n"><col style="width:8.5rem"><col style="width:5.5rem"><col style="width:6.5rem" class="hide-n"><col style="width:7rem" id="extraCol"></colgroup>
+      <thead><tr><th>batch</th><th class="hide-n">created</th><th class="n">driven</th><th class="n">mean</th><th class="n hide-n">disk</th><th id="extraHead"></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="itemCard">
+    <div class="row spread" style="margin-bottom:8px">
+      <div class="grow"><span class="lbl">Items</span> <span id="itemHead" class="muted small"></span></div>
+      <div class="row">
+        <span class="seg"><button data-sort="group" class="on">By group</button><button data-sort="score">By score, low first</button></span>
+        <button class="btn icon" id="foldBtn" title="Collapse or expand all groups">Fold all</button>
+      </div>
+    </div>
+    <div class="tw"><table id="itemTable">
+      <colgroup><col style="width:10.5rem" id="cItem"><col class="hide-n" id="cScen"><col style="width:5.5rem" id="cHum"><col style="width:8rem" id="cMod"><col style="width:28%" id="cStat"><col style="width:3.2rem"></colgroup>
+      <thead><tr><th>item</th><th class="hide-n">scenario</th><th class="n">human</th><th class="n">model</th><th>status</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="muted small" style="margin-top:6px">Double-click an item (or its &#9654;) to drive it next. It aborts nothing; with Playlist off the loop waits for the throttle.</div>
+  </section>
+</div>
+
+<dialog id="confirmDlg"><div class="dlg">
+  <h2 id="cfTitle"></h2><div class="body" id="cfBody"></div>
+  <div class="foot"><button class="btn" value="no" id="cfNo">Cancel</button><button class="btn primary" id="cfYes">OK</button></div>
+</div></dialog>
+
+<dialog id="offDlg"><div class="dlg">
+  <div class="row spread"><h2>Official table</h2><button class="btn icon" onclick="offDlg.close()">Close</button></div>
+  <div class="muted small" id="offRun"></div>
+  <div class="body" id="offBody"></div>
+</div></dialog>
+
+<dialog id="newDlg"><div class="dlg">
+  <div class="row spread"><h2>New batch</h2><button class="btn icon" onclick="newDlg.close()">Close</button></div>
+  <div class="tabs"><button data-tab="sets" class="on">Scene sets</button><button data-tab="pick" id="pickTab">Custom pick</button></div>
+  <div class="body" id="tabSets" style="flex:1"><div class="sets" id="sets"></div></div>
+  <div id="tabPick" style="display:none; flex:1; min-height:0; flex-direction:column; gap:8px">
+    <div class="row filters">
+      <input type="search" id="q" placeholder="Search id, label, group, failure...">
+      <select id="fTrack"></select><select id="fRev"></select><select id="fFail"></select>
+      <label class="switch"><input type="checkbox" id="fSel"><span class="knob"></span>selected only</label>
+    </div>
+    <div class="tw" style="flex:1"><table id="pickTable">
+      <colgroup><col style="width:2.6rem"><col style="width:10rem"><col class="hide-n"><col style="width:4.5rem" class="hide-n"><col style="width:7rem"><col style="width:6.5rem"><col style="width:10rem"><col style="width:7.5rem" class="hide-n"></colgroup>
+      <thead><tr><th><input type="checkbox" id="pickAll" title="Select or clear every shown scene"></th><th data-k="label">scene</th><th data-k="group" class="hide-n">group</th><th data-k="stage" class="n hide-n">stage</th><th data-k="ref_mean" class="n" title="organisers' mean">organisers</th><th data-k="r6dag" class="n">R6DAG</th><th data-k="fail">R6DAG failure</th><th data-k="model" class="n hide-n">model</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+  <div class="foot">
+    <span class="muted grow" id="newInfo"></span>
+    <button class="btn" onclick="newDlg.close()">Cancel</button>
+    <button class="btn primary big" id="newGo" disabled>Start new batch</button>
+  </div>
+</div></dialog>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const base = s => (s || "").split("/").pop();
+const S = {meta: null, st: null, run: null, sort: "group", folded: new Set(), sel: null, orderKey: null, noticeT: Date.now() / 1000,
+           busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "sets", setKey: null, html: {}};
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({ok: false, msg: "HTTP " + r.status}));
+  if (!r.ok && j.ok === undefined) j.ok = false;
+  return j;
+}
+function toast(msg, level, ms) {
+  if (!msg) return;
+  const d = document.createElement("div");
+  d.className = "toast " + (level || "");
+  d.textContent = msg;
+  $("#toasts").appendChild(d);
+  setTimeout(() => d.remove(), ms || 7000);
+  return d;
+}
+function confirmBox(title, body, yes, danger) {
+  return new Promise(res => {
+    $("#cfTitle").textContent = title;
+    $("#cfBody").textContent = body;
+    const y = $("#cfYes");
+    y.textContent = yes || "OK";
+    y.className = "btn " + (danger ? "danger solid" : "primary");
+    const dlg = $("#confirmDlg");
+    const done = v => { dlg.close(); res(v); };
+    y.onclick = () => done(true);
+    $("#cfNo").onclick = () => done(false);
+    dlg.oncancel = () => res(false);
+    dlg.showModal();
+    $("#cfNo").focus();
+  });
+}
+async function work(label, fn) {        // long backend calls: one at a time, with a sticky toast
+  if (S.busy) return toast("Still working on the previous action...", "bad");
+  S.busy = true;
+  const t = toast("", "", 600000);
+  t.innerHTML = '<span class="spin"></span>' + esc(label);
+  try { return await fn(); } finally { t.remove(); S.busy = false; }
+}
+function setHTML(el, key, html) { if (S.html[key] !== html) { S.html[key] = html; el.innerHTML = html; } }
+function scoreCls(v) { return v == null ? "" : v >= ((S.meta && S.meta.score_max) || 1) ? "score-1" : v <= 0 ? "score-0" : "score-m"; }
+
+// ---------- render ----------
+function render() {
+  const st = S.st, m = S.meta;
+  if (!st || !m) return;
+  const L = st.loop, C = st.control;
+  // header and loop
+  const pst = !L.alive ? "dead" : C.paused ? "paused" : ({driving: "driving", loading: "loading", paused: "paused", idle: "idle"}[L.state] || "");
+  $("#loopPill").className = "pill " + pst;
+  $("#loopPill").textContent = !L.alive ? "not running" : (L.state || "?") + (C.paused && L.state !== "paused" ? " · paused" : "");
+  const curItem = L.item ? (st.items.find(i => i.id === L.item) || {}).label || L.item : "";
+  $("#loopItem").textContent = curItem;
+  $("#loopItem").title = L.item || "";
+  $("#loopMsg").textContent = L.alive ? (L.msg || "") : (L.other ? "Not running; " + L.other : "Not running. Continue a batch or start a new one.");
+  $("#loopMsg").className = L.alive ? "" : "muted";
+  $("#loopRun").textContent = L.run ? "on " + base(L.run) : "";
+  const note = $("#showNote");
+  note.hidden = !(L.alive && L.run && st.shown && L.run !== st.shown);
+  if (!note.hidden) note.textContent = "Showing " + base(st.shown) + "; the loop runs on " + base(L.run) + ".";
+  $("#pauseBtn").textContent = C.paused ? "Resume" : "Pause";
+  $("#pauseBtn").className = "btn big" + (C.paused ? " primary" : "");
+  for (const b of ["#restartBtn", "#nextBtn", "#stopBtn"]) $(b).disabled = !L.alive;
+  // inputs
+  setHTML($("#inputs"), "inputs", st.inputs.map(([t, l]) => `<span class="chip ${l}">${esc(t)}</span>`).join(""));
+  if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#lan").textContent = "LAN fallback " + st.phone.lan; }
+  // toggles (only rebuilt when the values change, so a click is never lost)
+  const tg = [["playlist", "Playlist (auto-advance)", C.playlist]].concat(m.options.map(o => ["opt:" + o.name, o.label, C.options[o.name] ?? o.default]));
+  setHTML($("#toggles"), "toggles", tg.map(([k, l, v]) =>
+    `<label class="switch"><input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(l)}</label>`).join(""));
+  // batches
+  setHTML($("#batchTable tbody"), "batches", st.batches.map(b => {
+    const pct = b.total ? Math.round(100 * b.driven / b.total) : 0;
+    return `<tr data-run="${esc(b.run)}" class="${b.run === st.shown ? "sel" : ""} ${b.current ? "cur" : ""}" title="${esc(b.run)}">
+      <td><span class="two">${esc(b.label)}${b.current ? '<span class="badge">LOOP</span>' : ""}</span><span class="two mono">${esc(b.name)}</span></td>
+      <td class="hide-n">${esc(b.created)}</td>
+      <td class="n">${b.driven} / ${b.total}<div class="bar"><i style="width:${pct}%"></i></div></td>
+      <td class="n ${scoreCls(b.mean)}">${esc(b.mean_s)}</td><td class="n hide-n">${esc(b.size)}</td>${S.meta.batch_extra ? `<td>${esc(b.extra || "")}</td>` : ""}</tr>`;
+  }).join("") || '<tr><td colspan="6" class="muted">no batch yet: New batch</td></tr>');
+  const shownB = st.batches.find(b => b.run === st.shown);
+  $("#contBtn").disabled = $("#delBtn").disabled = !shownB;
+  $("#delBtn").disabled = !shownB || shownB.current;
+  $("#delBtn").title = shownB && shownB.current ? "The loop runs on this batch: Stop it first" : "Delete the shown batch";
+  $("#itemHead").textContent = shownB ? `${shownB.label} · ${shownB.driven} / ${shownB.total} driven${shownB.mean_s ? " · mean " + shownB.mean_s : ""}` : "";
+  renderItems();
+}
+
+function groups() {
+  const items = S.st.items;
+  if (S.sort === "score") {
+    const k = it => [it.human == null && it.model == null ? 1 : 0, it.human != null ? it.human : (it.model || 0)];
+    return [[null, items.slice().sort((a, b) => { const x = k(a), y = k(b); return x[0] - y[0] || x[1] - y[1]; })]];
+  }
+  const g = [];
+  for (const it of items) { if (!g.length || g[g.length - 1][0] !== it.group) g.push([it.group, []]); g[g.length - 1][1].push(it); }
+  return g;
+}
+
+function renderItems() {
+  const st = S.st, L = st.loop, gs = groups();
+  const order = gs.flatMap(g => g[1].map(i => i.id));
+  const key = S.sort + "|" + st.shown + "|" + order.join(",");
+  if (key !== S.orderKey) {            // as the Tk panel: write the order when it changes (the server refuses for another batch)
+    S.orderKey = key;
+    if (st.shown) api("/api/order", {run: st.shown, order});
+  }
+  const live = L.alive && L.run === st.shown;
+  const fmt = (v, cls) => v ? `<span class="${cls}">${esc(v)}</span>` : "";
+  let h = "";
+  for (const [g, its] of gs) {
+    if (g !== null) {
+      const d = its.filter(i => i.human != null), f = S.folded.has(g);
+      const mean = d.length ? (d.reduce((a, i) => a + i.human, 0) / d.length) : null;
+      h += `<tr class="grp" data-g="${esc(g)}"><td colspan="2"><span class="caret">${f ? "&#9656;" : "&#9662;"}</span>${esc(g)} <span class="muted small">(${its.length})</span></td>
+        <td class="n ${scoreCls(mean)}">${mean == null ? "" : mean.toFixed(S.meta.score_dec)}</td><td></td><td class="muted">${d.length} / ${its.length} driven</td><td></td></tr>`;
+      if (f) continue;
+    }
+    for (const it of its) {
+      const cls = [live && L.item === it.id ? "cur" : "", it.human != null ? "done" : "", S.sel === it.id ? "sel" : ""].join(" ");
+      h += `<tr data-id="${esc(it.id)}" class="${cls}" title="${esc(it.id)}">
+        <td class="${g !== null ? "sub" : ""} mono">${esc(it.label)}</td>
+        <td class="hide-n" title="${esc(it.scenario)}">${esc(it.scenario)}</td>
+        <td class="n">${fmt(it.human_s, scoreCls(it.human))}</td>
+        <td class="n">${esc(it.model_s)}${it.model_src ? `<span class="src">${esc(it.model_src)}</span>` : ""}</td>
+        <td class="st" title="${esc(it.status)}">${esc(it.status)}</td>
+        <td><button class="btn icon play" data-play="${esc(it.id)}" title="Drive this item next">&#9654;</button></td></tr>`;
+    }
+  }
+  setHTML($("#itemTable tbody"), "items", h || '<tr><td colspan="6" class="muted">no items</td></tr>');
+}
+
+// ---------- polling ----------
+async function poll() {
+  try {
+    const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : ""));
+    if (st.loop) {
+      S.st = st;
+      if (S.run && !st.batches.some(b => b.run === S.run)) S.run = null;
+      for (const n of st.notices) if (n.t > S.noticeT) { toast(n.msg, n.level === "bad" ? "bad" : ""); S.noticeT = n.t; }
+      render();
+    }
+  } catch (e) { $("#loopPill").className = "pill dead"; $("#loopPill").textContent = "panel server unreachable"; }
+  setTimeout(poll, 1000);
+}
+
+// ---------- actions ----------
+async function control(d) { const r = await api("/api/control", d); if (S.st && r.control) { S.st.control = r.control; render(); } }
+async function act(kind, item) { const r = await api("/api/act", {kind, item}); if (!r.ok) toast(r.msg, "bad"); return r; }
+
+$("#pauseBtn").onclick = () => control({paused: !S.st.control.paused});
+$("#restartBtn").onclick = () => act("restart").then(() => toast("Restart sent"));
+$("#nextBtn").onclick = () => act("next").then(() => toast("Next sent"));
+$("#stopBtn").onclick = async () => {
+  if (await confirmBox("Stop the loop?", "The current item is aborted (it can be driven again) and the loop exits.", "Stop", true))
+    act("stop").then(() => toast("Stop sent"));
+};
+$("#toggles").onchange = e => {
+  const k = e.target.dataset.k;
+  if (k === "playlist") control({playlist: e.target.checked});
+  else if (k && k.startsWith("opt:")) control({option: k.slice(4), value: e.target.checked});
+};
+$("#copyBtn").onclick = () => {
+  const u = S.st.phone.url;
+  const fallback = () => { const t = document.createElement("textarea"); t.value = u; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); };
+  (navigator.clipboard ? navigator.clipboard.writeText(u).catch(fallback) : Promise.resolve(fallback())).then(() => toast("Copied " + u, "ok", 2500));
+};
+$("#batchTable tbody").onclick = e => {
+  const tr = e.target.closest("tr[data-run]");
+  if (tr && tr.dataset.run !== S.st.shown) { S.run = tr.dataset.run; S.sel = null; S.html.items = null; poll1(); }
+};
+async function poll1() { const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : "")); if (st.loop) { S.st = st; render(); } }
+
+async function takeOver(path, body, label) {
+  let r = await work(label, () => api(path, body));
+  if (r && r.confirm) {
+    if (!await confirmBox("Another run is active", r.confirm, "Stop it and go on", true)) return;
+    r = await work("Stopping the other run, then " + label.toLowerCase(), () => api(path, Object.assign({force: true}, body)));
+  }
+  if (!r) return;
+  toast(r.msg, r.ok ? "ok" : "bad", 12000);
+  if (r.run) { S.run = r.run; S.sel = null; }
+  poll1();
+  return r;
+}
+$("#contBtn").onclick = () => S.st.shown && takeOver("/api/continue", {run: S.st.shown}, "Continuing " + base(S.st.shown));
+$("#delBtn").onclick = async () => {
+  const b = S.st.batches.find(x => x.run === S.st.shown);
+  if (!b) return;
+  if (b.current) return toast("The loop is running on this batch. Stop it first, then delete.", "bad");
+  const ok = await confirmBox(`Delete the batch "${b.label}"?`,
+    `${b.name}, created ${b.created}, ${b.driven} / ${b.total} driven, ${b.size} on disk.\n\nThis removes the whole directory\n${b.run}\nwith every attempt, rollout and score. It cannot be undone.`,
+    "Delete " + b.name, true);
+  if (!ok) return;
+  const r = await work("Deleting " + b.name, () => api("/api/delete", {run: b.run}));
+  if (r) { toast(r.msg, r.ok ? "ok" : "bad"); if (r.ok) S.run = null; poll1(); }
+};
+$("#offBtn").onclick = async () => {
+  $("#offBody").innerHTML = '<span class="spin"></span>loading';
+  $("#offRun").textContent = "";
+  offDlg.showModal();
+  const r = await api("/api/official" + (S.st.shown ? "?run=" + encodeURIComponent(S.st.shown) : ""));
+  $("#offRun").textContent = r.run || "";
+  $("#offBody").innerHTML = mdTables(r.text || r.msg || "");
+};
+function mdTables(text) {      // markdown tables -> <table>, other lines as text
+  const out = [], lines = text.split("\n");
+  for (let i = 0; i < lines.length;) {
+    if (lines[i].trim().startsWith("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) rows.push(lines[i++].trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()));
+      const al = rows[1] && rows[1].every(c => /^:?-+:?$/.test(c)) ? rows.splice(1, 1)[0].map(c => c.endsWith(":") ? "n" : "") : [];
+      out.push('<div class="tw" style="margin:6px 0"><table><thead><tr>' + rows[0].map((c, k) => `<th class="${al[k] || ""}">${esc(c)}</th>`).join("") +
+        "</tr></thead><tbody>" + rows.slice(1).map(r => "<tr>" + r.map((c, k) => `<td class="${al[k] || ""}">${esc(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table></div>");
+    } else { const l = lines[i++]; out.push(l.trim() ? `<p style="margin:4px 0">${esc(l)}</p>` : ""); }
+  }
+  return out.join("");
+}
+
+// items: select, fold, play
+const itBody = $("#itemTable tbody");
+itBody.onclick = e => {
+  const p = e.target.closest("[data-play]");
+  if (p) return playItem(p.dataset.play);
+  const g = e.target.closest("tr.grp");
+  if (g) { S.folded.has(g.dataset.g) ? S.folded.delete(g.dataset.g) : S.folded.add(g.dataset.g); return renderItems(); }
+  const tr = e.target.closest("tr[data-id]");
+  if (tr) { S.sel = tr.dataset.id; renderItems(); }
+};
+itBody.ondblclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) playItem(tr.dataset.id); };
+function playItem(id) {
+  const it = S.st.items.find(i => i.id === id) || {label: id};
+  const L = S.st.loop;
+  if (L.alive && L.run && L.run !== S.st.shown) return toast("The loop runs on another batch (" + base(L.run) + "). Continue this batch first.", "bad");
+  act("play", id).then(r => r.ok && toast("Drive next: " + it.label + (L.alive ? "" : " (the loop is not running: Continue this batch)"), "ok"));
+}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  S.sort = b.dataset.sort;
+  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+  renderItems();
+});
+$("#foldBtn").onclick = () => {
+  const gs = [...new Set(S.st.items.map(i => i.group))];
+  if (S.folded.size) S.folded.clear(); else gs.forEach(g => S.folded.add(g));
+  $("#foldBtn").textContent = S.folded.size ? "Expand all" : "Fold all";
+  renderItems();
+};
+
+// ---------- new batch dialog ----------
+function setTab(t) {
+  S.tab = t;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("#tabSets").style.display = t === "sets" ? "" : "none";
+  $("#tabPick").style.display = t === "pick" ? "flex" : "none";
+  if (t === "pick") loadCatalog();
+  newInfo();
+}
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$("#newBtn").onclick = () => {
+  $("#sets").innerHTML = S.meta.sets.map(([k, l]) => `<button class="setopt ${k === S.setKey ? "on" : ""}" data-k="${esc(k)}">${esc(l)}</button>`).join("");
+  $("#pickTab").style.display = S.meta.catalog ? "" : "none";
+  setTab(S.meta.catalog ? S.tab : "sets");
+  newDlg.showModal();
+};
+$("#sets").onclick = e => {
+  const b = e.target.closest(".setopt");
+  if (!b) return;
+  S.setKey = b.dataset.k;
+  document.querySelectorAll(".setopt").forEach(x => x.classList.toggle("on", x === b));
+  newInfo();
+};
+$("#sets").ondblclick = e => { if (e.target.closest(".setopt")) $("#newGo").click(); };
+function newInfo() {
+  let txt, ok;
+  if (S.tab === "sets") {
+    const s = S.meta.sets.find(x => x[0] === S.setKey);
+    txt = s ? "Set: " + s[1] : "Pick a set";
+    ok = !!s;
+  } else {
+    const tracks = new Set([...S.pick].map(id => (S.catById[id] || {}).track));
+    txt = S.pick.size + " scene(s) selected" + (tracks.size > 1 ? " (mixed tracks: pick PAI or nuPlan, not both)" : "");
+    ok = S.pick.size > 0 && tracks.size === 1;
+  }
+  $("#newInfo").textContent = txt;
+  $("#newGo").disabled = !ok;
+  $("#newGo").textContent = S.tab === "sets" ? "Start new batch" : `New batch from selection (${S.pick.size})`;
+}
+$("#newGo").onclick = async () => {
+  const body = S.tab === "sets" ? {key: S.setKey} : {key: "custom", ids: S.cat.filter(r => S.pick.has(r.id)).map(r => r.id)};
+  newDlg.close();
+  const r = await takeOver("/api/new_batch", body, "Creating the batch and starting the loop");
+  if (r && r.ok && S.tab === "pick") S.pick.clear();
+};
+async function loadCatalog() {
+  if (S.cat) return renderPick();
+  $("#pickTable tbody").innerHTML = '<tr><td colspan="8"><span class="spin"></span>loading the scene list</td></tr>';
+  const r = await api("/api/catalog");
+  S.cat = r.rows || [];
+  S.catById = Object.fromEntries(S.cat.map(x => [x.id, x]));
+  const opts = (sel, all, vals) => { sel.innerHTML = `<option value="">${all}</option>` + vals.map(v => `<option>${esc(v)}</option>`).join(""); };
+  const uniq = k => [...new Set(S.cat.map(x => x[k]).filter(v => v != null && v !== ""))].sort();
+  opts($("#fTrack"), "all tracks", uniq("track"));
+  opts($("#fRev"), "all revisions", uniq("revision"));
+  opts($("#fFail"), "any R6DAG result", ["any failure"].concat(uniq("fail")));
+  renderPick();
+}
+function pickRows() {
+  const q = $("#q").value.trim().toLowerCase(), tr = $("#fTrack").value, rv = $("#fRev").value, fl = $("#fFail").value, only = $("#fSel").checked;
+  let rows = S.cat.filter(x => (!tr || x.track === tr) && (!rv || x.revision === rv) && (!only || S.pick.has(x.id)) &&
+    (!fl || (fl === "any failure" ? !!x.fail : x.fail === fl)) &&
+    (!q || [x.id, x.label, x.group, x.fail].join(" ").toLowerCase().includes(q)));
+  const [k, dir] = S.pickSort;
+  if (k) rows = rows.slice().sort((a, b) => { const x = a[k], y = b[k];
+    if (x == null || x === "") return 1; if (y == null || y === "") return -1;
+    return (x < y ? -1 : x > y ? 1 : 0) * dir; });
+  return rows;
+}
+const f2 = v => v == null ? "" : Number(v).toFixed(2);
+function renderPick() {
+  if (!S.cat) return;
+  const rows = pickRows();
+  S.pickShown = rows;
+  $("#pickTable tbody").innerHTML = rows.map(x => `<tr data-id="${esc(x.id)}" class="${S.pick.has(x.id) ? "sel" : ""}" title="${esc(x.id)}">
+    <td><input type="checkbox" ${S.pick.has(x.id) ? "checked" : ""}></td><td class="mono">${esc(x.label)}</td>
+    <td class="hide-n" title="${esc(x.group)}">${esc(x.group)}</td><td class="n hide-n">${x.stage ?? ""}</td>
+    <td class="n">${f2(x.ref_mean)}</td><td class="n ${scoreCls(x.r6dag)}">${f2(x.r6dag)}</td><td>${esc(x.fail)}</td>
+    <td class="n hide-n">${f2(x.model)}${x.model_src ? `<span class="src">${esc(x.model_src)}</span>` : ""}</td></tr>`).join("") ||
+    '<tr><td colspan="8" class="muted">no scene matches</td></tr>';
+  $("#pickAll").checked = rows.length > 0 && rows.every(x => S.pick.has(x.id));
+  document.querySelectorAll("#pickTable th[data-k]").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.k === S.pickSort[0]); th.classList.toggle("asc", S.pickSort[1] > 0); });
+  newInfo();
+}
+["#q", "#fTrack", "#fRev", "#fFail", "#fSel"].forEach(s => $(s).addEventListener("input", renderPick));
+$("#pickTable tbody").onclick = e => {
+  const tr = e.target.closest("tr[data-id]");
+  if (!tr) return;
+  const id = tr.dataset.id;
+  S.pick.has(id) ? S.pick.delete(id) : S.pick.add(id);
+  renderPick();
+};
+$("#pickAll").onchange = e => { for (const x of S.pickShown) e.target.checked ? S.pick.add(x.id) : S.pick.delete(x.id); renderPick(); };
+document.querySelectorAll("#pickTable th[data-k]").forEach(th => th.onclick = () => {
+  const k = th.dataset.k;
+  S.pickSort = [k, S.pickSort[0] === k ? -S.pickSort[1] : 1];
+  renderPick();
+});
+
+// ---------- start ----------
+(async () => {
+  S.meta = await api("/api/meta");
+  document.title = S.meta.title;
+  $("#title").textContent = S.meta.title;
+  $("#extraHead").textContent = S.meta.batch_extra || "";
+  if (!S.meta.batch_extra) { $("#extraCol").remove(); $("#extraHead").remove(); }
+  poll();
+  const h = location.hash.slice(1);           // #new / #pick / #official / #delete / #stop open a dialog (screenshots, links)
+  if (h) setTimeout(() => {
+    if (h === "new" || h === "pick") { $("#newBtn").click(); if (h === "pick") setTab("pick"); }
+    else if (h === "official") $("#offBtn").click();
+    else if (h === "delete") $("#delBtn").click();
+    else if (h === "stop") $("#stopBtn").click();
+  }, 600);
+})();
+</script>
+</body>
+</html>

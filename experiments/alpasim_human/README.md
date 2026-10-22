@@ -155,7 +155,17 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
 `bash experiments/alpasim_human/scripts/human_panel.sh --install`). It is the twin of the "B2D human exam" panel
 ([phone_wheel](../phone_wheel/README.md), section "Desktop panel"): the same `lib/exam_panel.py` with the AlpaSim backend
 `lib/alpasim_exam.py`. One panel at a time (lock `/data/runs/alpasim_human/.panel.lock`); it starts the wheel daemon (tmux
-`wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing.
+`wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing. Since 2026-10-22 the
+panel is the web page `lib/exam_web.py` (port 8770; `http://100.108.238.8:8770/` from a phone or the Mac over Tailscale;
+`human_panel.sh --tk` = the old Tk window, `--restart` after a code update; details in phone_wheel's "Desktop panel").
+New batch has two tabs: the scene sets, and a custom pick over `catalog()` (search, track / revision / R6DAG failure
+filters, sortable columns: organisers' mean, R6DAG-s1 score and loss class, model; multi-select, "New batch from selection").
+
+![web panel](figs/panel_web.png)
+
+`figs/panel_web.png`: the web panel on the PAI stage-1 batch at the desktop size (1300 x 1800 screen px). Look at the
+batch list (LOOP badge and orange bar on the loop's batch, driven bar, mean coloured green 1 / orange / red 0) and the scene
+list grouped by revision with the group mean. `figs/panel_web_pick.png`: the custom pick tab.
 
 - New batch: one set per filter over the scene table (`Scenes` in `lib/alpasim_exam.py`): PAI stage 1 (10), first 40, all 441
   (`fetch_all/all441.tsv`, only scenes whose `$NUREC/all-usdzs/<uuid>.usdz` is on disk; all 441 are on Tokyo), 26.01 (177) / 26.04

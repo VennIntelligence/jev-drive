@@ -166,8 +166,16 @@ bash ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_drive.sh --resume 
 
 Double-click "B2D human exam" on the Tokyo desktop (`scripts/human_panel.sh`; install or refresh the icon with
 `bash experiments/phone_wheel/scripts/human_panel.sh --install`). It opens one panel (a lock file prevents a second) and
-starts the wheel daemon (tmux `wheel`) and the viewer (tmux `human:viewer`) if they are missing. The panel runs on the
-system Python (`/usr/bin/python3`; envs/carla has no Tcl).
+starts the wheel daemon (tmux `wheel`) and the viewer (tmux `human:viewer`) if they are missing.
+
+Since 2026-10-22 the panel is a web page (`lib/exam_web.py` + `lib/exam_web.html`, stdlib server on the system Python,
+vanilla JS, dark theme of the viewer). The icon starts the server once (it holds the lock; port 8771 for B2D, 8770 for
+AlpaSim, bound to 127.0.0.1 and the Tailscale IPv4 only) and opens it as a Chrome app window (own profile
+`/data/tmp/exam_panel_chrome`, device scale 1.4, x 20..1320 left of the viewer). Clicking the icon again only opens a window;
+`human_panel.sh --restart` restarts the server after a code update; `human_panel.sh --tk` is the old Tk panel (fallback; it takes
+the same lock, so close one before the other). From a phone or the Mac: `http://100.108.238.8:8771/` (8770 for AlpaSim) over
+Tailscale; narrow screens hide the secondary columns. The page polls `/api/state` every second; the shown batch is per page,
+so a phone can look at another batch than the desktop. Same Backend and `control.json` / `loop.json` protocol as the Tk panel.
 
 - New batch: pick Full val suite (220), Hard list (45, `results/exam_hard45.txt`), Junction turns (54) or Model failure routes
   (10). It writes a new run dir with `routes.txt` (town-grouped as in "The full exam") and starts the loop.
@@ -196,11 +204,17 @@ system Python (`/usr/bin/python3`; envs/carla has no Tcl).
   this batch" replaces "Resume last"; "Delete this batch" removes the run dir after a confirmation naming it and its size, never
   while the loop runs on it.
 - Viewer: the route keeps its 10 / 20 / 40 / 80 m dots; only the nearest visible one is labelled.
-- Generic: `lib/exam_panel.py` is the panel and the protocol over a `Backend` (items with id / group / scenario / human /
+- Generic: `lib/exam_panel.py` is the Tk panel and the protocol over a `Backend`, `lib/exam_web.py` the web panel over the same `Backend` (items with id / group / scenario / human /
   model / status; batch sets, new batch, resume, takeover of a foreign run, official table, side processes).
   `lib/b2d_exam.py` is the Bench2Drive backend; the AlpaSim backend is in [alpasim_human](../alpasim_human/README.md), section "Desktop panel".
 - Status 2026-10-14 00:05: the panel was rendered on the live run (`figs/panel_b2d.png`). The loop has not yet run a route
   end to end with CARLA, because card 0 was in use by the user's 220-route run. The agent's pause and hold logic is unit-tested.
+
+![web panel](figs/panel_web_b2d.png)
+
+`figs/panel_web_b2d.png`: the web panel (2026-10-22) on the same 220-route run at the desktop size (1300 x 1800 screen px,
+headless Chrome at scale 1.4). Look at the town rows (bold, human mean DS and driven count), the green driven routes with
+the DS coloured against 100, and that no column is clipped.
 
 ![panel](figs/panel_b2d.png)
 
