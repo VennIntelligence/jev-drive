@@ -1,7 +1,7 @@
 # wm_surplus: do driving policies need grafted world models
 
 status: live
-decisions: PD1, PD2, PD4, PD5, PD6, PD7
+decisions: PD1, PD2, PD4, PD5, PD6, PD7, PD8
 index: P2 profile: WA-JEPA completes 31/64 HUGSIM, right turns 1/7, >100 deg turns through 2/8
 
 **Question.** The paper (PD1) claims grafted foundation world models are surplus for end-to-end driving today. P1 measures how
@@ -98,6 +98,16 @@ this, cameras L0 / F0 / R0 / B0 only), arms off, k 8 .. 512. Outputs: `$DATA_DIR
 sweep chunks, ev.json; bench runs `runs/bench/navtest/PROBE-wajepa-ctx-*`), small results in `results/p1_usage/`.
 
 Results: pending (PD5).
+
+## P2 swap: WA-JEPA trained with the NTV0 recipe (PD8; feasibility only)
+
+Question: freeze WA-JEPA's V-JEPA 2.1 encoder, train its planner (`predictor` 174 M + `scene_projector` 2 M) with NTV0's batch
+composition (83 navtrain / 13 yaw-rate / 32 S rows), losses and 9 500 steps, read on PAI 281 (ACC + GAP) beside NTV0-L18-s0
+(0.744, 59 zeros). **Not built (2026-10-23 01:00):** the navtrain sensor blobs were deleted 10-21 (76 of 1 310 logs on disk), the S
+pool holds Cinque tokens and labels only (no 4-camera frames; must be re-rendered from stored ego states), PAI has no rear-centre
+camera for WA-JEPA's B0, and no WA-JEPA PAI driver or as-shipped PAI read exists. Estimate to do it properly: ~25–80 card-h for one
+seed, peak ~60 GB disk, ~5 agent-days of code, 2–3 calendar days (the 282 GB navtrain re-download at 2–4 MB/s sets the pace). Step
+table, risks and every unavoidable difference from NTV0: [results/p2_swap/estimate.md](results/p2_swap/estimate.md).
 
 <!-- files:begin -->
 ## Files
