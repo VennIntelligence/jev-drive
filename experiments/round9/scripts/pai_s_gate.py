@@ -321,7 +321,7 @@ def cmd_gate(a):
             ag_rows.append(dict(scene=s, at_ev=True, off=bool(m_stu[i] < 0), plan=bool(served["road"][i] > 0), v0=float(M["v0"][i])))
         elif len(pre):
             ag_rows.append(dict(scene=s, at_ev=False, off=bool((m_stu[pre] < 0).any()), plan=bool((served["road"][pre] > 0).any()),
-                                v0=float(M["v0"][pre].max())))
+                                v0=float(M["v0"][pre].max()), plan_rate=float((served["road"][pre] > 0).mean()), t0off_rate=float((m_stu[pre] < 0).mean())))
     ctrl = np.concatenate(ctrl)
     A = pd.DataFrame(ag_rows)
     G["G1"] = dict(rows=n, raster_ok=float(ok.mean()), human_rows=int(hl.sum()),
@@ -331,6 +331,8 @@ def cmd_gate(a):
                    offroad_scenes=int((A.shape[0])), offroad_event_rows_in_pool=int(A.at_ev.sum()) if len(A) else 0,
                    agree_off_or_plan=float((A.off | A.plan).mean()) if len(A) else None, agree_t0_off=float(A.off.mean()) if len(A) else None,
                    agree_at_event_only=float((A[A.at_ev].off | A[A.at_ev].plan).mean()) if len(A) and A.at_ev.any() else None,
+                   pre_event_plan_rate=float(A.plan_rate.mean()) if "plan_rate" in A else None,
+                   pre_event_t0off_rate=float(A.t0off_rate.mean()) if "t0off_rate" in A else None,
                    control_rows=int(len(ctrl)), control_t0_off=float((m_stu[ctrl][ok[ctrl]] < 0).mean()),
                    control_served_road_active=float((served["road"][ctrl] > 0).mean()))
     print("G1", json.dumps(G["G1"]), flush=True)
