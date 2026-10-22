@@ -1,0 +1,62 @@
+{
+ "pool": "on1_NDP",
+ "rows": 104,
+ "scenes": 6,
+ "k_ge2": 92,
+ "fed_ge2": 63,
+ "teacher_ok": 104,
+ "candidates": 63,
+ "no_label": {},
+ "frame_err_k0": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "T2": {
+  "rows": 63,
+  "teacher_inside": 0.9841269841269841,
+  "served_inside": 1.0,
+  "line": 0.9,
+  "passed": true,
+  "off_now_rows": 0,
+  "off_now_teacher_better": NaN
+ },
+ "T4": {
+  "line": 4.0,
+  "alat_teacher": [
+   0.189,
+   3.008,
+   3.802
+  ],
+  "alat_served": [
+   0.096,
+   1.96,
+   2.784
+  ],
+  "over": 1,
+  "leave": 1,
+  "dropped": 2,
+  "dropped_share": 0.031746031746031744,
+  "line_share": 0.1,
+  "passed": true
+ },
+ "drawable": 61,
+ "drawable_held_logs": 8,
+ "d0": {
+  "abs": [
+   0.201,
+   2.627,
+   2.979
+  ],
+  "signed_med": 0.17097215354442596,
+  "left_gt_05": 16,
+  "right_gt_05": 0,
+  "left_gt_1": 13,
+  "right_gt_1": 0
+ },
+ "lat4": [
+  0.213,
+  2.242,
+  3.458
+ ]
+}
