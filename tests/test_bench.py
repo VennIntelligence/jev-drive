@@ -235,6 +235,25 @@ class TestTrajHead(TmpData):
             NV.stages(M.resolve("FMH-F-s0:noside"), "navtest", self.D / "x", shards=2)
 
 
+class TestPredFamily(TmpData):
+    def test_stages(self):
+        """PROBE-<tag> (usage probes): a supplied pose file is only scored; no plans / export, score shards wait on nothing."""
+        from jevdrive.bench import navsim as NV
+        for v in ST.NAVSIM.values():
+            (self.D / "runs" / "op_lb" / v["data"]).mkdir(parents=True, exist_ok=True)
+            (self.D / "runs" / "op_lb" / v["data"] / "meta.json").write_text("{}")
+        m = M.resolve("PROBE-wajepa-ctx-k16")
+        self.assertEqual((m.family, m.key("navtest")), ("pred", "PROBE-wajepa-ctx-k16"))
+        with self.assertRaises(SystemExit):                                 # the pose file must exist first
+            NV.stages(m, "navtest", self.D / "r", shards=2)
+        NV.pred_file(m, "navtest").parent.mkdir(parents=True, exist_ok=True)
+        NV.pred_file(m, "navtest").write_text("x")
+        st = NV.stages(m, "navtest", self.D / "r", shards=2)
+        self.assertEqual([x.name for x in st], ["score0of2", "score1of2", "collect"])
+        self.assertTrue(all(not x.after for x in st[:2]))
+        self.assertTrue(str(NV.pred_file(m, "navtest")).endswith("preds/PROBE-wajepa-ctx-k16__base.npz"))
+
+
 class TestRunner(TmpData):
     def test_submit_graph(self):
         pool = self.D / "runs" / "pool"

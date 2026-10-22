@@ -96,15 +96,18 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
     if m.family == "wajepa":
         raise SystemExit(f"{m.name} on {bench}: stored reference only ({m.stored.get(bench)}); its runner is experiments/top10 "
                          "(navhard: experiments/op_parity/scripts/pp_navhard_wajepa.sh)")
+    if m.family == "pred":                                    # supplied poses (usage probes): score + collect only
+        if not pred_file(m, bench).exists():
+            raise SystemExit(f"{m.name}: write the (tokens, poses (n, 8, 3)) prediction file {pred_file(m, bench)} first")
     pf = plan_file(m, bench)
-    if ts:
+    if ts or m.family == "pred":
         pass
     elif m.family == "parity" and not pf.exists():
         old_stem = f"{m.frames}@cinque_PP{m.name}" + (f"_{m.opt}" if m.opt else "")
         old = data_dir() / "runs/op_lb" / data / "plans" / f"{old_stem}.npz"
         if old.exists():
             _copy_into(old, pf)
-    if ts:
+    if ts or m.family == "pred":
         pass
     elif m.family == "parity" and not m.unfreeze:
         need = [cache_dir(data, "gimm") / "tab.npz", cache_dir(data, m.frames) / "front.npy"]
@@ -124,23 +127,23 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
     else:
         S.append(R.Stage("plans", R.stage_cmd("jev", "onnx-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=16, ram=32, tries=2))
     pr = pred_file(m, bench)
-    if not ts and not m.thead:
+    if not ts and not m.thead and m.family != "pred":
         S.append(R.Stage("export", [R.py("jev"), str(REPO / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", data,
                                     "--adapters", adapter(m), "--plans", stem(m)],
                          done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
-    last = "select" if ts else "poses" if m.thead else "export"
+    last = "select" if ts else "poses" if m.thead else "" if m.family == "pred" else "export"
     if bench == "navtest":
         k = shards or default_shards()
         thr = max(4, min(16, int(R_cores() // max(k, 1)) - 1))
         for i in range(k):
             S.append(R.Stage(f"score{i}of{k}", R.stage_cmd("jev", "navsim-score", m.spec, bench, run_dir, i, k, subset),
                              done=str(run_dir / "score" / f"s{i}of{k}.csv"), vram=0.5, cpu=thr + 1, ram=24,
-                             env={"NAVSIM_THREADS": str(thr)}, after=[last], tries=2))
+                             env={"NAVSIM_THREADS": str(thr)}, after=[last] if last else [], tries=2))
         sc = [s.name for s in S if s.name.startswith("score")]
     else:
         n = procs or max(8, min(16, int(R_cores()) - 2))
         S.append(R.Stage("harness", [R.py("navsim2"), str(HARNESS), "--poses", str(pr), "--out", str(run_dir / "harness"), "--procs", str(n)],
-                         done=str(run_dir / "harness" / "harness_summary.json"), vram=0.5, cpu=n, ram=32, after=[last], tries=2))
+                         done=str(run_dir / "harness" / "harness_summary.json"), vram=0.5, cpu=n, ram=32, after=[last] if last else [], tries=2))
         sc = ["harness"]
     S.append(R.Stage("collect", R.stage_cmd("jev", "navsim-collect", m.spec, bench, run_dir, subset), done=str(run_dir / "DONE"),
                      vram=0.5, cpu=2, ram=8, after=sc))

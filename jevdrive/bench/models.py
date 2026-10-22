@@ -58,7 +58,7 @@ def data_dir() -> Path:
 @dataclass(frozen=True)
 class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
-    family: str                     # onnx | parity | wajepa
+    family: str                     # onnx | parity | wajepa | pred (PROBE-*: supplied pose file, scoring only)
     frames: str = ""                # navsim front protocol (default per family / tag)
     opt: str = ""                   # parity: noside | mshuf | sideoff (memory arms) | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving) | tsA | tsB | ts0 (turn selector)
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
@@ -170,6 +170,9 @@ def resolve(spec: str, check: bool = False) -> Model:
     elif re.fullmatch(r"P0|P[123]-init", name):
         m = Model(name, "parity", "warp", note="shipped Cinque through the parity path" + (" (untrained adapter, bias 0)" if name != "P0" else ""),
                   inputs=PARITY_INPUTS)
+    elif re.fullmatch(r"PROBE-[\w.-]+", name):
+        m = Model(name, "pred", note="supplied poses (usage probes, experiments/wm_surplus): pred file written by the probe, scored only",
+                  benches=("navtest", "navhard"))
     elif name.startswith("H-") and re.fullmatch(r"H-[\w.-]+", name):
         m = Model(name, "adapt_h", ckpt=str(data_dir() / "runs/op_adapt_H/runs" / name[2:] / "ckpt-final.pt"),
                   note="op_adapt H checkpoint; no-adapter ONNX export with stream equivalence gate", inputs=OP_INPUTS, benches=("hugsim",))
