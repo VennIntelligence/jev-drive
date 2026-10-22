@@ -50,7 +50,8 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
   for p in $P0 $((P0 + 1)) $((P0 + 2)) $((P0 + 3)) $((P0 + 4)) ${HUMAN_DRV_PORT:-6790}; do
     ss -ltn | grep -q ":$p " && { echo "port $p is taken (another human run?)"; launcher refused "port $p taken" ""; exit 1; }
   done
-  docker ps --format '{{.Names}}' | grep -q "^$PFX-" && { echo "a $PFX-* stack is running"; docker ps --format '{{.Names}}' | grep "^$PFX-"; exit 1; }
+  # the model-mode driver container (<prefix>-model, scripts/model_driver.sh) is not a stack: a leftover one of another track must not block
+  docker ps --format '{{.Names}}' | grep "^$PFX-" | grep -qv "^$PFX-model$" && { echo "a $PFX-* stack is running"; docker ps --format '{{.Names}}' | grep "^$PFX-"; exit 1; }
   tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main
   if [[ ${HUMAN_VIEWER:-1} == 1 ]] && ! tmux list-windows -t human -F '#{window_name}' | grep -qx alpa-viewer; then
     tmux new-window -d -t human -n alpa-viewer "cd $REPO && DISPLAY=:0 XAUTHORITY=$XAUTHORITY SDL_VIDEO_WINDOW_POS=${HUMAN_WIN_POS:-1340,40} \
