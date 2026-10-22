@@ -59,6 +59,8 @@ header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 /* switches */
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 4px 4px; }
 .switch input { display: none; }
+.choice { display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px; }
+.choice select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
 .switch .knob { width: 38px; height: 22px; border-radius: 11px; background: #3a4352; position: relative; transition: background .15s;
   flex: none; }
 .switch .knob::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%;
@@ -332,9 +334,10 @@ function render() {
   setHTML($("#inputs"), "inputs", st.inputs.map(([t, l]) => `<span class="chip ${l}">${esc(t)}</span>`).join(""));
   if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#lan").textContent = "LAN fallback " + st.phone.lan; }
   // toggles (only rebuilt when the values change, so a click is never lost)
-  const tg = [["playlist", "Playlist (auto-advance)", C.playlist]].concat(m.options.map(o => ["opt:" + o.name, o.label, C.options[o.name] ?? o.default]));
-  setHTML($("#toggles"), "toggles", tg.map(([k, l, v]) =>
-    `<label class="switch"><input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(l)}</label>`).join(""));
+  const tg = [["playlist", "Playlist (auto-advance)", C.playlist]].concat(m.options.map(o => ["opt:" + o.name, o.label, C.options[o.name] ?? o.default, o.choices]));
+  setHTML($("#toggles"), "toggles", tg.map(([k, l, v, ch]) => ch     // a choice option: a select; a toggle: a switch
+    ? `<label class="choice">${esc(l)} <select data-k="${esc(k)}">${ch.map(x => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>`
+    : `<label class="switch"><input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(l)}</label>`).join(""));
   // batches
   setHTML($("#batchTable tbody"), "batches", st.batches.map(b => {
     const pct = b.total ? Math.round(100 * b.driven / b.total) : 0;
@@ -431,7 +434,7 @@ $("#stopBtn").onclick = async () => {
 $("#toggles").onchange = e => {
   const k = e.target.dataset.k;
   if (k === "playlist") control({playlist: e.target.checked});
-  else if (k && k.startsWith("opt:")) control({option: k.slice(4), value: e.target.checked});
+  else if (k && k.startsWith("opt:")) control({option: k.slice(4), value: e.target.tagName === "SELECT" ? e.target.value : e.target.checked});
 };
 $("#copyBtn").onclick = () => {
   const u = S.st.phone.url;

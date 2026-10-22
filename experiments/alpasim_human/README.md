@@ -97,8 +97,8 @@ Scores from fast mode are therefore not comparable with leaderboard or model run
 itself is unchanged (the image scorer reads the front camera). `HUMAN_MODE=official` keeps the presets' camera sets and
 eval as shipped. In both modes the PAI renderer is unharmonised by default, as on the public leaderboard (ec2 preset, as
 `pai_run.sh`). `HUMAN_HARMONIZER=1` (PAI only; the panel's "Diffusion Harmonizer" checkbox) keeps the dev preset's
-`--enable-harmonizer` and mounts the weights from `$NUREC/harmonizer`, as `pai_run.sh HARMONIZER=1`; the render is
-2.2-7.1x slower ([docs/alpasim.md](../../docs/alpasim.md)). `run.json`, `done/<scene>.json` and the results tables record it.
+`--enable-harmonizer` and mounts the weights from `$NUREC/harmonizer`, as `pai_run.sh HARMONIZER=1`. With it the
+stack's defaults change to the real-time setting below (`HUMAN_H` 288, `HUMAN_FI_MS` 200, `HUMAN_HARM_RES` "288 512"). `run.json`, `done/<scene>.json` and the results tables record it.
 On nuPlan, gsplat is built for the card's own arch (sm_86), as `smoke.sh` does.
 
 | Measured on Tokyo card 0, PAI | Cameras | Wall s per sim s after the start | Unpaced | Card 0 peak |
@@ -113,6 +113,36 @@ On nuPlan, gsplat is built for the card's own arch (sm_86), as `smoke.sh` does.
 - The user found front-only good enough and stopped the other lever measurements (lower render height, frame interval,
   NRE `--renderer nrend`, physics off). Those knobs exist (`HUMAN_H`, `HUMAN_FI_MS`, `HUMAN_NRE`, `HUMAN_PHYS`) but are
   not measured. JPEG quality is fixed at 95 in the runtime (`sensorsim_service.py`) and is not configurable.
+
+**Harmonizer speed (2026-10-22, Tokyo card 1, scene 7a824ffa, fake wheel, unpaced, one scene per cell after the stack start).**
+The harmonizer runs per rendered frame at its own resolution (`--harmonizer-resolution`, shipped 576 x 1024), whatever the
+render height. So the render height does not move the speed; only the number of harmonized frames (frame interval) and the
+harmonizer's resolution do. Card peak = `usage.jsonl` peak on the card (one stack on it).
+
+| Harmonizer | Render px | Frame interval | Harmonizer px | Wall s per sim s | Card peak |
+|---|---|--:|---|--:|--:|
+| off | 1920 x 1080 | 100 ms | - | 0.45 | 4.8 GB |
+| on | 1920 x 1080 | 100 ms | 576 x 1024 (shipped) | 3.68 | 7.3 GB |
+| on | 1280 x 720 | 100 ms | 576 x 1024 | 3.64 | 7.2 GB |
+| on | 960 x 540 | 100 ms | 576 x 1024 | 3.66 | 7.2 GB |
+| on | 512 x 288 | 100 ms | 576 x 1024 | 3.67 | 7.2 GB |
+| on | 1080 / 720 / 540 / 288 | 200 ms | 576 x 1024 | 1.94 / 1.93 / 1.92 / 1.95 | 7.2-8.8 GB |
+| on | 512 x 288 | 100 ms | 320 x 576 | 1.50 | 8.5 GB |
+| on | 512 x 288 | 100 ms | 288 x 512 | 1.27 | 11.8 GB |
+| on | 960 x 540 | 100 ms | 384 x 672 | 1.78 | 9.3 GB |
+| on | 960 x 540 | 100 ms | 288 x 512 | 1.29 | 9.2 GB |
+| on, **default** | 512 x 288 | 200 ms | 288 x 512 | **0.75** | 9.2 GB |
+| on | 960 x 540 | 200 ms | 288 x 512 | 0.72 | 9.2 GB |
+
+- Per harmonized frame about 0.35 s at 576 x 1024 and 0.11 s at 288 x 512, on top of about 0.2 s per sim s for the rest.
+  At 10 Hz no tested harmonizer resolution is real time. At 200 ms (5 Hz, the model drivers' 0.2 s slot clock: they use
+  only every second 10 Hz frame) with 288 x 512 it is (0.72-0.75, below the 0.9 headroom mark).
+- Default with the harmonizer: 512 x 288 render, 200 ms, 288 x 512 harmonizer. A 960 x 540 render at the same harmonizer
+  setting costs the same (0.72), so "Render size" 540 is a free choice. Without the harmonizer the defaults stay 1080 px, 100 ms.
+- `HUMAN_HARM_RES` passes the renderer's own `--harmonizer-resolution` flag (the image is unchanged); `HUMAN_HARM_RES=` keeps
+  the shipped 576 x 1024. The harmonizer was trained at 576 x 1024, so the image at 288 x 512 is softer: judge it by eye.
+- The panel's "Render size" choice (auto / 1080 / 720 / 540 / 288; auto = the defaults above) sets `HUMAN_H` of the resident
+  stack; a change restarts the stack at the next hold point, like the harmonizer checkbox.
 
 **Where the loading time goes** (session 2: 154 s of loading in a 496 s wall run; renderer log and driver times):
 - Stack start (compose up to the first scene): 18-27 s.
@@ -202,8 +232,8 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   `experiments/alpasim/scripts/queue_read.py`) plus the human driver, for every scene of the track (PAI 441, nuPlan 48), detached
   from the loop and named in `<live>/resident.json` (dirs under `/data/runs/alpasim_human/resident/`, containers `hres-*`).
   `scripts/human_feed.py` (in the driver image) sends one `simulate` request per scene; the loop decides the order itself.
-  A new loop (New batch, Continue) reuses it when track, harmonizer and card match. It stops after 20 min without a loop
-  (`HUMAN_IDLE_S`), on a harmonizer change or a track change (the renderer flag / scene set are fixed per process; the
+  A new loop (New batch, Continue) reuses it when track, harmonizer, render size and card match. It stops after 20 min without a loop
+  (`HUMAN_IDLE_S`), on a harmonizer, render size or track change (the renderer flag / scene set are fixed per process; the
   progress text says so). Rollout dirs move into `stacks/<run>-sNN/` when their request returns, so scoring and the gallery
   are unchanged.
 - Measured on Tokyo card 1 (fake wheel, `HUMAN_REALTIME=0`, 2026-10-22), loop click to the scene's first frame:
@@ -239,6 +269,9 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   (`HUMAN_HARMONIZER`). After a change, once no scene is being driven, the resident is stopped and a new one starts with the new
   setting (about a minute; the progress says "harmonizer on: restarting the render stack"); a loading or held scene is requested
   again. The status column says "harmonized" and "Official table" has a harmonizer column.
+- Render size (select: auto / 1080 / 720 / 540 / 288 px height of the front camera, `HUMAN_H`): auto = the stack's default
+  (1080 unharmonised, 288 with the harmonizer, section "Speed"). Fixed per resident stack like the harmonizer: a change restarts
+  it at the next hold point. `done/<scene>.json` records it ("render").
 - Phone address and input: the panel's top line shows the phone page URL (from `tailscale status --json`, Copy button) and
   the live input status (phone connected / last frame, keyboard active, which source drives); phone_wheel README.
 - Shadow: human log (checkbox, off by default; viewer hotkey G, the last change wins): display only, it never touches control.

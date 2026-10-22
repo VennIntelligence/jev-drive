@@ -6,10 +6,12 @@
 # Starts tmux session `human`: window alpa-viewer (scripts/human_viewer.py on DISPLAY=:0) and alpa-drive (this script with --run).
 # Rendering (README "Speed"): HUMAN_MODE=fast (default: front camera only at HUMAN_H px height, no eval video, a human experience,
 #   not a leaderboard number) | official (the presets' cameras and eval as shipped). Knobs under fast: HUMAN_CAMS (front | all),
-#   HUMAN_H (render height px), HUMAN_FI_MS (camera frame interval ms), HUMAN_VIDEO (0 | 1), HUMAN_NRE (default | nrend: PAI renderer
+#   HUMAN_H (render height px; 1080, 288 with the harmonizer), HUMAN_FI_MS (camera frame interval ms; PAI 100, 200 with the harmonizer;
+#   nuPlan 500), HUMAN_VIDEO (0 | 1), HUMAN_NRE (default | nrend: PAI renderer
 #   backend), HUMAN_PHYS (1 | 0: PAI ground physics). HUMAN_HARMONIZER (0 | 1, PAI only, both modes: keep the dev preset's
-#   --enable-harmonizer and mount the weights from $NUREC/harmonizer, as pai_run.sh HARMONIZER=1; renders 2.2-7.1x slower,
-#   docs/alpasim.md; default 0 = unharmonised, as the public leaderboard). Other env: HUMAN_GPU (0; card 1 is refused unless HUMAN_ALLOW_CARD1=1),
+#   --enable-harmonizer and mount the weights from $NUREC/harmonizer, as pai_run.sh HARMONIZER=1; default 0 = unharmonised, as the
+#   public leaderboard). With it the defaults are HUMAN_H 288, HUMAN_FI_MS 200 and HUMAN_HARM_RES "288 512" (the renderer's shipped
+#   --harmonizer-resolution flag; shipped "576 1024", HUMAN_HARM_RES= keeps it): real time, wall / sim 0.75 unpaced vs 3.7 as shipped. Other env: HUMAN_GPU (0; card 1 is refused unless HUMAN_ALLOW_CARD1=1),
 #   HUMAN_PREFIX (hum: container / compose names; a probe beside the user's stack uses another), HUMAN_JIT_DIR, HUMAN_TRACK_GATE (1: the
 #   plan goes through track_ref's gate, lib/human_driver.py; 0 = the raw plan), HUMAN_BASEPORT (6700: renderer,
 #   physics, controller), HUMAN_DRV_PORT (6790), HUMAN_START (click | throttle | none), HUMAN_WHEEL_PORT (47800; 47801 = fake_wheel.py),
@@ -82,12 +84,16 @@ if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1
 n=$(echo "$ids" | wc -l); quoted=$(echo "$ids" | sed 's/.*/"&"/' | paste -sd,)
 
 # Rendering levers (README "Speed"). Defaults = the fastest combination that keeps the front image usable.
-H=${HUMAN_H:-1080}; W=$(( (H * 16 / 9 + 7) / 8 * 8 )); CAMS=${HUMAN_CAMS:-front}; VIDEO=${HUMAN_VIDEO:-0}; NRE=${HUMAN_NRE:-default}; PHYS=${HUMAN_PHYS:-1}
 HARM=0; [[ $TRACK == pai && ${HUMAN_HARMONIZER:-0} == 1 ]] && HARM=1
+# Harmonizer on: its cost is per frame at its own resolution (shipped 576 x 1024), not the render height, so the real-time defaults
+# are 288 x 512 harmonizer passes on every second 10 Hz frame (0.2 s, the model drivers' slot clock) of a 512 x 288 render:
+# wall / sim 0.75 unpaced vs 3.7 shipped (README "Speed", 2026-10-22). Each of the three env knobs overrides its default.
+H=${HUMAN_H:-$([[ $HARM == 1 ]] && echo 288 || echo 1080)}; W=$(( (H * 16 / 9 + 7) / 8 * 8 )); CAMS=${HUMAN_CAMS:-front}; VIDEO=${HUMAN_VIDEO:-0}; NRE=${HUMAN_NRE:-default}; PHYS=${HUMAN_PHYS:-1}
+HRES=${HUMAN_HARM_RES-$([[ $HARM == 1 ]] && echo "288 512")}
 [[ $HARM == 1 && ! -f $NUREC/harmonizer/harmonizer_nontemporal.pt ]] && die "HUMAN_HARMONIZER=1 but $NUREC/harmonizer/harmonizer_nontemporal.pt is missing"
 lever=()
 if [[ $TRACK == pai ]]; then
-  HOLD=1.7 SIM=20; FI=${HUMAN_FI_MS:-100}
+  HOLD=1.7 SIM=20; FI=${HUMAN_FI_MS:-$([[ $HARM == 1 ]] && echo 200 || echo 100)}
   wiz=(+e2e_challenge=dev "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "scenes.scene_cache=$NUREC"
        "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" "services.renderer.gpus=[$GPU]"
        "services.physics.gpus=[$GPU]" runtime.endpoints.physics.n_concurrent_rollouts=1)
@@ -138,15 +144,15 @@ docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" "${mounts[@]}" -e "PYTHONPA
   bash -c 'umask 0000; git config --global --add safe.directory "*"; cd /repo && "$@"' wizard "${wiz[@]}" > "$OUT/wizard.log" 2>&1 || die "wizard failed, see wizard.log"
 [[ -f $R/docker-compose.yaml ]] || die "no docker-compose.yaml"
 # PAI: the public leaderboard's renderer is unharmonised (ec2 preset), as pai_run.sh, unless HUMAN_HARMONIZER=1 (flag kept, weights
-# mounted); HUMAN_NRE=nrend swaps the NRE backend (fast mode)
+# mounted, HUMAN_HARM_RES its resolution); HUMAN_NRE=nrend swaps the NRE backend (fast mode)
 # HUMAN_JIT_CACHE=1 (default): the renderer's JIT caches live on the host, so kernels compiled once are reused by the next launch
 # (cache only, outputs unchanged). Measured: each artifact revision's first PAI scene spent ~40 s in the CUDA driver's PTX JIT
 # (/home/.nv/ComputeCache in the NRE container), lost with the container.
 JIT=${HUMAN_JIT_DIR:-$D/cache/alpasim_human/jit}; [[ ${HUMAN_JIT_CACHE:-1} == 1 ]] && mkdir -p "$JIT" && chmod 777 "$JIT"
 python3 - "$R/docker-compose.yaml" "$([[ $MODE == fast ]] && echo "$NRE" || echo default)" "$([[ ${HUMAN_JIT_CACHE:-1} == 1 ]] && echo "$JIT")" \
-  "$HARM" "$NUREC/harmonizer" <<'PY' || die "compose patch"
+  "$HARM" "$NUREC/harmonizer" "$HRES" <<'PY' || die "compose patch"
 import sys, yaml
-f, nre, jit, harm, cache = sys.argv[1:]
+f, nre, jit, harm, cache, hres = sys.argv[1:]
 d = yaml.safe_load(open(f))
 for k, s in d["services"].items():
     if not k.startswith("renderer"):
@@ -156,7 +162,8 @@ for k, s in d["services"].items():
             assert any("--enable-harmonizer" in c for c in s["command"]), "the preset has no --enable-harmonizer"
             s.setdefault("volumes", []).append(f"{cache}:/home/.cache/nre/harmonizer")
         s["command"] = [(c if harm == "1" else c.replace(" --enable-harmonizer", "")) +
-                        (f" --renderer={nre}" if nre != "default" and "serve-grpc" in c else "") for c in s["command"]]
+                        (f" --renderer={nre}" if nre != "default" and "serve-grpc" in c else "") +
+                        (f" --harmonizer-resolution {hres}" if harm == "1" and hres and "serve-grpc" in c else "") for c in s["command"]]
     if jit:
         s.setdefault("volumes", []).append(f"{jit}:/jitcache")
         s["environment"] = (s.get("environment") or []) + ["CUDA_CACHE_PATH=/jitcache/nv", "CUDA_CACHE_MAXSIZE=4294967296",
@@ -215,7 +222,7 @@ stop_all; wait "$sampler"; rm -f "$OUT/.stop"; trap - INT TERM
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
 python3 -c 'import json,sys; k=sys.argv[1::2]; v=sys.argv[2::2]; print(json.dumps(dict(zip(k, v))))' track "$TRACK" mode "$MODE" scenes "$n" wall_s "$wall" \
-  gpu "$GPU" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" gt "${HUMAN_GT:-1}" image "$IMG" base "$BASE" \
+  gpu "$GPU" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" harm_res "$HRES" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" gt "${HUMAN_GT:-1}" image "$IMG" base "$BASE" \
   peak_mib "$(tail -1 "$OUT/usage.jsonl" | python3 -c 'import json,sys; print(json.load(sys.stdin)["peak_mib"])')" > "$OUT/run.json"
 python3 "$here/human_results.py" "$OUT" || st "results table failed"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"; launcher finished "$n scenes done: $OUT/results.md" "$OUT"

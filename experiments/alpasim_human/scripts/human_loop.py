@@ -7,7 +7,7 @@ Commands come from <live>/control.json (written only by the panel; protocol in l
 progress to <live>/launcher.json (the viewer's banner: state, msg, t0 = start of the current wait, batch = [driven, total]).
 Resident stack (README "Resident stack"): human_stack.sh HUMAN_SERVE=1 runs renderer / physics / controller / the runtime daemon
 (AlpaSim's shipped wizard.run_mode=SERVER) / the human driver for every scene of the track, detached from this loop and registered
-in <live>/resident.json. A loop reuses it when track, harmonizer and card match, so only the first start after it went down costs
+in <live>/resident.json. A loop reuses it when track, harmonizer, render size and card match, so only the first start after it went down costs
 the start (about 45 s); a new batch, Continue, play and restart do not. It stops itself after HUMAN_IDLE_S (1200) without a loop.
 The loop sends one scene per simulate request (scripts/human_feed.py protocol), so it decides the order itself:
 - Playlist on: the next unfinished scene in the panel's order (control "order", else exam.json). Each scene loads and holds until
@@ -18,8 +18,9 @@ The loop sends one scene per simulate request (scripts/human_feed.py protocol), 
 - restart: the current scene is aborted and requested again first (~10 s run-out + the scene load, no stack start).
 - stop: the current scene is aborted and the loop exits; the resident stack stays warm.
 - Pause: no new scene is requested; inside a scene the driver holds.
-- Option "harmonizer" (PAI only): the renderer's flag for its whole life, so a change restarts the resident stack (about a minute)
-  once no scene is being driven; a loading or held scene is requested again on the new stack.
+- Option "harmonizer" (PAI only) and option "render" (front camera height: auto = human_stack.sh's pairing with the harmonizer,
+  else HUMAN_H) are fixed for a stack's whole life, so a change restarts the resident stack (about a minute) once no scene is
+  being driven; a loading or held scene is requested again on the new stack.
 Run dir layout per resident stack used: stacks/<run>-sNN/ with sim/rollouts/<scene>/<uuid>/ (moved out of the resident dir when its
 request returns), sim/eval-config.yaml, driver/{sessions,drive}.jsonl (that run's sessions) and driver/thumbs/, resident (its path).
 Scoring: every finished rollout that was not aborted is scored with AlpaSim's own aggregation (alpasim-aggregation in the
@@ -81,20 +82,24 @@ class Resident(object):
     def __init__(self, info, proc=None):
         self.info, self.proc = info, proc
         self.dir, self.pid, self.track, self.harm = Path(info["dir"]), info["pid"], info["track"], info["harm"]
+        self.size = info.get("size", "auto")                    # render option (HUMAN_H, or auto)
+        self.key = (self.harm, self.size)
         self.ids, self.feed = set(info["ids"]), Path(info["dir"]) / "feed"
 
     @classmethod
-    def start(cls, track, harm, ids):
-        d = RESIDENTS / ("%s%s-%s" % (track, "-harm" if harm else "", time.strftime("%m%d-%H%M%S")))
+    def start(cls, track, harm, size, ids):
+        d = RESIDENTS / ("%s%s%s-%s" % (track, "-harm" if harm else "", "" if size == "auto" else "-h" + size, time.strftime("%m%d-%H%M%S")))
         d.mkdir(parents=True)
         (d / "scenes.txt").write_text("\n".join(ids) + "\n")
         env = dict(os.environ, HUMAN_FG="1", HUMAN_VIEWER="0", HUMAN_SERVE="1", HUMAN_CONTROL=str(LIVE / "control.json"),
                    HUMAN_LIVE=str(LIVE), HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU=GPU,
                    HUMAN_HARMONIZER="1" if harm else "0", HUMAN_PREFIX=os.environ.get("HUMAN_PREFIX", "hres"))
+        if size != "auto":
+            env["HUMAN_H"] = size
         with open(str(d / "stack.out"), "a") as log:
             proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(d), str(d / "scenes.txt")],
                                     env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
-        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "gpu": GPU, "ids": list(ids), "t": time.time(),
+        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "size": size, "gpu": GPU, "ids": list(ids), "t": time.time(),
                 "prefix": env["HUMAN_PREFIX"]}
         write_json(cls.REG, info)
         return cls(info, proc)
@@ -110,8 +115,8 @@ class Resident(object):
             return False
         return pid_alive(self.pid) and not (self.dir / "DONE").exists() and not (self.dir / "ERROR").exists()
 
-    def fits(self, track, harm, ids):
-        return (self.track, self.harm, self.info.get("gpu", "0")) == (track, harm, GPU) and set(ids) <= self.ids
+    def fits(self, track, key, ids):
+        return (self.track, self.key, self.info.get("gpu", "0")) == (track, key, GPU) and set(ids) <= self.ids
 
     def phase(self):
         return read_json(self.dir / "phase.json", {}) or {}
@@ -268,7 +273,7 @@ class Scorer(object):
         rec = {"scene": scene, "score": r.get("score") or 0.0, "why": why(r), "rollout": rd.name, "stack": stack.dir.name,
                "progress": round(sm.get("progress_clipped_rel") or 0.0, 3), "driven_m": round(m.get("dist_traveled_m") or 0.0, 1),
                "gt_m": round(m.get("gt_dist_traveled_m") or 0.0, 1), "sim_s": drv.get("sim_s"), "wall_per_sim": drv.get("wall_per_sim"),
-               "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"), "harmonizer": stack.harm,
+               "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"), "harmonizer": stack.harm, "render": stack.res.size,
                "shadow_s": drv.get("shadow_s") or 0.0,
                "attempt": prev.get("attempt", 0) + 1, "t": time.time()}
         write_json(self.run / "done" / (scene + ".json"), rec)
@@ -377,7 +382,9 @@ def main():
         while True:
             c = ctl.read()
             harm = track == "pai" and bool(c["options"].get("harmonizer"))
-            hs = "harmonizer %s" % ("on" if harm else "off")
+            size = str(c["options"].get("render") or "auto")
+            key = (harm, size)
+            hs = "harmonizer %s, render %s" % ("on" if harm else "off", size)
             if res:
                 res.lease(owner, run)
             v = view()
@@ -412,7 +419,7 @@ def main():
                 elif not res.ready():
                     hold_error = "the render stack failed to start: %s (see %s)" % (err, res.dir)
                 res, batch = None, None
-            if res is not None and res.harm != harm and not started:
+            if res is not None and res.key != key and not started:
                 if req and not req.get("abort"):
                     abort(hs, None)
                     if req["scene"] not in plays and (c["playlist"] or req["scene"] in chosen):
@@ -428,14 +435,14 @@ def main():
                     time.sleep(0.5)
                     continue
                 res = Resident.find()
-                if res is not None and not res.fits(track, harm, ids):
-                    note("stopping resident stack %s (%s, harmonizer %s): this batch needs %s, %s" % (
-                        res.dir.name, res.track, res.harm, track, hs))
+                if res is not None and not res.fits(track, key, ids):
+                    note("stopping resident stack %s (%s, harmonizer %s, render %s): this batch needs %s, %s" % (
+                        res.dir.name, res.track, res.harm, res.size, track, hs))
                     progress("loading", "stopping the %s render stack for this batch (%s, %s)" % (res.track, track, hs), time.time())
                     res.stop()
                     res, restart_why = None, "switching the render stack to %s, %s (about a minute)" % (track.upper(), hs)
                 if res is None:
-                    res = Resident.start(track, harm, list(dict.fromkeys(catalog + ids)))
+                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)))
                     note("resident stack %s: %s, %s, %d scenes" % (res.dir.name, track, hs, len(res.ids)))
                 else:
                     note("reusing resident stack %s" % res.dir.name)
@@ -485,7 +492,7 @@ def main():
                     state = "paused" if c["paused"] else "driving"
                     progress(state, "resume on the panel" if c["paused"] else "%s%s" % (label(req["scene"]),
                              "   harmonizer on" if res.harm else ""), None, req["scene"])
-                if res.harm != harm:
+                if res.key != key:
                     st["msg"] = "%s: the render stack restarts after this scene; %s" % (hs, st["msg"])
                     write_json(state_f, st)
                 time.sleep(0.3)

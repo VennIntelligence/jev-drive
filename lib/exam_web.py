@@ -63,7 +63,7 @@ class App(object):
         self.sizes, self.cache, self.notices = {}, {}, []
         c = self.ctl.read()                    # write option defaults once, as the Tk panel does
         if any(n not in c["options"] for n in backend.options):
-            self.ctl.update(options=dict({n: d for n, (_, d) in backend.options.items()}, **c["options"]))
+            self.ctl.update(options=dict({n: o[1] for n, o in backend.options.items()}, **c["options"]))
         threading.Thread(target=self.sizer, daemon=True).start()
 
     def notice(self, msg, level="info"):
@@ -139,7 +139,7 @@ class App(object):
         dec = re.search(r"\.(\d)", self.b.score_fmt)
         return dict(title=self.b.title, batch_extra=self.b.batch_extra, score_max=getattr(self.b, "score_max", 1.0),
                     score_dec=int(dec.group(1)) if dec else 2, sets=[list(s) for s in self.b.batch_sets()],
-                    options=[dict(name=n, label=l, default=d) for n, (l, d) in self.b.options.items()],
+                    options=[dict(name=n, label=o[0], default=o[1], choices=o[2] if len(o) > 2 else None) for n, o in self.b.options.items()],
                     catalog=type(self.b).catalog is not Backend.catalog)
 
     # ---- actions ----
@@ -219,9 +219,13 @@ class App(object):
             self.ctl.update(paused=bool(d["paused"]))
         if "playlist" in d:
             self.ctl.update(playlist=bool(d["playlist"]))
-        if d.get("option") in self.b.options:
+        o = self.b.options.get(d.get("option"))
+        if o:                                  # a toggle takes a bool, a choice one of its values
+            v = bool(d.get("value")) if len(o) < 3 else str(d.get("value"))
+            if len(o) > 2 and v not in o[2]:
+                return dict(ok=False, msg="%s: %r is not one of %s" % (d["option"], v, o[2]))
             c = self.ctl.read()
-            self.ctl.update(options=dict(c["options"], **{d["option"]: bool(d.get("value"))}))
+            self.ctl.update(options=dict(c["options"], **{d["option"]: v}))
         return dict(ok=True, control=self.ctl.read())
 
     def official(self, run):

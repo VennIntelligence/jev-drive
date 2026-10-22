@@ -188,7 +188,8 @@ class AlpaSimExam(Backend):
     live = os.environ.get("HUMAN_LIVE", str(RUNS / "live"))
     score_fmt = "%.2f"
     options = {"harmonizer": ("Harmonizer (PAI, slower render)", False),   # human_loop.py: new stack at the next hold
-               "shadow": ("Shadow: human log", False)}                              # the viewer only (display; G there too)
+               "render": ("Render size", "auto", ["auto", "1080", "720", "540", "288"]),  # front camera height px (HUMAN_H); auto =
+               "shadow": ("Shadow: human log", False)}                         # human_stack.sh's pairing; the viewer only (display; G there too)
     batch_extra = "harmonizer"
 
     def __init__(self):

@@ -84,7 +84,8 @@ class Backend(object):
     title = "exam"
     score_fmt = "%.1f"             # human / model / group-mean cells
     live = None                    # live dir (control.json / loop.json)
-    options = {}                   # name -> (label, default bool), e.g. {"stop_on_collision": ("Stop on collision", False)}
+    options = {}                   # name -> (label, default bool) = a toggle, e.g. {"stop_on_collision": ("Stop on collision", False)},
+                                   # or (label, default str, [choices]) = a choice, e.g. {"size": ("Size", "auto", ["auto", "720"])}
     batch_extra = None             # title of an extra column of the batch list (batch_info "extra"), or None
     selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
@@ -354,14 +355,18 @@ def panel(backend):
     ttk.Checkbutton(row3, text="Playlist (auto-advance)", variable=play_var,
                     command=lambda: ctl.update(playlist=play_var.get())).pack(side="left", padx=4)
     opt_vars = {}
-    for name, (label, default) in backend.options.items():
-        v = tk.BooleanVar(value=c0["options"].get(name, default))
+    for name, (label, default, *choices) in backend.options.items():
+        v = (tk.StringVar if choices else tk.BooleanVar)(value=c0["options"].get(name, default))
         opt_vars[name] = v
 
-        def set_opt(name=name, v=v):
+        def set_opt(*_, name=name, v=v):
             c = ctl.read()
             ctl.update(options=dict(c["options"], **{name: v.get()}))
-        ttk.Checkbutton(row3, text=label, variable=v, command=set_opt).pack(side="left", padx=8)
+        if choices:
+            ttk.Label(row3, text=label + ":").pack(side="left", padx=(8, 2))
+            ttk.OptionMenu(row3, v, v.get(), *choices[0], command=set_opt).pack(side="left")
+        else:
+            ttk.Checkbutton(row3, text=label, variable=v, command=set_opt).pack(side="left", padx=8)
     if any(name not in c0["options"] for name in opt_vars):
         ctl.update(options=dict(c0["options"], **{n: v.get() for n, v in opt_vars.items()}))
     sort_var = tk.StringVar(value="group")
