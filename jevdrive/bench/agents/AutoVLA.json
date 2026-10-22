@@ -8,10 +8,18 @@
  "runner": "cmd",
  "runner_note": "their eval (run_pdm_score_cot.py) feeds compute_trajectory the per-token JSON of their preprocessing (scripts/run_nuplan_preprocessing.sh, INCLUDE_COT=false, output $DATA_DIR/runs/wm_surplus/p0_autovla/navtest_nocot, built by experiments/wm_surplus/scripts/autovla_prep.py) and gets (trajectory, CoT text) back, so the generic AgentInput loop cannot run it; autovla_poses.py is that loop with their overrides",
  "cmd": [
-  "{py}", "$DATA_DIR/jev-drive/experiments/wm_surplus/scripts/autovla_poses.py",
-  "--repo", "{repo}", "--tokens", "{tokens}", "--out", "{out}",
-  "--json-dir", "$DATA_DIR/runs/wm_surplus/p0_autovla/navtest_nocot",
-  "--base-model", "$DATA_DIR/models/autovla/Qwen2.5-VL-3B-Instruct",
+  "{py}",
+  "$DATA_DIR/jev-drive/experiments/wm_surplus/scripts/autovla_poses.py",
+  "--repo",
+  "{repo}",
+  "--tokens",
+  "{tokens}",
+  "--out",
+  "{out}",
+  "--json-dir",
+  "$DATA_DIR/runs/wm_surplus/p0_autovla/navtest_nocot",
+  "--base-model",
+  "$DATA_DIR/models/autovla/Qwen2.5-VL-3B-Instruct",
   "--",
   "train_test_split=navtest",
   "agent=autovla_agent",
@@ -30,10 +38,10 @@
   "source": "AutoVLA paper (Zhou et al., NeurIPS 2025, arXiv 2506.13757) Table 1, NAVSIM navtest, AutoVLA post-RFT; checkpoint name AutoVLA_PDMS_89 (HF Zewei-Zhou/AutoVLA, README: merged LoRA, LORA=false)"
  },
  "tolerance": 0.5,
- "vram": 20,
+ "vram": 26,
  "cpu": 6,
  "ram": 32,
- "chunks": 12,
+ "chunks": 24,
  "min_chunk": 200,
  "licence": "UCLA Academic Software License (academic / non-profit research only, no redistribution)",
  "deviations": [
@@ -46,5 +54,6 @@
   "PYTHONPATH": "$DATA_DIR/third_party/autovla:$DATA_DIR/third_party/autovla/navsim",
   "NAVSIM_DEVKIT_ROOT": "$DATA_DIR/third_party/autovla/navsim",
   "TOKENIZERS_PARALLELISM": "false"
- }
+ },
+ "vram_note": "trial 2026-10-23 (3 tokens, card 3 shared): peak 22.3 GB allocated (bf16 Qwen2.5-VL-3B + the 16 GB fp32 state dict torch.load'ed onto the card by their initialize()), 5.6 s/token; preprocessing 1252 s on 30 workers, 12146 JSON, 96 MB"
 }
