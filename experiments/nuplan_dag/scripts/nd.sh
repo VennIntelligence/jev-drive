@@ -29,7 +29,8 @@ NT=experiments/nuplan_dag/scripts/nd_teach.py; ONR=experiments/onpol_nuplan/scri
 AS=$DATA_DIR/third_party/alpasim; NAV=$DATA_DIR/envs/navsim2/bin/python; CK=$DATA_DIR/runs/op_parity/runs; CR=$DATA_DIR/runs/op_parity/cache
 LC=$DATA_DIR/datasets/alpasim_nuplan_long/after160; KEY=runtime.scene_provider.trajdata; SPL=experiments/onpol_nuplan/results/split
 EA=(env JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD)
-B2S0=STANDFMXH-L18-s0; NP=NDP; NA=NDAG; NM=JTXD; NSTEP=9500
+B2S0=STANDFMXH-L18-s0; NP=NDP; NM=JTXD; NSTEP=9500
+PARTS="on1_NDP $(for i in $(seq 1 24); do printf 'on1_ND%03d ' $i; done)"          # amendment 3: the chunk pools in merge order (c000 = the probe pool)
 KDAG=$(cat $RES/kdag.txt 2>/dev/null || echo 0)                                   # amendment 1: k_dag from the drawable count (weights stage)
 RO=(--vram 32 --cpu 8 --ram 40 --timeout-h 3 --env CL_HIST_KEY=nd-roll)
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
@@ -209,41 +210,51 @@ ok = all(v[2] for v in ck.values())
 print(json.dumps(dict(passed=ok, checks=ck), indent=1, default=str))
 sys.exit(0 if ok else 1)
 PY
-  date '+%F %T' > $O/PROBE_OK
-  [[ -n ${ND_NO_REST:-} ]] || bash $ME rest ;;
-rest)     # the full chain after the probe gates: 24 roll chunks -> rows NDAG (all 25 chunks) -> teach / label (write) -> append -> weights ->
-          # smoke + identity -> build -> two trainings -> reads -> p2sum
-  [[ -f $O/PROBE_OK && ! -f $O/VERDICT ]] || die "probe not passed"; [[ ! -e $O/roll/c001 ]] || die "rest already submitted"
-  h=$(git rev-parse --short HEAD); echo "$h rest" >> $O/code.txt
-  rr=(); for i in $(seq 1 24); do c=$(printf 'c%03d' $i); rr+=($(roll $c)) || exit 1; done
-  CH=(c000 $(for i in $(seq 1 24); do printf 'c%03d ' $i; done))
-  g=$(sub nd-geo-$NA --after $(csv ${rr[@]}) --vram 0.1 --cpu 32 --ram 96 --timeout-h 3 -- bash $ME geo $NA ${CH[*]}) || exit 1
-  k=$(sub nd-tok-$NA --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME tok $NA) || exit 1
-  te=$(sub nd-teach-$NA --after $g --vram 0.1 --cpu 32 --ram 96 --timeout-h 3 --env ND_TEACH_WORKERS=32 -- bash $ME teach $NA) || exit 1
-  ro=$(sub nd-route-$NA --after $k --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME route $NA) || exit 1
-  an=$(sub nd-anchor-$NA --after $ro --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME anchor $NA) || exit 1
-  st=$(sub nd-strip-$NA --after $k --vram 0.1 --cpu 16 --ram 16 --timeout-h 2 -- bash $ME strip $NA) || exit 1
-  lb=$(sub nd-label-$NA --after $k,$te --vram 0.1 --cpu 8 --ram 64 --timeout-h 2 -- bash $ME label $NA write) || exit 1
-  ap=$(sub nd-append --after $lb,$an --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
+  date '+%F %T' > $O/PROBE_OK ;;      # amendment 3: the full chain is submitted at once (`full`); its merge waits for this job
+full)     # amendment 3: full <chk1 job id>: the 24 roll chunks now; per chunk its rows pipeline (geo -> tok -> teach -> label, route -> anchor,
+          # strip) --after that chunk only, one pool (and staging / rows dir) per chunk: on1_ND001 .. on1_ND024 (+ the probe pool on1_NDP = c000);
+          # the pooled gates, append, weights, smoke, identity, build and the trainings after every chunk AND the probe's chk1
+  C1=${2:?chk1 job id}; [[ ! -e $O/roll/c001 ]] || die "full already submitted"
+  h=$(git rev-parse --short HEAD); echo "$h full" >> $O/code.txt
+  ln=$(sub nd-label-$NP-w --after $C1 --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME label $NP write) || exit 1
+  ro=$(sub nd-route-$NP --after $C1 --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME route $NP) || exit 1
+  an=$(sub nd-anchor-$NP --after $ro --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME anchor $NP) || exit 1
+  st=$(sub nd-strip-$NP --after $C1 --vram 0.1 --cpu 16 --ram 16 --timeout-h 2 -- bash $ME strip $NP) || exit 1
+  dn=($ln $an); ss=($st)
+  for i in $(seq 1 24); do c=$(printf 'c%03d' $i); N=$(printf 'ND%03d' $i)
+    r=$(roll $c) || exit 1
+    g=$(sub nd-geo-$N --after $r --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 --env ND_GEO_WORKERS=16 -- bash $ME geo $N $c) || exit 1
+    k=$(sub nd-tok-$N --after $g --vram 16 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME tok $N) || exit 1
+    t=$(sub nd-teach-$N --after $g --vram 0.1 --cpu 8 --ram 32 --timeout-h 2 -- bash $ME teach $N) || exit 1
+    l=$(sub nd-label-$N --after $k,$t --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME label $N write) || exit 1
+    ro=$(sub nd-route-$N --after $k --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME route $N) || exit 1
+    an=$(sub nd-anchor-$N --after $ro --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME anchor $N) || exit 1
+    st=$(sub nd-strip-$N --after $k --vram 0.1 --cpu 8 --ram 16 --timeout-h 2 -- bash $ME strip $N) || exit 1
+    dn+=($l $an); ss+=($st)
+    echo "$(date '+%F %T') full $c -> $N: roll $r geo $g tok $k teach $t label $l route $ro anchor $an strip $st" >> $O/stages.txt; done
+  ga=$(sub nd-gates --after $(csv ${dn[@]}),$C1 --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME gates) || exit 1
+  ap=$(sub nd-append --after $ga --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
   wt=$(sub nd-weights --after $ap --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME weights) || exit 1
   sm=$(sub nd-smoke --after $wt "${FT[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1
   ia=$(sub nd-ident-a --after $wt "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun a) || exit 1
   ib=$(sub nd-ident-b --after $wt "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash $ME identrun b) || exit 1
   ic=$(sub nd-ident --after $ia,$ib --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident) || exit 1
-  bd=$(sub nd-build --after $sm,$ic,$st --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME build) || exit 1
+  bd=$(sub nd-build --after $sm,$ic,$(csv ${ss[@]}) --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME build) || exit 1
   nch=$(python3 -c "import json; print(len(json.load(open('$AH/meta.json'))['chunks']))"); ids=()
   for s in 0 1; do T=NDAG-L18-s$s; [[ ! -e $CK/$T/ckpt-final.pt ]] || die "$T exists"
     t=$(sub nd-train-s$s --after $bd "${FT[@]}" --timeout-h 6 -- bash $ME train $s) || exit 1
     for c in $(seq 0 $((nch - 1))); do ids+=($(TRIES=2 sub nd-ar-$T-c$c --after $t "${RD[@]}" -- bash $JT aread $T off $c)) || exit 1; done
     for i in 0 1 2 3 4 5; do ids+=($(TRIES=2 sub nd-held-$T-$i --after $t "${RD[@]}" -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6)) || exit 1; done; done
   ps=$(sub nd-p2sum --after $(csv ${ids[@]}) --vram 0.1 --cpu 32 --ram 96 --timeout-h 4 -- bash $ME p2sum) || exit 1
-  echo "$(date '+%F %T') rest (code $h): rolls ${rr[*]} geo $g tok $k teach $te route $ro anchor $an strip $st label $lb append $ap weights $wt" \
+  echo "$(date '+%F %T') full (code $h): 24 chunk pipelines (stages.txt lines above); NDP label $ln anchor $an strip $st; gates $ga append $ap weights $wt" \
        "smoke $sm identity $ia $ib $ic build $bd reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) p2sum $ps" | tee -a $O/stages.txt ;;
+gates)    # amendment 3: T2 / T4 pooled over the chunk pools' label files (each chunk's label is written, never stops alone)
+  $TR $NT gates --res $RES --pools $PARTS || { echo "STOP T2 / T4 pooled over the chunk pools ($RES/gates.json)" > $O/VERDICT; exit 1; } ;;
 append) free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 150 )) || die "free $free GB < 150 GB"
-  $TR $NT append --base on1_JTX --add on1_$NA --out on1_$NM --res $RES ;;
+  $TR $NT append --base on1_JTX --add "$PARTS" --out on1_$NM --res $RES ;;
 weights)  # amendment 1: k_dag = min(8, floor(4.6 x drawable / 9 500)) rows a batch (<= 4.6 expected draws per DAgger row, the JT ceiling)
-  $TR $NT weights --pool on1_$NM --base JTX00 --src on1_$NA --k-on 70 --k-dag 0 --out NDAG0 --res $RES || die NDAG0
-  $TR $NT weights --pool on1_$NM --base JTX00 --src on1_$NA --k-on 70 --k-dag auto --out NDAG --res $RES || die NDAG
+  $TR $NT weights --pool on1_$NM --base JTX00 --src $(echo $PARTS | tr ' ' ,) --k-on 70 --k-dag 0 --out NDAG0 --res $RES || die NDAG0
+  $TR $NT weights --pool on1_$NM --base JTX00 --src $(echo $PARTS | tr ' ' ,) --k-on 70 --k-dag auto --out NDAG --res $RES || die NDAG
   python3 -c "import json; print(json.load(open('$RES/w_NDAG.json'))['k_dag'])" > $RES/kdag.txt; echo "$(date '+%F %T') k_dag $(cat $RES/kdag.txt)" | tee -a $O/stages.txt ;;
 smoke)
   X=NDSM-L18-s0; [[ ! -e $CK/$X ]] || die "$X exists"; run dag 60 $X 0
@@ -259,7 +270,7 @@ ident)
   mv experiments/defect_fix/results/nuplan_dag_identity.json $RES/identity.json || r=4
   rm -rf $CK/NDIDA-L18-s1 $CK/NDIDB-L18-s1; exit $r ;;
 build)
-  python3 -c "import json, sys; r = '$RES'; sys.exit(0 if json.load(open(f'{r}/smoke.json'))['pass_'] and json.load(open(f'{r}/identity.json'))['identical'] and json.load(open(f'{r}/label_$NA.json'))['T2']['passed'] and json.load(open(f'{r}/label_$NA.json'))['T4']['passed'] else 1)" \
+  python3 -c "import json, sys; r = '$RES'; sys.exit(0 if json.load(open(f'{r}/smoke.json'))['pass_'] and json.load(open(f'{r}/identity.json'))['identical'] and json.load(open(f'{r}/gates.json'))['passed'] else 1)" \
     || { echo "STOP smoke / identity (T3) / T2 / T4 on the full pool" > $O/VERDICT; exit 1; }
   date '+%F %T' > $O/BUILT ;;
 train) s=$2; [[ -f $O/BUILT && ! -f $O/VERDICT ]] || die "not built"; run dag $NSTEP NDAG-L18-s$s $s

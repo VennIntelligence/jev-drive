@@ -312,8 +312,34 @@ def cmd_label(a):
     if a.write:
         fut = np.where(draw[:, None, None], fut_t, tb["served"]).astype(np.float32)
         np.savez(CR / f"on1_{a.name}" / "tab.npz", **(tb | dict(fut=fut, src=np.full(n, "dagger").astype("U16"))))
-        if not (rec["T2"]["passed"] and rec["T4"]["passed"]):
-            sys.exit(1)
+        (CR / f"on1_{a.name}" / "LABELLED").write_text(TEACHER + "\n")   # amendment 3: the gates are pooled over the chunk pools (nd_teach.py gates)
+
+
+def cmd_gates(a):
+    """amendment 3: T2 / T4 pooled over the chunk pools' label files (sums of the per-pool counts) -> res/gates.{json,md}; exit 1 = stop."""
+    R = Path(a.res)
+    L = {p: json.loads((R / f"label_{p[4:]}.json").read_text()) for p in a.pools}
+    for p in a.pools:
+        assert (CR / p / "LABELLED").exists(), f"{p}: tab.fut not written"
+    t2n = sum(x["T2"]["rows"] for x in L.values())
+    t2 = sum(x["T2"]["rows"] * x["T2"]["teacher_inside"] for x in L.values() if x["T2"]["rows"]) / max(t2n, 1)
+    t2s = sum(x["T2"]["rows"] * x["T2"]["served_inside"] for x in L.values() if x["T2"]["rows"]) / max(t2n, 1)
+    cand, drop = sum(x["candidates"] for x in L.values()), sum(x["T4"]["dropped"] for x in L.values())
+    rec = dict(pools=len(L), rows=sum(x["rows"] for x in L.values()), candidates=cand, drawable=sum(x["drawable"] for x in L.values()),
+               T2=dict(rows=t2n, teacher_inside=t2, served_inside=t2s, passed=bool(t2 >= 0.90)),
+               T4=dict(over=sum(x["T4"]["over"] for x in L.values()), leave=sum(x["T4"]["leave"] for x in L.values()), dropped=drop,
+                       share=drop / max(cand, 1), passed=bool(drop <= 0.10 * cand)),
+               frame_err_k0_p99_max=max(x["frame_err_k0"][2] for x in L.values() if x["frame_err_k0"]),
+               per_pool={p: dict(rows=x["rows"], drawable=x["drawable"], t2=x["T2"]["teacher_inside"], t4=x["T4"]["dropped_share"]) for p, x in L.items()})
+    rec["passed"] = bool(rec["T2"]["passed"] and rec["T4"]["passed"] and rec["frame_err_k0_p99_max"] <= 0.10)
+    dump(R / "gates.json", rec)
+    (R / "gates.md").write_text(f"# Pooled gates over {len(L)} chunk pools (nd_teach.py gates)\n\nRows {rec['rows']}, teacher candidates {cand}, drawable "
+                                f"{rec['drawable']}. T2: teacher inside {t2:.3f} (served {t2s:.3f}, n {t2n}) -> {'PASS' if rec['T2']['passed'] else 'FAIL'}. "
+                                f"T4: dropped {drop} ({rec['T4']['share']:.1%}; over 4 m/s^2 {rec['T4']['over']}, leaves {rec['T4']['leave']}) -> "
+                                f"{'PASS' if rec['T4']['passed'] else 'FAIL'}. Frame check k = 0 p99 max {rec['frame_err_k0_p99_max']:.3g} m.\n")
+    print(json.dumps({k: v for k, v in rec.items() if k != "per_pool"}, indent=1))
+    if not rec["passed"]:
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------- plots (probe)
@@ -394,13 +420,47 @@ def _cat(x, y, n_y):
     return np.concatenate([x, y])
 
 
+def _join(parts, name):
+    """amendment 3: plain row concatenation of the chunk pools (same builder, same keys) -> on1_<...>_add: tab, agent / road / drivable / route,
+    dagger.npz, features (.npz / .a.npz), zero-copy tokens, teacher; names unchanged (distinct scenes)."""
+    from jevdrive.tokens import link_front
+    O, W = CR / name, CR / f"{name}@warp"
+    assert not O.exists() and not W.exists(), f"{O} exists"
+    O.mkdir(), W.mkdir()
+    for f in ("tab.npz", "agent.npz", "road.npz", "drivable.npz", "route.npz", "dagger.npz"):
+        Z = [np.load(CR / p / f) for p in parts]
+        n = [len(z["names" if "names" in z.files else "tokens"]) for z in Z]
+        keys = set.intersection(*[set(z.files) for z in Z])
+        np.savez(O / f, **{k: (np.concatenate([z[k] for z in Z]) if Z[0][k].ndim and len(Z[0][k]) == n[0] else Z[0][k]) for k in keys})
+    (O / "LABELLED").write_text(TEACHER + "\n")
+    for sfx in ("", ".a"):
+        Z = [np.load(FEAT / f"{p}{sfx}.npz") for p in parts]
+        n0 = len(Z[0]["names"])
+        np.savez(FEAT / f"{name}{sfx}.npz", **{k: (np.concatenate([z[k] for z in Z]) if Z[0][k].ndim and len(Z[0][k]) == n0 else Z[0][k]) for k in Z[0].files})
+    link_front(W, [CR / f"{p}@warp/front.npy" for p in parts])
+    T = [np.load(CR / f"{p}@warp/teacher.npz") for p in parts]
+    np.savez(W / "teacher.npz", out=np.concatenate([t["out"] for t in T]), plan=np.concatenate([t["plan"] for t in T]), di=T[0]["di"], pi=T[0]["pi"])
+    tb = np.load(O / "tab.npz")
+    assert len(set(tb["names"].tolist())) == len(tb["names"]), "duplicate row names across the chunk pools"
+
+
 def cmd_append(a):
     """on1_<out> = on1_<base> (every file bit-equal on its rows, same order and names) + on1_<add> (renamed on:<prefix>:<token>, mode both,
     pool <prefix>); tokens zero-copy; route features (feat/.npz and .a.npz) appended alike. Files of the base the recipe does not read
     (stand_gap, stand_launch, tight_in, turn_cap) are not carried."""
     from jevdrive.tokens import link_front, open_front
-    B, Ad, O = CR / a.base, CR / a.add, CR / a.out
+    B, O = CR / a.base, CR / a.out
     assert not O.exists() and not (CR / f"{a.out}@warp").exists(), f"{O} exists: never overwritten"
+    adds = a.add.split()
+    for p in adds:
+        assert (CR / p / "LABELLED").exists(), f"{p}: not labelled"
+    if len(adds) > 1:                                                           # amendment 3: the chunk pools first joined into one added pool
+        J = CR / f"{a.out}_add"
+        _join(adds, J.name)
+        Ad = J
+    else:
+        Ad = CR / adds[0]
+    a_add = Ad.name
     O.mkdir(), (CR / f"{a.out}@warp").mkdir()
     tb, ta = dict(np.load(B / "tab.npz")), dict(np.load(Ad / "tab.npz"))
     nb, na = len(tb["names"]), len(ta["names"])
@@ -422,11 +482,11 @@ def cmd_append(a):
                 A[k_] = zb[k_]
         np.savez(O / f, **A)
     for sfx in ("", ".a"):
-        zb, za = np.load(FEAT / f"{a.base}{sfx}.npz"), np.load(FEAT / f"{a.add}{sfx}.npz")
+        zb, za = np.load(FEAT / f"{a.base}{sfx}.npz"), np.load(FEAT / f"{a_add}{sfx}.npz")
         np.savez(FEAT / f"{a.out}{sfx}.npz", **{k_: _cat(zb[k_], ren if k_ == "names" else za[k_], na) if zb[k_].ndim and len(zb[k_]) == nb else zb[k_]
                                                 for k_ in zb.files})
-    link_front(CR / f"{a.out}@warp", [CR / f"{a.base}@warp/front.npy", CR / f"{a.add}@warp/front.npy"])
-    Tb, Ta = np.load(CR / f"{a.base}@warp/teacher.npz"), np.load(CR / f"{a.add}@warp/teacher.npz")
+    link_front(CR / f"{a.out}@warp", [CR / f"{a.base}@warp/front.npy", CR / f"{a_add}@warp/front.npy"])
+    Tb, Ta = np.load(CR / f"{a.base}@warp/teacher.npz"), np.load(CR / f"{a_add}@warp/teacher.npz")
     assert same(Tb["di"], Ta["di"]) and same(Tb["pi"], Ta["pi"])
     np.savez(CR / f"{a.out}@warp/teacher.npz", out=np.concatenate([Tb["out"], Ta["out"]]), plan=np.concatenate([Tb["plan"], Ta["plan"]]), di=Tb["di"], pi=Tb["pi"])
     # check: every base file bit-equal on the base rows
@@ -445,7 +505,7 @@ def cmd_append(a):
     if not same(open_front(CR / f"{a.out}@warp/front.npy")[i], open_front(CR / f"{a.base}@warp/front.npy")[i]):
         bad.append("front sample (base)")
     j = np.sort(np.random.default_rng(1).choice(na, min(na, 1000), replace=False))
-    if not same(open_front(CR / f"{a.out}@warp/front.npy")[nb + j], open_front(CR / f"{a.add}@warp/front.npy")[j]):
+    if not same(open_front(CR / f"{a.out}@warp/front.npy")[nb + j], open_front(CR / f"{a_add}@warp/front.npy")[j]):
         bad.append("front sample (added)")
     rec = dict(out=a.out, base_rows=nb, added_rows=na, extra_keys_dropped=extra, mismatch=bad, modes=dict(Counter(to["mode"].astype(str).tolist())))
     dump(Path(a.res) / f"append_{a.out}.json", rec)
@@ -461,7 +521,8 @@ def cmd_weights(a):
     tb = np.load(CR / a.pool / "tab.npz")
     names, n0 = tb["names"].astype(str), len(Bw["names"])
     assert np.array_equal(names[:n0], Bw["names"].astype(str)), "prefix != the base draw's rows"
-    X = np.load(CR / a.src / "dagger.npz")
+    Xs = [np.load(CR / q / "dagger.npz") for q in a.src.split(",")]            # amendment 3: the chunk pools in merge order
+    X = {k_: np.concatenate([x[k_] for x in Xs]) for k_ in ("names", "draw")}
     assert len(names) == n0 + len(X["names"]) and all(x.split(":", 2)[2] == y.split(":", 1)[1] for x, y in zip(names[n0:], X["names"].astype(str)))
     logs, mode = tb["log"].astype(str), tb["mode"].astype(str)
     heldl = sorted(g for g in set(logs[mode == "self"]) if zlib.crc32(g.encode()) % 100 < HOLD_PCT)       # rm_train --on-hold-pct 15's held logs
@@ -533,11 +594,12 @@ def main():
     for k_ in ("pool", "base", "src", "out", "res"):
         q.add_argument(f"--{k_}", required=True)
     q.add_argument("--k-on", type=int, default=70); q.add_argument("--k-dag", default="0")
+    q = sp.add_parser("gates"); q.add_argument("--res", required=True); q.add_argument("--pools", nargs="+", required=True)
     q = sp.add_parser("smoke"); q.add_argument("--tag", required=True); q.add_argument("--wfile", required=True); q.add_argument("--res", required=True)
     q.add_argument("--k-dag", type=int, default=8)
     a = p.parse_args()
     dict(lists=cmd_lists, t1=cmd_t1, teach=cmd_teach, label=cmd_label, plots=cmd_plots, chk1=cmd_chk1, append=cmd_append, weights=cmd_weights,
-         smoke=cmd_smoke)[a.cmd](a)
+         smoke=cmd_smoke, gates=cmd_gates)[a.cmd](a)
 
 
 if __name__ == "__main__":
