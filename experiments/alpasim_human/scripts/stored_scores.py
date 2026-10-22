@@ -48,7 +48,7 @@ RS += [("box", None, "nuplan", "nuPlan public 1491 @10 (%s)" % "/".join(g.split(
 FULL = set(os.environ.get("FULL", "RSG-L18-s0").split(","))
 # held 460 @18 reads (route_mem/read, onpol held split) of the nuPlan candidates the loss playlists show (scripts/loss_playlists.py); kept
 # whatever TAGS is (their checkpoints need not be on Tokyo)
-HELD = ["STANDFMXH-L18-s1", "JTN-L18-s1", "NPB70-L18-s0"]
+HELD = ["STANDFMXH-L18-s1", "STANDFMXH-L18-s0", "JTN-L18-s1", "NPB70-L18-s0"]
 RS += [("box", t, "nuplan", "nuPlan held 460 @18 (route_mem/read)", "native", "route_mem/read/%s/c*/run" % t) for t in HELD]
 RS += [("tokyo", t, "nuplan", "nuPlan 48 (native_ref/%s)" % d, c, "alpasim/native_ref/" + d)
        for t, d, c in [("JTN-L18-s1", "JTN-L18-s1-native", "native"), ("JTN-L18-s1", "JTN-L18-s1-holdstop3", "stop3"),
@@ -63,7 +63,7 @@ RS += [("tokyo", t, "pai", "PAI %s (alpasim/%s)" % (n, g.split("/")[0]), "unreco
 def short(p):
     """A run dir as its read root relative to runs/ (the chunk dirs of a read share it)."""
     p = os.path.relpath(str(p), str(D))
-    return re.sub(r"/(runs/[^/]+|b\d+|[^/]*_c\d+)(/.*)?$", "", p)
+    return re.sub(r"/(runs/[^/]+|b\d+|[^/]*_c\d+|c\d+/run)(/.*)?$", "", p)
 
 
 def family(tag):

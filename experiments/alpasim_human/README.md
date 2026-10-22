@@ -445,7 +445,8 @@ plain state line and the buttons. `figs/panel_web_pick.png`: New playlist with t
 ### Model mode: a checkpoint drives the same scenes (2026-10-22)
 
 The panel's "Driver" select: "Human (phone)", the current tags (marked from decisions.md "现状": NTV0-L18-s0 = PAI p1021a, the lead
-family R8K-L18-s2 / R6DAG-L18-s1, RSG-L18-s0, nuPlan JTN-L18-s1), then every other checkpoint under `/data/runs/op_parity/runs/` (not
+family R8K-L18-s2 / R6DAG-L18-s1, RSG-L18-s0, nuPlan candidate B2 STANDFMXH-L18-s1 and its backup seed STANDFMXH-L18-s0 (decision
+391), nuPlan submitted JTN-L18-s1), then every other checkpoint under `/data/runs/op_parity/runs/` (not
 the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in the same resident stack and viewer.
 
 - How: `lib/human_driver.py` stays the stack's driver and delegates. Before each request the loop writes `<live>/driver.json` (scene,

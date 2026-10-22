@@ -25,7 +25,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 PAI = {"R8K-L18-s2": "R8K-s2", "R6DAG-L18-s1": "R6DAG-s1", "NTV0-L18-s0": "NTV0-s0 (submitted p1021a)"}
-NU = {"STANDFMXH-L18-s1": "B2-s1 (candidate)", "JTN-L18-s1": "JTN-s1 (submitted native)", "NPB70-L18-s0": "NPB70-s0"}
+NU = {"STANDFMXH-L18-s1": "B2-s1 (candidate)", "STANDFMXH-L18-s0": "B2-s0 (backup seed)", "JTN-L18-s1": "JTN-s1 (submitted native)", "NPB70-L18-s0": "NPB70-s0"}
 TOPN = 30
 
 

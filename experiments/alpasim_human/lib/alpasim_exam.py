@@ -37,7 +37,10 @@ FAIL = ("collision_at_fault", "offroad", "left_corridor_laterally")
 CKPTS = D / "runs/op_parity/runs"
 # Driver choices marked from research/decisions.md "现状" (2026-10-22): tag -> note. Every other checkpoint on Tokyo follows, alphabetical.
 CURRENT = {"NTV0-L18-s0": "PAI submitted p1021a", "R8K-L18-s2": "PAI lead family", "R6DAG-L18-s1": "PAI lead family",
-           "RSG-L18-s0": "PAI submitted (vennai)", "JTN-L18-s1": "nuPlan submitted"}
+           "RSG-L18-s0": "PAI submitted (vennai)", "STANDFMXH-L18-s1": "nuPlan candidate B2, native",
+           "STANDFMXH-L18-s0": "nuPlan B2 backup seed, native", "JTN-L18-s1": "nuPlan submitted"}
+# the PAI difficulty sets' "our models' mean" (fixed 10-22: a nuPlan-only candidate added to CURRENT does not move them)
+MEAN_TAGS = ("NTV0-L18-s0", "R8K-L18-s2", "R6DAG-L18-s1", "RSG-L18-s0", "JTN-L18-s1")
 NOT_DRIVERS = re.compile(r"^(TB-|ONP-|AP)")                 # trajectory-bank probes, identity tests, AlpaSim-standard (ap2) family
 
 
@@ -215,7 +218,7 @@ class Scenes(object):
                     self.refs[(track, name)] = summary_scores(Path(src))
         self.cur = {t: stored_scores(t) for t in CURRENT}
         for i, m in self.meta.items():                         # current models' stored reads (PAI: their mean; nuPlan: the 49-read spread)
-            v = [st[i]["score"] for st in self.cur.values() if i in st]
+            v = [self.cur[t][i]["score"] for t in MEAN_TAGS if i in self.cur[t]]
             m["cur_n"], m["cur_mean"], m["cur_max"] = len(v), (sum(v) / len(v) if v else None), (max(v) if v else None)
             if m["track"] == "pai":
                 m["ours"], m["ours_n"] = m["cur_mean"], m["cur_n"]
@@ -237,9 +240,9 @@ class Scenes(object):
                   ("ref_05", "Organisers' mean 0.2 - 0.5", Dp, P(lambda m: 0.2 < m["ref"] <= 0.5)),
                   ("ref_08", "Organisers' mean 0.5 - 0.8", Dp, P(lambda m: 0.5 < m["ref"] < 0.8)),
                   ("ref_1", "Organisers' mean >= 0.8", Dp, P(lambda m: m["ref"] >= 0.8)),
-                  ("hard_pai", "Hard for everyone: our %d models' mean < 0.5" % len(CURRENT), Dp, P(lambda m: m["cur_n"] >= 3 and m["cur_mean"] < 0.5)),
+                  ("hard_pai", "Hard for everyone: our %d models' mean < 0.5" % len(MEAN_TAGS), Dp, P(lambda m: m["cur_n"] >= 3 and m["cur_mean"] < 0.5)),
                   ("allfail_pai", "Every current model fails (all < 1)", Dp, P(lambda m: m["cur_n"] >= 3 and m["cur_max"] < 1))]
-        preds += [("ours_pai_" + b, "Our %d models' mean %s" % (len(CURRENT), t), Dp, P(lambda m, f=f: m["cur_n"] >= 3 and f(m["cur_mean"]))) for b, t, f in BANDS]
+        preds += [("ours_pai_" + b, "Our %d models' mean %s" % (len(MEAN_TAGS), t), Dp, P(lambda m, f=f: m["cur_n"] >= 3 and f(m["cur_mean"]))) for b, t, f in BANDS]
         nmax = max([m["ours_n"] for m in self.meta.values() if m["track"] == "nuplan"] or [0])
         preds += [("hard_nuplan", "Hard for everyone: our %d checkpoints' mean < 0.5" % nmax, Dn,
                    N(lambda m: m["ours_n"] and m["ours"] < 0.5 and nf(m))),

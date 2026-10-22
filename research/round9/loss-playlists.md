@@ -1,6 +1,6 @@
 # 失分播放列表（Tokyo 面板，2026-10-22）
 
-面板 `http://100.108.238.8:8770/` 左栏的 8 个播放列表，从上往下看就是按失分价值从高到低。每个场景的副行写着
+面板 `http://100.108.238.8:8770/` 左栏的 9 个播放列表，从上往下看就是按失分价值从高到低。每个场景的副行写着
 `#名次 value 价值 (a 区分度 x lost 失分) 类别; fixed by <哪个读数满分>`；"<tag> stored" 列是该模型自己的存档分和 why
 （播放列表钉在该 checkpoint 上，不随 Driver 选项变）。生成：`experiments/alpasim_human/scripts/loss_playlists.py`（命令在文件头），
 逐场景全表 `tmp/lossplay/rows.csv`（Mac，未提交）。
@@ -11,10 +11,11 @@
 | PAI R6DAG-s1 losses by value | 72 | 同上 |
 | PAI NTV0-s0 losses by value | 96 | 同上（已提交 p1021a） |
 | nuPlan B2-s1 losses by value | 81 | held 460 @18 原生（`route_mem/read/STANDFMXH-L18-s1`） |
+| nuPlan B2-s0 losses by value | 90 | held 460 @18 原生（`route_mem/read/STANDFMXH-L18-s0`，B2 备选 seed；10-22 晚补） |
 | nuPlan JTN-s1 losses by value | 137 | held 460 @18 原生（已提交 native） |
 | nuPlan NPB70-s0 losses by value | 99 | held 460 @18 原生（读数已落地） |
 | PAI top 30 recoverable losses (all candidates) | 30 | 三个 PAI 模型合并，每场景取价值最高的那个模型；stored 列钉在副行写的模型上 |
-| nuPlan top 30 recoverable losses (all candidates) | 30 | 三个 nuPlan 模型合并，同上 |
+| nuPlan top 30 recoverable losses (all candidates) | 30 | 四个 nuPlan 模型合并（10-22 晚加入 B2-s0，30 个里 7 个来自它），同上 |
 
 ![loss playlists](../../experiments/alpasim_human/figs/panel_loss_playlists.png)
 
