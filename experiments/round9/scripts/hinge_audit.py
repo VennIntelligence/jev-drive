@@ -9,7 +9,8 @@ R6DAG-L18-s1. Chain: hinge_audit.sh. Box outputs: $DATA_DIR/runs/round9/hinge_au
   steps  (op-train)  per pool (S | PAID | PAIH) and path (log / fut / plan): per-step raw clearances of every term (agent corridor / side
                      distance, road corner SDF (+ drivable SDF on nuPlan), onc / soft region SDF, side distance) plus the root-cause
                      counterfactuals of the log path -> $O/steps_<pool>_<path>.npz
-  report (op-train)  every table of the result page from the steps files -> $O/audit.json, results dir
+  report (op-train)  every table of the result page from the steps files -> $O/audit.json
+  g5     (op-train)  --pool P --designs ..: one shape-only step of each design's summed terms on LA rows -> $O/g5_<pool>.json
 """
 from __future__ import annotations
 
@@ -412,6 +413,469 @@ def cmd_steps(a):
     print("written", O / f"steps_{a.pool}.npz", flush=True)
 
 
+# ---------------------------------------------------------------- report
+EPS = 0.05
+TERMS = ("agent", "road", "onc", "soft", "side")
+HARD = ("agent", "road", "onc", "side")
+
+
+class Pool:
+    """A steps file with the term values of every path under a design (fixed margins or per-row margins)."""
+
+    def __init__(self, name, f):
+        z = np.load(f, allow_pickle=True)
+        self.name, self.z = name, z
+        self.n = len(z["names"])
+        self.paths = [p for p in ("log", "fut", "plan") if f"{p}__ok" in z.files]
+        if name == "PAIH":
+            self.paths = ["log", "plan"]
+        self.has_lat = "lat_ok" in z.files
+        self.terms = TERMS if self.has_lat else ("agent", "road", "side")
+        self.C = {p: self._clear(p) for p in self.paths}
+
+    def g(self, p, q):
+        return self.z[f"{p}__{q}"].astype(np.float64)
+
+    def _clear(self, p):
+        """Row clearances of path p in each term's own metric (+ = room): agent corridor / side, road, onc / soft depth (negated), side."""
+        c = dict(ag_c=self.g(p, "ag_c").min(1), ag_s=self.g(p, "ag_s").min(1), road=self.g(p, "road").min((1, 2)), sd=self.g(p, "sd")[:, 1:].min(1))
+        if self.has_lat:
+            c["onc"], c["soft"] = self.g(p, "onc").min(1), self.g(p, "soft").min(1)
+        return c
+
+    def ok(self, t):
+        z = self.z
+        if t in ("agent", "side"):
+            return z["agent_ok"].astype(bool)
+        if t == "road":
+            return z["road_ok"].astype(bool)
+        return z["lat_ok"].astype(bool) if self.has_lat else np.zeros(self.n, bool)
+
+    def margins(self, design, ref=None):
+        """Per-row margins (dict of (n,)) of a design. ref: list of paths whose clearances calibrate the margins (min over them)."""
+        n = self.n
+        m = dict(ag_c=np.full(n, MARGIN), ag_s=np.zeros(n), road=np.full(n, MARGIN), sd=np.full(n, BUF), onc=np.zeros(n), soft=np.zeros(n))
+        if design in ("fixed", "gate"):
+            return m
+        if design in ("ec_log", "ec_wit"):
+            ref = ["log"] if design == "ec_log" else [p for p in ("log", "fut") if p in self.paths]
+            for k in m:
+                if k not in self.C["log"]:
+                    continue
+                vals = []
+                for p in ref:
+                    v = self.C[p][k].copy()
+                    v[~self.z[f"{p}__ok"]] = np.inf
+                    vals.append(v)
+                c = np.minimum.reduce(vals)
+                if k in ("onc", "soft"):                     # depth allowed = max(0, human depth + eps); clearance metric is the sdf (- = inside)
+                    m[k] = np.where(np.isfinite(c), np.maximum(0.0, -c + EPS), 0.0)
+                else:
+                    m[k] = np.where(np.isfinite(c), np.minimum(m[k], c - EPS), m[k])
+            return m
+        if design == "ctx":                                  # per-context quantile margins (calibrated on even scene hashes, see ctx_margins)
+            return self.ctx_m
+        raise ValueError(design)
+
+    def values(self, p, design="fixed", rows=None):
+        """Term values (weighted, as the trainer) of path p under a design -> dict term -> (n,)."""
+        m = self.margins(design)
+        r = slice(None) if rows is None else rows
+        ag_c, ag_s = self.g(p, "ag_c")[r], self.g(p, "ag_s")[r]
+        mc, ms = m["ag_c"][r][:, None], m["ag_s"][r][:, None]
+        out = dict(agent=W["agent"] * np.maximum(np.maximum(mc - ag_c, 0), np.maximum(ms - ag_s, 0)).mean(1),
+                   road=W["road"] * np.maximum(m["road"][r][:, None, None] - self.g(p, "road")[r], 0).mean((1, 2)),
+                   side=W["side"] * np.maximum(m["sd"][r][:, None] - self.g(p, "sd")[r][:, 1:], 0).mean(1))
+        if self.has_lat:
+            for t in ("onc", "soft"):
+                out[t] = W[t] * np.maximum(-self.g(p, t)[r] - m[t][r][:, None], 0).mean(1)
+        okp = self.z[f"{p}__ok"][r]
+        for t in out:
+            out[t] = np.where(self.ok(t)[r] & okp, out[t], 0.0)
+        if design == "gate":                                 # term kept on a row only where the human paths satisfy it
+            hum = {q: self.values(q, "fixed", rows) for q in ("log", "fut") if q in self.paths}
+            for t in out:
+                bad = np.zeros_like(out[t], bool)
+                for q, hv in hum.items():
+                    bad |= hv[t] > 0
+                out[t] = np.where(bad, 0.0, out[t])
+        return out
+
+
+def ctx_bins(P):
+    """Context bin per row: speed band x scene (for the context-quantile margins and the strata)."""
+    z = P.z
+    v = z["speed"].astype(float)
+    L = P.z["log__P9"] if "log__P9" in z.files else None
+    dpsi = np.degrees(np.abs(np.unwrap(L[..., 2], axis=1)[:, 8] - np.unwrap(L[..., 2], axis=1)[:, 0])) if L is not None else np.zeros(P.n)
+    junc = z["junc"].astype(float) if "junc" in z.files else np.full(P.n, np.nan)
+    scene = np.select([v < 0.5, dpsi > 30, np.nan_to_num(junc) > 0.1, z["lead_d"] < 20, z["parked"].astype(bool)],
+                      ["standing", "turn>30", "junction", "lead<20m", "parked beside"], "straight free")
+    spd = np.select([v < 0.5, v < 3, v < 8, v < 13, v < 17], ["<0.5", "0.5-3", "3-8", "8-13", "13-17"], ">17")
+    return spd, scene, dpsi
+
+
+def scene_hash(P):
+    z = P.z
+    if "scene" in z.files:
+        s = z["scene"].astype(str)
+    else:
+        s = np.array([":".join(x.split(":")[2:-2]) if x.count(":") >= 4 else ":".join(x.split(":")[:-1]) for x in z["names"].astype(str)])
+    import zlib
+    return np.array([zlib.crc32(x.encode()) % 2 for x in s])
+
+
+def ctx_margins(P, spd, scene, q=0.05):
+    """Context-quantile margins: per (speed band, scene) the q-quantile of the human log clearance, clipped to [lo, m0]; calibrated on the
+    rows of even-hash scenes only (the odd half is the test)."""
+    h = scene_hash(P)
+    cal = (h == 0) & P.z["log__ok"]
+    m0 = P.margins("fixed")
+    out, tab = {k: v.copy() for k, v in m0.items()}, {}
+    key = np.char.add(np.char.add(spd.astype(str), "|"), scene.astype(str))
+    for k in m0:
+        if k not in P.C["log"]:
+            continue
+        c = P.C["log"][k]
+        for b in np.unique(key):
+            sel = key == b
+            cc = c[sel & cal & np.isfinite(c) & (c < BIG / 2)]
+            if k in ("onc", "soft"):
+                val = max(0.0, float(-np.quantile(cc, q)) + EPS) if len(cc) > 20 else 0.0
+                out[k][sel] = val
+            else:
+                val = min(m0[k][0], float(np.quantile(cc, q)) - EPS) if len(cc) > 20 else m0[k][0]
+                out[k][sel] = val
+            tab[f"{k}|{b}"] = round(float(val), 3)
+    return out, tab, h
+
+
+def cover(v, dpsi, act, la):
+    """LA rows in the loss-map bands (pai_s_gate.cover): counts relative to all rows."""
+    rs = (act["road"] > 0) | (act["side"] > 0)
+    ag = act["agent"] > 0
+    return dict(turn_inside=la & rs & (dpsi > 30) & (v >= 2.6) & (v <= 12.2), straight_offroad=la & rs & (dpsi < 5) & (v >= 1.3) & (v <= 24.2),
+                drift=la & rs & (dpsi < 5) & (v >= 17.2), collision=la & ag & (v >= 2.7) & (v <= 16.1), gt13=la & (v > 13))
+
+
+def cmd_report(a):
+    import pandas as pd
+    R = {}
+    md = []
+    pools = {}
+    for name in ("S", "PAID", "PAIH"):
+        f = O / f"steps_{name}.npz"
+        if f.exists():
+            pools[name] = Pool(name, f)
+    wz = np.load(DATA / "runs/round6/dag/w/R6DAG.npz")
+    wmap = dict(zip(wz["names"].astype(str).tolist(), wz["w"].tolist()))
+    DOSE = dict(S=32, PAID=16, PAIH=32)
+    for name, P in pools.items():
+        z = P.z
+        spd, scene, dpsi = ctx_bins(P)
+        v = z["speed"].astype(float)
+        P.ctx_m, ctx_tab, hsh = ctx_margins(P, spd, scene)
+        live = np.array([wmap.get(x, 0.0) for x in z["names"].astype(str)]) if name == "S" else np.ones(P.n)
+        cand = z["draw"].astype(bool) & (live > 0) if "draw" in z.files else live > 0
+        res = dict(rows=P.n, candidates=int(cand.sum()), ctx_margins=ctx_tab)
+        fut_dpsi = np.degrees(np.abs(z["fut__P9"][:, 8, 2])) if "fut__P9" in z.files else dpsi
+        # ---- 1. unconditional human / teacher violation per term, fixed design
+        V = {p: P.values(p, "fixed") for p in P.paths}
+        aud = {}
+        for t in P.terms:
+            okt = P.ok(t)
+            row = {}
+            for p in P.paths:
+                m = okt & z[f"{p}__ok"] & cand
+                row[p] = dict(n=int(m.sum()), viol=float((V[p][t][m] > 0).mean()) if m.any() else None, mass_mean=float(V[p][t][m].mean()) if m.any() else None)
+            if "plan" in V:
+                pm = okt & z["plan__ok"] & cand
+                act = pm & (V["plan"][t] > 0)
+                row["plan_active"] = float(act.sum() / max(pm.sum(), 1))
+                for p in ("log", "fut"):
+                    if p in V:
+                        mm = act & z[f"{p}__ok"]
+                        row[f"{p}_viol_given_active"] = float((V[p][t][mm] > 0).mean()) if mm.any() else None
+                        row[f"{p}_viol_uncond_same_rows"] = float((V[p][t][pm & z[f"{p}__ok"]] > 0).mean()) if pm.any() else None
+            aud[t] = row
+        res["audit"] = aud
+        # strata of the human log violation (unconditional, candidates)
+        st = []
+        for t in P.terms:
+            m = P.ok(t) & z["log__ok"] & cand
+            hv = V["log"][t] > 0
+            ck = {"agent": "ag_c", "road": "road", "onc": "onc", "soft": "soft", "side": "sd"}[t]
+            c = P.C["log"][ck]
+            cb = np.select([c < 0, c < 0.1, c < 0.3, c < 1.0, c < BIG / 2], ["<0", "0-0.1", "0.1-0.3", "0.3-1", ">1"], "none")
+            for lab, arr in (("speed", spd), ("scene", scene), ("clearance", cb)):
+                for b in np.unique(arr[m]):
+                    s = m & (arr == b)
+                    st.append(dict(term=t, by=lab, bin=str(b), rows=int(s.sum()), share=float(s.sum() / max(m.sum(), 1)),
+                                   human_viol=float(hv[s].mean()), human_mass_share=float(V["log"][t][s].sum() / max(V["log"][t][m].sum(), 1e-12))))
+        res["strata"] = st
+        # ---- 2. root causes of the human (log) violations
+        rc = {}
+        cf_rows = z["log__cf_rows"] if "log__cf_rows" in z.files else np.zeros(0, int)
+        cpos = {int(r): i for i, r in enumerate(cf_rows)}
+
+        def cf_ok(var, rows):
+            i = np.array([cpos[int(r)] for r in rows], int)
+            ac, as_ = z[f"log__cf_{var}_ag_c"][i].astype(float), z[f"log__cf_{var}_ag_s"][i].astype(float)
+            return np.minimum(ac, as_).min(1) >= 0, z[f"log__cf_{var}_sd"][i].astype(float)[:, 1:].min(1) >= 0
+        L9 = z["log__P9"]
+        for t in P.terms:
+            m = P.ok(t) & z["log__ok"] & cand & (V["log"][t] > 0)
+            rows = np.flatnonzero(m)
+            if not len(rows):
+                rc[t] = dict(n=0)
+                continue
+            cause = np.full(len(rows), "residual", object)
+            inc = {}
+            if t == "agent":
+                ac, as_ = P.g("log", "ag_c")[rows], P.g("log", "ag_s")[rows]
+                init = (np.maximum(MARGIN - ac[:, 0], 0) + np.maximum(-as_[:, 0], 0)) > 0
+                pc, ps = P.g("log", "agp_c")[rows].min(1), P.g("log", "agp_s")[rows].min(1)
+                real = np.minimum(pc, ps) < 0
+                front_only = ~real & (pc >= MARGIN)
+                o_geo, _ = cf_ok("ego_shrink", rows)
+                o_box, _ = cf_ok("obj_shrink", rows)
+                o_t = np.zeros(len(rows), bool)
+                for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
+                    o_t |= cf_ok(vn, rows)[0]
+                o_st, _ = cf_ok("static", rows)
+                inc = dict(initial=init, margin_front_extension=front_only, margin=~real & ~front_only, geometry=real & o_geo, box_inflation=real & o_box,
+                           time_shift=real & o_t, real_overlap=real, static_boxes_would_clear=o_st)
+                order = ["initial", "margin_front_extension", "margin", "geometry", "box_inflation", "time_shift"]
+            elif t == "road":
+                rd = P.g("log", "road")[rows]
+                init = rd[:, 0].min(1) < MARGIN
+                mn = rd.min((1, 2))
+                marg = mn >= 0
+                gap = np.zeros(len(rows), bool)
+                if P.name == "S":
+                    dv = P.g("log", "drv")[rows]
+                    neg = rd < 0
+                    gap = ~marg & np.where(neg, dv >= 0, True).all((1, 2))
+                oow = z["log__oow"][rows].any(1)
+                pts = P.g("log", "pts")[rows].min((1, 2)) >= 0
+                geo = ~marg & pts & (mn > -0.5)
+                inc = dict(initial=init, margin=marg, raster_gap=gap, coverage=oow, geometry=geo, centre_outside=P.g("log", "pts")[rows].min((1, 2)) < 0)
+                order = ["initial", "margin", "raster_gap", "coverage", "geometry"]
+            elif t in ("onc", "soft"):
+                x = P.g("log", t)[rows]
+                init = x[:, :2].min(1) < 0 if x.shape[1] == 80 else x[:, :1].min(1) < 0
+                shallow = (-x.min(1)) < 0.3
+                Lr = L9[rows].astype(float)
+                c0, s0 = np.cos(Lr[:, 0, 2]), np.sin(Lr[:, 0, 2])
+                lat_disp = np.abs(-s0 * (Lr[:, 8, 0] - Lr[:, 0, 0]) + c0 * (Lr[:, 8, 1] - Lr[:, 0, 1]))
+                if t == "onc":
+                    legit = (dpsi[rows] > 30) | z["parked"][rows].astype(bool) | ((z["lead_d"][rows] < 25) & ~z["lead_moving"][rows].astype(bool))
+                    inc = dict(initial=init, depth_lt_0p3=shallow, legit_turn_or_pass=legit, turn=dpsi[rows] > 30)
+                else:
+                    legit = lat_disp > 1.5
+                    inc = dict(initial=init, depth_lt_0p3=shallow, legit_lane_change=legit)
+                order = list(inc)[:3]
+            else:                                            # side
+                sd = P.g("log", "sd")[rows]
+                init = sd[:, 1] < BUF
+                marg = sd[:, 1:].min(1) >= 0
+                _, g_ = cf_ok("ego_shrink", rows)
+                _, b_ = cf_ok("obj_shrink", rows)
+                tt = np.zeros(len(rows), bool)
+                for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
+                    tt |= cf_ok(vn, rows)[1]
+                inc = dict(initial=init, margin=marg, geometry=~marg & g_, box_inflation=~marg & b_, time_shift=~marg & tt)
+                order = ["initial", "margin", "geometry", "box_inflation", "time_shift"]
+            for k in reversed(order):
+                cause = np.where(inc[k], k, cause)
+            vals = V["log"][t][rows]
+            rc[t] = dict(n=int(len(rows)), first_match={k: float((cause == k).mean()) for k in order + ["residual"]},
+                         first_match_mass={k: float(vals[cause == k].sum() / vals.sum()) for k in order + ["residual"]},
+                         incidence={k: float(np.mean(x)) for k, x in inc.items()})
+        if "log__lag_sweep" in z.files:
+            rc["lag_sweep_log"] = json.loads(str(z["log__lag_sweep"]))
+        if "fut__lag_sweep" in z.files:
+            rc["lag_sweep_fut"] = json.loads(str(z["fut__lag_sweep"]))
+        res["root_causes"] = rc
+        # ---- 4. designs
+        DES = ["fixed", "gate", "ec_log", "ec_wit", "ctx"]
+        if "plan" in P.paths:
+            pm = z["plan__ok"] & cand
+            w_ = live[pm] if name == "S" else np.ones(pm.sum())
+            base_cov = None
+            dres = {}
+            for d in DES:
+                Vd = {p: P.values(p, d) for p in P.paths}
+                tv = {t: Vd["plan"][t][pm] for t in P.terms}
+                act = {t: tv[t] > 0 for t in P.terms}
+                anyact = np.any([act[t] for t in P.terms], 0)
+                fut_k = "fut" if "fut" in Vd else "log"
+                un = (z["off_t0"][pm].astype(bool) if name != "PAIH" else np.zeros(pm.sum(), bool)).copy()
+                un_ar = un.copy()
+                for t in P.terms:
+                    u_t = act[t] & (Vd[fut_k][t][pm] > 0)
+                    un |= u_t
+                    if t in ("agent", "road"):
+                        un_ar |= u_t
+                la = anyact & ~un
+                mass = np.sum([tv[t] for t in P.terms], 0)
+                hard_mass = np.sum([tv[t] for t in P.terms if t != "soft"], 0)
+                row = dict(active=float(np.average(anyact, weights=w_)), la=float(np.average(la, weights=w_)),
+                           la_per_batch=float(DOSE[name] * np.average(la, weights=w_)), unlearnable=float(np.average(un, weights=w_)),
+                           mass_mean=float(np.average(mass, weights=w_)), learnable_mass=float((mass * w_)[~un].sum() / max((mass * w_).sum(), 1e-12)),
+                           learnable_mass_agent_road_def=float((mass * w_)[~un_ar].sum() / max((mass * w_).sum(), 1e-12)),
+                           hard_mass_mean=float(np.average(hard_mass, weights=w_)))
+                for t in P.terms:
+                    okm = P.ok(t)
+                    hm = okm & z["log__ok"] & cand
+                    row[f"{t}_human_viol"] = float((Vd["log"][t][hm] > 0).mean()) if hm.any() else None
+                    if d == "ctx":                                  # out-of-sample half: odd scene hashes
+                        hm2 = hm & (hsh == 1)
+                        row[f"{t}_human_viol_test_half"] = float((Vd["log"][t][hm2] > 0).mean()) if hm2.any() else None
+                    if "fut" in Vd:
+                        fm = okm & z["fut__ok"] & cand
+                        row[f"{t}_fut_viol"] = float((Vd["fut"][t][fm] > 0).mean()) if fm.any() else None
+                        a_ = act[t]
+                        row[f"{t}_fut_viol_given_active"] = float((Vd["fut"][t][pm][a_] > 0).mean()) if a_.any() else None
+                    row[f"{t}_active"] = float(np.average(act[t], weights=w_))
+                    row[f"{t}_la"] = float(np.average(act[t] & ~un, weights=w_))
+                    row[f"{t}_mass_share"] = float((tv[t] * w_).sum() / max((mass * w_).sum(), 1e-12))
+                cv = cover(v[pm], fut_dpsi[pm], {t: tv.get(t, np.zeros(pm.sum())) for t in ("agent", "road", "side")}, la)
+                cvr = {k: float(DOSE[name] * np.average(x, weights=w_)) for k, x in cv.items()}
+                row["cover_per_batch"] = cvr
+                if d == "fixed":
+                    base_cov = cvr
+                row["cover_rel_fixed"] = {k: (cvr[k] / base_cov[k] if base_cov[k] > 0 else None) for k in cvr}
+                dres[d] = row
+            res["designs"] = dres
+        R[name] = res
+        print(name, json.dumps({k: res[k] for k in ("rows", "candidates")}), flush=True)
+    # ---- navtrain drivable hinge (human label on every labelled row; plan on the fwd sample)
+    f = O / "fwd_nav_0.npz"
+    if f.exists():
+        z = np.load(f)
+        h, ms = z["all_fut_hinge"], z["all_fut_minsdf"]
+        nav = dict(rows=int(len(h)), human_viol=float((h > 0).mean()), human_overlap=float((ms < 0).mean()),
+                   human_minsdf_q=[float(x) for x in np.quantile(ms, [0.01, 0.05, 0.25, 0.5])],
+                   plan_active=float((z["tr_nav"] > 0).mean()), human_viol_given_plan_active=float((z["tr_nav_fut"][z["tr_nav"] > 0] > 0).mean()))
+        for mg in (0.2, 0.1, 0.0):
+            nav[f"human_viol_margin_{mg}"] = float((ms < mg).mean())
+        R["navtrain"] = nav
+    O.mkdir(parents=True, exist_ok=True)
+    (O / "audit.json").write_text(json.dumps(R, indent=1, default=float))
+    print("written", O / "audit.json", flush=True)
+
+
+def cmd_g5(a):
+    """G5-style gradient sanity of a design on LA rows of a pool: one shape-only step (max 0.2 m per pose) of the summed S terms on the
+    R6DAG-L18-s1 plan -> term reduction, 4 s arc / end-speed change, cos toward the recovery label `fut` and toward the human log line."""
+    import torch
+    from agent_hinge import AgentHinge
+    from drivable_hinge import Hinge
+    from nr1_lat import shape_only
+    import nr1_lat
+    from jevdrive.common import n_cpus
+    torch.set_num_threads(a.threads or n_cpus())
+    P = Pool(a.pool, O / f"steps_{a.pool}.npz")
+    z = P.z
+    spd, scene, dpsi = ctx_bins(P)
+    P.ctx_m, _, _ = ctx_margins(P, spd, scene)
+    sp = pool_spec(a.pool)
+    out = {}
+    for d in a.designs.split(","):
+        Vd = {p: P.values(p, d) for p in P.paths}
+        fut_k = "fut" if "fut" in Vd else "log"
+        act = np.any([Vd["plan"][t] > 0 for t in P.terms], 0) & z["plan__ok"]
+        un = z["off_t0"].astype(bool) if a.pool != "PAIH" else np.zeros(P.n, bool)
+        for t in P.terms:
+            un = un | ((Vd["plan"][t] > 0) & (Vd[fut_k][t] > 0))
+        la = np.flatnonzero(act & ~un & z["draw"].astype(bool))
+        rows = np.sort(np.random.default_rng(0).choice(la, min(a.n, len(la)), replace=False))
+        names = z["names"][rows].astype(str)
+        ah = AgentHinge(sp["agent"], names, "cpu", MARGIN, 0.0)
+        road = Hinge(sp["road"], names, "cpu", MARGIN)
+        if sp["drv"] is not None:
+            fb = np.flatnonzero(z["off_t0"][rows])
+            if len(fb):
+                dr = Hinge(sp["drv"], names, "cpu", MARGIN)
+                fb = torch.as_tensor(fb)
+                road.sdf[fb], road.ok[fb] = dr.sdf[fb], dr.ok[fb]
+        pack = None
+        if P.has_lat:
+            lm = np.load(sp["lat"] / "meta.npz")
+            pack = dict(bins=torch.as_tensor(lm["bins"].astype(np.float32)), points=str(lm["points"]) if "points" in lm.files else "both",
+                        onc=np.load(sp["lat"] / "onc.npy", mmap_mode="r"), soft=np.load(sp["lat"] / "soft.npy", mmap_mode="r"))
+            lat_rows = sp["lat_rows"][rows]
+        m = P.margins(d)
+        M = {k: torch.as_tensor(v[rows], dtype=torch.float32) for k, v in m.items()}
+        keep = {t: torch.as_tensor((P.values("plan", d)[t][rows] > 0) | True) for t in P.terms}
+        if d == "gate":                                       # rows / terms the gate switched off stay off
+            hv = {q: P.values(q, "fixed") for q in ("log", "fut") if q in P.paths}
+            for t in P.terms:
+                bad = np.zeros(len(rows), bool)
+                for q in hv:
+                    bad |= hv[q][t][rows] > 0
+                keep[t] = torch.as_tensor(~bad)
+        okA = torch.as_tensor(z["agent_ok"][rows].astype(bool))
+        okR = torch.as_tensor(z["road_ok"][rows].astype(bool))
+        okL = torch.as_tensor(z["lat_ok"][rows].astype(bool)) if P.has_lat else None
+        Pp = torch.as_tensor(z["plan__P9"][rows, 1:].astype(np.float32))
+        ri = torch.arange(len(rows))
+
+        def f(x, y, psi):
+            xs, ys = shape_only(x, y, psi)
+            P9 = torch.cat([torch.zeros(len(x), 1, 3), torch.stack([xs, ys, psi], -1)], 1)
+            D = torch.einsum("kj,bjc->bkc", torch.as_tensor(interp_at(T41), dtype=torch.float32), P9)
+            bx, vv = boxes_at(ah.box[ri], ah.val[ri], T41)
+            q = box_terms(D, bx, vv)
+            tot = {}
+            tot["agent"] = W["agent"] * torch.maximum((M["ag_c"][:, None] - q["ag_c"]).clamp_min(0), (M["ag_s"][:, None] - q["ag_s"]).clamp_min(0)).mean(1) * okA
+            tot["side"] = W["side"] * (M["sd"][:, None] - q["sd"][:, 1:]).clamp_min(0).mean(1) * okA
+            C, _ = foot(D)
+            tot["road"] = W["road"] * (M["road"][:, None] - sample(road.sdf[ri], C.reshape(len(x), -1, 2))).clamp_min(0).mean(1) * okR
+            if pack is not None:
+                lo = lat_rows >= 0
+                for k in ("onc", "soft"):
+                    v_ = torch.zeros(len(x))
+                    if lo.any():
+                        sdf = nr1_lat.region_m(D[torch.as_tensor(lo)], torch.as_tensor(lat_rows[lo]), pack, k)
+                        v_[torch.as_tensor(lo)] = W[k] * (-sdf - M[k][torch.as_tensor(lo)][:, None]).clamp_min(0).mean(1)
+                    tot[k] = v_ * okL
+            return sum(tot[t] * keep[t] for t in tot)
+        x, y, psi = Pp[..., 0].clone().requires_grad_(True), Pp[..., 1].clone().requires_grad_(True), Pp[..., 2]
+        v0 = f(x, y, psi)
+        v0.sum().backward()
+        gx, gy = x.grad, y.grad
+        nrm = torch.hypot(gx, gy).amax(1, keepdim=True).clamp_min(1e-9)
+        nx, ny = (x - 0.2 * gx / nrm).detach(), (y - 0.2 * gy / nrm).detach()
+        with torch.no_grad():
+            v1 = f(nx, ny, psi)
+        P0, P1 = Pp.numpy(), torch.stack([nx, ny, psi], -1).numpy()
+
+        def arc(Q):
+            Q = np.concatenate([np.zeros((len(Q), 1, 2)), Q[..., :2]], 1)
+            sg = np.hypot(*np.diff(Q, axis=1).transpose(2, 0, 1))
+            return sg.sum(1), sg[:, -1] / 0.5
+        a0, e0 = arc(P0)
+        a1, e1 = arc(P1)
+        dv = (P1 - P0)[..., :2].reshape(len(P0), -1)
+        res = dict(rows=len(rows), la_rows=int(len(la)), term_reduced=float((v1 < v0.detach()).float().mean()),
+                   term_rel_reduction_med=float(np.median(((v0.detach() - v1) / v0.detach().clamp_min(1e-9)).numpy())),
+                   arc_rel_change_med=float(np.median((a1 - a0) / np.maximum(a0, 1e-3))), end_speed_change_med=float(np.median(e1 - e0)))
+        for ref in ("fut", "log"):
+            L = z[f"{ref}__P9"][rows, 1:].astype(np.float64)
+            okr = np.isfinite(L).all((1, 2))
+            to = (L - P0)[..., :2].reshape(len(P0), -1)
+            cos = (dv * to).sum(1) / np.maximum(np.linalg.norm(dv, axis=1) * np.linalg.norm(to, axis=1), 1e-9)
+            d0 = np.linalg.norm((L - P0)[..., :2], axis=2).mean(1)
+            d1 = np.linalg.norm((L - P1)[..., :2], axis=2).mean(1)
+            res[f"toward_{ref}"] = float((cos[okr] > 0).mean())
+            res[f"away_from_{ref}_line"] = float((d1[okr] > d0[okr] + 1e-4).mean())
+        out[d] = res
+        print(a.pool, d, json.dumps(res), flush=True)
+    (O / f"g5_{a.pool}.json").write_text(json.dumps(out, indent=1))
+
+
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -427,8 +891,13 @@ def main():
     s.add_argument("--threads", type=int, default=0)
     s.add_argument("--limit", type=int, default=0)
     sp.add_parser("report")
+    g = sp.add_parser("g5")
+    g.add_argument("--pool", choices=["S", "PAID", "PAIH"], required=True)
+    g.add_argument("--designs", default="fixed,gate,ec_log,ec_wit,ctx")
+    g.add_argument("--n", type=int, default=2000)
+    g.add_argument("--threads", type=int, default=0)
     a = p.parse_args()
-    dict(fwd=cmd_fwd, steps=globals().get("cmd_steps"), report=globals().get("cmd_report"))[a.cmd](a)
+    dict(fwd=cmd_fwd, steps=cmd_steps, report=cmd_report, g5=cmd_g5)[a.cmd](a)
 
 
 if __name__ == "__main__":
