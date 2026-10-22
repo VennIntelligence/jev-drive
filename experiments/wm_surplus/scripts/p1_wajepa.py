@@ -230,7 +230,7 @@ def cmd_merge(a):
     from jevdrive.bench.models import resolve
     import yaml
     toks = yaml.safe_load(open(TP / "navsim/navsim/planning/script/config/common/train_test_split/scene_filter/navtest.yaml"))["tokens"]
-    fs = sorted((OUT / "sweep").glob("s*of*/c*.npz"))
+    fs = sorted((OUT / "sweep").glob("*/c*.npz"))      # batch-1 shards s*of* and batched shards f*of*
     zs = [np.load(f) for f in fs]
     T = np.concatenate([z["tokens"] for z in zs])
     P = np.concatenate([z["poses"] for z in zs], 1)
