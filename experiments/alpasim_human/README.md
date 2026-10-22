@@ -340,9 +340,10 @@ the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in t
 
 - How: `lib/human_driver.py` stays the stack's driver and delegates. Before each request the loop writes `<live>/driver.json` (scene,
   tag, address); a session of that scene forwards start_session, the camera / egomotion / route submissions, drive and close_session
-  to the model driver and returns its trajectory unchanged (no phone, no `HUMAN_TRACK_GATE`). Pacing to real time (after the model
-  call), pause, Next / Restart, the live view, shadow, thumbnails and scoring are the human path's. The scene starts by itself at the
-  hold point. AlpaSim's daemon can also take a driver address per request (`SimulationRequest.available_drivers`), but then the live view,
+  to the model driver and returns its trajectory unchanged (no phone, no `HUMAN_TRACK_GATE`). Pause, Next / Restart, the live view,
+  shadow, thumbnails and scoring are the human path's. The scene starts by itself at the hold point and is not paced: model drives are
+  watched like recordings, so it runs as fast as the stack and the model allow (`HUMAN_MODEL_REALTIME`, default 0; 1.0 paces it to
+  real time after the model call, as before 10-22 evening; a stack setting, so it needs a stack restart). AlpaSim's daemon can also take a driver address per request (`SimulationRequest.available_drivers`), but then the live view,
   pacing and the fast abort would be lost, so it is not used.
 - The model driver (`scripts/model_driver.sh`, container `<prefix>-model`, port 6791, same card): the driver of a submission image
   with the tag's checkpoint mounted, and the image's baked serving switches. PAI uses the p1021a image
@@ -366,17 +367,20 @@ the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in t
 - A driver change takes effect at the next hold point: a loading scene is requested again with the new driver, and a scene being
   driven finishes first.
 - Model view (viewer, default in model mode; M toggles the raw front camera): `lib/model_view.py` wraps the image's own driver and
-  writes what the policy was fed at each decision. It shows the openpilot road and wide model frames of the newest slot (512 x 256 each;
-  PAI: from the rendered 10 Hz frames through the session's f-theta maps; nuPlan: the slots that `sh30_core` synthesises from the 2 Hz
-  keyframes) and the decision's 8 slots on their 0.2 s clock (oldest at the top; dark = invalid). The route (blue), the served trajectory
-  (orange) and the model's own plan before any serving switch (yellow) are drawn in each frame. The tag reads "DRIVER: MODEL <tag>" in
-  teal. The view updates at the decision rate (PAI 10 Hz, nuPlan 2 Hz). It is display only: the hook copies the arrays after the
-  model's call and a separate thread encodes them.
+  writes the widest view the policy gets at each decision: the openpilot wide model frame (512 x 256) at the decision time t0 (PAI: from
+  the rendered 10 Hz frames through the session's f-theta maps; nuPlan: the slot that `sh30_core` synthesises from the 2 Hz keyframes).
+  The viewer scales it into the human view's image area with the human view's overlays: the route (blue, 10 m dots), the served
+  trajectory (orange), the shadow, plus the model's own plan before any serving switch (yellow); gallery and top view as for the human.
+  The tag reads "DRIVER: MODEL <tag>" in teal. The view updates at the decision rate (PAI 10 Hz, nuPlan 2 Hz). It is display only and
+  kept off the decision path: the hook copies only that one frame (196 KB) after the model's call, and a writer thread encodes it (JPEG
+  quality 80) with latest-value semantics, so a decision that arrives while the previous one is being written replaces it.
+  `HUMAN_MODEL_ENV="-e HUMAN_MODEL_VIEW=0"` runs the image's driver without the hook. (Until 10-22 evening it also showed the road
+  frame and the decision's 8 slots; the user wanted the one wide frame.)
 - Scores: a model attempt goes to `done/<scene>@<tag>.json` (`"driver": <tag>`), a human attempt to `done/<scene>.json` (`"driver":
   "human"`). The human score column, the batch means and "Official table"'s human rows read only the human files. The item status
   appends "model <tag> <score> <why>", "Official table" has a separate "Model drives" table with a mean per tag, and the gallery
   labels model drives "MODEL <tag>". Playlist order in model mode skips the scenes that tag has already driven.
-- These reads are for watching, not leaderboard numbers. They run at real-time pacing, front camera only, with one rollout and
+- These reads are for watching, not leaderboard numbers. They run unpaced, front camera only, with one rollout and
   scores from the post-hoc aggregation. A model's local-read scores come from `pai_eval.sh` / `pai_box.sh`.
 - Deferred: a human takeover (disengage by a pedal press).
 - Checked on Tokyo card 1 (2026-10-22, probe prefix `hmt`, its own live dir and ports, scratch runs under `/data/tmp/hm_runs`):

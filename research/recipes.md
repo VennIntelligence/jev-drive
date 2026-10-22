@@ -1,6 +1,6 @@
 # 配方登记表（recipe registry）
 
-2026-10-12 写，覆盖决策 170–264。只汇总，不新增读数：每个数都来自 `research/decisions.md` 的行、`decisions/NNN.md` 页或注明的结果文件。
+2026-10-12 写，覆盖决策 170–264。**2026-10-20 注：此后没有更新，下面「活着的配方」一节已全部过时**（当时的提交 checkpoint YR10m10 已被取代；当前候选与提交见 [decisions.md](decisions.md) 页首现状块：nuPlan B2 `STANDFMXH-L18-s1` 第 391 条，PAI NTV0-L18-s0 + ACC + GAP 第 366 条）。只汇总，不新增读数：每个数都来自 `research/decisions.md` 的行、`decisions/NNN.md` 页或注明的结果文件。
 记号：d### = 决策号；CI 都是 95%（多数为按 log 聚类的 bootstrap，以原文为准）；「推」= 由记录的数算出、原文没写。
 
 ## 先读这几个词（每个只解释一次）

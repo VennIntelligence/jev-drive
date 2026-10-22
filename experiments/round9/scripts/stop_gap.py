@@ -144,8 +144,9 @@ def scene_job(job):
     t_rear = R.t0 + 1e6 * F["rear_t_s"] if F.get("rear_t_s") is not None and np.isfinite(F["rear_t_s"]) else np.nan
     t_end = R.t[-1]
     st_on = stills(R, t_hand)
-    s_hrest = float(R.log_station(np.asarray(o["log"]["P"][-1:], float))[0])
-    sta = lambda t: float(R.log_station(R.pose(t)[None, :2])[0])  # noqa: E731
+    LX = np.vstack([R.LP, R.LP[-1] + np.outer(np.arange(1, 41) * 5.0, np.r_[np.cos(o["log"]["Y"][-1]), np.sin(o["log"]["Y"][-1])])])
+    s_hrest = float(TX.poly_proj(LX, np.asarray(o["log"]["P"][-1:], float))[1][0])
+    sta = lambda t: float(TX.poly_proj(LX, R.pose(t)[None, :2])[1][0])  # noqa: E731   station on the log path extended 200 m
     RT = np.array([r["t"] for r in recs]) if recs else np.zeros(0)
     rec_at = lambda t: recs[int(np.clip(np.searchsorted(RT, t, side="right") - 1, 0, len(recs) - 1))] if len(recs) else {}  # noqa: E731
     row = dict(read=name, scene=s, n_still=len(st_on), s_hrest=s_hrest, f_gap=follower(R), t_ev=(t_ev - R.t0) / 1e6, t_rear=(t_rear - R.t0) / 1e6,
@@ -221,7 +222,8 @@ def cmd_scan(a):
                 rows.append(r), decs.extend(d)
         print(name, len(jobs), "scenes", flush=True)
     if a.limit:
-        print(pd.DataFrame(rows).T.to_string()[:6000]); return
+        X = pd.DataFrame(rows)
+        print(X[X.n_still > 0].T.to_string()[:12000]); print(pd.DataFrame(decs).head(30).to_string()); return
     pd.DataFrame(rows).to_csv(f"{OUT}/scenes.csv", index=False, float_format="%.4f")
     pd.DataFrame(decs).to_csv(f"{OUT}/decs.csv.gz", index=False, float_format="%.3f")
     print("->", OUT)

@@ -52,9 +52,10 @@ submission image with the tag's checkpoint, lib/model_view.py, at driver.json "a
 service does not accept connections yet: state.json "model_wait"), the camera, egomotion and route
 submissions, drive and close_session are forwarded unchanged; the recorded ground truth is not (served runs have it off). The model's
 trajectory is returned as it came back: no phone input, no HUMAN_TRACK_GATE (the model's own served configuration has its own gate).
-Everything else stays: the hold point (released at once unless paused), pause, skip, real-time pacing (after the model call), the live
-view (state.json "driver" = the tag, "plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions
-records carry "driver"). A model error fails the drive call with the model's own status, as it would fail a served rollout.
+Everything else stays: the hold point (released at once unless paused), pause, skip, the live view (state.json "driver" = the tag, "plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions
+records carry "driver"). No pacing: a model session runs as fast as the stack and the model allow (HUMAN_MODEL_REALTIME, default 0,
+paces it as HUMAN_REALTIME paces the human; model drives are watched like recordings, so scenes per hour is what counts). A model
+error fails the drive call with the model's own status, as it would fail a served rollout.
 """
 from __future__ import annotations
 
@@ -83,6 +84,7 @@ FRONT = ("CAM_F0", "camera_front_wide_120fov")
 SIDES = {"left": ("CAM_L0", "camera_cross_left_120fov"), "right": ("CAM_R0", "camera_cross_right_120fov")}
 E = os.environ.get
 RT = float(E("HUMAN_REALTIME", "1.0"))
+RT_MODEL = float(E("HUMAN_MODEL_REALTIME", "0"))                    # model mode: unpaced (watched like a recording)
 HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "throttle")
 FAST_ABORT = E("HUMAN_FAST_ABORT", "0") == "1"
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
@@ -352,7 +354,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                    "sim_s": round((t1 - s.t_first) / 1e6, 2), "driven_sim_s": round(sim, 2), "driven_wall_s": round(w1 - w0, 2),
                    "wall_per_sim": round((w1 - w0 - s.paused_s) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
                    "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept - s.paused_s) / sim, 3) if sim > 0 else None,
-                   "late": s.n_late, "realtime": RT, "aborted": s.aborted, "paused_s": round(s.paused_s, 1),
+                   "late": s.n_late, "realtime": RT if s.model is None else RT_MODEL, "aborted": s.aborted, "paused_s": round(s.paused_s, 1),
                    "shadow_s": round(s.shadow_s, 1), "gt": s.gt is not None, "driver": s.driver}
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
@@ -535,9 +537,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             resp = self._fwd(s, "drive", req, ctx)
             s.model_ms = round(1e3 * (time.time() - t_m), 1)
         slept = 0.0
-        if s.started is not None and RT > 0 and not s.aborted:                       # pace: sim time never runs ahead of wall time x HUMAN_REALTIME
+        rt = RT if s.model is None else RT_MODEL
+        if s.started is not None and rt > 0 and not s.aborted:                       # pace: sim time never runs ahead of wall time x HUMAN_REALTIME
             wall = time.time()
-            target = s.anchor[0] + (now - s.anchor[1]) / 1e6 / RT
+            target = s.anchor[0] + (now - s.anchor[1]) / 1e6 / rt
             if target > wall:
                 slept = target - wall
                 time.sleep(slept)
@@ -582,7 +585,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         R = np.array([[math.cos(yaw), math.sin(yaw)], [-math.sin(yaw), math.cos(yaw)]])
         plan = ((traj_xyv[::4, :2] - [x, y]) @ R.T).round(2).tolist()               # rig frame of the current pose, 0.4 s apart
         self._live(s, {**base, **self._panel(st), "waiting": False, "delta_deg": round(math.degrees(delta), 1), "accel": round(a, 2),
-                       "plan": plan, "wall_per_sim": wps, "realtime": RT, "late": s.n_late,
+                       "plan": plan, "wall_per_sim": wps, "realtime": rt, "late": s.n_late,
                        "unpaced_per_sim": round(((wall - s.started[0]) - s.slept - s.paused_s) / ((now - s.started[1]) / 1e6), 3) if wps else None, "started": s.started is not None,
                        "paused": False, "aborted": s.aborted})
         return egodriver_pb2.DriveResponse(trajectory=traj)

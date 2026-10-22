@@ -8,15 +8,15 @@ pai     the image's experiments/alpasim/lib/pai_driver.py (PAI images: the code 
         session's own f-theta Maps at submit time) and their validity.
 nuplan  the image's sh30_driver.py. Hook: sh30_core.Core.plan, which synthesises the 8 slots on its 0.2 s clock from the 2 Hz keyframes
         and returns them ("cur", "valid").
-Both: only calls made inside the driver's `drive` count (the warm-up passes do not). Per decision, a writer thread (latest value only, so a
-slow disk never delays the model) puts into HUMAN_LIVE (atomic renames):
-  model.jpg        the newest slot (the frame at the decision time t0): road model frame (512 x 256) over the wide one (512 x 256), RGB,
-                   the layout of frame_fill.model_rgb (the human's nuPlan HUMAN_MODEL_VIEW)
-  model_slots.jpg  the 8 slots oldest first, road frame, 256 x 128 each, in one row (the model's 0.2 s slot clock; invalid slots dark)
+Both: only calls made inside the driver's `drive` count (the warm-up passes do not). Per decision the hook copies only the wide model
+frame of the newest slot (the frame at the decision time t0, 196 KB) and a writer thread (latest value only: a decision that arrives
+while the previous one is still being written replaces it, so a slow disk never delays the model) puts into HUMAN_LIVE (atomic renames):
+  model.jpg        the wide model frame at t0 (512 x 256, RGB, quality 80): the widest view the policy gets
   model.json       {t, n, track, tag, valid (8), poses (8, 3: the model's own plan, rear axle x, y, yaw at 0.5 .. 4 s in the t0 frame, before
-                   any serving switch), cam_t, K_road, K_wide, view_from_device}: the viewer projects a rig-frame point p into a model frame
-                   as K @ view_from_device @ ((p - cam_t) * [1, -1, -1])
-Env: HUMAN_LIVE (required), SH30_TAG (the tag, as the drivers read it), JEV_LIB (the image's driver directory).
+                   any serving switch), cam_t, K_wide, view_from_device}: the viewer projects a rig-frame point p into the frame
+                   as K_wide @ view_from_device @ ((p - cam_t) * [1, -1, -1])
+Env: HUMAN_LIVE (required), SH30_TAG (the tag, as the drivers read it), JEV_LIB (the image's driver directory), HUMAN_MODEL_VIEW (1;
+0 = no hook, the image's driver alone: for measuring the view's cost).
 """
 from __future__ import annotations
 
@@ -49,16 +49,17 @@ class View:
 
     def __init__(self, track: str, I):
         self.track, self.I, self.item, self.cv, self.n = track, I, None, threading.Condition(), 0
-        from jevdrive.openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE
-        self.K = {"K_road": MEDMODEL_K.tolist(), "K_wide": SBIGMODEL_K.tolist(), "view_from_device": VIEW_FROM_DEVICE.tolist()}
+        from jevdrive.openpilot.frames import SBIGMODEL_K, VIEW_FROM_DEVICE
+        self.K = {"K_wide": SBIGMODEL_K.tolist(), "view_from_device": VIEW_FROM_DEVICE.tolist()}
         threading.Thread(target=self._run, daemon=True, name="model-view").start()
 
     def put(self, cur, valid, poses, cam_t):
         if not getattr(TLS, "on", False):
             return
         try:
-            cur = cur.cpu().numpy() if hasattr(cur, "cpu") else np.asarray(cur)
-            item = (time.time(), cur.copy(), np.asarray(valid, bool).copy(), np.asarray(poses, float).copy(), list(map(float, cam_t)))
+            w = cur[-1, 1]                                         # newest slot, wide frame: (6, 128, 256) packed YUV420
+            w = w.cpu().numpy() if hasattr(w, "cpu") else np.array(w)
+            item = (time.time(), w, np.asarray(valid, bool).copy(), np.asarray(poses, float).copy(), list(map(float, cam_t)))
         except Exception as e:  # noqa: BLE001  (display only)
             LOG.warning("view put: %r", e)
             return
@@ -80,12 +81,9 @@ class View:
             with self.cv:
                 while self.item is None:
                     self.cv.wait()
-                (t, cur, valid, poses, cam_t), self.item = self.item, None
+                (t, wide, valid, poses, cam_t), self.item = self.item, None
             try:
-                jpg = lambda im: cv2.imencode(".jpg", im, [cv2.IMWRITE_JPEG_QUALITY, 90])[1].tobytes()  # noqa: E731
-                put(LIVE / "model.jpg", jpg(np.vstack([self.rgb(cur[-1, 0]), self.rgb(cur[-1, 1])])))
-                strip = [cv2.resize(self.rgb(c[0]), (256, 128), interpolation=cv2.INTER_AREA) // (1 if v else 4) for c, v in zip(cur, valid)]
-                put(LIVE / "model_slots.jpg", jpg(np.hstack(strip)))
+                put(LIVE / "model.jpg", cv2.imencode(".jpg", self.rgb(wide), [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes())
                 self.n += 1
                 put(LIVE / "model.json", json.dumps({"t": t, "n": self.n, "track": self.track, "tag": os.environ.get("SH30_TAG"),
                                                      "valid": valid.tolist(), "poses": poses.round(3).tolist(), "cam_t": cam_t, **self.K}).encode())
@@ -110,6 +108,9 @@ def in_drive(cls):
 def main():
     track = sys.argv[1]
     LIVE.mkdir(parents=True, exist_ok=True)
+    if os.environ.get("HUMAN_MODEL_VIEW", "1") == "0" and track in ("pai", "nuplan"):   # no hook: the image's driver as it ships
+        __import__("pai_driver" if track == "pai" else "sh30_driver").main()
+        return
     if track == "pai":
         import pai_driver as D
         import pai_core as PC

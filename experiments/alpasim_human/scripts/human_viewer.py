@@ -9,10 +9,10 @@ under the image (speed, applied steering / acceleration, phone bars, scene clock
 (arrows / WASD, Space handbrake; experiments/phone_wheel/lib/keyboard_wheel.py, merged with the phone in the wheel daemon).
 "HARMONIZER ON" shows when the stack renders with the diffusion harmonizer.
 Model mode (README "Model mode"; state.json "driver" = a tag): the tag reads "DRIVER: MODEL <tag>" (teal) and the image area shows the
-model's own view by default: the openpilot road (top) and wide (bottom) model frames of its newest slot as the model driver fed them
-(<live>/model.jpg, model.json from lib/model_view.py), with the route (blue), the served trajectory (orange) and the model's own plan
-before any serving switch (yellow) projected into each frame, and the 8 policy slots of that decision beside them (model_slots.jpg, oldest
-at the top, 0.2 s apart; dark = invalid). M toggles back to the raw front camera (the human's view).
+model's own view by default: the widest frame the policy gets, the openpilot wide model frame at the decision time t0 as the model driver
+fed it (<live>/model.jpg, model.json from lib/model_view.py), scaled into the same image area as the human view with the same overlays
+(route with its 10 m dots, the served trajectory orange, the shadow) plus the model's own plan before any serving switch (yellow).
+M toggles back to the raw front camera (the human's view).
 
 Layout: derived from the window's aspect (canvas 1120 units high). The image takes the full height left by the top bar, the strip and a
 one-line legend; the right column is the scene gallery: every finished scene of the panel run (<run>/done/*.json, run from
@@ -93,14 +93,6 @@ def uvs(pts, cal):
     return uv
 
 
-def project(pts, cal):
-    """uvs() of the points in view only, else []."""
-    if cal is None or not np.asarray(pts).size:
-        return np.zeros((0, 2))
-    uv = uvs(pts, cal)
-    return uv[np.isfinite(uv).all(1)]
-
-
 def dense(xy, step=1.0):
     """Resample a polyline (n, >= 2 columns, arc length from the first two) every `step` m; the other columns are interpolated."""
     xy = np.asarray(xy, float)
@@ -159,31 +151,32 @@ def ghost_corners(g, z=True):
     return [[x + c * a - s * b, y + s * a + c * b, gz + hz] for hz in (0.0, 1.5) for a, b in fp]
 
 
-def overlay(img, st, cal, font, shadow_on):
-    """Route (blue line, 10 m dots, the nearest visible one labelled), the 4 s plan (orange) and the shadow drawn in the native image."""
-    if cal is None:
-        return
-    sc = img.get_width() / cal["spec"]["native"][0]
+def overlay(img, st, uvf, sc, font, shadow_on, lw=None, extra=()):
+    """Route (blue line, 10 m dots, the nearest visible one labelled), the 4 s plan (orange), `extra` (xy, colour, width) polylines and the
+    shadow drawn into img. uvf: rig-frame points (n, 3) -> pixels of the source image (NaN where not in view); sc: source px -> img px;
+    lw: line width scale (default sc: widths are for a 1920 px wide image)."""
+    lw = sc if lw is None else lw
     W, H = img.get_size()
-    for xy, col, wdt in ((st.get("plan") or [], ORANGE, 6), (st.get("route") or [], BLUE, 9)):
+    seen = lambda P: (lambda uv: uv[np.isfinite(uv).all(1)])(uvf(np.asarray(P, float).reshape(-1, 3)))  # noqa: E731
+    for xy, col, wdt in ((st.get("plan") or [], ORANGE, 6), (st.get("route") or [], BLUE, 9)) + tuple(extra):
         d = dense(xy, 0.5)
         if len(d) < 2:
             continue
-        uv = project(np.c_[d, np.zeros(len(d))], cal) * sc
+        uv = seen(np.c_[d[:, :2], np.zeros(len(d))]) * sc
         if len(uv) > 1:
-            pygame.draw.lines(img, col, False, [tuple(p) for p in uv], max(2, int(wdt * sc)))
+            pygame.draw.lines(img, col, False, [tuple(p) for p in uv], max(2, int(wdt * lw)))
     sh = st.get("shadow") if shadow_on else None
     if sh and len(sh.get("path") or []) > 1:
         P = dense(sh["path"], 0.5)
-        uv = uvs(P[:, :3], cal) * sc
+        uv = uvf(P[:, :3]) * sc
         for a, b, kmh in zip(uv[:-1], uv[1:], P[:-1, 3]):
             if np.isfinite(a).all() and np.isfinite(b).all():
-                pygame.draw.line(img, speed_col(kmh), tuple(a), tuple(b), max(2, int(5 * sc)))
+                pygame.draw.line(img, speed_col(kmh), tuple(a), tuple(b), max(2, int(5 * lw)))
     if sh and sh.get("ghost"):
-        uv = uvs(ghost_corners(sh["ghost"]), cal) * sc
+        uv = uvf(np.asarray(ghost_corners(sh["ghost"]), float)) * sc
         for i, j in [(i, (i + 1) % 4) for i in range(4)] + [(4 + i, 4 + (i + 1) % 4) for i in range(4)] + [(i, i + 4) for i in range(4)]:
             if np.isfinite(uv[i]).all() and np.isfinite(uv[j]).all():
-                pygame.draw.line(img, GHOST, tuple(uv[i]), tuple(uv[j]), max(2, int(4 * sc)))
+                pygame.draw.line(img, GHOST, tuple(uv[i]), tuple(uv[j]), max(2, int(4 * lw)))
         top = uv[4:][np.isfinite(uv[4:]).all(1)]
         if len(top):
             t = font.render("LOG", True, GHOST)
@@ -194,56 +187,42 @@ def overlay(img, st, cal, font, shadow_on):
         for m in range(10, 130, 10):
             k = int(np.argmin(np.abs(dist - m)))
             if abs(dist[k] - m) < 0.6:
-                uv = project([[d[k, 0], d[k, 1], 0.0]], cal) * sc
+                uv = seen([[d[k, 0], d[k, 1], 0.0]]) * sc
                 if len(uv):
                     u, v = map(int, uv[0])
-                    pygame.draw.circle(img, BLUE, (u, v), max(4, int(14 * sc)))
-                    pygame.draw.circle(img, WHITE, (u, v), max(4, int(14 * sc)), 2)
+                    pygame.draw.circle(img, BLUE, (u, v), max(4, int(14 * lw)))
+                    pygame.draw.circle(img, WHITE, (u, v), max(4, int(14 * lw)), 2)
                     if not labelled and 0 <= u < W and 0 <= v < H:
-                        img.blit(font.render("%d m" % m, True, WHITE), (u + int(18 * sc), v - 12))
+                        img.blit(font.render("%d m" % m, True, WHITE), (u + int(18 * lw), v - 12))
                         labelled = True
 
 
-def model_uv(pts, mj, wide):
-    """Rig-frame points (n, 3) -> pixels (n, 2) of the 512 x 256 road / wide model frame (model_view.py's convention), NaN behind 1 m."""
+def model_uv(pts, mj, size=(512, 256)):
+    """Rig-frame points (n, 3) -> pixels (n, 2) of the 512 x 256 wide model frame (model_view.py's convention), NaN behind 1 m or far
+    outside the frame (as uvs)."""
     P = np.asarray(pts, float).reshape(-1, 3)
     d = (P - np.asarray(mj["cam_t"], float)) * [1.0, -1.0, -1.0]                  # rig (x fwd, y left, z up) -> device (x fwd, y right, z down)
-    q = d @ (np.asarray(mj["K_wide" if wide else "K_road"]) @ np.asarray(mj["view_from_device"])).T
+    q = d @ (np.asarray(mj["K_wide"]) @ np.asarray(mj["view_from_device"])).T
+    w, h = size
     with np.errstate(all="ignore"):
         uv = q[:, :2] / q[:, 2:]
-    uv[(q[:, 2] <= 1.0) | ~np.isfinite(uv).all(1)] = np.nan
+        uv[(q[:, 2] <= 1.0) | ~np.isfinite(uv).all(1) | ~((uv[:, 0] > -w) & (uv[:, 0] < 2 * w) & (uv[:, 1] > -h) & (uv[:, 1] < 2 * h))] = np.nan
     return uv
 
 
-def draw_model(c, R, st, mj, img, slots, font, small):
-    """Model mode: the model's road / wide frames (img, 512 x 512) with route / served plan / own plan, and its 8 slots (strip) to the right."""
-    k = R.h / 512.0
-    x0 = R.x
-    for j, wide in enumerate((False, True)):
-        f = pygame.transform.smoothscale(img.subsurface((0, 256 * j, 512, 256)), (int(512 * k), int(256 * k)))
-        own = [[p[0], p[1]] for p in mj.get("poses") or []]
-        for xy, col, wdt in ((st.get("route") or [], BLUE, 5), (st.get("plan") or [], ORANGE, 4), ([[0.0, 0.0]] + own, YEL, 2)):
-            d = dense(xy, 0.5)
-            if len(d) < 2:
-                continue
-            uv = model_uv(np.c_[d, np.zeros(len(d))], mj, wide) * k
-            seg = [tuple(p) for p in uv if np.isfinite(p).all() and -2 * f.get_width() < p[0] < 3 * f.get_width()]
-            if len(seg) > 1:
-                pygame.draw.lines(f, col, False, seg, wdt)
-        c.blit(f, (x0, R.y + int(256 * k) * j))
-        c.blit(small.render("model %s frame (512 x 256, as fed)" % ("wide" if wide else "road"), True, TEAL), (x0 + 8, R.y + int(256 * k) * j + 6))
-    if slots is not None:
-        sh = R.h // 8
-        sw = sh * 2
-        xs = x0 + int(512 * k) + 8
-        for i in range(8):
-            t = pygame.transform.smoothscale(slots.subsurface((256 * i, 0, 256, 128)), (sw, sh - 4))
-            c.blit(t, (xs, R.y + i * sh))
-            c.blit(small.render("t0 - %.1f s" % (0.2 * (7 - i)) if i < 7 else "t0", True, WHITE), (xs + 4, R.y + i * sh + 2))
-        c.blit(small.render("slots", True, TEAL), (xs + sw + 6, R.y + 4))
+def draw_model(c, R, st, mj, img, big, small, shadow_on):
+    """Model mode: the wide model frame at t0 (img, 512 x 256) fitted into the image area R, with the human view's overlays (route,
+    served trajectory, shadow) and the model's own plan (yellow)."""
+    f = fit(img, R.w, R.h)
+    own = [[0.0, 0.0]] + [[p[0], p[1]] for p in mj.get("poses") or []]
+    overlay(f, st, lambda P: model_uv(P, mj, img.get_size()), f.get_width() / img.get_width(), big, shadow_on,
+            lw=f.get_width() / 1920.0, extra=((own, YEL, 4),))
+    x0, y0 = R.x + (R.w - f.get_width()) // 2, R.y + (R.h - f.get_height()) // 2
+    c.blit(f, (x0, y0))
+    c.blit(small.render("model wide frame at t0 (512 x 256, as fed)", True, TEAL), (x0 + 8, y0 + 6))
     age = time.time() - mj.get("t", 0)
     c.blit(small.render("yellow: the model's own plan   orange: served trajectory   decision %d, %.1f s ago" % (mj.get("n", 0), age),
-                        True, TEAL if age < 1.5 else RED), (x0 + 8, R.bottom - 26))
+                        True, TEAL if age < 1.5 else RED), (x0 + 8, y0 + f.get_height() - 26))
 
 
 def bar(c, x, y, w, h, v, col, centered=False):
@@ -418,13 +397,14 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
     pygame.draw.rect(c, (0, 0, 0), R)
     if mview:
         try:
-            draw_model(c, R, st, mj, imgs["model"], imgs.get("model_slots"), font, small)
+            draw_model(c, R, st, mj, imgs["model"], big, small, shadow_on and status == "LIVE")
         except Exception:  # noqa: BLE001  (a malformed frame must not take the window down)
             pass
     elif front is not None:
         f = front.copy()
         try:
-            overlay(f, st, cal, big, shadow_on and status == "LIVE")
+            if cal is not None:
+                overlay(f, st, lambda P: uvs(P, cal), f.get_width() / cal["spec"]["native"][0], big, shadow_on and status == "LIVE")
         except Exception:  # noqa: BLE001  (a calibration surprise must not take the window down)
             pass
         f = fit(f, R.w, R.h)
@@ -436,7 +416,7 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
     if st.get("route") and status == "LIVE":
         code, text, dist = maneuver(st["route"])
         head = big.render(text + ("" if dist is None else "  in %d m" % dist), True, WHITE)
-        bw, cx = head.get_width() + 140, R.x + R.h // 2 if mview else R.centerx      # model view: over the model frames
+        bw, cx = head.get_width() + 140, R.centerx
         pygame.draw.rect(c, (0, 0, 0), (cx - bw // 2, R.y + 36, bw, 84), border_radius=10)
         arrow(c, code, (cx - bw // 2 + 60, R.y + 78), 34, WHITE if code in (1, 2) else GREY)
         c.blit(head, (cx - bw // 2 + 115, R.y + 78 - head.get_height() // 2))
@@ -501,7 +481,7 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
         lab("MODEL", (x2, y0), LBL)
         lab(st["driver"], (x2, y0 + 26), TEAL, big)
         v = (mj or {}).get("valid") or []
-        lab("view: %s (M toggles)   slots valid %d of %d" % ("model frames" if mview else "raw camera", sum(v), len(v)), (x2, y0 + 80), GREY, small)
+        lab("view: %s (M toggles)   slots valid %d of %d" % ("model wide frame" if mview else "raw camera", sum(v), len(v)), (x2, y0 + 80), GREY, small)
     else:
         lab("wheel %+.1f deg (+ left)" % (st.get("delta_deg") or 0), (x1 + 210, y0 + 30))
         lab("accel %+.1f m/s^2" % (st.get("accel") or 0), (x1 + 210, y0 + 60))
@@ -595,7 +575,7 @@ def main():
         status = "BETWEEN" if st.get("closed") and age < 120 else ("LIVE" if st and age < 10 and not st.get("closed") else "IDLE")
         imgs = {k: load(os.path.join(a.dir, k + ".jpg"), cache) for k in ("front", "left", "right")} if st else {}
         if (st.get("driver") or "human") != "human":                # model mode: the model's own frames (lib/model_view.py)
-            imgs.update({k: load(os.path.join(a.dir, k + ".jpg"), cache) for k in ("model", "model_slots")})
+            imgs["model"] = load(os.path.join(a.dir, "model.jpg"), cache)
             try:
                 m = os.stat(os.path.join(a.dir, "model.json")).st_mtime_ns
                 if m != mj_m:
