@@ -1,6 +1,6 @@
 # P1 level (a) pre-registration: how many feature directions does WA-JEPA's planner read? (2026-10-22, before any GPU job)
 
-Decision row: 454 (reserved). Paper: d452, research/paper-outline section 3.2 (P1).
+Decision row: PD5 in research/paper/decisions.md (paper decisions). Paper: PD1, research/paper-outline section 3.2 (P1).
 
 ## Subject and feature site
 
