@@ -59,3 +59,11 @@ JTN 配方从 RB0-F-s0、池 on1_JTX（JTX00，on-k 70）、STAND W_S 0.0068、F
 - 分段：闸（60 步）先于训练；训练是同一配方的已知长度（B2 跑过两次），不另做 1 → 10 分段。任何闸失败、或累计超过 15 卡时：停线报告。
 - 优先级：训练 20、读数 19（低于 PAI-BASE 的 21，不抢 R9DL 已排的作业）。
 - 决定行只在核实的判定之后写。
+
+## 补记 1（10-22 18:10，恒等闸作业失败后，任何训练与读数之前）
+
+恒等闸的旧代码 run（5858f899 工作树）在读池时报错：`on1_JTX@warp` 已于 10-21 经用户批准换成零拷贝索引（`front.parts.json`，没有 `front.npy`），
+5858f899 的 `pp_train.open_front` 打不开（找 `ticks.npy`）。这不是数值不一致，是旧代码读不了现在的盘。改法：旧工作树里只把 `open_front` 对
+`front.parts.json` 的分支接到 HEAD 的 `jevdrive.tokens.open_front`（零拷贝检查 `cl_infra/results/zero-copy` 已证每行、每种 gather、60 步训练逐位相同），
+B2 训练逻辑其余全是 5858f899。闸的含义不变（B2 的命令在旧代码与 HEAD 上 60 步逐位相同）。整条链用 `RETRY=1 nupb.sh launch` 重新提交（第一次的训练、
+读数作业都已随闸失败，没有任何输出）。

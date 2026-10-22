@@ -39,11 +39,23 @@ check)
         || die "$a: not tag + init only"; done; } > $RES/cmd_diff.txt || exit 1
   cat $RES/cmd_diff.txt; echo "diff ok" ;;
 launch)
-  [[ ! -e $O/DONE ]] || die "already ran"; for a in $ARMS NPBGG-old NPBGG-new NPBSM; do [[ $a == NPB* ]] && x=$a || x=$(tag $a)
+  [[ ! -e $O/DONE ]] || die "already ran"; [[ -n ${RETRY:-} ]] && rm -rf $RUNS/NPBGG-old $RUNS/NPBGG-new $RUNS/NPBSM   # relaunch after a failed gate
+  for a in $ARMS NPBGG-old NPBGG-new NPBSM; do [[ $a == NPB* ]] && x=$a || x=$(tag $a)
     [[ ! -e $RUNS/$x ]] || die "$x exists"; done
   for t in $REFS RB0-P70-s0 RB0-P30-s0; do [[ -s $RUNS/$t/ckpt-final.pt ]] || die "no $t"; done
   bash $ME check > /dev/null || exit 1
   WT=$DATA_DIR/tmp/df_old_$REV; [[ -d $WT ]] || git worktree add --detach $WT $REV > /dev/null || die "worktree $REV"
+  # addendum 1: on1_JTX is a zero-copy pool since 10-21 (front.parts.json, no front.npy), which 5858f899 cannot open; the old tree opens that
+  # manifest through HEAD's jevdrive.tokens.open_front (bitwise equal to the copied pool, cl_infra/results/zero-copy); nothing else changes
+  cp jevdrive/tokens.py $WT/jevdrive/tokens.py && python3 - $WT/experiments/op_parity/scripts/pp_train.py <<'PY' || die "old tree patch"
+import sys
+p = sys.argv[1]; s = open(p).read()
+a = '    return np.load(f, mmap_mode="r") if f.exists() else IndexedMM(f.parent)\n'
+b = ('    return np.load(f, mmap_mode="r") if f.exists() else __import__("jevdrive.tokens", fromlist=["open_front"]).open_front(f) '
+     'if (f.parent / "front.parts.json").exists() else IndexedMM(f.parent)  # nupb addendum 1\n')
+assert s.count(a) == 1 or s.count(b) == 1, "open_front line"
+open(p, "w").write(s.replace(a, b))
+PY
   h=$(git rev-parse --short HEAD); echo "$h launch" >> $O/code.txt; FE=("${TRN[@]}" --env JEV_RM_EAGER=1 --timeout-h 1)
   a=$(sub 20 nupb-gg-old "${FE[@]}" -- bash -c "cd $WT && $(cmd b2s0 NPBGG-old 60 50)") || exit 1      # the old code runs from its worktree
   b=$(sub 20 nupb-gg-new "${FE[@]}" -- bash -c "$(cmd b2s0 NPBGG-new 60 50)") || exit 1
