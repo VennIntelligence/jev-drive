@@ -468,7 +468,7 @@ def agent_stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: s
                          ram=float(c.get("ram", 32)), env=agent_env(c), tries=2))
     S.append(R.Stage("merge", R.stage_cmd("jev", "agent-merge", m.spec, bench, run_dir, subset), done=str(preds_of(m, bench, run_dir)),
                      vram=0.5, cpu=2, ram=8, after=[s.name for s in S]))
-    n = shards or default_shards()
+    n = max(1, min(shards or default_shards(), len(ul), -(-len(toks) // 400)))   # never an empty shard (an empty token filter = no filter)
     thr = max(4, min(16, int(R_cores() // max(n, 1)) - 1))
     for i in range(n):
         S.append(R.Stage(f"score{i}of{n}", R.stage_cmd("jev", "navsim-score", m.spec, bench, run_dir, i, n, subset),

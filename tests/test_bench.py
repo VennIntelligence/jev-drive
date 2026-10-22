@@ -299,7 +299,7 @@ class TestAgentFamily(TmpData):
         with mock.patch.object(NV, "navsim_tokens", return_value=(toks, logs)), mock.patch.object(NV, "R_cores", return_value=24.0):
             st = NV.stages(m, "navtest", run, shards=2)
             names = [x.name for x in st]
-            self.assertEqual(names, ["poses0of1", "merge", "score0of2", "score1of2", "score_v1", "collect"])  # min_chunk 200 -> 1 chunk
+            self.assertEqual(names, ["poses0of1", "merge", "score0of1", "score_v1", "collect"])  # 1 chunk, 1 shard (no empty shards)
             cmd = st[0].cmd
             self.assertTrue(cmd[0].endswith("envs/p0-recogdrive/bin/python") and cmd[1].endswith("agent_poses.py"))
             self.assertEqual(json.loads(cmd[cmd.index("--sensors") + 1]), {"lidar_pc": False})
@@ -309,7 +309,7 @@ class TestAgentFamily(TmpData):
             self.assertEqual(st[0].env["PYTHONPATH"], str(self.D / "third_party/recogdrive"))
             self.assertEqual(st[0].env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"], "1")
             self.assertEqual((run / "poses/c0of1.tsv").read_text().split("\n")[0], "t0\ta")
-            self.assertEqual(st[-1].after, ["score0of2", "score1of2", "score_v1"])
+            self.assertEqual(st[-1].after, ["score0of1", "score_v1"])
             np.savez(run / "poses/c0of1.npz", tokens=toks[::-1], poses=np.arange(6 * 24, dtype=np.float32).reshape(6, 8, 3)[::-1], wall_s=3.0)
             NV.agent_merge("ReCogDrive-2B-RL", "navtest", str(run))
         z = np.load(NV.preds_of(m, "navtest", run))
