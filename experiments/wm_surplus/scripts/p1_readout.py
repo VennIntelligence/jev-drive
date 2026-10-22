@@ -57,40 +57,60 @@ def main():
         r["ev_navtrain"] = ev.get("explained_navtrain", {}).get(x)
         r["ev_navtest"] = ev.get("explained_navtest", {}).get(x)
         r["plan_shift_m"] = ev.get("plan_shift_vs_off_m", {}).get(x)
+        r["ev_readin"] = ev.get("explained_readin", {}).get(x)
+        r["norm_ratio"] = ev.get("norm_ratio", {}).get(x)
         rows.append(r)
     T = pd.DataFrame(rows)
     pd1 = v1_table(a, spec, out) if a.v1 else None
     if pd1 is not None:
         T = T.merge(pd1, on="arm", how="left")
-    T["k"] = pd.to_numeric(T.arm.str.extract(r"^k(\d+)$")[0], errors="coerce")
-    T = T.sort_values("k", na_position="last")
+    # arms k<k> (the protocol) or <variant>-k<k> (projection variants, one k95 / k99 set per variant)
+    m = T.arm.str.extract(r"^(?:([A-Za-z]\w*)-)?k(\d+)$")
+    T["group"], T["k"] = m[0].fillna(""), pd.to_numeric(m[1], errors="coerce")
+    T = T.sort_values(["group", "k"], na_position="last")
+    b1 = float(pd1.attrs["ref_PDMS"]) if pd1 is not None else None
+    kq = {}
+    for g in dict.fromkeys(T.group):
+        G = T[(T.group == g) & T.k.notna()]
+        pre = f"{g}_" if g else ""
 
-    def first(mask):
-        s = T.k[mask & T.k.notna()]
-        return int(s.iloc[0]) if len(s) else None
-    # k95 / k99 per the pre-registration: point (retained >= q) and CI-backed (CI lower bound of the difference >= -(1-q) x base)
-    kq = {f"k{int(q * 100)}_point": first(T.retained >= q) for q in (0.95, 0.99)}
-    kq |= {f"k{int(q * 100)}_ci": first(T.lo >= -(1 - q) * base) for q in (0.95, 0.99)}
-    if pd1 is not None:
-        b1 = float(pd1.attrs["ref_PDMS"])
-        kq |= {f"PDMS_k{int(q * 100)}_point": first(T.PDMS / b1 >= q) for q in (0.95, 0.99)}
-        kq |= {f"PDMS_k{int(q * 100)}_ci": first(T.dPDMS_lo >= -(1 - q) * b1) for q in (0.95, 0.99)}
+        def first(mask):
+            s = G.k[mask]
+            return int(s.iloc[0]) if len(s) else None
+        # k95 / k99 per the pre-registration: point (retained >= q) and CI-backed (CI lower bound of the difference >= -(1-q) x base)
+        kq |= {f"{pre}k{int(q * 100)}_point": first(G.retained >= q) for q in (0.95, 0.99)}
+        kq |= {f"{pre}k{int(q * 100)}_ci": first(G.lo >= -(1 - q) * base) for q in (0.95, 0.99)}
+        if pd1 is not None:
+            kq |= {f"{pre}PDMS_k{int(q * 100)}_point": first(G.PDMS / b1 >= q) for q in (0.95, 0.99)}
+            kq |= {f"{pre}PDMS_k{int(q * 100)}_ci": first(G.dPDMS_lo >= -(1 - q) * b1) for q in (0.95, 0.99)}
+    extra = T.ev_readin.notna().any()
     summ = dict(tag=a.tag, ref=a.ref, ref_EPDMS=base, ref_PDMS=None if pd1 is None else float(pd1.attrs["ref_PDMS"]), **kq, ref_subscores={k: float(A.loc[a.ref, k]) for k in
                 ("NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC")}, ev=ev)
     T.to_csv(out / "p1_readout.csv", index=False)
     (out / "p1_readout.json").write_text(json.dumps(summ, indent=1))
     lines = [f"# P1 usage read-out: {a.tag} (ref arm `{a.ref}` EPDMS {base:.2f})", "",
-             "| arm | EPDMS | retained | d vs off [95 % CI] | NC | DAC | DDC | TLC | EP | TTC | LK | HC | EC | EV navtrain | EV navtest | plan shift m |",
-             "|---|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+             "| arm | EPDMS | retained | d vs off [95 % CI] | NC | DAC | DDC | TLC | EP | TTC | LK | HC | EC | EV navtrain | EV navtest | plan shift m |"
+             + (" EV read-in | norm ratio |" if extra else ""),
+             "|---|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|" + ("--:|--:|" if extra else "")]
     f = lambda v, p=3: "" if v is None or v != v else f"{v:.{p}f}"  # noqa: E731
     for r in T.itertuples():
         lines.append(f"| {r.arm} | {r.EPDMS:.2f} | {r.retained:.4f} | {r.d:+.2f} [{r.lo:+.2f}, {r.hi:+.2f}] | "
                      + " | ".join(f"{getattr(r, k):.2f}" for k in ("NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC"))
-                     + f" | {f(r.ev_navtrain)} | {f(r.ev_navtest)} | {f(r.plan_shift_m)} |")
+                     + f" | {f(r.ev_navtrain)} | {f(r.ev_navtest)} | {f(r.plan_shift_m)} |"
+                     + (f" {f(r.ev_readin)} | {f(r.norm_ratio)} |" if extra else ""))
     if pd1 is not None:
         lines += ["", f"NAVSIM v1.1 PDMS (ref arm `{a.ref}` {pd1.attrs['ref_PDMS']:.2f}; same poses):", "",
                   "| arm | PDMS | d vs off [95 % CI] |", "|---|--:|---|"]
         lines += [f"| {r.arm} | {r.PDMS:.2f} | {r.dPDMS:+.2f} [{r.dPDMS_lo:+.2f}, {r.dPDMS_hi:+.2f}] |" for r in T.itertuples()]
+    groups = list(dict.fromkeys(T.group))
+    if len(groups) > 1:
+        lines += ["", "Smallest k per variant (`` = the protocol's PCA arms; point = retained >= q, CI = CI lower bound >= -(1-q) x ref):", "",
+                  "| variant | EPDMS k95 point / CI | EPDMS k99 point / CI |" + (" PDMS k95 point / CI | PDMS k99 point / CI |" if pd1 is not None else ""),
+                  "|---|---|---|" + ("---|---|" if pd1 is not None else "")]
+        for g in groups:
+            pre = f"{g}_" if g else ""
+            cell = lambda m, q: f"{kq.get(f'{pre}{m}k{q}_point')} / {kq.get(f'{pre}{m}k{q}_ci')}"  # noqa: E731
+            lines.append(f"| {g or 'pca (protocol)'} | {cell('', 95)} | {cell('', 99)} |" + (f" {cell('PDMS_', 95)} | {cell('PDMS_', 99)} |" if pd1 is not None else ""))
     lines += ["", "k95 / k99 (pre-registered): " + ", ".join(f"{k} = {v}" for k, v in kq.items()),
               "", "Paired CIs: per-token EPDMS x 100, cluster bootstrap over navtest logs (B 10000, seed 0); bench tables "
               "`navtest_{arms,paired,shapley,strata}.md` in this directory."]

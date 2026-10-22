@@ -430,13 +430,14 @@ def sweep(probes, S, fn, ks) -> dict:
     out = {}
     try:
         for k in ks:
-            for p in probes:
-                p.k = None if k is None else min(k, p.basis.U.shape[0])
-            out[k] = fn()
+            for i, p in enumerate(probes):
+                # an int k projects onto the probe's top-k PCA directions; a (name, fns) arm applies fns[i] to probe i
+                p.k = k[1][i] if isinstance(k, tuple) else None if k is None else min(k, p.basis.U.shape[0])
+            out[k[0] if isinstance(k, tuple) else k] = fn()
             if k is None:
                 out["_pooled"] = pooled(S)
                 for p in (p for p in probes if p.basis is not None):
-                    for key, v in p.basis.energy(p.cache, [x for x in ks if x is not None]).items():
+                    for key, v in p.basis.energy(p.cache, [x for x in ks if isinstance(x, int)]).items():
                         p.energy[key] = p.energy.get(key, 0.0) + v
     finally:
         for p in probes:
@@ -573,9 +574,202 @@ def cmd_merge(a):
     print(json.dumps(ev, indent=1))
 
 
+# ---------------------------------------------------------------- projection-artifact controls (variants)
+# Same tokens, folds, cross-fitted PCAs and k grid as `sweep`; each token's producer (the LM) runs once and every variant x k
+# arm reuses the cached feature (UP.Projector). Outputs under <out_dir>/variants/; bench arms PROBE-<tag>-<variant>-k<k>.
+VAR_DEFAULT = ("cnorm", "norm", "rand", "std", "wpca")
+
+
+def read_in(model: str, agent) -> torch.Tensor:
+    """The planner's linear read-in of the site (m x D, fp32 on the card): ReCogDrive's DiT sees the LM hidden state only
+    through action_head.feature_encoder = nn.Linear(D, 384) (get_action: vl_embeds = feature_encoder(vl_features))."""
+    if model == "ReCogDrive-2B-RL":
+        return agent.action_head.feature_encoder.weight.detach().float()
+    raise SystemExit(f"no linear read-in known for {model}")
+
+
+def projectors(model, agent, pcas, variants) -> dict:
+    W = read_in(model, agent)
+    return {v: [UP.Projector(q, v, "cuda", W=W.double().cpu().numpy()) for q in pcas] for v in variants}, W
+
+
+def variant_arms(prj: dict, ks) -> list:
+    """[(name, [fn per probe])] per variant x k; k grid of the original sweep, clamped to the variant's rank (wpca: k < kmax,
+    then kmax)."""
+    arms = []
+    for v, ps in prj.items():
+        km = ps[0].kmax
+        for k in [k for k in ks if k < km] + ([km] if km <= max(ks) else []):
+            arms.append((f"{v}-k{k}", [lambda x, p=p, k=k: p.project(x, k) for p in ps]))
+    return arms
+
+
+def cmd_vgate(a):
+    """Identity gate for the variant run: G1 hook off == no hook, G4 determinism, G3 / G5 sweep arm off == no hook and
+    repeatable, P0 Projector('pca') == the original projection bit for bit, R full-rank arm of every variant vs plain."""
+    c, cfg, agent = build(a.model)
+    toks, logs = navtest_tokens()
+    sel = list(range(0, len(toks), max(1, len(toks) // a.n)))[: a.n]
+    T = [toks[i] for i in sel]
+    L = loader(c, cfg, agent, T, [logs[i] for i in sel])
+    pcas = load_pcas(a.model, 0)
+    prj, W = projectors(a.model, agent, pcas, a.variants)
+    full = [(f"{v}-full", [lambda x, p=p: p.project(x, p.kmax) for p in ps]) for v, ps in prj.items()]
+    plain, again, hooked, swept, swept2, R = [], [], [], [], [], {n: [] for n, _ in full}
+    p0 = []
+    t0 = time.time()
+    for t in T:
+        plain.append(call(agent, L, t))
+        again.append(call(agent, L, t))
+    t_plain = (time.time() - t0) / (2 * len(T))
+    S = site(a.model, agent)
+    t_arm = []
+    with S:
+        probes = [UP.Probe(S, f"f{i}").__enter__() for i in range(S.n)]
+        try:
+            for t in T:
+                hooked.append(call(agent, L, t, S))
+                t1 = time.time()
+                r = sweep(probes, S, lambda: call(agent, L, t), [None] + full)
+                t_arm.append((time.time() - t1 - t_plain) / len(full))
+                swept.append(r[None])
+                for n, _ in full:
+                    R[n].append(r[n])
+                swept2.append(sweep(probes, S, lambda: call(agent, L, t), [None])[None])
+                x = S.pick(S.memo)[0]
+                b, pp = UP._Basis(pcas[0], "cuda"), UP.Projector(pcas[0], "pca", "cuda")
+                p0.append(all(torch.equal(b.project(x, k), pp.project(x, k)) for k in (8, 64, 512, 1024)))
+        finally:
+            for p in probes:
+                p.__exit__()
+    xy = lambda A, B: float(np.mean([np.abs(np.asarray(x)[:, :2] - np.asarray(y)[:, :2]).mean() for x, y in zip(A, B)]))  # noqa: E731
+    g = dict(model=a.model, n=len(T), variants=list(prj), kmax={v: ps[0].kmax for v, ps in prj.items()}, read_in_shape=list(W.shape),
+             s_per_token_plain=t_plain, s_per_cached_arm=float(np.mean(t_arm)),
+             G1_off_vs_nohook=UP.identity_gate(plain, hooked), G4_determinism=UP.identity_gate(plain, again),
+             G5_sweep_determinism=UP.identity_gate(swept, swept2), G3_sweep_off_vs_nohook=UP.identity_gate(plain, swept),
+             P0_projector_pca_equals_original=bool(all(p0)),
+             R={n: dict(max_abs_m=max(UP.max_abs_diff(x, y) for x, y in zip(plain, v)), mean_abs_xy_m=xy(plain, v)) for n, v in R.items()})
+    g["R_tol_mean_abs_xy_m"] = G3_TOL_M
+    g["passed"] = all(g[k]["bit_identical"] for k in ("G1_off_vs_nohook", "G4_determinism", "G5_sweep_determinism", "G3_sweep_off_vs_nohook")) \
+        and g["P0_projector_pca_equals_original"] and all(v["mean_abs_xy_m"] <= G3_TOL_M for v in g["R"].values())
+    d = out_dir(a.model) / "variants"
+    d.mkdir(exist_ok=True)
+    (d / "gate.json").write_text(json.dumps(g, indent=1))
+    print(json.dumps(g, indent=1))
+    if not g["passed"]:
+        sys.exit("variant identity gate failed")
+
+
+def cmd_vsweep(a):
+    """`sweep` with the variant arms: navtest shard I of N, a token of fold g uses the other fold's PCA; also the
+    projection diagnostics (residual energy in input and read-in space, norm ratio) of every variant incl. the original pca."""
+    c, cfg, agent = build(a.model)
+    toks, logs = navtest_tokens()
+    fo = fold_of_logs(logs)
+    idx = list(range(a.shard[0], len(toks), a.shard[1]))
+    ks = ks_for([q.dim for q in load_pcas(a.model, 0)])
+    d = out_dir(a.model) / "variants" / "sweep" / f"s{a.shard[0]}of{a.shard[1]}"
+    d.mkdir(parents=True, exist_ok=True)
+    S = site(a.model, agent)
+    t0, n = time.time(), 0
+    with S:
+        probes = [UP.Probe(S, f"f{i}").__enter__() for i in range(S.n)]
+        for g in range(FOLDS):
+            pcas = load_pcas(a.model, (g + 1) % FOLDS)
+            prj, W = projectors(a.model, agent, pcas, a.variants)
+            diag = {v: (prj[v][0] if v in prj else UP.Projector(pcas[0], v, "cuda", W=W.double().cpu().numpy())) for v in ("pca", *a.variants)}
+            arms = variant_arms(prj, ks)
+            names = ["off"] + [n_ for n_, _ in arms]
+            for c0 in range(0, len(idx), a.chunk):
+                part = [i for i in idx[c0:c0 + a.chunk] if fo[logs[i]] == g]
+                f_out = d / f"g{g}_c{c0:06d}.npz"
+                if not part or f_out.exists():
+                    continue
+                T = [toks[i] for i in part]
+                L = loader(c, cfg, agent, T, [logs[i] for i in part])
+                P, st = [], {}
+                for t in T:
+                    r = sweep(probes, S, lambda: call(agent, L, t), [None] + arms)
+                    P.append(np.stack([r[None]] + [r[n_] for n_ in names[1:]]))
+                    x = S.pick(S.memo)[0]
+                    for v, pr in diag.items():
+                        kv = [k for k in ks if k < pr.kmax] + ([pr.kmax] if pr.kmax <= max(ks) else [])
+                        s = pr.stats(x, kv, W)
+                        acc = st.setdefault(v, {})
+                        for key, val in s.items():
+                            if isinstance(val, dict):
+                                for kk, vv in val.items():
+                                    acc.setdefault(f"k{key}", {}).setdefault(kk, 0.0)
+                                    acc[f"k{key}"][kk] += vv
+                            else:
+                                acc[key] = acc.get(key, 0.0) + val
+                n += len(T)
+                np.savez(d / "tmp.npz", tokens=np.array(T), fold=g, poses=np.stack(P, 1), arms=np.array(names), stats=json.dumps(st))
+                os.replace(d / "tmp.npz", f_out)
+                print(f"[vsweep] fold {g} chunk {c0}: {n}/{len(idx)} {(time.time() - t0) / max(n, 1):.2f} s/token", flush=True)
+        for p in probes:
+            p.__exit__()
+    (d / "DONE").write_text(json.dumps(dict(tokens=len(idx), wall_s=time.time() - t0)))
+
+
+def cmd_vmerge(a):
+    """-> bench pred files PROBE-<tag>-<variant>-k<k>, variants/ev.json (diagnostics per arm; original arms as k<k>), and the
+    check that this run's arm off equals the original sweep's off plans bit for bit."""
+    from jevdrive.bench.models import resolve
+    from jevdrive.bench.navsim import pred_file
+    d = out_dir(a.model) / "variants"
+    toks, _ = navtest_tokens()
+    zs = [np.load(f) for f in sorted((d / "sweep").glob("s*of*/g*_c*.npz"))]
+    names = [str(x) for x in zs[0]["arms"]]
+    assert all([str(x) for x in z["arms"]] == names for z in zs), "arm lists differ between folds / chunks"
+    T = np.concatenate([z["tokens"] for z in zs])
+    P = np.concatenate([z["poses"] for z in zs], 1)
+    assert len(set(T)) == len(T) == len(toks) and set(T) == set(toks), f"{len(T)} plans for {len(toks)} navtest tokens"
+    o = np.argsort(T)
+    T, P = T[o], P[:, o]
+    off = P[names.index("off")]
+    z0 = np.load(pred_file(resolve(f"PROBE-{TAGS[a.model]}-off"), "navtest"))
+    o0 = np.argsort(z0["tokens"])
+    assert (z0["tokens"][o0] == T).all()
+    same = bool(np.array_equal(z0["poses"][o0], off))
+    for i, nm in enumerate(names[1:], 1):
+        pf = pred_file(resolve(f"PROBE-{TAGS[a.model]}-{nm}"), "navtest")
+        pf.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(pf, tokens=T, poses=P[i])
+    st = {}
+    for z in zs:
+        for v, acc in json.loads(str(z["stats"])).items():
+            tgt = st.setdefault(v, {})
+            for key, val in acc.items():
+                if isinstance(val, dict):
+                    for kk, vv in val.items():
+                        tgt.setdefault(key, {}).setdefault(kk, 0.0)
+                        tgt[key][kk] += vv
+                else:
+                    tgt[key] = tgt.get(key, 0.0) + val
+    diag = {}
+    for v, acc in st.items():
+        for key, r in acc.items():
+            if isinstance(r, dict):
+                diag["k" + key[1:] if v == "pca" else f"{v}-{key}"] = dict(ev_input=1 - r["res2"] / acc["c2"], ev_readin=1 - r["wres2"] / acc["wc2"],
+                                                                         norm_ratio=r["ratio"] / acc["rows"])
+    shift = {nm: float(np.linalg.norm(P[i][..., :2] - off[..., :2], axis=-1).mean()) for i, nm in enumerate(names)}
+    ev = dict(model=a.model, tokens=len(T), arms=names, off_equals_original_off=same, fit="navtest 2-fold log cross-fit (same PCAs as sweep)",
+              explained_navtest={k: v["ev_input"] for k, v in diag.items()}, explained_readin={k: v["ev_readin"] for k, v in diag.items()},
+              norm_ratio={k: v["norm_ratio"] for k, v in diag.items()}, plan_shift_vs_off_m=shift)
+    ev["note"] = ("explained_navtest = 1 - sum ||x - x'||^2 / sum ||x - mu||^2 over held-out rows (input space); explained_readin = the same "
+                  "through the planner's read-in W (1 - ||W(x - x')||^2 / ||W(x - mu)||^2); norm_ratio = mean ||x'|| / ||x|| per row; "
+                  "keys k<k> = the original pca arms (diagnostics only, plans from the original sweep)")
+    (d / "ev.json").write_text(json.dumps(ev, indent=1))
+    print(json.dumps({k: ev[k] for k in ("tokens", "off_equals_original_off")}, indent=1))
+    if not same:
+        sys.exit("variant run's off arm differs from the original sweep's off arm")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["gate", "fit", "pca", "sweep", "merge"])
+    ap.add_argument("cmd", choices=["gate", "fit", "pca", "sweep", "merge", "vgate", "vsweep", "vmerge"])
+    ap.add_argument("--variants", nargs="+", default=list(VAR_DEFAULT), choices=list(UP.VARIANTS[1:]))
     ap.add_argument("--model", required=True, choices=sorted(TAGS))
     ap.add_argument("--n", type=int, default=24)
     ap.add_argument("--pca", action="store_true", help="gate: also G3 / full-rank checks with the fold-0 PCA")
@@ -585,7 +779,7 @@ def main():
     ap.add_argument("--chunk", type=int, default=128)
     a = ap.parse_args()
     from jevdrive.run import Run
-    tag = f"p1a-{TAGS[a.model]}-{a.cmd}" + (f"-f{a.fold}" if a.cmd == "fit" else "") + (f"-s{a.shard[0]}of{a.shard[1]}" if a.cmd in ("fit", "sweep") else "")
+    tag = f"p1a-{TAGS[a.model]}-{a.cmd}" + (f"-f{a.fold}" if a.cmd == "fit" else "") + (f"-s{a.shard[0]}of{a.shard[1]}" if a.cmd in ("fit", "sweep", "vsweep") else "")
     with Run("wm_surplus", tag, config=vars(a)) as run:
         from jevdrive.data import splits
         run.use_split(splits.load("navsim/navtest"))

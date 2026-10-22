@@ -13,6 +13,9 @@ Model-agnostic measurement hooks (torch only; no repo imports, so it runs inside
                            the inputs (gate: `determinism_gate`).
   Moments / PCA            float64 accumulator -> eigendecomposition (mean, components, explained variance); npz on disk
   project(x, pca, k)       mu + (x - mu) U_k U_k^T in fp32, cast back to x.dtype; k = None or D keeps every direction
+                           (discarded directions sit at the fit mean, not at zero)
+  Projector(pca, variant)  artifact controls (opt-in; the default above is unchanged): norm restore (centred / raw), random
+                           subspace, correlation-matrix PCA, planner-aligned PCA through the consumer's linear read-in
   .apply(fn)               replace the feature by fn(feature) (token pruning, slice ablations); .off() restores
   skip_blocks(blocks, idx) level (b): context manager that replaces the listed entries of an nn.ModuleList by identity
 
@@ -116,6 +119,80 @@ class _Basis:
 
 def project(x: torch.Tensor, pca: PCA, k) -> torch.Tensor:
     return _Basis(pca, x.device).project(x, k)
+
+
+VARIANTS = ("pca", "cnorm", "norm", "rand", "std", "wpca")
+
+
+class Projector:
+    """Projection variants for artifact controls (the default protocol is _Basis / Probe.use_pca, unchanged). Every variant
+    is x' = mu + (c E_k) R_k^T with c = x - mu (row vectors), then an optional norm restore; mu = the fit's mean:
+      pca    E = R = U (top-k principal directions, discarded directions at their fit mean): the original protocol
+      cnorm  pca, then the centred part rescaled to the original ||x - mu|| per row (deviation energy restored)
+      norm   pca, then x' rescaled to the original ||x|| per row (raw norm restored)
+      rand   E = R = Q, k random orthonormal directions (QR of a Gaussian D x D, fixed seed; nested in k)
+      std    PCA of the correlation matrix: standardise by the fit's per-dimension std s, project, unstandardise
+             (E = Q / s, R = Q * s)
+      wpca   planner-aligned: given the consumer's linear read-in W (m x D), V_k = top-k eigenvectors of W Cov W^T; x' is the
+             least-squares (Gaussian conditional mean) reconstruction of x from the k coordinates V_k^T W c, so W x' = W mu +
+             V_k V_k^T W c exactly (E = W^T V_k, R = Cov W^T V_k / lambda_k); k is clamped to rank(W Cov W^T)
+    Linear algebra in float64 on the host, applied in fp32, cast back to x.dtype (as _Basis)."""
+
+    def __init__(self, pca: PCA, variant: str = "pca", device="cpu", W=None, seed: int = 0):
+        assert variant in VARIANTS, variant
+        U, var, D = np.asarray(pca.comps, np.float64), np.asarray(pca.var, np.float64), pca.dim
+        cov = (U * var) @ U.T
+        if variant in ("pca", "cnorm", "norm"):
+            E = R = U
+        elif variant == "rand":
+            Q, r = np.linalg.qr(np.random.default_rng(seed).standard_normal((D, D)))
+            E = R = Q * np.sign(np.diag(r))
+        elif variant == "std":
+            s = np.sqrt(np.clip(np.diag(cov), 1e-12, None))
+            w, Q = np.linalg.eigh(cov / np.outer(s, s))
+            Q = Q[:, np.argsort(w)[::-1]]
+            E, R = Q / s[:, None], Q * s[:, None]
+        else:
+            W = np.asarray(W, np.float64)
+            w, V = np.linalg.eigh(W @ cov @ W.T)
+            o = np.argsort(w)[::-1]
+            w, V = w[o], V[:, o]
+            keep = w > w[0] * 1e-10
+            w, V = w[keep], V[:, keep]
+            E, R = W.T @ V, (cov @ W.T @ V) / w
+        self.variant, self.kmax = variant, E.shape[1]
+        self.renorm = {"cnorm": "centred", "norm": "raw"}.get(variant)
+        f = lambda a: torch.as_tensor(np.ascontiguousarray(a), dtype=torch.float32, device=device)  # noqa: E731
+        self.mu, self.E, self.R = f(pca.mean), f(E), f(R)
+
+    def project(self, x: torch.Tensor, k: int) -> torch.Tensor:
+        k = min(k, self.kmax)
+        xf = x.float()
+        c = xf - self.mu
+        y = (c @ self.E[:, :k]) @ self.R[:, :k].T
+        if self.renorm == "centred":
+            y = y * (c.norm(dim=-1, keepdim=True) / y.norm(dim=-1, keepdim=True).clamp_min(1e-12))
+        y = y + self.mu
+        if self.renorm == "raw":
+            y = y * (xf.norm(dim=-1, keepdim=True) / y.norm(dim=-1, keepdim=True).clamp_min(1e-12))
+        return y.to(x.dtype)
+
+    def stats(self, x: torch.Tensor, ks, W: torch.Tensor | None = None) -> dict:
+        """Sums over the rows of x per k: rows, ||x - x'||^2, ||x - mu||^2, ||x'|| / ||x||, and with W (m x D, fp32) the
+        consumer-side ||W (x - x')||^2 and ||W (x - mu)||^2 (how much of what the read-in sees the projection removes)."""
+        x = x.detach().reshape(-1, x.shape[-1])
+        xf = x.float()
+        c = xf - self.mu
+        out = {"rows": x.shape[0], "c2": float(c.pow(2).sum())}
+        if W is not None:
+            out["wc2"] = float((c @ W.T).pow(2).sum())
+        for k in ks:
+            d = xf - self.project(x, k).float()
+            r = {"res2": float(d.pow(2).sum()), "ratio": float((xf - d).norm(dim=-1).div(xf.norm(dim=-1).clamp_min(1e-12)).sum())}
+            if W is not None:
+                r["wres2"] = float((d @ W.T).pow(2).sum())
+            out[k] = r
+        return out
 
 
 class Probe:
