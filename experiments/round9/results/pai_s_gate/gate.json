@@ -1,0 +1,348 @@
+{
+ "G1": {
+  "rows": 110981,
+  "raster_ok": 1.0,
+  "human_rows": 110981,
+  "human_t0_inside": 0.9846550310413494,
+  "human_t0_inside_0p3": 0.9621016209981889,
+  "human_t0_inside_close": 0.9972184054425416,
+  "student_t0_off_all": 0.002450869968733387,
+  "student_t0_off_cand": 0.0019158361018826134,
+  "offroad_scenes": 71,
+  "offroad_event_rows_in_pool": 0,
+  "agree_off_or_plan": 1.0,
+  "agree_t0_off": 0.4084507042253521,
+  "agree_at_event_only": null,
+  "pre_event_plan_rate": 0.8552112676056338,
+  "pre_event_t0off_rate": 0.04112676056338029,
+  "control_rows": 103763,
+  "control_t0_off": 0.0015516128099611615,
+  "control_served_road_active": 0.09627709299075779
+ },
+ "G2": {
+  "agent_ok": 1.0,
+  "box_t0_any": 0.9699678323316604,
+  "boxes_t0_mean": 22.46734125661149,
+  "t0_overlap_nocol": 0.00033337346162038025,
+  "t0_overlap_colscenes": 0.027722110888443553,
+  "collision_scenes": 30,
+  "by_source": [
+   {
+    "src": "R5LC-s0 served (PAID)",
+    "agent_active": 0.0417718715393134,
+    "label_also": 0.8027571580063627,
+    "human_also": 0.13016967126193002,
+    "road_active": 0.12243632336655592,
+    "road_label_also": 0.6301555716353111,
+    "road_human_also": 0.49493487698986977,
+    "road_label_trig_all": 0.11124031007751937,
+    "road_human_trig_all": 0.12115171650055372
+   },
+   {
+    "src": "R6DAG-L18-s1 (PAID)",
+    "agent_active": 0.04208268619184972,
+    "label_also": 0.7644991212653779,
+    "human_also": 0.1256590509666081,
+    "road_active": 0.11940684860587235,
+    "road_label_also": 0.6463301331681636,
+    "road_human_also": 0.5137813564571074,
+    "road_label_trig_all": 0.11034686783521928,
+    "road_human_trig_all": 0.12184749648694623
+   },
+   {
+    "src": "R6DAG-L18-s0 (PAID)",
+    "agent_active": 0.041675911545004066,
+    "label_also": 0.7666370896184561,
+    "human_also": 0.12688553682342502,
+    "road_active": 0.11996154130611641,
+    "road_label_also": 0.6458076448828607,
+    "road_human_also": 0.5117139334155364,
+    "road_label_trig_all": 0.11034686783521928,
+    "road_human_trig_all": 0.12184749648694623
+   }
+  ]
+ },
+ "check_trainer_terms": {
+  "R6DAG-L18-s1": {
+   "agent_maxdiff": 4.353394508361816,
+   "side_maxdiff": 0.6651644706726074
+  },
+  "R6DAG-L18-s0": {
+   "agent_maxdiff": 4.523262977600098,
+   "side_maxdiff": 0.6546893119812012
+  }
+ },
+ "G3": {
+  "R5LC-s0 served (PAID)": {
+   "rows": 90300,
+   "any_active": 0.17221483942414176,
+   "la": 0.06314507198228128,
+   "unlearn": 0.10906976744186046,
+   "t0_off": 0.0019158361018826134,
+   "mass_mean": 0.3960820734500885,
+   "mass_on_learnable": 0.17650792002677917,
+   "mass_on_la": 0.17650792002677917,
+   "agent_active": 0.0417718715393134,
+   "agent_la": 0.007497231450719823,
+   "agent_mass_share": 0.3939981758594513,
+   "agent_label_also": 0.8027571580063627,
+   "side_active": 0.030764119601328903,
+   "side_la": 0.0182281284606866,
+   "side_mass_share": 0.03448021784424782,
+   "side_label_also": 0.5813534917206623,
+   "road_active": 0.12243632336655592,
+   "road_la": 0.04356589147286822,
+   "road_mass_share": 0.5715216398239136,
+   "road_label_also": 0.6301555716353111
+  },
+  "R6DAG-L18-s1 (PAID)": {
+   "rows": 27042,
+   "any_active": 0.17010576140817987,
+   "la": 0.062310479994083276,
+   "unlearn": 0.1077952814140966,
+   "t0_off": 0.0019229346941794245,
+   "mass_mean": 0.3773248791694641,
+   "mass_on_learnable": 0.16269460320472717,
+   "mass_on_la": 0.16269460320472717,
+   "agent_active": 0.04208268619184972,
+   "agent_la": 0.009096960284002663,
+   "agent_mass_share": 0.4122598469257355,
+   "agent_label_also": 0.7644991212653779,
+   "side_active": 0.031062791213667628,
+   "side_la": 0.01775016640781007,
+   "side_mass_share": 0.03404352813959122,
+   "side_label_also": 0.5845238095238096,
+   "road_active": 0.11940684860587235,
+   "road_la": 0.04082538273796317,
+   "road_mass_share": 0.5536966919898987,
+   "road_label_also": 0.6463301331681636
+  },
+  "R6DAG-L18-s0 (PAID)": {
+   "rows": 27042,
+   "any_active": 0.16984690481473264,
+   "la": 0.061940684860587236,
+   "unlearn": 0.1079062199541454,
+   "t0_off": 0.0019229346941794245,
+   "mass_mean": 0.38428881764411926,
+   "mass_on_learnable": 0.1545424461364746,
+   "mass_on_la": 0.1545424461364746,
+   "agent_active": 0.041675911545004066,
+   "agent_la": 0.008875083203905036,
+   "agent_mass_share": 0.4025237262248993,
+   "agent_label_also": 0.7666370896184561,
+   "side_active": 0.03098883218696842,
+   "side_la": 0.017787145921159677,
+   "side_mass_share": 0.03431414067745209,
+   "side_label_also": 0.5906921241050119,
+   "road_active": 0.11996154130611641,
+   "road_la": 0.040973300791361585,
+   "road_mass_share": 0.5631621479988098,
+   "road_label_also": 0.6458076448828607
+  },
+  "R6DAG-L18-s0 own states (PAID2A, no road)": {
+   "rows": 92484,
+   "any_active": 0.058474979455905886,
+   "la": 0.02600449807534276,
+   "unlearn": 0.032470481380563125,
+   "t0_off": 0.0,
+   "mass_mean": 0.16963968302486748,
+   "mass_on_learnable": 0.2244180231079971,
+   "mass_on_la": 0.2244180231079971,
+   "agent_active": 0.04432117987976299,
+   "agent_la": 0.011850698499199862,
+   "agent_mass_share": 0.9108622721873922,
+   "agent_label_also": 0.7326177116369846,
+   "side_active": 0.032935426668396696,
+   "side_la": 0.019981834695731154,
+   "side_mass_share": 0.0891376873813036,
+   "side_label_also": 0.6021011162179908,
+   "road_active": 0.0,
+   "road_la": 0.0,
+   "road_mass_share": 0.0,
+   "road_label_also": null
+  },
+  "R6DAG-L18-s1 own states (PAID2B, no road)": {
+   "rows": 94381,
+   "any_active": 0.05292378762674691,
+   "la": 0.024613004736122737,
+   "unlearn": 0.02831078289062417,
+   "t0_off": 0.0,
+   "mass_mean": 0.151593914746028,
+   "mass_on_learnable": 0.24882216634913834,
+   "mass_on_la": 0.24882216634913834,
+   "agent_active": 0.040357699113168964,
+   "agent_la": 0.012046916222544791,
+   "agent_mass_share": 0.9116147564656081,
+   "agent_label_also": 0.7014964557626674,
+   "side_active": 0.029995443998262362,
+   "side_la": 0.01852067683114186,
+   "side_mass_share": 0.08838524769327454,
+   "side_label_also": 0.6036736135641116,
+   "road_active": 0.0,
+   "road_la": 0.0,
+   "road_mass_share": 0.0,
+   "road_label_also": null
+  }
+ },
+ "G4": {
+  "R5LC-s0 served (PAID)": {
+   "la_rows": 5702,
+   "gt13": 0.23623290073658365,
+   "gt8": 0.5468256752016836,
+   "turn_4_10": 0.19642230796211854,
+   "turn_inside_band_road": 0.25341985268326905,
+   "straight_offroad_band": 0.3354963170817257,
+   "drift_band": 0.07278148018239214,
+   "collision_band": 0.10136794107330761,
+   "speed_q": [
+    4.209913921356201,
+    8.602856636047363,
+    19.50513153076172
+   ],
+   "la_per_batch_8": 0.5051605758582502,
+   "gt13_la_per_batch_8": 0.11933554817275746,
+   "la_per_batch_16": 1.0103211517165005,
+   "gt13_la_per_batch_16": 0.23867109634551492,
+   "candidate_speed_gt13": 0.3248504983388704
+  },
+  "R6DAG-L18-s1 (PAID)": {
+   "la_rows": 1685,
+   "gt13": 0.23264094955489614,
+   "gt8": 0.5590504451038576,
+   "turn_4_10": 0.18813056379821957,
+   "turn_inside_band_road": 0.2540059347181009,
+   "straight_offroad_band": 0.3074183976261128,
+   "drift_band": 0.07002967359050445,
+   "collision_band": 0.12640949554896141,
+   "speed_q": [
+    4.187771415710449,
+    8.980563163757324,
+    19.507547760009764
+   ],
+   "la_per_batch_8": 0.4984838399526662,
+   "gt13_la_per_batch_8": 0.11596775386435915,
+   "la_per_batch_16": 0.9969676799053324,
+   "gt13_la_per_batch_16": 0.2319355077287183,
+   "candidate_speed_gt13": 0.32475408623622515
+  },
+  "R6DAG-L18-s0 (PAID)": {
+   "la_rows": 1675,
+   "gt13": 0.2244776119402985,
+   "gt8": 0.5522388059701493,
+   "turn_4_10": 0.1773134328358209,
+   "turn_inside_band_road": 0.24417910447761193,
+   "straight_offroad_band": 0.3164179104477612,
+   "drift_band": 0.06746268656716418,
+   "collision_band": 0.12477611940298508,
+   "speed_q": [
+    4.2076457977294925,
+    8.798795700073242,
+    19.195032119750977
+   ],
+   "la_per_batch_8": 0.4955254788846979,
+   "gt13_la_per_batch_8": 0.11123437615560978,
+   "la_per_batch_16": 0.9910509577693958,
+   "gt13_la_per_batch_16": 0.22246875231121957,
+   "candidate_speed_gt13": 0.32475408623622515
+  },
+  "R6DAG-L18-s0 own states (PAID2A, no road)": {
+   "la_rows": 2405,
+   "gt13": 0.12474012474012475,
+   "gt8": 0.35135135135135137,
+   "turn_4_10": 0.1130977130977131,
+   "turn_inside_band_road": 0.09147609147609148,
+   "straight_offroad_band": 0.4461538461538462,
+   "drift_band": 0.038253638253638256,
+   "collision_band": 0.37754677754677757,
+   "speed_q": [
+    3.151062345504761,
+    6.400245189666748,
+    14.451026916503904
+   ],
+   "la_per_batch_8": 0.20803598460274209,
+   "gt13_la_per_batch_8": 0.02595043466978072,
+   "la_per_batch_16": 0.41607196920548417,
+   "gt13_la_per_batch_16": 0.05190086933956144,
+   "candidate_speed_gt13": 0.32162319968859476
+  },
+  "R6DAG-L18-s1 own states (PAID2B, no road)": {
+   "la_rows": 2323,
+   "gt13": 0.15497201894102453,
+   "gt8": 0.37021093413689193,
+   "turn_4_10": 0.10848041325871717,
+   "turn_inside_band_road": 0.0654326302195437,
+   "straight_offroad_band": 0.4365045200172191,
+   "drift_band": 0.04218682737839001,
+   "collision_band": 0.40594059405940597,
+   "speed_q": [
+    3.170964241027832,
+    6.583162307739258,
+    16.007137680053713
+   ],
+   "la_per_batch_8": 0.1969040378889819,
+   "gt13_la_per_batch_8": 0.030514616289295513,
+   "la_per_batch_16": 0.3938080757779638,
+   "gt13_la_per_batch_16": 0.061029232578591025,
+   "candidate_speed_gt13": 0.32751295281889364
+  }
+ },
+ "G5": {
+  "road": {
+   "rows": 1104,
+   "active": 3229,
+   "la": 1104,
+   "label_also_violates": 0.6463301331681636,
+   "arc_rel_change_med": 9.451945608660614e-05,
+   "arc_rel_change_p10_p90": [
+    -0.00047995675010164835,
+    0.0016129266564366294
+   ],
+   "end_speed_change_med": 0.0002357005772535281,
+   "end_speed_change_p10_p90": [
+    -0.01699374457636349,
+    0.03050950314079054
+   ],
+   "term_reduced": 0.9963768115942029,
+   "term_rel_reduction_med": 0.8428196907043457,
+   "toward_label": 0.9221014492753623,
+   "cos_med": 0.27956002950668335,
+   "label_dist_before_med": 1.2933915853500366,
+   "lat_left_share": 0.5842391304347826,
+   "plan_vs_label_arc_ratio_med": 1.0108677083081148
+  },
+  "agent": {
+   "rows": 246,
+   "active": 1138,
+   "la": 246,
+   "label_also_violates": 0.7644991212653779,
+   "arc_rel_change_med": 0.0001616871591939044,
+   "arc_rel_change_p10_p90": [
+    -0.00020804020014711914,
+    0.0014618329459446262
+   ],
+   "end_speed_change_med": 0.0001049936924628625,
+   "end_speed_change_p10_p90": [
+    -0.0029296634241244845,
+    0.019511671032465427
+   ],
+   "term_reduced": 0.8943089430894309,
+   "term_rel_reduction_med": 0.2031041532754898,
+   "toward_label": 0.6951219512195121,
+   "cos_med": 0.12272718548774719,
+   "label_dist_before_med": 1.4833276271820068,
+   "lat_left_share": 0.44715447154471544,
+   "plan_vs_label_arc_ratio_med": 0.9965155126970902
+  }
+ },
+ "meta": {
+  "weights": {
+   "agent": 30.0,
+   "road": 30.0,
+   "side": 15.0
+  },
+  "margin": 0.3,
+  "buf": 0.4,
+  "ckpts": "R6DAG-L18-s1,R6DAG-L18-s0",
+  "frac_note": "fwd on a seeded sample"
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "rows": 110981,
+ "scenes": 718,
+ "rasters": 110981,
+ "ok": 1.0,
+ "empty_scenes": 0,
+ "inside_gt90": 0.1207053459601193,
+ "inside_med": 0.5179198980331421,
+ "build_s": 99.4
+}
