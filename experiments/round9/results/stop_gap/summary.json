@@ -1,0 +1,142 @@
+{
+ "1": {
+  "n": 89,
+  "scenes": 21,
+  "ego_gmin_med": 3.8089,
+  "human_med": 4.510742988957915,
+  "diff_med": -1.1564494761612076,
+  "d_win_med": 0.9744,
+  "gmin_lt1": 1
+ },
+ "reading_true_at_X": {
+  "2.7": 2.625,
+  "3.5": 3.5845000000000002,
+  "4.0": 3.981,
+  "5.0": 4.941,
+  "6.0": 7.203
+ },
+ "2/standing at the handoff / queue": {
+  "n": 107,
+  "creep_med": 0.4636,
+  "creep_p90": 1.02852,
+  "gt05": 0.4672897196261682,
+  "share": {
+   "ref0": 0.04362170490435393,
+   "lead": 0.9366342539899798,
+   "model": 0.019744041105666306,
+   "ramp": 0.0,
+   "set": 0.0,
+   "curve": 0.0
+  }
+ },
+ "2/stop from motion": {
+  "n": 91,
+  "creep_med": 0.3429,
+  "creep_p90": 2.4804,
+  "gt05": 0.38461538461538464,
+  "share": {
+   "ref0": 0.11375346938775513,
+   "lead": 0.7600342857142857,
+   "model": 0.1262122448979592,
+   "ramp": 0.0,
+   "set": 0.0,
+   "curve": 0.0
+  }
+ },
+ "3/af": {
+  "partner not on the heading line (cut-in / turn / lateral)": 7,
+  "lead misread at speed (no reading / reads long)": 5,
+  "oncoming": 5,
+  "after standstill + creep (lead not moved)": 1,
+  "slow approach, close-range over-read": 1
+ },
+ "3/overshoot": {
+  "n": 102,
+  "stopped": 0,
+  "v_med": 7.406750000000001
+ },
+ "3/rear": {
+  "n": 106,
+  "stop_from_motion_rear": 0,
+  "stop_from_motion_n": 76,
+  "loss_mean": 0.3837440370014434
+ },
+ "4/rule_check": {
+  "tp": 23,
+  "fp": 7,
+  "fn": 4,
+  "tn": 80
+ },
+ "4": [
+  {
+   "arm": "stop 4 m",
+   "case": "low",
+   "zeros_fixed": 1,
+   "new_rear": 0,
+   "pts_per_seed": 0.2
+  },
+  {
+   "arm": "stop 4 m",
+   "case": "p50",
+   "zeros_fixed": 1,
+   "new_rear": 0,
+   "pts_per_seed": 0.2
+  },
+  {
+   "arm": "stop 4 m",
+   "case": "high",
+   "zeros_fixed": 1,
+   "new_rear": 0,
+   "pts_per_seed": 0.2
+  },
+  {
+   "arm": "stop 5 m",
+   "case": "low",
+   "zeros_fixed": 2,
+   "new_rear": 0,
+   "pts_per_seed": 0.4
+  },
+  {
+   "arm": "stop 5 m",
+   "case": "p50",
+   "zeros_fixed": 2,
+   "new_rear": 2,
+   "pts_per_seed": 0.24650238519942266
+  },
+  {
+   "arm": "stop 5 m",
+   "case": "high",
+   "zeros_fixed": 2,
+   "new_rear": 10,
+   "pts_per_seed": -0.36748807400288674
+  },
+  {
+   "arm": "stop 6 m",
+   "case": "low",
+   "zeros_fixed": 2,
+   "new_rear": 10,
+   "pts_per_seed": -0.36748807400288674
+  },
+  {
+   "arm": "stop 6 m",
+   "case": "p50",
+   "zeros_fixed": 2,
+   "new_rear": 10,
+   "pts_per_seed": -0.36748807400288674
+  },
+  {
+   "arm": "stop 6 m",
+   "case": "high",
+   "zeros_fixed": 2,
+   "new_rear": 15,
+   "pts_per_seed": -0.7512321110043301
+  },
+  {
+   "arm": "no creep until the lead moves",
+   "case": "p50",
+   "zeros_fixed": 1,
+   "new_rear": 0,
+   "pts_per_seed": 0.2
+  }
+ ]
+}
