@@ -1,0 +1,21 @@
+{
+ "a": "NPBGG-old",
+ "b": "NPBGG-new",
+ "note": "B2-s0's command (init RB0-F-s0) 60 steps eager, warm-up 50: code 5858f899 at /root/autodl-tmp/ujs/tmp/df_old_5858f899 vs 5c1fa909",
+ "scalars": 315,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": [],
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5468162894248962,
+  0.5468162894248962
+ ],
+ "on_hash_60": [
+  "81d78547676d739f",
+  "81d78547676d739f"
+ ],
+ "want_hash": null,
+ "identical": true
+}

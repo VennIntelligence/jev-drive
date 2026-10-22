@@ -1,0 +1,36 @@
+== STANDFMXH-L18-s0 -> NPB70-L18-s0
+5c5
+< STANDFMXH-L18-s0
+---
+> NPB70-L18-s0
+7c7
+< RB0-F-s0
+---
+> RB0-P70-s0
+== STANDFMXH-L18-s1 -> NPB70-L18-s1
+5c5
+< STANDFMXH-L18-s1
+---
+> NPB70-L18-s1
+7c7
+< RB0-F-s0
+---
+> RB0-P70-s0
+== STANDFMXH-L18-s0 -> NPB30-L18-s0
+5c5
+< STANDFMXH-L18-s0
+---
+> NPB30-L18-s0
+7c7
+< RB0-F-s0
+---
+> RB0-P30-s0
+== STANDFMXH-L18-s1 -> NPB30-L18-s1
+5c5
+< STANDFMXH-L18-s1
+---
+> NPB30-L18-s1
+7c7
+< RB0-F-s0
+---
+> RB0-P30-s0

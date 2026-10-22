@@ -1,0 +1,5033 @@
+{
+ "tag": "NPB70-L18-s1",
+ "n_items": 2106,
+ "human_offroad": 26,
+ "base": {
+  "boardmix": 1353.8431034828845,
+  "g15": 1393.6046118255415,
+  "mean": 0.9305021759863568,
+  "zeros": 105,
+  "partials": 94
+ },
+ "ref_pcs": {
+  "garage": {
+   "boardmix": 1524.6597378468553,
+   "g15": 1536.4008030328487
+  },
+  "JTN-s1": {
+   "boardmix": 1246.5502000099123,
+   "g15": 1317.3555100100157
+  },
+  "JTN-s1+stop3": {
+   "boardmix": 1324.0523182189454,
+   "g15": 1433.4074349835332
+  }
+ },
+ "oracle": {
+  "boardmix": 2250.5642153938375,
+  "g15": 2217.020793908353
+ },
+ "strata": [
+  {
+   "stratum": "a: easy (garage = 1)",
+   "items": 1564,
+   "B_zeros": 29,
+   "B_partials": 20,
+   "B_lost": 35.66397038008168,
+   "garage_lost": 0.0,
+   "JTN1_lost": 114.69929281886061,
+   "a_median": 2.21601115,
+   "fix": {
+    "boardmix": [
+     896.7211119109529,
+     717.3119991099168,
+     934.2597395035083
+    ],
+    "g15": [
+     823.4161820828115,
+     701.5146531468305,
+     877.9691341960537
+    ]
+   }
+  },
+  {
+   "stratum": "b: garage < 1, a pool subject = 1",
+   "items": 488,
+   "B_zeros": 43,
+   "B_partials": 63,
+   "B_lost": 73.86062348928894,
+   "garage_lost": 366.6803576362537,
+   "JTN1_lost": 74.85129570344411,
+   "a_median": 0.097894178,
+   "fix": {
+    "boardmix": [
+     16.380274646834096,
+     9.113107635879704,
+     36.57999625378444
+    ],
+    "g15": [
+     12.219626420379655,
+     6.288256526205077,
+     63.28140377257502
+    ]
+   }
+  },
+  {
+   "stratum": "c: no pool subject = 1",
+   "items": 28,
+   "B_zeros": 9,
+   "B_partials": 11,
+   "B_lost": 12.837823503361864,
+   "garage_lost": 22.564114690681503,
+   "JTN1_lost": 11.707493803341935,
+   "a_median": 0.108622585,
+   "fix": {
+    "boardmix": [
+     3.490874195398874,
+     0.5945545691690484,
+     8.250415272589684
+    ],
+    "g15": [
+     2.634883109072007,
+     0.7173088421318425,
+     12.138460495014549
+    ]
+   }
+  },
+  {
+   "stratum": "d: human track offroad",
+   "items": 26,
+   "B_zeros": 24,
+   "B_partials": 0,
+   "B_lost": 24.0,
+   "garage_lost": 26.0,
+   "JTN1_lost": 23.422088817850252,
+   "a_median": 0.13777684,
+   "fix": {
+    "boardmix": [
+     3.980280029579262,
+     1.3374886347310848,
+     9.123615365409425
+    ],
+    "g15": [
+     3.5097373640519436,
+     1.100477498846044,
+     15.533746667123177
+    ]
+   }
+  },
+  {
+   "stratum": "a-strict: garage, LTF, DD all = 1 (not d)",
+   "items": 923,
+   "B_zeros": 8,
+   "B_partials": 14,
+   "B_lost": 11.607665774966467,
+   "garage_lost": 0.0,
+   "JTN1_lost": 28.055633562981804,
+   "a_median": 3.2092414,
+   "fix": {
+    "boardmix": [
+     103.04608066469086,
+     45.17015044670255,
+     250.44631940541865
+    ],
+    "g15": [
+     219.9075629482279,
+     82.99156720189829,
+     443.06771771391607
+    ]
+   }
+  },
+  {
+   "stratum": "c, but some stored read of ours = 1",
+   "items": 17,
+   "B_zeros": 4,
+   "B_partials": 5,
+   "B_lost": 5.31695415333123,
+   "garage_lost": 12.342762681591072,
+   "JTN1_lost": 5.464846209300911,
+   "a_median": 0.13699064,
+   "fix": {
+    "boardmix": [
+     2.705494798631662,
+     -0.00854515861962568,
+     7.038950821846112
+    ],
+    "g15": [
+     1.7611129667957357,
+     0.09375401100612066,
+     9.58033796421924
+    ]
+   }
+  },
+  {
+   "stratum": "all items",
+   "items": 2106,
+   "B_zeros": 105,
+   "B_partials": 94,
+   "B_lost": 146.3624173727325,
+   "garage_lost": 415.24447232693524,
+   "JTN1_lost": 224.68017114349692,
+   "a_median": 1.7893796499999999,
+   "fix": {
+    "boardmix": [
+     896.7211119109529,
+     839.9177088617549,
+     936.4517483982789
+    ],
+    "g15": [
+     823.4161820828115,
+     702.3969282490124,
+     877.9758241990288
+    ]
+   }
+  }
+ ],
+ "premise": {
+  "win": 450,
+  "loss": 69,
+  "tie": 1587,
+  "win_points": 312.9089824110089,
+  "loss_points": 44.026927456806206,
+  "win_by_cell": {
+   "braking": 104,
+   "launch": 93,
+   "turn": 88,
+   "other": 84,
+   "static-free": 43,
+   "static-lead": 28,
+   "cruise": 10
+  },
+  "loss_by_cell": {
+   "launch": 19,
+   "other": 16,
+   "braking": 13,
+   "static-free": 10,
+   "turn": 8,
+   "cruise": 3
+  },
+  "win_by_stratum": {
+   "b: garage < 1, a pool subject = 1": 430,
+   "c: no pool subject = 1": 18,
+   "d: human track offroad": 2
+  },
+  "loss_by_stratum": {
+   "a: easy (garage = 1)": 49,
+   "b: garage < 1, a pool subject = 1": 18,
+   "c: no pool subject = 1": 2
+  },
+  "a_median_win": 0.088835585,
+  "a_median_loss": 0.9699785,
+  "a_median_easy": 2.21601115,
+  "a_median_other": 0.10377107499999999,
+  "give_back_wins": {
+   "boardmix": [
+    -41.12258381288984,
+    -67.54234921902581,
+    -28.46858768192691
+   ],
+   "g15": [
+    -44.22808571391988,
+    -117.16043440074263,
+    -27.217132914527813
+   ]
+  },
+  "take_garage_on_losses": {
+   "boardmix": [
+    896.7211119109529,
+    839.9177088617549,
+    936.4517483982789
+   ],
+   "g15": [
+    823.4161820828115,
+    702.3969282490124,
+    877.9758241990288
+   ]
+  },
+  "take_garage_on_losses_easy": {
+   "boardmix": [
+    896.7211119109529,
+    717.3119991099168,
+    934.2597395035083
+   ],
+   "g15": [
+    823.4161820828115,
+    701.5146531468305,
+    877.9691341960537
+   ]
+  }
+ },
+ "marginal": {
+  "win_give_back_median": -0.0982738221564432,
+  "win_give_back_by_cell": {
+   "braking": -0.1,
+   "cruise": -0.09,
+   "launch": -0.08,
+   "other": -0.09,
+   "static-free": -0.13,
+   "static-lead": -0.16,
+   "turn": -0.13
+  },
+  "loss_to1_median_by_stratum": {
+   "a: easy (garage = 1)": 1.85,
+   "b: garage < 1, a pool subject = 1": 0.1,
+   "c: no pool subject = 1": 0.12,
+   "d: human track offroad": 0.16
+  },
+  "loss_to1_sum": 144.56637707401342
+ },
+ "causes": [
+  {
+   "cause": "partial: launch late / not launching",
+   "B": {
+    "windows": 54,
+    "zeros": 0,
+    "partials": 54,
+    "points": 30.40375966528689,
+    "fix": {
+     "boardmix": [
+      28.431968907233113,
+      12.044896269481729,
+      77.33485744398399
+     ],
+     "g15": [
+      12.150647287337279,
+      5.38680106764424,
+      74.92190751232144
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 41,
+    "zeros": 0,
+    "partials": 41,
+    "points": 15.41623199934613,
+    "fix": {
+     "boardmix": [
+      2.9392457575361277,
+      0.20112038148146213,
+      7.408417001603602
+     ],
+     "g15": [
+      3.4378744196469597,
+      0.8397065944896269,
+      7.981782839649668
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 66,
+    "zeros": 0,
+    "partials": 66,
+    "points": 35.30105797330823,
+    "fix": {
+     "boardmix": [
+      14.38739448955289,
+      4.5629017883439875,
+      29.014308235905027
+     ],
+     "g15": [
+      21.526718480786712,
+      9.46699958926626,
+      42.92102617570838
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 42,
+    "a: easy (garage = 1)": 8,
+    "c: no pool subject = 1": 4
+   },
+   "B_garage1": 8,
+   "B_ratio_med": 0.7539419619952078,
+   "B_cells": {
+    "launch": 52,
+    "other": 2
+   }
+  },
+  {
+   "cause": "unsolvable: human track offroad (d354)",
+   "B": {
+    "windows": 24,
+    "zeros": 24,
+    "partials": 0,
+    "points": 24.0,
+    "fix": {
+     "boardmix": [
+      3.980280029579262,
+      1.3374886347310848,
+      9.123615365409425
+     ],
+     "g15": [
+      3.5097373640519436,
+      1.100477498846044,
+      15.533746667123177
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 24,
+    "zeros": 23,
+    "partials": 1,
+    "points": 23.422088817850252,
+    "fix": {
+     "boardmix": [
+      1.6213741030626352,
+      0.5746972982952172,
+      3.077466539173207
+     ],
+     "g15": [
+      3.0050851418136517,
+      1.0576218016380607,
+      5.885506637042775
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 24,
+    "zeros": 23,
+    "partials": 1,
+    "points": 23.422088817850252,
+    "fix": {
+     "boardmix": [
+      2.8187371957421874,
+      1.0572545810981637,
+      5.367919477880859
+     ],
+     "g15": [
+      6.3348834783416805,
+      2.308216463607522,
+      12.492882615788908
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "d: human track offroad": 24
+   },
+   "B_garage1": 0,
+   "B_ratio_med": 1.0218196698712851,
+   "B_cells": {
+    "turn": 7,
+    "other": 6,
+    "braking": 4,
+    "launch": 4,
+    "static-free": 2,
+    "static-lead": 1
+   }
+  },
+  {
+   "cause": "zero: static, red line, no lead",
+   "B": {
+    "windows": 20,
+    "zeros": 20,
+    "partials": 0,
+    "points": 20.0,
+    "fix": {
+     "boardmix": [
+      17.59387957949116,
+      5.1322989677446404,
+      35.60317165440714
+     ],
+     "g15": [
+      11.514932645230601,
+      3.125746373525698,
+      50.95740229712158
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 84,
+    "zeros": 84,
+    "partials": 0,
+    "points": 84.0,
+    "fix": {
+     "boardmix": [
+      57.450885347317126,
+      28.1901456353867,
+      88.69990340347569
+     ],
+     "g15": [
+      80.42223666756263,
+      41.24829885950142,
+      120.5499707115116
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 0,
+    "zeros": 0,
+    "partials": 0,
+    "points": 0.0
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 12,
+    "a: easy (garage = 1)": 8
+   },
+   "B_garage1": 8,
+   "B_ratio_med": NaN,
+   "B_cells": {
+    "static-free": 20
+   }
+  },
+  {
+   "cause": "zero: turn window, offroad / corridor",
+   "B": {
+    "windows": 18,
+    "zeros": 18,
+    "partials": 0,
+    "points": 18.0,
+    "fix": {
+     "boardmix": [
+      14.23439257981181,
+      2.6746405084209357,
+      38.35544203859284
+     ],
+     "g15": [
+      9.57467302958139,
+      1.8976285645697601,
+      55.01199603284808
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 12,
+    "zeros": 12,
+    "partials": 0,
+    "points": 12.0,
+    "fix": {
+     "boardmix": [
+      6.185482624420274,
+      2.2391045056667678,
+      11.860016476113781
+     ],
+     "g15": [
+      8.566975296189412,
+      3.183027476241557,
+      16.810229599502335
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 12,
+    "zeros": 12,
+    "partials": 0,
+    "points": 12.0,
+    "fix": {
+     "boardmix": [
+      10.67740741206535,
+      3.891414228257662,
+      20.083964416281503
+     ],
+     "g15": [
+      17.813727922877888,
+      6.808510844093138,
+      34.38883588237194
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 8,
+    "a: easy (garage = 1)": 6,
+    "c: no pool subject = 1": 4
+   },
+   "B_garage1": 6,
+   "B_ratio_med": 1.1732938884700705,
+   "B_cells": {
+    "turn": 18
+   }
+  },
+  {
+   "cause": "zero: offroad, non-turn",
+   "B": {
+    "windows": 18,
+    "zeros": 18,
+    "partials": 0,
+    "points": 18.0,
+    "fix": {
+     "boardmix": [
+      22.157849027262046,
+      8.109341353991823,
+      56.011494587632576
+     ],
+     "g15": [
+      15.003789158133713,
+      5.183838740360949,
+      81.39759634605775
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 21,
+    "zeros": 21,
+    "partials": 0,
+    "points": 21.0,
+    "fix": {
+     "boardmix": [
+      6.271558005258612,
+      1.93121585855028,
+      12.988362427480192
+     ],
+     "g15": [
+      7.813555064269622,
+      2.270850381997758,
+      17.4622471267995
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 15,
+    "zeros": 15,
+    "partials": 0,
+    "points": 15.0,
+    "fix": {
+     "boardmix": [
+      7.0723988284676125,
+      2.51329694169213,
+      13.564295114331218
+     ],
+     "g15": [
+      10.543353933023809,
+      3.818364071188762,
+      21.155610189049046
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 9,
+    "a: easy (garage = 1)": 8,
+    "c: no pool subject = 1": 1
+   },
+   "B_garage1": 8,
+   "B_ratio_med": 0.9969642712830336,
+   "B_cells": {
+    "other": 12,
+    "braking": 3,
+    "launch": 2,
+    "cruise": 1
+   }
+  },
+  {
+   "cause": "zero: corridor, moving non-turn",
+   "B": {
+    "windows": 17,
+    "zeros": 17,
+    "partials": 0,
+    "points": 17.0,
+    "fix": {
+     "boardmix": [
+      14.367884789880918,
+      5.045439741260043,
+      28.986308808790938
+     ],
+     "g15": [
+      10.332002224243979,
+      3.279554694987053,
+      46.14949618859902
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 18,
+    "zeros": 18,
+    "partials": 0,
+    "points": 18.0,
+    "fix": {
+     "boardmix": [
+      5.668267597348176,
+      2.8979186514699165,
+      8.614840014678444
+     ],
+     "g15": [
+      8.485009157627701,
+      4.641297925325643,
+      12.639514627668143
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 6,
+    "zeros": 6,
+    "partials": 0,
+    "points": 6.0,
+    "fix": {
+     "boardmix": [
+      0.6492166253713094,
+      0.20379526768567757,
+      1.2187796435201503
+     ],
+     "g15": [
+      1.4385510462193452,
+      0.4505930397232589,
+      2.7047800146156704
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 8,
+    "a: easy (garage = 1)": 5,
+    "c: no pool subject = 1": 4
+   },
+   "B_garage1": 5,
+   "B_ratio_med": 1.078018455154629,
+   "B_cells": {
+    "braking": 11,
+    "other": 6
+   }
+  },
+  {
+   "cause": "partial: free-road ratchet / slow",
+   "B": {
+    "windows": 16,
+    "zeros": 0,
+    "partials": 16,
+    "points": 2.36098087299366,
+    "fix": {
+     "boardmix": [
+      25.711692955689614,
+      2.4858885874204875,
+      73.20466965389103
+     ],
+     "g15": [
+      79.69356580454541,
+      3.149670372071853,
+      169.59281260828487
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 75,
+    "zeros": 0,
+    "partials": 75,
+    "points": 9.039970733406989,
+    "fix": {
+     "boardmix": [
+      30.099925172508165,
+      15.22996261193913,
+      55.45697996250579
+     ],
+     "g15": [
+      32.18634316408202,
+      15.776161145706885,
+      63.056183811610936
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 76,
+    "zeros": 0,
+    "partials": 76,
+    "points": 9.867480806549517,
+    "fix": {
+     "boardmix": [
+      80.07790955171868,
+      53.980871498439015,
+      123.13672058691989
+     ],
+     "g15": [
+      113.22561559330734,
+      76.71288585754627,
+      186.25433392583196
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 8,
+    "a: easy (garage = 1)": 5,
+    "c: no pool subject = 1": 3
+   },
+   "B_garage1": 5,
+   "B_ratio_med": 0.6150440747640844,
+   "B_cells": {
+    "braking": 5,
+    "turn": 5,
+    "other": 4,
+    "cruise": 2
+   }
+  },
+  {
+   "cause": "partial: rear-ended",
+   "B": {
+    "windows": 8,
+    "zeros": 0,
+    "partials": 8,
+    "points": 6.632897560421604,
+    "fix": {
+     "boardmix": [
+      7.630508608536729,
+      0.3119837481681998,
+      26.96530695073115
+     ],
+     "g15": [
+      2.5320647417031523,
+      0.26931628001936475,
+      17.549892703548796
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 11,
+    "zeros": 0,
+    "partials": 11,
+    "points": 4.022126893045165,
+    "fix": {
+     "boardmix": [
+      3.0755408981085566,
+      0.5055433409530906,
+      7.063392689074245
+     ],
+     "g15": [
+      3.455641961483707,
+      0.6167047598923545,
+      8.472332106697094
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 18,
+    "zeros": 0,
+    "partials": 18,
+    "points": 9.076327755717847,
+    "fix": {
+     "boardmix": [
+      13.998562939077829,
+      3.54668039763954,
+      27.722562848213787
+     ],
+     "g15": [
+      17.476311342662484,
+      4.959042660840715,
+      33.83655519625021
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 6,
+    "c: no pool subject = 1": 1,
+    "a: easy (garage = 1)": 1
+   },
+   "B_garage1": 1,
+   "B_ratio_med": 0.54923444076727,
+   "B_cells": {
+    "launch": 7,
+    "other": 1
+   }
+  },
+  {
+   "cause": "zero: static, other cue",
+   "B": {
+    "windows": 7,
+    "zeros": 7,
+    "partials": 0,
+    "points": 7.0,
+    "fix": {
+     "boardmix": [
+      4.33573541910323,
+      0.4490354150766279,
+      10.356935968426976
+     ],
+     "g15": [
+      3.217395859267299,
+      0.3808111942128392,
+      15.36974720399114
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 31,
+    "zeros": 31,
+    "partials": 0,
+    "points": 31.0,
+    "fix": {
+     "boardmix": [
+      15.754936379921674,
+      5.136806826680919,
+      28.43763644778237
+     ],
+     "g15": [
+      21.970423050175214,
+      7.674163411136169,
+      38.888673163730616
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 0,
+    "zeros": 0,
+    "partials": 0,
+    "points": 0.0
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 5,
+    "a: easy (garage = 1)": 2
+   },
+   "B_garage1": 2,
+   "B_ratio_med": NaN,
+   "B_cells": {
+    "static-free": 7
+   }
+  },
+  {
+   "cause": "partial: near-miss 0.98-0.999",
+   "B": {
+    "windows": 6,
+    "zeros": 0,
+    "partials": 6,
+    "points": 0.078561262802329,
+    "fix": {
+     "boardmix": [
+      6.286270056875992,
+      -0.2413749891715497,
+      22.922362877935754
+     ],
+     "g15": [
+      4.722690547926277,
+      -0.08889655567676868,
+      41.40801732707864
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 18,
+    "zeros": 0,
+    "partials": 18,
+    "points": 0.18282906535847143,
+    "fix": {
+     "boardmix": [
+      5.098761745308138,
+      1.9490009418467196,
+      9.52795371095557
+     ],
+     "g15": [
+      5.743490518608041,
+      2.1245264326571713,
+      11.52347805251439
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 17,
+    "zeros": 0,
+    "partials": 17,
+    "points": 0.15663246475872739,
+    "fix": {
+     "boardmix": [
+      9.959356299482806,
+      2.921513913136761,
+      18.258225155397167
+     ],
+     "g15": [
+      14.09416307454444,
+      4.530970657126398,
+      26.375098860714616
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 3,
+    "a: easy (garage = 1)": 3
+   },
+   "B_garage1": 3,
+   "B_ratio_med": 0.7530250537165317,
+   "B_cells": {
+    "braking": 3,
+    "other": 2,
+    "launch": 1
+   }
+  },
+  {
+   "cause": "partial: following a lead",
+   "B": {
+    "windows": 4,
+    "zeros": 0,
+    "partials": 4,
+    "points": 0.6076177448572456,
+    "fix": {
+     "boardmix": [
+      -0.05912298103157809,
+      -0.9130891705805994,
+      0.6366803607284964
+     ],
+     "g15": [
+      0.07367065083394664,
+      -0.7881579998781376,
+      1.42950958857375
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 12,
+    "zeros": 0,
+    "partials": 12,
+    "points": 1.5945253615323143,
+    "fix": {
+     "boardmix": [
+      1.2100292824777625,
+      -0.005461947293923686,
+      3.3556857156392015
+     ],
+     "g15": [
+      1.5342944635533513,
+      0.10184189383636522,
+      4.115906103652661
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 12,
+    "zeros": 0,
+    "partials": 12,
+    "points": 1.6457618836925694,
+    "fix": {
+     "boardmix": [
+      2.627787909811559,
+      0.005479055137499248,
+      7.3323904007142655
+     ],
+     "g15": [
+      4.127941945336033,
+      0.24265343073535633,
+      11.594107341790066
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "c: no pool subject = 1": 3,
+    "b: garage < 1, a pool subject = 1": 1
+   },
+   "B_garage1": 0,
+   "B_ratio_med": 0.787865179629909,
+   "B_cells": {
+    "other": 3,
+    "turn": 1
+   }
+  },
+  {
+   "cause": "partial: other slow",
+   "B": {
+    "windows": 4,
+    "zeros": 0,
+    "partials": 4,
+    "points": 1.0125292257904173,
+    "fix": {
+     "boardmix": [
+      4.849818046511018,
+      0.0,
+      20.002297348709057
+     ],
+     "g15": [
+      4.155335097437728,
+      0.0,
+      38.8072940048489
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 2,
+    "zeros": 0,
+    "partials": 2,
+    "points": 0.37390244289236885,
+    "fix": {
+     "boardmix": [
+      -0.16214082345982206,
+      -0.44342577795707144,
+      0.0
+     ],
+     "g15": [
+      -0.163476806435483,
+      -0.5001511772114157,
+      0.05067049363800602
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 9,
+    "zeros": 0,
+    "partials": 9,
+    "points": 2.859834472604607,
+    "fix": {
+     "boardmix": [
+      6.024491213737292,
+      -0.018610986415063736,
+      17.042620850936228
+     ],
+     "g15": [
+      9.614640340973892,
+      0.0685144133116296,
+      27.54740101607618
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 3,
+    "a: easy (garage = 1)": 1
+   },
+   "B_garage1": 1,
+   "B_ratio_med": 0.9038721119841326,
+   "B_cells": {
+    "other": 2,
+    "turn": 1,
+    "braking": 1
+   }
+  },
+  {
+   "cause": "partial: stop / lock",
+   "B": {
+    "windows": 2,
+    "zeros": 0,
+    "partials": 2,
+    "points": 0.2660710405803417,
+    "fix": {
+     "boardmix": [
+      3.448178787744382,
+      0.0,
+      12.77888096256446
+     ],
+     "g15": [
+      1.6666762105953694,
+      0.0,
+      14.33654965541294
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 5,
+    "zeros": 0,
+    "partials": 5,
+    "points": 0.6284958300652137,
+    "fix": {
+     "boardmix": [
+      2.8645345250906757,
+      0.4796538119060358,
+      7.269291847632885
+     ],
+     "g15": [
+      3.0925643657687942,
+      0.4767449855802681,
+      8.37273122500121
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 5,
+    "zeros": 0,
+    "partials": 5,
+    "points": 0.6219688096001051,
+    "fix": {
+     "boardmix": [
+      6.089639442823,
+      0.8876046146059423,
+      15.289201356237134
+     ],
+     "g15": [
+      8.076331064537499,
+      1.1062685697550478,
+      20.710343614477413
+     ]
+    }
+   },
+   "B_by_stratum": {
+    "a: easy (garage = 1)": 2
+   },
+   "B_garage1": 2,
+   "B_ratio_med": 0.41475125025497206,
+   "B_cells": {
+    "braking": 2
+   }
+  },
+  {
+   "cause": "zero: AF-front collision",
+   "B": {
+    "windows": 1,
+    "zeros": 1,
+    "partials": 0,
+    "points": 1.0,
+    "fix": {
+     "boardmix": [
+      0.11051365284811254,
+      0.0,
+      0.45952122931259826
+     ],
+     "g15": [
+      0.10509445994307498,
+      0.0,
+      0.8478556193614839
+     ]
+    }
+   },
+   "JTN1": {
+    "windows": 0,
+    "zeros": 0,
+    "partials": 0,
+    "points": 0.0
+   },
+   "JTN1S3": {
+    "windows": 0,
+    "zeros": 0,
+    "partials": 0,
+    "points": 0.0
+   },
+   "B_by_stratum": {
+    "b: garage < 1, a pool subject = 1": 1
+   },
+   "B_garage1": 0,
+   "B_ratio_med": 1.3139235001635472,
+   "B_cells": {
+    "turn": 1
+   }
+  },
+  {
+   "cause": "zero: AF-side collision",
+   "B": {
+    "windows": 0,
+    "zeros": 0,
+    "partials": 0,
+    "points": 0.0
+   },
+   "JTN1": {
+    "windows": 4,
+    "zeros": 4,
+    "partials": 0,
+    "points": 4.0,
+    "fix": {
+     "boardmix": [
+      2.08024407625021,
+      0.0,
+      5.645044209704371
+     ],
+     "g15": [
+      2.7552211202335,
+      0.0,
+      7.8134345288026195
+     ]
+    }
+   },
+   "JTN1S3": {
+    "windows": 1,
+    "zeros": 1,
+    "partials": 0,
+    "points": 1.0,
+    "fix": {
+     "boardmix": [
+      0.6482039147749674,
+      0.0,
+      2.3759850840849834
+     ],
+     "g15": [
+      0.8530216938497688,
+      0.0,
+      3.1603253829244404
+     ]
+    }
+   },
+   "B_by_stratum": {},
+   "B_garage1": 0,
+   "B_ratio_med": NaN,
+   "B_cells": {}
+  }
+ ],
+ "leave_one": {
+  "partial: launch late / not launching": {
+   "boardmix": 1803.612392827284,
+   "g15": 2217.020793908353
+  },
+  "unsolvable: human track offroad (d354)": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "zero: static, red line, no lead": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "zero: turn window, offroad / corridor": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "zero: offroad, non-turn": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "zero: corridor, moving non-turn": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "partial: free-road ratchet / slow": {
+   "boardmix": 1527.0273931790557,
+   "g15": 1469.0955631601655
+  },
+  "partial: rear-ended": {
+   "boardmix": 1957.1789274062255,
+   "g15": 2217.020793908353
+  },
+  "zero: static, other cue": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "partial: near-miss 0.98-0.999": {
+   "boardmix": 1980.515293917891,
+   "g15": 1892.3626629705507
+  },
+  "partial: following a lead": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "partial: other slow": {
+   "boardmix": 1924.9642396155518,
+   "g15": 1909.2898687110282
+  },
+  "partial: stop / lock": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  },
+  "zero: AF-front collision": {
+   "boardmix": 2250.5642153938375,
+   "g15": 2217.020793908353
+  }
+ },
+ "greedy": {
+  "boardmix": [
+   {
+    "step": 0,
+    "cause": "as read",
+    "pcs": 1353.8431034828845,
+    "mean": 0.9305021759863568
+   },
+   {
+    "step": 1,
+    "cause": "partial: stop / lock",
+    "windows": 2,
+    "pcs": 1357.291282270629,
+    "per_window": 1.724089393872191,
+    "mean": 0.9306285155117986
+   },
+   {
+    "step": 2,
+    "cause": "partial: free-road ratchet / slow",
+    "windows": 16,
+    "pcs": 1384.6834982761293,
+    "per_window": 1.7120135003437724,
+    "mean": 0.931749589050732
+   },
+   {
+    "step": 3,
+    "cause": "partial: other slow",
+    "windows": 4,
+    "pcs": 1392.4462625223086,
+    "per_window": 1.9406910615448396,
+    "mean": 0.9322303721588946
+   },
+   {
+    "step": 4,
+    "cause": "zero: offroad, non-turn",
+    "windows": 18,
+    "pcs": 1430.2599802429927,
+    "per_window": 2.1007620955935584,
+    "mean": 0.9407773807059031
+   },
+   {
+    "step": 5,
+    "cause": "partial: rear-ended",
+    "windows": 8,
+    "pcs": 1452.5212168412888,
+    "per_window": 2.782654574787017,
+    "mean": 0.9439269047137006
+   },
+   {
+    "step": 6,
+    "cause": "partial: near-miss 0.98-0.999",
+    "windows": 6,
+    "pcs": 1473.3383834997815,
+    "per_window": 3.4695277764154375,
+    "mean": 0.9439642082572914
+   },
+   {
+    "step": 7,
+    "cause": "partial: launch late / not launching",
+    "windows": 54,
+    "pcs": 1898.3313348238366,
+    "per_window": 7.870239839334356,
+    "mean": 0.9584009412417582
+   },
+   {
+    "step": 8,
+    "cause": "zero: static, other cue",
+    "windows": 7,
+    "pcs": 2106.3757779227494,
+    "per_window": 29.720634728416112,
+    "mean": 0.9617247778989282
+   },
+   {
+    "step": 9,
+    "cause": "zero: corridor, moving non-turn",
+    "windows": 17,
+    "pcs": 2250.5642153938375,
+    "per_window": 8.481672792416944,
+    "mean": 0.9697969526377697
+   },
+   {
+    "step": 10,
+    "cause": "unsolvable: human track offroad (d354)",
+    "windows": 24,
+    "pcs": 2250.5642153938375,
+    "per_window": 0.0,
+    "mean": 0.981192964033781
+   },
+   {
+    "step": 11,
+    "cause": "zero: static, red line, no lead",
+    "windows": 20,
+    "pcs": 2250.5642153938375,
+    "per_window": 0.0,
+    "mean": 0.9906896401971238
+   },
+   {
+    "step": 12,
+    "cause": "zero: turn window, offroad / corridor",
+    "windows": 18,
+    "pcs": 2250.5642153938375,
+    "per_window": 0.0,
+    "mean": 0.9992366487441324
+   },
+   {
+    "step": 13,
+    "cause": "partial: following a lead",
+    "windows": 4,
+    "pcs": 2250.5642153938375,
+    "per_window": 0.0,
+    "mean": 0.9995251661918328
+   },
+   {
+    "step": 14,
+    "cause": "zero: AF-front collision",
+    "windows": 1,
+    "pcs": 2250.5642153938375,
+    "per_window": 0.0,
+    "mean": 1.0
+   }
+  ],
+  "g15": [
+   {
+    "step": 0,
+    "cause": "as read",
+    "pcs": 1393.6046118255415,
+    "mean": 0.9305021759863568
+   },
+   {
+    "step": 1,
+    "cause": "partial: free-road ratchet / slow",
+    "windows": 16,
+    "pcs": 1473.298177630087,
+    "per_window": 4.980847862784088,
+    "mean": 0.9316232495252903
+   },
+   {
+    "step": 2,
+    "cause": "partial: other slow",
+    "windows": 4,
+    "pcs": 1488.7428697694406,
+    "per_window": 3.86117303483843,
+    "mean": 0.9321040326334528
+   },
+   {
+    "step": 3,
+    "cause": "partial: near-miss 0.98-0.999",
+    "windows": 6,
+    "pcs": 1508.70957953261,
+    "per_window": 3.32778496052822,
+    "mean": 0.9321413361770436
+   },
+   {
+    "step": 4,
+    "cause": "partial: stop / lock",
+    "windows": 2,
+    "pcs": 1516.847478434376,
+    "per_window": 4.068949450882997,
+    "mean": 0.9322676757024855
+   },
+   {
+    "step": 5,
+    "cause": "zero: offroad, non-turn",
+    "windows": 18,
+    "pcs": 1596.3459716661037,
+    "per_window": 4.416582957318206,
+    "mean": 0.940814684249494
+   },
+   {
+    "step": 6,
+    "cause": "zero: corridor, moving non-turn",
+    "windows": 17,
+    "pcs": 1690.2960419418164,
+    "per_window": 5.526474722100749,
+    "mean": 0.9488868589883354
+   },
+   {
+    "step": 7,
+    "cause": "zero: static, red line, no lead",
+    "windows": 20,
+    "pcs": 1860.7529060298239,
+    "per_window": 8.522843204400374,
+    "mean": 0.9583835351516782
+   },
+   {
+    "step": 8,
+    "cause": "partial: rear-ended",
+    "windows": 8,
+    "pcs": 1971.404624782029,
+    "per_window": 13.831464844025646,
+    "mean": 0.9615330591594757
+   },
+   {
+    "step": 9,
+    "cause": "zero: turn window, offroad / corridor",
+    "windows": 18,
+    "pcs": 2181.168441013526,
+    "per_window": 11.653545346194266,
+    "mean": 0.9700800677064843
+   },
+   {
+    "step": 10,
+    "cause": "zero: static, other cue",
+    "windows": 7,
+    "pcs": 2217.020793908353,
+    "per_window": 5.121764699261023,
+    "mean": 0.9734039043636542
+   },
+   {
+    "step": 11,
+    "cause": "partial: launch late / not launching",
+    "windows": 54,
+    "pcs": 2217.020793908353,
+    "per_window": 0.0,
+    "mean": 0.987840637348121
+   },
+   {
+    "step": 12,
+    "cause": "unsolvable: human track offroad (d354)",
+    "windows": 24,
+    "pcs": 2217.020793908353,
+    "per_window": 0.0,
+    "mean": 0.9992366487441324
+   },
+   {
+    "step": 13,
+    "cause": "partial: following a lead",
+    "windows": 4,
+    "pcs": 2217.020793908353,
+    "per_window": 0.0,
+    "mean": 0.9995251661918328
+   },
+   {
+    "step": 14,
+    "cause": "zero: AF-front collision",
+    "windows": 1,
+    "pcs": 2217.020793908353,
+    "per_window": 0.0,
+    "mean": 1.0
+   }
+  ]
+ },
+ "by_a": {
+  "boardmix": [
+   {
+    "n": 1,
+    "a": 3.3339326,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1357.7592229770762
+   },
+   {
+    "n": 2,
+    "a": 3.2471476,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1361.669298507298
+   },
+   {
+    "n": 3,
+    "a": 3.2449596,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1365.6713083712564
+   },
+   {
+    "n": 4,
+    "a": 3.211855,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1388.8429596388087
+   },
+   {
+    "n": 5,
+    "a": 2.6521394,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1393.5083611372677
+   },
+   {
+    "n": 6,
+    "a": 2.4745624,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1400.9075928538687
+   },
+   {
+    "n": 7,
+    "a": 1.9976885,
+    "cause": "partial: other slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1409.8448117765522
+   },
+   {
+    "n": 8,
+    "a": 1.961916,
+    "cause": "zero: static, other cue",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1414.0247448468983
+   },
+   {
+    "n": 9,
+    "a": 1.9412891,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1418.3256202752298
+   },
+   {
+    "n": 10,
+    "a": 1.8995844,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1422.6857696978118
+   },
+   {
+    "n": 11,
+    "a": 1.8523763,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1427.0814460526992
+   },
+   {
+    "n": 12,
+    "a": 1.7916099,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1431.469793473936
+   },
+   {
+    "n": 13,
+    "a": 1.6822995,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1436.0185274642408
+   },
+   {
+    "n": 14,
+    "a": 1.5599155,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1440.1046694045297
+   },
+   {
+    "n": 15,
+    "a": 1.5561532,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1444.3049036358302
+   },
+   {
+    "n": 16,
+    "a": 1.5559638,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1448.6324976390745
+   },
+   {
+    "n": 17,
+    "a": 1.5555365,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1453.0937220457206
+   },
+   {
+    "n": 18,
+    "a": 1.5550406,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1457.6944283059097
+   },
+   {
+    "n": 19,
+    "a": 1.542564,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1462.4053028362316
+   },
+   {
+    "n": 20,
+    "a": 1.5422988,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1467.2689471493013
+   },
+   {
+    "n": 21,
+    "a": 1.5302033,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1472.3110889884356
+   },
+   {
+    "n": 22,
+    "a": 1.5183926,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1477.4419591295182
+   },
+   {
+    "n": 23,
+    "a": 1.5118809,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1482.9054687902485
+   },
+   {
+    "n": 24,
+    "a": 1.5118085,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1488.3516976898688
+   },
+   {
+    "n": 25,
+    "a": 1.4689121,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1493.812635535421
+   },
+   {
+    "n": 26,
+    "a": 1.4253676,
+    "cause": "partial: stop / lock",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1502.3041202060049
+   },
+   {
+    "n": 27,
+    "a": 1.4124839,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1508.0330400309858
+   },
+   {
+    "n": 28,
+    "a": 1.368506,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1513.7241071517592
+   },
+   {
+    "n": 29,
+    "a": 1.3336381,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1519.8588412211689
+   },
+   {
+    "n": 30,
+    "a": 1.2466679,
+    "cause": "partial: rear-ended",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1570.979129186182
+   },
+   {
+    "n": 31,
+    "a": 1.1897415,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1585.9861519502363
+   },
+   {
+    "n": 32,
+    "a": 1.1300019,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1594.0613795099694
+   },
+   {
+    "n": 33,
+    "a": 1.023337,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1601.614190642681
+   },
+   {
+    "n": 34,
+    "a": 1.0118908,
+    "cause": "zero: static, other cue",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1609.2611043852428
+   },
+   {
+    "n": 35,
+    "a": 0.9699785,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1697.4503237355693
+   },
+   {
+    "n": 36,
+    "a": 0.8678107,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1712.89416154452
+   },
+   {
+    "n": 37,
+    "a": 0.8493148,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1737.652542601786
+   },
+   {
+    "n": 38,
+    "a": 0.79398566,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1752.5656405322586
+   },
+   {
+    "n": 39,
+    "a": 0.7884282,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1767.7211191483018
+   },
+   {
+    "n": 40,
+    "a": 0.7870306,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1794.9047074733598
+   },
+   {
+    "n": 41,
+    "a": 0.77692026,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1806.1432998579758
+   },
+   {
+    "n": 42,
+    "a": 0.7746505,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1885.047267592251
+   },
+   {
+    "n": 43,
+    "a": 0.751715,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1943.7215539832282
+   },
+   {
+    "n": 44,
+    "a": 0.732665,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2077.5313819282533
+   },
+   {
+    "n": 45,
+    "a": 0.70813435,
+    "cause": "partial: stop / lock",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2141.5834896599717
+   },
+   {
+    "n": 46,
+    "a": 0.68529725,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2169.9907426228147
+   },
+   {
+    "n": 47,
+    "a": 0.61995715,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2210.973527444337
+   },
+   {
+    "n": 48,
+    "a": 0.6184173,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 49,
+    "a": 0.6047794,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 50,
+    "a": 0.56105936,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 51,
+    "a": 0.4459792,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 52,
+    "a": 0.42807865,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 53,
+    "a": 0.42227334,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 54,
+    "a": 0.39424974,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 55,
+    "a": 0.34138274,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 56,
+    "a": 0.22984198,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 57,
+    "a": 0.22756918,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 58,
+    "a": 0.2256565,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 59,
+    "a": 0.20653652,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 60,
+    "a": 0.2025193,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 61,
+    "a": 0.17401215,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 62,
+    "a": 0.17226468,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 63,
+    "a": 0.16465503,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 64,
+    "a": 0.1506633,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 65,
+    "a": 0.14767407,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 66,
+    "a": 0.14625937,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 67,
+    "a": 0.14576423,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 68,
+    "a": 0.14469102,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 69,
+    "a": 0.14376551,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 70,
+    "a": 0.1419834,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 71,
+    "a": 0.14074844,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 72,
+    "a": 0.13995656,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 73,
+    "a": 0.13963187,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 74,
+    "a": 0.13954592,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 75,
+    "a": 0.1392855,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 76,
+    "a": 0.13926001,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 77,
+    "a": 0.13911808,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 78,
+    "a": 0.13908905,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 79,
+    "a": 0.13898864,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 80,
+    "a": 0.13866219,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 81,
+    "a": 0.13847867,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 82,
+    "a": 0.13829368,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 83,
+    "a": 0.13821162,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 84,
+    "a": 0.13801771,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 85,
+    "a": 0.13799086,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 86,
+    "a": 0.13794492,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 87,
+    "a": 0.13793069,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 88,
+    "a": 0.13790138,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 89,
+    "a": 0.13789138,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 90,
+    "a": 0.1378756,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 91,
+    "a": 0.13784093,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 92,
+    "a": 0.13778467,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 93,
+    "a": 0.13776901,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 94,
+    "a": 0.13775465,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 95,
+    "a": 0.13775328,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 96,
+    "a": 0.13773175,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 97,
+    "a": 0.13771808,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 98,
+    "a": 0.13744746,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 99,
+    "a": 0.1373947,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 100,
+    "a": 0.13726984,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 101,
+    "a": 0.1371392,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 102,
+    "a": 0.13706698,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 103,
+    "a": 0.13703768,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 104,
+    "a": 0.1370276,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 105,
+    "a": 0.13699064,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 106,
+    "a": 0.13669848,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 107,
+    "a": 0.13668576,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 108,
+    "a": 0.13653898,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 109,
+    "a": 0.1362653,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 110,
+    "a": 0.13622865,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 111,
+    "a": 0.13613272,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 112,
+    "a": 0.13609938,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 113,
+    "a": 0.13596672,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 114,
+    "a": 0.13543911,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 115,
+    "a": 0.13533464,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 116,
+    "a": 0.13478199,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 117,
+    "a": 0.13417418,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 118,
+    "a": 0.133753,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 119,
+    "a": 0.13372794,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 120,
+    "a": 0.1334575,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 121,
+    "a": 0.13307808,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 122,
+    "a": 0.13149363,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 123,
+    "a": 0.13092113,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 124,
+    "a": 0.12916538,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 125,
+    "a": 0.1273215,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 126,
+    "a": 0.1226028,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 127,
+    "a": 0.119721286,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 128,
+    "a": 0.11928815,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 129,
+    "a": 0.10487666,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 130,
+    "a": 0.10282183,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 131,
+    "a": 0.10097793,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 132,
+    "a": 0.099366084,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 133,
+    "a": 0.09867822,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 134,
+    "a": 0.09697799,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 135,
+    "a": 0.09553984,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 136,
+    "a": 0.09455292,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 137,
+    "a": 0.09255681,
+    "cause": "zero: AF-front collision",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 138,
+    "a": 0.08787299,
+    "cause": "partial: following a lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 139,
+    "a": 0.08736434,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 140,
+    "a": 0.08583813,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 141,
+    "a": 0.08576387,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 142,
+    "a": 0.084778555,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 143,
+    "a": 0.08411072,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 144,
+    "a": 0.08406557,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 145,
+    "a": 0.083959475,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 146,
+    "a": 0.08385187,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 147,
+    "a": 0.082493156,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 148,
+    "a": 0.08243173,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 149,
+    "a": 0.08224048,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 150,
+    "a": 0.08100465,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 151,
+    "a": 0.08092227,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 152,
+    "a": 0.080706336,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 153,
+    "a": 0.08067688,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 154,
+    "a": 0.08059865,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 155,
+    "a": 0.08038968,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 156,
+    "a": 0.08003252,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 157,
+    "a": 0.07990539,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 158,
+    "a": 0.07919335,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 159,
+    "a": 0.07892976,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 160,
+    "a": 0.07836642,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 161,
+    "a": 0.07834316,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 162,
+    "a": 0.078334644,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 163,
+    "a": 0.07795814,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 164,
+    "a": 0.07795671,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 165,
+    "a": 0.077912055,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 166,
+    "a": 0.07774609,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 167,
+    "a": 0.07725592,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 168,
+    "a": 0.07724363,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 169,
+    "a": 0.07718507,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 170,
+    "a": 0.076121196,
+    "cause": "partial: rear-ended",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 171,
+    "a": 0.075692326,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 172,
+    "a": 0.07523183,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 173,
+    "a": 0.07520803,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 174,
+    "a": 0.07514125,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 175,
+    "a": 0.07510475,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 176,
+    "a": 0.074900195,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 177,
+    "a": 0.07481505,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 178,
+    "a": 0.07428534,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 179,
+    "a": 0.07105818,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 180,
+    "a": 0.07076378,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 181,
+    "a": 0.070729546,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 182,
+    "a": 0.07070015,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 183,
+    "a": 0.070464864,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 184,
+    "a": 0.07006251,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 185,
+    "a": 0.07005319,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 186,
+    "a": 0.06906234,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 187,
+    "a": 0.067980506,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 188,
+    "a": 0.06723678,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 189,
+    "a": 0.06690339,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 190,
+    "a": 0.06654247,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 191,
+    "a": 0.065774046,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 192,
+    "a": 0.065480545,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 193,
+    "a": 0.06457079,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 194,
+    "a": 0.064457215,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 195,
+    "a": 0.06434421,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 196,
+    "a": 0.063102685,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 197,
+    "a": 0.05933888,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 198,
+    "a": 0.05651265,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   },
+   {
+    "n": 199,
+    "a": 0.05540558,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2250.5642153938375
+   }
+  ],
+  "g15": [
+   {
+    "n": 1,
+    "a": 3.3339326,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1396.753575553017
+   },
+   {
+    "n": 2,
+    "a": 3.2471476,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1399.9863796400243
+   },
+   {
+    "n": 3,
+    "a": 3.2449596,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1403.115630855207
+   },
+   {
+    "n": 4,
+    "a": 3.211855,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1493.2481153646663
+   },
+   {
+    "n": 5,
+    "a": 2.6521394,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1501.3388451321985
+   },
+   {
+    "n": 6,
+    "a": 2.4745624,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1518.2686465024995
+   },
+   {
+    "n": 7,
+    "a": 1.9976885,
+    "cause": "partial: other slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1543.6348073353452
+   },
+   {
+    "n": 8,
+    "a": 1.961916,
+    "cause": "zero: static, other cue",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1552.4994897335018
+   },
+   {
+    "n": 9,
+    "a": 1.9412891,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1560.932935185182
+   },
+   {
+    "n": 10,
+    "a": 1.8995844,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1570.0141317904518
+   },
+   {
+    "n": 11,
+    "a": 1.8523763,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1579.5449511790875
+   },
+   {
+    "n": 12,
+    "a": 1.7916099,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1588.472844763553
+   },
+   {
+    "n": 13,
+    "a": 1.6822995,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1596.2744492919396
+   },
+   {
+    "n": 14,
+    "a": 1.5599155,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1604.698890602429
+   },
+   {
+    "n": 15,
+    "a": 1.5561532,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1613.495951061473
+   },
+   {
+    "n": 16,
+    "a": 1.5559638,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1622.6210016469201
+   },
+   {
+    "n": 17,
+    "a": 1.5555365,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1632.2401295551174
+   },
+   {
+    "n": 18,
+    "a": 1.5550406,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1642.5902127739755
+   },
+   {
+    "n": 19,
+    "a": 1.542564,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1653.5875452044797
+   },
+   {
+    "n": 20,
+    "a": 1.5422988,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1664.7910129964216
+   },
+   {
+    "n": 21,
+    "a": 1.5302033,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1676.4615458422827
+   },
+   {
+    "n": 22,
+    "a": 1.5183926,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1688.650326865421
+   },
+   {
+    "n": 23,
+    "a": 1.5118809,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1700.0619437139676
+   },
+   {
+    "n": 24,
+    "a": 1.5118085,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1713.4009353265037
+   },
+   {
+    "n": 25,
+    "a": 1.4689121,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1727.4571465321767
+   },
+   {
+    "n": 26,
+    "a": 1.4253676,
+    "cause": "partial: stop / lock",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1749.6236190407963
+   },
+   {
+    "n": 27,
+    "a": 1.4124839,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1763.9280784881814
+   },
+   {
+    "n": 28,
+    "a": 1.368506,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1777.1094038285553
+   },
+   {
+    "n": 29,
+    "a": 1.3336381,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1789.1435649883424
+   },
+   {
+    "n": 30,
+    "a": 1.2466679,
+    "cause": "partial: rear-ended",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1852.6947288476988
+   },
+   {
+    "n": 31,
+    "a": 1.1897415,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1878.0561679094685
+   },
+   {
+    "n": 32,
+    "a": 1.1300019,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1893.7926141912512
+   },
+   {
+    "n": 33,
+    "a": 1.023337,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1907.031638471347
+   },
+   {
+    "n": 34,
+    "a": 1.0118908,
+    "cause": "zero: static, other cue",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 1921.4605072668905
+   },
+   {
+    "n": 35,
+    "a": 0.9699785,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2010.440617541809
+   },
+   {
+    "n": 36,
+    "a": 0.8678107,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2030.0700475654107
+   },
+   {
+    "n": 37,
+    "a": 0.8493148,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2058.6658983563784
+   },
+   {
+    "n": 38,
+    "a": 0.79398566,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2076.045241666735
+   },
+   {
+    "n": 39,
+    "a": 0.7884282,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2093.605796093232
+   },
+   {
+    "n": 40,
+    "a": 0.7870306,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2123.5710875388922
+   },
+   {
+    "n": 41,
+    "a": 0.77692026,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2135.6106805581367
+   },
+   {
+    "n": 42,
+    "a": 0.7746505,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2213.2628242208953
+   },
+   {
+    "n": 43,
+    "a": 0.751715,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 44,
+    "a": 0.732665,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 45,
+    "a": 0.70813435,
+    "cause": "partial: stop / lock",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 46,
+    "a": 0.68529725,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 47,
+    "a": 0.61995715,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 48,
+    "a": 0.6184173,
+    "cause": "partial: launch late / not launching",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 49,
+    "a": 0.6047794,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "a: easy (garage = 1)",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 50,
+    "a": 0.56105936,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 51,
+    "a": 0.4459792,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 52,
+    "a": 0.42807865,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 53,
+    "a": 0.42227334,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 54,
+    "a": 0.39424974,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 55,
+    "a": 0.34138274,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 56,
+    "a": 0.22984198,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 57,
+    "a": 0.22756918,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 58,
+    "a": 0.2256565,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 59,
+    "a": 0.20653652,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 60,
+    "a": 0.2025193,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 61,
+    "a": 0.17401215,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 62,
+    "a": 0.17226468,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 63,
+    "a": 0.16465503,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 64,
+    "a": 0.1506633,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 65,
+    "a": 0.14767407,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 66,
+    "a": 0.14625937,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 67,
+    "a": 0.14576423,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 68,
+    "a": 0.14469102,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 69,
+    "a": 0.14376551,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 70,
+    "a": 0.1419834,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 71,
+    "a": 0.14074844,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 72,
+    "a": 0.13995656,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 73,
+    "a": 0.13963187,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 74,
+    "a": 0.13954592,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 75,
+    "a": 0.1392855,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 76,
+    "a": 0.13926001,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 77,
+    "a": 0.13911808,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 78,
+    "a": 0.13908905,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 79,
+    "a": 0.13898864,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 80,
+    "a": 0.13866219,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 81,
+    "a": 0.13847867,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 82,
+    "a": 0.13829368,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 83,
+    "a": 0.13821162,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 84,
+    "a": 0.13801771,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 85,
+    "a": 0.13799086,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 86,
+    "a": 0.13794492,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 87,
+    "a": 0.13793069,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 88,
+    "a": 0.13790138,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 89,
+    "a": 0.13789138,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 90,
+    "a": 0.1378756,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 91,
+    "a": 0.13784093,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 92,
+    "a": 0.13778467,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 93,
+    "a": 0.13776901,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 94,
+    "a": 0.13775465,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 95,
+    "a": 0.13775328,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 96,
+    "a": 0.13773175,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 97,
+    "a": 0.13771808,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 98,
+    "a": 0.13744746,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 99,
+    "a": 0.1373947,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 100,
+    "a": 0.13726984,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 101,
+    "a": 0.1371392,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 102,
+    "a": 0.13706698,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 103,
+    "a": 0.13703768,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 104,
+    "a": 0.1370276,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 105,
+    "a": 0.13699064,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 106,
+    "a": 0.13669848,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 107,
+    "a": 0.13668576,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 108,
+    "a": 0.13653898,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 109,
+    "a": 0.1362653,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 110,
+    "a": 0.13622865,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 111,
+    "a": 0.13613272,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 112,
+    "a": 0.13609938,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 113,
+    "a": 0.13596672,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 114,
+    "a": 0.13543911,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 115,
+    "a": 0.13533464,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 116,
+    "a": 0.13478199,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 117,
+    "a": 0.13417418,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 118,
+    "a": 0.133753,
+    "cause": "zero: static, other cue",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 119,
+    "a": 0.13372794,
+    "cause": "zero: static, red line, no lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 120,
+    "a": 0.1334575,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 121,
+    "a": 0.13307808,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 122,
+    "a": 0.13149363,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 123,
+    "a": 0.13092113,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 124,
+    "a": 0.12916538,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 125,
+    "a": 0.1273215,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 126,
+    "a": 0.1226028,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 127,
+    "a": 0.119721286,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 128,
+    "a": 0.11928815,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 129,
+    "a": 0.10487666,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 130,
+    "a": 0.10282183,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 131,
+    "a": 0.10097793,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 132,
+    "a": 0.099366084,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 133,
+    "a": 0.09867822,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 134,
+    "a": 0.09697799,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 135,
+    "a": 0.09553984,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 136,
+    "a": 0.09455292,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 137,
+    "a": 0.09255681,
+    "cause": "zero: AF-front collision",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 138,
+    "a": 0.08787299,
+    "cause": "partial: following a lead",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 139,
+    "a": 0.08736434,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 140,
+    "a": 0.08583813,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 141,
+    "a": 0.08576387,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 142,
+    "a": 0.084778555,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 143,
+    "a": 0.08411072,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 144,
+    "a": 0.08406557,
+    "cause": "zero: turn window, offroad / corridor",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 145,
+    "a": 0.083959475,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 146,
+    "a": 0.08385187,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 147,
+    "a": 0.082493156,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 148,
+    "a": 0.08243173,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 149,
+    "a": 0.08224048,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 150,
+    "a": 0.08100465,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 151,
+    "a": 0.08092227,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 152,
+    "a": 0.080706336,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 153,
+    "a": 0.08067688,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 154,
+    "a": 0.08059865,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 155,
+    "a": 0.08038968,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 156,
+    "a": 0.08003252,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 157,
+    "a": 0.07990539,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 158,
+    "a": 0.07919335,
+    "cause": "unsolvable: human track offroad (d354)",
+    "stratum": "d: human track offroad",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 159,
+    "a": 0.07892976,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 160,
+    "a": 0.07836642,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 161,
+    "a": 0.07834316,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 162,
+    "a": 0.078334644,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 163,
+    "a": 0.07795814,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 164,
+    "a": 0.07795671,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 165,
+    "a": 0.077912055,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 166,
+    "a": 0.07774609,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 167,
+    "a": 0.07725592,
+    "cause": "partial: rear-ended",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 168,
+    "a": 0.07724363,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 169,
+    "a": 0.07718507,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 170,
+    "a": 0.076121196,
+    "cause": "partial: rear-ended",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 171,
+    "a": 0.075692326,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 172,
+    "a": 0.07523183,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 173,
+    "a": 0.07520803,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 174,
+    "a": 0.07514125,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 175,
+    "a": 0.07510475,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 176,
+    "a": 0.074900195,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 177,
+    "a": 0.07481505,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 178,
+    "a": 0.07428534,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 179,
+    "a": 0.07105818,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 180,
+    "a": 0.07076378,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 181,
+    "a": 0.070729546,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 182,
+    "a": 0.07070015,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 183,
+    "a": 0.070464864,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 184,
+    "a": 0.07006251,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 185,
+    "a": 0.07005319,
+    "cause": "partial: near-miss 0.98-0.999",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 186,
+    "a": 0.06906234,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 187,
+    "a": 0.067980506,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 188,
+    "a": 0.06723678,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 189,
+    "a": 0.06690339,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 190,
+    "a": 0.06654247,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 191,
+    "a": 0.065774046,
+    "cause": "partial: free-road ratchet / slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 192,
+    "a": 0.065480545,
+    "cause": "zero: offroad, non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 193,
+    "a": 0.06457079,
+    "cause": "zero: corridor, moving non-turn",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 194,
+    "a": 0.064457215,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 195,
+    "a": 0.06434421,
+    "cause": "partial: other slow",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 196,
+    "a": 0.063102685,
+    "cause": "partial: launch late / not launching",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 197,
+    "a": 0.05933888,
+    "cause": "partial: launch late / not launching",
+    "stratum": "b: garage < 1, a pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 198,
+    "a": 0.05651265,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   },
+   {
+    "n": 199,
+    "a": 0.05540558,
+    "cause": "partial: following a lead",
+    "stratum": "c: no pool subject = 1",
+    "pcs": 2217.020793908353
+   }
+  ]
+ },
+ "theta": {
+  "boardmix": 2.261686987775836,
+  "g15": 2.670718769259782
+ },
+ "theta_cap_pcs": {
+  "boardmix": 2250.5642153938907,
+  "g15": 2217.0207939084057
+ },
+ "class_easy_only": {
+  "partial: launch late / not launching": {
+   "boardmix": [
+    18.770566623819377,
+    5.355213316730231,
+    53.8363216490485
+   ],
+   "g15": [
+    6.861894983320326,
+    1.8194231768763303,
+    43.98417725551854
+   ]
+  },
+  "zero: static, red line, no lead": {
+   "boardmix": [
+    15.430291102506544,
+    3.932982678860378,
+    31.91495613726722
+   ],
+   "g15": [
+    9.694278253448147,
+    2.388118074911978,
+    44.30946020832389
+   ]
+  },
+  "zero: turn window, offroad / corridor": {
+   "boardmix": [
+    11.608892277526593,
+    1.7825638592548614,
+    29.771936611544383
+   ],
+   "g15": [
+    7.51993832408516,
+    1.0949299714723224,
+    40.1929986859996
+   ]
+  },
+  "zero: offroad, non-turn": {
+   "boardmix": [
+    19.98757209535961,
+    6.306712733317829,
+    49.93598964058625
+   ],
+   "g15": [
+    13.548118849438424,
+    4.030766459547243,
+    74.75304711652598
+   ]
+  },
+  "zero: corridor, moving non-turn": {
+   "boardmix": [
+    11.879150423014835,
+    3.1599244122688956,
+    24.647085338750667
+   ],
+   "g15": [
+    8.44355495615605,
+    2.009688436012425,
+    38.911637185319876
+   ]
+  },
+  "partial: free-road ratchet / slow": {
+   "boardmix": [
+    24.783326447229683,
+    1.7473035519617497,
+    71.37021938239756
+   ],
+   "g15": [
+    77.75535798010901,
+    1.6199889147510476,
+    165.57191015021348
+   ]
+  },
+  "partial: rear-ended": {
+   "boardmix": [
+    6.409036289000369,
+    0.0,
+    24.904592247813127
+   ],
+   "g15": [
+    1.7540027460354395,
+    0.0,
+    14.823291159504626
+   ]
+  },
+  "zero: static, other cue": {
+   "boardmix": [
+    3.4974109227671306,
+    0.0,
+    9.396157721570388
+   ],
+   "g15": [
+    2.478998260697608,
+    0.0,
+    13.189364559618536
+   ]
+  },
+  "partial: near-miss 0.98-0.999": {
+   "boardmix": [
+    6.532655683403618,
+    0.0,
+    23.822650241648912
+   ],
+   "g15": [
+    4.820648812686841,
+    0.0,
+    41.633660276043116
+   ]
+  },
+  "partial: other slow": {
+   "boardmix": [
+    4.769662136200623,
+    0.0,
+    20.102162049553307
+   ],
+   "g15": [
+    4.0147488562324725,
+    0.0,
+    38.60813845706905
+   ]
+  },
+  "partial: stop / lock": {
+   "boardmix": [
+    3.448178787744382,
+    0.0,
+    12.77888096256446
+   ],
+   "g15": [
+    1.6666762105953694,
+    0.0,
+    14.33654965541294
+   ]
+  }
+ },
+ "class_stratum": {
+  "partial: launch late / not launching": {
+   "a: easy (garage = 1)": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      18.770566623819377,
+      5.355213316730231,
+      53.8363216490485
+     ],
+     "g15": [
+      6.861894983320326,
+      1.8194231768763303,
+      43.98417725551854
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 42,
+    "fix": {
+     "boardmix": [
+      6.565045658903273,
+      2.274741246367887,
+      17.15665838225699
+     ],
+     "g15": [
+      4.379892730651818,
+      2.0778119975114917,
+      22.86093380794364
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 4,
+    "fix": {
+     "boardmix": [
+      1.3852025053411126,
+      -0.11069046638677378,
+      4.506048326445757
+     ],
+     "g15": [
+      0.8156656949840908,
+      -0.031999604235880955,
+      5.105081287221068
+     ]
+    }
+   }
+  },
+  "unsolvable: human track offroad (d354)": {
+   "d: human track offroad": {
+    "windows": 24,
+    "fix": {
+     "boardmix": [
+      3.980280029579262,
+      1.3374886347310848,
+      9.123615365409425
+     ],
+     "g15": [
+      3.5097373640519436,
+      1.100477498846044,
+      15.533746667123177
+     ]
+    }
+   }
+  },
+  "zero: static, red line, no lead": {
+   "a: easy (garage = 1)": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      15.430291102506544,
+      3.932982678860378,
+      31.91495613726722
+     ],
+     "g15": [
+      9.694278253448147,
+      2.388118074911978,
+      44.30946020832389
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 12,
+    "fix": {
+     "boardmix": [
+      1.9732562552121635,
+      0.0,
+      4.479305804164068
+     ],
+     "g15": [
+      1.8262194261503737,
+      0.0,
+      8.524752940169137
+     ]
+    }
+   }
+  },
+  "zero: turn window, offroad / corridor": {
+   "a: easy (garage = 1)": {
+    "windows": 6,
+    "fix": {
+     "boardmix": [
+      11.608892277526593,
+      1.7825638592548614,
+      29.771936611544383
+     ],
+     "g15": [
+      7.51993832408516,
+      1.0949299714723224,
+      40.1929986859996
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      1.8499711706926973,
+      0.09890233781716233,
+      6.264635567765371
+     ],
+     "g15": [
+      1.4964173255689275,
+      0.09307174605889372,
+      9.788400498163648
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 4,
+    "fix": {
+     "boardmix": [
+      0.5868569242243211,
+      0.0,
+      1.814466630820793
+     ],
+     "g15": [
+      0.5616248078124499,
+      0.0,
+      3.277913653814629
+     ]
+    }
+   }
+  },
+  "zero: offroad, non-turn": {
+   "a: easy (garage = 1)": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      19.98757209535961,
+      6.306712733317829,
+      49.93598964058625
+     ],
+     "g15": [
+      13.548118849438424,
+      4.030766459547243,
+      74.75304711652598
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 9,
+    "fix": {
+     "boardmix": [
+      0.9395062667933871,
+      0.15743916140025932,
+      2.5927503616887164
+     ],
+     "g15": [
+      0.8625944113025525,
+      0.12942647722740047,
+      4.658910246949504
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      0.9845987102448817,
+      0.0,
+      3.9404712210815545
+     ],
+     "g15": [
+      0.6003445174426361,
+      0.0,
+      4.563654401570431
+     ]
+    }
+   }
+  },
+  "zero: corridor, moving non-turn": {
+   "a: easy (garage = 1)": {
+    "windows": 5,
+    "fix": {
+     "boardmix": [
+      11.879150423014835,
+      3.1599244122688956,
+      24.647085338750667
+     ],
+     "g15": [
+      8.44355495615605,
+      2.009688436012425,
+      38.911637185319876
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      1.6488042724874958,
+      0.3941216198690256,
+      3.6103239496629027
+     ],
+     "g15": [
+      1.3022923144196739,
+      0.32780186828736646,
+      6.0792127556884035
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 4,
+    "fix": {
+     "boardmix": [
+      0.6569889101149329,
+      0.13157538299104204,
+      1.6910461198597826
+     ],
+     "g15": [
+      0.5890133638367843,
+      0.11780499389396937,
+      3.014177406015454
+     ]
+    }
+   }
+  },
+  "partial: free-road ratchet / slow": {
+   "a: easy (garage = 1)": {
+    "windows": 5,
+    "fix": {
+     "boardmix": [
+      24.783326447229683,
+      1.7473035519617497,
+      71.37021938239756
+     ],
+     "g15": [
+      77.75535798010901,
+      1.6199889147510476,
+      165.57191015021348
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 8,
+    "fix": {
+     "boardmix": [
+      0.6978504359876752,
+      -0.01957658589497555,
+      2.460460999270212
+     ],
+     "g15": [
+      0.6105721187959716,
+      0.10945006875656418,
+      4.02938942399716
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 3,
+    "fix": {
+     "boardmix": [
+      -0.05238106935075848,
+      -0.4020665078295679,
+      0.2010010733274214
+     ],
+     "g15": [
+      0.024215798759996687,
+      -0.35557656852195124,
+      0.6928317180027758
+     ]
+    }
+   }
+  },
+  "partial: rear-ended": {
+   "a: easy (garage = 1)": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      6.409036289000369,
+      0.0,
+      24.904592247813127
+     ],
+     "g15": [
+      1.7540027460354395,
+      0.0,
+      14.823291159504626
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 6,
+    "fix": {
+     "boardmix": [
+      1.0816744067849413,
+      0.1304991706357214,
+      3.3801179269190107
+     ],
+     "g15": [
+      0.7104670925909886,
+      0.14417553274206513,
+      4.183443810557865
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      0.061834895953552405,
+      0.0,
+      0.2479251996355911
+     ],
+     "g15": [
+      0.06389996997063463,
+      0.0,
+      0.4372291399733733
+     ]
+    }
+   }
+  },
+  "zero: static, other cue": {
+   "a: easy (garage = 1)": {
+    "windows": 2,
+    "fix": {
+     "boardmix": [
+      3.4974109227671306,
+      0.0,
+      9.396157721570388
+     ],
+     "g15": [
+      2.478998260697608,
+      0.0,
+      13.189364559618536
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 5,
+    "fix": {
+     "boardmix": [
+      0.8181546801388322,
+      0.0,
+      2.275499975668349
+     ],
+     "g15": [
+      0.7379888644006769,
+      0.0,
+      4.369942181612071
+     ]
+    }
+   }
+  },
+  "partial: near-miss 0.98-0.999": {
+   "a: easy (garage = 1)": {
+    "windows": 3,
+    "fix": {
+     "boardmix": [
+      6.532655683403618,
+      0.0,
+      23.822650241648912
+     ],
+     "g15": [
+      4.820648812686841,
+      0.0,
+      41.633660276043116
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 3,
+    "fix": {
+     "boardmix": [
+      -0.2367866419785969,
+      -0.7400822845080427,
+      0.0
+     ],
+     "g15": [
+      -0.09852893566630883,
+      -0.5217102563996605,
+      0.0
+     ]
+    }
+   }
+  },
+  "partial: following a lead": {
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      0.1085141181565632,
+      0.0,
+      0.41706926701662567
+     ],
+     "g15": [
+      0.09831238182528068,
+      0.0,
+      0.7930703380119144
+     ]
+    }
+   },
+   "c: no pool subject = 1": {
+    "windows": 3,
+    "fix": {
+     "boardmix": [
+      -0.1676435508652503,
+      -1.0137170444812682,
+      0.44209349256415514
+     ],
+     "g15": [
+      -0.024660959212042144,
+      -1.0380109384475134,
+      0.9425730224349564
+     ]
+    }
+   }
+  },
+  "partial: other slow": {
+   "a: easy (garage = 1)": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      4.769662136200623,
+      0.0,
+      20.102162049553307
+     ],
+     "g15": [
+      4.0147488562324725,
+      0.0,
+      38.60813845706905
+     ]
+    }
+   },
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 3,
+    "fix": {
+     "boardmix": [
+      0.07607707387910523,
+      -0.0772370542542717,
+      0.312420061206518
+     ],
+     "g15": [
+      0.13844819558926247,
+      0.0,
+      0.8257529796361666
+     ]
+    }
+   }
+  },
+  "partial: stop / lock": {
+   "a: easy (garage = 1)": {
+    "windows": 2,
+    "fix": {
+     "boardmix": [
+      3.448178787744382,
+      0.0,
+      12.77888096256446
+     ],
+     "g15": [
+      1.6666762105953694,
+      0.0,
+      14.33654965541294
+     ]
+    }
+   }
+  },
+  "zero: AF-front collision": {
+   "b: garage < 1, a pool subject = 1": {
+    "windows": 1,
+    "fix": {
+     "boardmix": [
+      0.11051365284811254,
+      0.0,
+      0.45952122931259826
+     ],
+     "g15": [
+      0.10509445994307498,
+      0.0,
+      0.8478556193614839
+     ]
+    }
+   }
+  }
+ },
+ "garage_on_easy": {
+  "boardmix": [
+   896.7211119109529,
+   717.3119991099168,
+   934.2597395035083
+  ],
+  "g15": [
+   823.4161820828115,
+   701.5146531468305,
+   877.9691341960537
+  ]
+ },
+ "max_B_garage": {
+  "boardmix": [
+   896.7211119109529,
+   839.9177088617549,
+   936.4517483982789
+  ],
+  "g15": [
+   823.4161820828115,
+   702.3969282490124,
+   877.9758241990288
+  ]
+ },
+ "zeros_to_1": {
+  "boardmix": [
+   89.48965828552718,
+   45.13108204905806,
+   252.38400212685642
+  ],
+  "g15": [
+   51.43131233824829,
+   23.62636669286864,
+   447.17927485384484
+  ]
+ },
+ "partials_to_1": {
+  "boardmix": [
+   171.7415544308692,
+   82.63642856335059,
+   840.1528594180676
+  ],
+  "g15": [
+   242.91090500556288,
+   85.84642412162029,
+   802.6375089436129
+  ]
+ },
+ "JTN1_by_stratum": {
+  "a: easy (garage = 1)": {
+   "zeros": 105,
+   "partials": 76,
+   "lost": 114.69929281886061
+  },
+  "b: garage < 1, a pool subject = 1": {
+   "zeros": 57,
+   "partials": 68,
+   "lost": 74.85129570344411
+  },
+  "c: no pool subject = 1": {
+   "zeros": 8,
+   "partials": 20,
+   "lost": 11.707493803341935
+  },
+  "d: human track offroad": {
+   "zeros": 23,
+   "partials": 1,
+   "lost": 23.422088817850252
+  }
+ },
+ "JTN1_premise": {
+  "win": 437,
+  "loss": 202,
+  "win_points": 311.3498520400006,
+  "loss_points": 120.78545131881796
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "ctl": "NPBGG-new",
+ "arm": "NPBSM",
+ "finite_rc": 0,
+ "finite": {
+  "b": "NPBGG-new",
+  "b1": "NPBSM",
+  "finite": true,
+  "steps": 3,
+  "first": [
+   0.09657143115997315,
+   0.09771428793668747
+  ],
+  "mean": [
+   0.10333333599070708,
+   0.1013333357622226
+  ],
+  "pass_": true,
+  "criterion": "finite only (fire share is not expected to fall under a lower dose)"
+ },
+ "init": "RB0-P70-s0",
+ "dev_ade": [
+  0.5468162894248962,
+  0.610421359539032
+ ],
+ "weight_max_abs_diff_vs_ctl": 0.3666745722293854,
+ "pass_": true
+}

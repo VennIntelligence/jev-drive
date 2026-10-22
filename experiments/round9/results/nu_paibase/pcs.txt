@@ -1,0 +1,7 @@
+JTN-L18-s1: windows 2106 / 2106, mean 0.8933, PCS 1247
+NPB30-L18-s0: windows 2106 / 2106, mean 0.9349, PCS 1350
+NPB30-L18-s1: windows 2106 / 2106, mean 0.9315, PCS 1358
+NPB70-L18-s0: windows 2106 / 2106, mean 0.9427, PCS 1349
+NPB70-L18-s1: windows 2106 / 2106, mean 0.9305, PCS 1354
+STANDFMXH-L18-s0: windows 2106 / 2106, mean 0.9386, PCS 1369
+STANDFMXH-L18-s1: windows 2106 / 2106, mean 0.9365, PCS 1398

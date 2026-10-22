@@ -54,18 +54,21 @@ def cmd_mac(a):
     rows = RES / "arena_windows.csv.gz"
     ar, hd = json.load(open(RES / "arena.json")), json.load(open(RES / "held460.json"))
     # 1. frozen board-mix PCS, every tag of the window table from the same script
-    out = subprocess.run([py, str(REPO / "experiments/alpasim_proxy/scripts/pcs_local.py"), "score", "--rows", str(rows)], capture_output=True,
-                         text=True, check=True).stdout
-    (RES / "pcs.txt").write_text(out)
+    if not (RES / "pcs.txt").exists():
+        (RES / "pcs.txt").write_text(subprocess.run([py, str(REPO / "experiments/alpasim_proxy/scripts/pcs_local.py"), "score", "--rows", str(rows)],
+                                                    capture_output=True, text=True, check=True).stdout)
+    out = (RES / "pcs.txt").read_text()
     pcs = {m.group(1): float(m.group(2)) for m in re.finditer(r"^(\S+): windows .* PCS (\d+)$", out, re.M)}
     # 2. easy-item tables (decision 387 / 390), ref JTN-L18-s1
     tags = [*ARMS["70"], *ARMS["30"], *B2.values()]
     easy = {}
-    if a.ext:
-        for t in tags:
-            subprocess.run([py, str(REPO / "experiments/alpasim_proxy/scripts/easy_items.py"), "subject", "--rows", str(rows), "--tag", t, "--ref", JTN,
-                            "--dec", a.ext, "--out", f"../../round9/results/nu_paibase/easy_{t}", "--misses", f"../../../round9/results/nu_paibase/misses_{t}"],
-                           capture_output=True, text=True, check=True)
+    if a.ext:                                                        # one process per tag, in parallel (each takes ~30 min)
+        ps = [subprocess.Popen([py, str(REPO / "experiments/alpasim_proxy/scripts/easy_items.py"), "subject", "--rows", str(rows), "--tag", t, "--ref", JTN,
+                                "--dec", a.ext, "--out", f"../../round9/results/nu_paibase/easy_{t}", "--misses", f"../../../round9/results/nu_paibase/misses_{t}"],
+                               stdout=subprocess.DEVNULL, stderr=open(f"/tmp/nupb_easy_{t}.log", "w")) for t in a.easy_tags or tags]
+        assert all(p.wait() == 0 for p in ps), "easy_items subject failed"
+    for t in tags:
+        if (RES / f"easy_{t}.json").exists():
             J = json.load(open(RES / f"easy_{t}.json"))
             st = {s["stratum"][:2]: s for s in J["strata"]}
             ez = st["a:"]
@@ -103,7 +106,7 @@ def cmd_mac(a):
     L += ["", "Shares: " + ", ".join(f"P{sh} {'PASS' if V[f'share{sh}'] else 'FAIL'}" for sh in ARMS), "",
           "## Against JTN-L18-s1 (reported, not judged)", "", "| arm | arena paired [CI] | zeros arm / JTN | held 460 paired [CI] | held 460 zeros arm / JTN |",
           "|:--|--:|--:|--:|--:|"]
-    for t in [*ARMS["70"], *ARMS["30"], *B2.values()]:
+    for t in [*ARMS["70"], *ARMS["30"]]:
         p, h = ar[f"{t}|{JTN}"], hd[f"{t}|{JTN}"]
         L.append(f"| {t} | {p['mean']:+.4f} [{p['lo']:+.4f}, {p['hi']:+.4f}] | {p['zeros_a']} / {p['zeros_b']} | {h['mean']:+.4f} [{h['lo']:+.4f}, {h['hi']:+.4f}] | "
                  f"{h['zeros_a']} / {h['zeros_b']} |")
@@ -131,7 +134,8 @@ def main():
         q.add_argument(f"--{k}", required=True)
     q.add_argument("--ok", type=int, required=True)
     q = sp.add_parser("mac")
-    q.add_argument("--ext", default="", help="local copy of the box's native_gap extract ($O/ext) for the easy-item tables")
+    q.add_argument("--ext", default="", help="local copy of the box's native_gap extract ($O/ext): run the easy-item tables (else use existing)")
+    q.add_argument("--easy-tags", nargs="*", default=[])
     a = p.parse_args()
     dict(smoke=cmd_smoke, mac=cmd_mac)[a.cmd](a)
 
