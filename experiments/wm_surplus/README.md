@@ -99,6 +99,27 @@ sweep chunks, ev.json; bench runs `runs/bench/navtest/PROBE-wajepa-ctx-*`), smal
 Results: pending (decision 454).
 
 <!-- files:begin -->
+## P0: third-party subjects on navtest (reference rows and probe subjects)
+
+Decision row 455. Shortlist with repos, checkpoints, data and env recipes: [results/p0_subjects/shortlist.md](results/p0_subjects/shortlist.md);
+per-model setup status (written by the setup lane): `results/p0_subjects/setup.md`. Subjects: DiffusionDrive (non-foundation,
+88.1 PDMS), ReCogDrive-2B-RL (LLM: InternVL3-2B / Qwen2.5 hidden state -> DiT planner, 90.8), WoTE (BEV world model, 88.3);
+DriveVLA-W0 (Emu3 world model + VLA, 87.2) only if its missing artifacts exist publicly. Measurement subjects only.
+
+- **Bench family `agent`** (`jevdrive/bench/agents/<model>.json`, docs in `jevdrive/bench/models.py`): the fork's own NAVSIM agent
+  as its eval script runs it (`jevdrive/bench/agent_poses.py`, the model's env), poses in chunks of whole logs, one GPU job each;
+  then v2 EPDMS (our board) and v1.1 PDMS (the published metric) from the same poses; `summary.json` carries `PDMS_v1`,
+  `published`, `delta_vs_published`. `python -m jevdrive.bench run --model DiffusionDrive --bench navtest [--subset navsim/p0-smoke-logs]`.
+- **Reproduction gate** (`scripts/p0_repro.py submit --model M`): smoke on `navsim/p0-smoke-logs` (8 logs, 540 tokens) -> CPU
+  gate job (released per-token CSV: within 1.0 PDMS on the same tokens; otherwise >= published - 3) -> full navtest; `verdict`
+  writes `results/p0_subjects/<M>_full.json` (reproduced iff |PDMS - published| <= 0.5). A failing model is reported, not tuned.
+- **P1 on the subjects** (`scripts/p1_agent.py`, same commands and outputs as `p1_wajepa.py`, through `lib/usage_probe.Probe`):
+  sites ReCogDrive = the LM's last hidden state handed to the DiT; DiffusionDrive / WoTE = the two BEV maps of the TransFuser
+  backbone that the planner reads. Pred files `PROBE-{recog-lmh,dd-bev,wote-bev}-<arm>`, read out with `scripts/p1_readout.py`.
+  Outputs `$DATA_DIR/runs/wm_surplus/p1_agents/<model>/`.
+
+Results: pending.
+
 ## Files
 
 - `README.md` (README.md): do driving policies need grafted world …

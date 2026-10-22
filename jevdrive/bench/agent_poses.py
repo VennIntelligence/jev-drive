@@ -23,6 +23,49 @@ from pathlib import Path
 import numpy as np
 
 
+def build(repo: Path, config_dir: str, config_name: str, overrides) -> tuple:
+    """(cfg, agent): the fork's scoring config composed with its eval overrides, agent instantiated, initialized, eval mode."""
+    from hydra import compose, initialize_config_dir
+    from hydra.utils import instantiate
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    with initialize_config_dir(config_dir=str(Path(repo) / config_dir), version_base=None):
+        cfg = compose(config_name=config_name, overrides=list(overrides))
+    agent = instantiate(cfg.agent)
+    agent.initialize()
+    if hasattr(agent, "eval"):
+        agent.eval()
+    return cfg, agent
+
+
+def scene_loader(cfg, agent, tokens, logs, split_filter=None, blobs=None, data=None):
+    """SceneLoader as run_pdm_score.py builds it (the split's scene filter, restricted to these logs / tokens). split_filter /
+    blobs / data override the config's filter and paths (P1 fits on navtrain with the navtest-configured agent)."""
+    from hydra.utils import instantiate
+    from navsim.common.dataloader import SceneLoader
+    sf = split_filter if split_filter is not None else (instantiate(cfg.train_test_split.scene_filter) if "train_test_split" in cfg
+                                                       else instantiate(cfg.scene_filter))
+    sf.log_names = list(logs)
+    sf.tokens = list(tokens)
+    L = SceneLoader(sensor_blobs_path=Path(blobs or cfg.sensor_blobs_path), data_path=Path(data or cfg.navsim_log_path), scene_filter=sf,
+                    sensor_config=agent.get_sensor_config())
+    missing = sorted(set(tokens) - set(L.tokens))
+    assert not missing, f"{len(missing)} tokens not found by the SceneLoader, e.g. {missing[:3]}"
+    return L
+
+
+def trajectory(agent, loader, tok) -> np.ndarray:
+    """agent.compute_trajectory as run_pdm_score.py calls it -> (8, 3) float32."""
+    inp = loader.get_agent_input_from_token(tok)
+    if getattr(agent, "requires_scene", False):
+        traj = agent.compute_trajectory(inp, loader.get_scene_from_token(tok))
+    else:
+        traj = agent.compute_trajectory(inp)
+    p = np.asarray(traj.poses, np.float32)
+    assert p.shape == (8, 3), f"{tok}: trajectory shape {p.shape}, expected (8, 3) at 0.5 .. 4 s"
+    return p
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True, help="the fork's checkout (its navsim package is imported from here)")
@@ -39,43 +82,21 @@ def main(argv=None) -> None:
         print(f"{out} exists, nothing to do", flush=True)
         return
     repo = Path(a.repo).resolve()
-    sys.path.insert(0, str(repo))
     rows = [ln.split("\t") for ln in Path(a.tokens).read_text().split("\n") if ln.strip()]
     if a.limit:
         rows = rows[: a.limit]
     tokens, logs = [r[0] for r in rows], sorted({r[1] for r in rows})
 
     import torch
-    from hydra import compose, initialize_config_dir
-    from hydra.utils import instantiate
-    from navsim.common.dataloader import SceneLoader
-
     torch.manual_seed(a.seed)
     np.random.seed(a.seed)
-    with initialize_config_dir(config_dir=str(repo / a.config_dir), version_base=None):
-        cfg = compose(config_name=a.config_name, overrides=list(a.overrides))
-    agent = instantiate(cfg.agent)
-    agent.initialize()
-    if hasattr(agent, "eval"):
-        agent.eval()
-    sf = instantiate(cfg.train_test_split.scene_filter) if "train_test_split" in cfg else instantiate(cfg.scene_filter)
-    sf.log_names = logs
-    sf.tokens = tokens
-    loader = SceneLoader(sensor_blobs_path=Path(cfg.sensor_blobs_path), data_path=Path(cfg.navsim_log_path), scene_filter=sf,
-                         sensor_config=agent.get_sensor_config())
-    missing = sorted(set(tokens) - set(loader.tokens))
-    assert not missing, f"{len(missing)} tokens not found by the SceneLoader, e.g. {missing[:3]}"
+    cfg, agent = build(repo, a.config_dir, a.config_name, a.overrides)
+    loader = scene_loader(cfg, agent, tokens, logs)
     poses = np.full((len(tokens), 8, 3), np.nan, np.float32)
     t0 = time.time()
     with torch.no_grad():
         for i, tok in enumerate(tokens):
-            inp = loader.get_agent_input_from_token(tok)
-            if getattr(agent, "requires_scene", False):
-                traj = agent.compute_trajectory(inp, loader.get_scene_from_token(tok))
-            else:
-                traj = agent.compute_trajectory(inp)
-            p = np.asarray(traj.poses, np.float32)
-            assert p.shape == (8, 3), f"{tok}: trajectory shape {p.shape}, expected (8, 3) at 0.5 .. 4 s"
+            p = trajectory(agent, loader, tok)
             poses[i] = p
             if i % 100 == 0 or i == len(tokens) - 1:
                 el = time.time() - t0
