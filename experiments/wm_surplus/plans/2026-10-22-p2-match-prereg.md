@@ -1,6 +1,6 @@
 # P2 追平读数（WA-JEPA vs 当前谱系）预登记
 
-2026-10-22 21:55 写，HUGSIM 全量读数出来之前（只看过单场景冒烟：WA-JEPA 0.881、P0 0.059 与历史逐位相同）。论文骨架 research/paper-outline 3.2 / 五 P2，决策 138、144、148、170、452。
+2026-10-22 21:55 写，HUGSIM 全量读数出来之前（只看过单场景冒烟：WA-JEPA 0.881、P0 0.059 与历史逐位相同）。论文骨架 research/paper-outline 3.2 / 五 P2，总表第 138、144、148、170 条，PD1；结论记为 PD4（research/paper/decisions.md）。
 
 ## 问题
 
