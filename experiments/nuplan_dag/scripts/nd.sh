@@ -15,7 +15,7 @@
 #               plots <N> | t1all | t1probe | chk1 | rest | append | weights | smoke | identrun <a|b> | ident | build | train <seed> | p2sum
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=${ND_O:-$DATA_DIR/runs/nuplan_dag}; ME=experiments/nuplan_dag/scripts/nd.sh; PY=experiments/nuplan_dag/scripts/nd.py; V=.venv/bin/python
-TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; RES=experiments/nuplan_dag/results
+TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python; RES=${ND_RES:-$O/res}   # lane outputs outside the repo tree (copied into experiments/nuplan_dag/results at report time)
 JT=experiments/defect_fix/scripts/jt.sh; FM=experiments/defect_fix/scripts/free_m.py; J=$DATA_DIR/runs/defect_fix/jt; AH=$DATA_DIR/runs/alpasim_proxy/arena/hold
 B2=STANDFMXH-L18-s1; NTV0=NTV0-L18-s0; P1TAGS="R8K-L18-s2 R6DAG-L18-s1"; PRIO=${PRIO:-22}
 RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)          # nuPlan reads: 4 a card (alpasim-read4)
@@ -29,15 +29,16 @@ NT=experiments/nuplan_dag/scripts/nd_teach.py; ONR=experiments/onpol_nuplan/scri
 AS=$DATA_DIR/third_party/alpasim; NAV=$DATA_DIR/envs/navsim2/bin/python; CK=$DATA_DIR/runs/op_parity/runs; CR=$DATA_DIR/runs/op_parity/cache
 LC=$DATA_DIR/datasets/alpasim_nuplan_long/after160; KEY=runtime.scene_provider.trajdata; SPL=experiments/onpol_nuplan/results/split
 EA=(env JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD)
-B2S0=STANDFMXH-L18-s0; NP=NDP; NA=NDAG; NM=JTXD; KDAG=8; NSTEP=9500
+B2S0=STANDFMXH-L18-s0; NP=NDP; NA=NDAG; NM=JTXD; NSTEP=9500
+KDAG=$(cat $RES/kdag.txt 2>/dev/null || echo 0)                                   # amendment 1: k_dag from the drawable count (weights stage)
 RO=(--vram 32 --cpu 8 --ram 40 --timeout-h 3 --env CL_HIST_KEY=nd-roll)
 FT=(--train --vram 40 --cpu 6 --ram 30 --env CL_HIST_KEY=rm-train)
 T1CFG="$DATA_DIR/runs/onpol_long/roll/RB0-F-s0/c*/run/generated-user-config-0.yaml"
 argv() {  # argv <variant> <steps> <tag> [seed]: one argument a line. b2 = B2's logged argv; d0 = b2 on on1_JTXD / NDAG0 (DAgger rows at weight 0: T3);
           # dag = b2 on on1_JTXD / NDAG, 8 DAgger rows a batch (--on-k 78 --batch 136 --yr-mass 0.095: 45 normal + 13 yaw-rate + 70 pool rows unchanged)
   local M; M=$(ls -d $DATA_DIR/runs/route_mem/train-$B2/*/ | tail -1)meta.json; [[ -f $M ]] || die "no $M"
-  python3 - "$M" "$@" <<'PY'
-import json, sys
+  ND_KDAG=$KDAG python3 - "$M" "$@" <<'PY'
+import json, os, sys
 m, var, steps, tag = sys.argv[1:5]
 seed = (sys.argv[5:] or [None])[0]
 a = json.load(open(m))["argv"]
@@ -50,10 +51,12 @@ a[last("--steps") + 1] = steps
 if var in ("d0", "dag"):
     a[last("--on") + 1] = "on1_JTXD"
     a[last("--on-wfile") + 1] = f"runs/nuplan_dag/w/{'NDAG0' if var == 'd0' else 'NDAG'}.npz"
-if var == "dag":
-    a[last("--on-k") + 1] = "78"
-    a[last("--yr-mass") + 1] = "0.095"
-    a += ["--batch", "136"]
+if var == "dag":                                                   # amendment 1: k = k_dag rows a batch, 45 normal + 13 yaw-rate + 70 pool unchanged
+    k = int(os.environ["ND_KDAG"]); assert 1 <= k <= 8, f"k_dag {k}"
+    a[last("--on-k") + 1] = str(70 + k)
+    a[last("--yr-mass") + 1] = f"{13 / (128 + k):.4f}"
+    assert round((128 + k) * float(a[last("--yr-mass") + 1])) == 13
+    a += ["--batch", str(128 + k)]
 if seed is not None:
     a[last("--seed") + 1] = seed
 print("\n".join(a))
@@ -70,9 +73,13 @@ p1)
     for i in 0 1 2 3 4 5; do ids+=($(TRIES=2 sub nd-held-$t-$i "${RD[@]}" -- bash experiments/route_mem/scripts/rm_chain.sh read $t $i 6)) || exit 1; done; done
   s=$(sub nd-p1sum --after $(csv ${ids[@]}) --vram 0.1 --cpu 32 --ram 96 --timeout-h 4 -- bash $ME p1sum "${T[*]}") || exit 1
   echo "$(date '+%F %T') p1 (code $(git rev-parse --short HEAD)): ${T[*]}: reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) p1sum $s" | tee -a $O/stages.txt ;;
+p1quick) s=$(sub nd-p1quick --vram 0.1 --cpu 8 --ram 32 --timeout-h 1 -- bash -c "$TR $PY quick --tags $P1TAGS --refs $B2 $NTV0 --out $RES/p1_quick.md --title 'Part 1: PAI checkpoints on nuPlan' && date > $O/P1QUICK") || exit 1
+  echo "$(date '+%F %T') p1quick $s" | tee -a $O/stages.txt ;;
 p1resum) s=$(sub nd-p1sum --vram 0.1 --cpu 32 --ram 96 --timeout-h 4 -- bash $ME p1sum) || exit 1; echo "$(date '+%F %T') p1sum resubmitted $s" | tee -a $O/stages.txt ;;
 p1sum)  # the arena extract (native_gap rule) of the PAI tags + B2 + NTV0 -> paired arena / held 460 tables, zero classes, lateral-zero split
   T=(${2:-$P1TAGS}); X=$O/p1/ext; mkdir -p $O/p1; rd=(); for t in ${T[@]} $B2 $NTV0; do rd+=($t=$J/arena/$t@off); done
+  $TR $PY quick --tags ${T[@]} --refs $B2 $NTV0 --out $RES/p1_quick.md --title "Part 1: PAI checkpoints on nuPlan" || die "quick"
+  date '+%F %T' > $O/P1QUICK
   $AP $FM ext --read ${rd[@]} --out $X --workers 32 > $O/p1/ext.log 2>&1 || die "extract (log $O/p1/ext.log)"
   for t in ${T[@]} $NTV0; do $V $FM arena --src $X --a $t --b $B2 --ref $NTV0 --out $O/p1/arena_$t.json > /dev/null || die "arena $t"; done
   $V -c "import pandas as pd; w = pd.read_parquet('$X/win.parquet'); w[['tag', 'id', 'score', 'type']].to_csv('$RES/p1_arena_windows.csv.gz', index=False)" || die windows
@@ -222,21 +229,22 @@ rest)     # the full chain after the probe gates: 24 roll chunks -> rows NDAG (a
        "smoke $sm identity $ia $ib $ic build $bd reads ${ids[0]} .. ${ids[-1]} (${#ids[@]}) p2sum $ps" | tee -a $O/stages.txt ;;
 append) free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 150 )) || die "free $free GB < 150 GB"
   $TR $NT append --base on1_JTX --add on1_$NA --out on1_$NM --res $RES ;;
-weights)
+weights)  # amendment 1: k_dag = min(8, floor(4.6 x drawable / 9 500)) rows a batch (<= 4.6 expected draws per DAgger row, the JT ceiling)
   $TR $NT weights --pool on1_$NM --base JTX00 --src on1_$NA --k-on 70 --k-dag 0 --out NDAG0 --res $RES || die NDAG0
-  $TR $NT weights --pool on1_$NM --base JTX00 --src on1_$NA --k-on 70 --k-dag $KDAG --out NDAG --res $RES || die NDAG ;;
+  $TR $NT weights --pool on1_$NM --base JTX00 --src on1_$NA --k-on 70 --k-dag auto --out NDAG --res $RES || die NDAG
+  python3 -c "import json; print(json.load(open('$RES/w_NDAG.json'))['k_dag'])" > $RES/kdag.txt; echo "$(date '+%F %T') k_dag $(cat $RES/kdag.txt)" | tee -a $O/stages.txt ;;
 smoke)
   X=NDSM-L18-s0; [[ ! -e $CK/$X ]] || die "$X exists"; run dag 60 $X 0
   echo "$(date '+%F %T') smoke: ${A[*]} --diag-every 20" | tee -a $O/stages.txt
   $TR "${A[@]}" --diag-every 20 > $O/smoke.log 2>&1 || die "smoke run (log $O/smoke.log)"
-  $TR $NT smoke --tag $X --wfile NDAG --k-dag $KDAG --res $RES; r=$?; rm -rf $CK/$X; exit $r ;;
+  $TR $NT smoke --tag $X --wfile NDAG --k-dag $(cat $RES/kdag.txt) --res $RES; r=$?; rm -rf $CK/$X; exit $r ;;
 identrun)  # identrun a|b: 60 steps eager: a = B2's argv (on1_JTX / JTX00), b = the same on on1_JTXD / NDAG0
   declare -A IX=([a]=NDIDA [b]=NDIDB) VX=([a]=b2 [b]=d0); X=${IX[$2]}-L18-s1; [[ ! -e $CK/$X ]] || die "$X exists"; run ${VX[$2]} 60 $X
   echo "$(date '+%F %T') identity $2: ${A[*]}" | tee -a $O/stages.txt; $TR "${A[@]}" > $O/ident_$2.log 2>&1 || die "identity run $2 (log $O/ident_$2.log)" ;;
 ident)
   $TR experiments/defect_fix/scripts/df.py bitcmp --a NDIDA-L18-s1 --b NDIDB-L18-s1 --out nuplan_dag_identity \
       --note "B2 (STANDFMXH-L18-s1) argv 60 steps eager: on1_JTX / JTX00 vs on1_JTXD / NDAG0 (on1_NDAG rows at weight 0)"; r=$?
-  cp experiments/defect_fix/results/nuplan_dag_identity.json $RES/identity.json || r=4
+  mv experiments/defect_fix/results/nuplan_dag_identity.json $RES/identity.json || r=4
   rm -rf $CK/NDIDA-L18-s1 $CK/NDIDB-L18-s1; exit $r ;;
 build)
   python3 -c "import json, sys; r = '$RES'; sys.exit(0 if json.load(open(f'{r}/smoke.json'))['pass_'] and json.load(open(f'{r}/identity.json'))['identical'] and json.load(open(f'{r}/label_$NA.json'))['T2']['passed'] and json.load(open(f'{r}/label_$NA.json'))['T4']['passed'] else 1)" \
@@ -248,6 +256,8 @@ dry) echo "NDAG s1: $(argv dag $NSTEP NDAG-L18-s1 1 | xargs)"; echo "== B2 -> ND
   echo "== B2 -> NDAG s0"; diff <(argv b2 $NSTEP $B2) <(argv dag $NSTEP NDAG-L18-s0 0); echo "== identity a -> b"; diff <(argv b2 60 NDIDA-L18-s1) <(argv d0 60 NDIDB-L18-s1); true ;;
 p2sum)  # NDAG s0 / s1 against the same-seed B2 (s0 / s1) and NTV0: arena (extract), held 460, zero classes, lateral split
   T=(NDAG-L18-s0 NDAG-L18-s1); X=$O/p2/ext; mkdir -p $O/p2; rd=(); for t in ${T[@]} $B2S0 $B2 $NTV0; do rd+=($t=$J/arena/$t@off); done
+  $TR $PY quick --tags ${T[@]} --refs $B2S0 $B2 $NTV0 --out $RES/p2_quick.md --title "Part 2: NDAG vs B2" || die "quick"
+  date '+%F %T' > $O/P2QUICK
   $AP $FM ext --read ${rd[@]} --out $X --workers 32 > $O/p2/ext.log 2>&1 || die "extract (log $O/p2/ext.log)"
   $V $FM arena --src $X --a NDAG-L18-s0 --b $B2S0 --ref $B2 $NTV0 --out $O/p2/arena_NDAG-L18-s0.json > /dev/null || die "arena s0"
   $V $FM arena --src $X --a NDAG-L18-s1 --b $B2 --ref $B2S0 $NTV0 --out $O/p2/arena_NDAG-L18-s1.json > /dev/null || die "arena s1"

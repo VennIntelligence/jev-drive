@@ -466,6 +466,10 @@ def cmd_weights(a):
     logs, mode = tb["log"].astype(str), tb["mode"].astype(str)
     heldl = sorted(g for g in set(logs[mode == "self"]) if zlib.crc32(g.encode()) % 100 < HOLD_PCT)       # rm_train --on-hold-pct 15's held logs
     dr = np.flatnonzero(X["draw"] & ~np.isin(logs[n0:], heldl))
+    if a.k_dag == "auto":                                                      # amendment 1: <= 4.6 expected draws per DAgger row over 9 500 steps
+        a.k_dag = int(min(8, np.floor(4.6 * len(dr) / 9500)))
+        assert a.k_dag >= 1, f"{len(dr)} drawable rows: k_dag < 1"
+    a.k_dag = int(a.k_dag)
     k_all = a.k_on + a.k_dag
     w = np.zeros(len(names))
     w[:n0] = Bw["w"].astype(np.float64) * (a.k_on / k_all if a.k_dag else 1.0)
@@ -528,7 +532,7 @@ def main():
     q = sp.add_parser("weights")
     for k_ in ("pool", "base", "src", "out", "res"):
         q.add_argument(f"--{k_}", required=True)
-    q.add_argument("--k-on", type=int, default=70); q.add_argument("--k-dag", type=int, default=8)
+    q.add_argument("--k-on", type=int, default=70); q.add_argument("--k-dag", default="0")
     q = sp.add_parser("smoke"); q.add_argument("--tag", required=True); q.add_argument("--wfile", required=True); q.add_argument("--res", required=True)
     q.add_argument("--k-dag", type=int, default=8)
     a = p.parse_args()

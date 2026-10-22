@@ -5,6 +5,7 @@
   $AP nd.py latsplit --ext X --tags T.. --out F      arena held lateral zeros (offroad / corridor) of each tag split by d395's pre-registered rule
                                                      (lat_zero.classify: a over-speed at curvature / slow-down, b path error at normal speed,
                                                      c other) on a free_m / native_gap extract; a is split a2 turn (human turns >= 28 deg) / a1 other
+  $TR nd.py quick --tags T.. --refs R.. --out M   score-only headline (arena + held 460 pairs, zero classes) before any extract
   $V nd.py p1md --root D --tags T.. --b2 B --ntv0 N --out M    Part 1 report (arena pairs, held 460, zero classes, lateral split)
 """
 from __future__ import annotations
@@ -83,6 +84,62 @@ def cmd_latsplit(a):
     print(R.groupby(["tag", "cls"]).size().unstack(fill_value=0).to_string())
 
 
+def arena_scores(tag):
+    """Score-only arena read of a tag (no extract): window id -> rollout row, from the 18 chunk run dirs (jt.sh aread)."""
+    import glob
+    R = {}
+    for f in sorted(glob.glob(str(DATA / f"runs/defect_fix/jt/arena/{tag}@off/c*/run/aggregate/results-summary.json"))):
+        for r in json.load(open(f))["rollouts"]:
+            R.setdefault(r["clipgt_id"], r)
+    return R
+
+
+def cmd_quick(a):
+    """Headline tables from the scorer outputs only (no native_gap extract): arena held windows (score, failure_type, route-fail excluded as
+    free_m arena does) and held 460 @18, each tag paired against the refs (log-clustered bootstrap), zero classes."""
+    import pandas as pd
+    import df
+    import nx_regress as NR
+    from jevdrive import stats
+    S = pd.read_csv(DATA / "runs/alpasim_proxy/arena/set/set.csv.gz").drop_duplicates("id").set_index("id")
+    held = S.index[S.split == "held"]
+    tags = list(dict.fromkeys([*a.tags, *a.refs]))
+    A = {t: arena_scores(t) for t in tags}
+    H = {t: NR.rollouts(df.read_dirs(t)["held"]) for t in tags}
+    sc = lambda r: float(r.get("score") or 0)  # noqa: E731
+    L = [f"# {a.title}: score-only headline (scorer outputs, no extract)", "",
+         "Arena: held windows read by both tags, route-fail windows dropped (free_m arena's rule); held 460 @18: scenes read by both. "
+         "Paired = arm - ref, log-clustered bootstrap 95 % CI (jevdrive.stats.paired).", "",
+         "| arm | ref | read | n | mean arm / ref | paired [CI] | zeros arm / ref | lateral zeros arm / ref |", "|:--|:--|:--|--:|--:|--:|--:|--:|"]
+    lat = lambda r: sc(r) == 0 and any(k in NR.failure_type(r) for k in LATERAL)  # noqa: E731
+    out = {}
+    for t in a.tags:
+        for ref in [x for x in a.refs if x != t]:
+            for rd, D in (("arena", A), ("held 460", H)):
+                ids = sorted(set(D[t]) & set(D[ref]) & (set(held) if rd == "arena" else set(D[t])))
+                if rd == "arena":
+                    ids = [i for i in ids if NR.failure_type(D[t][i]) != "route-fail" and NR.failure_type(D[ref][i]) != "route-fail"]
+                if not ids:
+                    continue
+                x, y = np.array([sc(D[t][i]) for i in ids]), np.array([sc(D[ref][i]) for i in ids])
+                g = S.log.reindex(ids).values if rd == "arena" else np.array([i.rsplit("-", 1)[0] for i in ids])
+                p = stats.paired(x, y, groups=g)
+                la, lb = sum(lat(D[t][i]) for i in ids), sum(lat(D[ref][i]) for i in ids)
+                out[f"{t}|{ref}|{rd}"] = dict(n=len(ids), a=float(x.mean()), b=float(y.mean()), **{k: float(p[k]) for k in ("mean", "lo", "hi")},
+                                              zeros_a=int((x == 0).sum()), zeros_b=int((y == 0).sum()), lat_a=la, lat_b=lb)
+                L.append(f"| {t} | {ref} | {rd} | {len(ids)} | {x.mean():.4f} / {y.mean():.4f} | {p['mean']:+.4f} [{p['lo']:+.4f}, {p['hi']:+.4f}] | "
+                         f"{(x == 0).sum()} / {(y == 0).sum()} | {la} / {lb} |")
+    for rd, D in (("arena held", A), ("held 460", H)):
+        L += ["", f"Zero classes, {rd} (nx_regress.failure_type):", "", "| class | " + " | ".join(tags) + " |", "|:--|" + "--:|" * len(tags)]
+        C = {t: Counter(NR.failure_type(r) for i, r in D[t].items() if sc(r) == 0 and (rd != "arena held" or i in set(held))) for t in tags}
+        for k in sorted({k for c in C.values() for k in c}, key=lambda k: -sum(c.get(k, 0) for c in C.values())):
+            L.append(f"| {k} | " + " | ".join(str(C[t].get(k, 0)) for t in tags) + " |")
+        out[f"zeros|{rd}"] = {t: dict(C[t]) for t in tags}
+    Path(a.out).write_text("\n".join(L) + "\n")
+    dump(Path(a.out).with_suffix(".json"), out)
+    print("\n".join(L))
+
+
 def ci(p):
     return f"{p['mean' if 'mean' in p else 'diff']:+.4f} [{p['lo']:+.4f}, {p['hi']:+.4f}]"
 
@@ -144,12 +201,15 @@ def main():
     q.add_argument("--tags", nargs="+", required=True), q.add_argument("--refs", nargs="+", required=True), q.add_argument("--out", required=True)
     q = sp.add_parser("latsplit")
     q.add_argument("--ext", required=True), q.add_argument("--tags", nargs="+", required=True), q.add_argument("--out", required=True)
+    q = sp.add_parser("quick")
+    q.add_argument("--tags", nargs="+", required=True), q.add_argument("--refs", nargs="+", required=True), q.add_argument("--out", required=True)
+    q.add_argument("--title", default="NUPLAN-DAG")
     q = sp.add_parser("p1md")
     for k in ("root", "b2", "ntv0", "out"):
         q.add_argument(f"--{k}", required=True)
     q.add_argument("--tags", nargs="+", required=True)
     a = p.parse_args()
-    dict(held=cmd_held, latsplit=cmd_latsplit, p1md=cmd_p1md)[a.cmd](a)
+    dict(held=cmd_held, latsplit=cmd_latsplit, p1md=cmd_p1md, quick=cmd_quick)[a.cmd](a)
 
 
 if __name__ == "__main__":
