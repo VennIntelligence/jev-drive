@@ -108,11 +108,13 @@ def load_facts(f):
 def read(label, root, facts):
     F = load_facts(facts)
     out = []
-    for sim in sorted(glob.glob(os.path.join(root, "runs", "*", "sim")) + glob.glob(os.path.join(root, "*", "sim"))):
-        f = os.path.join(sim, "aggregate", "results-summary.json")
-        dj = os.path.join(os.path.dirname(sim), "driver", "drive.jsonl")
-        if not (os.path.exists(f) and os.path.exists(dj)):
+    for f in sorted(glob.glob(os.path.join(root, "**", "aggregate", "results-summary.json"), recursive=True)):
+        sim = os.path.dirname(os.path.dirname(f))
+        dj = [x for x in (os.path.join(os.path.dirname(sim), "driver", "drive.jsonl"), os.path.join(sim, "driver-logs", "drive.jsonl"))
+              if os.path.exists(x)]
+        if not dj:
             continue
+        dj = dj[0]
         D = {}
         for line in open(dj):
             if '"infer": true' in line:
