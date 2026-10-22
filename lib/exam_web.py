@@ -13,9 +13,13 @@ GET /api/catalog (backend.catalog(), for the custom pick), GET /api/official?run
 POST /api/control {paused | playlist | record | option + value}, /api/act {kind, item} (refused when no loop runs), /api/order {run, order},
 /api/new_batch {key, ids, name, start} (start false: only create it), /api/continue {run, force}, /api/play_start {run, item, force}
 (continue, then drive that item first), /api/reload {run, force} (archive_results, then continue from the first item), /api/delete {run},
-/api/ensure_side. continue / play_start / reload (and new_batch with start) answer {"confirm": text} when backend.busy_other() reports
+/api/ensure_side, /api/show_view (start the viewer when it is not running), /api/bye (the page is closing: sendBeacon on pagehide).
+continue / play_start / reload (and new_batch with start) answer {"confirm": text} when backend.busy_other() reports
 another run; the page asks and posts again with force (stop_other() first), as the Tk panel does.
 The shown batch is per request (?run=), so the desktop window and a phone can look at different batches.
+Closing the panel closes what is not driving: once no page has polled /api/state for IDLE_S (120 s; Chrome throttles a hidden
+page's timers to about one a minute) or BYE_S (20 s) after a page said bye, and backend.driving() is false, the server closes the
+viewer (backend.stop_side()) and exits (its lock goes with it). While something drives it leaves everything alone and checks again.
 """
 import json
 import os
@@ -30,6 +34,7 @@ from urllib.parse import parse_qs, urlparse
 from exam_panel import WHEEL_STATUS, Backend, Control, du, human_size, phone_urls, read_json
 
 PAGE = Path(__file__).with_name("exam_web.html")
+IDLE_S, BYE_S = float(os.environ.get("EXAM_IDLE_S", 120)), float(os.environ.get("EXAM_BYE_S", 20))
 BOOT = "%x" % int(time.time() * 1000)      # server start id: an open page reloads itself when it changes (new code after --restart)
 
 
@@ -67,6 +72,7 @@ class App(object):
         self.lock = threading.Lock()           # backend.selected is shared: items / official run under it
         self.url, self.lan = phone_urls()
         self.sizes, self.cache, self.notices = {}, {}, []
+        self.seen, self.bye = time.time(), None   # last /api/state poll of any page; last bye (pagehide) of a page
         c = self.ctl.read()                    # write option defaults once, as the Tk panel does
         if any(n not in c["options"] for n in backend.options):
             self.ctl.update(options=dict({n: o[1] for n, o in backend.options.items()}, **c["options"]))
@@ -147,6 +153,7 @@ class App(object):
                       other="" if alive else self.cached("busy", 5, self.b.busy_other)),
             control=dict(paused=c["paused"], playlist=c["playlist"], record=c["record"], options=c["options"]),
             viewer={k: v for k, v in vw.items() if k not in ("pid", "t")} if time.time() - (vw.get("t") or 0) < 5 else {},
+            side=self.cached("side", 2, self.b.side_running) if self.side else {},
             shown=shown, batches=bat, items=items, notices=self.notices, boot=BOOT, t=time.time())
 
     def meta(self):
@@ -265,6 +272,29 @@ class App(object):
                 self.ctl.update(options=dict(self.ctl.read()["options"], **{d["option"]: v}))
         return dict(ok=True, control=self.ctl.read())
 
+    def idle(self):
+        """Seconds no page has been open (0 = a page polls): IDLE_S after the last poll, or BYE_S after a bye with no poll since."""
+        quiet = time.time() - self.seen
+        limit = BYE_S if self.bye and self.bye >= self.seen else IDLE_S
+        return quiet if quiet > limit else 0
+
+    def watchdog(self, servers):
+        """No page open and nothing driving: close the viewer and stop serving (serve() returns, the process exits)."""
+        while True:
+            time.sleep(5)
+            try:
+                if not self.idle() or self.b.driving():
+                    continue
+                msg = self.b.stop_side() if self.side else ""
+            except Exception as e:  # noqa: BLE001
+                print("watchdog: %r" % e, flush=True)
+                continue
+            print("%s no page for %.0f s and nothing drives: %s; server exits" % (time.strftime("%F %T"), self.idle(), msg or
+                                                                                  "no viewer to close"), flush=True)
+            for s in servers:
+                s.shutdown()
+            return
+
     def official(self, run):
         with self.lock:
             self.b.selected = run
@@ -297,6 +327,13 @@ class App(object):
             return self.reload(d.get("run"), bool(d.get("force")))
         if path == "/api/delete":
             return self.delete(d.get("run"))
+        if path == "/api/bye":
+            self.bye = time.time()
+            return dict(ok=True)
+        if path == "/api/show_view":
+            msg = self.b.show_view() if self.side else "This panel runs without helper windows (--no-side)."
+            self.cache.pop("side", None)
+            return dict(ok=True, msg=msg)
         if path == "/api/ensure_side":
             msg = self.b.ensure_side() if self.side else ""
             self.notice(msg)
@@ -306,6 +343,7 @@ class App(object):
     def get(self, path, q):
         run = q.get("run", [None])[0] or None
         if path == "/api/state":
+            self.seen = time.time()
             return self.state(run)
         if path == "/api/meta":
             return self.meta()
@@ -373,4 +411,7 @@ def serve(backend, port, hosts=None, side=True):
     print("%s panel on %s" % (backend.title, ", ".join("http://%s:%d/" % (h, port) for h in bound)), flush=True)
     for s in servers[1:]:
         threading.Thread(target=s.serve_forever, daemon=True).start()
+    threading.Thread(target=app.watchdog, args=(servers,), daemon=True).start()
     servers[0].serve_forever()
+    for s in servers:
+        s.server_close()

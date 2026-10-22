@@ -32,7 +32,9 @@ from the wheel daemon's status file (WHEEL_STATUS, default $DATA_DIR/tmp/wheel/s
 """
 import json
 import os
+import shlex
 import shutil
+import signal
 import subprocess
 import threading
 import time
@@ -101,7 +103,7 @@ class Backend(object):
     pinned = ()                    # toggle options the web panel also shows as a big switch in its header (always visible)
     selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
-    def batch_sets(self):          # [(key, label)] offered by "New batch"
+    def batch_sets(self):          # [(key, label[, category])] offered by "New batch"; category "Cat/Sub" groups them on the web page
         raise NotImplementedError
 
     def new_batch(self, key, ids=None, name=None, start=True):  # run dir for set `key` (or the picked `ids`, key "custom"), labelled
@@ -109,6 +111,42 @@ class Backend(object):
 
     def catalog(self):             # every selectable item for a custom pick, as dicts (backend-specific fields); [] = none
         return []
+
+    # The viewer window (pygame, DISPLAY EXAM_DISPLAY) runs once, never in a respawn loop: the user closes windows and nothing reopens
+    # them on its own. viewer = (tmux window in session EXAM_TMUX, script under the repo, shell command); show_view() starts it when
+    # missing (the web panel's "Show driving view"), stop_side() closes it (the web panel when no page is open and nothing drives).
+    viewer = None
+
+    def viewer_pids(self):
+        if not self.viewer:
+            return []
+        return subprocess.run(["pgrep", "-f", "%s --dir %s( |$)" % (self.viewer[1], self.live)], stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL, text=True).stdout.split()
+
+    def side_running(self):        # {"viewer": bool} of the helper windows this backend starts
+        return {"viewer": bool(self.viewer_pids())} if self.viewer else {}
+
+    def show_view(self):           # start the viewer if it is not running; message ("" = no viewer)
+        if not self.viewer:
+            return ""
+        if self.viewer_pids():
+            return "The driving view is already open."
+        win, _, cmd = self.viewer
+        subprocess.run(["bash", "-c", "tmux has-session -t {s} 2>/dev/null || tmux new-session -d -s {s} -n main; tmux kill-window -t {s}:{w} "
+                        "2>/dev/null; tmux new-window -d -t {s} -n {w} {c}".format(s=SIDE_TMUX, w=win, c=shlex.quote(cmd))])
+        return "Driving view opened (tmux %s:%s)." % (SIDE_TMUX, win)
+
+    def stop_side(self):           # close the viewer; message
+        pids = self.viewer_pids()
+        for p in pids:
+            try:
+                os.kill(int(p), signal.SIGTERM)
+            except (OSError, ValueError):
+                pass
+        return "driving view closed" if pids else ""
+
+    def driving(self):             # something drives (the panel loop, a terminal run): the web panel then never closes the viewer
+        return bool(self.loop_run())
 
     def start_loop(self, run):     # (re)start the drive loop on that run dir; return (ok, message)
         raise NotImplementedError
@@ -168,6 +206,8 @@ class Backend(object):
         return ""
 
 
+SIDE_TMUX = os.environ.get("EXAM_TMUX", "human")           # tmux session of the viewer window (a test instance uses another)
+VIEW_DISPLAY = os.environ.get("EXAM_DISPLAY", ":0")        # X display of the viewer (a test instance: an Xvfb display)
 WHEEL_STATUS = os.environ.get("WHEEL_STATUS", os.path.join(os.environ.get("DATA_DIR", "/data"), "tmp/wheel/status.json"))
 
 
@@ -265,7 +305,7 @@ def panel(backend):
         return True
 
     def new_batch():
-        key = dict((l, k) for k, l in sets).get(set_var.get())
+        key = dict((s[1], s[0]) for s in sets).get(set_var.get())
         if key and take_over():
             before = set(backend.runs())
             info(backend.new_batch(key)[1])

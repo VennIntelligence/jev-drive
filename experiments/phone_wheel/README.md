@@ -166,7 +166,9 @@ bash ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_drive.sh --resume 
 
 Double-click "B2D human exam" on the Tokyo desktop (`scripts/human_panel.sh`; install or refresh the icon with
 `bash experiments/phone_wheel/scripts/human_panel.sh --install`). It opens one panel (a lock file prevents a second) and
-starts the wheel daemon (tmux `wheel`) and the viewer (tmux `human:viewer`) if they are missing.
+starts the wheel daemon (tmux `wheel`) and the viewer (tmux `human:viewer`, run once, no respawn) if they are missing. "Show
+driving view" in the header opens a closed viewer again; with no panel page open and nothing driving the server closes the viewer
+and exits (AlpaSim README, "Desktop panel", Windows).
 
 Since 2026-10-22 the panel is a web page (`lib/exam_web.py` + `lib/exam_web.html`, stdlib server on the system Python,
 vanilla JS, dark theme of the viewer). The icon starts the server once (it holds the lock; port 8771 for B2D, 8770 for

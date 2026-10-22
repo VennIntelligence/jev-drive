@@ -10,7 +10,11 @@
 Columns: tag, track (pai / nuplan), scene_id, score (mean over the read's rollouts of the scene), why (PAI facts: fclass (ok -> pass / partial), primary in
 brackets; results-summary reads: alpasim_exam.why of the scene's worst rollout), read (short name), config (serve), src (the read root
 under runs/ of the host, box: = the GPU box, tokyo: = Tokyo). TAGS = the Driver tags (alpasim_exam.driver_choices); rows of another seed of the
-same family (tag minus -s<k>) are kept only for a Driver tag that has no row of its own on that track.
+same family (tag minus -s<k>) are kept only for a Driver tag that has no row of its own on that track. nuPlan public-1491 reads keep the
+48 scenes of scenes_navtest_full_part001_48.txt, all 1491 for the tags in FULL (default RSG-L18-s0, the current tag with such a read).
+`spread` (box): every checkpoint's public-1491 read (the read10 roots below, any tag) -> one row per scene: n reads, mean, min, max,
+zeros, passes (results/nuplan_public_spread.tsv; the panel's "hard for our models" nuPlan sets):
+  ssh autodl "python3 - spread" < experiments/alpasim_human/scripts/stored_scores.py > experiments/alpasim_human/results/nuplan_public_spread.tsv
 Configs: "ACC+GAP" = the PAI submission serve (JEV_VCONT 1.0, LEAD, ACC, GAP 0.7,2.7, steering weight 10), "ACC+GAP+harm" = the same
 with the Harmonizer on, "ACC" = without GAP, "VC+LEAD" = PAI native serve, "native" = nuPlan, every serving switch off, "stop3" /
 "leash3" = nuPlan hold serves, "unrecorded" = the run dir keeps no serve. The panel's model mode serves PAI with ACC+GAP and nuPlan
@@ -39,8 +43,9 @@ RS = [("box", "RSG-L18-s0", "pai", "PAI 281 (d330 acc_gap/read/s2)", "ACC+GAP", 
 RS += [("box", t, "pai", "PAI 281 (onpol_long/pai281/%s)" % d, "unrecorded", "onpol_long/pai281/%s/*" % d)
        for t, d in [("YS-L18-s0", "ys0"), ("YS-L18-s1", "ys1"), ("YNONE-L18-s0", "ynone0"), ("YNONE-L18-s1", "ynone1"),
                     ("YS2G-L18-s0", "ys2g0"), ("YS2G-L18-s1", "ys2g1"), ("YR10m10-F-s0", "ybase")]]
-RS += [("box", None, "nuplan", "nuPlan public 1491 @10 (%s)" % "/".join(g.split("/")[:2]), "native", g + "/<tag>/*")
-       for g in ("route_follow/guard/read10", "route_follow/slow/read10", "route_follow/allrows/read10", "onpol_long/read10")]
+READ10 = ("route_follow/guard/read10", "route_follow/slow/read10", "route_follow/allrows/read10", "onpol_long/read10")
+RS += [("box", None, "nuplan", "nuPlan public 1491 @10 (%s)" % "/".join(g.split("/")[:2]), "native", g + "/<tag>/*") for g in READ10]
+FULL = set(os.environ.get("FULL", "RSG-L18-s0").split(","))
 RS += [("tokyo", t, "nuplan", "nuPlan 48 (native_ref/%s)" % d, c, "alpasim/native_ref/" + d)
        for t, d, c in [("JTN-L18-s1", "JTN-L18-s1-native", "native"), ("JTN-L18-s1", "JTN-L18-s1-holdstop3", "stop3"),
                        ("JTN-L18-s0", "JTN-L18-s0-holdstop3", "stop3"), ("RSG-L18-s0", "RSG-L18-s0-holdstop3", "stop3"),
@@ -117,12 +122,32 @@ def rows(host, repo):
             for td in sorted(glob.glob(str(D / base / "*"))):
                 t = Path(td).name
                 if fams is None or family(t) in fams:
-                    out += rs_rows(t, track, read, config, sorted(glob.glob(td + "/*")), nu48)
+                    out += rs_rows(t, track, read, config, sorted(glob.glob(td + "/*")), None if t in FULL else nu48)
         else:
             out += rs_rows(tag, track, read, config, sorted(glob.glob(str(D / g))), nu48 if track == "nuplan" else None)
     for r in out:
         r[7] = "%s:%s" % (host, r[7])
         print("\t".join(str(x).replace("\t", " ") for x in r))
+
+
+def spread():
+    """Per public nuPlan scene over every checkpoint's public-1491 read (READ10 roots, one dir per tag): scene_id, n, mean, min, max,
+    zeros (score 0), passes (score 1)."""
+    per = {}
+    for g in READ10:
+        for td in sorted(glob.glob(str(D / g / "*"))):
+            if not re.search(r"-s\d+$", Path(td).name):
+                continue
+            mine = {}
+            for c in glob.glob(td + "/*/aggregate/results-summary.json") + glob.glob(td + "/*/sim/aggregate/results-summary.json"):
+                for r in json.loads(Path(c).read_text())["rollouts"]:
+                    mine.setdefault(r["clipgt_id"], []).append(r["score"] or 0.0)
+            for sid, v in mine.items():
+                per.setdefault(sid, []).append(sum(v) / len(v))
+    print("scene_id\tn\tmean\tmin\tmax\tzeros\tpasses")
+    for sid in sorted(per):
+        v = per[sid]
+        print("%s\t%d\t%.4f\t%.4f\t%.4f\t%d\t%d" % (sid, len(v), sum(v) / len(v), min(v), max(v), sum(x == 0 for x in v), sum(x >= 1 for x in v)))
 
 
 def write(out):
@@ -146,6 +171,8 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     if a[:1] == ["rows"]:
         rows(a[a.index("--host") + 1], a[a.index("--repo") + 1])
+    elif a[:1] == ["spread"]:
+        spread()
     elif a[:1] == ["write"]:
         write(a[a.index("--out") + 1])
     else:

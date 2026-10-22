@@ -45,7 +45,7 @@ header.top { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap
 .chip.ok { color: var(--green); } .chip.ok::before { background: var(--green); }
 .chip.warn { color: var(--orange); } .chip.warn::before { background: var(--orange); }
 .chip.bad { color: var(--red); } .chip.bad::before { background: var(--red); }
-#setBtn { margin-left: auto; }
+#viewBtn { margin-left: auto; } #viewBtn[hidden] + #setBtn { margin-left: auto; }
 .pin { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px 4px 6px; font-weight: 700; }
 .pin.on { border-color: var(--blue); background: var(--sel); }
 /* main: library | playlist */
@@ -164,14 +164,23 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
 .set .when { color: var(--orange); font-size: .82rem; margin-top: 4px; }
 .set select { min-width: 12rem; }
 .step { color: var(--label); font-weight: 700; }
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
-.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; cursor: pointer; color: var(--muted); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; cursor: pointer; color: var(--muted); white-space: nowrap; }
 .tabs button.on { color: var(--text); border-bottom-color: var(--blue); }
-.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
-.setopt { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; text-align: left; min-height: 44px; }
-.setopt:hover { background: var(--hover); } .setopt.on { border-color: var(--blue); background: var(--sel); }
+.tabs button .n { font-size: .78rem; color: var(--muted); margin-left: 4px; }
+.sub { color: var(--label); font-size: .9rem; font-weight: 700; margin: 14px 2px 6px; }
+.sub:first-child { margin-top: 2px; }
+.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.setopt { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; text-align: left; min-height: 42px;
+  display: flex; align-items: center; gap: 10px; }
+.setopt .t { flex: 1; min-width: 0; } .setopt .c { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; background: var(--bg);
+  border-radius: 999px; padding: 1px 9px; flex: none; }
+.setopt:hover { background: var(--hover); } .setopt.on { border-color: var(--blue); background: var(--sel); } .setopt.on .c { color: var(--text); }
+.custom { background: var(--card2); border-radius: 10px; padding: 14px; } .custom p { margin: 0 0 10px; }
+#viewBtn.off { background: var(--orange); border-color: var(--orange); color: #111; font-weight: 700; }
+#viewBtn.on { background: transparent; color: var(--muted); }
 .filters input[type=search] { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 14rem; }
-#pickTable th { cursor: pointer; top: 0; } #pickTable td { white-space: nowrap; text-overflow: ellipsis; }
+#pickTable th { cursor: pointer; top: 0; } #pickTable td.fl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } #pickTable td { white-space: nowrap; text-overflow: ellipsis; }
 #pickTable th.sorted::after { content: " \25BE"; } #pickTable th.sorted.asc::after { content: " \25B4"; }
 #pickTable tr.sel td { background: var(--sel); }
 #pickTable input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--blue); }
@@ -204,6 +213,7 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
     <button class="btn ghost" id="copyBtn" style="min-height:32px;padding:3px 10px" title="Copy the phone address">Copy</button></span>
   <span class="row" id="inputs"></span>
   <span class="row" id="pins"></span>
+  <button class="btn" id="viewBtn" hidden title="The driving view window (the viewer). Closing it closes it; this opens it again.">Show driving view</button>
   <button class="btn" id="setBtn">&#9881; Drive settings</button>
 </header>
 
@@ -287,17 +297,23 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
 <dialog id="newDlg"><div class="dlg">
   <div class="row"><h2 class="grow">New playlist</h2><button class="btn" onclick="newDlg.close()">Close</button></div>
   <div class="step">1. Choose the tracks</div>
-  <div class="tabs"><button data-tab="sets" class="on">From a scene set</button><button data-tab="pick" id="pickTab">Pick scenes yourself</button></div>
-  <div class="body" id="tabSets" style="flex:1"><div class="sets" id="sets"></div></div>
+  <div class="tabs" id="cats"></div>
+  <div class="body" id="tabSets" style="flex:1"></div>
   <div id="tabPick" style="display:none; flex:1; min-height:0; flex-direction:column; gap:8px">
     <div class="row filters">
-      <input type="search" id="q" placeholder="Search id, label, group, failure...">
-      <select id="fTrack"></select><select id="fRev"></select><select id="fFail"></select>
+      <input type="search" id="q" placeholder="Search id, label, log, failure...">
+      <select id="fTrack"></select><select id="fGroup"></select><select id="fFail"></select><select id="fScore"></select>
       <label class="switch"><input type="checkbox" id="fSel"><span class="knob"></span>selected only</label>
+      <span class="muted small" id="pickN"></span>
     </div>
     <div class="tw" style="flex:1; overflow:auto; margin:0"><table id="pickTable">
-      <colgroup><col style="width:2.8rem"><col style="width:10rem"><col class="hide-n"><col style="width:4.5rem" class="hide-n"><col style="width:7rem"><col style="width:6.5rem"><col style="width:10rem"><col style="width:7.5rem" class="hide-n"></colgroup>
-      <thead><tr><th><input type="checkbox" id="pickAll" title="Select or clear every shown scene"></th><th data-k="label">scene</th><th data-k="group" class="hide-n">group</th><th data-k="stage" class="n hide-n">stage</th><th data-k="ref_mean" class="n" title="organisers' mean">organisers</th><th data-k="r6dag" class="n">R6DAG</th><th data-k="fail">R6DAG failure</th><th data-k="model" class="n hide-n">model</th></tr></thead>
+      <colgroup><col style="width:2.6rem"><col style="width:9.6rem"><col class="hide-n"><col style="width:6.6rem" class="hide-n"><col style="width:5.6rem"><col style="width:5rem" class="hide-n"><col style="width:8.5rem"><col class="ckc" style="width:5.6rem"><col style="width:6.5rem" class="hide-n"></colgroup>
+      <thead><tr><th><input type="checkbox" id="pickAll" title="Select or clear every shown scene"></th><th data-k="label">scene</th><th data-k="group" class="hide-n">group</th>
+        <th data-k="ref_mean" class="n hide-n" title="Organisers' mean (PAI)">organisers</th>
+        <th data-k="ours" class="n" title="PAI: mean of our current models' stored reads. nuPlan: mean of every checkpoint's public-1491 read">our mean</th>
+        <th data-k="r6dag" class="n hide-n">R6DAG</th><th data-k="fail" title="How the reference checkpoint failed in its stored read: NTV0 on PAI, RSG on nuPlan (public-1491 read)">failure</th>
+        <th data-k="stored" class="n ckc" id="pickCk" title="The selected Driver checkpoint's stored score">stored</th>
+        <th data-k="model" class="n hide-n">reference</th></tr></thead>
       <tbody></tbody>
     </table></div>
   </div>
@@ -318,7 +334,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const base = s => (s || "").split("/").pop();
 const S = {meta: null, st: null, run: null, view: null, sort: "order", show: "all", grp: "", anchor: null, orderKey: null,
-           noticeT: Date.now() / 1000, busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "sets", setKey: null, html: {},
+           noticeT: Date.now() / 1000, busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "Track", setKey: null, html: {},
            head: null, headT: 0, cur: null, last: null, nameEdited: false};
 
 // ---------- plumbing ----------
@@ -413,6 +429,9 @@ function render() {
     return `<label class="switch pin ${v ? "on" : ""}" title="${esc(help)}"><input type="checkbox" data-k="opt:${esc(o.name)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(o.label)} <span style="color:${v ? "var(--green)" : "var(--muted)"}">${v ? "ON" : "OFF"}</span></label>`;
   }).join(""));
   setHTML($("#inputs"), "inputs", st.inputs.map(([t, l]) => `<span class="chip ${l}">${esc(t)}</span>`).join(""));
+  const vb = $("#viewBtn"), side = st.side || {};
+  vb.hidden = !("viewer" in side);
+  if (!vb.hidden) { vb.className = "btn " + (side.viewer ? "on" : "off"); vb.textContent = side.viewer ? "Driving view open" : "Show driving view"; vb.disabled = !!side.viewer; }
   if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#url").title = "LAN fallback " + st.phone.lan; }
   // library
   setHTML($("#libList"), "lib", st.batches.map(b => {
@@ -584,7 +603,7 @@ function choiceOpts(ch, v) {    // choices: plain values, or [value, label, grou
 // ---------- polling ----------
 async function poll1() {
   const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : ""));
-  if (!st.loop) { $("#stHead").textContent = "Panel server not answering"; $("#stHead").className = "bad"; return; }
+  if (!st.loop) { $("#stHead").textContent = "Panel server not answering (it stops when no panel page is open: click the desktop icon)"; $("#stHead").className = "bad"; return; }
   if (S.boot && st.boot && st.boot !== S.boot) return location.reload();   // the server restarted (new code): reload the page
   S.boot = st.boot;
   if (S.run && !st.batches.some(b => b.run === S.run)) S.run = null;
@@ -737,25 +756,53 @@ function mdTables(text) {      // markdown tables -> <table>, other lines as tex
 }
 
 // ---------- new playlist ----------
+// Sets come from /api/meta as [key, label "<name> (<count>)", category "Cat/Sub"]; the dialog shows one category at a time (tabs), its
+// sets under their sub-headings, and a last tab "Custom pick" = the scene table (catalog). Meta and catalog are fetched on every open:
+// the Driver option changes the "Selected model" sets and the stored column.
+const CAT_ORDER = ["Track", "Difficulty", "Our models", "Failure type"];
+function catsOf() {
+  const cats = [];
+  for (const s of S.meta.sets) { const c = (s[2] || "Sets").split("/")[0]; if (!cats.includes(c)) cats.push(c); }
+  cats.sort((x, y) => (CAT_ORDER.indexOf(x) + 1 || 99) - (CAT_ORDER.indexOf(y) + 1 || 99));
+  return S.meta.catalog ? cats.concat(["Custom pick"]) : cats;
+}
 function setTab(t) {
+  const cats = catsOf();
+  if (!cats.includes(t)) t = cats[0];
   S.tab = t;
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
-  $("#tabSets").style.display = t === "sets" ? "" : "none";
-  $("#tabPick").style.display = t === "pick" ? "flex" : "none";
-  if (t === "pick") loadCatalog();
+  $("#cats").innerHTML = cats.map(c => {
+    const n = c === "Custom pick" ? "" : S.meta.sets.filter(s => (s[2] || "Sets").split("/")[0] === c).length;
+    return `<button data-tab="${esc(c)}" class="${c === t ? "on" : ""}">${esc(c)}${n ? `<span class="n">${n}</span>` : ""}</button>`;
+  }).join("");
+  const pick = t === "Custom pick";
+  $("#tabSets").style.display = pick ? "none" : "";
+  $("#tabPick").style.display = pick ? "flex" : "none";
+  if (pick) loadCatalog();
+  else {
+    let html = "", sub = null;
+    for (const [k, l, c] of S.meta.sets.filter(s => (s[2] || "Sets").split("/")[0] === t)) {
+      const sb = (c || "").split("/").slice(1).join("/");
+      if (sb !== sub) { html += (sub !== null ? "</div>" : "") + (sb ? `<div class="sub">${esc(sb)}</div>` : "") + '<div class="sets">'; sub = sb; }
+      const m = /^(.*) \((\d+)\)$/.exec(l) || [l, l, ""];
+      html += `<button class="setopt ${k === S.setKey ? "on" : ""}" data-k="${esc(k)}"><span class="t">${esc(m[1])}</span>${m[2] ? `<span class="c">${m[2]}</span>` : ""}</button>`;
+    }
+    $("#tabSets").innerHTML = html + (sub !== null ? "</div>" : "");
+  }
   newInfo();
 }
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
-$("#newBtn").onclick = () => {
-  $("#sets").innerHTML = S.meta.sets.map(([k, l]) => `<button class="setopt ${k === S.setKey ? "on" : ""}" data-k="${esc(k)}">${esc(l)}</button>`).join("");
-  $("#pickTab").hidden = !S.meta.catalog;
+$("#cats").onclick = e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); };
+$("#newBtn").onclick = async () => {
+  const m = await api("/api/meta");
+  if (m.sets) S.meta = m;
+  S.cat = null;                                // stored column and filters follow the Driver now in control
   S.nameEdited = false;
   $("#newName").value = "";
-  setTab(S.meta.catalog ? S.tab : "sets");
+  if (S.setKey && !S.meta.sets.some(s => s[0] === S.setKey)) S.setKey = null;
+  setTab(S.tab);
   newDlg.showModal();
 };
 $("#newName").oninput = () => { S.nameEdited = !!$("#newName").value.trim(); newInfo(); };
-$("#sets").onclick = e => {
+$("#tabSets").onclick = e => {
   const b = e.target.closest(".setopt");
   if (!b) return;
   S.setKey = b.dataset.k;
@@ -764,9 +811,9 @@ $("#sets").onclick = e => {
 };
 function newInfo() {
   let txt, ok, dflt;
-  if (S.tab === "sets") {
+  if (S.tab !== "Custom pick") {
     const s = S.meta.sets.find(x => x[0] === S.setKey);
-    txt = s ? "Tracks: " + s[1] : "Choose a scene set";
+    txt = s ? "Tracks: " + s[1] + ((s[2] || "").includes("/") ? " · " + s[2].split("/").slice(1).join("/") : "") : "Choose a scene set";
     ok = !!s; dflt = s ? s[1] : "";
   } else {
     const tracks = new Set([...S.pick].map(id => (S.catById[id] || {}).track));
@@ -778,35 +825,57 @@ function newInfo() {
   $("#newGo").disabled = !ok || !$("#newName").value.trim();
 }
 $("#newGo").onclick = async () => {
-  const name = $("#newName").value.trim();
-  const body = Object.assign(S.tab === "sets" ? {key: S.setKey} : {key: "custom", ids: S.cat.filter(r => S.pick.has(r.id)).map(r => r.id)}, {name, start: false});
+  const name = $("#newName").value.trim(), pick = S.tab === "Custom pick";
+  const body = Object.assign(!pick ? {key: S.setKey} : {key: "custom", ids: S.cat.filter(r => S.pick.has(r.id)).map(r => r.id)}, {name, start: false});
   newDlg.close();
   const r = await work("Creating the playlist", () => api("/api/new_batch", body));
   if (!r) return;
   toast(r.ok ? `Playlist "${name}" created. Press ▶ Play to start it.` : r.msg || "Failed", r.ok ? "ok" : "bad", 8000);
-  if (r.ok) { if (S.tab === "pick") S.pick.clear(); if (r.run) { S.run = r.run; S.view = "pl"; S.anchor = null; S.grp = ""; } }
+  if (r.ok) { if (pick) S.pick.clear(); if (r.run) { S.run = r.run; S.view = "pl"; S.anchor = null; S.grp = ""; } }
   poll1();
 };
+// score filters of the pick: [value, label, test(row)]; "stored" = the Driver checkpoint's stored score (catalog field stored.score)
+const ckv = x => x.stored ? x.stored.score : null;
+const SCORE_F = [
+  ["Driver checkpoint's stored score", [["ck0", "stored = 0", x => ckv(x) === 0], ["ckp", "stored 0 - 1 (partial)", x => ckv(x) > 0 && ckv(x) < 1],
+    ["cklo", "stored < 0.3", x => ckv(x) != null && ckv(x) < 0.3], ["ckmid", "stored 0.3 - 0.7", x => ckv(x) >= 0.3 && ckv(x) < 0.7],
+    ["ckhi", "stored >= 0.7", x => ckv(x) >= 0.7], ["ckno", "no stored read", x => ckv(x) == null]]],
+  ["Our models' mean", [["olo", "our mean < 0.3", x => x.ours != null && x.ours < 0.3], ["omid", "our mean 0.3 - 0.7", x => x.ours >= 0.3 && x.ours < 0.7],
+    ["ohi", "our mean >= 0.7", x => x.ours >= 0.7], ["ohard", "our mean < 0.5", x => x.ours != null && x.ours < 0.5]]],
+  ["Organisers' mean (PAI)", [["r0", "organisers = 0", x => x.ref_mean === 0], ["r02", "organisers 0 - 0.2", x => x.ref_mean > 0 && x.ref_mean <= 0.2],
+    ["r05", "organisers 0.2 - 0.5", x => x.ref_mean > 0.2 && x.ref_mean <= 0.5], ["r1", "organisers > 0.5", x => x.ref_mean > 0.5]]]];
+const SCORE_T = Object.fromEntries(SCORE_F.flatMap(([, v]) => v.map(([k, , f]) => [k, f])));
 async function loadCatalog() {
   if (S.cat) return renderPick();
-  $("#pickTable tbody").innerHTML = '<tr><td colspan="8"><span class="spin"></span>loading the scene list</td></tr>';
+  $("#pickTable tbody").innerHTML = '<tr><td colspan="9"><span class="spin"></span>loading the scene list</td></tr>';
   const r = await api("/api/catalog");
   S.cat = r.rows || [];
   S.catById = Object.fromEntries(S.cat.map(x => [x.id, x]));
-  const opts = (sel, all, vals) => { sel.innerHTML = `<option value="">${all}</option>` + vals.map(v => `<option>${esc(v)}</option>`).join(""); };
-  const uniq = k => [...new Set(S.cat.map(x => x[k]).filter(v => v != null && v !== ""))].sort();
-  opts($("#fTrack"), "all tracks", uniq("track"));
-  opts($("#fRev"), "all revisions", uniq("revision"));
-  opts($("#fFail"), "any R6DAG result", ["any failure"].concat(uniq("fail")));
+  const uniq = (k, rows) => [...new Set((rows || S.cat).map(x => x[k]).filter(v => v != null && v !== ""))].sort();
+  const og = (lab, vals) => vals.length ? `<optgroup label="${esc(lab)}">` + vals.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join("") + "</optgroup>" : "";
+  const keep = (id, html) => { const el = $(id), v = el.value; el.innerHTML = html; if ([...el.options].some(o => o.value === v)) el.value = v; };
+  keep("#fTrack", `<option value="">all tracks</option>` + uniq("track").map(v => `<option value="${esc(v)}">${v === "pai" ? "PAI" : v === "nuplan" ? "nuPlan" : esc(v)}</option>`).join(""));
+  const nu = S.cat.filter(x => x.track === "nuplan");
+  keep("#fGroup", `<option value="">any revision / city / log</option>` + og("PAI revision", uniq("revision").map(v => ["revision:" + v, "PAI " + v])) +
+    og("nuPlan city", uniq("city", nu).map(v => ["city:" + v, v])) + og("nuPlan split", uniq("split", nu).map(v => ["split:" + v, v + " split"])) +
+    og("nuPlan log", uniq("log", nu).map(v => ["log:" + v, v])));
+  const fails = [...new Set(S.cat.flatMap(x => (x.fail || "").split(", ")).filter(Boolean))].sort();
+  keep("#fFail", `<option value="">any result (NTV0 on PAI, RSG on nuPlan)</option><option value="*">any failure</option>` + fails.map(v => `<option>${esc(v)}</option>`).join(""));
+  const ck = S.cat.some(x => x.stored);
+  keep("#fScore", `<option value="">any score</option>` + SCORE_F.filter(([g]) => ck || !g.startsWith("Driver")).map(([g, v]) => og(g, v.map(([k, t]) => [k, t]))).join(""));
+  const tag = ((S.st && S.st.control.options.driver) || "").split("-")[0];
+  $("#pickCk").textContent = ck ? tag : "stored";
+  document.querySelectorAll("#pickTable .ckc").forEach(el => el.style.display = ck ? "" : "none");
   renderPick();
 }
 function pickRows() {
-  const q = $("#q").value.trim().toLowerCase(), tr = $("#fTrack").value, rv = $("#fRev").value, fl = $("#fFail").value, only = $("#fSel").checked;
-  let rows = S.cat.filter(x => (!tr || x.track === tr) && (!rv || x.revision === rv) && (!only || S.pick.has(x.id)) &&
-    (!fl || (fl === "any failure" ? !!x.fail : x.fail === fl)) &&
-    (!q || [x.id, x.label, x.group, x.fail].join(" ").toLowerCase().includes(q)));
-  const [k, dir] = S.pickSort;
-  if (k) rows = rows.slice().sort((a, b) => { const x = a[k], y = b[k];
+  const q = $("#q").value.trim().toLowerCase(), tr = $("#fTrack").value, g = $("#fGroup").value, fl = $("#fFail").value, sf = SCORE_T[$("#fScore").value],
+        only = $("#fSel").checked, [gk, gv] = g ? [g.slice(0, g.indexOf(":")), g.slice(g.indexOf(":") + 1)] : [];
+  let rows = S.cat.filter(x => (!tr || x.track === tr) && (!g || x[gk] === gv) && (!only || S.pick.has(x.id)) && (!sf || sf(x)) &&
+    (!fl || (fl === "*" ? !!x.fail : (x.fail || "").split(", ").includes(fl))) &&
+    (!q || [x.id, x.label, x.group, x.fail, x.city].join(" ").toLowerCase().includes(q)));
+  const [k, dir] = S.pickSort, val = (x, k) => k === "stored" ? ckv(x) : x[k];
+  if (k) rows = rows.slice().sort((a, b) => { const x = val(a, k), y = val(b, k);
     if (x == null || x === "") return 1; if (y == null || y === "") return -1;
     return (x < y ? -1 : x > y ? 1 : 0) * dir; });
   return rows;
@@ -816,18 +885,22 @@ function renderPick() {
   if (!S.cat) return;
   const rows = pickRows();
   S.pickShown = rows;
-  $("#pickTable tbody").innerHTML = rows.map(x => `<tr data-id="${esc(x.id)}" class="${S.pick.has(x.id) ? "sel" : ""}" title="${esc(x.id)}">
+  const lim = rows.slice(0, 2500);
+  $("#pickTable tbody").innerHTML = lim.map(x => `<tr data-id="${esc(x.id)}" class="${S.pick.has(x.id) ? "sel" : ""}" title="${esc(x.id)}">
     <td><input type="checkbox" ${S.pick.has(x.id) ? "checked" : ""}></td><td class="mono">${esc(x.label)}</td>
-    <td class="hide-n" title="${esc(x.group)}">${esc(x.group)}</td><td class="n hide-n">${x.stage ?? ""}</td>
-    <td class="n">${f2(x.ref_mean)}</td><td class="n ${scoreCls(x.r6dag)}">${f2(x.r6dag)}</td><td>${esc(x.fail)}</td>
+    <td class="hide-n fl" title="${esc(x.group)}">${esc(x.track === "nuplan" ? x.city + ", " + x.split + " split" : x.group + ", stage " + x.stage)}</td>
+    <td class="n hide-n">${f2(x.ref_mean)}</td><td class="n ${scoreCls(x.ours)}" title="${x.ours_n ? x.ours_n + " reads" : "no read"}">${f2(x.ours)}</td>
+    <td class="n hide-n ${scoreCls(x.r6dag)}">${f2(x.r6dag)}</td><td class="fl" title="${esc(x.fail)}">${esc(x.fail)}</td>
+    <td class="n ckc ${scoreCls(ckv(x))}" style="${S.cat.some(r => r.stored) ? "" : "display:none"}" title="${esc(x.stored ? x.stored.src + "; " + x.stored.why : "")}">${f2(ckv(x))}</td>
     <td class="n hide-n">${f2(x.model)} <span class="muted small">${esc(x.model_src || "")}</span></td></tr>`).join("") ||
-    '<tr><td colspan="8" class="muted">no scene matches</td></tr>';
+    '<tr><td colspan="9" class="muted">no scene matches</td></tr>';
+  $("#pickN").textContent = `${rows.length} of ${S.cat.length} scenes shown`;
   $("#pickAll").checked = rows.length > 0 && rows.every(x => S.pick.has(x.id));
   document.querySelectorAll("#pickTable th[data-k]").forEach(th => {
     th.classList.toggle("sorted", th.dataset.k === S.pickSort[0]); th.classList.toggle("asc", S.pickSort[1] > 0); });
   newInfo();
 }
-["#q", "#fTrack", "#fRev", "#fFail", "#fSel"].forEach(s => $(s).addEventListener("input", renderPick));
+["#q", "#fTrack", "#fGroup", "#fFail", "#fScore", "#fSel"].forEach(s => $(s).addEventListener("input", renderPick));
 $("#pickTable tbody").onclick = e => {
   const tr = e.target.closest("tr[data-id]");
   if (!tr) return;
@@ -842,6 +915,14 @@ document.querySelectorAll("#pickTable th[data-k]").forEach(th => th.onclick = ()
   renderPick();
 });
 
+// ---------- driving view (viewer window) and page close ----------
+$("#viewBtn").onclick = async () => {
+  const r = await api("/api/show_view", {});
+  toast(r.msg || (r.ok ? "Driving view opened." : "Failed"), r.ok ? "ok" : "bad", 6000);
+  poll1();
+};
+addEventListener("pagehide", () => { try { navigator.sendBeacon("/api/bye", "{}"); } catch (e) { /* page closing */ } });
+
 // ---------- start ----------
 (async () => {
   while (!(S.meta = await api("/api/meta")).sets) {      // the server may still be starting: try again each second
@@ -854,9 +935,10 @@ document.querySelectorAll("#pickTable th[data-k]").forEach(th => th.onclick = ()
   setTimeout(poll, 1000);
   setInterval(() => S.st && renderTransport(), 1000);    // the elapsed seconds tick between polls
   new ResizeObserver(() => document.body.style.setProperty("--tpH", $("#tp").offsetHeight + "px")).observe($("#tp"));
-  const h = location.hash.slice(1);           // #new / #pick / #settings / #lib / #official / #delete / #reload open a view (screenshots, links)
+  const h = location.hash.slice(1);           // #new / #new-<category> / #pick / #settings / #lib / #official / #delete / #reload open a view (screenshots, links)
   if (h) setTimeout(() => {
-    if (h === "new" || h === "pick") { $("#newBtn").click(); if (h === "pick") setTab("pick"); }
+    if (h === "new" || h === "pick" || h.startsWith("new-"))       // #new-<category>, e.g. #new-Difficulty
+      $("#newBtn").onclick().then(() => setTab(h === "pick" ? "Custom pick" : h.startsWith("new-") ? decodeURIComponent(h.slice(4)) : S.tab));
     else if (h === "settings") $("#setBtn").click();
     else if (h === "lib") $("#backBtn").click();
     else if (h === "official") $("#offBtn").click();

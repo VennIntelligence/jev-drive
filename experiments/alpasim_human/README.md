@@ -185,14 +185,25 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
 `bash experiments/alpasim_human/scripts/human_panel.sh --install`). It is the twin of the "B2D human exam" panel
 ([phone_wheel](../phone_wheel/README.md), section "Desktop panel"): the same `lib/exam_panel.py` with the AlpaSim backend
 `lib/alpasim_exam.py`. One panel at a time (lock `/data/runs/alpasim_human/.panel.lock`); it starts the wheel daemon (tmux
-`wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing. Since 2026-10-22 the
+`wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`) once when they are missing. Since 2026-10-22 the
 panel is the web page `lib/exam_web.py` (port 8770; `http://100.108.238.8:8770/` from a phone or the Mac over Tailscale;
 `human_panel.sh --tk` = the old Tk window, `--restart` after a code update; details in phone_wheel's "Desktop panel").
+Windows (2026-10-22 night; the user closes windows and nothing reopens on its own): the viewer runs once, with no respawn loop
+(until then a `while true` loop in tmux `human:alpa-viewer` reopened it 3 s after every close). Closing it closes it; the header
+button "Show driving view" (orange while the viewer is not running) opens it again (`/api/show_view`, `Backend.show_view()`).
+Closing the panel window closes what is not driving: the page sends a bye on pagehide; when no page has polled the server for 20 s
+after a bye, or 120 s without one (Chrome throttles a hidden page's timers to about one a minute), and nothing drives (no panel loop,
+no `hum-*` terminal stack: `driving()`), the server closes the viewer and exits, releasing its lock (`lib/exam_web.py` watchdog;
+`EXAM_IDLE_S` / `EXAM_BYE_S`). While a loop runs it leaves everything alone and checks again; the wheel daemon (shared with the B2D
+panel) stays up. Tested on a throwaway instance (`HUMAN_LIVE`, `HUMAN_RUNS`, `EXAM_TMUX`, `EXAM_DISPLAY` = an Xvfb display): server and
+viewer gone 41 s after the last poll (timeout 40 s) and 12 s after a bye (10 s), both kept 77 s with a loop running and gone 10 s
+after it ended; the lock was free afterwards; a closed viewer was not reopened.
 Layout (2026-10-22 evening redesign, a music player; the user could not read the batch / loop / item version):
 - Playlists (left column; at phone width a separate view with "All playlists" to go back) = batches. Each card: name, played /
   total with a bar, your mean, created, disk, badges (track, harmonizer on / off / mixed, model drivers that drove in it), NOW
-  PLAYING on the loop's. "+ New playlist": 1. choose the tracks (a scene set, or "Pick scenes yourself" = the custom pick over
-  `catalog()`), 2. name it (prefilled), "Create playlist". Creating does not start anything (`new_batch(..., start=False)`).
+  PLAYING on the loop's. "+ New playlist": 1. choose the tracks: tabs Track / Difficulty / Our models / Failure type (the sets, under
+  sub-headings, each with its scene count) and Custom pick (the scene table over `catalog()`), 2. name it (prefilled), "Create
+  playlist". Creating does not start anything (`new_batch(..., start=False)`).
 - Playlist (right) = its tracks, one flat list in playlist order (no group folders): #, track (scene label; group and scenario under
   it), Reference (the model score and its source), Your result (score + why; "scoring..." while the loop scores it; model drives under
   it), Driven (you, tries, sim seconds; hidden below 1100 px), "<tag> stored" when the Driver is a checkpoint (that checkpoint's
@@ -209,7 +220,9 @@ Layout (2026-10-22 evening redesign, a music player; the user could not read the
   tag's own read wins, preferring the serve model mode uses (PAI ACC + GAP, Harmonizer as the panel's option; nuPlan native), then
   another seed of the same family stands in (src says "seed <tag>"). Coverage (10-22): PAI 281 ACC + GAP for NTV0-L18-s0 (+ 72 val160
   scenes of the PAI-FIX exam), R6DAG-L18-s1, R8K-L18-s2, RSG-L18-s0 (+ val160), JTN-L18-s0 / s1, RB0-F-s0 (+ val160); Harmonizer-on 281
-  reads for NTV0 / R6DAG / R8K; nuPlan 48 native for JTN-L18-s1, RSG-L18-s0 and the RSG / RBSG / YS families (public 1491 reads);
+  reads for NTV0 / R6DAG / R8K; nuPlan 48 native for JTN-L18-s1 and the RSG / RBSG / YS families (public 1491 reads), all 1491 for
+  RSG-L18-s0 (`FULL`); `results/nuplan_public_spread.tsv`: per public scene, n / mean / min / max / zeros / passes over every
+  checkpoint's public-1491 read (49 on 10-22; `stored_scores.py spread`), the nuPlan difficulty sets;
   older tags' PAI 281 reads whose serve the run dir does not record ("unrecorded"). Rebuild: the command at the top of the script.
 - Transport bar (bottom, always visible): now playing (track, playlist, driver), the state in plain words (Loading render stack /
   Loading track / Ready - press throttle / Driving / Model driving / Paused / Scoring / Playlist finished / Stopped, with seconds; the
@@ -232,13 +245,31 @@ Layout (2026-10-22 evening redesign, a music player; the user could not read the
 6-track PAI playlist with a fake stack: playlists left, tracks right with results, the transport bar at the bottom. Look at the
 plain state line and the buttons. `figs/panel_web_pick.png`: New playlist with the custom pick.
 
-- New batch: one set per filter over the scene table (`Scenes` in `lib/alpasim_exam.py`): PAI stage 1 (10), first 40, all 441
-  (`fetch_all/all441.tsv`, only scenes whose `$NUREC/all-usdzs/<uuid>.usdz` is on disk; all 441 are on Tokyo), 26.01 (177) / 26.04
-  (264), hard (organisers' mean <= 0.2, 270) / easy (>= 0.8, 4), R6DAG-s1 failures on PAI 281 (score < 1, 72) and one set per R6DAG
-  loss class (decision 436: turn inside 7, other offroad 5, stop overshoot 19, drift 4, slow partial 8, rear-ended moving 13 /
-  launch 8, at-fault collision 6, route turn 2), nuPlan navtest 48. R6DAG scores and classes: `results/model_ref_r6dag_281.tsv`
-  (copied from `experiments/round7/results/loss_map.csv`); the model column shows R6DAG first, then P2H10, then alpamayo1.
-  Custom pick: `catalog()` lists every scene, `new_batch("custom", ids)` makes a batch of any one-track id list.
+- New batch: one set per filter over the scene table (`Scenes` in `lib/alpasim_exam.py`; `sets` = [key, "<name> (<count>)",
+  "Category/Sub"]), counts of 2026-10-22:
+  - Track. PAI: all 441 (`fetch_all/all441.tsv`, only scenes whose `$NUREC/all-usdzs/<uuid>.usdz` is on disk; all are on Tokyo),
+    stage 1 (10), first 40, 26.01 (177), 26.04 (264). nuPlan: all public 1491 (`alpasim_proxy/results/scene_city.csv`, those with a
+    config under `$NUPLAN_ROOT/navtest/configs`; all are on Tokyo), usual 48, held split 460 / train split 1031 (onpol split by log,
+    `onpol_nuplan/results/split`), Las Vegas 481, Boston 467, Pittsburgh 323, Singapore 220. (ARENA and the wait set are rebuilt
+    windows, not public scene ids: not offered.)
+  - Difficulty. PAI organisers' mean = 0 (51), 0-0.2 (219), 0.2-0.5 (147), 0.5-0.8 (20), >= 0.8 (4); hard for everyone = mean of the
+    5 current models' stored reads < 0.5 (71; at least 3 reads), every current model < 1 (51), their mean < 0.3 / 0.3-0.7 / >= 0.7
+    (40 / 49 / 192). nuPlan over the 49-checkpoint spread: mean < 0.5 (54), none passes (47), mean < 0.3 / 0.3-0.7 / >= 0.7 (35 / 45 /
+    1399); the 12 scenes whose route check fails before driving are left out of these. Then the stored-score bands < 0.3 / 0.3-0.7 /
+    >= 0.7 of the Driver checkpoint ("Selected model"), or with the Human driver of the lead models (NTV0 on PAI 92 / 17 / 244, RSG on
+    nuPlan 47 / 24 / 1408); keys `m:<tag>:<track>:<band>`, resolved when the playlist is made.
+  - Our models: per current tag its zeros and partials from the stored reads, on each track it has reads (NTV0 88 / 44, R8K 47 / 23,
+    R6DAG 43 / 29, RSG PAI 117 / 55 and nuPlan 46 / 270, JTN PAI 69 / 42 and nuPlan partials 11).
+  - Failure type: R6DAG-s1 on PAI 281 (any 72; loss classes of decision 436: turn inside 7, other offroad 5, stop overshoot 19,
+    drift 4, slow partial 8, rear-ended moving 13 / launch 8, at-fault collision 6, route turn 2; `results/model_ref_r6dag_281.tsv`
+    from `experiments/round7/results/loss_map.csv`); NTV0 on PAI by stored why (`fail_classes`: overshoot 38, rear-ended 30, missed
+    route turn 22, offroad 14, slow partial 14, at-fault collision 8, other zero 6); RSG on nuPlan 1491 (offroad 31, at-fault
+    collision 8, left the corridor 8, slow partial 270).
+  The model column shows R6DAG first, then P2H10, then alpamayo1 (nuPlan off the 48: RSG's public read).
+  Custom pick: `catalog()` lists every scene (441 + 1491) with group, city / split / log, organisers' mean, our mean, R6DAG,
+  failure (NTV0 / RSG), the Driver's stored score and the reference; filters: search, track, revision / city / split / log, failure,
+  score (Driver stored 0 / partial / bands / no read, our mean bands, organisers' bands). `new_batch("custom", ids)` makes a batch of
+  any one-track id list.
   It writes `/data/runs/alpasim_human/exam_<track>_<stamp>/exam.json`, starts the loop, and the new batch appears at the top
   of the batch list.
 - Batch list (since 2026-10-22, generic in `lib/exam_panel.py`): every `exam_*` batch, newest first, with set label, created

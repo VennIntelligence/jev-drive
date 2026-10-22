@@ -16,7 +16,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "lib"))
-from exam_panel import Backend, Control, read_json  # noqa: E402
+from exam_panel import VIEW_DISPLAY, Backend, Control, read_json  # noqa: E402
 
 RUNS = Path("/data/runs/human_drive")
 B2D = Path(os.environ.get("BENCH2DRIVE_ROOT", "/data/third_party/Bench2Drive"))
@@ -24,7 +24,7 @@ XML = B2D / "leaderboard/data/bench2drive_0.0.4_val.xml"
 PY = "/data/envs/carla/bin/python"
 TURNS = re.compile("JunctionLeftTurn|JunctionRightTurn|T_Junction|VanillaSignalizedTurn|VanillaNonSignalizedTurn")
 FAIL10 = "334 24948 27005 24944 27870 28147 27297 24416 26023 24519".split()
-ENV = "export DISPLAY=:0 XAUTHORITY=/run/user/1001/gdm/Xauthority DATA_DIR=/data CARLA_ROOT=/data/third_party/carla/CARLA_0.9.15 " \
+ENV = "export DISPLAY=" + VIEW_DISPLAY + " XAUTHORITY=/run/user/1001/gdm/Xauthority DATA_DIR=/data CARLA_ROOT=/data/third_party/carla/CARLA_0.9.15 " \
       "BENCH2DRIVE_ROOT=%s" % B2D
 
 
@@ -44,6 +44,10 @@ class B2DExam(Backend):
     option_help = {"stop_on_collision": ("End the route at the first collision instead of driving on.", "From the next route.")}
 
     def __init__(self):
+        # the viewer runs once (no respawn loop): closing its window closes it; "Show driving view" on the panel opens it again
+        self.viewer = ("viewer", "experiments/phone_wheel/scripts/human_viewer.py",
+                       "%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; exec %s experiments/phone_wheel/scripts/human_viewer.py --dir %s "
+                       "--window-size 2480 1736 2>> %s/viewer.log" % (ENV, REPO, PY, self.live, self.live))
         root = ET.parse(str(XML)).getroot()
         self.routes = [(r.get("id"), r.get("town"), r.find("scenarios").find("scenario").get("type")) for r in root.findall("route")]
         self.meta = {i: (t, s) for i, t, s in self.routes}
@@ -102,6 +106,9 @@ class B2DExam(Backend):
             return "The panel loop is already running on %s." % self.default_run()
         return ""
 
+    def driving(self):
+        return bool(self.busy_other())
+
     def stop_other(self):
         if self.loop_alive():
             Control(self.live).act("stop")
@@ -152,12 +159,8 @@ class B2DExam(Backend):
             sh("mkdir -p /data/tmp/wheel && cd %s && tmux new-session -d -s wheel -n server \"/data/envs/wheel/bin/python "
                "experiments/phone_wheel/scripts/wheel_server.py --lan-port 8766 2>&1 | tee -a /data/tmp/wheel/log.txt\"" % REPO)
             msgs.append("wheel daemon started (tmux wheel)")
-        if not sh("pgrep -f 'phone_wheel/scripts/human_viewer.py'").strip():
-            sh("tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main; tmux kill-window -t human:viewer 2>/dev/null; "
-               "tmux new-window -d -t human -n viewer \"%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; until %s "
-               "experiments/phone_wheel/scripts/human_viewer.py --dir %s --window-size 2480 1736; do sleep 3; done\""
-               % (ENV, REPO, PY, self.live))
-            msgs.append("viewer started (tmux human:viewer)")
+        if not self.viewer_pids():
+            msgs.append(self.show_view())
         return "\n".join(msgs)
 
     # ---- items ----

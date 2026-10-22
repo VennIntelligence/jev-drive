@@ -23,10 +23,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "lib"))
-from exam_panel import Backend, Control, read_json  # noqa: E402
+from exam_panel import VIEW_DISPLAY, Backend, Control, read_json  # noqa: E402
 
 D = Path(os.environ.get("DATA_DIR", "/data"))
-RUNS = D / "runs/alpasim_human"
+RUNS = Path(os.environ.get("HUMAN_RUNS", D / "runs/alpasim_human"))     # a test panel uses a throwaway dir
 A = D / "runs/alpasim"
 PAI_TSV = A / "pai1/pai_scenes_40.tsv"
 NUPLAN_LIST = A / "scenes_navtest_full_part001_48.txt"
@@ -97,7 +97,7 @@ def stored_scores(tag, harmonizer=False):
 def model_drives(run, sid):
     """{tag: done record} of the model drives of a scene in a run (done/<scene>@<tag>.json, scripts/human_loop.py)."""
     return {driver_of(d): d for d in (read_json(p) for p in sorted(Path(run, "done").glob(sid + "@*.json"))) if d}
-ENV = "export DISPLAY=:0 XAUTHORITY=/run/user/1001/gdm/Xauthority DATA_DIR=%s" % D
+ENV = "export DISPLAY=%s XAUTHORITY=/run/user/1001/gdm/Xauthority DATA_DIR=%s" % (VIEW_DISPLAY, D)
 
 
 def sh(cmd):
@@ -124,6 +124,34 @@ def why(r):
 
 
 R6DAG_TSV = REPO / "experiments/alpasim_human/results/model_ref_r6dag_281.tsv"
+# nuPlan: all 1491 public navtest scenes (city per scene from alpasim_proxy, the onpol held / train split by log), those with a config
+# under $NUPLAN_ROOT/navtest/configs (Tokyo has all); spread = every checkpoint's public-1491 read per scene (scripts/stored_scores.py spread)
+NUPLAN = Path(os.environ.get("NUPLAN_ROOT", D / "datasets/alpasim_nuplan"))
+NUPLAN_CITY = REPO / "experiments/alpasim_proxy/results/scene_city.csv"
+NUPLAN_HELD = REPO / "experiments/onpol_nuplan/results/split/held.txt"
+SPREAD_TSV = REPO / "experiments/alpasim_human/results/nuplan_public_spread.tsv"
+CITY = {"us-nv-las-vegas-strip": "Las Vegas", "us-ma-boston": "Boston", "us-pa-pittsburgh-hazelwood": "Pittsburgh", "sg-one-north": "Singapore"}
+LEAD = {"pai": "NTV0-L18-s0", "nuplan": "RSG-L18-s0"}      # band sets when the Driver is human: the PAI submission; RSG = the 1491 read
+FAIL_BY = [("NTV0-L18-s0", "pai", "NTV0 on PAI"), ("RSG-L18-s0", "nuplan", "RSG on nuPlan 1491")]   # failure-type sets from stored why
+BANDS = [("lo", "< 0.3", lambda v: v < 0.3), ("mid", "0.3 - 0.7", lambda v: 0.3 <= v < 0.7), ("hi", ">= 0.7", lambda v: v >= 0.7)]
+ROUTE_FAIL = "route check fails (not drivable)"
+TRACK_NAME = {"pai": "PAI", "nuplan": "nuPlan"}
+
+
+def fail_classes(w):
+    """Plain failure classes of a stored `why` (PAI facts words and results-summary words alike); [] = pass."""
+    out = []
+    for p in (w or "").split(", "):
+        p = p.split(" (")[0].strip()
+        c = (ROUTE_FAIL if p.startswith("failed:") and "Waypoint" in w else "stack error" if p.startswith("failed:") else
+             "at-fault collision" if p in ("collision_at_fault", "side") or p.startswith(("AF-", "coll")) else
+             "rear-ended" if p.startswith("rear") else "stop-line overshoot" if p == "overshoot" else
+             "missed route turn" if p == "route-turn" else "offroad" if p.startswith("off") else
+             "left the corridor" if p.startswith("left_corridor") else "slow partial" if p in ("slow", "near1", "partial") else
+             None if p in ("pass", "ok", "") else "other zero")
+        if c and c not in out:
+            out.append(c)
+    return out
 ALL_TSV = A / "fetch_all/all441.tsv"
 NUREC = Path(os.environ.get("NUREC", D / "datasets/nurec"))
 # R6DAG-s1 loss classes (round7 loss map, decision 436) -> one "R6DAG fails" set each: (key, label, classes)
@@ -161,12 +189,22 @@ class Scenes(object):
                                             r6=float(m["score"]) if m else None, cat=m.get("category"),
                                             scenario="stage %s, organisers %.2f%s" % (r["stage"], float(r["ref_mean"]),
                                                                                    ", R6DAG: %s" % m["category"] if m and m["category"] != "ok" else ""))
-        self.nuplan = NUPLAN_LIST.read_text().split() if NUPLAN_LIST.exists() else []
+        in48 = set(NUPLAN_LIST.read_text().split()) if NUPLAN_LIST.exists() else set()
+        held = set(NUPLAN_HELD.read_text().split()) if NUPLAN_HELD.exists() else set()
+        city = dict(ln.split(",")[:2] for ln in NUPLAN_CITY.read_text().split()) if NUPLAN_CITY.exists() else {i: "?" for i in in48}
+        cfg = NUPLAN / "navtest/configs"
+        self.nuplan = sorted(i for i in city if not cfg.is_dir() or (cfg / (i + ".yaml")).is_file())
+        self.spread = {r["scene_id"]: r for r in tsv(SPREAD_TSV)}
         for k, s in enumerate(self.nuplan):
             seg = s.split("_")[2:4] if s.count("_") >= 3 else ["?", "?"]     # <date>_<vehicle>_<start>_<end>-<token>
-            self.meta[s] = dict(track="nuplan", group="nuPlan log %s_%s" % (seg[0], seg[1].split("-")[0]), k=k,
-                                label="%s_%s" % (seg[0], seg[1][:14]),
-                                scenario="navtest %s" % s.split("_")[0])
+            sp = self.spread.get(s)
+            c = CITY.get(city.get(s), city.get(s))
+            self.meta[s] = dict(track="nuplan", group="nuPlan %s, log %s" % (c, s.rsplit("-", 1)[0]), k=k,
+                                label="%s_%s" % (seg[0], seg[1][:14]), city=c, log=s.rsplit("-", 1)[0],
+                                split="held" if s in held else "train", in48=s in in48,
+                                ours=float(sp["mean"]) if sp else None, ours_n=int(sp["n"]) if sp else 0, ours_max=float(sp["max"]) if sp else None,
+                                scenario="navtest %s, %s, %s split%s" % (s.split("_")[0], CITY.get(city.get(s), "?"),
+                                                                      "held" if s in held else "train", ", in the usual 48" if s in in48 else ""))
         self.refs[("pai", "R6DAG")] = {i: float(r["score"]) for i, r in r6.items()}
         for track in ("pai", "nuplan"):
             for name, src in MODELS[track] + EXTRA[track]:
@@ -175,23 +213,93 @@ class Scenes(object):
                     self.refs[(track, name)] = {r["scene_id"]: float(r[col]) for r in self.pai if r.get(col) not in (None, "")}
                 elif (track, name) not in self.refs:
                     self.refs[(track, name)] = summary_scores(Path(src))
-        pai = lambda f: ("pai", f)  # noqa: E731
-        preds = [("pai1", "PAI stage 1", pai(lambda m: m["stage"] <= 1)), ("pai40", "PAI first 40", pai(lambda m: m["in40"])),
-                 ("pai441", "PAI all", pai(lambda m: True))]
-        preds += [("pai" + v, "PAI %s" % v, pai(lambda m, v=v: m["rev"] == v)) for v in sorted({r["revision"] for r in self.pai})]
-        preds += [("hard", "PAI hard (organisers' mean <= 0.2)", pai(lambda m: m["ref"] <= 0.2)),
-                  ("easy", "PAI easy (organisers' mean >= 0.8)", pai(lambda m: m["ref"] >= 0.8)),
-                  ("r6fail", "R6DAG fails on 281 (score < 1)", pai(lambda m: m["r6"] is not None and m["r6"] < 1))]
-        preds += [("r6_" + k, "R6DAG fails: " + t, pai(lambda m, c=c: m["cat"] in c)) for k, t, c in FAIL_SETS]
-        preds += [("nuplan48", "nuPlan navtest", ("nuplan", lambda m: True))]
-        self.pred = {k: p for k, _, p in preds}
-        self.sets = [(k, "%s (%d)" % (t, len(self.ids(k)))) for k, t, _ in preds]
-        self.sets = [s for s in self.sets if not s[1].endswith("(0)")]
+        self.cur = {t: stored_scores(t) for t in CURRENT}
+        for i, m in self.meta.items():                         # current models' stored reads (PAI: their mean; nuPlan: the 49-read spread)
+            v = [st[i]["score"] for st in self.cur.values() if i in st]
+            m["cur_n"], m["cur_mean"], m["cur_max"] = len(v), (sum(v) / len(v) if v else None), (max(v) if v else None)
+            if m["track"] == "pai":
+                m["ours"], m["ours_n"] = m["cur_mean"], m["cur_n"]
+            fs = self.cur.get(dict((tr, t) for t, tr, _ in FAIL_BY).get(m["track"]), {}).get(i)
+            m["fails"] = fail_classes(fs["why"]) if fs and fs["score"] < 1 else []
+            m["fail"] = ", ".join(m["fails"])
+        P, N = (lambda f: ("pai", f)), (lambda f: ("nuplan", f))  # noqa: E731
+        T, TN, Dp, Dn = "Track/PAI", "Track/nuPlan", "Difficulty/PAI", "Difficulty/nuPlan"
+        nf = lambda m: ROUTE_FAIL not in m["fails"]  # noqa: E731     (scenes nobody can drive stay out of the difficulty sets)
+        preds = [("pai441", "PAI all", T, P(lambda m: True)), ("pai1", "PAI stage 1", T, P(lambda m: m["stage"] <= 1)),
+                 ("pai40", "PAI first 40", T, P(lambda m: m["in40"]))]
+        preds += [("pai" + v, "PAI %s" % v, T, P(lambda m, v=v: m["rev"] == v)) for v in sorted({r["revision"] for r in self.pai})]
+        preds += [("nuplan1491", "nuPlan all public", TN, N(lambda m: True)), ("nuplan48", "nuPlan usual 48", TN, N(lambda m: m["in48"])),
+                  ("nuplan_held", "nuPlan held split", TN, N(lambda m: m["split"] == "held")),
+                  ("nuplan_train", "nuPlan train split", TN, N(lambda m: m["split"] == "train"))]
+        preds += [("nuplan_" + c.lower().replace(" ", ""), "nuPlan " + c, TN, N(lambda m, c=c: m["city"] == c)) for c in CITY.values()]
+        preds += [("ref_0", "Organisers' mean = 0", Dp, P(lambda m: m["ref"] == 0)),
+                  ("ref_02", "Organisers' mean 0 - 0.2", Dp, P(lambda m: 0 < m["ref"] <= 0.2)),
+                  ("ref_05", "Organisers' mean 0.2 - 0.5", Dp, P(lambda m: 0.2 < m["ref"] <= 0.5)),
+                  ("ref_08", "Organisers' mean 0.5 - 0.8", Dp, P(lambda m: 0.5 < m["ref"] < 0.8)),
+                  ("ref_1", "Organisers' mean >= 0.8", Dp, P(lambda m: m["ref"] >= 0.8)),
+                  ("hard_pai", "Hard for everyone: our %d models' mean < 0.5" % len(CURRENT), Dp, P(lambda m: m["cur_n"] >= 3 and m["cur_mean"] < 0.5)),
+                  ("allfail_pai", "Every current model fails (all < 1)", Dp, P(lambda m: m["cur_n"] >= 3 and m["cur_max"] < 1))]
+        preds += [("ours_pai_" + b, "Our %d models' mean %s" % (len(CURRENT), t), Dp, P(lambda m, f=f: m["cur_n"] >= 3 and f(m["cur_mean"]))) for b, t, f in BANDS]
+        nmax = max([m["ours_n"] for m in self.meta.values() if m["track"] == "nuplan"] or [0])
+        preds += [("hard_nuplan", "Hard for everyone: our %d checkpoints' mean < 0.5" % nmax, Dn,
+                   N(lambda m: m["ours_n"] and m["ours"] < 0.5 and nf(m))),
+                  ("allfail_nuplan", "No checkpoint passes (all %d < 1)" % nmax, Dn, N(lambda m: m["ours_n"] and m["ours_max"] < 1 and nf(m)))]
+        preds += [("ours_nuplan_" + b, "Our %d checkpoints' mean %s" % (nmax, t), Dn, N(lambda m, f=f: m["ours_n"] and f(m["ours"]) and nf(m)))
+                  for b, t, f in BANDS]
+        for t in CURRENT:                                       # per current model: its zeros and partials, both tracks
+            for tr in ("pai", "nuplan"):
+                preds += [("m:%s:%s:%s" % (t, tr, k), "%s on %s" % (w, TRACK_NAME[tr]), "Our models/" + t, (tr, None))
+                          for k, w in (("zero", "zeros"), ("part", "partials"))]
+        preds += [("r6fail", "any failure (score < 1)", "Failure type/R6DAG on PAI 281", P(lambda m: m["r6"] is not None and m["r6"] < 1))]
+        preds += [("r6_" + k, t, "Failure type/R6DAG on PAI 281", P(lambda m, c=c: m["cat"] in c)) for k, t, c in FAIL_SETS]
+        for t, tr, name in FAIL_BY:
+            seen = sorted({c for m in self.meta.values() if m["track"] == tr for c in m["fails"]} - {ROUTE_FAIL})   # nobody drives those
+            preds += [("f:%s:%s" % (tr, c), c, "Failure type/" + name, (tr, lambda m, c=c: c in m["fails"])) for c in seen]
+        self.pred = {k: p for k, _, _, p in preds}
+        self.cats = {k: c for k, _, c, _ in preds}
+        self.sets = [(k, "%s (%d)" % (t, len(self.ids(k))), c) for k, t, c, _ in preds]
+        self.sets = [x for x in self.sets if not x[1].endswith("(0)")]
+
+    def model_ids(self, tag, track, kind):
+        """Scenes of `track` by `tag`'s stored reads: kind zero (score 0), part (0 < score < 1), or a BANDS key (lo / mid / hi)."""
+        st = self.cur.get(tag) if tag in self.cur else stored_scores(tag)
+        f = dict(zero=lambda v: v == 0, part=lambda v: 0 < v < 1, **{b: g for b, _, g in BANDS})[kind]
+        ids = [i for i, v in st.items() if self.meta.get(i, {}).get("track") == track and f(v["score"])
+               and ROUTE_FAIL not in fail_classes(v["why"])]
+        return sorted(ids, key=self.order)
+
+    def model_sets(self, tag, cat=None, tracks=("pai", "nuplan")):
+        """Band sets of a checkpoint's stored reads on both tracks: [(key, label, category)] (keys m:<tag>:<track>:<band>)."""
+        out = []
+        for tr in tracks:
+            for b, t, _ in BANDS:
+                n = len(self.model_ids(tag, tr, b))
+                if n:
+                    out.append(("m:%s:%s:%s" % (tag, tr, b), "%s stored score %s on %s (%d)" % (tag.split("-")[0], t, TRACK_NAME[tr], n),
+                                cat or "Difficulty/" + tag))
+        return out
+
+    def order(self, i):
+        m = self.meta[i]
+        return (m["group"], m.get("stage", 0), m["k"])
+
+    def resolve(self, key):
+        """(track, ids, label) of a set key, also the m:<tag>:<track>:<kind> keys of any checkpoint; None = unknown."""
+        if key.startswith("m:"):
+            _, tag, tr, kind = key.split(":")
+            ids = self.model_ids(tag, tr, kind)
+            word = dict(zero="zeros", part="partials", **{b: "stored score " + t for b, t, _ in BANDS})[kind]
+            return tr, ids, "%s %s on %s (%d)" % (tag.split("-")[0], word, TRACK_NAME[tr], len(ids))
+        if key not in self.pred:
+            return None
+        return self.pred[key][0], self.ids(key), dict((k, l) for k, l, _ in self.sets).get(key, key)
 
     def ids(self, key):
+        if key.startswith("m:"):
+            return self.model_ids(*key.split(":")[1:])
         track, f = self.pred[key]
         ids = [i for i, m in self.meta.items() if m["track"] == track and f(m)]
-        return sorted(ids, key=lambda i: (self.meta[i]["group"], self.meta[i].get("stage", 0), self.meta[i]["k"]))
+        return sorted(ids, key=self.order)
 
     def model(self, scene):
         """(score, source) of the best available model read on this scene: R6DAG-s1 (PAI 281), then P2H10, else the organisers' alpamayo1."""
@@ -200,19 +308,22 @@ class Scenes(object):
             v = self.refs.get((track, name), {}).get(scene)
             if v is not None:
                 return v, ("a1" if name == "alpamayo1" else name)
+        if track == "nuplan" and scene in self.cur.get(LEAD["nuplan"], {}):        # off the 48: RSG's public-1491 read
+            return self.cur[LEAD["nuplan"]][scene]["score"], LEAD["nuplan"].split("-")[0]
         return None, None
 
     def catalog(self):
-        """Every selectable scene (custom pick), in set order: dict(id, track ("pai" / "nuplan"), group, label, revision (PAI
-        "26.01" / "26.04", else None), stage, ref_mean (organisers' mean, PAI), r6dag (R6DAG-s1 281 score or None), fail (R6DAG
-        loss class, "" = none / not read), model, model_src (the panel's model column))."""
+        """Every selectable scene (custom pick), PAI 441 then nuPlan 1491: dict(id, track ("pai" / "nuplan"), group, label, revision (PAI
+        "26.01" / "26.04"), stage, city / split / log (nuPlan; held / train), ref_mean (organisers' mean, PAI), r6dag (R6DAG-s1 281
+        score), fail (fail_classes of the FAIL_BY checkpoint's stored read: NTV0 on PAI, RSG on nuPlan; "" = pass / not read), ours / ours_n (PAI: mean of the
+        current models' stored reads; nuPlan: mean of every checkpoint's public-1491 read), model, model_src (the panel's model column))."""
         out = []
-        for i in self.ids("pai441") + self.ids("nuplan48"):
+        for i in self.ids("pai441") + self.ids("nuplan1491"):
             m = self.meta[i]
             ms, src = self.model(i)
             out.append(dict(id=i, track=m["track"], group=m["group"], label=m["label"], revision=m.get("rev"), stage=m.get("stage"),
-                            ref_mean=m.get("ref"), r6dag=m.get("r6"), fail=m.get("cat") if m.get("cat") not in (None, "ok") else "",
-                            model=ms, model_src=src))
+                            city=m.get("city"), split=m.get("split"), log=m.get("log"), ref_mean=m.get("ref"), r6dag=m.get("r6"), fail=m.get("fail") or "",
+                            ours=m.get("ours"), ours_n=m.get("ours_n"), model=ms, model_src=src))
         return out
 
     def table(self, run):
@@ -280,11 +391,19 @@ class AlpaSimExam(Backend):
     }
 
     def __init__(self):
+        # the viewer runs once (no respawn loop): closing its window closes it; "Show driving view" on the panel opens it again
+        self.viewer = ("alpa-viewer", "experiments/alpasim_human/scripts/human_viewer.py",
+                       "%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; exec /data/envs/carla/bin/python experiments/alpasim_human/scripts/"
+                       "human_viewer.py --dir %s --window-size 2480 1736 2>> %s/viewer.log" % (ENV, REPO, self.live, self.live))
         self.sc = Scenes()
         self.options = dict(type(self).options, driver=("Driver", "human", driver_choices()))   # human_loop.py: at the next hold point
 
     def batch_sets(self):
-        return list(self.sc.sets)
+        """Scenes.sets, then the band sets of the Driver checkpoint (or LEAD's when the Driver is human) under Difficulty."""
+        tag = self.stored_now()[0]
+        extra = self.sc.model_sets(tag, "Difficulty/Selected model: " + tag) if tag else \
+            [x for tr, t in LEAD.items() for x in self.sc.model_sets(t, "Difficulty/%s lead model: %s" % (TRACK_NAME[tr], t), (tr,))]
+        return list(self.sc.sets) + extra
 
     def stored_now(self):
         """(driver tag or "", stored_scores of it) for the Driver option now in control.json (harmonizer option too); ("", {}) = human."""
@@ -399,7 +518,10 @@ class AlpaSimExam(Backend):
                 return False, ("Unknown scenes: %s" % ", ".join(bad[:5])) if bad else "Pick scenes of one track (PAI or nuPlan)."
             track, label = tracks.pop(), "Custom pick (%d)" % len(ids)
         else:
-            ids, track, label = self.sc.ids(key), self.sc.pred[key][0], dict(self.sc.sets)[key]
+            r = self.sc.resolve(key or "")
+            if not r or not r[1]:
+                return False, "Unknown or empty scene set: %s" % key
+            track, ids, label = r
         label = (name or "").strip()[:80] or label
         run = RUNS / ("exam_%s_%s" % (track, time.strftime("%m%d-%H%M%S")))
         while run.exists():                                                   # two batches within one second
@@ -411,17 +533,18 @@ class AlpaSimExam(Backend):
         return self.start_loop(run) if start else (True, "Playlist \"%s\" created (%d scenes)." % (label, len(ids)))
 
     def ensure_side(self):
+        """Panel start: the wheel daemon (tmux wheel, a daemon, shared with the B2D panel) and the viewer, each once when missing."""
         msgs = []
         if sh("tmux has-session -t wheel 2>/dev/null && echo yes").strip() != "yes":
             sh("mkdir -p /data/tmp/wheel && cd %s && tmux new-session -d -s wheel -n server \"/data/envs/wheel/bin/python "
                "experiments/phone_wheel/scripts/wheel_server.py --lan-port 8766 2>&1 | tee -a /data/tmp/wheel/log.txt\"" % REPO)
             msgs.append("wheel daemon started (tmux wheel)")
-        if not sh("pgrep -f 'alpasim_human/scripts/human_viewer.py'").strip():
-            sh("tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main; tmux kill-window -t human:alpa-viewer 2>/dev/null; "
-               "tmux new-window -d -t human -n alpa-viewer \"%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; while true; do /data/envs/carla/bin/python "
-               "experiments/alpasim_human/scripts/human_viewer.py --dir %s --window-size 2480 1736; sleep 3; done\"" % (ENV, REPO, self.live))
-            msgs.append("viewer started (tmux human:alpa-viewer)")
+        if not self.viewer_pids():
+            msgs.append(self.show_view())
         return "\n".join(msgs)
+
+    def driving(self):
+        return self.loop_alive() or bool(sh("docker ps --format '{{.Names}}' | grep '^hum-'").strip())
 
     # ---- items ----
     def items(self):
