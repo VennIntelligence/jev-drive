@@ -37,7 +37,7 @@ the hinge mass and are mostly below 13 m/s. At a dose of 16 rows they would give
 | G1b control (scenes without an offroad event) | t0 off <= 2 % | 0.16 % (served-plan hinge active 9.6 %, the d418 false-trigger level) | pass |
 | G1c t0 already off the surface (unlearnable) | <= 10 % of candidates | 0.19 % | pass |
 | G2 boxes: coverage / t0 overlap without a collision | overlap <= 2 % | agent label 100 %, >= 1 valid box at t0 97.0 % (mean 22.5 boxes); overlap 0.03 % (2.8 % in the 30 collision scenes) | pass |
-| G2 human log future also violates agent, of agent-active | <= 20 % | 12.6 %; 12.7 % | pass |
+| G2 human log future also violates agent, of agent-active | <= 20 % | 1.8 % (corrected 10-22; this row first read 12.6 %; 12.7 %, which drew the human path from the student's position instead of the human's own; see ../hinge_audit/README.md) | pass |
 | G2 teacher label also violates agent, of agent-active | <= 30 % | **76.4 %; 76.7 %** | **fail** |
 | G3 learnable-active (LA) share of candidates | >= 10 % | **6.2 %; 6.2 %** (own states PAID2B / 2A, no road: 2.5 %; 2.6 %) | **fail** |
 | G3 hinge mass on learnable rows | >= 50 % | **16.3 %; 15.5 %** (own states 25 %; 22 %) | **fail** |
