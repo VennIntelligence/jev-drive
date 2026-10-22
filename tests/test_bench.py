@@ -369,7 +369,7 @@ class TestHugsim(TmpData):
         with mock.patch.object(H, "expected_walls", return_value={}), mock.patch.object(RN, "box_cards", return_value=[0]), \
                 mock.patch.object(RN, "card_gb", return_value=75.6):        # 83.6 GB card - 8 GB headroom
             st = H.stages(M.resolve("WA-JEPA"), "exam", self.D / "r4", scen, workers=6)
-        self.assertEqual(json.loads((self.D / "r4" / "config.json").read_text())["workers"], 5)   # 6 slots = 81 GB would never place
+        self.assertEqual(json.loads((self.D / "r4" / "config.json").read_text())["workers"], 5)   # 6 slots would not fit one card
         self.assertLessEqual(max(s.vram for s in st), 75.6)
 
     def test_queue(self):

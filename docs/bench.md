@@ -24,6 +24,13 @@ the per-board tables, then `<out>/DONE`; cells the registry does not allow (`Mod
 $B match --drivers STANDFMXH-L18-s1 RB0-F-s0 --ref WA-JEPA --also P0 --boards hugsim:exam navtest --repeat p2 --out DIR [--drop-ply]
 ```
 
+**VRAM sizing (HUGSIM, measured 2026-10-23).** A worker job declares `slots x per-slot` (`hugsim.stages`), and the slot count is
+clamped to what fits one card (total minus the pool's 8 GB headroom). Per-slot = measured job peak / slots x 1.3, from the pool's
+`vram_peak` of the P2 reads (experiments/wm_surplus): parity / ONNX models 58 jobs at 6 slots, peak max 43.7 GB (p95 42.9, median
+36.5) -> 7.3 GB per slot -> 9.5 declared; WA-JEPA 12 jobs at 5 slots, peak max 57.1 GB (p95 55.7) -> 11.4 -> 14.9 declared
+(5 slots per card). The earlier constants (8 + 8.5 / slot and 6 + 12.5 / slot) were 1.35x and 1.2x the peak, not more:
+per-process nvidia-smi (2-6 GB) undercounts because one slot is several processes (HUGSIM renderer, simulator, client / servers).
+
 Route-memory checkpoints (`route_mem.json` beside `ckpt-final.pt`: RB0-F and every AlpaSim-lineage checkpoint) are HUGSIM-only: the
 bias server feeds them an empty route memory (`pp_hugsim.py tail_row`), and the note names the on-policy pools of their lineage.
 

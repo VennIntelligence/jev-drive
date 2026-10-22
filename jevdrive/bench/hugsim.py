@@ -164,8 +164,10 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     todo = [s for s in want if Path(s).stem not in done]
     for f in (run_dir / "claims").glob("*.failed") if (run_dir / "claims").is_dir() else []:
         f.unlink()                                                    # a new submit retries scenarios that failed before
-    per = 12.5 if m.family == "wajepa" else 8.5                         # VRAM per scenario slot / per job (servers), GB
-    base = 6 if m.family == "wajepa" else 8
+    # VRAM per scenario slot = measured job peak / slots x 1.3 (2026-10-23, pool vram_peak of 58 parity jobs at 6 slots: max 43.7 GB,
+    # 12 WA-JEPA jobs at 5 slots: max 57.1 GB; docs/bench.md "VRAM sizing"); the per-job servers are inside the slot figure
+    per = 14.9 if m.family == "wajepa" else 9.5
+    base = 0.0
     cap = max(1, int((R.card_gb() - base) // per))                    # slots that fit one card (6 WA-JEPA slots = 81 GB never placed)
     w = max(1, min(workers, cap, len(todo) or 1))
     k = jobs or max(1, min(len(R.box_cards()), -(-len(todo) // w)))
