@@ -104,6 +104,28 @@ def site(model: str, agent) -> Site:
     raise SystemExit(f"no P1 site for {model}")
 
 
+def seed_of(tok: str) -> int:
+    return int(hashlib.sha256(tok.encode()).hexdigest()[:8], 16)
+
+
+def call(agent, L, tok, S=None):
+    if S is not None:
+        S.memo = None                    # a new token: the producer runs again
+    torch.manual_seed(seed_of(tok))
+    with torch.no_grad():
+        return AP.trajectory(agent, L, tok)
+
+
+def build(model: str):
+    from jevdrive.bench.navsim import agent_env
+    c = agent_cfg(model)
+    for k, v in agent_env(c).items():
+        os.environ.setdefault(k, v)
+    cfg, agent = AP.build(Path(c["repo"]), c.get("config_dir", "navsim/planning/script/config/pdm_scoring"),
+                          c.get("config_name", "default_run_pdm_score"), c["overrides"])
+    return c, cfg, agent
+
+
 def navtest_tokens():
     from jevdrive.bench.sets import navsim_tokens
     t, lg = navsim_tokens("navtest")
