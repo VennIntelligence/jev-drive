@@ -8,8 +8,7 @@ English version in `docs/` or code. `tmp/` is gitignored scratch.
 | Task | Go to |
 |---|---|
 | Any experiment: question, status, conclusion, code, results, figures | [experiments/INDEX.md](experiments/INDEX.md) (grep a name or alias) -> `<topic>/README.md` |
-| What did we decide, is it still open | [research/decisions.md](research/decisions.md) (its "现状" block = current candidates and submissions; the newest rows are at the bottom) -> `research/decisions/<NNN>.md` |
-| Current AlpaSim candidates, submitted images, scores | decisions.md "现状" block, then [experiments/alpasim/README.md](experiments/alpasim/README.md) "Submissions and candidates"; never auto-memory alone |
+| What did we decide, is it still open | [research/decisions.md](research/decisions.md) -> `research/decisions/<NNN>.md` |
 | Start a new experiment or result | rules below, [docs/lib.md](docs/lib.md), [experiments/TEMPLATE.md](experiments/TEMPLATE.md) |
 | Run any model on any benchmark (navtest, navhard, HUGSIM, B2D) and report it | `python -m jevdrive.bench`: [docs/bench.md](docs/bench.md); never write a new runner |
 | A CARLA / Bench2Drive run | [docs/closed-loop-runbook.md](docs/closed-loop-runbook.md) |
