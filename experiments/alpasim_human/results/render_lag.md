@@ -34,11 +34,13 @@ check: on the first frame (force-GT replay) the runtime's ego pose equals the lo
 
 **Why.** The runtime puts the simulation time in `frame_start_us` / `frame_end_us` of every request
 (`alpasim_runtime/services/sensorsim_service.py` `construct_rgb_render_request`, lines 229-311, `frame_start_us=start_us, frame_end_us=end_us`; the pose is interpolated from
-the ego trajectory, the time is the clock trigger's). The NuRec renderer (closed source, `pycena_nrm_full`) evidently
+the ego trajectory, the time is the clock trigger's). The NuRec renderer (`pycena_nrm_full`) evidently
 renders the background as reconstructed at that time: the closer a region was to the recording camera at time T, the sharper
 it is at T. A camera that is D s behind on the path looks at the near scene the recording camera left D s earlier, which at
 time T is represented only as seen from far away. Hence the dependence on how far the log camera moved, not on D itself
-(071d15c4 standing: little damage at 2-5 s). This is inferred from the probe; the renderer code is not available.
+(071d15c4 standing: little damage at 2-5 s). This is inferred from the probe. Correction (2026-10-22): the renderer's Python source ships inside the image; its scene model gives the whole
+scene's appearance a time input (`nre/models/gaussians/collect/collector.py`) and the server config has no time option, which fits the probe
+(read from the code, not traced per scene; [../../alpasim/results/version_and_frametime.md](../../alpasim/results/version_and_frametime.md)).
 
 **Consequence.** Any driver slower than the log (human or model) gets a degraded image, the more so the further behind. A fix
 would be in the renderer request (frame time = the log time whose pose is nearest the ego, actors at sim time = the
