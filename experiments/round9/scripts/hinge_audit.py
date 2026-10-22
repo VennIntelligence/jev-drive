@@ -438,7 +438,10 @@ class Pool:
 
     def _clear(self, p):
         """Row clearances of path p in each term's own metric (+ = room): agent corridor / side, road, onc / soft depth (negated), side."""
-        c = dict(ag_c=self.g(p, "ag_c").min(1), ag_s=self.g(p, "ag_s").min(1), road=self.g(p, "road").min((1, 2)), sd=self.g(p, "sd")[:, 1:].min(1))
+        win = ~self.z[f"{p}__oow"].astype(bool)
+        c = dict(ag_c=self.g(p, "ag_c").min(1), ag_s=self.g(p, "ag_s").min(1), road=self.g(p, "road").min((1, 2)), sd=self.g(p, "sd")[:, 1:].min(1),
+                 agp_c=self.g(p, "agp_c").min(1), agp_s=self.g(p, "agp_s").min(1),
+                 road_w=np.where(win[..., None], self.g(p, "road"), BIG).min((1, 2)))
         if self.has_lat:
             c["onc"], c["soft"] = self.g(p, "onc").min(1), self.g(p, "soft").min(1)
         return c
@@ -475,6 +478,27 @@ class Pool:
             return m
         if design == "ctx":                                  # per-context quantile margins (calibrated on even scene hashes, see ctx_margins)
             return self.ctx_m
+        if design == "spec":                                 # the recommended spec: witness-calibrated (min over log, fut), single front margin
+            ref = [p for p in ("log", "fut") if p in self.paths]   # (plain ego box), in-window road clearance, overlap floor (term off)
+            def wc(k):
+                vals = []
+                for p in ref:
+                    v = self.C[p][k].copy()
+                    v[~self.z[f"{p}__ok"]] = np.inf
+                    vals.append(v)
+                return np.minimum.reduce(vals)
+            ca, cs, cr, cd = wc("agp_c"), wc("agp_s"), wc("road_w"), wc("sd")
+            m["ag_c"] = np.where(np.isfinite(ca), np.minimum(MARGIN, ca - EPS), MARGIN)
+            m["ag_s"] = np.where(np.isfinite(cs), np.minimum(0.0, cs - EPS), 0.0)
+            m["road"] = np.where(np.isfinite(cr), np.minimum(MARGIN, cr - EPS), MARGIN)
+            m["sd"] = np.where(np.isfinite(cd), np.minimum(BUF, cd - EPS), BUF)
+            m["off_agent"] = np.minimum(ca, cs) < 0                 # a witness overlaps an object: no agent term on the row
+            m["off_side"] = cd < 0
+            if self.has_lat:
+                for k in ("onc", "soft"):
+                    c_ = wc(k)
+                    m[k] = np.where(np.isfinite(c_), np.maximum(0.0, -c_ + EPS), 0.0)
+            return m
         raise ValueError(design)
 
     def values(self, p, design="fixed", rows=None):
@@ -489,6 +513,12 @@ class Pool:
         if self.has_lat:
             for t in ("onc", "soft"):
                 out[t] = W[t] * np.maximum(-self.g(p, t)[r] - m[t][r][:, None], 0).mean(1)
+        if design == "spec":
+            agp_c, agp_s = self.g(p, "agp_c")[r], self.g(p, "agp_s")[r]
+            out["agent"] = W["agent"] * np.maximum(np.maximum(mc - agp_c, 0), np.maximum(ms - agp_s, 0)).mean(1) * ~m["off_agent"][r]
+            win = ~self.z[f"{p}__oow"][r].astype(bool)
+            out["road"] = W["road"] * (np.maximum(m["road"][r][:, None, None] - self.g(p, "road")[r], 0) * win[..., None]).mean((1, 2))
+            out["side"] = out["side"] * ~m["off_side"][r]
         okp = self.z[f"{p}__ok"][r]
         for t in out:
             out[t] = np.where(self.ok(t)[r] & okp, out[t], 0.0)
@@ -708,7 +738,13 @@ def cmd_report(a):
             rc["lag_sweep_fut"] = json.loads(str(z["fut__lag_sweep"]))
         res["root_causes"] = rc
         # ---- 4. designs
-        DES = ["fixed", "gate", "ec_log", "ec_wit", "ctx"]
+        DES = ["fixed", "gate", "ec_log", "ec_wit", "ctx", "spec"]
+        if "plan" in P.paths:                                # the plan's road mass from corners outside the raster window (border clamp)
+            pm_ = z["plan__ok"] & cand
+            rv = np.maximum(MARGIN - P.g("plan", "road")[pm_], 0) * P.ok("road")[pm_][:, None, None]
+            ow = z["plan__oow"][pm_].astype(bool)
+            res["plan_road_oow"] = dict(rows_with_oow=float(ow.any(1).mean()), road_mass_share_oow=float(rv[ow].sum() / max(rv.sum(), 1e-12)),
+                                        by_speed={b: float(ow[spd[pm_] == b].any(1).mean()) for b in np.unique(spd[pm_])})
         if "plan" in P.paths and (z["plan__ok"] & cand).any():
             pm = z["plan__ok"] & cand
             w_ = live[pm] if name == "S" else np.ones(pm.sum())
@@ -817,7 +853,7 @@ def cmd_g5(a):
                         onc=np.load(sp["lat"] / "onc.npy", mmap_mode="r"), soft=np.load(sp["lat"] / "soft.npy", mmap_mode="r"))
             lat_rows = sp["lat_rows"][rows]
         m = P.margins(d)
-        M = {k: torch.as_tensor(v[rows], dtype=torch.float32) for k, v in m.items()}
+        M = {k: torch.as_tensor(np.asarray(v)[rows], dtype=torch.float32) for k, v in m.items()}
         keep = {t: torch.as_tensor((P.values("plan", d)[t][rows] > 0) | True) for t in P.terms}
         if d == "gate":                                       # rows / terms the gate switched off stay off
             hv = {q: P.values(q, "fixed") for q in ("log", "fut") if q in P.paths}
@@ -839,10 +875,18 @@ def cmd_g5(a):
             bx, vv = boxes_at(ah.box[ri], ah.val[ri], T41)
             q = box_terms(D, bx, vv)
             tot = {}
-            tot["agent"] = W["agent"] * torch.maximum((M["ag_c"][:, None] - q["ag_c"]).clamp_min(0), (M["ag_s"][:, None] - q["ag_s"]).clamp_min(0)).mean(1) * okA
+            sp_ = d == "spec"
+            kc, ks = ("agp_c", "agp_s") if sp_ else ("ag_c", "ag_s")
+            tot["agent"] = W["agent"] * torch.maximum((M["ag_c"][:, None] - q[kc]).clamp_min(0), (M["ag_s"][:, None] - q[ks]).clamp_min(0)).mean(1) * okA
             tot["side"] = W["side"] * (M["sd"][:, None] - q["sd"][:, 1:]).clamp_min(0).mean(1) * okA
             C, _ = foot(D)
-            tot["road"] = W["road"] * (M["road"][:, None] - sample(road.sdf[ri], C.reshape(len(x), -1, 2))).clamp_min(0).mean(1) * okR
+            rr = (M["road"][:, None] - sample(road.sdf[ri], C.reshape(len(x), -1, 2))).clamp_min(0)
+            if sp_:
+                tot["agent"] = tot["agent"] * (1 - M["off_agent"])
+                tot["side"] = tot["side"] * (1 - M["off_side"])
+                win = ~((C[..., 0] < X0) | (C[..., 0] > X0 + 64) | (C[..., 1].abs() > 24)).any(-1)          # (B, 41) step in the window
+                rr = rr * win.detach().float().repeat_interleave(4, 1)
+            tot["road"] = W["road"] * rr.mean(1) * okR
             if pack is not None:
                 lo = lat_rows >= 0
                 for k in ("onc", "soft"):
@@ -872,7 +916,7 @@ def cmd_g5(a):
         res = dict(rows=len(rows), la_rows=int(len(la)), term_reduced=float((v1 < v0.detach()).float().mean()),
                    term_rel_reduction_med=float(np.median(((v0.detach() - v1) / v0.detach().clamp_min(1e-9)).numpy())),
                    arc_rel_change_med=float(np.median((a1 - a0) / np.maximum(a0, 1e-3))), end_speed_change_med=float(np.median(e1 - e0)))
-        for ref in ("fut", "log"):
+        for ref in [q for q in ("fut", "log") if f"{q}__P9" in z.files]:
             L = z[f"{ref}__P9"][rows, 1:].astype(np.float64)
             okr = np.isfinite(L).all((1, 2))
             to = (L - P0)[..., :2].reshape(len(P0), -1)
@@ -958,7 +1002,7 @@ def main():
     sp.add_parser("report")
     g = sp.add_parser("g5")
     g.add_argument("--pool", choices=["S", "PAID", "PAIH"], required=True)
-    g.add_argument("--designs", default="fixed,gate,ec_log,ec_wit,ctx")
+    g.add_argument("--designs", default="fixed,gate,ec_log,ec_wit,ctx,spec")
     g.add_argument("--n", type=int, default=2000)
     g.add_argument("--threads", type=int, default=0)
     r = sp.add_parser("retime")
