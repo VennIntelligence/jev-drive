@@ -14,6 +14,11 @@ spins left on a spin set, did not fire). The v8 diagnostic shows plain v8 alread
 references (the stored r281/rsg, APP1X and all earlier reads are path 0; the new reference is `v2pai/RSG-L18-s0-gate`, path gate).
 All reads in this file: identities path 0; arms path v9 / gate as named.
 
+**Follow-up 2026-10-22 ([spin_events.md](../../../alpasim/results/spin_events.md)):** on the 16 current gate-path PAI 281 reads (NTV0, R6DAG,
+R6DAG2, R8K; ACC + GAP, Harmonizer off / on) no spin precedes any scored failure (0 points). The rollovers left in videos are the
+simulator pose fault (z / pitch jump first, 29 rollouts, all on 1.0 scenes or after the failure). The hand-driving mapping has no gate
+and reproduces the brake-steer spin (the MPC steers 0.24-0.48 rad while the reference brakes from +1..+3 to -9 m/s^2 in 0.5 s).
+
 ## Mechanism (Amendment 1; [diag_handoff.md](diag_handoff.md), [diag_replay.md](diag_replay.md))
 
 - v8 was never served in the APP1X or r281/rsg reads (`JEV_TRACK 0` in driver.log). APP1X's 29 spins tell us nothing about v8; they come from
