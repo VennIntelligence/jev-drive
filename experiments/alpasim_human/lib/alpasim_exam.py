@@ -507,9 +507,10 @@ class AlpaSimExam(Backend):
         return True, ("Loop started on %s (card 0, %s MiB free). The stack takes about a minute to start; each scene then holds "
                       "until the first throttle press." % (run, free))
 
-    def new_batch(self, key, ids=None, name=None, start=True):
+    def new_batch(self, key, ids=None, name=None, start=True, extra=None):
         """A run dir for set `key`, or for the picked `ids` (key "custom"; one track), labelled `name` if given; then start the loop on it
-        (`start`)."""
+        (`start`). `extra` goes into exam.json as is (loss playlists: stored_tag = the checkpoint whose stored reads the "<tag> stored"
+        column shows whatever the Driver is, notes = {scene: text shown after the scenario})."""
         if ids is not None:
             ids = list(dict.fromkeys(ids))
             bad = [i for i in ids if i not in self.sc.meta]
@@ -528,7 +529,7 @@ class AlpaSimExam(Backend):
             run = run.with_name(run.name + "b")
         run.mkdir(parents=True)
         (run / "exam.json").write_text(json.dumps({"track": track, "set": key, "label": label, "ids": list(ids),
-                                                   "created": time.strftime("%F %T")}, indent=1))
+                                                   "created": time.strftime("%F %T"), **(extra or {})}, indent=1))
         (run / "notes.txt").write_text("%s panel: new batch %s (%d scenes)\n" % (time.strftime("%F %T"), key, len(ids)))
         return self.start_loop(run) if start else (True, "Playlist \"%s\" created (%d scenes)." % (label, len(ids)))
 
@@ -553,6 +554,10 @@ class AlpaSimExam(Backend):
             return []
         ex = read_json(Path(run, "exam.json"), {}) or {}
         out, (tag, st) = [], self.stored_now()
+        pin = ex.get("stored_tag")                                # a playlist built for one checkpoint (loss playlists) shows its reads
+        if pin:
+            tag, st = pin, stored_scores(pin, bool(ex.get("stored_harmonizer")))
+        notes = ex.get("notes") or {}
         for sid in ex.get("ids", []):
             m = self.sc.meta.get(sid, {})
             d = read_json(Path(run, "done", sid + ".json"))
@@ -569,12 +574,13 @@ class AlpaSimExam(Backend):
             if md:                                               # model drives, apart from the human score
                 status = "; ".join([status] * bool(status) + ["model %s %.2f %s" % (k, v["score"], v["why"]) for k, v in md.items()])
             ms, src = self.sc.model(sid)
-            out.append(dict(id=sid, label=m.get("label", sid), group=m.get("group", "?"), scenario=m.get("scenario", ""),
+            sc = " \u00b7 ".join(x for x in (m.get("scenario", ""), notes.get(sid, "")) if x)
+            out.append(dict(id=sid, label=m.get("label", sid), group=m.get("group", "?"), scenario=sc,
                             human=d["score"] if d else None, model=ms, model_src=src, status=status,
                             why=d["why"] if d else (t or {}).get("status", ""), attempts=d.get("attempt", 1) if d else 0,
                             sim_s=d.get("sim_s") if d else None, ref=m.get("ref"),
                             drives=[dict(driver=k, score=v["score"], why=v["why"]) for k, v in md.items()],
-                            stored=self.stored_of(tag, st, sid)))
+                            stored=dict(self.stored_of(tag, st, sid) or {}, pinned=True) if pin and st.get(sid) else self.stored_of(tag, st, sid)))
         return out
 
     def official(self):

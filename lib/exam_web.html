@@ -502,12 +502,13 @@ async function sendOrder(force) {
 }
 // The selected Driver checkpoint's stored score of a track (alpasim_exam.py: stored_scores(tag) per item): the item field shaped
 // {score, why, src}. Shown only when the Driver is a checkpoint and some track has one.
-const ckScore = it => isModel() ? Object.values(it).find(v => v && typeof v === "object" && !Array.isArray(v) && "score" in v && "src" in v && v.score != null) : null;
+const ckScore = it => (isModel() || (it.stored && it.stored.pinned)) ? Object.values(it).find(v => v && typeof v === "object" && !Array.isArray(v) && "score" in v && "src" in v && v.score != null) : null;
 function renderTracks() {
   const st = S.st, L = st.loop, r = rows(), live = L.alive && L.run === st.shown, filt = S.grp || S.show !== "all";
   const ck = st.items.some(ckScore);
   document.body.classList.toggle("ck", ck);
-  if (ck) $("#ckHead").textContent = (st.control.options.driver || "").split("-")[0] + " stored";
+  const pinned = st.items.find(i => i.stored && i.stored.pinned);   // a playlist pinned to one checkpoint's reads (exam.json stored_tag)
+  if (ck) $("#ckHead").textContent = (pinned ? pinned.stored.driver : (st.control.options.driver || "").split("-")[0]) + " stored";
   $("#shownN").textContent = filt ? `${r.length} of ${st.items.length} shown; auto-advance plays only these` : "";
   sendOrder();
   const fmtS = s => s == null ? "" : s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";

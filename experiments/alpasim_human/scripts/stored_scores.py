@@ -46,6 +46,10 @@ RS += [("box", t, "pai", "PAI 281 (onpol_long/pai281/%s)" % d, "unrecorded", "on
 READ10 = ("route_follow/guard/read10", "route_follow/slow/read10", "route_follow/allrows/read10", "onpol_long/read10")
 RS += [("box", None, "nuplan", "nuPlan public 1491 @10 (%s)" % "/".join(g.split("/")[:2]), "native", g + "/<tag>/*") for g in READ10]
 FULL = set(os.environ.get("FULL", "RSG-L18-s0").split(","))
+# held 460 @18 reads (route_mem/read, onpol held split) of the nuPlan candidates the loss playlists show (scripts/loss_playlists.py); kept
+# whatever TAGS is (their checkpoints need not be on Tokyo)
+HELD = ["STANDFMXH-L18-s1", "JTN-L18-s1", "NPB70-L18-s0"]
+RS += [("box", t, "nuplan", "nuPlan held 460 @18 (route_mem/read)", "native", "route_mem/read/%s/c*/run" % t) for t in HELD]
 RS += [("tokyo", t, "nuplan", "nuPlan 48 (native_ref/%s)" % d, c, "alpasim/native_ref/" + d)
        for t, d, c in [("JTN-L18-s1", "JTN-L18-s1-native", "native"), ("JTN-L18-s1", "JTN-L18-s1-holdstop3", "stop3"),
                        ("JTN-L18-s0", "JTN-L18-s0-holdstop3", "stop3"), ("RSG-L18-s0", "RSG-L18-s0-holdstop3", "stop3"),
@@ -94,7 +98,7 @@ def rs_rows(tag, track, read, config, dirs, keep=None):
 def rows(host, repo):
     sys.path.insert(0, str(Path(repo) / "experiments/alpasim_human/lib"))
     tags = [t for t in os.environ.get("TAGS", "").split(",") if t]
-    fams = {family(t) for t in tags} or None
+    fams = {family(t) for t in tags + HELD * bool(tags)} or None
     out = []
     if host == "box":
         for f in sorted(glob.glob(str(D / "pai_fix/facts/*.csv"))):
@@ -124,7 +128,7 @@ def rows(host, repo):
                 if fams is None or family(t) in fams:
                     out += rs_rows(t, track, read, config, sorted(glob.glob(td + "/*")), None if t in FULL else nu48)
         else:
-            out += rs_rows(tag, track, read, config, sorted(glob.glob(str(D / g))), nu48 if track == "nuplan" else None)
+            out += rs_rows(tag, track, read, config, sorted(glob.glob(str(D / g))), nu48 if track == "nuplan" and "held 460" not in read else None)
     for r in out:
         r[7] = "%s:%s" % (host, r[7])
         print("\t".join(str(x).replace("\t", " ") for x in r))
@@ -158,6 +162,7 @@ def write(out):
             seen.add(tuple(r[:3] + r[5:7]))
             L.append(r)
     tags = [t for t in os.environ.get("TAGS", "").split(",") if t]
+    tags += [t for t in HELD if tags and t not in tags]
     have = {(r[0], r[1]) for r in L}
     need = {(family(t), tr) for t in tags for tr in ("pai", "nuplan") if (t, tr) not in have}   # family seeds stand in only for these
     L = [r for r in L if not tags or r[0] in tags or (family(r[0]), r[1]) in need]
