@@ -1,0 +1,735 @@
+{
+ "NTV0-s0+AG": {
+  "pcs": 2195.3726432313,
+  "ci": [
+   2138.2647319481493,
+   2299.0685359500044
+  ]
+ },
+ "R3MV-s0+AG": {
+  "pcs": 1917.9336921525874,
+  "ci": [
+   1848.5494829663505,
+   1959.5270814944238
+  ],
+  "diff_median": -276.46943004174886,
+  "diff_point": -277.43895107871276,
+  "diff_ci": [
+   -374.77256057014756,
+   -217.24315052722693
+  ],
+  "p_pos": 0.0
+ },
+ "DAG-s0+AG": {
+  "pcs": 1982.5026056095562,
+  "ci": [
+   1906.742756571012,
+   2121.794807965935
+  ],
+  "diff_median": -210.1421128375124,
+  "diff_point": -212.8700376217439,
+  "diff_ci": [
+   -305.0853519151731,
+   -56.66266428038318
+  ],
+  "p_pos": 0.0
+ },
+ "R8K-s0+AG": {
+  "pcs": 2013.991963292564,
+  "ci": [
+   1950.9659031468716,
+   2188.3921583801043
+  ],
+  "diff_median": -180.7500418424828,
+  "diff_point": -181.3806799387362,
+  "diff_ci": [
+   -275.1439356565275,
+   -24.352318502301635
+  ],
+  "p_pos": 0.02
+ },
+ "DAG-s1+AG": {
+  "pcs": 2040.4088174928818,
+  "ci": [
+   1964.949012254577,
+   2224.480458153595
+  ],
+  "diff_median": -152.99102305109488,
+  "diff_point": -154.96382573841834,
+  "diff_ci": [
+   -259.85841357117425,
+   35.72480384908822
+  ],
+  "p_pos": 0.06
+ },
+ "R8K-s1+AG": {
+  "pcs": 2039.4284551789146,
+  "ci": [
+   1963.049256700824,
+   2199.184670378768
+  ],
+  "diff_median": -155.51050758600854,
+  "diff_point": -155.94418805238547,
+  "diff_ci": [
+   -249.89954998862652,
+   31.77739067113622
+  ],
+  "p_pos": 0.06
+ },
+ "DAG-s2+AG": {
+  "pcs": 2030.6293989840349,
+  "ci": [
+   1956.9683790138427,
+   2193.300306025305
+  ],
+  "diff_median": -161.62702781182827,
+  "diff_point": -164.74324424726524,
+  "diff_ci": [
+   -273.00683489200094,
+   6.764520251557254
+  ],
+  "p_pos": 0.03
+ },
+ "R8K-s2+AG": {
+  "pcs": 2050.5498371202907,
+  "ci": [
+   1982.8335282584183,
+   2191.8965928218718
+  ],
+  "diff_median": -141.46647446001373,
+  "diff_point": -144.8228061110094,
+  "diff_ci": [
+   -250.3204052041847,
+   25.055318545007893
+  ],
+  "p_pos": 0.05
+ },
+ "class_values": {
+  "NTV0-s0+AG": {
+   "partial rear-hit": 168.23440965054124,
+   "partial slow": 52.20423911560147,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 38.12202849518417,
+   "zero route-turn": 28.324881903372443,
+   "zero offroad": 21.84614359080524,
+   "zero other (AF-front, side, drift / lane change)": 18.91639337891138,
+   "all partials": 507.8858170928338,
+   "all zeros": 116.6482356339061
+  },
+  "R3MV-s0+AG": {
+   "partial rear-hit": 20.38509309462188,
+   "partial slow": 15.284728368168544,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 11.717139426414178,
+   "zero route-turn": 0.3435706010507147,
+   "zero offroad": 21.007904462359875,
+   "zero other (AF-front, side, drift / lane change)": 25.32959232676467,
+   "all partials": 49.010534454042045,
+   "all zeros": 60.91069990487904
+  },
+  "DAG-s0+AG": {
+   "partial rear-hit": 5.441787635189712,
+   "partial slow": 78.65069150900081,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 7.4427332746049615,
+   "zero route-turn": 0.4477126837200558,
+   "zero offroad": 16.33340743348299,
+   "zero other (AF-front, side, drift / lane change)": 4.02011426217814,
+   "all partials": 167.44691805570346,
+   "all zeros": 28.29084221265407
+  },
+  "R8K-s0+AG": {
+   "partial rear-hit": 14.469083297883117,
+   "partial slow": 41.59554957823502,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 7.687290845781263,
+   "zero route-turn": 3.3415592489081973,
+   "zero offroad": 47.833658426221064,
+   "zero other (AF-front, side, drift / lane change)": 11.795607753285822,
+   "all partials": 108.24291913534125,
+   "all zeros": 77.332516176833
+  },
+  "DAG-s1+AG": {
+   "partial rear-hit": 20.705576853927823,
+   "partial slow": 45.497817964043634,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 7.631045597486036,
+   "zero route-turn": 0.89635213114002,
+   "zero offroad": 11.644053665504316,
+   "zero other (AF-front, side, drift / lane change)": 5.948560593471939,
+   "all partials": 112.66397670183164,
+   "all zeros": 26.720629299981965
+  },
+  "R8K-s1+AG": {
+   "partial rear-hit": 30.104546283447235,
+   "partial slow": 59.6753495360731,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 9.154678315380806,
+   "zero route-turn": 3.9971258883708742,
+   "zero offroad": 32.48436746922971,
+   "zero other (AF-front, side, drift / lane change)": 9.795980740190316,
+   "all partials": 337.4708330307262,
+   "all zeros": 58.27258102312453
+  },
+  "DAG-s2+AG": {
+   "partial rear-hit": 25.011571259929724,
+   "partial slow": 48.137620035254486,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 12.516573037319858,
+   "zero route-turn": 1.4157816864451434,
+   "zero offroad": 39.726295865948714,
+   "zero other (AF-front, side, drift / lane change)": 6.81901492421207,
+   "all partials": 182.56688452450385,
+   "all zeros": 63.73682728721519
+  },
+  "R8K-s2+AG": {
+   "partial rear-hit": 44.29556804371714,
+   "partial slow": 36.927265737300786,
+   "partial other contact": 0.0,
+   "zero overshoot (passes the human's rest point)": 17.567749410416127,
+   "zero route-turn": 1.3127488102691132,
+   "zero offroad": 33.96454765385943,
+   "zero other (AF-front, side, drift / lane change)": 26.701274907265997,
+   "all partials": 229.89972575833917,
+   "all zeros": 85.57667795496945
+  }
+ },
+ "class_counts": {
+  "NTV0-s0+AG": {
+   "partial rear-hit": [
+    25,
+    10.406640808354219
+   ],
+   "partial slow": [
+    11,
+    2.1636447533714036
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    22,
+    22.0
+   ],
+   "zero route-turn": [
+    15,
+    15.0
+   ],
+   "zero offroad": [
+    12,
+    12.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    9,
+    9.0
+   ],
+   "all partials": [
+    36,
+    12.570285561725624
+   ],
+   "all zeros": [
+    58,
+    58.0
+   ]
+  },
+  "R3MV-s0+AG": {
+   "partial rear-hit": [
+    24,
+    9.46831897456555
+   ],
+   "partial slow": [
+    5,
+    0.6050180338569007
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    22,
+    22.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    19,
+    19.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    18,
+    18.0
+   ],
+   "all partials": [
+    29,
+    10.073337008422449
+   ],
+   "all zeros": [
+    61,
+    61.0
+   ]
+  },
+  "DAG-s0+AG": {
+   "partial rear-hit": [
+    22,
+    8.686187438332873
+   ],
+   "partial slow": [
+    6,
+    0.9061378568915829
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    20,
+    20.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    20,
+    20.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    11,
+    11.0
+   ],
+   "all partials": [
+    28,
+    9.592325295224455
+   ],
+   "all zeros": [
+    53,
+    53.0
+   ]
+  },
+  "R8K-s0+AG": {
+   "partial rear-hit": [
+    17,
+    7.153336086111546
+   ],
+   "partial slow": [
+    4,
+    0.7170522460678969
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    19,
+    19.0
+   ],
+   "zero route-turn": [
+    3,
+    3.0
+   ],
+   "zero offroad": [
+    17,
+    17.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    11,
+    11.0
+   ],
+   "all partials": [
+    21,
+    7.870388332179442
+   ],
+   "all zeros": [
+    50,
+    50.0
+   ]
+  },
+  "DAG-s1+AG": {
+   "partial rear-hit": [
+    20,
+    7.681292899465008
+   ],
+   "partial slow": [
+    6,
+    0.7682774209951196
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    19,
+    19.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    12,
+    12.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    10,
+    10.0
+   ],
+   "all partials": [
+    26,
+    8.449570320460126
+   ],
+   "all zeros": [
+    43,
+    43.0
+   ]
+  },
+  "R8K-s1+AG": {
+   "partial rear-hit": [
+    20,
+    7.893533480373061
+   ],
+   "partial slow": [
+    3,
+    0.5147840999383071
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    19,
+    19.0
+   ],
+   "zero route-turn": [
+    3,
+    3.0
+   ],
+   "zero offroad": [
+    16,
+    16.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    9,
+    9.0
+   ],
+   "all partials": [
+    23,
+    8.408317580311369
+   ],
+   "all zeros": [
+    47,
+    47.0
+   ]
+  },
+  "DAG-s2+AG": {
+   "partial rear-hit": [
+    18,
+    6.741234267624289
+   ],
+   "partial slow": [
+    3,
+    0.5416386711347413
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    20,
+    20.0
+   ],
+   "zero route-turn": [
+    3,
+    3.0
+   ],
+   "zero offroad": [
+    18,
+    18.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    10,
+    10.0
+   ],
+   "all partials": [
+    21,
+    7.282872938759031
+   ],
+   "all zeros": [
+    51,
+    51.0
+   ]
+  },
+  "R8K-s2+AG": {
+   "partial rear-hit": [
+    17,
+    6.878312722782622
+   ],
+   "partial slow": [
+    4,
+    0.53401152129271
+   ],
+   "partial other contact": [
+    0,
+    0.0
+   ],
+   "zero overshoot (passes the human's rest point)": [
+    20,
+    20.0
+   ],
+   "zero route-turn": [
+    2,
+    2.0
+   ],
+   "zero offroad": [
+    14,
+    14.0
+   ],
+   "zero other (AF-front, side, drift / lane change)": [
+    11,
+    11.0
+   ],
+   "all partials": [
+    21,
+    7.412324244075333
+   ],
+   "all zeros": [
+    47,
+    47.0
+   ]
+  }
+ },
+ "variants": {
+  "paimix": {
+   "NTV0-s0+AG": 2195.3726432313,
+   "R3MV-s0+AG": 1917.9336921525874,
+   "DAG-s0+AG": 1982.5026056095562,
+   "R8K-s0+AG": 2013.991963292564,
+   "DAG-s1+AG": 2040.4088174928818,
+   "R8K-s1+AG": 2039.4284551789146,
+   "DAG-s2+AG": 2030.6293989840349,
+   "R8K-s2+AG": 2050.5498371202907,
+   "garage": 1783.2612445878199,
+   "go-straight": 1463.9865931536988,
+   "RSG+AG": 2106.752162258481
+  },
+  "paimix-s1": {
+   "NTV0-s0+AG": 2164.2229695431874,
+   "R3MV-s0+AG": 1944.576431068374,
+   "DAG-s0+AG": 2015.6650953847443,
+   "R8K-s0+AG": 2026.7644838264803,
+   "DAG-s1+AG": 2060.773357402407,
+   "R8K-s1+AG": 2049.141620482421,
+   "DAG-s2+AG": 2042.1306586131263,
+   "R8K-s2+AG": 2056.6101774945637,
+   "garage": 1807.8745849098286,
+   "go-straight": 1450.961504286866,
+   "RSG+AG": 2095.163910803306
+  },
+  "paimix-s2": {
+   "NTV0-s0+AG": 2175.8677798521503,
+   "R3MV-s0+AG": 1919.8807252316508,
+   "DAG-s0+AG": 2005.3187630642417,
+   "R8K-s0+AG": 2016.7894370961837,
+   "DAG-s1+AG": 2059.0584544876383,
+   "R8K-s1+AG": 2038.5974172207405,
+   "DAG-s2+AG": 2034.2574508005507,
+   "R8K-s2+AG": 2046.5852130648104,
+   "garage": 1804.3755958524735,
+   "go-straight": 1452.6412120839364,
+   "RSG+AG": 2096.983192063593
+  },
+  "garagex0.5": {
+   "NTV0-s0+AG": 2181.090175151854,
+   "R3MV-s0+AG": 1924.7799692192357,
+   "DAG-s0+AG": 1993.4730116398212,
+   "R8K-s0+AG": 2006.4840242750845,
+   "DAG-s1+AG": 2034.4309111531034,
+   "R8K-s1+AG": 2030.0324922385166,
+   "DAG-s2+AG": 2023.96984112474,
+   "R8K-s2+AG": 2045.0736597600644,
+   "garage": 1796.292829018692,
+   "go-straight": 1456.7389039699199,
+   "RSG+AG": 2100.9682670113875
+  },
+  "garagex2": {
+   "NTV0-s0+AG": 2188.1983298214363,
+   "R3MV-s0+AG": 1919.045802613198,
+   "DAG-s0+AG": 1971.2275076951225,
+   "R8K-s0+AG": 2026.8632245674683,
+   "DAG-s1+AG": 2047.0069700972858,
+   "R8K-s1+AG": 2052.414868491026,
+   "DAG-s2+AG": 2042.9945837619553,
+   "R8K-s2+AG": 2066.317796939274,
+   "garage": 1764.5454941480846,
+   "go-straight": 1475.8039425350944,
+   "RSG+AG": 2113.6505633168235
+  },
+  "bandx0.5": {
+   "NTV0-s0+AG": 2158.429800331615,
+   "R3MV-s0+AG": 1908.844711333146,
+   "DAG-s0+AG": 1957.849312406021,
+   "R8K-s0+AG": 2036.2207032698316,
+   "DAG-s1+AG": 2037.6194171707189,
+   "R8K-s1+AG": 2071.331189884141,
+   "DAG-s2+AG": 2048.8130895035324,
+   "R8K-s2+AG": 2078.2394718039736,
+   "garage": 1808.1734745459605,
+   "go-straight": 1450.8206605092962,
+   "RSG+AG": 2095.0058649447424
+  },
+  "bandx2": {
+   "NTV0-s0+AG": 2206.855994166991,
+   "R3MV-s0+AG": 1871.4862979921788,
+   "DAG-s0+AG": 1955.7521819329318,
+   "R8K-s0+AG": 1967.2759372221853,
+   "DAG-s1+AG": 2014.6475116236475,
+   "R8K-s1+AG": 1984.936407406858,
+   "DAG-s2+AG": 1998.2565137525787,
+   "R8K-s2+AG": 2017.152034544025,
+   "garage": 1741.3030989294468,
+   "go-straight": 1492.910365290909,
+   "RSG+AG": 2119.7865357796445
+  },
+  "gsx0.5": {
+   "NTV0-s0+AG": 2220.7278285116736,
+   "R3MV-s0+AG": 1900.0316525968562,
+   "DAG-s0+AG": 1968.942915191526,
+   "R8K-s0+AG": 1999.364876603119,
+   "DAG-s1+AG": 2033.9042133590174,
+   "R8K-s1+AG": 2018.0491886243526,
+   "DAG-s2+AG": 2019.42516655997,
+   "R8K-s2+AG": 2042.0535568492353,
+   "garage": 1739.5890830963458,
+   "go-straight": 1494.2850824988836,
+   "RSG+AG": 2120.125834404769
+  },
+  "gsx2": {
+   "NTV0-s0+AG": 2149.4236689991876,
+   "R3MV-s0+AG": 1907.2458644854892,
+   "DAG-s0+AG": 1950.8237949969698,
+   "R8K-s0+AG": 2015.0265059154224,
+   "DAG-s1+AG": 2019.6637051133325,
+   "R8K-s1+AG": 2044.5831054446496,
+   "DAG-s2+AG": 2029.217119884279,
+   "R8K-s2+AG": 2054.6071615454225,
+   "garage": 1815.8584726984182,
+   "go-straight": 1447.3423336277715,
+   "RSG+AG": 2090.79919367381
+  },
+  "low-as-gs": {
+   "NTV0-s0+AG": 2134.980011506699,
+   "R3MV-s0+AG": 1900.2809725316563,
+   "DAG-s0+AG": 1940.028373920848,
+   "R8K-s0+AG": 2017.036837390879,
+   "DAG-s1+AG": 2011.6843539249085,
+   "R8K-s1+AG": 2050.1699602147696,
+   "DAG-s2+AG": 2033.0952823692571,
+   "R8K-s2+AG": 2061.994888032869,
+   "garage": 1822.2575212278446,
+   "go-straight": 1444.6571538561047,
+   "RSG+AG": 2087.0853249160505
+  },
+  "dedup": {
+   "NTV0-s0+AG": 2260.3426346179335,
+   "R3MV-s0+AG": 1883.8677701136571,
+   "DAG-s0+AG": 1988.7291714213243,
+   "R8K-s0+AG": 2043.1769025541407,
+   "DAG-s1+AG": 2100.08972670425,
+   "R8K-s1+AG": 2074.9969449677164,
+   "DAG-s2+AG": 2073.5055173620226,
+   "R8K-s2+AG": 2107.2440055852094,
+   "garage": 1717.0851350495157,
+   "go-straight": 1513.9197748023093,
+   "RSG+AG": 2122.9950901481743
+  },
+  "paimix-1pl": {
+   "NTV0-s0+AG": 2129.9930488204513,
+   "R3MV-s0+AG": 2125.465422965626,
+   "DAG-s0+AG": 2155.4076442186242,
+   "R8K-s0+AG": 2203.0407602352766,
+   "DAG-s1+AG": 2224.935534433927,
+   "R8K-s1+AG": 2210.559651665375,
+   "DAG-s2+AG": 2207.719282999021,
+   "R8K-s2+AG": 2228.686692274813,
+   "garage": 1796.7135199501868,
+   "go-straight": 1456.5181367204489,
+   "RSG+AG": 2100.768343329365
+  }
+ },
+ "bands": {
+  "NTV0-s0+AG": {
+   "cells": [
+    "90 items: 0 / 0 / 90",
+    "26 items: 0 / 1 / 25",
+    "159 items: 58 / 35 / 66"
+   ],
+   "fix_a3": 0.0,
+   "fix_a1": 11.848065700967254
+  },
+  "R3MV-s0+AG": {
+   "cells": [
+    "90 items: 13 / 4 / 73",
+    "26 items: 3 / 2 / 21",
+    "159 items: 45 / 24 / 89"
+   ],
+   "fix_a3": 164.22060224442885,
+   "fix_a1": 341.3272176556702
+  },
+  "DAG-s0+AG": {
+   "cells": [
+    "90 items: 2 / 1 / 87",
+    "26 items: 3 / 4 / 19",
+    "159 items: 48 / 26 / 85"
+   ],
+   "fix_a3": 55.30008991575801,
+   "fix_a1": 249.43912945643797
+  },
+  "R8K-s0+AG": {
+   "cells": [
+    "90 items: 3 / 0 / 87",
+    "26 items: 4 / 3 / 19",
+    "159 items: 43 / 19 / 97"
+   ],
+   "fix_a3": 28.80597864141373,
+   "fix_a1": 281.215418992766
+  },
+  "DAG-s1+AG": {
+   "cells": [
+    "90 items: 0 / 1 / 89",
+    "26 items: 0 / 5 / 21",
+    "159 items: 43 / 22 / 94"
+   ],
+   "fix_a3": 18.98348673020314,
+   "fix_a1": 224.63055298804534
+  },
+  "R8K-s1+AG": {
+   "cells": [
+    "90 items: 1 / 0 / 89",
+    "26 items: 4 / 2 / 20",
+    "159 items: 42 / 21 / 96"
+   ],
+   "fix_a3": 8.69832818456689,
+   "fix_a1": 200.249219972437
+  },
+  "DAG-s2+AG": {
+   "cells": [
+    "90 items: 2 / 0 / 88",
+    "26 items: 4 / 4 / 18",
+    "159 items: 45 / 20 / 94"
+   ],
+   "fix_a3": 18.50065549496844,
+   "fix_a1": 294.1214047760343
+  },
+  "R8K-s2+AG": {
+   "cells": [
+    "90 items: 1 / 0 / 89",
+    "26 items: 6 / 2 / 18",
+    "159 items: 40 / 20 / 99"
+   ],
+   "fix_a3": 10.78531651206049,
+   "fix_a1": 220.36180484037823
+  }
+ }
+}
