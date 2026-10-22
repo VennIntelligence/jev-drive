@@ -419,6 +419,12 @@ class AlpaSimExam(Backend):
         s = st.get(sid)
         return dict(s, driver=tag) if s else None
 
+    @classmethod
+    def pinned_of(cls, tag, harm, sid):
+        """stored_of for a playlist pinned to checkpoint `tag` (marked pinned: the page shows it whatever the Driver is); None = not pinned."""
+        s = cls.stored_of(tag, stored_scores(tag, harm), sid) if tag else None
+        return dict(s, pinned=True) if s else None
+
     def catalog(self):
         tag, st = self.stored_now()
         return [dict(c, stored=self.stored_of(tag, st, c["id"])) for c in self.sc.catalog()]
@@ -554,9 +560,8 @@ class AlpaSimExam(Backend):
             return []
         ex = read_json(Path(run, "exam.json"), {}) or {}
         out, (tag, st) = [], self.stored_now()
-        pin = ex.get("stored_tag")                                # a playlist built for one checkpoint (loss playlists) shows its reads
-        if pin:
-            tag, st = pin, stored_scores(pin, bool(ex.get("stored_harmonizer")))
+        # a playlist built for one checkpoint (loss playlists: stored_tag, or stored_tags = {scene: tag}) shows that checkpoint's reads
+        pins, harm = ex.get("stored_tags") or {}, bool(ex.get("stored_harmonizer"))
         notes = ex.get("notes") or {}
         for sid in ex.get("ids", []):
             m = self.sc.meta.get(sid, {})
@@ -580,7 +585,7 @@ class AlpaSimExam(Backend):
                             why=d["why"] if d else (t or {}).get("status", ""), attempts=d.get("attempt", 1) if d else 0,
                             sim_s=d.get("sim_s") if d else None, ref=m.get("ref"),
                             drives=[dict(driver=k, score=v["score"], why=v["why"]) for k, v in md.items()],
-                            stored=dict(self.stored_of(tag, st, sid) or {}, pinned=True) if pin and st.get(sid) else self.stored_of(tag, st, sid)))
+                            stored=self.pinned_of(pins.get(sid) or ex.get("stored_tag"), harm, sid) or self.stored_of(tag, st, sid)))
         return out
 
     def official(self):

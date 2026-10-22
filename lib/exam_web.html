@@ -508,7 +508,8 @@ function renderTracks() {
   const ck = st.items.some(ckScore);
   document.body.classList.toggle("ck", ck);
   const pinned = st.items.find(i => i.stored && i.stored.pinned);   // a playlist pinned to one checkpoint's reads (exam.json stored_tag)
-  if (ck) $("#ckHead").textContent = (pinned ? pinned.stored.driver : (st.control.options.driver || "").split("-")[0]) + " stored";
+  const ptags = new Set(st.items.filter(i => i.stored && i.stored.pinned).map(i => i.stored.driver));
+  if (ck) $("#ckHead").textContent = (pinned ? (ptags.size > 1 ? "model" : pinned.stored.driver) : (st.control.options.driver || "").split("-")[0]) + " stored";
   $("#shownN").textContent = filt ? `${r.length} of ${st.items.length} shown; auto-advance plays only these` : "";
   sendOrder();
   const fmtS = s => s == null ? "" : s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";

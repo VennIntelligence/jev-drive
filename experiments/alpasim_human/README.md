@@ -277,6 +277,10 @@ Layout (2026-10-22 evening redesign, a music player; the user could not read the
   RSG-L18-s0 (`FULL`); `results/nuplan_public_spread.tsv`: per public scene, n / mean / min / max / zeros / passes over every
   checkpoint's public-1491 read (49 on 10-22; `stored_scores.py spread`), the nuPlan difficulty sets;
   older tags' PAI 281 reads whose serve the run dir does not record ("unrecorded"). Rebuild: the command at the top of the script.
+- Loss playlists (2026-10-22, `scripts/loss_playlists.py`, page [research/round9/loss-playlists.md](../../research/round9/loss-playlists.md)):
+  per candidate x track the scenes its stored read loses, sorted by board-weighted loss value. exam.json may pin the stored column to a
+  checkpoint (`stored_tag`, or `stored_tags` = {scene: tag}; shown whatever the Driver is) and carry `notes` = {scene: text} shown after
+  the scenario; `new_batch(..., extra=...)` writes them. stored_scores.tsv now also has the nuPlan candidates' held 460 @18 reads.
 - Transport bar (bottom, always visible): now playing (track, playlist, driver), the state in plain words (Loading render stack /
   Loading track / Ready - press throttle / Driving / Model driving / Paused / Scoring / Playlist finished / Stopped, with seconds; the
   loop's raw message as the line under it and its tooltip; sim seconds and speed from `<live>/state.json` while driving), and

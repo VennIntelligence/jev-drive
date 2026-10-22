@@ -119,7 +119,7 @@ def build(d):
             aw["val"] = aw.a * (1 - aw.score)
         L = []
         for s, r in m.iterrows():
-            if r.score >= 1:
+            if r.score >= 1 or str(r.why).startswith("failed: Waypoint"):    # route check fails before driving: every tag, not a drive
                 continue
             nr = near.loc[s] if s in near.index else None
             a = float(nr.a) if nr is not None else bmed
@@ -154,7 +154,7 @@ def build(d):
                     best_row[x["scene"]] = x
         top = sorted(best_row.values(), key=lambda x: -x["value"])[:TOPN]
         lists.append(dict(name="%s top %d recoverable losses (all candidates)" % (lab, TOPN), track=tr, stored_tag=None,
-                          ids=[x["scene"] for x in top],
+                          ids=[x["scene"] for x in top], stored_tags={x["scene"]: x["tag"] for x in top},
                           notes={x["scene"]: "#%d %s value %.2f (score %.2f) %s; fixed by %s" % (i, x["tag"].replace("-L18", ""), x["value"], x["score"],
                                                                                         x["cls"], x["recoverable"]) for i, x in enumerate(top, 1)}))
     (d / "spec.json").write_text(json.dumps(dict(playlists=lists), indent=1))
@@ -163,8 +163,9 @@ def build(d):
         print("%-55s %s %3d  stored=%s" % (p["name"], p["track"], len(p["ids"]), p["stored_tag"]))
 
 
-def make(spec, prefix=""):
-    """Tokyo: create the playlists whose name starts with `prefix` (no loop start). Existing playlists of the same name are skipped."""
+def make(spec, prefix="", replace=False):
+    """Tokyo: create the playlists whose name starts with `prefix` (no loop start). Existing playlists of the same name are skipped, or with
+    `replace` (--replace) rebuilt in place when nothing was driven in them yet (exam.json rewritten, run dir kept)."""
     sys.path.insert(0, str(REPO / "experiments/alpasim_human/lib"))
     sys.path.insert(0, str(REPO / "lib"))
     import alpasim_exam as AE
@@ -174,9 +175,17 @@ def make(spec, prefix=""):
         if not p["name"].startswith(prefix):
             continue
         if p["name"] in have:
-            print("skip (exists):", p["name"])
+            run = next(r for r in b.runs() if AE.read_json(Path(r, "exam.json"), {}).get("label") == p["name"])
+            if not replace or any(Path(run, "done").glob("*.json")):
+                print("skip (exists%s): %s" % (", driven" * replace, p["name"]))
+                continue
+            ex = json.load(open(Path(run, "exam.json")))
+            ex = {k: v for k, v in ex.items() if k not in ("stored_tag", "stored_tags", "notes")}
+            ex.update(ids=p["ids"], notes=p["notes"], **{k: p[k] for k in ("stored_tag", "stored_tags") if p.get(k)})
+            Path(run, "exam.json").write_text(json.dumps(ex, indent=1))
+            print("replaced %s (%d scenes)" % (p["name"], len(p["ids"])))
             continue
-        extra = dict(notes=p["notes"], **({"stored_tag": p["stored_tag"]} if p["stored_tag"] else {}))
+        extra = dict(notes=p["notes"], **{k: p[k] for k in ("stored_tag", "stored_tags") if p.get(k)})
         print(b.new_batch("custom", ids=p["ids"], name=p["name"], start=False, extra=extra))
 
 
@@ -189,6 +198,6 @@ if __name__ == "__main__":
     elif a[:1] == ["build"]:
         build(a[a.index("--dir") + 1])
     elif a[:1] == ["make"]:
-        make(a[1], a[2] if len(a) > 2 else "")
+        make(a[1], next((x for x in a[2:] if not x.startswith("--")), ""), "--replace" in a)
     else:
         print(__doc__)
