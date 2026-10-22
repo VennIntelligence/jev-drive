@@ -886,7 +886,7 @@ def cmd_g5(a):
                 tot["side"] = tot["side"] * (1 - M["off_side"])
                 win = ~((C[..., 0] < X0) | (C[..., 0] > X0 + 64) | (C[..., 1].abs() > 24)).any(-1)          # (B, 41) step in the window
                 rr = rr * win.detach().float().repeat_interleave(4, 1)
-            tot["road"] = W["road"] * rr.mean(1) * okR
+            tot["road"] = torch.where(okR, W["road"] * rr.mean(1), torch.zeros(()))         # unlabelled rows hold uninitialised rasters
             if pack is not None:
                 lo = lat_rows >= 0
                 for k in ("onc", "soft"):
