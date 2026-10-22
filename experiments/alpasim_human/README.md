@@ -197,12 +197,20 @@ Layout (2026-10-22 evening redesign, a music player; the user could not read the
   it), Reference (the model score and its source), Your result (score + why; "scoring..." while the loop scores it; model drives under
   it), Driven (you, tries, sim seconds; hidden below 1100 px), "<tag> stored" when the Driver is a checkpoint (that checkpoint's
   stored score of the scene from our earlier reads, coloured like the other scores, read source and why as tooltip; the item field
-  shaped {score, why, src} from `alpasim_exam.py`; hidden for Human or when no track has one), and a play button (&#9654; unplayed, &#8635; replay). Sort: playlist order /
+  `stored` = {score, why, src, tag, config, driver} from `alpasim_exam.py`; hidden for Human or when no track has one), and a play button (&#9654; unplayed, &#8635; replay). Sort: playlist order /
   lowest score first; show: all / to play / played; a group filter. Auto-advance plays the shown tracks in the shown order, and a
   track's play button continues from that track ("play from here": the order sent to the loop starts there). Buttons: Play /
   Continue (track N) = the first unplayed track, "Reload playlist" (start over from track 1: `archive_results()` moves done/,
   tried/ and results.md to `<run>/archive/<stamp>/`, kept on disk, no longer counted; then the loop restarts on it), "Results table"
   (= results.md), Delete (confirm; refused while it plays).
+- Stored scores (the "<tag> stored" column): `alpasim_exam.stored_scores(tag)` reads `/data/runs/alpasim_human/refs/stored_scores.tsv`
+  (repo copy [results/stored_scores.tsv](results/stored_scores.tsv); else that copy), built by `scripts/stored_scores.py` from the
+  stored reads on the GPU box and Tokyo: one row per tag, track, scene and read (score, why, read, serve config, source). Per scene the
+  tag's own read wins, preferring the serve model mode uses (PAI ACC + GAP, Harmonizer as the panel's option; nuPlan native), then
+  another seed of the same family stands in (src says "seed <tag>"). Coverage (10-22): PAI 281 ACC + GAP for NTV0-L18-s0 (+ 72 val160
+  scenes of the PAI-FIX exam), R6DAG-L18-s1, R8K-L18-s2, RSG-L18-s0 (+ val160), JTN-L18-s0 / s1, RB0-F-s0 (+ val160); Harmonizer-on 281
+  reads for NTV0 / R6DAG / R8K; nuPlan 48 native for JTN-L18-s1, RSG-L18-s0 and the RSG / RBSG / YS families (public 1491 reads);
+  older tags' PAI 281 reads whose serve the run dir does not record ("unrecorded"). Rebuild: the command at the top of the script.
 - Transport bar (bottom, always visible): now playing (track, playlist, driver), the state in plain words (Loading render stack /
   Loading track / Ready - press throttle / Driving / Model driving / Paused / Scoring / Playlist finished / Stopped, with seconds; the
   loop's raw message as the line under it and its tooltip; sim seconds and speed from `<live>/state.json` while driving), and

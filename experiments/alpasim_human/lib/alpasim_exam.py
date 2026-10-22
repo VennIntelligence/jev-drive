@@ -4,7 +4,8 @@ Items = scenes. Groups: PAI = track + NuRec artifact revision (26.01 / 26.04), n
 Human score = the AlpaSim scene score of the scene's latest finished, not skipped rollout in the run (done/<scene>.json, written by
 scripts/human_loop.py). Model score = R6DAG-L18-s1 (PAI 281 ACC + GAP, results/model_ref_r6dag_281.tsv), else P2H10-F-s0 where a read
 exists (PAI stage 1: pai1/runs/a10_c4; nuPlan 48: native_ref/P2H10-F-s0), else the organisers' alpamayo1 (PAI tsv column); the source
-is shown after the score. Sets (Scenes): filters over the PAI 441 table (revision, organisers' mean, R6DAG score / loss class) plus a
+is shown after the score. When the Driver option is a checkpoint, every item / catalog entry also carries "stored": that checkpoint's
+stored read of the scene (stored_scores(tag), table of scripts/stored_scores.py), else None. Sets (Scenes): filters over the PAI 441 table (revision, organisers' mean, R6DAG score / loss class) plus a
 custom pick in the panel.
 A run dir: /data/runs/alpasim_human/exam_<track>_<stamp>/ with exam.json (track, set, ids), stacks/<one human_stack.sh out dir per
 stack launch>, done/<scene>.json, tried/<scene>.json, scores/<rollout id>/ (post-hoc aggregation), scores.jsonl, results.md, loop.log.
@@ -50,6 +51,47 @@ def driver_choices():
 
 def driver_of(d):
     return (d or {}).get("driver") or "human"
+
+
+# Stored per-scene reads of the Driver checkpoints (scripts/stored_scores.py; repo copy results/stored_scores.tsv). Config order = the
+# panel's model-mode serve first (scripts/model_driver.sh: PAI ACC + GAP, nuPlan native), then the rest.
+STORED = [RUNS / "refs/stored_scores.tsv", REPO / "experiments/alpasim_human/results/stored_scores.tsv"]
+PREF = {"pai": ["ACC+GAP", "ACC+GAP+harm", "ACC", "VC+LEAD", "unrecorded"], "nuplan": ["native", "stop3", "leash3", "unrecorded"]}
+_stored = {}
+
+
+def stored_scores(tag, harmonizer=False):
+    """{scene_id: {"score": float, "why": str, "src": str, "tag": str, "config": str}} of `tag`'s stored reads, both tracks. Per scene the
+    tag's own rows win over another seed of its family (tag minus -s<k>; "tag" then names that seed and src says so), then the config
+    order PREF (`harmonizer` puts "ACC+GAP+harm" first), then the larger read. src = "<read>, <config>" (+ ", seed <tag>"). Cached per
+    table mtime; {} for "human", an unknown tag or no table."""
+    p = next((p for p in STORED if p.is_file()), None)
+    if not p or not tag or tag == "human":
+        return {}
+    key = (str(p), p.stat().st_mtime)
+    if _stored.get("key") != key:
+        rows = tsv(p)
+        n = {}
+        for r in rows:
+            n[(r["tag"], r["read"], r["config"])] = n.get((r["tag"], r["read"], r["config"]), 0) + 1
+        _stored.clear()
+        _stored.update(key=key, rows=rows, n=n)
+    if (tag, harmonizer) in _stored:
+        return _stored[(tag, harmonizer)]
+    fam, out = re.sub(r"-s\d+$", "", tag), {}
+    for r in _stored["rows"]:
+        if r["tag"] != tag and re.sub(r"-s\d+$", "", r["tag"]) != fam:
+            continue
+        pref = list(PREF.get(r["track"], []))
+        if harmonizer and "ACC+GAP+harm" in pref:
+            pref.remove("ACC+GAP+harm")
+            pref.insert(0, "ACC+GAP+harm")
+        rank = (r["tag"] != tag, pref.index(r["config"]) if r["config"] in pref else len(pref), -_stored["n"][(r["tag"], r["read"], r["config"])])
+        if r["scene_id"] not in out or rank < out[r["scene_id"]][0]:
+            out[r["scene_id"]] = (rank, dict(score=float(r["score"]), why=r["why"], tag=r["tag"], config=r["config"],
+                                             src="%s, %s%s" % (r["read"], r["config"], "" if r["tag"] == tag else ", seed " + r["tag"])))
+    _stored[(tag, harmonizer)] = {k: v for k, (_, v) in out.items()}
+    return _stored[(tag, harmonizer)]
 
 
 def model_drives(run, sid):
@@ -244,8 +286,23 @@ class AlpaSimExam(Backend):
     def batch_sets(self):
         return list(self.sc.sets)
 
+    def stored_now(self):
+        """(driver tag or "", stored_scores of it) for the Driver option now in control.json (harmonizer option too); ("", {}) = human."""
+        o = Control(self.live).read().get("options") or {}
+        tag = o.get("driver") or "human"
+        return ("", {}) if tag == "human" else (tag, stored_scores(tag, bool(o.get("harmonizer"))))
+
+    @staticmethod
+    def stored_of(tag, st, sid):
+        """Item field "stored": the selected Driver checkpoint's stored read of scene `sid` as dict(score, why, src ("<read>, <config>[,
+        seed <tag>]"), tag (the checkpoint whose read it is: the Driver tag, or another seed of its family when that tag has no read of the
+        scene), config, driver (the Driver tag)); None when the Driver is human or no read has the scene."""
+        s = st.get(sid)
+        return dict(s, driver=tag) if s else None
+
     def catalog(self):
-        return self.sc.catalog()
+        tag, st = self.stored_now()
+        return [dict(c, stored=self.stored_of(tag, st, c["id"])) for c in self.sc.catalog()]
 
     # ---- runs and the loop ----
     def runs(self):
@@ -372,7 +429,7 @@ class AlpaSimExam(Backend):
         if not run:
             return []
         ex = read_json(Path(run, "exam.json"), {}) or {}
-        out = []
+        out, (tag, st) = [], self.stored_now()
         for sid in ex.get("ids", []):
             m = self.sc.meta.get(sid, {})
             d = read_json(Path(run, "done", sid + ".json"))
@@ -393,7 +450,8 @@ class AlpaSimExam(Backend):
                             human=d["score"] if d else None, model=ms, model_src=src, status=status,
                             why=d["why"] if d else (t or {}).get("status", ""), attempts=d.get("attempt", 1) if d else 0,
                             sim_s=d.get("sim_s") if d else None, ref=m.get("ref"),
-                            drives=[dict(driver=k, score=v["score"], why=v["why"]) for k, v in md.items()]))
+                            drives=[dict(driver=k, score=v["score"], why=v["why"]) for k, v in md.items()],
+                            stored=self.stored_of(tag, st, sid)))
         return out
 
     def official(self):
