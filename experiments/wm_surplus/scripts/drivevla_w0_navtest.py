@@ -54,6 +54,18 @@ def rel_to_abs(rel) -> np.ndarray:
     return out
 
 
+def w0_env(token_yaml, workers: int = 4) -> dict:
+    """Path-only settings of their inference (env-var paths, pickle path rewrite, PYTHONPATH incl. <repo>/utils)."""
+    return dict(DRIVEVLA_ROOT=str(ROOT), HF_HUB_OFFLINE="1",
+                PYTHONPATH=f"{ROOT}/inference/navsim/navsim:{ROOT}:{ROOT}/utils",
+                VLA_ACTION_TOKENIZER=str(ROOT / "configs/fast"), VLA_VLM_MODEL=str(W / "Emu3_NuPlan_Pretrain_Cktps"),
+                VLA_NORM_STATS=str(ROOT / "configs/normalizer_navsim_trainval/norm_stats.json"), VLA_TOKEN_YAML=str(token_yaml),
+                VLA_NUM_WORKERS=str(workers), VLA_BATCH_SIZE="1",
+                VLA_ANCHOR_CLUSTER_PATH=str(W / "cluster_centers_8192.npy"),
+                VLA_ANCHOR_METRIC_SCORE_PATH=str(W / "formatted_pdm_score_8192.npy"),   # listed by the script, unused by flow matching
+                VLA_PATH_REPLACEMENTS=f"/mnt/vdb1/yingyan.li/repo/VLA/:{W}/")
+
+
 def poses_of(d: Path, toks) -> np.ndarray:
     return np.stack([rel_to_abs(json.loads((d / f"{t}.json").read_text())["action"]) for t in toks]).astype(np.float32)
 
@@ -93,14 +105,7 @@ def main() -> None:
     (wd / "json").mkdir(parents=True)
     pickle.dump([data[i] for i in idx], open(wd / "test.pkl", "wb"))
     (wd / "tokens.yaml").write_text(yaml.safe_dump({"tokens": toks}))
-    env = dict(os.environ, DRIVEVLA_ROOT=str(ROOT), HF_HUB_OFFLINE="1",
-               PYTHONPATH=f"{ROOT}/inference/navsim/navsim:{ROOT}:{ROOT}/utils",
-               VLA_ACTION_TOKENIZER=str(ROOT / "configs/fast"), VLA_VLM_MODEL=str(W / "Emu3_NuPlan_Pretrain_Cktps"),
-               VLA_NORM_STATS=str(ROOT / "configs/normalizer_navsim_trainval/norm_stats.json"), VLA_TOKEN_YAML=str(wd / "tokens.yaml"),
-               VLA_NUM_WORKERS=str(a.workers), VLA_BATCH_SIZE="1",
-               VLA_ANCHOR_CLUSTER_PATH=str(W / "cluster_centers_8192.npy"),
-               VLA_ANCHOR_METRIC_SCORE_PATH=str(W / "formatted_pdm_score_8192.npy"),   # listed by the script, unused by flow matching
-               VLA_PATH_REPLACEMENTS=f"/mnt/vdb1/yingyan.li/repo/VLA/:{W}/")
+    env = dict(os.environ, **w0_env(wd / "tokens.yaml", a.workers))
     t0 = time.time()
     subprocess.run([sys.executable, "-m", "torch.distributed.run", "--standalone", "--nproc_per_node", "1",
                     "inference/vla/inference_action_navsim_flow_matching_vava.py", "--emu_hub", str(HUB),
