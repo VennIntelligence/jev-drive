@@ -46,7 +46,8 @@ if not a.summary:
     WP = "47898"
     env = dict(os.environ, HUMAN_LIVE=str(L), HUMAN_GPU="1", HUMAN_ALLOW_CARD1="1", HUMAN_PREFIX="hpf", HUMAN_JIT_DIR="/data/tmp/hmp_jit",
                HUMAN_BASEPORT="6900", HUMAN_DRV_PORT="6990", HUMAN_MODEL_PORT="6991", HUMAN_RESIDENT_DIR=str(RES),
-               HUMAN_WHEEL_PORT=WP, HUMAN_IDLE_S="120", **dict(x.split("=", 1) for x in a.env))
+               HUMAN_WHEEL_PORT=WP, HUMAN_IDLE_S="120")
+    env.update(x.split("=", 1) for x in a.env)                 # K=V may override the probe defaults (prefix, ports, card)
     fake = subprocess.Popen(["python3", a.repo + "/experiments/alpasim_human/scripts/fake_wheel.py", "--port", WP, "--straight", "1000",
                              "--live", str(L)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) if human else None
     t_start = time.time()
