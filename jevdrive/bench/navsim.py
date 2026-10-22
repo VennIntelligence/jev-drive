@@ -514,17 +514,22 @@ def agent_score_v1(spec: str, bench: str, run_dir: str, subset: str = "") -> Non
     a subset is passed as TOKENS_FILE (the full split needs none: a 12 k-token hydra list exceeds the argv limit)."""
     m = resolve(spec)
     run_dir = Path(run_dir)
-    d = run_dir / "v1"
+    name = f"bench_{bench}_{stem(m)}" + (f"_{subset.replace('/', '-')}" if subset else "")
+    score_v1(preds_of(m, bench, run_dir), name, run_dir / "v1", bench, subset)
+
+
+def score_v1(preds: Path, name: str, d: Path, bench: str, subset: str = "") -> Path:
+    """v1.1 PDMS of a (tokens, poses) file -> <d>/pdms.csv (per token; log in <d>/score.log). Also used for probe arms."""
+    d = Path(d)
     d.mkdir(parents=True, exist_ok=True)
     toks, _ = navsim_tokens(bench, subset)
     env = dict(os.environ)
     if subset:
         (d / "tokens.txt").write_text("\n".join(toks.tolist()) + "\n")
         env["TOKENS_FILE"] = str(d / "tokens.txt")
-    name = f"bench_{bench}_{stem(m)}" + (f"_{subset.replace('/', '-')}" if subset else "")
     t0 = time.time()
     with open(d / "score.log", "w") as log:
-        subprocess.run(["bash", str(SCORE_SH), "score", "v1", NAVSIM[bench]["split"], name, str(preds_of(m, bench, run_dir))], check=True,
+        subprocess.run(["bash", str(SCORE_SH), "score", "v1", NAVSIM[bench]["split"], name, str(preds)], check=True,
                        cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
     fs = [f for f in (data_dir() / "runs" / "navsim" / "eval" / f"v1_{NAVSIM[bench]['split']}_{name}").glob("*/*.csv") if f.stat().st_mtime >= t0 - 5]
     if not fs:
@@ -536,6 +541,7 @@ def agent_score_v1(spec: str, bench: str, run_dir: str, subset: str = "") -> Non
     if miss:
         raise RuntimeError(f"{len(miss)} of {len(toks)} tokens missing from the v1 CSV")
     _copy_into(sorted(fs)[-1], d / "pdms.csv")
+    return d / "pdms.csv"
 
 
 def agent_v1_summary(m: Model, run_dir: Path) -> dict:

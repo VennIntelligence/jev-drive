@@ -4,7 +4,9 @@
 #   -> sweep shards (GPU) -> merge (CPU) -> readout (CPU: bench navtest scoring of every arm, paired tables vs off, k95 / k99)
 #   -> knows-vs-does (CPU, p1_knowdo.py on knowdo_feats.npz and the off plans)
 # Usage (box, repo root): experiments/wm_surplus/scripts/p1_agent_lane.sh <model> [<tag>]   e.g. ReCogDrive-2B-RL recog-lmh
-# Env: NF fit shards per fold (default 2), NS sweep shards (default: cards), PRIO (default -1), VRAM (default 14).
+# Env: NF fit shards per fold (default 2), NS sweep shards (default: cards), PRIO (default -1), VRAM (default 14),
+#      DIM feature width for the arm list (default 1536), PCPU cores of the PCA job (default 2), V1=1 adds v1.1 PDMS per arm.
+#      DriveVLA-W0: TAG w0-vlmkv, DIM=4096 VRAM=45 (at most one W0 shard per 84 GB card) PCPU=8 V1=1.
 # Wait for $O/readout/DONE (and $O/knowdo/DONE) with one blocking waiter, never a polling loop.
 set -euo pipefail
 : "${DATA_DIR:?}"
@@ -27,7 +29,7 @@ join() { local IFS=,; echo "$*"; }
 F=(); for f in 0 1; do for i in $(seq 0 $((NF - 1))); do
   F+=($(sub fit-f$f-s$i --vram "$VRAM" --cpu 4 --ram 32 -- env $ENV "$PY" $ME fit --model "$M" --fold $f --shard "$i" "$NF"))
 done; done
-P=$(sub pca --after "$(join "${F[@]}")" --vram 0.1 --cpu 2 --ram 16 -- env $ENV "$PY" $ME pca --model "$M")
+P=$(sub pca --after "$(join "${F[@]}")" --vram 0.1 --cpu "${PCPU:-2}" --ram 16 -- env $ENV "$PY" $ME pca --model "$M")
 G=$(sub gate-pca --after "$P" --vram "$VRAM" --cpu 4 --ram 24 -- env $ENV "$PY" $ME gate --model "$M" --n 24 --pca)
 S=(); for i in $(seq 0 $((NS - 1))); do
   S+=($(sub sweep-s$i --after "$G" --vram "$VRAM" --cpu 4 --ram 32 -- env $ENV "$PY" $ME sweep --model "$M" --shard "$i" "$NS"))
@@ -36,8 +38,9 @@ MG=$(sub merge --after "$(join "${S[@]}")" --vram 0.1 --cpu 2 --ram 16 -- env $E
 ARMS=$(.venv/bin/python -c "
 import sys; sys.path.insert(0, 'experiments/wm_surplus/scripts')
 D = int(sys.argv[1]); print(' '.join(['off'] + [f'k{2**i}' for i in range(3, 20) if 2**i < D] + [f'k{D}']))" "${DIM:-1536}")
-R=$(sub readout --after "$MG" --vram 0.1 --cpu 1 --ram 8 -- env PYTHONPATH="$PWD" .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
-  --tag "$TAG" --arms $ARMS --ev "$O/ev.json" --out "$O/results" --priority "$PRIO")
+RC=1; RV=(); [ -n "${V1:-}" ] && RC=17 && RV=(--v1)
+R=$(sub readout --after "$MG" --vram 0.1 --cpu $RC --ram 24 -- env PYTHONPATH="$PWD" NAVSIM_THREADS=$((RC > 1 ? RC - 1 : 1)) .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
+  --tag "$TAG" --arms $ARMS --ev "$O/ev.json" --out "$O/results" --priority "$PRIO" "${RV[@]}")
 K=$(sub knowdo --after "$MG" --vram 0.1 --cpu 8 --ram 16 -- .venv/bin/python experiments/wm_surplus/scripts/p1_knowdo.py \
   --feats "$O/knowdo_feats.npz" --plans "PROBE-$TAG-off" --name "$TAG" --out "$O/knowdo")
 printf 'fit %s\npca %s\ngate %s\nsweep %s\nmerge %s\nreadout %s\nknowdo %s\n' "$(join "${F[@]}")" "$P" "$G" "$(join "${S[@]}")" "$MG" "$R" "$K" | tee "$O/jobs.txt"
