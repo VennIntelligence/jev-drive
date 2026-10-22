@@ -18,11 +18,11 @@
  },
  "deviations": "torch 2.8 cu128; sdpa (their inference config default) without flash-attn installed; PYTHONPATH += <repo>/utils (their setup_paths_early expects it under the old name train/); flow-matching noise unseeded as shipped",
  "tolerance": 0.5,
- "vram": 24,
+ "vram": 20,
  "cpu": 6,
  "ram": 32,
- "chunks": 8,
- "min_chunk": 200,
+ "chunks": 40,
+ "min_chunk": 300,
  "licence": "see the DriveVLA-W0 repository (BraveGroup) and Emu3 (Apache-2.0)",
  "cmd": [
   "{py}",
@@ -31,5 +31,6 @@
   "{tokens}",
   "--out",
   "{out}"
- ]
+ ],
+ "trial": "pool job p0-w0-trial (3 tokens): 5.1 s/token steady, ~25 s model load, peak VRAM 14.6 GB sampled (load check 18.3 GB); chunks of ~300 tokens = ~26 min; poses vs their shipped zip JSON: mean |xy| 0.10 m, mean final L2 0.40 m = their own run-to-run spread (hub json_output vs zip, 5030 tokens: 0.099 m / 0.33 m), unseeded noise"
 }
