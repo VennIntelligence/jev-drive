@@ -117,7 +117,7 @@ class App(object):
                 items = self.b.items()
             except Exception:  # noqa: BLE001  (never die on a half-written file)
                 items = []
-        return shown, [dict(id=it["id"], label=it.get("label") or it["id"], group=it["group"], scenario=it["scenario"],
+        return shown, [dict({k: v for k, v in it.items() if k not in ("drives",)}, id=it["id"], label=it.get("label") or it["id"], group=it["group"], scenario=it["scenario"],
                             human=it["human"], model=it["model"], human_s=self.fmt(it["human"]),
                             model_s=self.fmt(it["model"]), model_src=it.get("model_src") if it["model"] is not None else None,
                             status=it["status"], why=it.get("why", it["status"]), attempts=it.get("attempts"), sim_s=it.get("sim_s"),

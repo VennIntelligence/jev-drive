@@ -102,6 +102,8 @@ td.num { color: var(--muted); text-align: right; font-variant-numeric: tabular-n
 .pbtn:hover { background: var(--blue); color: #08131f; }
 .nowlbl { color: var(--orange); font-weight: 700; font-size: .8rem; }
 .colDrv { width: 8.5rem; }
+body:not(.ck) #colCk, body:not(.ck) .cCk { display: none; }
+body.ck #colRes { width: 22%; }
 @media (max-width: 1099px) { .colDrv, .cDrv { display: none; } }
 @media (max-width: 599px) { .colRef, .cRef { display: none; } html { font-size: 14px; } #pl { padding: 10px 8px; } }
 /* equaliser (now playing) */
@@ -234,8 +236,9 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
         <span class="muted small" id="shownN"></span>
       </div>
       <div class="tw"><table id="trk">
-        <colgroup><col style="width:3rem"><col><col class="colRef" style="width:6.5rem"><col style="width:34%"><col class="colDrv"><col style="width:4.2rem"></colgroup>
+        <colgroup><col style="width:3rem"><col><col class="colRef" style="width:6.5rem"><col id="colCk" style="width:7rem"><col id="colRes" style="width:34%"><col class="colDrv"><col style="width:4.2rem"></colgroup>
         <thead><tr><th class="n">#</th><th>Track</th><th class="n cRef" title="The best model read we have on this scene (its name follows)">Reference</th>
+          <th class="n cCk" id="ckHead" title="The selected Driver checkpoint's stored score on this scene, from our earlier reads">Checkpoint</th>
           <th>Your result</th><th class="cDrv">Driven</th><th></th></tr></thead>
         <tbody></tbody>
       </table></div>
@@ -478,8 +481,14 @@ async function sendOrder(force) {
   S.orderKey = key;
   await api("/api/order", {run: S.st.shown, order});
 }
+// The selected Driver checkpoint's stored score of a track (alpasim_exam.py: stored_scores(tag) per item): the item field shaped
+// {score, why, src}. Shown only when the Driver is a checkpoint and some track has one.
+const ckScore = it => isModel() ? Object.values(it).find(v => v && typeof v === "object" && !Array.isArray(v) && "score" in v && "src" in v && v.score != null) : null;
 function renderTracks() {
   const st = S.st, L = st.loop, r = rows(), live = L.alive && L.run === st.shown, filt = S.grp || S.show !== "all";
+  const ck = st.items.some(ckScore);
+  document.body.classList.toggle("ck", ck);
+  if (ck) $("#ckHead").textContent = (st.control.options.driver || "").split("-")[0] + " stored";
   $("#shownN").textContent = filt ? `${r.length} of ${st.items.length} shown; auto-advance plays only these` : "";
   sendOrder();
   const fmtS = s => s == null ? "" : s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";
@@ -493,6 +502,7 @@ function renderTracks() {
       <td class="num">${cur ? '<span class="eq"><i></i><i></i><i></i></span>' : n}</td>
       <td><span class="l1 mono">${esc(it.label)}</span><span class="l2">${esc(it.group)} &middot; ${esc(it.scenario)}</span></td>
       <td class="n cRef">${esc(it.model_s)}<span class="l2">${esc(it.model_src || "")}</span></td>
+      <td class="n cCk">${(sv => sv ? `<span class="sc ${scoreCls(sv.score)}" title="${esc([sv.src, sv.why].filter(Boolean).join(": "))}">${Number(sv.score).toFixed(S.meta.score_dec)}</span><span class="l2">${esc(sv.why || "")}</span>` : '<span class="muted">-</span>')(ckScore(it))}</td>
       <td>${cur ? `<span class="nowlbl">NOW PLAYING</span>` : scoring ? '<span class="muted"><span class="spin"></span>scoring&hellip;</span>'
         : played ? `<span class="sc ${scoreCls(it.human)}">${esc(it.human_s)}</span> <span class="muted small">${esc(it.why)}</span>`
         : `<span class="muted small">${esc(it.why || "not played")}</span>`}
@@ -500,7 +510,7 @@ function renderTracks() {
       <td class="cDrv small">${drv.join("<br>") || '<span class="muted">-</span>'}</td>
       <td>${cur ? "" : `<button class="pbtn" data-play="${esc(it.id)}" title="${played ? "Replay this track (a new attempt; the newest counts)" : "Play this track"}${S.st.control.playlist ? ", then continue from here" : ""}">${played ? "&#8635;" : "&#9654;"}</button>`}</td></tr>`;
   }
-  setHTML($("#trk tbody"), "tracks", h || '<tr><td colspan="6" class="muted" style="padding:14px">No track matches the filter.</td></tr>');
+  setHTML($("#trk tbody"), "tracks", h || '<tr><td colspan="7" class="muted" style="padding:14px">No track matches the filter.</td></tr>');
 }
 
 function renderTransport() {

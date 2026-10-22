@@ -195,7 +195,9 @@ Layout (2026-10-22 evening redesign, a music player; the user could not read the
   `catalog()`), 2. name it (prefilled), "Create playlist". Creating does not start anything (`new_batch(..., start=False)`).
 - Playlist (right) = its tracks, one flat list in playlist order (no group folders): #, track (scene label; group and scenario under
   it), Reference (the model score and its source), Your result (score + why; "scoring..." while the loop scores it; model drives under
-  it), Driven (you, tries, sim seconds; hidden below 1100 px), and a play button (&#9654; unplayed, &#8635; replay). Sort: playlist order /
+  it), Driven (you, tries, sim seconds; hidden below 1100 px), "<tag> stored" when the Driver is a checkpoint (that checkpoint's
+  stored score of the scene from our earlier reads, coloured like the other scores, read source and why as tooltip; the item field
+  shaped {score, why, src} from `alpasim_exam.py`; hidden for Human or when no track has one), and a play button (&#9654; unplayed, &#8635; replay). Sort: playlist order /
   lowest score first; show: all / to play / played; a group filter. Auto-advance plays the shown tracks in the shown order, and a
   track's play button continues from that track ("play from here": the order sent to the loop starts there). Buttons: Play /
   Continue (track N) = the first unplayed track, "Reload playlist" (start over from track 1: `archive_results()` moves done/,
