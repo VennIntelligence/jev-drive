@@ -20,11 +20,14 @@ def main():
     ap.add_argument("--tag", required=True)
     ap.add_argument("--arms", nargs="+", required=True)
     ap.add_argument("--ref", default="off")
+    ap.add_argument("--ref-spec", default="", help="bench model of the reference arm (default PROBE-<tag>-<ref>)")
     ap.add_argument("--ev", default="")
     ap.add_argument("--out", required=True)
     ap.add_argument("--priority", type=float, default=0.0)
     a = ap.parse_args()
     spec = {x: f"PROBE-{a.tag}-{x}" for x in a.arms}
+    if a.ref_spec:
+        spec[a.ref] = a.ref_spec
     dirs = [bench.run(s, "navtest", priority=a.priority) for s in spec.values()]
     if not bench.wait(dirs):
         raise SystemExit("a scoring run failed: " + ", ".join(str(d) for d in dirs if (d / "ERROR").exists()))
@@ -51,11 +54,11 @@ def main():
         r["plan_shift_m"] = ev.get("plan_shift_vs_off_m", {}).get(x)
         rows.append(r)
     T = pd.DataFrame(rows)
-    T["k"] = T.arm.str[1:].astype(int)
-    T = T.sort_values("k")
+    T["k"] = pd.to_numeric(T.arm.str.extract(r"^k(\d+)$")[0], errors="coerce")
+    T = T.sort_values("k", na_position="last")
 
     def first(mask):
-        s = T.k[mask]
+        s = T.k[mask & T.k.notna()]
         return int(s.iloc[0]) if len(s) else None
     # k95 / k99 per the pre-registration: point (retained >= q) and CI-backed (CI lower bound of the difference >= -(1-q) x base)
     kq = {f"k{int(q * 100)}_point": first(T.retained >= q) for q in (0.95, 0.99)}
