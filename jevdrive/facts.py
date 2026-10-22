@@ -36,10 +36,12 @@ AP = $DATA_DIR/third_party/alpasim/.venv/bin/python (the scene loader). Tag argu
 from __future__ import annotations
 
 import argparse
+import fcntl
 import glob
 import json
 import os
 import pickle
+import shutil
 import sys
 import time
 from collections import Counter
@@ -220,42 +222,62 @@ def extract(units, workers):
     dirs = []
     for i, (bench, key, run) in enumerate(units):
         d = cdir(bench, key, run)
-        d.mkdir(parents=True, exist_ok=True)
-        (d / "DONE").unlink(missing_ok=True)
+        tmp = d.parent / f".{d.name}.tmp{os.getpid()}"                    # built aside, swapped in complete (DONE inside)
+        shutil.rmtree(tmp, ignore_errors=True)
+        tmp.mkdir(parents=True)
         rows = [dict(r, tag=key) for r in dec.get(i, [])]
         X = pd.DataFrame(rows)
         if len(X):
             X["poses"] = X.poses.map(lambda x: np.asarray(x, np.float32).tolist())
-        X.to_parquet(d / "dec.parquet")
-        pd.DataFrame(W[i]).to_parquet(d / "win.parquet")
-        ST[i].to_parquet(d / "steps.parquet")
-        pd.DataFrame(sc[i]).to_parquet(d / "scores.parquet")
-        pickle.dump(hum.get(i, {}), open(d / "hum.pkl", "wb"), protocol=4)
-        if cen is not None and not (d / "set_census.parquet").exists():
-            os.symlink(cen, d / "set_census.parquet")
-        (d / "DONE.part").write_text(json.dumps(dict(key=key, run=str(run), stamp=stamp(run))))
-        dirs.append((d, bench, key, run, len(rows), len(W[i]), errs.get(i, [])))
+        X.to_parquet(tmp / "dec.parquet")
+        pd.DataFrame(W[i]).to_parquet(tmp / "win.parquet")
+        ST[i].to_parquet(tmp / "steps.parquet")
+        pd.DataFrame(sc[i]).to_parquet(tmp / "scores.parquet")
+        pickle.dump(hum.get(i, {}), open(tmp / "hum.pkl", "wb"), protocol=4)
+        if cen is not None:
+            os.symlink(cen, tmp / "set_census.parquet")
+        (tmp / "DONE.part").write_text(json.dumps(dict(key=key, run=str(run), stamp=stamp(run))))
+        dirs.append((d, tmp, bench, key, run, len(rows), len(W[i]), errs.get(i, [])))
     t["write"] = time.time()
-    lat = [d for d, b, *_ in dirs if b == "arena"]
+    lat = [tmp for _, tmp, b, *_ in dirs if b == "arena"]
     with Pool(max(1, min(workers, len(lat) or 1))) as p:
         L = dict(zip(lat, p.map(_lat_job, lat)))
     t["lat"] = time.time()
     tm = {k: round(t[k] - t[p_], 2) for p_, k in zip(["start", "read", "windows", "write"], ["read", "windows", "write", "lat"])}
-    try:
-        rev = os.popen(f"git -C {REPO} rev-parse --short HEAD 2>/dev/null").read().strip()
-    except OSError:
-        rev = ""
-    for d, bench, key, run, nd_, nw, er in dirs:
-        if d in L:
-            pickle.dump(L[d], open(d / "lat.pkl", "wb"), protocol=4)
-        (d / "DONE").write_text(json.dumps(dict(key=key, bench=bench, run=str(run), stamp=stamp(run), decisions=nd_, windows=nw, errors=er,
-                                                code=rev, batch_units=len(units), batch_seconds=tm, t=time.strftime("%F %T")), indent=1))
-        (d / "DONE.part").unlink(missing_ok=True)
+    rev = os.popen(f"git -C {REPO} rev-parse --short HEAD 2>/dev/null").read().strip()
+    for d, tmp, bench, key, run, nd_, nw, er in dirs:
+        if tmp in L:
+            pickle.dump(L[tmp], open(tmp / "lat.pkl", "wb"), protocol=4)
+        (tmp / "DONE").write_text(json.dumps(dict(key=key, bench=bench, run=str(run), stamp=stamp(run), decisions=nd_, windows=nw, errors=er,
+                                                  code=rev, batch_units=len(units), batch_seconds=tm, t=time.strftime("%F %T")), indent=1))
+        (tmp / "DONE.part").unlink()
+        shutil.rmtree(d, ignore_errors=True)
+        os.rename(tmp, d)
     print(json.dumps(dict(units=len(units), windows=len(D), errors=sum(len(x[-1]) for x in dirs), seconds=tm)), flush=True)
+
+
+def locked(bench, keys):
+    """exclusive per-read locks (sorted: no deadlock between two fills); a second writer waits, then finds the chunks fresh."""
+    fs = []
+    for k in sorted(set(keys)):
+        (ROOT / bench / k).mkdir(parents=True, exist_ok=True)
+        f = open(ROOT / bench / k / ".lock", "w")
+        fcntl.flock(f, fcntl.LOCK_EX)
+        fs.append(f)
+    return fs
 
 
 def fill(bench, keys, workers, strict=True):
     """extract every missing / stale chunk of the reads in one batch. strict: a chunk without results-summary.json is an error."""
+    fs = locked(bench, keys)
+    try:
+        _fill(bench, keys, workers, strict)
+    finally:
+        for f in fs:
+            f.close()
+
+
+def _fill(bench, keys, workers, strict):
     units, missing = [], []
     for k in keys:
         rr = runs(bench, k)
@@ -306,10 +328,12 @@ def cmd_chunk(a):
     try:
         from jevdrive.common import n_cpus
         key = key_of(a.bench, a.run)
+        fs = locked(a.bench, [key])
         if fresh(a.bench, key, a.run) and not a.force:
             print(f"facts {a.bench} {key} {Path(a.run).parent.name}: cached")
             return
         extract([(a.bench, key, a.run)], a.workers or n_cpus())
+        del fs
     except Exception as e:  # noqa: BLE001
         print(f"facts chunk {a.run} failed (the read stands; fill rebuilds it): {e!r}", file=sys.stderr)
 

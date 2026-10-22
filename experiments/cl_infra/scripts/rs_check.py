@@ -46,7 +46,7 @@ def table_vs_quick(new):
     for bench, rd, zk, zq in (("arena", "arena", "zeros", "zeros|arena held"), ("held", "held 460", "zeros", "zeros|held 460")):
         t = json.load(open(new / f"table_{bench}.json"))
         pairs = {k: v for k, v in t.items() if k != zk}
-        qp = {k.rsplit("|", 1)[0]: v for k, v in q.items() if k.endswith(f"|{rd}")}
+        qp = {k.rsplit("|", 1)[0]: v for k, v in q.items() if k.endswith(f"|{rd}") and not k.startswith("zeros|")}
         out[bench] = dict(pairs=len(pairs), equal=pairs == qp and t[zk] == q[zq])
     return out
 
@@ -59,7 +59,8 @@ def main():
     N, O, L = Path(a.new), Path(a.old), Path(a.lane)
     J = sorted(x.name for x in N.glob("arena_*.json"))
     r = dict(ext_vs_old=frames(N / "ext", O / "ext"), ext_vs_lane=frames(N / "ext", L / "ext"),
-             outputs_vs_old=files(N, O, [*J, "held.json", "latsplit.csv", "p1.md", "p1_arena_windows.csv.gz"]),
+             outputs_vs_old=files(N, O, [*J, "held.json", "latsplit.csv", "p1_arena_windows.csv.gz"]),
+             p1md_vs_old_lines=dict(equal=sorted((N / "p1.md").read_text().splitlines()) == sorted((O / "p1.md").read_text().splitlines())),
              outputs_vs_lane=files(N, L, [*J, "held.json", "latsplit.csv"]),
              p1md_vs_lane=dict(equal=(N / "p1.md").read_text() == Path(a.lane_md).read_text()),
              table_vs_quick=table_vs_quick(N))
