@@ -1,0 +1,227 @@
+{
+ "NDAG-L18-s0|STANDFMXH-L18-s0|arena": {
+  "n": 2228,
+  "a": 0.9354202740544151,
+  "b": 0.937267197272658,
+  "mean": -0.001846923218243097,
+  "lo": -0.007081803870532802,
+  "hi": 0.0035474496326989876,
+  "zeros_a": 99,
+  "zeros_b": 92,
+  "lat_a": 95,
+  "lat_b": 89
+ },
+ "NDAG-L18-s0|STANDFMXH-L18-s0|held 460": {
+  "n": 460,
+  "a": 0.8634345934659248,
+  "b": 0.8439000363145175,
+  "mean": 0.019534557151407318,
+  "lo": 0.0008867520519114567,
+  "hi": 0.03645359161931846,
+  "zeros_a": 35,
+  "zeros_b": 41,
+  "lat_a": 22,
+  "lat_b": 27
+ },
+ "NDAG-L18-s0|STANDFMXH-L18-s1|arena": {
+  "n": 2228,
+  "a": 0.9354202740544151,
+  "b": 0.9357701718580649,
+  "mean": -0.00034989780364992726,
+  "lo": -0.005529852032298823,
+  "hi": 0.005056036792998008,
+  "zeros_a": 99,
+  "zeros_b": 101,
+  "lat_a": 95,
+  "lat_b": 99
+ },
+ "NDAG-L18-s0|STANDFMXH-L18-s1|held 460": {
+  "n": 460,
+  "a": 0.8634345934659248,
+  "b": 0.8527025592852288,
+  "mean": 0.010732034180695944,
+  "lo": -0.010459076891435378,
+  "hi": 0.0291271289641722,
+  "zeros_a": 35,
+  "zeros_b": 41,
+  "lat_a": 22,
+  "lat_b": 30
+ },
+ "NDAG-L18-s0|NTV0-L18-s0|arena": {
+  "n": 2228,
+  "a": 0.9354202740544151,
+  "b": 0.7699475377179559,
+  "mean": 0.16547273633645915,
+  "lo": 0.1135293797520981,
+  "hi": 0.22062711899641307,
+  "zeros_a": 99,
+  "zeros_b": 494,
+  "lat_a": 95,
+  "lat_b": 475
+ },
+ "NDAG-L18-s0|NTV0-L18-s0|held 460": {
+  "n": 460,
+  "a": 0.8634345934659248,
+  "b": 0.8875693851814622,
+  "mean": -0.024134791715537344,
+  "lo": -0.0586874942792577,
+  "hi": 0.00878550725801807,
+  "zeros_a": 35,
+  "zeros_b": 32,
+  "lat_a": 22,
+  "lat_b": 20
+ },
+ "NDAG-L18-s1|STANDFMXH-L18-s0|arena": {
+  "n": 2228,
+  "a": 0.9304233729627148,
+  "b": 0.937267197272658,
+  "mean": -0.006843824309943307,
+  "lo": -0.01661466802404501,
+  "hi": 0.0015274198351090905,
+  "zeros_a": 111,
+  "zeros_b": 92,
+  "lat_a": 107,
+  "lat_b": 89
+ },
+ "NDAG-L18-s1|STANDFMXH-L18-s0|held 460": {
+  "n": 460,
+  "a": 0.8538469221032549,
+  "b": 0.8439000363145175,
+  "mean": 0.0099468857887374,
+  "lo": -0.011813037421179423,
+  "hi": 0.02905775957557679,
+  "zeros_a": 38,
+  "zeros_b": 41,
+  "lat_a": 24,
+  "lat_b": 27
+ },
+ "NDAG-L18-s1|STANDFMXH-L18-s1|arena": {
+  "n": 2228,
+  "a": 0.9304233729627148,
+  "b": 0.9357701718580649,
+  "mean": -0.005346798895350137,
+  "lo": -0.012621691642965773,
+  "hi": 8.357795901297928e-05,
+  "zeros_a": 111,
+  "zeros_b": 101,
+  "lat_a": 107,
+  "lat_b": 99
+ },
+ "NDAG-L18-s1|STANDFMXH-L18-s1|held 460": {
+  "n": 460,
+  "a": 0.8538469221032549,
+  "b": 0.8527025592852288,
+  "mean": 0.0011443628180260272,
+  "lo": -0.016635168887702553,
+  "hi": 0.01852485219640141,
+  "zeros_a": 38,
+  "zeros_b": 41,
+  "lat_a": 24,
+  "lat_b": 30
+ },
+ "NDAG-L18-s1|NTV0-L18-s0|arena": {
+  "n": 2228,
+  "a": 0.9304233729627148,
+  "b": 0.7699475377179559,
+  "mean": 0.16047583524475895,
+  "lo": 0.10564734449552443,
+  "hi": 0.21815294361495582,
+  "zeros_a": 111,
+  "zeros_b": 494,
+  "lat_a": 107,
+  "lat_b": 475
+ },
+ "NDAG-L18-s1|NTV0-L18-s0|held 460": {
+  "n": 460,
+  "a": 0.8538469221032549,
+  "b": 0.8875693851814622,
+  "mean": -0.03372246307820727,
+  "lo": -0.06388863433569168,
+  "hi": -0.000757286038320192,
+  "zeros_a": 38,
+  "zeros_b": 32,
+  "lat_a": 24,
+  "lat_b": 20
+ },
+ "zeros|arena held": {
+  "NDAG-L18-s0": {
+   "AF-front": 4,
+   "corridor": 37,
+   "offroad+corridor": 1,
+   "offroad": 57,
+   "route-fail": 18
+  },
+  "NDAG-L18-s1": {
+   "AF-front": 4,
+   "corridor": 43,
+   "offroad": 61,
+   "route-fail": 18,
+   "AF-front+offroad": 1,
+   "offroad+corridor": 1,
+   "AF-side": 1
+  },
+  "STANDFMXH-L18-s0": {
+   "offroad": 51,
+   "corridor": 35,
+   "AF-side": 1,
+   "route-fail": 18,
+   "AF-front": 3,
+   "offroad+corridor": 2
+  },
+  "STANDFMXH-L18-s1": {
+   "corridor": 43,
+   "offroad+corridor": 2,
+   "offroad": 53,
+   "AF-side": 1,
+   "route-fail": 18,
+   "AF-front": 2
+  },
+  "NTV0-L18-s0": {
+   "corridor": 396,
+   "offroad": 61,
+   "AF-front": 19,
+   "route-fail": 18,
+   "AF-front+corridor": 18
+  }
+ },
+ "zeros|held 460": {
+  "NDAG-L18-s0": {
+   "AF-front": 5,
+   "corridor": 4,
+   "offroad": 16,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "NDAG-L18-s1": {
+   "AF-front": 6,
+   "corridor": 8,
+   "offroad": 15,
+   "route-fail": 8,
+   "AF-front+corridor": 1
+  },
+  "STANDFMXH-L18-s0": {
+   "AF-front": 6,
+   "corridor": 8,
+   "offroad": 17,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "STANDFMXH-L18-s1": {
+   "AF-front": 3,
+   "corridor": 9,
+   "offroad": 19,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "NTV0-L18-s0": {
+   "AF-front": 4,
+   "corridor": 4,
+   "offroad": 15,
+   "route-fail": 8,
+   "AF-side": 1
+  }
+ }
+}
