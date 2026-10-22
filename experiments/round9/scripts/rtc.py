@@ -143,12 +143,13 @@ def cmd_extract(a):
     tgt = set(lm[lm["R6DAG-s0_primary"].isin(TARGET) | lm["R6DAG-s1_primary"].isin(TARGET)].scene)
     print("target scenes", len(tgt), flush=True)
     allrows, full, meta = [], {}, {}
+    jobs = [(k, f) for k, (tag, root) in READS.items() for f in sorted(glob.glob(f"{DATA}/runs/{root}/runs/*/driver/drive.jsonl"))]
+    res = par.pmap(_one_log, [(f, tgt) for _, f in jobs], workers=min(len(jobs), a.workers or n_cpus()), desc="logs")
+    res.raise_if_failed()
     for k, (tag, root) in READS.items():
-        fs = sorted(glob.glob(f"{DATA}/runs/{root}/runs/*/driver/drive.jsonl"))
-        res = par.pmap(_one_log, [(f, tgt) for f in fs], workers=min(len(fs), a.workers or n_cpus()), desc=f"logs {k}")
-        res.raise_if_failed()
+        mine = [res.values[i] for i, (kk, _) in enumerate(jobs) if kk == k]
         best = {}                                                                # a scene read twice (retry): keep the log with most decisions
-        for rows, fl in res.values:
+        for rows, fl in mine:
             for s, d in fl.items():
                 if s not in full.get(k, {}) or len(d["t0"]) > len(full[k][s]["t0"]):
                     full.setdefault(k, {})[s] = d
@@ -159,7 +160,7 @@ def cmd_extract(a):
                 if n > best.get(s, (0, None))[0]:
                     best[s] = (n, rows[0]["log"])
         keep = {(s, lg) for s, (n, lg) in best.items()}
-        for rows, _ in res.values:
+        for rows, _ in mine:
             allrows += [dict(read=k, **x) for x in rows if (x["scene"], x["log"]) in keep]
         F = pd.read_csv(DATA / f"runs/pai_fix/facts/{tag}-281ag.csv")
         tax = pickle.load(open(DATA / f"runs/pai_fix/tax/{tag}-281ag.pkl", "rb"))["rolls"]
@@ -169,7 +170,7 @@ def cmd_extract(a):
             for s in re.findall(r"scene_id: (clipgt-[0-9a-f-]+)", open(f).read()):
                 cfg.setdefault(s, f)
         meta[k] = dict(tag=tag, facts=F, c0=c0, cfg=cfg)
-        print(k, len(fs), "logs", len(best), "scenes", flush=True)
+        print(k, len(mine), "logs", len(best), "scenes", flush=True)
     for k in full:
         for s, d in full[k].items():
             i = np.argsort(d["t0"], kind="stable")
