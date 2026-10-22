@@ -155,18 +155,17 @@ def scene_job(job):
     row.update(g_end=g_end, rd_end=rec_at(t_end).get("d"))
     if np.isfinite(t_ev):                                   # the event: partner, speed, reading against truth over the last 2 s
         g_e, id_e, v_e = lead_at(R, t_ev - 0.3e6)
-        row.update(ev_gap=g_e, ev_obj_v=v_e, ev_d_hrest=sta(t_ev) - s_hrest)
+        row.update(ev_gap=g_e, ev_id=id_e, ev_obj_v=v_e, ev_d_hrest=sta(t_ev) - s_hrest)
         er = [(r["d"], lead_at(R, r["t"])[0], r["v"]) for r in recs if t_ev - 2e6 <= r["t"] <= t_ev]
         row.update(ev_nread=len(er), ev_noread=float(np.mean([d is None for d, _, _ in er])) if er else np.nan,
                    ev_err=float(np.nanmedian([d - g for d, g, _ in er if d is not None and np.isfinite(g)])) if any(d is not None and np.isfinite(g) for d, g, _ in er) else np.nan)
-    decs = []
-    if st_on:
-        t1 = st_on[0]
+    decs, eps = [], []
+    for e, t1 in enumerate(st_on):                         # every standstill episode: rest gap, reading, creep until the lead moves
         g0, oid, vo = lead_at(R, t1)
         r1 = rec_at(t1)
-        row.update(t_still=(t1 - R.t0) / 1e6, v_still_in=float(np.interp(t1 - 2e6, R.t, R.v)), d_still=sta(t1) - s_hrest, g_still=g0, lead_id=oid,
-                   rd_still=r1.get("d"), won_still=r1.get("won", ""), guard_still=r1.get("guard", ""),
-                   still_before_ev=bool(np.isfinite(t_ev) and t1 < t_ev))
+        ep = dict(read=name, scene=s, ep=e, t_still=(t1 - R.t0) / 1e6, v_in=float(np.interp(t1 - 2e6, R.t, R.v)), d_still=sta(t1) - s_hrest,
+                  g_still=g0, lead_id=oid, lead_v=vo, rd_still=r1.get("d"), vl_still=r1.get("vl"), won_still=r1.get("won", ""),
+                  guard_still=r1.get("guard", ""), before_ev=bool(np.isfinite(t_ev) and t1 < t_ev))
         t_lm = np.nan
         if oid:
             T, X = track(R, oid)
@@ -177,34 +176,35 @@ def scene_job(job):
                 if len(j):
                     i = j[0]
                     t_lm = float(np.interp(LEAD_MOVE, [dx[i - 1], dx[i]], [T[k][i - 1], T[k][i]])) if i else float(T[k][0])
-        tw = min([t_end, t_lm] + [x for x in ev if x > t1], key=lambda x: x if np.isfinite(x) else np.inf)
-        row.update(t_lm=(t_lm - R.t0) / 1e6, t_win=(tw - t1) / 1e6, creep=path_len(R, t1, tw),
-                   creep_end=path_len(R, t1, min([t_end] + [x for x in ev if x > t1])), d_win=sta(tw) - s_hrest)
+        nxt = st_on[e + 1] if e + 1 < len(st_on) else np.inf
+        tw = min([t_end, t_lm, nxt] + [x for x in ev if x > t1], key=lambda x: x if np.isfinite(x) else np.inf)
+        ep.update(t_lm=(t_lm - R.t0) / 1e6, t_win=(tw - t1) / 1e6, creep=path_len(R, t1, tw), d_win=sta(tw) - s_hrest,
+                  win_end="event" if any(abs(tw - x) < 1 for x in ev) else "lead_moves" if tw == t_lm else "next_stop" if tw == nxt else "end")
         if oid:                                             # true gap to the same lead over the window
             gs = [lead_at(R, t, {oid})[0] for t in np.arange(t1, tw + 1, 0.5e6)]
             gs = [g for g in gs if np.isfinite(g)]
-            row.update(g_min=min(gs) if gs else np.nan, g_win=lead_at(R, tw, {oid})[0])
-        # creep attribution and per-decision trace in the window
-        m = (R.t >= t1) & (R.t <= tw)
+            ep.update(g_min=min(gs) if gs else np.nan, g_win=lead_at(R, tw, {oid})[0])
+        m = (R.t >= t1) & (R.t <= tw)                       # creep attribution
         ti, xi, yi = R.t[m], R.x[m], R.y[m]
         att = defaultdict(float)
         for i in range(1, len(ti)):
             r = rec_at(ti[i - 1])
             lab = "ref0" if np.isfinite(r.get("a_srv", np.nan)) and r["a_srv"] < 0.1 else (r.get("won") or "none")
             att[lab] += float(np.hypot(xi[i] - xi[i - 1], yi[i] - yi[i - 1]))
-        row.update({f"cr_{k}": v for k, v in att.items()})
+        ep.update({f"cr_{k}": v for k, v in att.items()})
+        eps.append(ep)
         for r in recs:
-            if t1 <= r["t"] <= tw:
-                gt = lead_at(R, r["t"], {oid} if oid else None)[0] if oid else np.nan
-                decs.append(dict(read=name, scene=s, ts=(r["t"] - t1) / 1e6, v=r["v"], g=gt, **{k: r[k] for k in
+            if t1 <= r["t"] <= min(tw, t1 + 30e6):
+                gt = lead_at(R, r["t"], {oid})[0] if oid else np.nan
+                decs.append(dict(read=name, scene=s, ep=e, ts=(r["t"] - t1) / 1e6, v=r["v"], g=gt, **{k: r[k] for k in
                                  ("d", "vl", "p", "cut", "guard", "won", "v15", "vmod", "vlead", "a_mod", "a_srv")}))
-    return row, decs
+    return row, eps, decs
 
 
 def cmd_scan(a):
     from jevdrive.common import n_cpus
     os.makedirs(OUT, exist_ok=True)
-    rows, decs = [], []
+    rows, eps, decs = [], [], []
     W = max(2, min(n_cpus() // 2, 24))
     for name in a.reads:
         root, stem = READS[name]
@@ -218,13 +218,13 @@ def cmd_scan(a):
         DR = {k: sorted(v, key=lambda r: r["t"]) for k, v in DR.items()}
         jobs = [(name, s, A[s], DR.get(s, []), F.loc[s].to_dict()) for s in sorted(A) if s in F.index][:a.limit or None]
         with ProcessPoolExecutor(W) as ex:
-            for r, d in ex.map(scene_job, jobs, chunksize=2):
-                rows.append(r), decs.extend(d)
+            for r, e, d in ex.map(scene_job, jobs, chunksize=2):
+                rows.append(r), eps.extend(e), decs.extend(d)
         print(name, len(jobs), "scenes", flush=True)
     if a.limit:
-        X = pd.DataFrame(rows)
-        print(X[X.n_still > 0].T.to_string()[:12000]); print(pd.DataFrame(decs).head(30).to_string()); return
+        print(pd.DataFrame(eps).T.to_string()[:12000]); return
     pd.DataFrame(rows).to_csv(f"{OUT}/scenes.csv", index=False, float_format="%.4f")
+    pd.DataFrame(eps).to_csv(f"{OUT}/episodes.csv", index=False, float_format="%.4f")
     pd.DataFrame(decs).to_csv(f"{OUT}/decs.csv.gz", index=False, float_format="%.3f")
     print("->", OUT)
 
