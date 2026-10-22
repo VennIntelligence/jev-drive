@@ -230,11 +230,123 @@ def cmd_events(a):
     pd.DataFrame([x for v in res.values if v for x in v]).to_parquet(O / "ev.parquet")
 
 
+# ---------------------------------------------------------------- band (box, op-train venv, CPU): C, route dependence by distance band
+R6DAG_ARGV = ("--tag {tag} --init NTV0-L18-s0 --allow-init --warmup 1 --eval-every 500 --yr-mass 0.095 --label-bank --agent-lam 10 --agent-on-only "
+              "--shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on-k 13 --on-mode self --on on1_JTPHD --on-k 72 "
+              "--on-mode mixed --on-lon-all --on-normal --on-wfile {data}/runs/round6/dag/w/R6DAG.npz --on-hold-pct 15 --ego-scale-speed 0.5 "
+              "--ego-scale-max 0.2 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file {data}/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 "
+              "--lat-soft-depth 0.0 --lat-buf 0.4 --lat-host --on-arc 0 --diag --warmup 500 --lr-floor 0.1 --on-arc-rows brake --steps 9500 --seed 0 "
+              "--batch 136")                                   # R6DAG-L18-s0's train line (runs/round6/dag/stages.txt), rely mode builds the store
+BANDS = {"tail": (-7, 0), "b0_20": (0, 20), "b20_40": (20, 40), "b40_72": (40, 73), "all": (-7, 73)}
+SPEED_BINS = (0.5, 5, 10, 15, 20, 45)
+
+
+def cmd_band(a):
+    import pandas as pd
+    import torch
+    import time
+    import rmem as RM
+    from jevdrive.common import n_cpus
+    torch.set_num_threads(a.threads or n_cpus())
+    rt = REPO / "experiments/route_mem/scripts/rm_train.py"
+    src = rt.read_text()
+    tail = "dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)"
+    assert src.count(tail) == 1
+    g = {"__name__": "__main__", "__file__": str(rt)}
+    sys.argv = [str(rt), "rely", *R6DAG_ARGV.format(tag=a.ckpt, data=DATA).split()]
+    exec(compile(src.replace(tail, "_RTC_ARGS = a"), str(rt), "exec"), g)
+    ra = g["_RTC_ARGS"]
+    ra.rm_from = a.ckpt
+    dev = torch.device("cpu")
+    ns, *_ = g["build"](ra, dev)
+    LS = ns.losses(ns.mode)
+    import pp_train as T
+    S, model = ns.S, ns.model.eval()
+    names = S.tab["names"][ns.on0:].astype(str)
+    part = np.array([x.split(":")[1] for x in names])
+    pt = np.load(DATA / "runs/op_parity/cache/on1_JTPHD/tab.npz")
+    assert np.array_equal(pt["names"].astype(str), names), "pool rows are not on1_JTPHD's"
+    speed = pt["speed"].astype(np.float64)
+    E0 = RM.EGO_DIM
+    F = S.ego[ns.on0:, E0:E0 + RM.DIM].float().cpu().numpy().reshape(-1, RM.N_PT, RM.NF)
+    v = F[:, :, 0] > 0.5
+    h = np.arctan2(F[:, :, 4], F[:, :, 3])
+    m40 = v & (RM.OFFS >= 0) & (RM.OFFS <= 40)
+    dh = np.abs(wrap(h - h[:, RM.I0:RM.I0 + 1]))
+    dth40 = np.degrees(np.where(m40 & v[:, RM.I0:RM.I0 + 1], dh, 0).max(1))
+    ok = v[:, RM.I0] & (v.sum(1) >= 10)
+    straight = dth40 < 3.0
+    rng = np.random.default_rng(a.seed)
+    sel = []
+    for p_ in a.parts.split(","):
+        for lo, hi in zip(SPEED_BINS[:-1], SPEED_BINS[1:]):
+            for st in (True, False):
+                c = np.flatnonzero((part == p_) & ok & (speed >= lo) & (speed < hi) & (straight == st))
+                sel += list(rng.choice(c, min(a.per, len(c)), replace=False))
+    sel = np.array(sorted(sel))
+    print("rows", len(sel), flush=True)
+    pi_ = torch.as_tensor(S.pi, device=dev)
+    cov = np.where(v & (RM.OFFS >= 0), RM.OFFS, -1).max(1)
+
+    def fwd(r, ego):
+        with torch.no_grad():
+            o = model(S.front[r.cpu().numpy()], ego, S.tc[r], None, None, nv=None if ns.nv is None else ns.nv[r]).float()
+            x, y, psi = T.rear(o[:, pi_].view(-1, 33, 15), S.cam_x[r], LS.W)
+        return torch.stack([x, y], -1).cpu().numpy()
+
+    variants = ["base"] + [f"{k}:{b}" for k in ("mask", "shift") for b in BANDS] + ["cmd:S", "cmd:L", "cmd:R", "cmd:H"]
+    out = {k: [] for k in variants}
+    t0 = time.time()
+    for j in range(0, len(sel), a.bs):
+        r = torch.as_tensor(ns.on0 + sel[j:j + a.bs], device=dev)
+        e0 = S.ego[r].float().clone()
+        for k in variants:
+            e = e0.clone()
+            if k.startswith(("mask", "shift")):
+                kind, b = k.split(":")
+                lo, hi = BANDS[b]
+                cols = np.flatnonzero((RM.OFFS >= lo) & (RM.OFFS < hi))
+                P = e[:, E0:E0 + RM.DIM].view(-1, RM.N_PT, RM.NF)
+                if kind == "mask":
+                    P[:, cols] = 0.0
+                else:                                                            # 1 m to the left, valid slots only
+                    P[:, cols, 2] += (P[:, cols, 0] > 0.5).float() / 20.0
+                e[:, E0:E0 + RM.DIM] = P.reshape(-1, RM.DIM)
+            elif k.startswith("cmd"):
+                c = k.split(":")[1]
+                if c == "H":
+                    oh = torch.as_tensor(RM.cmd_heading(e[:, E0:E0 + RM.DIM].cpu().numpy().astype(np.float16))[:, :3])
+                else:
+                    oh = torch.zeros(len(e), 3)
+                    oh[:, "LSR".index(c)] = 1.0
+                e[:, 1:4] = oh.to(e.dtype)
+            out[k].append(fwd(r, e))
+        if j == 0:
+            print(f"first batch {time.time() - t0:.1f} s", flush=True)
+    X = {k: np.concatenate(v_) for k, v_ in out.items()}
+    base = X["base"]
+    df = pd.DataFrame(dict(name=names[sel], part=part[sel], speed=speed[sel], straight=straight[sel], dth40=dth40[sel], cov=cov[sel],
+                           cmd=np.where(S.ego[ns.on0 + sel, 1:4].float().numpy().max(1) > 0.5, S.ego[ns.on0 + sel, 1:4].float().numpy().argmax(1), 3),
+                           x4=base[:, -1, 0], y4=base[:, -1, 1],
+                           arc4=np.hypot(*np.diff(np.concatenate([np.zeros((len(base), 1, 2)), base], 1), axis=1).transpose(2, 0, 1)).sum(1)))
+    for k in variants[1:]:
+        d = X[k] - base
+        df[f"dy4_{k}"] = d[:, -1, 1]
+        df[f"dx4_{k}"] = d[:, -1, 0]
+        df[f"dmax_{k}"] = np.hypot(d[..., 0], d[..., 1]).max(1)
+    O.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(O / f"band_{a.ckpt}.parquet")
+    print(json.dumps(dict(ckpt=a.ckpt, rows=len(df), sec=round(time.time() - t0, 1), horizon=int(base.shape[1]))), flush=True)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     for n in ("extract", "events"):
         p = sub.add_parser(n)
         p.add_argument("--workers", type=int, default=0)
+    p = sub.add_parser("band")
+    p.add_argument("--ckpt", required=True), p.add_argument("--parts", default="pd,ph"), p.add_argument("--per", type=int, default=40)
+    p.add_argument("--bs", type=int, default=256), p.add_argument("--threads", type=int, default=0), p.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
-    dict(extract=cmd_extract, events=cmd_events)[a.cmd](a)
+    dict(extract=cmd_extract, events=cmd_events, band=cmd_band)[a.cmd](a)
