@@ -101,6 +101,9 @@ SRC = {
     # round 9 DAG-LANE (round9/scripts/dl.sh): R6DAG + heading command + the teacher's human-lane rule, ACC + GAP + JEV_CMD=heading, out of pool
     "R9DL-s0+AG": ("round9/dag_lane/pai281/R9DL-L18-s0-ag", "other"),
     "R9DL-s1+AG": ("round9/dag_lane/pai281/R9DL-L18-s1-ag", "other"),
+    # round 9 PAI-BASE (round9/scripts/pb.sh): the PAI-from-start base through the L18 + DAgger stages, ACC + GAP, out of pool
+    "PBDAG-s0+AG": ("round9/pai_base/pai281/PBDAG-L18-s0-ag", "other"),
+    "PBDAG-s1+AG": ("round9/pai_base/pai281/PBDAG-L18-s1-ag", "other"),
     # PAI-PARTIALS serve sweep on NTV0-s0 (plans/2026-10-20-pai-partials-sweep-prereg.md): out of pool, so the fit is unchanged
     **{f"PP-{a}": (f"alpasim_proxy/pai_partials/{a}", "other") for a in ("R0", "V1", "V1b", "V2", "V3", "J")},
 }
