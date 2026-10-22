@@ -96,6 +96,8 @@ from a0, path unchanged. Step full brake (cap 8 + drag), 3 seeds x 2 plan curvat
   re-anchored to the car every 0.1 s), and the 10 m/s^3 onset costs ~0.5-0.8 s. At 30 m/s: 81 m (+62 %) with the default, 59 m
   (+17 %) with amin -8. The jerk limit is what prevents the spin: 20 m/s^3 or more spins again.
 - Option, not applied: `JEV_TRACK_CFG=amin=-8` (passed into the driver container) for 0.8 g braking at +17 % distance.
+- Decided 2026-10-22 (user): keep the production gate as is (-5 m/s^2, 10 m/s^3), so hand and model brake alike and their scores compare;
+  `amin=-8` stays an option, not wired into `human_stack.sh`.
 
 ## Full stack on card 1
 
