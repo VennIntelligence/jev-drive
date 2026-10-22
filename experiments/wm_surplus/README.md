@@ -10,9 +10,12 @@ models included, can actually do on HUGSIM per manoeuvre (turns, straight, lane-
 
 **Conclusion.** P2 (PD4): WA-JEPA, a grafted foundation world model on its authors' HUGSIM client, completes 31 / 64 scenarios
 (HD 0.484 [0.382, 0.591]; repeat 0.458); foreground collisions end 24; right turns complete 1 / 7 (3 leave the route), turns over
-100 deg get through 2 / 8, straight 11 / 18 complete. Traffic lights are not judged by HUGSIM (not measurable there).
+100 deg get through 2 / 8, straight 11 / 18 complete. Traffic lights are not judged by HUGSIM (not measurable there). The camera-only
+non-foundation references SimScale LTF / DiffusionDrive (same harness, a one-file client feeding HUGSIM's real command) complete
+17 / 64 and 15 / 64 (HD 0.342 [0.251, 0.441], 0.307 [0.228, 0.390]): left turns 2 / 16 and 1 / 16, turns over 100 deg 0 / 8;
+right turns are 1 / 7 for all three models.
 
-**Next.** P2: the same profile for the camera-only subjects as they register (SimScale LTF / DiffusionDrive first: small HUGSIM client); P1 level (a) on WA-JEPA running (section P1).
+**Next.** P2: the same profile for the remaining camera-only subjects as they register (ReCogDrive next; SimScale LTF / DiffusionDrive done); P1 level (a) on WA-JEPA running (section P1).
 
 **Read more.** [results/p2_match/README.md](results/p2_match/README.md) (P2 profile, HUGSIM limits, per-subject feasibility);
 [plans/2026-10-22-p2-match-prereg.md](plans/2026-10-22-p2-match-prereg.md) (P2 pre-registration; its cross-model lines superseded by PD7);
@@ -47,7 +50,8 @@ $B match --drivers <subject> [<subject> ...] --ref WA-JEPA --also P0 --boards hu
 
 ### Read so far
 
-HUGSIM 64, preset `exam`: WA-JEPA twice (`p2`, `p2b`), shipped Cinque `P0` as the non-foundation reference. Our checkpoints were
+HUGSIM 64, preset `exam`: WA-JEPA twice (`p2`, `p2b`), shipped Cinque `P0` as the non-foundation reference, SimScale LTF and
+DiffusionDrive (camera-only NAVSIM references, bench drivers `SimScale-LTF` / `SimScale-DD`) twice each. Our checkpoints were
 also read before PD7 (B2, PAI checkpoints, RB0-F, SH30); they stay as an input-mismatched reference only
 (`results/p2_match/reference_ours/`), as does a stored AlpaSim held-460 pairing (`scripts/held_pair.py`).
 Not read: navtest / navhard (our S-trained lineage saw navtest logs), WOD (data deleted), B2D (closed lane).

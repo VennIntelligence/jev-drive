@@ -166,9 +166,8 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
         f.unlink()                                                    # a new submit retries scenarios that failed before
     # VRAM per scenario slot = measured job peak / slots x 1.3 (2026-10-23, pool vram_peak of 58 parity jobs at 6 slots: max 43.7 GB,
     # 12 WA-JEPA jobs at 5 slots: max 57.1 GB; docs/bench.md "VRAM sizing"); the per-job servers are inside the slot figure
-    # SimScale LTF / DD: the parity slot (7.3 GB peak, renderer + simulator) + one fp16 client (0.4 GB torch peak in the 10-23 smoke,
-    # ~1 GB with the CUDA context) x 1.3
-    per = 14.9 if m.family == "wajepa" else 11.0 if m.family == "simscale" else 9.5
+    # SimScale LTF / DD: 24 jobs at 6 slots (P2, 2026-10-23) peak max 36.5 GB -> 6.1 GB per slot x 1.3
+    per = 14.9 if m.family == "wajepa" else 8.0 if m.family == "simscale" else 9.5
     base = 0.0
     cap = max(1, int((R.card_gb() - base) // per))                    # slots that fit one card (6 WA-JEPA slots = 81 GB never placed)
     w = max(1, min(workers, cap, len(todo) or 1))

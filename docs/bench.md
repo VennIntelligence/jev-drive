@@ -28,7 +28,7 @@ $B match --drivers STANDFMXH-L18-s1 RB0-F-s0 --ref WA-JEPA --also P0 --boards hu
 clamped to what fits one card (total minus the pool's 8 GB headroom). Per-slot = measured job peak / slots x 1.3, from the pool's
 `vram_peak` of the P2 reads (experiments/wm_surplus): parity / ONNX models 58 jobs at 6 slots, peak max 43.7 GB (p95 42.9, median
 36.5) -> 7.3 GB per slot -> 9.5 declared; WA-JEPA 12 jobs at 5 slots, peak max 57.1 GB (p95 55.7) -> 11.4 -> 14.9 declared
-(5 slots per card). The earlier constants (8 + 8.5 / slot and 6 + 12.5 / slot) were 1.35x and 1.2x the peak, not more:
+(5 slots per card); SimScale LTF / DD 24 jobs at 6 slots, peak max 36.5 GB -> 6.1 -> 8.0 declared. The earlier constants (8 + 8.5 / slot and 6 + 12.5 / slot) were 1.35x and 1.2x the peak, not more:
 per-process nvidia-smi (2-6 GB) undercounts because one slot is several processes (HUGSIM renderer, simulator, client / servers).
 
 Route-memory checkpoints (`route_mem.json` beside `ckpt-final.pt`: RB0-F and every AlpaSim-lineage checkpoint) are HUGSIM-only: the
@@ -50,6 +50,7 @@ Name syntax `<name>[@<frames>][:<opt>]`, e.g. `P0@gimm`, `P3-F-s0:noside`.
 | vt | vis_train arms with a memory branch or their own encoder: `VT-A0` / `VT-A` / `VT-B` / `VT-C` / `VT-W-s<seed>[-k<NN>]`, `VT-A2` / `VT-B2` (A / B continued under a new tag) (`VT-F` / `VT-F0` are plain parity checkpoints; so are the from-scratch memory arms `VTR-0` / `VTR-A` / `VTR-B-s<seed>`, which read a token bank `runs/op_parity/mem/vtr_*/` and take `:noside` / `:mshuf` on the parity path) | `experiments/vis_train/scripts/vt.py plans` (cached slot tokens + the pre-rendered pixel cache, protocol W only). Options: `:noside` masks the memory, `:mshuf` feeds the memory of a token of another log, `:sideoff` (`VT-W` only, the three-view branch) masks the two side views and keeps the F0 view | none |
 | adapt_h | `H-<tag>` (checkpoint in `runs/op_adapt_H/runs/<tag>`) | HUGSIM only | no-adapter ONNX export, training-port stream equivalence gate (plan xy <= 0.5 m), then the shared policy server |
 | wajepa | `WA-JEPA` | stored references (its navtest CSV, navhard harness dir) | its shipped client (`zs_run --agent wajepa`), exam preset only |
+| simscale | `SimScale-LTF`, `SimScale-DD` (AlpaSim e2e_challenge camera-only samples, envs/alpasim-ltf) | not served (HUGSIM only) | `experiments/hugsim/scripts/simscale_hugsim_client.py` (`zs_run --agent ss-ltf / ss-dd`, ad slot `ss`): the shipped policies unchanged; HUGSIM's real per-step command, nuScenes FRONT_LEFT / FRONT / FRONT_RIGHT as L0 / F0 / R0 resized 800 x 450 -> 1920 x 1080; exam preset only |
 
 `SH30-F-s{0,1}:tsA|tsB|ts0` also run on `--bench hugsim` (preset `spec_plan_smooth`, run dir `<name>-<tsX>_<preset>`): the policy ONNX is served with `--taps view_39,select_4,mean`, the bias server answers `select` requests (`experiments/op_parity/scripts/turn_selhug.py`), and the agent swaps in the picked plan; `ts0` runs everything but changes nothing (decision 194).
 
