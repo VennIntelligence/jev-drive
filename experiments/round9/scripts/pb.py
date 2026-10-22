@@ -161,7 +161,7 @@ def cmd_basegate(a):
     rows, cand = [], []
     for s in ("30", "50", "70"):
         k = f"RB0P{s}-ag"
-        p = P.get(f"{k}:RB0F-ag")
+        p = (P.get(f"{k}:RB0F-ag") or {}).get("mean")             # r2.py r281: per pair {"mean": stats.paired(..), <class>: counts}
         ok = dict(ci_lo_gt0=bool(p) and p["lo"] > 0, launch=nl(R[k]) >= nl(ref) - 2, draws=dr.get(f"RB0-P{s}-s0", {}).get("pass_", False))
         if all(ok.values()):
             cand.append((p["mean"], -int(s), s))
