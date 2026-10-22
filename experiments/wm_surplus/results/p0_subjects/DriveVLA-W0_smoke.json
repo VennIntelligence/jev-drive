@@ -1,0 +1,11 @@
+{
+ "model": "DriveVLA-W0",
+ "smoke_run": "/root/autodl-tmp/ujs/runs/bench/navtest/DriveVLA-W0_navsim-p0-smoke-logs",
+ "n": 540,
+ "PDMS_v1": 90.00522965027722,
+ "EPDMS": 89.6537439278653,
+ "published": 87.2,
+ "delta": 2.8052296502772123,
+ "rule": "smoke PDMS >= published - 3",
+ "passed": true
+}
