@@ -26,7 +26,8 @@ figure (without the sleeps) and the sleeps are logged and shown.
 Logs (ALPASIM_DRIVER_LOG_DIR): drive.jsonl, one `drive` record per call (phone input, applied delta / accel, speed, input age,
 stale, pose, wall) and one `close` record per session (sim s, wall s, wall per sim s after the start, stale calls, wait s);
 start.jsonl (scene, cameras, box). Live (HUMAN_LIVE): state.json + front.jpg / left.jpg / right.jpg (the received JPEGs, atomic
-rename) and camera.json (front camera calibration, for the route drawn on the image) for scripts/human_viewer.py. Env: ALPASIM_DRIVER_HOST / _PORT, HUMAN_WHEEL_PORT (47800; fake_wheel.py uses 47801),
+rename) and camera.json (front camera calibration, for the route drawn on the image) for scripts/human_viewer.py; on nuPlan
+front.jpg is the model drivers' 0.2 s slot frame instead (lib/frame_fill.py, state.json "fill"; HUMAN_FILL=0 = the raw keyframes). Env: ALPASIM_DRIVER_HOST / _PORT, HUMAN_WHEEL_PORT (47800; fake_wheel.py uses 47801),
 HUMAN_TRACK, HUMAN_N_SCENES, HUMAN_SIM_S (scene length for the progress bar). Needs grpc, alpasim_grpc, numpy (the driver image).
 
 Desktop panel (scripts/human_loop.py, protocol in lib/exam_panel.py): HUMAN_CONTROL = the panel's control.json. While "paused" is set,
@@ -40,8 +41,9 @@ HUMAN_GT=1) the runtime sends the recorded log ego trajectory every step (submit
 the whole log at 20 Hz on PAI, in the rig frame of the step). state.json "shadow" = the log path from 5 m behind to 120 m ahead of
 the ego's projection with the log speed, the log ego ("ghost") at the current sim time, and the gaps (you behind / ahead in m and s,
 lateral offset from the log path). The viewer's toggle (viewer.json "shadow") is integrated per scene as shadow_s (sim s driven with
-the shadow on) in the close record. close_session also saves the last front frame as <log dir>/thumbs/<session>.jpg (480 px wide;
-session uuid = rollout dir name) for the viewer's scene gallery.
+the shadow on) in the close record. The first front frame of the scene (at the handoff, as the hold for the start begins; at close
+when the scene never got there) is saved as <log dir>/thumbs/<session>.jpg (480 px wide; session uuid = rollout dir name) for the
+viewer's scene gallery.
 """
 from __future__ import annotations
 
@@ -62,6 +64,7 @@ from alpasim_grpc.v0 import common_pb2, egodriver_pb2, egodriver_pb2_grpc
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "phone_wheel" / "lib"))
 from wheel_client import WheelClient  # noqa: E402
+import frame_fill as FF  # noqa: E402
 
 LOG = logging.getLogger("human")
 DELTA_MAX, AY_MAX, A_THR, A_BRK, V_MAX, DT, N_OUT = 0.55, 7.0, 3.0, 8.0, 36.0, 0.1, 41
@@ -198,6 +201,7 @@ class Session:
         self.written = {}
         self.t_created, self.aborted, self.paused_s = time.time(), False, 0.0
         self.gt, self.shadow_s, self.prev_now = None, 0.0, None         # gt: (step us, (n, 4) t, x, y, z rig frame)
+        self.thumb = False
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
@@ -211,6 +215,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         self.start = open(log_dir / "start.jsonl", "a", buffering=1)
         self.sess_log = open(log_dir / "sessions.jsonl", "a", buffering=1)
         self.panel = Panel()
+        self.st, self.stlock = {}, threading.Lock()                    # last state.json (the fill thread re-writes it with its "fill")
+        self.fill = FF.Fill(LIVE, put, self._state_put) if FF.enabled() else None
         self.meta = {"track": E("HUMAN_TRACK", "?"), "n_scenes": int(E("HUMAN_N_SCENES", "0")), "sim_total": float(E("HUMAN_SIM_S", "0")),
                      "start_mode": START, "run": E("HUMAN_RUN", ""), "harmonizer": E("HUMAN_HARMONIZER", "0") == "1"}
 
@@ -231,6 +237,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         calib = front_camera(req.rollout_spec.vehicle)
         self.start.write(json.dumps({"t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "cams": s.cams,
                                      "L": s.L, **(calib or {})}) + "\n")
+        if self.fill:
+            self.fill.calib(calib)
         try:
             put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(calib or {})}).encode())
         except OSError as e:
@@ -254,7 +262,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
             self._live(s, {"waiting": False, "closed": True})
-        if s is not None:
+        if s is not None and not s.thumb:
             self._thumb(req.session_uuid, s)
             self.sess_log.write(json.dumps({"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
                                             "started": s.started is not None, "aborted": s.aborted, "drives": s.k}) + "\n")
@@ -299,7 +307,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             return {}
 
     def _thumb(self, uuid: str, s: Session):
-        """Last front frame of the session, 480 px wide, as <log dir>/thumbs/<session>.jpg (the viewer's scene gallery)."""
+        """The scene's handoff front frame, 480 px wide, as <log dir>/thumbs/<session>.jpg (the viewer's scene gallery)."""
         f = s.frames.get("front")
         if not f:
             return
@@ -315,6 +323,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         try:
             (self.log_dir / "thumbs").mkdir(exist_ok=True)
             put(self.log_dir / "thumbs" / f"{uuid}.jpg", data)
+            s.thumb = True
         except OSError as e:
             LOG.warning("thumb: %r", e)
 
@@ -322,14 +331,21 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         """state.json + the newest JPEGs into the live dir for the viewer; never raises."""
         try:
             for name, (ts, jpg) in list(s.frames.items()):
-                if s.written.get(name) != ts:
+                if s.written.get(name) != ts and not (name == "front" and self.fill):     # front.jpg: the fill thread
                     put(LIVE / f"{name}.jpg", jpg)
                     s.written[name] = ts
             st = {**self.meta, "t": time.time(), "running": True, "scene": s.scene, "scene_i": s.n + 1, "cams": s.cams,
                   "frames": sorted(s.frames), "route": s.route, **extra}
-            put(LIVE / "state.json", json.dumps(st).encode())
+            with self.stlock:
+                self.st = st
+                put(LIVE / "state.json", json.dumps({**st, **(self.fill.state() if self.fill else {})}).encode())
         except Exception as e:  # the view must never stop the car
             LOG.warning("live write failed: %r", e)
+
+    def _state_put(self, extra: dict):
+        with self.stlock:
+            if self.st:
+                put(LIVE / "state.json", json.dumps({**self.st, **extra}).encode())
 
     def _released(self, s: Session, t_hold: float) -> bool:
         p = self.panel.poll()
@@ -390,6 +406,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         sim_t = (now - s.t_first) / 1e6
         base = {"sim_t": round(sim_t, 2), "speed": round(v, 2), **self._shadow(s, now)}
         if s.started is None and now - s.t_first >= HOLD_US:
+            self._thumb(req.session_uuid, s)
             self._hold(s, base)
             s.started = s.anchor = (time.time(), now)
         p = self.panel.poll()
@@ -422,6 +439,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.shadow_s += (now - s.prev_now) / 1e6
         s.prev_now = now
         traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
+        if self.fill:
+            self.fill.drive(s, now, ta, traj_xyv, s.started is not None)
         k0 = max(0, math.ceil((now - ta) / (DT * 1e6) - 1e-9))
         traj = common_pb2.Trajectory()
         for i in range(k0, N_OUT):

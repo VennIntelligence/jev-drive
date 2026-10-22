@@ -133,23 +133,27 @@ def track_wod(past) -> EgoTrack:
 _RAYS = {}
 
 
-def _rays(view: str, K=None) -> np.ndarray:
+def _rays(view: str, K=None, R=None, size=None) -> np.ndarray:
     """(H, W, 3) vehicle-frame rays of the model frame's pixel centres (openpilot calib = vehicle axes). K overrides the view's
-    intrinsics (e.g. openpilot.frames.wide_K(256), a 90 deg wide frame)."""
+    intrinsics (e.g. openpilot.frames.wide_K(256), a 90 deg wide frame); R (camera -> vehicle rotation, columns = camera x, y, z
+    in vehicle axes; default the calibrated OPENCV_TO_VEHICLE) and size (w, h) serve a raw camera image (e.g. AlpaSim CAM_F0)."""
     K = OP_K[view] if K is None else np.asarray(K, float)
-    key = (view, K.tobytes())
+    R = OPENCV_TO_VEHICLE if R is None else np.asarray(R, float)
+    w, h = size or (W, H)
+    key = (view, K.tobytes(), R.tobytes(), w, h)
     if key not in _RAYS:
-        u, v = np.meshgrid(np.arange(W, dtype=float), np.arange(H, dtype=float))
-        r = np.stack([(u - K[0, 2]) / K[0, 0], (v - K[1, 2]) / K[1, 1], np.ones_like(u)], -1) @ OPENCV_TO_VEHICLE.T
+        u, v = np.meshgrid(np.arange(w, dtype=float), np.arange(h, dtype=float))
+        r = np.stack([(u - K[0, 2]) / K[0, 0], (v - K[1, 2]) / K[1, 1], np.ones_like(u)], -1) @ R.T
         _RAYS[key] = r
     return _RAYS[key]
 
 
-def warp_map(view: str, cam, pose_dst, pose_src, K=None):
+def warp_map(view: str, cam, pose_dst, pose_src, K=None, R=None, size=None):
     """Source-image pixel coordinates (map_x, map_y) (H, W) for every destination pixel: the destination ray hits the
     road plane z = 0 (camera at height cam[2]) or the 60 m sphere, moves with the ego from pose_dst to pose_src.
-    K overrides the view's intrinsics (source and destination frame)."""
-    r = _rays(view, K)
+    K overrides the view's intrinsics (source and destination frame); R, size as _rays (a raw camera image)."""
+    R = OPENCV_TO_VEHICLE if R is None else np.asarray(R, float)
+    r = _rays(view, K, R, size)
     c = np.asarray(cam, float)
     down = -r[..., 2]
     lam = np.where(down > 1e-6, c[2] / np.maximum(down, 1e-6), np.inf)
@@ -158,7 +162,7 @@ def warp_map(view: str, cam, pose_dst, pose_src, K=None):
     Pw = P[..., :2] @ rot2(pose_dst[2]).T + pose_dst[:2]
     Ps = (Pw - pose_src[:2]) @ rot2(pose_src[2])                             # R^T (Pw - p)
     ray = np.concatenate([Ps, P[..., 2:]], -1) - c
-    cv = ray @ OPENCV_TO_VEHICLE                                             # vehicle -> opencv
+    cv = ray @ R                                                             # vehicle -> opencv (R^T ray)
     K = OP_K[view] if K is None else np.asarray(K, float)
     z = np.where(cv[..., 2] > 0.1, cv[..., 2], np.nan)
     mx = K[0, 0] * cv[..., 0] / z + K[0, 2]
