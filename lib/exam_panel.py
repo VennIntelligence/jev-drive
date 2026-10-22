@@ -18,9 +18,12 @@ The loop handles an action once (it records the action's id in consumed):
   - stop: abort the running item and exit.
 "paused" holds at the next item boundary; the agent may also hold mid-item. "playlist" makes the loop auto-advance to the next
 unfinished item in "order"; without it the loop waits for a play action or the driver's own start signal.
+The top of the panel shows the phone page address (from `tailscale status --json`, with a Copy button) and the live input status
+from the wheel daemon's status file (WHEEL_STATUS, default $DATA_DIR/tmp/wheel/status.json; experiments/phone_wheel/scripts/wheel_server.py).
 """
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -105,6 +108,36 @@ class Backend(object):
         return ""
 
 
+WHEEL_STATUS = os.environ.get("WHEEL_STATUS", os.path.join(os.environ.get("DATA_DIR", "/data"), "tmp/wheel/status.json"))
+
+
+def phone_urls():
+    """(https URL via tailscale serve, plain-http LAN fallback) of the phone page; fallbacks if tailscale does not answer."""
+    try:
+        s = json.loads(subprocess.run(["tailscale", "status", "--json"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                      timeout=5).stdout)["Self"]
+        dns, ip = s.get("DNSName", "").rstrip("."), next((a for a in s.get("TailscaleIPs", []) if "." in a), None)
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        dns, ip = None, None
+    return ("https://%s/" % dns if dns else "https://<tailscale name>/ (tailscale status failed)",
+            "http://%s:8766/" % (ip or "<tailscale IP>"))
+
+
+def wheel_line(path=WHEEL_STATUS):
+    """(text, colour) of the phone / keyboard input status from the wheel daemon's status file."""
+    st = read_json(path)
+    if not st or time.time() - st.get("t", 0) > 5:
+        return "input: wheel daemon not running (no fresh %s)" % path, "#c00000"
+    ph, kb = st.get("phone") or {}, st.get("keyboard") or {}
+    pa, ka = ph.get("age_s"), kb.get("age_s")
+    p = ("phone connected, last frame %s" % ("none yet" if pa is None else "%.1f s ago" % pa if pa > 0.3 else "live")
+         if ph.get("clients") else "phone not connected")
+    k = "keyboard active%s" % (" (%s)" % " ".join(kb["keys"]) if kb.get("keys") else "") if ka is not None and ka < 0.3 else \
+        "keyboard idle (focus a viewer window to drive with it)"
+    src = st.get("source")
+    return "input: %s;  %s;  driving: %s" % (p, k, src or "NOBODY (car brakes)"), "#2e7d32" if src else "#c05000"
+
+
 def model_key(it):
     return (it["model"] is None, it["model"] if it["model"] is not None else 0.0)
 
@@ -125,7 +158,19 @@ def panel(backend):
 
     top = ttk.Frame(root, padding=8)
     top.pack(fill="x")
-    run_var, state_var = tk.StringVar(), tk.StringVar()
+    run_var, state_var, wheel_var = tk.StringVar(), tk.StringVar(), tk.StringVar()
+    url, lan = phone_urls()
+    prow = ttk.Frame(top)
+    prow.pack(fill="x")
+    ttk.Label(prow, text="Phone: %s" % url, font=("DejaVu Sans", 15, "bold"), foreground="#0050a0").pack(side="left")
+    ttk.Label(prow, text="   (LAN fallback %s)" % lan).pack(side="left")
+
+    def copy_url():
+        root.clipboard_clear()
+        root.clipboard_append(url)
+    ttk.Button(prow, text="Copy", command=copy_url).pack(side="left", padx=8)
+    wheel_lab = ttk.Label(top, textvariable=wheel_var)
+    wheel_lab.pack(anchor="w")
     ttk.Label(top, textvariable=run_var).pack(anchor="w")
     ttk.Label(top, textvariable=state_var, foreground="#c05000", font=("DejaVu Sans", 14, "bold")).pack(anchor="w")
 
@@ -237,6 +282,9 @@ def panel(backend):
             items = []
         st = read_json(Path(backend.live) / "loop.json", {}) or {}
         c = ctl.read()
+        w, col = wheel_line()
+        wheel_var.set(w)
+        wheel_lab.configure(foreground=col)
         run_var.set("run: %s" % (backend.run_dir() or "-"))
         alive = st.get("pid") and os.path.exists("/proc/%s" % st.get("pid"))
         other = "" if alive else backend.busy_other()

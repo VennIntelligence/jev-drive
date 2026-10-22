@@ -43,11 +43,23 @@ Comfort 19.4.
   wheel above, tracks side by side below. "Full" = `requestFullscreen` (optional landscape lock); `manifest.webmanifest`
   (`display: fullscreen`) + a pass-through `sw.js` make "Add to Home screen" / "Install app" launch it with no browser UI.
 - `scripts/wheel_server.py` (aiohttp): serves the page and `/ws` on 127.0.0.1:8765 (optional plain-http `--lan-port`),
-  keeps the latest frame, echoes `{ts}`, pushes stats every 5 s, logs connections / rate / drops / rtt, and fans every
-  frame out as one JSON datagram to each UDP subscriber of 127.0.0.1:47800.
+  keeps the latest frame, echoes `{ts}`, pushes stats every 5 s, logs connections / rate / drops / rtt. Keyboard frames
+  come in as UDP datagrams on 127.0.0.1:47802 (`--key-port`). The daemon merges phone and keyboard and sends the result as
+  one JSON datagram to each UDP subscriber of 127.0.0.1:47800, on every phone frame and at 60 Hz: steer = clip(phone +
+  keyboard), throttle / brake / raw_throttle = max, handbrake = or, every phone field kept, plus `source` (phone / keyboard
+  / both). A source counts while its last frame is younger than 0.3 s; with neither fresh nothing is sent, so clients go
+  stale and brake (a silent phone now brakes after 0.3 + 1.0 s). About once a second it writes
+  `/data/tmp/wheel/status.json` (`WHEEL_STATUS`: phone clients and frame age, keyboard age and keys, source) for the panels.
+- Keyboard (`lib/keyboard_wheel.py`, stdlib): both pygame viewers (B2D and AlpaSim `human_viewer.py`) call it every frame
+  while their window has focus and send a frame to the daemon, a heartbeat even with no key held. Left / A and Right / D
+  steer (ramps toward full lock at 1.2 /s, recenters at 4 /s on release, through centre at once on reversal), Up / W
+  throttle (ramps at 2 /s, `raw_throttle` 1 while held, so "start on throttle" works), Down / S brake (full, at once),
+  Space handbrake. No reverse key. An unfocused viewer sends nothing. While a viewer is focused and no key is held the
+  keyboard still counts, so with the phone gone the car coasts instead of braking. The viewers show the source and held keys.
 - `lib/wheel_client.py` (stdlib, Python 3.8): `WheelClient().latest() -> (steer, throttle, brake, age_s)`, non-blocking;
   `state()` adds reverse / handbrake / stale. It subscribes by sending a datagram every 0.5 s, so any number of
-  consumers can read at once. No frame for 0.3 s -> stale: steer 0, throttle 0, brake 1, handbrake on.
+  consumers can read at once. No frame for WHEEL_STALE_S (1.0 s) -> stale: throttle 0, brake ramps to 1, then handbrake.
+  `state()["source"]` says which input the daemon merged.
   Steer +1 = right.
 
 ## Run (Tokyo)
@@ -170,6 +182,9 @@ system Python (`/usr/bin/python3`; envs/carla has no Tcl).
   status (leaderboard status and infractions). Double-click a row to drive it next, even if it was already driven.
   Playlist on: the next unfinished row in the current order loads when a route ends. Playlist off: the loop waits for a
   double-click or a throttle press on the phone.
+- Top lines: the phone page URL (`https://<tailscale name>/` from `tailscale status --json`, with the LAN fallback
+  `http://<tailscale IP>:8766/` and a Copy button) and the live input status from the daemon's status file: phone
+  connected and last frame age, keyboard active (keys held), which source drives, or "wheel daemon not running".
 - "Stop route at first collision" (off by default = official): applies from the next route. "Official table" runs
   `human_official.py` on the run.
 - Drive side: `scripts/human_loop.py --run <dir>` in tmux `human:loop`. It runs one b2d_run Runner per route on one kept
@@ -193,6 +208,7 @@ where the best model has a score (24721, 24944, 24416, 27005, 334).
 
 - `wheel_server.py` (scripts): Phone steering wheel daemon
 - `wheel_client.py` (lib): Non-blocking reader for the phone wheel …
+- `keyboard_wheel.py` (lib): keyboard as a second wheel input, called by both viewers
 - `human_agent.py` (lib): Bench2Drive agent driven by the phone, openpilot wide camera view
 - `human_drive.sh` (scripts): launcher: own CARLA, tmux `human`, results table
 - `human_viewer.py` (scripts): the "human drive (phone wheel)" window
@@ -200,5 +216,5 @@ where the best model has a score (24721, 24944, 24416, 27005, 334).
 - `index.html` (web): 
 - `manifest.webmanifest` (web): 
 
-[lib/](lib/) 2 libraries · [scripts/](scripts/) 4 entry points
+[lib/](lib/) 3 libraries · [scripts/](scripts/) 4 entry points
 <!-- files:end -->

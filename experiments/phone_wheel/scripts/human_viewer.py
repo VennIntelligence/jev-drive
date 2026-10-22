@@ -2,6 +2,8 @@
 """Window for the human driver: openpilot's wide model frame (as lib/human_agent.py publishes it through
 scripts/drive_runtime/preview) with the route command banner, the benchmark route (blue, 10/20/40/80 m dots), ego state
 and the phone-wheel block. Read-only, no CARLA connection; Q / Escape closes only this window. Python 3.8, envs/carla.
+While the window has focus the keyboard drives too (arrows / WASD, Space handbrake; lib/keyboard_wheel.py, merged with the phone in
+the wheel daemon).
 
     PYTHONPATH=scripts python experiments/phone_wheel/scripts/human_viewer.py --dir /data/runs/human_drive/live
 """
@@ -15,7 +17,9 @@ import pygame
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
                                 "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib"))
 from drive_runtime.preview import PreviewReader  # noqa: E402
+from keyboard_wheel import KeyboardWheel, pygame_keys  # noqa: E402
 
 TITLE = "human drive (phone wheel)"
 BLUE, WHITE, GREY, ORANGE, RED, GREEN = (70, 170, 250), (230, 235, 240), (150, 150, 150), (255, 150, 60), (240, 70, 60), (80, 220, 120)
@@ -72,7 +76,7 @@ def launcher_line(live):
     return "LOADING NEXT ROUTE (%d of %d done)" % (done, n), ORANGE
 
 
-def draw(canvas, state, images, font, big, status, tag, live):
+def draw(canvas, state, images, font, big, status, tag, live, kb=""):
     def label(msg, pos, color=WHITE, f=None):
         canvas.blit((f or font).render(msg, True, color), pos)
     hu = state.get("human") or {}
@@ -134,6 +138,7 @@ def draw(canvas, state, images, font, big, status, tag, live):
           (x2, y0 + 128), RED if hu.get("stale") or (rxhz is not None and rxhz < 20) else WHITE)
     label("raw steer %+.2f  gain %s expo %s   throttle ^%s x%s" % (hu.get("steer_in", 0), hu.get("gain"), hu.get("expo"),
                                                                   hu.get("thr_gamma"), hu.get("thr_gain")), (x2, y0 + 158), GREY)
+    label("source %s   %s" % (hu.get("source") or "-", kb), (x2, y0 + 188), GREY)
     label("ROUTE / SIM", (x3, y0), (150, 200, 255))
     p = hu.get("progress", 0) or 0
     label("progress %.0f %% of %s m" % (100 * p, hu.get("route_m")), (x3, y0 + 34))
@@ -161,7 +166,7 @@ def main():
     big = pygame.font.SysFont("DejaVu Sans", 44, bold=True)
     tag = pygame.font.SysFont("DejaVu Sans", 30, bold=True)
     clock = pygame.time.Clock()
-    reader, packet, state, images, last_draw = None, None, {}, {}, 0.0
+    reader, packet, state, images, last_draw, kb = None, None, {}, {}, 0.0, KeyboardWheel()
     try:
         while True:
             dirty = False
@@ -171,6 +176,7 @@ def main():
                 if e.type == pygame.VIDEORESIZE:
                     screen = pygame.display.set_mode(e.size, pygame.RESIZABLE)
                     dirty = True
+            kb.update(pygame_keys(pygame))
             if reader is None:
                 try:
                     reader = PreviewReader(a.dir)
@@ -188,7 +194,7 @@ def main():
                 canvas.fill((17, 21, 29))
                 age = time.time() - state.get("t", 0)
                 status = ("LIVE" if age < 3 else "STALE") if state.get("running") else ("ENDED" if state else "WAITING FOR A ROUTE")
-                draw(canvas, state, images, font, big, status, tag, a.dir)
+                draw(canvas, state, images, font, big, status, tag, a.dir, kb.text())
                 r = min(screen.get_width() / CW, screen.get_height() / CH)
                 screen.fill((0, 0, 0))
                 screen.blit(pygame.transform.smoothscale(canvas, (max(1, int(CW * r)), max(1, int(CH * r)))), (0, 0))

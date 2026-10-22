@@ -92,7 +92,10 @@ Stop a run with Ctrl-C in tmux `human:alpa-drive`; the trap takes the stack down
 
 Scores from fast mode are therefore not comparable with leaderboard or model runs, which see all cameras. The scorer
 itself is unchanged (the image scorer reads the front camera). `HUMAN_MODE=official` keeps the presets' camera sets and
-eval as shipped. In both modes the PAI renderer is unharmonised, as on the public leaderboard (ec2 preset, as `pai_run.sh`).
+eval as shipped. In both modes the PAI renderer is unharmonised by default, as on the public leaderboard (ec2 preset, as
+`pai_run.sh`). `HUMAN_HARMONIZER=1` (PAI only; the panel's "Diffusion Harmonizer" checkbox) keeps the dev preset's
+`--enable-harmonizer` and mounts the weights from `$NUREC/harmonizer`, as `pai_run.sh HARMONIZER=1`; the render is
+2.2-7.1x slower ([docs/alpasim.md](../../docs/alpasim.md)). `run.json`, `done/<scene>.json` and the results tables record it.
 On nuPlan, gsplat is built for the card's own arch (sm_86), as `smoke.sh` does.
 
 | Measured on Tokyo card 0, PAI | Cameras | Wall s per sim s after the start | Unpaced | Card 0 peak |
@@ -180,7 +183,15 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
   (`<run>/scores/<rollout>/`), so scenes of a stack that was stopped early still count. The result goes to
   `done/<scene>.json` (latest attempt, attempt count) and `scores.jsonl` (all), then `results.md`. Checked on a copy of
   `pai_1013-2305_rt` with 3 scenes removed: the post-hoc scores equal the stack's own.
-- Viewer: shows "PAUSED: resume on the panel" and "SKIPPING THIS SCENE". Scene i of n counts within the current stack.
+- Diffusion Harmonizer (checkbox, PAI only, off by default): a stack renders with or without it for its whole life
+  (`HUMAN_HARMONIZER`). After a change the running scene finishes; at the next hold point the stack is stopped and a new
+  one starts with the new setting, the held scene first (with Playlist off it is queued again). The loop's message says
+  "harmonizer on: restarting the stack at the next scene" until then. The status column says "harmonized" and "Official
+  table" has a harmonizer column, so harmonized and unharmonized attempts stay apart.
+- Phone address and input: the panel's top line shows the phone page URL (from `tailscale status --json`, Copy button) and
+  the live input status (phone connected / last frame, keyboard active, which source drives); phone_wheel README.
+- Viewer: shows "PAUSED: resume on the panel", "SKIPPING THIS SCENE" and a green "HARMONIZER ON" tag. Scene i of n counts
+  within the current stack. With the viewer window focused the keyboard drives too (arrows / WASD, Space; phone_wheel README).
 - Test without a GPU: `scripts/fake_stack.py` stands in for `human_stack.sh` (`HUMAN_STACK_SCRIPT=...`). It writes the same
   files, honours pause and skip, and copies real `metrics.parquet` files of an earlier run, so scoring is real.
 

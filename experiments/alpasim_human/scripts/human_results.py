@@ -60,6 +60,7 @@ def main():
     drv = [json.loads(x) for x in (run / "driver/drive.jsonl").read_text().splitlines()] if (run / "driver/drive.jsonl").exists() else []
     close = {r["scene"]: r for r in drv if r["kind"] == "close"}
     track = "pai" if rolls and rolls[0]["clipgt_id"].startswith("clipgt-") else "nuplan"
+    harm = str((json.loads((run / "run.json").read_text()) if (run / "run.json").exists() else {}).get("harmonizer", "0")) == "1"
     refs = dict(x.split("=", 1) for x in a.ref) if a.ref is not None else REFS[track]
     ref = {k: scores(Path(v)) for k, v in refs.items()}
     rows = []
@@ -72,7 +73,7 @@ def main():
                      **{k: (round(v[r["clipgt_id"]], 4) if r["clipgt_id"] in v else None) for k, v in ref.items()}})
     mean = lambda k: round(sum(r[k] for r in rows) / len(rows), 4) if rows and all(r[k] is not None for r in rows) else None  # noqa: E731
     wps = [r["wall_per_sim"] for r in rows if r["wall_per_sim"]]
-    out = {"run": str(run), "track": track, "n": len(rows), "mean_score": mean("score"), "refs": {k: mean(k) for k in ref},
+    out = {"run": str(run), "track": track, "harmonizer": harm, "n": len(rows), "mean_score": mean("score"), "refs": {k: mean(k) for k in ref},
            "ref_paths": {k: str(v) for k, v in refs.items()}, "wall_per_sim_mean": round(sum(wps) / len(wps), 3) if wps else None, "scenes": rows}
     (run / "results.json").write_text(json.dumps(out, indent=1))
     L = ["| scene | human | why | progress | driven / GT m | sim s | wall per sim s | stale | wait s | " + " | ".join(ref) + " |",
@@ -80,7 +81,7 @@ def main():
     for r in rows:
         L.append(f"| {r['scene'][-16:]} | {r['score']:.3f} | {r['why']} | {r['progress']} | {r['driven_m']} / {r['gt_m']} | {r['sim_s']} | "
                  f"{r['wall_per_sim']} | {r['stale']} | {r['wait_s']} | " + " | ".join("-" if r[k] is None else f"{r[k]:.3f}" for k in ref) + " |")
-    L += ["", f"{track}, {len(rows)} scenes: human mean {out['mean_score']}; " + "; ".join(f"{k} {v}" for k, v in out["refs"].items())
+    L += ["", f"{track}{', harmonizer on' if harm else ''}, {len(rows)} scenes: human mean {out['mean_score']}; " + "; ".join(f"{k} {v}" for k, v in out["refs"].items())
           + f"; wall s per sim s (after the start) {out['wall_per_sim_mean']}"]
     (run / "results.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))

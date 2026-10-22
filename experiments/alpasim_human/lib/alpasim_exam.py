@@ -117,12 +117,13 @@ class Scenes(object):
                 rows.append((sid, d, [self.refs.get((track, n), {}).get(sid) for n in cols]))
         L = ["%s, set %s: %d of %d scenes driven (latest finished attempt per scene; skipped attempts do not count)" % (
             track, ex.get("set"), len(rows), len(ex.get("ids", []))), "",
-            "| scene | group | human | why | progress | driven / GT m | wall per sim s | stale | attempts | " + " | ".join(cols) + " |",
-            "|---|---|--:|---|--:|--:|--:|--:|--:|" + "--:|" * len(cols)]
+            "| scene | group | human | why | progress | driven / GT m | wall per sim s | stale | attempts | harmonizer | " + " | ".join(cols) + " |",
+            "|---|---|--:|---|--:|--:|--:|--:|--:|---|" + "--:|" * len(cols)]
         for sid, d, refs in rows:
-            L.append("| %s | %s | %.3f | %s | %s | %s / %s | %s | %s | %s | %s |" % (
+            L.append("| %s | %s | %.3f | %s | %s | %s / %s | %s | %s | %s | %s | %s |" % (
                 self.meta.get(sid, {}).get("label", sid), self.meta.get(sid, {}).get("group", "?"), d["score"], d["why"],
                 d.get("progress"), d.get("driven_m"), d.get("gt_m"), d.get("wall_per_sim"), d.get("stale"), d.get("attempt", 1),
+                "on" if d.get("harmonizer") else "off",
                 " | ".join("-" if v is None else "%.3f" % v for v in refs)))
         if rows:
             mean = lambda v: sum(v) / len(v)  # noqa: E731
@@ -139,7 +140,7 @@ class AlpaSimExam(Backend):
     title = "AlpaSim human exam"
     live = os.environ.get("HUMAN_LIVE", str(RUNS / "live"))
     score_fmt = "%.2f"
-    options = {}
+    options = {"harmonizer": ("Diffusion Harmonizer (PAI, slower render)", False)}   # human_loop.py: new stack at the next hold
 
     def __init__(self):
         self.sc = Scenes()
@@ -246,7 +247,8 @@ class AlpaSimExam(Backend):
             d = read_json(Path(run, "done", sid + ".json"))
             t = read_json(Path(run, "tried", sid + ".json"))
             if d:
-                status = "%s, progress %s%s" % (d["why"], d.get("progress"), ", attempt %d" % d["attempt"] if d.get("attempt", 1) > 1 else "")
+                status = "%s, progress %s%s%s" % (d["why"], d.get("progress"), ", attempt %d" % d["attempt"] if d.get("attempt", 1) > 1 else "",
+                                                  ", harmonized" if d.get("harmonizer") else "")
             elif t:
                 status = t.get("status", "not finished")
             else:

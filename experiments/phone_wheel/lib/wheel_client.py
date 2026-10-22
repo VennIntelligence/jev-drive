@@ -6,7 +6,8 @@
 
 steer in [-1, 1] (+ = right), throttle and brake in [0, 1]. If no frame arrived for STALE_S, latest() returns
 throttle 0 and brake ramping to 1 over WHEEL_BRAKE_RAMP_S (steer held at its last value meanwhile; handbrake once the ramp is
-full); `wheel.stale` and `wheel.state()` (adds reverse / handbrake, age, receive rate) tell the caller.
+full); `wheel.stale` and `wheel.state()` (adds reverse / handbrake, age, receive rate, source: phone / keyboard / both as the daemon
+merged them) tell the caller.
 Env: WHEEL_STALE_S (1.0; was 0.3 until 2026-10-13, when Chrome's ~1 Hz timer throttling between routes tripped it),
 WHEEL_BRAKE_RAMP_S (1.0).
 Run as a script for a 10 Hz console readout: python experiments/phone_wheel/lib/wheel_client.py
@@ -65,14 +66,14 @@ class WheelClient:
         f = self.frame or {}
         stale = self.frame is None or age > STALE_S
         ramp = 1.0 if self.frame is None else min(1.0, (age - STALE_S) / max(BRAKE_RAMP_S, 1e-3)) if stale else 0.0
-        reason = "" if not stale else "no phone frame yet" if self.frame is None else "no phone frame for %.1f s" % age
+        reason = "" if not stale else "no wheel frame yet" if self.frame is None else "no wheel frame for %.1f s" % age
         return {"steer": (0.0 if self.frame is None else float(f.get("steer", 0.0))) if stale else float(f.get("steer", 0.0)),
                 "throttle": 0.0 if stale else float(f.get("throttle", 0.0)),
                 "brake": max(ramp, float(f.get("brake", 0.0))) if stale else float(f.get("brake", 0.0)),
                 "raw_throttle": 0.0 if stale else float(f.get("raw_throttle", f.get("throttle", 0.0))),
                 "reverse": bool(f.get("reverse")) and not stale,
                 "handbrake": bool(f.get("handbrake")) or ramp >= 1.0,
-                "age_s": age, "stale": stale, "rx_hz": len(self.rx), "reason": reason}
+                "age_s": age, "stale": stale, "rx_hz": len(self.rx), "reason": reason, "source": None if stale else f.get("source", "phone")}
 
     def latest(self):
         """(steer, throttle, brake, age_s); stale -> throttle 0, brake 1, steer 0."""

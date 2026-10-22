@@ -166,7 +166,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         self.sess_log = open(log_dir / "sessions.jsonl", "a", buffering=1)
         self.panel = Panel()
         self.meta = {"track": E("HUMAN_TRACK", "?"), "n_scenes": int(E("HUMAN_N_SCENES", "0")), "sim_total": float(E("HUMAN_SIM_S", "0")),
-                     "start_mode": START, "run": E("HUMAN_RUN", "")}
+                     "start_mode": START, "run": E("HUMAN_RUN", ""), "harmonizer": E("HUMAN_HARMONIZER", "0") == "1"}
 
     def _s(self, uuid, ctx) -> Session:
         s = self.sessions.get(uuid)
@@ -294,7 +294,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
     @staticmethod
     def _panel(st):
         return {"steer_in": round(st["steer"], 3), "throttle_in": round(st["throttle"], 3), "brake_in": round(st["brake"], 3),
-                "raw_throttle": round(st["raw_throttle"], 3), "age_ms": round(1e3 * min(st["age_s"], 99.0), 1), "stale": st["stale"]}
+                "raw_throttle": round(st["raw_throttle"], 3), "age_ms": round(1e3 * min(st["age_s"], 99.0), 1), "stale": st["stale"],
+                "source": st.get("source")}
 
     def drive(self, req, ctx):
         s, now, tq = self._s(req.session_uuid, ctx), int(req.time_now_us), int(req.time_query_us)

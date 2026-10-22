@@ -18,6 +18,9 @@ picks the scene order itself (observed: clip id order, not the list order), so t
   still loading) next and restart do nothing.
 - stop: the stack is stopped, the loop exits.
 - Pause: no stack starts; inside a stack the driver holds (a waiting scene stays held, a running one stops advancing).
+- Option "harmonizer" (PAI only; human_stack.sh HUMAN_HARMONIZER): a stack renders with or without the diffusion harmonizer for its
+  whole life. When the option differs from the running stack's, the stack is stopped at its next hold point (never mid-scene) and a
+  new one starts with the option; the held scene is driven next (playlist off: it is queued again). done/<scene>.json records it.
 Scoring: every finished rollout (sim/rollouts/<scene>/<id>/_complete) that was not skipped is scored with AlpaSim's own aggregation
 (alpasim-aggregation in the alpasim-base image, CPU, ~7 s) on a copy of its metrics.parquet -> done/<scene>.json; results.md after each.
 """
@@ -59,13 +62,13 @@ def jsonl(p):
 class Stack(object):
     """One human_stack.sh run (foreground, own process group) on a list of scenes."""
 
-    def __init__(self, run, k, track, ids):
+    def __init__(self, run, k, track, ids, harm=False):
         self.dir = run / "stacks" / ("%s-s%02d" % (run.name, k))
         self.dir.mkdir(parents=True)
-        self.ids, self.name, self.killed = list(ids), stack_name(self.dir), None
+        self.ids, self.name, self.killed, self.harm = list(ids), stack_name(self.dir), None, harm
         (self.dir / "scenes.txt").write_text("\n".join(ids) + "\n")
         env = dict(os.environ, HUMAN_FG="1", HUMAN_VIEWER="0", HUMAN_CONTROL=str(LIVE / "control.json"), HUMAN_LIVE=str(LIVE),
-                   HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU="0")
+                   HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU="0", HUMAN_HARMONIZER="1" if harm else "0")
         self.log = open(str(self.dir / "stack.out"), "a")
         self.proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(self.dir), str(self.dir / "scenes.txt")], env=env,
                                      stdout=self.log, stderr=subprocess.STDOUT, start_new_session=True)
@@ -145,7 +148,7 @@ class Scorer(object):
         rec = {"scene": scene, "score": r.get("score") or 0.0, "why": why(r), "rollout": rd.name, "stack": stack.dir.name,
                "progress": round(sm.get("progress_clipped_rel") or 0.0, 3), "driven_m": round(m.get("dist_traveled_m") or 0.0, 1),
                "gt_m": round(m.get("gt_dist_traveled_m") or 0.0, 1), "sim_s": drv.get("sim_s"), "wall_per_sim": drv.get("wall_per_sim"),
-               "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"),
+               "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"), "harmonizer": stack.harm,
                "attempt": prev.get("attempt", 0) + 1, "t": time.time()}
         write_json(self.run / "done" / (scene + ".json"), rec)
         self.log(rec)
@@ -241,6 +244,8 @@ def main():
     try:
         while True:
             c = ctl.read()
+            harm = track == "pai" and bool(c["options"].get("harmonizer"))
+            hs = "harmonizer %s" % ("on" if harm else "off")
             for a in [a for a in ctl.pending(st["consumed"])]:
                 st["consumed"].append(a["id"])
                 v = view()
@@ -272,6 +277,12 @@ def main():
                     end_stack("ended")
                     continue
                 held = v.get("scene") if v.get("waiting") and not v.get("closed") else None
+                if held and held in stack.ids and stack.harm != harm:     # option changed: new stack at this hold point
+                    if held not in plays and (not c["playlist"] or done(held)):
+                        plays.insert(0, held)
+                        chosen.add(held)
+                    end_stack(hs)
+                    continue
                 if held and held in stack.ids:
                     if held in plays:                          # AlpaSim picks the order inside a stack: any queued play counts
                         plays.remove(held)
@@ -284,6 +295,8 @@ def main():
                 state = "paused" if c["paused"] else "loading" if not v or v.get("closed") else "driving"
                 msg = ("%s held: press throttle" % sc.meta.get(held, {}).get("label", held)) if held and not c["paused"] else \
                     "resume on the panel" if c["paused"] else "stack %s, %d scenes" % (stack.dir.name, len(stack.ids))
+                msg = ("%s: restarting the stack at the next scene; " % hs + msg) if stack.harm != harm else \
+                    msg + ("   harmonizer on" if stack.harm else "")
                 report(item=v.get("scene") if v and not v.get("closed") else None, state=state, msg=msg)
                 time.sleep(0.3)
                 continue
@@ -316,9 +329,9 @@ def main():
                 time.sleep(0.3)
                 continue
             k += 1
-            launcher("running", "starting a stack for %d scene(s): about a minute" % len(todo))
-            stack = Stack(run, k, track, todo)
-            note("stack %s: %d scenes from %s" % (stack.dir.name, len(todo), sc.meta.get(todo[0], {}).get("label", todo[0])))
+            launcher("running", "starting a stack for %d scene(s)%s: about a minute" % (len(todo), ", harmonizer on" if harm else ""))
+            stack = Stack(run, k, track, todo, harm)
+            note("stack %s: %d scenes from %s, %s" % (stack.dir.name, len(todo), sc.meta.get(todo[0], {}).get("label", todo[0]), hs))
             report(item=todo[0], state="loading", msg="starting the stack (%d scenes)" % len(todo))
     except KeyboardInterrupt:
         pass

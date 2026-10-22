@@ -356,7 +356,7 @@ class HumanAgent(AutonomousAgent):
             "route_px": route_px, "route_marks": marks, "img_scale": self.scale,
             "human": {"steer_in": round(st["steer"], 3), "throttle_in": round(st["raw_throttle"], 3), "reverse": bool(st["reverse"]),
                       "handbrake": bool(st["handbrake"]), "stale": bool(st["stale"]), "age_ms": round(1e3 * min(st["age_s"], 99.0), 1),
-                      "rx_hz": st.get("rx_hz"), "stale_reason": st.get("reason"),
+                      "rx_hz": st.get("rx_hz"), "stale_reason": st.get("reason"), "source": st.get("source"),
                       "progress": round(prog, 4), "route_m": round(float(r.s[-1]), 0) if r is not None else None,
                       "wall_per_sim": round((self.raw_s + self.slept_s) / sim, 3) if self.sim_s else None,
                       "raw_per_sim": round(self.raw_s / sim, 3) if self.sim_s else None, "late": self.n_late,

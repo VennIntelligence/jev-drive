@@ -5,6 +5,8 @@ calibration (<live>/camera.json from the driver; for older sessions the scene's 
 banner from the route's shape, a small top-down inset (rig frame), side cameras when rendered, speed, applied steering /
 acceleration, the phone panel, scene progress, sim vs wall time, and "DRIVER: HUMAN (phone)". Reads <live>/state.json and *.jpg
 (lib/human_driver.py). A left click anywhere writes <live>/start: the held scene starts. Heartbeat <live>/viewer.json. Q / Esc closes.
+While the window has focus the keyboard drives too (arrows / WASD, Space handbrake; experiments/phone_wheel/lib/keyboard_wheel.py,
+merged with the phone in the wheel daemon). "HARMONIZER ON" shows when the stack renders with the diffusion harmonizer.
 
     /data/envs/carla/bin/python experiments/alpasim_human/scripts/human_viewer.py --dir /data/runs/alpasim_human/live
 """
@@ -13,10 +15,14 @@ import glob
 import json
 import math
 import os
+import sys
 import time
 
 import numpy as np
 import pygame
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../phone_wheel/lib"))
+from keyboard_wheel import KeyboardWheel, pygame_keys  # noqa: E402
 
 TITLE = "alpasim human drive (phone wheel)"
 BLUE, WHITE, GREY, ORANGE, RED, GREEN = (70, 170, 250), (230, 235, 240), (150, 150, 150), (255, 150, 60), (240, 70, 60), (80, 220, 120)
@@ -184,12 +190,16 @@ def fit(img, w, h):
     return pygame.transform.smoothscale(img, (int(img.get_width() * r), int(img.get_height() * r)))
 
 
-def draw(c, st, live, imgs, F, status, cal=None):
+def draw(c, st, live, imgs, F, status, cal=None, kb=""):
     font, big, tag, huge = F
     lab = lambda m, p, col=WHITE, f=None: c.blit((f or font).render(m, True, col), p)  # noqa: E731
     t = tag.render("DRIVER: HUMAN (phone)", True, (0, 0, 0))
     pygame.draw.rect(c, ORANGE, (14, 3, t.get_width() + 20, 42), border_radius=8)
     c.blit(t, (24, 24 - t.get_height() // 2))
+    if st.get("harmonizer"):
+        h = tag.render("HARMONIZER ON", True, (0, 0, 0))
+        pygame.draw.rect(c, GREEN, (CW - h.get_width() - 34, 3, h.get_width() + 20, 42), border_radius=8)
+        c.blit(h, (CW - h.get_width() - 24, 24 - h.get_height() // 2))
     waiting = st.get("waiting") and status == "LIVE"
     if status == "LIVE":
         line, col = ("SKIPPING", GREY) if st.get("aborted") else ("PAUSED", ORANGE) if st.get("paused") else ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
@@ -260,8 +270,9 @@ def draw(c, st, live, imgs, F, status, cal=None):
         lab(n, (x2, y0 + 34 + 30 * i))
         bar(c, x2 + 100, y0 + 38 + 30 * i, 400, 18, st.get(k) or 0, colr, cen)
     age = st.get("age_ms")
-    lab("input age %s   %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if st.get("stale") else "ok"),
-        (x2, y0 + 128), RED if st.get("stale") else WHITE)
+    lab("input age %s   %s   source %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if st.get("stale") else "ok",
+                                           st.get("source") or "-"), (x2, y0 + 128), RED if st.get("stale") else WHITE)
+    lab(kb, (x2, y0 + 158), GREY)
     lab("SCENE / CLOCK", (x3, y0), (150, 200, 255))
     tot = st.get("sim_total") or 0
     lab("sim %.1f s of ~%.1f s" % (st.get("sim_t") or 0, tot), (x3, y0 + 34))
@@ -288,7 +299,7 @@ def main():
     pygame.display.set_caption(TITLE)
     c = pygame.Surface((CW, CH))
     F = tuple(pygame.font.SysFont("DejaVu Sans", s, bold=b) for s, b in ((22, False), (44, True), (30, True), (90, True)))
-    clock, cache, st, st_m, beat, calib = pygame.time.Clock(), {}, {}, None, 0.0, Calib(a.dir)
+    clock, cache, st, st_m, beat, calib, kb = pygame.time.Clock(), {}, {}, None, 0.0, Calib(a.dir), KeyboardWheel()
     os.makedirs(a.dir, exist_ok=True)
     while True:
         for e in pygame.event.get():
@@ -300,6 +311,7 @@ def main():
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 with open(os.path.join(a.dir, "start"), "w") as fh:
                     fh.write(json.dumps({"t": time.time()}))
+        kb.update(pygame_keys(pygame))
         if time.time() - beat > 1:
             beat = time.time()
             tmp = os.path.join(a.dir, "viewer.tmp")
@@ -317,7 +329,7 @@ def main():
         status = "BETWEEN" if st.get("closed") and age < 120 else ("LIVE" if st and age < 10 and not st.get("closed") else "IDLE")
         imgs = {k: load(os.path.join(a.dir, k + ".jpg"), cache) for k in ("front", "left", "right")} if st else {}
         c.fill((17, 21, 29))
-        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None)
+        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None, kb.text())
         r = min(screen.get_width() / CW, screen.get_height() / CH)
         screen.fill((0, 0, 0))
         screen.blit(pygame.transform.smoothscale(c, (max(1, int(CW * r)), max(1, int(CH * r)))), (0, 0))
