@@ -40,6 +40,7 @@ import os
 import re
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -69,30 +70,54 @@ def dkey(scene, driver):
 
 
 class ModelSvc(object):
-    """The model driver service of model mode (scripts/model_driver.sh, container <prefix>-model), started without blocking the loop."""
+    """The model driver service of model mode (scripts/model_driver.sh, container <prefix>-model), started without blocking the loop.
+    The container outlives the loop (a new loop with the same track / tag reuses it; its labels name track, tag, port, card, out
+    dir); human mode, a tag switch, a failed start or the resident stack's idle stop remove it."""
 
     def __init__(self):
         self.name = "%s-model" % os.environ.get("HUMAN_PREFIX", "hres")
         self.track = self.tag = self.proc = None
         self.err, self.t0, self.out, self.ok, self.t_ok = "", 0.0, None, False, 0.0
+        lab = self.labels()                                     # a container a previous loop left running
+        if lab.get("human.port") == MODEL_PORT and lab.get("human.gpu") == GPU and lab.get("human.tag"):
+            self.track, self.tag, self.out = lab.get("human.track"), lab["human.tag"], Path(lab.get("human.out") or "/tmp")
+
+    def labels(self):
+        try:
+            return json.loads(sh("docker inspect -f '{{if .State.Running}}{{json .Config.Labels}}{{end}}' %s 2>/dev/null" % self.name)
+                              .strip() or "{}") or {}
+        except ValueError:
+            return {}
 
     def running(self):
-        if time.time() - self.t_ok > 5:                         # docker inspect at most every 5 s
-            self.ok, self.t_ok = sh("docker inspect -f '{{.State.Running}}' %s 2>/dev/null" % self.name).strip() == "true", time.time()
+        """The container runs and MODEL_PORT accepts a connection (inspect at most every 5 s while true)."""
+        if not self.ok or time.time() - self.t_ok > 5:
+            up = sh("docker inspect -f '{{.State.Running}}' %s 2>/dev/null" % self.name).strip() == "true"
+            if up:
+                try:
+                    socket.create_connection(("127.0.0.1", int(MODEL_PORT)), timeout=1).close()
+                except OSError:
+                    up = False
+            self.ok, self.t_ok = up, time.time()
         return self.ok
 
     def ensure(self, track, tag):
-        """True once `tag` listens on MODEL_PORT for `track`; starts (or switches) it otherwise. self.err: why it failed."""
+        """True once `tag` listens on MODEL_PORT for `track` (model_driver.sh exited 0 for this start, or a reused container that
+        accepts connections); starts (or switches) it otherwise. self.err: why it failed."""
         if (self.track, self.tag) == (track, tag):
             if self.proc is not None and self.proc.poll() is not None:
                 rc, self.proc = self.proc.returncode, None
                 if rc:
                     self.err = (self.out / "start.out").read_text().strip().splitlines()[-1:] or ["exit %d" % rc]
                     self.err = "model driver %s did not start: %s" % (tag, self.err[0])
-            if self.proc is None:
-                return not self.err and self.running()
-            return False
-        self.stop()
+                self.ok, self.t0 = False, time.time()
+            if self.proc is not None or self.err:
+                return False
+            if self.running():
+                return True
+            if time.time() - self.t0 < 10:                      # just ready: the port check may lag the driver's log line
+                return False
+        self.stop()                                             # other tag, or the container went away: (re)start it
         self.track, self.tag, self.err, self.t0 = track, tag, "", time.time()
         self.out = D / "runs/alpasim_human/models" / ("%s-%s-%s" % (track, tag, time.strftime("%m%d-%H%M%S")))
         self.out.mkdir(parents=True, exist_ok=True)
@@ -102,15 +127,20 @@ class ModelSvc(object):
                                          stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
         return False
 
+    def detach(self):
+        """Loop exit: a started service stays for the next loop; one still starting is stopped."""
+        if self.proc is not None or self.err:
+            self.stop()
+
     def stop(self):
         if self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
             self.proc.wait()
-        if self.tag is not None and self.out is not None:
+        if self.tag is not None and self.out is not None and self.out.is_dir():
             sh("docker logs %s > %s/driver.log 2>&1" % (self.name, self.out))
         sh("docker rm -f %s >/dev/null 2>&1" % self.name)
         self.track = self.tag = self.proc = None
-        self.t_ok = 0.0
+        self.ok, self.t_ok = False, 0.0
         self.err = ""
 
 
@@ -567,6 +597,9 @@ def main():
                     progress("loading", "%s: waiting for the previous scene to end" % label(req["scene"]), req["t"], req["scene"])
                 elif not v:
                     progress("loading", "loading %s: renderer loading the scene" % label(req["scene"]), b.get("t_sent"), req["scene"])
+                elif v.get("model_wait") is not None and not started:
+                    progress("loading", "loading %s: waiting for model driver %s to accept connections" % (label(req["scene"]), req["driver"]),
+                             b.get("t_sent"), req["scene"])
                 elif v.get("waiting") and not started:
                     progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else
                              "%s held: press throttle" % label(req["scene"]), None, req["scene"])
@@ -627,7 +660,10 @@ def main():
         pass
     finally:
         report(item=None, state="stopped", msg="")
-        model.stop()
+        if res is not None:                                     # a warm stack keeps a started model driver for the next loop
+            model.detach()
+        else:
+            model.stop()
         if res is not None:
             if req and res.result(req["name"]) is None:
                 if res.busy().get("name") == req["name"]:

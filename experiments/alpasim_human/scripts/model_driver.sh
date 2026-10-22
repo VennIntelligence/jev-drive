@@ -9,6 +9,7 @@
 # Container restrictions as the official runner's local copy (read-only root, /tmp 2 GB, no new privileges), host network (loopback only).
 # Env: HUMAN_GPU (0), HUMAN_MODEL_PORT (6791), HUMAN_LIVE, HUMAN_PREFIX (hum), HUMAN_MODEL_IMG_PAI / HUMAN_MODEL_IMG_NUPLAN,
 #   HUMAN_MODEL_ENV (extra `-e K=V`, space separated, e.g. "-e JEV_ACC=0"), DATA_DIR (/data).
+# Labels human.{track,tag,port,gpu,out} let a later loop reuse a running container (scripts/human_loop.py ModelSvc).
 # Writes <out>/{driver.log (docker logs at stop), logs/ (the driver's drive.jsonl / start.jsonl), info.json}.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$here/../../.." && pwd)
@@ -29,6 +30,7 @@ mkdir -p "$OUT/logs" "$LIVE"; chmod 777 "$OUT/logs"
 docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges:true --read-only --pids-limit 1024 --memory 32g --cpus 8 \
   --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network host --gpus "device=$GPU" \
   --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$CK:/app/data/runs/op_parity/runs/$TAG:ro" -v "$OUT/logs:/logs" -v "$LIVE:$LIVE" \
+  --label "human.track=$TRACK" --label "human.tag=$TAG" --label "human.port=$PORT" --label "human.gpu=$GPU" --label "human.out=$OUT" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$PORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "SH30_TAG=$TAG" -e "HUMAN_LIVE=$LIVE" \
   ${HUMAN_MODEL_ENV:-} --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/model_view.py" "$TRACK" >/dev/null || { echo "docker run failed"; exit 1; }
 t0=$(date +%s)

@@ -314,7 +314,13 @@ the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in t
   (`jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7`: `pai_driver.py`, JEV_VCONT 1.0, JEV_LEAD, JEV_ACC, JEV_GAP 0.7,2.7,
   JEV_TRACK gate). nuPlan uses the native JTN-L18-s1 image (`jev-alpasim:jtn-l18-s1-ba3ef44d`: `sh30_driver.py`, every switch off). Any
   sh30-family tag gets that track's served configuration (`HUMAN_MODEL_ENV` adds `-e` flags). It starts in about 22 s, the first time
-  model mode is used in a loop and when the tag changes. It stops when the driver goes back to human or the loop exits.
+  model mode is used and when the tag changes. A loop requests a scene only after the start reported "listening" (or, for a
+  container a previous loop left running with the same track / tag / port / card, once its port accepts connections); the delegating
+  driver retries an UNAVAILABLE start_session for up to 60 s ("waiting for model driver" in the banner) on a fast-reconnect channel.
+  It stays warm across loops while the resident stack does, and stops when the driver goes back to human, the tag changes, the start
+  fails, or the resident stack stops idle. (10-22 bug: a new loop removed the previous loop's container and started a new one; the
+  resident driver's cached channel to 127.0.0.1:6791 was still in gRPC's default reconnect backoff, so the first start_session failed
+  "Connection refused" 5 s after the new service listened.)
 - Stack: model mode renders the front camera as the preset does, whatever the "Render size" is: 1080 px (auto unharmonised is
   1080 already). On PAI it also keeps the 10 Hz frame interval and the shipped harmonizer resolution when the harmonizer is on, and it
   uses the submissions' steering weight (`controller.gains.rel_front_steering_angle_weight=10`, `HUMAN_MODEL_WIZ`). These are fixed per
