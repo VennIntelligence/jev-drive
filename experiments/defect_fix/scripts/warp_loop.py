@@ -225,13 +225,14 @@ def cmd_slot(a):
     run = Path(a.run)
     name = "_".join(run.parts[-3:-1]) if run.name == "run" else run.name
     core = SC.Core(NG.CKPT[a.tag], "cuda", "backwarp")
+    core.compile()                                                # the served passes (sh30_driver SH30_COMPILE=1; prereg addendum 1)
 
     def plan(cur, valid, ego, rmem, cam_t):
         prev = np.concatenate([np.zeros((1,) + cur.shape[1:], np.uint8), cur[:-1]])
         pp, cu = (torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
-        H = core.model.net.run_batched(core.A.vision_feeds(pp, cu), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *core.A.H_SHAPE)
+        H = core._enc(pp, cu).reshape(1, int(valid.sum()), *core.A.H_SHAPE)
         r_ = np.r_[ego, np.asarray(rmem, np.float32)] if core.rm else ego
-        o = core.model(H, torch.from_numpy(r_[None].astype(np.float32)).to(core.dev), torch.tensor([[1.0, 0.0]], device=core.dev))
+        o = core._pol(H, torch.from_numpy(r_[None].astype(np.float32)).to(core.dev), torch.tensor([[1.0, 0.0]], device=core.dev))
         mu = (o[0] if isinstance(o, tuple) else o).float()[0, core.pi].reshape(33, 15).cpu().numpy()
         return I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")[:, :3]
 

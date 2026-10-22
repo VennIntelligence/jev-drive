@@ -55,3 +55,11 @@ warp 出来（`sh30_core.lattice_gpu`，与 `op_interp.synth_cpu` `warp` 同一�
 
 - 每模型约 270 窗、约 2 000 个 k >= 3 决策；B2 6 个 dump 读（各约 45 窗）+ 12 个开环 job + 1 个报告 job，都经 GPU 池串起。
 - 门不过就停下查原因，不读结果。
+
+## 补记 1（2026-10-22 16:20，只看了门的列，规则间比较未读）
+
+NTV0 前 3 个分片（1 350 个决策）门不过：dump 帧前向 F 对 dump 的 served plan p99 0.079 m、max 0.125 m（线 0.06 / 0.15 的 p99 不过），
+N 对 served plan 同样（p99 0.078）；但 N 对 F（同一前向、重建帧对 dump 帧）p99 0.058、max 0.0625，帧重建是干净的。差按 plan 远端
+距离成台阶增长（32–64 m 段中位正好 0.03125 m = fp16 的 1 ulp），是 slot job 用 op_torch 解释器前向、serve 用 `Core.compile()`
+（`SH30_COMPILE=1`）的 fp16 舍入差（lat1_frame_synthesis.md 记过约 1 cm 级）。改法：slot job 改用 serve 同一组编译前向
+（`core.compile()`，`_enc` / `_pol`），门与判读线不变；已跑的 NTV0 结果作废重跑。
