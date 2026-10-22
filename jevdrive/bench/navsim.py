@@ -443,6 +443,7 @@ def agent_cmd(c: dict, tokens: Path, out: Path) -> list:
         return [str(x).format(py=py, repo=c["repo"], tokens=tokens, out=out) for x in c["cmd"]]
     return [py, str(AGENT_POSES), "--repo", c["repo"], "--config-name", c.get("config_name", "default_run_pdm_score"),
             *(["--config-dir", c["config_dir"]] if c.get("config_dir") else []), "--tokens", str(tokens), "--out", str(out),
+            "--sensors", json.dumps(c.get("sensor_overrides", {})), "--loader-kw", json.dumps(c.get("loader_kwargs", {})),
             "--", *c.get("overrides", [])]
 
 

@@ -289,7 +289,9 @@ class TestAgentFamily(TmpData):
         v2 shards + v1 PDMS -> collect; the pred file lives in the run dir; merge keeps bench token order."""
         import numpy as np
         from jevdrive.bench import navsim as NV
-        m = M.resolve("DiffusionDrive")
+        with self.assertRaises(ValueError):                                       # PD2: LiDAR agents disabled
+            M.resolve("DiffusionDrive")
+        m = M.resolve("ReCogDrive-2B-RL")
         self.assertEqual((m.family, m.benches), ("agent", ("navtest",)))
         toks = np.array([f"t{i}" for i in range(6)])
         logs = np.array(["a", "a", "b", "b", "c", "c"])
@@ -299,15 +301,17 @@ class TestAgentFamily(TmpData):
             names = [x.name for x in st]
             self.assertEqual(names, ["poses0of1", "merge", "score0of2", "score1of2", "score_v1", "collect"])  # min_chunk 200 -> 1 chunk
             cmd = st[0].cmd
-            self.assertTrue(cmd[0].endswith("envs/p0-navsim1-gpu/bin/python") and cmd[1].endswith("agent_poses.py"))
+            self.assertTrue(cmd[0].endswith("envs/p0-recogdrive/bin/python") and cmd[1].endswith("agent_poses.py"))
+            self.assertEqual(json.loads(cmd[cmd.index("--sensors") + 1]), {"lidar_pc": False})
             ov = cmd[cmd.index("--") + 1:]
-            self.assertIn("agent=diffusiondrive_agent", ov)
+            self.assertIn("agent=recogdrive_agent", ov)
             self.assertTrue(any(str(self.D) in x for x in ov))                      # $DATA_DIR expanded
-            self.assertEqual(st[0].env["PYTHONPATH"], str(self.D / "third_party/diffusiondrive"))
+            self.assertEqual(st[0].env["PYTHONPATH"], str(self.D / "third_party/recogdrive"))
+            self.assertEqual(st[0].env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"], "1")
             self.assertEqual((run / "poses/c0of1.tsv").read_text().split("\n")[0], "t0\ta")
             self.assertEqual(st[-1].after, ["score0of2", "score1of2", "score_v1"])
             np.savez(run / "poses/c0of1.npz", tokens=toks[::-1], poses=np.arange(6 * 24, dtype=np.float32).reshape(6, 8, 3)[::-1], wall_s=3.0)
-            NV.agent_merge("DiffusionDrive", "navtest", str(run))
+            NV.agent_merge("ReCogDrive-2B-RL", "navtest", str(run))
         z = np.load(NV.preds_of(m, "navtest", run))
         self.assertEqual(z["tokens"].tolist(), toks.tolist())
         self.assertEqual(float(z["poses"][1, 0, 0]), 24.0)

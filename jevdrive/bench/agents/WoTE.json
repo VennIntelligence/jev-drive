@@ -1,9 +1,10 @@
 {
+ "disabled": "PD2 (research/paper/decisions.md): camera-only subjects only; this agent reads LiDAR, which is not on the box",
  "kind": "world-model",
  "note": "WoTE (BEV world model rolls out candidate trajectories, reward scorer; TransFuser base), released checkpoint, run as shipped",
  "repo": "$DATA_DIR/third_party/wote",
  "commit": "298957c128a91d41a1c6075bd0bb6e7e845e093f",
- "env": "p0-navsim1-gpu",
+ "env": "p0-wote",
  "ckpt": "$DATA_DIR/models/wote/epoch=29-step=19950.ckpt",
  "overrides": [
   "split=test",

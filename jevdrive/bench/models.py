@@ -200,6 +200,8 @@ def resolve(spec: str, check: bool = False) -> Model:
         m = replace(m, ckpt=expand(m.ckpt)) if m.ckpt else m
     elif agent_cfg(name):
         c = agent_cfg(name)
+        if c.get("disabled"):
+            raise ValueError(f"{name}: disabled in jevdrive/bench/agents/{name}.json: {c['disabled']}")
         m = Model(name, "agent", ckpt=c.get("ckpt", ""), note=f"{c['kind']}: {c['note']}", inputs=tuple(c.get("inputs", ())),
                   benches=("navtest",))
     elif re.fullmatch(r"P0|P[123]-init", name):
@@ -263,7 +265,8 @@ def listing() -> list:
             rows.append(dict(name=n, family="onnx", frames="gimm", weights=expand(c["onnx"]), note=c.get("note", "")[:80]))
     for f in sorted(AGENT_DIR.glob("*.json")):
         c = agent_cfg(f.stem)
-        rows.append(dict(name=f.stem, family="agent", frames="", weights=c.get("ckpt", ""), note=f"{c['kind']}: {c['note']}"[:80]))
+        rows.append(dict(name=f.stem, family="agent", frames="", weights=c.get("ckpt", ""),
+                         note=(f"DISABLED ({c['disabled']}) " if c.get("disabled") else "") + f"{c['kind']}: {c['note']}"[:80]))
     runs = parity_root() / "runs"
     if runs.is_dir():
         for d in sorted(runs.iterdir()):

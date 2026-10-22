@@ -15,6 +15,7 @@ chunk.tsv: one `token<TAB>log` per line. Output written atomically; re-running w
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -38,7 +39,17 @@ def build(repo: Path, config_dir: str, config_name: str, overrides) -> tuple:
     return cfg, agent
 
 
-def scene_loader(cfg, agent, tokens, logs, split_filter=None, blobs=None, data=None):
+def sensor_config(agent, overrides: dict = None):
+    """agent.get_sensor_config() with field overrides (e.g. {"lidar_pc": False} for an agent that requests LiDAR but never
+    reads it; PD2, recorded per model in jevdrive/bench/agents/<model>.json)."""
+    sc = agent.get_sensor_config()
+    for k, v in (overrides or {}).items():
+        assert hasattr(sc, k), f"SensorConfig has no field {k}"
+        setattr(sc, k, v)
+    return sc
+
+
+def scene_loader(cfg, agent, tokens, logs, split_filter=None, blobs=None, data=None, sensors: dict = None, loader_kw: dict = None):
     """SceneLoader as run_pdm_score.py builds it (the split's scene filter, restricted to these logs / tokens). split_filter /
     blobs / data override the config's filter and paths (P1 fits on navtrain with the navtest-configured agent)."""
     from hydra.utils import instantiate
@@ -48,7 +59,7 @@ def scene_loader(cfg, agent, tokens, logs, split_filter=None, blobs=None, data=N
     sf.log_names = list(logs)
     sf.tokens = list(tokens)
     L = SceneLoader(sensor_blobs_path=Path(blobs or cfg.sensor_blobs_path), data_path=Path(data or cfg.navsim_log_path), scene_filter=sf,
-                    sensor_config=agent.get_sensor_config())
+                    sensor_config=sensor_config(agent, sensors), **(loader_kw or {}))
     missing = sorted(set(tokens) - set(L.tokens))
     assert not missing, f"{len(missing)} tokens not found by the SceneLoader, e.g. {missing[:3]}"
     return L
@@ -75,6 +86,8 @@ def main(argv=None) -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=0, help="torch / numpy seed (the forks' eval scripts set none)")
     ap.add_argument("--limit", type=int, default=0, help="first N tokens only (setup checks)")
+    ap.add_argument("--sensors", default="{}", help="JSON SensorConfig field overrides, e.g. {\"lidar_pc\": false}")
+    ap.add_argument("--loader-kw", default="{}", help="JSON extra SceneLoader kwargs as the fork's scorer passes them")
     ap.add_argument("overrides", nargs="*")
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -91,7 +104,7 @@ def main(argv=None) -> None:
     torch.manual_seed(a.seed)
     np.random.seed(a.seed)
     cfg, agent = build(repo, a.config_dir, a.config_name, a.overrides)
-    loader = scene_loader(cfg, agent, tokens, logs)
+    loader = scene_loader(cfg, agent, tokens, logs, sensors=json.loads(a.sensors), loader_kw=json.loads(a.loader_kw))
     poses = np.full((len(tokens), 8, 3), np.nan, np.float32)
     t0 = time.time()
     with torch.no_grad():
