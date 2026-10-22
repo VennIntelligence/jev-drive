@@ -318,9 +318,9 @@ def cmd_gate(a):
         pre = j[(t0[j] < e) & (t0[j] >= e - 2_500_000)]
         if len(at):
             i = at[np.argmin(t0[at])]
-            ag_rows.append(dict(scene=s, at=True, off=bool(m_stu[i] < 0), plan=bool(served["road"][i] > 0), v0=float(M["v0"][i])))
+            ag_rows.append(dict(scene=s, at_ev=True, off=bool(m_stu[i] < 0), plan=bool(served["road"][i] > 0), v0=float(M["v0"][i])))
         elif len(pre):
-            ag_rows.append(dict(scene=s, at=False, off=bool((m_stu[pre] < 0).any()), plan=bool((served["road"][pre] > 0).any()),
+            ag_rows.append(dict(scene=s, at_ev=False, off=bool((m_stu[pre] < 0).any()), plan=bool((served["road"][pre] > 0).any()),
                                 v0=float(M["v0"][pre].max())))
     ctrl = np.concatenate(ctrl)
     A = pd.DataFrame(ag_rows)
@@ -328,9 +328,9 @@ def cmd_gate(a):
                    human_t0_inside=float((m_hum[hl & ok] >= 0).mean()), human_t0_inside_0p3=float((m_hum[hl & ok] >= MARGIN).mean()),
                    human_t0_inside_close=float((m_hum[hl & ok & (np.hypot(*M["log0"][:, :2].T) < 3)] >= 0).mean()),
                    student_t0_off_all=float((m_stu[ok] < 0).mean()), student_t0_off_cand=float((m_stu[ok & draw] < 0).mean()),
-                   offroad_scenes=int((A.shape[0])), offroad_event_rows_in_pool=int(A.at.sum()) if len(A) else 0,
+                   offroad_scenes=int((A.shape[0])), offroad_event_rows_in_pool=int(A.at_ev.sum()) if len(A) else 0,
                    agree_off_or_plan=float((A.off | A.plan).mean()) if len(A) else None, agree_t0_off=float(A.off.mean()) if len(A) else None,
-                   agree_at_event_only=float((A[A.at].off | A[A.at].plan).mean()) if len(A) and A.at.any() else None,
+                   agree_at_event_only=float((A[A.at_ev].off | A[A.at_ev].plan).mean()) if len(A) and A.at_ev.any() else None,
                    control_rows=int(len(ctrl)), control_t0_off=float((m_stu[ctrl][ok[ctrl]] < 0).mean()),
                    control_served_road_active=float((served["road"][ctrl] > 0).mean()))
     print("G1", json.dumps(G["G1"]), flush=True)
