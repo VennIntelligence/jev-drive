@@ -1,0 +1,25 @@
+{
+ "n": 24,
+ "G1_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G2_loader_vs_agent": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G3_sweep_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G5_vs_stored_9171_max_abs_m": 0.35709381103515625,
+ "passed": true
+}

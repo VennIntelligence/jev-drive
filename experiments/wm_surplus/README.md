@@ -101,7 +101,25 @@ image input of the flow planner. PCA fit on navtrain logs of the `navtrain_{curr
 this, cameras L0 / F0 / R0 / B0 only), arms off, k 8 .. 512. Outputs: `$DATA_DIR/runs/wm_surplus/p1_usage/` (pca, gate,
 sweep chunks, ev.json; bench runs `runs/bench/navtest/PROBE-wajepa-ctx-*`), small results in `results/p1_usage/`.
 
-Results: pending (PD5).
+Results (PD5; tables in [results/p1_usage/](results/p1_usage/)): identity gate bit-identical on 24 tokens (hook off, loader
+path, cached sweep, determinism); arm `off` EPDMS 91.71 (= the September read). Retained EPDMS per k (8 .. 256): 0.80 / 0.85 /
+0.95 / 0.97 / 0.99 / 0.998; k95 = 64 (CI-backed; point 32), k99 = 256 (point 128) of 512; navtest explained variance at k 64
+is 0.63. Losses concentrate in turns > 45 deg and right turns ([navtest_strata.md](results/p1_usage/results/navtest_strata.md)).
+Pre-registered reading: partial (between 32 and 256). Level (b): running.
+
+### Knows vs does (any subject)
+
+`lib/know_do.py` + `scripts/p1_knowdo.py`: a subject writes one npz (`tokens`, `X` = training-free pooled planner-input
+features, `B` = the planner's non-image inputs) and has its navtest plans as a bench pred file; the script classes GT and plan
+with the bench's manoeuvre strata and fits log-fold logistic probes (`blind`, `feat`, `feat+blind`) -> per-class knows / does
+table with log-bootstrap CIs and the pre-registered verdicts ([plans/2026-10-23-p1-knowdo-prereg.md](plans/2026-10-23-p1-knowdo-prereg.md)).
+WA-JEPA features: `scripts/p1_wajepa_feats.py`. WA-JEPA result: no "sees but does not do" class; the plan's per-class recall
+beats the linear probe in every class (balanced accuracy 0.875 vs 0.685)
+([knowdo_wajepa.md](results/p1_usage/results_kd/knowdo_wajepa.md)).
+
+Throughput note: the WA-JEPA flow planner is compute-bound in fp32 (0.9 s per call; encoder 0.08 s, loading 0.1 s);
+batching 4 tokens x 8 arms gains ~5 %, TF32 nothing, bf16 4x but moves plans up to 0.27 m, so fp32 was kept
+([profile.json](results/p1_usage/profile.json)). Declare >= 45 GB per sweep shard so the pool never stacks two on one card.
 
 ## P2 swap: WA-JEPA trained with the NTV0 recipe (PD8; feasibility only)
 

@@ -1,0 +1,31 @@
+{
+ "name": "wajepa",
+ "tokens": 12146,
+ "balanced_accuracy": {
+  "blind": 0.5342436586795192,
+  "feat": 0.6848159484350829,
+  "feat+blind": 0.6853963042781006,
+  "plan": 0.8754357884169186
+ },
+ "regression_r2": {
+  "dyaw_deg": {
+   "blind": 0.7496957111779863,
+   "feat+blind": 0.8645068359059562,
+   "plan": 0.9594485896941233
+  },
+  "lat_4s_m": {
+   "blind": 0.8262414003611325,
+   "feat+blind": 0.8982331222789829,
+   "plan": 0.9710842666041383
+  }
+ },
+ "verdicts": {
+  "straight": "does what it sees",
+  "left turn": "does what it sees",
+  "curve": "unclear",
+  "launch": "unclear",
+  "right turn": "unclear",
+  "stop": "unclear",
+  "lane change": "unclear"
+ }
+}
