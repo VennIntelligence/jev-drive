@@ -136,7 +136,12 @@ execution check only). The LiDAR subjects (hustvl DiffusionDrive, WoTE) are disa
   `scripts/p1_knowdo.py`. **Request to the P1 lane**: for comparability, also refit WA-JEPA with the same 2 log folds
   (`p1_agent.fold_of_logs`) next to its navtrain fit; the subjects' rows will be labelled "navtest 2-fold cross-fit" either way.
 
-Results: pending (PD6).
+Results (PD6): reproduced within 0.5 v1 PDMS on all 12 146 navtest tokens: ReCogDrive-2B-RL 90.52 (published 90.8; EPDMS 82.70),
+AutoVLA 89.53 (89.11; 89.24), DriveVLA-W0 87.04 (87.2; 87.00); SimScale-LTF / -DD 87.28 / 87.35 (EPDMS 87.84 / 86.28; no published
+number). P1 on ReCogDrive (cross-fitted PCA of the LM hidden state, 1536-d): k95 = 512, k99 = 1024; knows-vs-does: stop = sees but
+does not do (0.442 vs 0.152), turns / straight = does what it sees. Tables: `results/p0_subjects/*_full.json`,
+[results/p0_subjects/p1_recogdrive/p1_readout.md](results/p0_subjects/p1_recogdrive/p1_readout.md),
+[knowdo_recog-lmh.md](results/p0_subjects/p1_recogdrive/knowdo_recog-lmh.md).
 
 ## Files
 
