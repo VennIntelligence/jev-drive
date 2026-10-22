@@ -9,7 +9,7 @@
 #                         R8K-L18-s0 / s1 -> PAI 281 OFF + ON each -> ruler (collect + 20 boots) -> report -> $K/DONE
 #   r8k.sh s2             (PRIO 20, amendment 1) third seed of both recipes: R6DAG-L18-s2 (R6DAG argv) and R8K-L18-s2 (R8K argv), each -> PAI 281
 #                         OFF + ON -> r8k.py seeds (3-seed recipe means, after R8K-s1's ON tax too) -> $S2/DONE
-#   r8k.sh ruler2         (amendment 1) DAG-s2 / R8K-s2 into the ruler with pcs_r8k's fits (same draws; out-of-pool rows do not enter the fits)
+#   r8k.sh ruler2         (amendment 1) DAG-s2 / R8K-s2 into the ruler: collect -> the same 20 boot seeds as R8K's ruler (same draws) -> r5
 #                         -> $S2/results/pcs_s2.{md,json}, $S2/RULER
 #   r8k.sh wait <K|N|S> [M] one run_in_background waiter: the marker (default DONE), $K/VERDICT or a failed / cancelled job of that lane
 #   r8k.sh printargv <variant> <steps> <tag> <seed>   r6 = R6DAG's argv; id = HEAD with every switch off (on1_JTPHDI / R7J0); k = the arm
@@ -170,13 +170,20 @@ report)
   $V $PY verdict --json $RES/pai281_R8K.json --md $RES/pai281_R8K.md --pcs $RES/pcs_r8k.json --read "${rd[@]}" || die verdict
   date '+%F %T' > $K/DONE ;;
 ruler2)
-  LANE=$S2; P0=$DATA_DIR/tmp/pcs_r8k; PT=$DATA_DIR/tmp/pcs_r8k2; [[ ! -e $PT ]] || die "$PT exists"; mkdir -p $PT/out/fits && cp $P0/out/fits/*.npz $PT/out/fits/
+  LANE=$S2; P0=$DATA_DIR/tmp/pcs_r8k; PT=$DATA_DIR/tmp/pcs_r8k2; [[ ! -e $PT/rows.csv.gz ]] || die "$PT exists"; mkdir -p $PT/out/fits && cp $P0/out/fits/*.npz $PT/out/fits/
   EV=(env OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONPATH=$DATA_DIR/tmp/pcs_r5/site); X=experiments/alpasim_proxy/scripts/pai_pcs_local.py
+  c=$(sub $S2 20 s2-pcs-collect --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- "${EV[@]}" $V $X collect --out $PT/rows.csv.gz --only DAG-s2+AG,R8K-s2+AG \
+      --base $P0/rows.csv.gz) || exit 1
+  b=(); for k in $(seq 0 5 95); do b+=($(sub $S2 20 s2-pcs-boot-$k --after $c --vram 0.1 --cpu 4 --ram 16 --timeout-h 3 -- "${EV[@]}" $V $X fit --rows $PT/rows.csv.gz \
+      --out $PT/out --variants - --boot 5 --boot0 $k)) || exit 1; done
+  r=$(sub $S2 20 s2-ruler --after $(csv ${b[@]}) --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- "${EV[@]}" bash $ME ruler2rep) || exit 1
+  echo "$(date '+%F %T') ruler2: collect $c boot ${b[*]} report $r" | tee -a $S2/stages.txt ;;
+ruler2rep)
+  PT=$DATA_DIR/tmp/pcs_r8k2; X=experiments/alpasim_proxy/scripts/pai_pcs_local.py
   sj="R3MV-s0+AG=R3MV-L18-s0-281ag.csv"; for s in 0 1 2; do sj="$sj,DAG-s$s+AG=R6DAG-L18-s$s-281ag.csv,R8K-s$s+AG=R8K-L18-s$s-281ag.csv"; done
-  c="${EV[*]} $V $X collect --out $PT/rows.csv.gz --only DAG-s2+AG,R8K-s2+AG --base $P0/rows.csv.gz && ${EV[*]} $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ \
-     --subjects $sj --pairs R8K-s0+AG:DAG-s0+AG,R8K-s1+AG:DAG-s1+AG,R8K-s2+AG:DAG-s2+AG > $PT/out/r5.log 2>&1 && cp $PT/out/r5_report.md $S2/results/pcs_s2.md \
-     && cp $PT/out/pai_pcs_local_r5.json $S2/results/pcs_s2.json && date '+%F %T' > $S2/RULER"
-  r=$(sub $S2 20 s2-ruler --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash -c "$c") || exit 1; echo "$(date '+%F %T') ruler2 $r" | tee -a $S2/stages.txt ;;
+  $V $X r5 --rows $PT/rows.csv.gz --out $PT/out --facts $F_ --subjects "$sj" --pairs R8K-s0+AG:DAG-s0+AG,R8K-s1+AG:DAG-s1+AG,R8K-s2+AG:DAG-s2+AG \
+    > $PT/out/r5.log 2>&1 || die "ruler2 report (log $PT/out/r5.log)"
+  cp $PT/out/r5_report.md $S2/results/pcs_s2.md && cp $PT/out/pai_pcs_local_r5.json $S2/results/pcs_s2.json && date '+%F %T' > $S2/RULER ;;
 printargv) argv "${@:2}" ;;
 wait) case ${2:-K} in K) waiter $K ${3:-DONE} ;; N) waiter $N_ ${3:-DONE} ;; S) waiter $S2 ${3:-DONE} ;; *) die "wait K|N|S" ;; esac ;;
 *) sed -n 2,18p "$0"; exit 2 ;;
