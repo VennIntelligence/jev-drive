@@ -214,7 +214,8 @@ PY
 full)     # amendment 3: full <chk1 job id>: the 24 roll chunks now; per chunk its rows pipeline (geo -> tok -> teach -> label, route -> anchor,
           # strip) --after that chunk only, one pool (and staging / rows dir) per chunk: on1_ND001 .. on1_ND024 (+ the probe pool on1_NDP = c000);
           # the pooled gates, append, weights, smoke, identity, build and the trainings after every chunk AND the probe's chk1
-  C1=${2:?chk1 job id}; [[ ! -e $O/roll/c001 ]] || die "full already submitted"
+  C1=${2:?chk1 job id}; RR=(${ND_ROLLS//,/ })                                     # ND_ROLLS: the 24 roll ids already queued (10-22: the old rest's)
+  [[ ${#RR[@]} == 24 || ! -e $O/roll/c001 ]] || die "full already submitted"
   h=$(git rev-parse --short HEAD); echo "$h full" >> $O/code.txt
   ln=$(sub nd-label-$NP-w --after $C1 --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME label $NP write) || exit 1
   ro=$(sub nd-route-$NP --after $C1 --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME route $NP) || exit 1
@@ -222,7 +223,7 @@ full)     # amendment 3: full <chk1 job id>: the 24 roll chunks now; per chunk i
   st=$(sub nd-strip-$NP --after $C1 --vram 0.1 --cpu 16 --ram 16 --timeout-h 2 -- bash $ME strip $NP) || exit 1
   dn=($ln $an); ss=($st)
   for i in $(seq 1 24); do c=$(printf 'c%03d' $i); N=$(printf 'ND%03d' $i)
-    r=$(roll $c) || exit 1
+    if [[ ${#RR[@]} == 24 ]]; then r=${RR[$((i - 1))]}; else r=$(roll $c) || exit 1; fi
     g=$(sub nd-geo-$N --after $r --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 --env ND_GEO_WORKERS=16 -- bash $ME geo $N $c) || exit 1
     k=$(sub nd-tok-$N --after $g --vram 16 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME tok $N) || exit 1
     t=$(sub nd-teach-$N --after $g --vram 0.1 --cpu 8 --ram 32 --timeout-h 2 -- bash $ME teach $N) || exit 1
