@@ -1,0 +1,23 @@
+{
+ "tag": "RB0-PSM-s0",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "batch": [
+   "57",
+   "13",
+   "58",
+   "imit"
+  ],
+  "batch_want": [
+   "57",
+   "13",
+   "58",
+   "imit"
+  ],
+  "dev0": 1.5761,
+  "dev_last": 1.0732,
+  "dev_events": 4
+ },
+ "pass_": true
+}

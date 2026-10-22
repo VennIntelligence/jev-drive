@@ -1,0 +1,38 @@
+{
+ "src": "runs/round6/fix/w/R6FIX.npz",
+ "pool": "on1_JTPH",
+ "rows": 528547,
+ "drawable": 193850,
+ "scenes": 709,
+ "drawable_by_part": {
+  "ph": 81801,
+  "ph05": 73413,
+  "ph15": 38636
+ },
+ "share": {
+  "ph": 0.49999999999999994,
+  "ph05": 0.2500000000000001,
+  "ph15": 0.2500000000000001
+ },
+ "split_ids": {
+  "physical_ai_av/pai-rows": "physical_ai_av/pai-rows@v1:bcfba1aeeca8",
+  "physical_ai_av/test281": "physical_ai_av/test281@v1:4c6b4371a40f",
+  "physical_ai_av/curated-val": "physical_ai_av/curated-val@v1:0eb692d91c4f"
+ },
+ "checks": {
+  "names_equal": true,
+  "only_pai_parts": true,
+  "in_pai_rows": true,
+  "excluded_hits": {
+   "physical_ai_av/test281": 0,
+   "physical_ai_av/curated-val": 0,
+   "drives_val160.csv": 0,
+   "train_exclude.csv": 0,
+   "exam_scenes.txt": 0,
+   "n_t281_partner": 0
+  },
+  "held_hits": 0
+ },
+ "bad_examples": {},
+ "pass_": true
+}

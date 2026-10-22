@@ -1,0 +1,33 @@
+{
+ "tag": "RB0-P50-s0",
+ "k": 58,
+ "steps": 10000,
+ "hash_replayed": {
+  "60": "cc2c68a1e5b182f0",
+  "1000": "ef1d02500aa9f558",
+  "10000": "76ef580b797222b0"
+ },
+ "hash_logged": {
+  "60": "cc2c68a1e5b182f0",
+  "1000": "ef1d02500aa9f558",
+  "10000": "76ef580b797222b0"
+ },
+ "hash_equal": true,
+ "draws": 580000,
+ "draws_by_part": {
+  "ph": 290393,
+  "ph05": 144847,
+  "ph15": 144760
+ },
+ "share_by_part": {
+  "ph": 0.5006775862068965,
+  "ph05": 0.24973620689655174,
+  "ph15": 0.24958620689655173
+ },
+ "distinct_rows": 180384,
+ "distinct_scenes": 709,
+ "drawn_w0": 0,
+ "drawn_held_rows": 0,
+ "passes_per_drawable_row": 2.992004126902244,
+ "pass_": true
+}

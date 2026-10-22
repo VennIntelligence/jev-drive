@@ -1,0 +1,33 @@
+{
+ "tag": "RB0-P30-s0",
+ "k": 35,
+ "steps": 10000,
+ "hash_replayed": {
+  "60": "fde7f4a203f288a2",
+  "1000": "3b980b51856a9600",
+  "10000": "abe2a81e0e0c0b2d"
+ },
+ "hash_logged": {
+  "60": "fde7f4a203f288a2",
+  "1000": "3b980b51856a9600",
+  "10000": "abe2a81e0e0c0b2d"
+ },
+ "hash_equal": true,
+ "draws": 350000,
+ "draws_by_part": {
+  "ph": 175463,
+  "ph05": 87508,
+  "ph15": 87029
+ },
+ "share_by_part": {
+  "ph": 0.5013228571428572,
+  "ph05": 0.25002285714285716,
+  "ph15": 0.24865428571428572
+ },
+ "distinct_rows": 157792,
+ "distinct_scenes": 709,
+ "drawn_w0": 0,
+ "drawn_held_rows": 0,
+ "passes_per_drawable_row": 1.805519731751354,
+ "pass_": true
+}

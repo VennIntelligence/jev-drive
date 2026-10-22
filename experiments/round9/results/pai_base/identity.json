@@ -1,0 +1,21 @@
+{
+ "a": "RB0-F-s0",
+ "b": "RB0-FR-s0",
+ "note": "RB0-F-s0's argv (10-13, code 2962dc63 dirty) rerun on HEAD, eager, 10 000 steps: the PAI-share-0 base",
+ "scalars": 2077,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": [],
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5275979042053223,
+  0.5275979042053223
+ ],
+ "on_hash_60": [
+  null,
+  null
+ ],
+ "want_hash": null,
+ "identical": true
+}

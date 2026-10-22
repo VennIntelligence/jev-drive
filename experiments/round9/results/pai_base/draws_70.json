@@ -1,0 +1,33 @@
+{
+ "tag": "RB0-P70-s0",
+ "k": 80,
+ "steps": 10000,
+ "hash_replayed": {
+  "60": "d50e7684bbad8380",
+  "1000": "4f979b2d47da5701",
+  "10000": "5305951fa1916570"
+ },
+ "hash_logged": {
+  "60": "d50e7684bbad8380",
+  "1000": "4f979b2d47da5701",
+  "10000": "5305951fa1916570"
+ },
+ "hash_equal": true,
+ "draws": 800000,
+ "draws_by_part": {
+  "ph": 400970,
+  "ph05": 199285,
+  "ph15": 199745
+ },
+ "share_by_part": {
+  "ph": 0.5012125,
+  "ph05": 0.24910625,
+  "ph15": 0.24968125
+ },
+ "distinct_rows": 188262,
+ "distinct_scenes": 709,
+ "drawn_w0": 0,
+ "drawn_held_rows": 0,
+ "passes_per_drawable_row": 4.126902244003095,
+ "pass_": true
+}
