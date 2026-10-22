@@ -51,6 +51,8 @@ curl -sf -X POST -d '{}' http://127.0.0.1:$PORT/api/ensure_side > /dev/null     
 # and the window size in screen px (EXAM_PANEL_SIZE) divided by it, so it fills x 20..1320 left of the viewer (x 1340).
 SCALE=${EXAM_PANEL_SCALE:-1.4} SIZE=${EXAM_PANEL_SIZE:-1300,1800}
 DIP=$(awk -v s=$SCALE -v wh=$SIZE 'BEGIN { split(wh, a, ","); printf "%d,%d", a[1] / s, a[2] / s }')
+# one window per panel: an open one reloads itself on a server restart (page boot id), so a click or --restart opens no second window
+curl -sf http://127.0.0.1:$PORT/ -o /dev/null && pgrep -f "app=http://127.0.0.1:$PORT/" > /dev/null && exit 0
 mkdir -p /data/tmp/exam_panel_chrome
 exec google-chrome --user-data-dir=/data/tmp/exam_panel_chrome --no-first-run --no-default-browser-check \
   --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --force-device-scale-factor=$SCALE \

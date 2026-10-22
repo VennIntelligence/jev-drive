@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 from exam_panel import WHEEL_STATUS, Backend, Control, du, human_size, phone_urls, read_json
 
 PAGE = Path(__file__).with_name("exam_web.html")
+BOOT = "%x" % int(time.time() * 1000)      # server start id: an open page reloads itself when it changes (new code after --restart)
 
 
 def wheel_status(path=WHEEL_STATUS):
@@ -132,7 +133,7 @@ class App(object):
                       msg=st.get("msg", "") if alive else "", run=st.get("run") if alive else None,
                       other="" if alive else self.cached("busy", 5, self.b.busy_other)),
             control=dict(paused=c["paused"], playlist=c["playlist"], options=c["options"]),
-            shown=shown, batches=bat, items=items, notices=self.notices, t=time.time())
+            shown=shown, batches=bat, items=items, notices=self.notices, boot=BOOT, t=time.time())
 
     def meta(self):
         dec = re.search(r"\.(\d)", self.b.score_fmt)

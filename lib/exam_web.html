@@ -403,6 +403,8 @@ async function poll() {
   try {
     const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : ""));
     if (st.loop) {
+      if (S.boot && st.boot && st.boot !== S.boot) return location.reload();   // the server restarted (new code): reload the page
+      S.boot = st.boot;
       S.st = st;
       if (S.run && !st.batches.some(b => b.run === S.run)) S.run = null;
       for (const n of st.notices) if (n.t > S.noticeT) { toast(n.msg, n.level === "bad" ? "bad" : ""); S.noticeT = n.t; }
