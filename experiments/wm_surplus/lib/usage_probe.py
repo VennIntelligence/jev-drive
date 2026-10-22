@@ -143,7 +143,7 @@ class Projector:
         U, var, D = np.asarray(pca.comps, np.float64), np.asarray(pca.var, np.float64), pca.dim
         cov = (U * var) @ U.T
         if variant in ("pca", "cnorm", "norm"):
-            E = R = U
+            E = R = np.asarray(pca.comps)     # as _Basis (same dtype and memory layout -> the same GEMM -> pca is bit-identical)
         elif variant == "rand":
             Q, r = np.linalg.qr(np.random.default_rng(seed).standard_normal((D, D)))
             E = R = Q * np.sign(np.diag(r))
@@ -162,7 +162,7 @@ class Projector:
             E, R = W.T @ V, (cov @ W.T @ V) / w
         self.variant, self.kmax = variant, E.shape[1]
         self.renorm = {"cnorm": "centred", "norm": "raw"}.get(variant)
-        f = lambda a: torch.as_tensor(np.ascontiguousarray(a), dtype=torch.float32, device=device)  # noqa: E731
+        f = lambda a: torch.as_tensor(a, dtype=torch.float32, device=device)  # noqa: E731
         self.mu, self.E, self.R = f(pca.mean), f(E), f(R)
 
     def project(self, x: torch.Tensor, k: int) -> torch.Tensor:

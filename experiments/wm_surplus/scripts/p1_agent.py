@@ -604,6 +604,34 @@ def variant_arms(prj: dict, ks) -> list:
     return arms
 
 
+class InputMemo:
+    """Variant commands only: per-token one-entry memo of the deterministic input path that the cached sweep arms would
+    otherwise redo per arm (the loader's AgentInput; ReCogDrive's InternVL `load_image` tiling, no RNG). Model math is
+    untouched; the variant gate re-checks off / full-rank arms against the unhooked model."""
+
+    def __init__(self, model: str, L):
+        self.L, self.mods = L, []
+        if model == "ReCogDrive-2B-RL":
+            self.mods = [sys.modules["navsim.agents.recogdrive.recogdrive_agent"]]
+
+    def __enter__(self):
+        if self.L is not None:
+            get, m = self.L.get_agent_input_from_token, {}
+            self.L.get_agent_input_from_token = lambda t: m[t] if t in m else (m.clear(), m.setdefault(t, get(t)))[1]
+        for mod in self.mods:
+            li, m2 = mod.load_image, {}
+            mod._p1_orig_load_image = li
+            mod.load_image = lambda p, *a, _li=li, _m=m2, **kw: _m[p] if p in _m else (_m.clear(), _m.setdefault(p, _li(p, *a, **kw)))[1]
+        return self
+
+    def __exit__(self, *exc):
+        if self.L is not None:
+            del self.L.get_agent_input_from_token
+        for mod in self.mods:
+            mod.load_image = mod._p1_orig_load_image
+        return False
+
+
 def cmd_vgate(a):
     """Identity gate for the variant run: G1 hook off == no hook, G4 determinism, G3 / G5 sweep arm off == no hook and
     repeatable, P0 Projector('pca') == the original projection bit for bit, R full-rank arm of every variant vs plain."""
@@ -624,7 +652,7 @@ def cmd_vgate(a):
     t_plain = (time.time() - t0) / (2 * len(T))
     S = site(a.model, agent)
     t_arm = []
-    with S:
+    with S, InputMemo(a.model, L):
         probes = [UP.Probe(S, f"f{i}").__enter__() for i in range(S.n)]
         try:
             for t in T:
@@ -689,7 +717,8 @@ def cmd_vsweep(a):
                 L = loader(c, cfg, agent, T, [logs[i] for i in part])
                 P, st = [], {}
                 for t in T:
-                    r = sweep(probes, S, lambda: call(agent, L, t), [None] + arms)
+                    with InputMemo(a.model, L):
+                        r = sweep(probes, S, lambda: call(agent, L, t), [None] + arms)
                     P.append(np.stack([r[None]] + [r[n_] for n_ in names[1:]]))
                     x = S.pick(S.memo)[0]
                     for v, pr in diag.items():
