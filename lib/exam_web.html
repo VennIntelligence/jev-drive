@@ -5,233 +5,286 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>exam panel</title>
 <style>
-/* Same visual language as the pygame viewers (human_viewer.py of alpasim_human / phone_wheel): dark slate, blue labels, orange tag. */
+/* A music player over the exam: playlists (batches) -> tracks (scenes), a transport bar for the drive loop, a settings drawer.
+   Same visual language as the pygame viewers (human_viewer.py): dark slate, blue labels, orange accent. */
 :root {
   --bg: #11151d; --card: #181d26; --card2: #202734; --line: #2b3341; --hover: #263042; --sel: #1d3550;
   --text: #e6ebf0; --muted: #98a2ae; --label: #96c8ff; --blue: #46aafa; --orange: #ff963c; --red: #f0463c; --green: #50dc78;
-  --ghost: #ebd7ff; --r: 8px;
+  --r: 10px;
 }
 * { box-sizing: border-box; }
 html { font-size: 15px; }
-body { margin: 0; overflow-x: hidden; background: var(--bg); color: var(--text); font-family: "DejaVu Sans", "Segoe UI", system-ui, sans-serif;
-  line-height: 1.35; -webkit-text-size-adjust: 100%; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: "DejaVu Sans", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.35; -webkit-text-size-adjust: 100%; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 button, input, select { font: inherit; color: inherit; }
-.app { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 12px; min-height: 100vh; }
-@media (min-width: 700px) and (min-height: 700px) { .app { height: 100vh; } }
-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.tag { background: var(--orange); color: #111; font-weight: 700; padding: 3px 12px; border-radius: var(--r); font-size: 1.15rem; }
-.card { background: var(--card); border-radius: var(--r); padding: 10px 12px; }
-.lbl { color: var(--label); text-transform: uppercase; letter-spacing: .04em; font-size: .85rem; }
-.muted { color: var(--muted); }
-.small { font-size: .87rem; }
-.mono { font-family: "DejaVu Sans Mono", ui-monospace, monospace; }
+[hidden] { display: none !important; }
+.muted { color: var(--muted); } .small { font-size: .87rem; } .mono { font-family: "DejaVu Sans Mono", ui-monospace, monospace; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.spread { justify-content: space-between; }
 .grow { flex: 1; min-width: 0; }
+.lbl { color: var(--label); text-transform: uppercase; letter-spacing: .05em; font-size: .8rem; }
 /* buttons */
-.btn { background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; cursor: pointer;
-  white-space: nowrap; transition: background .1s; }
+.btn { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; white-space: nowrap;
+  min-height: 40px; transition: background .1s; }
 .btn:hover:not(:disabled) { background: var(--hover); }
 .btn:disabled { opacity: .4; cursor: default; }
 .btn.primary { background: var(--blue); border-color: var(--blue); color: #08131f; font-weight: 700; }
 .btn.primary:hover:not(:disabled) { background: #6cbcff; }
 .btn.danger { color: var(--red); border-color: #5a2a2a; }
-.btn.danger:hover:not(:disabled) { background: #3a1e22; }
 .btn.danger.solid { background: var(--red); color: #fff; border-color: var(--red); }
-.btn.big { padding: 9px 18px; font-size: 1.05rem; }
-.btn.icon { padding: 2px 10px; }
-/* chips and pills */
+.btn.ghost { background: transparent; }
+/* header */
+header.top { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 8px 12px; background: var(--card);
+  border-bottom: 1px solid var(--line); }
+.brand { background: var(--orange); color: #111; font-weight: 700; padding: 4px 12px; border-radius: 8px; font-size: 1.05rem; white-space: nowrap; }
+.phone { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.phone a { color: var(--blue); font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--card2);
-  font-size: .9rem; }
+  font-size: .85rem; white-space: nowrap; }
 .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.chip.ok::before { background: var(--green); } .chip.warn::before { background: var(--orange); } .chip.bad::before { background: var(--red); }
-.chip.ok { color: var(--green); } .chip.warn { color: var(--orange); } .chip.bad { color: var(--red); }
-.pill { font-weight: 700; padding: 2px 10px; border-radius: 6px; text-transform: uppercase; font-size: .95rem; letter-spacing: .03em;
-  background: var(--card2); color: var(--muted); }
-.pill.driving { background: rgba(80,220,120,.15); color: var(--green); }
-.pill.loading, .pill.paused { background: rgba(255,150,60,.15); color: var(--orange); }
-.pill.idle { background: rgba(70,170,250,.15); color: var(--blue); }
-.pill.dead { background: rgba(240,70,60,.15); color: var(--red); }
-.badge { font-size: .72rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--green); color: #08130c;
-  vertical-align: 2px; margin-left: 6px; }
-/* phone */
-.url { color: var(--blue); font-weight: 700; font-size: 1.15rem; text-decoration: none; overflow-wrap: anywhere; min-width: 0; }
-/* switches */
-.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 4px 4px; }
-.switch input { display: none; }
-.choice { display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px; }
-.choice select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
-.switch .knob { width: 38px; height: 22px; border-radius: 11px; background: #3a4352; position: relative; transition: background .15s;
-  flex: none; }
-.switch .knob::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%;
-  background: #cfd6de; transition: left .15s; }
-.switch input:checked + .knob { background: var(--blue); }
-.switch input:checked + .knob::after { left: 19px; background: #fff; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.seg button { background: transparent; border: 0; padding: 4px 12px; cursor: pointer; color: var(--muted); }
+.chip.ok { color: var(--green); } .chip.ok::before { background: var(--green); }
+.chip.warn { color: var(--orange); } .chip.warn::before { background: var(--orange); }
+.chip.bad { color: var(--red); } .chip.bad::before { background: var(--red); }
+#setBtn { margin-left: auto; }
+.pin { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px 4px 6px; font-weight: 700; }
+.pin.on { border-color: var(--blue); background: var(--sel); }
+/* main: library | playlist */
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: 270px 1fr; }
+.pane { min-height: 0; overflow: auto; }
+#lib { background: #141922; border-right: 1px solid var(--line); padding: 12px 10px; }
+#pl { padding: 12px 14px 8px; }
+.back { display: none; }
+@media (max-width: 879px) {
+  main { grid-template-columns: 1fr; }
+  main.v-pl #lib, main.v-lib #pl { display: none; }
+  #lib { border-right: 0; }
+  .back { display: inline-block; }
+}
+h1 { margin: 2px 0 4px; font-size: 1.5rem; } h2 { margin: 0; font-size: 1.15rem; }
+/* library */
+.libhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.pcard { background: var(--card); border: 1px solid transparent; border-radius: var(--r); padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.pcard:hover { background: var(--hover); }
+.pcard.open { border-color: var(--blue); background: var(--sel); }
+.pcard .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard .ln { font-size: .85rem; color: var(--muted); margin-top: 3px; }
+.tag { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 4px; background: var(--card2); color: var(--muted); margin: 3px 4px 0 0; }
+.tag.play { background: var(--orange); color: #111; font-weight: 700; }
+.tag.prac { background: rgba(255,150,60,.18); color: var(--orange); font-weight: 700; }
+.bar { height: 5px; background: #2d3544; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--blue); transition: width .3s; }
+.bar.busy > i { width: 30% !important; animation: slide 1.4s ease-in-out infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+/* playlist */
+.plmeta { color: var(--muted); }
+.actions { margin: 10px 0 8px; }
+.note { background: rgba(70,170,250,.1); border-left: 3px solid var(--blue); padding: 6px 10px; border-radius: 4px; margin: 6px 0; }
+.note.warn { background: rgba(255,150,60,.1); border-left-color: var(--orange); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 6px 12px; cursor: pointer; color: var(--muted); min-height: 36px; }
 .seg button.on { background: var(--sel); color: var(--text); }
-/* tables */
-.tw { overflow: auto; border-radius: 6px; border: 1px solid var(--line); }
+select { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-height: 36px; max-width: 100%; }
+.tw { border: 1px solid var(--line); border-radius: 8px; margin-top: 8px; }
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-th { position: sticky; top: 0; z-index: 1; background: var(--card2); color: var(--label); font-weight: 400; text-align: left;
-  font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; }
-td { padding: 5px 8px; border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  vertical-align: middle; }
+th { position: sticky; top: -12px; z-index: 1; background: var(--card2); color: var(--label); font-weight: 400; text-align: left;
+  font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; padding: 7px 8px; white-space: nowrap; overflow: hidden; }
+td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: middle; overflow: hidden; }
 th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
-tbody tr { cursor: pointer; }
+td .l1 { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td .l2 { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: .8rem; }
 tbody tr:hover td { background: var(--hover); }
-tr.sel td { background: var(--sel) !important; }
-tr.cur td { background: rgba(255,150,60,.16); }
+tr.cur td { background: rgba(255,150,60,.14) !important; }
 tr.cur td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
-tr.done td { color: var(--green); }
-tr.done td.st { color: #8fd8a6; }
-tr.grp td { background: #1b2230; font-weight: 700; color: var(--text); cursor: pointer; }
-tr.grp td .caret { display: inline-block; width: 1em; color: var(--muted); }
-td.sub { padding-left: 24px; }
-.src { color: var(--muted); font-size: .8rem; margin-left: 4px; }
-.bar { height: 5px; background: #2d3544; border-radius: 3px; margin-top: 3px; overflow: hidden; }
-.bar > i { display: block; height: 100%; background: var(--blue); }
-td .two { display: block; overflow: hidden; text-overflow: ellipsis; }
-td .two + .two { color: var(--muted); font-size: .82rem; }
-.play { visibility: hidden; }
-tr:hover .play, tr.sel .play { visibility: visible; }
+td.num { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.sc { font-weight: 700; font-size: 1.05rem; }
 .score-1 { color: var(--green); } .score-0 { color: var(--red); } .score-m { color: var(--orange); }
-/* layout of the main cards */
-#batchCard .tw { max-height: 15.5rem; }
-#itemCard { flex: 1; display: flex; flex-direction: column; min-height: 22rem; }
-#itemCard .tw { flex: 1; }
-.notebar { background: rgba(70,170,250,.1); border-left: 3px solid var(--blue); padding: 4px 10px; border-radius: 4px; }
+.pbtn { width: 44px; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--card2); cursor: pointer; font-size: 1.05rem; }
+.pbtn:hover { background: var(--blue); color: #08131f; }
+.nowlbl { color: var(--orange); font-weight: 700; font-size: .8rem; }
+.colDrv { width: 8.5rem; }
+@media (max-width: 1099px) { .colDrv, .cDrv { display: none; } }
+@media (max-width: 599px) { .colRef, .cRef { display: none; } html { font-size: 14px; } #pl { padding: 10px 8px; } }
+/* equaliser (now playing) */
+.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; vertical-align: -1px; }
+.eq i { width: 3px; background: var(--orange); animation: eq 0.9s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; }
+.eq.still i { animation: none; height: 40%; }
+@keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+/* transport */
+footer#tp { background: #0c1016; border-top: 2px solid var(--line); padding: 10px 14px 12px; display: grid; gap: 8px 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "now state" "ctl opts" "why why"; align-items: center; }
+#tp .now { grid-area: now; display: flex; gap: 10px; align-items: center; min-width: 0; }
+#tp .now .t { font-size: 1.25rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tp .now .s { color: var(--muted); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tp .state { grid-area: state; min-width: 0; }
+#stHead { font-size: 1.25rem; font-weight: 700; }
+#stHead.go { color: var(--green); } #stHead.wait { color: var(--orange); } #stHead.bad { color: var(--red); } #stHead.off { color: var(--muted); }
+#stDetail { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tp .ctl { grid-area: ctl; display: flex; gap: 12px; align-items: center; }
+.tb { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); background: var(--card2); cursor: pointer; font-size: 1.35rem;
+  display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.tb:hover:not(:disabled) { background: var(--hover); }
+.tb:disabled { opacity: .3; cursor: default; }
+.tb.main { width: 72px; height: 72px; background: var(--blue); border-color: var(--blue); color: #08131f; font-size: 1.9rem; }
+.tb.main:hover:not(:disabled) { background: #6cbcff; }
+.tb.stop { color: var(--red); }
+#tp .opts { grid-area: opts; display: flex; gap: 6px 18px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+#tpWhy { grid-area: why; color: var(--muted); font-size: .88rem; min-height: 1.2em; }
+@media (max-width: 699px) {
+  footer#tp { grid-template-columns: 1fr; grid-template-areas: "now" "state" "ctl" "opts" "why"; padding: 8px 10px; gap: 6px; }
+  #tp .ctl { justify-content: center; } #tp .opts { justify-content: flex-start; }
+  .tb { width: 52px; height: 52px; } .tb.main { width: 64px; height: 64px; }
+}
+/* switches */
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 4px 0; white-space: nowrap; }
+.switch input { display: none; }
+.switch .knob { width: 42px; height: 24px; border-radius: 12px; background: #3a4352; position: relative; transition: background .15s; flex: none; }
+.switch .knob::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #cfd6de; transition: left .15s; }
+.switch input:checked + .knob { background: var(--blue); }
+.switch input:checked + .knob::after { left: 21px; background: #fff; }
+.switch.rec input:checked + .knob { background: var(--red); }
 /* dialogs */
-dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 0;
-  max-width: 96vw; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 0; max-width: 96vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 dialog::backdrop { background: rgba(5,8,12,.7); }
 .dlg { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; max-height: 92vh; }
-.dlg h2 { margin: 0; font-size: 1.2rem; }
 .dlg .body { overflow: auto; min-height: 0; }
 .dlg .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
-#confirmDlg { width: 640px; max-height: 90vh; } #confirmDlg .dlg { max-height: 90vh; } #confirmDlg .body { white-space: pre-wrap; word-break: break-word; }
-#newDlg { width: 1240px; height: 92vh; } #newDlg .dlg { height: 100%; }
-#offDlg { width: 1240px; } #offDlg .body pre { white-space: pre-wrap; font-size: .85rem; }
-#offDlg table { table-layout: auto; } #offDlg td, #offDlg th { white-space: nowrap; }
+#confirmDlg { width: 620px; } #confirmDlg .body { white-space: pre-wrap; word-break: break-word; }
+#newDlg { width: 1200px; height: 92vh; } #newDlg .dlg { height: 100%; }
+#offDlg { width: 1200px; } #offDlg table { table-layout: auto; } #offDlg td, #offDlg th { white-space: nowrap; }
+#setDlg { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(500px, 100vw); max-width: 100vw; border-radius: 0; border-width: 0 0 0 1px; }
+#setDlg .dlg { height: 100%; max-height: none; }
+.set { background: var(--card2); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.set .h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.set .h b { font-size: 1.05rem; }
+.set .help { color: var(--muted); font-size: .88rem; margin-top: 6px; }
+.set .when { color: var(--orange); font-size: .82rem; margin-top: 4px; }
+.set select { min-width: 12rem; }
+.step { color: var(--label); font-weight: 700; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
-.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 6px 14px; cursor: pointer; color: var(--muted); }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; cursor: pointer; color: var(--muted); }
 .tabs button.on { color: var(--text); border-bottom-color: var(--blue); }
-.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 8px; }
-.setopt { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; text-align: left; }
-.setopt:hover { background: var(--hover); }
-.setopt.on { border-color: var(--blue); background: var(--sel); }
-.filters input[type=search] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 16rem; }
-.filters select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
-#pickTable th { cursor: pointer; }
+.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+.setopt { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; text-align: left; min-height: 44px; }
+.setopt:hover { background: var(--hover); } .setopt.on { border-color: var(--blue); background: var(--sel); }
+.filters input[type=search] { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 14rem; }
+#pickTable th { cursor: pointer; top: 0; } #pickTable td { white-space: nowrap; text-overflow: ellipsis; }
 #pickTable th.sorted::after { content: " \25BE"; } #pickTable th.sorted.asc::after { content: " \25B4"; }
-#pickTable td:first-child { text-overflow: clip; }
-#pickTable input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--blue); }
-.toast-wrap { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 50; max-width: min(560px, 92vw); }
-.toast { background: var(--card2); border-left: 4px solid var(--blue); padding: 9px 14px; border-radius: 6px; white-space: pre-wrap;
-  word-break: break-word; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
-.toast.bad { border-left-color: var(--red); } .toast.ok { border-left-color: var(--green); }
-.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: transparent;
-  border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -2px; margin-right: 6px; }
-@keyframes s { to { transform: rotate(360deg); } }
-/* narrow (phone) */
-@media (max-width: 760px) {
-  html { font-size: 14px; }
-  .app { padding: 8px; }
-  td.hide-n, th.hide-n { padding: 0 !important; font-size: 0; }   /* columns collapse via col.hide-n (cells must stay for the column map) */
-  .btn { padding: 7px 11px; }
-  col.hide-n { width: 0 !important; }
-  #itemTable td:last-child { padding: 2px 4px; text-overflow: clip; }
-  #batchCard .tw { max-height: 13rem; }
-  .play { visibility: visible; }
-  .filters input[type=search] { min-width: 0; flex: 1 1 100%; }
-  #cItem { width: 32% !important; } #cScen { width: 0 !important; } #cHum { width: 15% !important; } #cMod { width: 15% !important; } #cStat { width: auto !important; }
-  #itemTable .src { display: none; }
-  td.sub { padding-left: 14px; }
+#pickTable tr.sel td { background: var(--sel); }
+#pickTable input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--blue); }
+#newName { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: min(480px, 100%); }
+@media (max-width: 699px) {
+  .hide-n { display: none; }
+  header.top { gap: 6px 8px; padding: 6px 8px; }
+  .brand { font-size: .95rem; padding: 3px 10px; }
+  #setBtn { order: 1; min-height: 36px; padding: 4px 10px; }
+  .phone { order: 2; flex: 1 1 100%; }
+  #inputs { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; }
+  #pins { order: 1; }
+  #tp .now .t, #stHead { font-size: 1.1rem; }
+  #tpWhy { font-size: .8rem; }
 }
+.toast-wrap { position: fixed; right: 14px; bottom: calc(var(--tpH, 170px) + 10px); display: flex; flex-direction: column; gap: 8px; z-index: 50;
+  max-width: min(520px, 92vw); pointer-events: none; }   /* toasts never take a click meant for the page */
+.toast { background: var(--card2); border-left: 4px solid var(--blue); padding: 9px 14px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.toast.bad { border-left-color: var(--red); } .toast.ok { border-left-color: var(--green); }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%;
+  animation: s .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes s { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <span class="tag" id="title">exam</span>
-    <span class="pill" id="loopPill">-</span>
-    <span id="loopItem" class="grow" style="font-weight:700"></span>
-  </header>
+<header class="top">
+  <span class="brand" id="title">exam</span>
+  <span class="phone"><span class="muted small">Phone</span> <a id="url" target="_blank"></a>
+    <button class="btn ghost" id="copyBtn" style="min-height:32px;padding:3px 10px" title="Copy the phone address">Copy</button></span>
+  <span class="row" id="inputs"></span>
+  <span class="row" id="pins"></span>
+  <button class="btn" id="setBtn">&#9881; Drive settings</button>
+</header>
 
-  <section class="card">
-    <div class="row spread">
-      <div class="lbl">Phone</div>
-      <div class="row" id="inputs"></div>
-    </div>
-    <div class="row" style="margin-top:6px">
-      <a class="url" id="url" target="_blank"></a>
-      <button class="btn icon" id="copyBtn">Copy</button>
-      <span class="muted small" id="lan"></span>
-    </div>
-  </section>
+<main id="main" class="v-pl">
+  <aside id="lib" class="pane">
+    <div class="libhead"><h2>Playlists</h2><button class="btn primary" id="newBtn">+ New playlist</button></div>
+    <div id="libList"></div>
+  </aside>
 
-  <section class="card">
-    <div class="row spread"><div class="lbl">Loop</div><div class="muted small" id="loopRun"></div></div>
-    <div id="loopMsg" style="margin:6px 0 2px; min-height:1.35em; word-break:break-word"></div>
-    <div id="showNote" class="notebar small" hidden></div>
-    <div class="row" style="margin-top:8px">
-      <button class="btn big" id="pauseBtn">Pause</button>
-      <button class="btn big" id="restartBtn" title="Abort the running item and drive it again">Restart item</button>
-      <button class="btn big" id="nextBtn" title="Skip the running item (not counted) and go on">Next item</button>
-      <button class="btn big danger" id="stopBtn" title="Abort the running item and stop the loop">Stop</button>
-    </div>
-    <div class="row" style="margin-top:8px; gap:4px 18px" id="toggles"></div>
-  </section>
-
-  <section class="card" id="batchCard">
-    <div class="row spread" style="margin-bottom:8px">
-      <div class="lbl">Batches</div>
-      <div class="row">
-        <button class="btn primary" id="newBtn">New batch&hellip;</button>
-        <button class="btn" id="contBtn">Continue this batch</button>
+  <section id="pl" class="pane">
+    <button class="btn ghost back" id="backBtn">&#8249; All playlists</button>
+    <div id="plEmpty" class="muted" style="padding:30px 4px">No playlist open. Pick one from the list, or make one with <b>+ New playlist</b>.</div>
+    <div id="plBody" hidden>
+      <div class="lbl">Playlist</div>
+      <h1 id="plTitle"></h1>
+      <div class="plmeta" id="plMeta"></div>
+      <div class="bar" style="max-width:520px"><i id="plBar"></i></div>
+      <div id="plTags"></div>
+      <div class="row actions">
+        <button class="btn primary" id="contBtn">&#9654; Play</button>
+        <button class="btn" id="reloadBtn" title="Start over from track 1">&#10227; Reload playlist&hellip;</button>
+        <button class="btn" id="offBtn">Results table</button>
         <button class="btn danger" id="delBtn">Delete&hellip;</button>
-        <button class="btn" id="offBtn">Official table</button>
       </div>
-    </div>
-    <div class="tw"><table id="batchTable">
-      <colgroup><col><col style="width:8.5rem" class="hide-n"><col style="width:8.5rem"><col style="width:5.5rem"><col style="width:6.5rem" class="hide-n"><col style="width:7rem" id="extraCol"></colgroup>
-      <thead><tr><th>batch</th><th class="hide-n">created</th><th class="n">driven</th><th class="n">mean</th><th class="n hide-n">disk</th><th id="extraHead"></th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-  </section>
-
-  <section class="card" id="itemCard">
-    <div class="row spread" style="margin-bottom:8px">
-      <div class="grow"><span class="lbl">Items</span> <span id="itemHead" class="muted small"></span></div>
+      <div id="plNote" class="note" hidden></div>
       <div class="row">
-        <span class="seg"><button data-sort="group" class="on">By group</button><button data-sort="score">By score, low first</button></span>
-        <button class="btn icon" id="foldBtn" title="Collapse or expand all groups">Fold all</button>
+        <span class="seg" id="sortSeg"><button data-v="order" class="on">Playlist order</button><button data-v="score">Lowest score first</button></span>
+        <span class="seg" id="showSeg"><button data-v="all" class="on">All</button><button data-v="todo">To play</button><button data-v="done">Played</button></span>
+        <select id="grpSel" title="Show one group of scenes"></select>
+        <span class="muted small" id="shownN"></span>
       </div>
+      <div class="tw"><table id="trk">
+        <colgroup><col style="width:3rem"><col><col class="colRef" style="width:6.5rem"><col style="width:34%"><col class="colDrv"><col style="width:4.2rem"></colgroup>
+        <thead><tr><th class="n">#</th><th>Track</th><th class="n cRef" title="The best model read we have on this scene (its name follows)">Reference</th>
+          <th>Your result</th><th class="cDrv">Driven</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="muted small" style="margin:8px 2px 4px">&#9654; plays a track (with Auto-advance on, the playlist then continues from there).
+        &#8635; replays a played track: a new attempt, the newest one counts.</div>
     </div>
-    <div class="tw"><table id="itemTable">
-      <colgroup><col style="width:10.5rem" id="cItem"><col class="hide-n" id="cScen"><col style="width:5.5rem" id="cHum"><col style="width:8rem" id="cMod"><col style="width:28%" id="cStat"><col style="width:3.2rem"></colgroup>
-      <thead><tr><th>item</th><th class="hide-n">scenario</th><th class="n">human</th><th class="n">model</th><th>status</th><th></th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-    <div class="muted small" style="margin-top:6px">Double-click an item (or its &#9654;) to drive it next. It aborts nothing; with Playlist off the loop waits for the throttle.</div>
   </section>
-</div>
+</main>
+
+<footer id="tp">
+  <div class="now"><span class="eq still" id="npEq"><i></i><i></i><i></i></span>
+    <div class="grow"><div class="t" id="npTrack">Nothing playing</div><div class="s" id="npSub"></div></div></div>
+  <div class="state"><div id="stHead" class="off">Stopped</div><div id="stDetail"></div><div class="bar" id="stBarW"><i id="stBar" style="width:0"></i></div></div>
+  <div class="ctl">
+    <button class="tb" id="tbReplay" title="Replay track">&#9198;</button>
+    <button class="tb main" id="tbPlay" title="Play">&#9654;</button>
+    <button class="tb" id="tbNext" title="Next track">&#9197;</button>
+    <button class="tb stop" id="tbStop" title="Stop">&#9632;</button>
+  </div>
+  <div class="opts">
+    <label class="switch rec" id="recSw" title="Off = practice: the track is driven but nothing is scored, counted or kept">
+      <input type="checkbox" id="recIn"><span class="knob"></span>Record results</label>
+    <span class="tag prac" id="pracTag" hidden>PRACTICE &middot; not recorded</span>
+    <label class="switch" title="After a track ends, the next unplayed one loads by itself"><input type="checkbox" id="autoIn"><span class="knob"></span>Auto-advance</label>
+  </div>
+  <div id="tpWhy"></div>
+</footer>
 
 <dialog id="confirmDlg"><div class="dlg">
   <h2 id="cfTitle"></h2><div class="body" id="cfBody"></div>
-  <div class="foot"><button class="btn" value="no" id="cfNo">Cancel</button><button class="btn primary" id="cfYes">OK</button></div>
+  <div class="foot"><button class="btn" id="cfNo">Cancel</button><button class="btn primary" id="cfYes">OK</button></div>
 </div></dialog>
 
 <dialog id="offDlg"><div class="dlg">
-  <div class="row spread"><h2>Official table</h2><button class="btn icon" onclick="offDlg.close()">Close</button></div>
+  <div class="row"><h2 class="grow">Results table</h2><button class="btn" onclick="offDlg.close()">Close</button></div>
   <div class="muted small" id="offRun"></div>
   <div class="body" id="offBody"></div>
 </div></dialog>
 
+<dialog id="setDlg"><div class="dlg">
+  <div class="row"><h2 class="grow">Drive settings</h2><button class="btn" onclick="setDlg.close()">Close</button></div>
+  <div class="muted small">Saved as soon as you change them. They apply to whatever plays next.</div>
+  <div class="body" id="setBody"></div>
+</div></dialog>
+
 <dialog id="newDlg"><div class="dlg">
-  <div class="row spread"><h2>New batch</h2><button class="btn icon" onclick="newDlg.close()">Close</button></div>
-  <div class="tabs"><button data-tab="sets" class="on">Scene sets</button><button data-tab="pick" id="pickTab">Custom pick</button></div>
+  <div class="row"><h2 class="grow">New playlist</h2><button class="btn" onclick="newDlg.close()">Close</button></div>
+  <div class="step">1. Choose the tracks</div>
+  <div class="tabs"><button data-tab="sets" class="on">From a scene set</button><button data-tab="pick" id="pickTab">Pick scenes yourself</button></div>
   <div class="body" id="tabSets" style="flex:1"><div class="sets" id="sets"></div></div>
   <div id="tabPick" style="display:none; flex:1; min-height:0; flex-direction:column; gap:8px">
     <div class="row filters">
@@ -239,16 +292,18 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
       <select id="fTrack"></select><select id="fRev"></select><select id="fFail"></select>
       <label class="switch"><input type="checkbox" id="fSel"><span class="knob"></span>selected only</label>
     </div>
-    <div class="tw" style="flex:1"><table id="pickTable">
-      <colgroup><col style="width:2.6rem"><col style="width:10rem"><col class="hide-n"><col style="width:4.5rem" class="hide-n"><col style="width:7rem"><col style="width:6.5rem"><col style="width:10rem"><col style="width:7.5rem" class="hide-n"></colgroup>
+    <div class="tw" style="flex:1; overflow:auto; margin:0"><table id="pickTable">
+      <colgroup><col style="width:2.8rem"><col style="width:10rem"><col class="hide-n"><col style="width:4.5rem" class="hide-n"><col style="width:7rem"><col style="width:6.5rem"><col style="width:10rem"><col style="width:7.5rem" class="hide-n"></colgroup>
       <thead><tr><th><input type="checkbox" id="pickAll" title="Select or clear every shown scene"></th><th data-k="label">scene</th><th data-k="group" class="hide-n">group</th><th data-k="stage" class="n hide-n">stage</th><th data-k="ref_mean" class="n" title="organisers' mean">organisers</th><th data-k="r6dag" class="n">R6DAG</th><th data-k="fail">R6DAG failure</th><th data-k="model" class="n hide-n">model</th></tr></thead>
       <tbody></tbody>
     </table></div>
   </div>
+  <div class="step">2. Name it</div>
+  <input id="newName" maxlength="80" placeholder="Playlist name">
   <div class="foot">
     <span class="muted grow" id="newInfo"></span>
     <button class="btn" onclick="newDlg.close()">Cancel</button>
-    <button class="btn primary big" id="newGo" disabled>Start new batch</button>
+    <button class="btn primary" id="newGo" disabled>Create playlist</button>
   </div>
 </div></dialog>
 
@@ -259,13 +314,15 @@ dialog::backdrop { background: rgba(5,8,12,.7); }
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const base = s => (s || "").split("/").pop();
-const S = {meta: null, st: null, run: null, sort: "group", folded: new Set(), sel: null, orderKey: null, noticeT: Date.now() / 1000,
-           busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "sets", setKey: null, html: {}};
+const S = {meta: null, st: null, run: null, view: null, sort: "order", show: "all", grp: "", anchor: null, orderKey: null,
+           noticeT: Date.now() / 1000, busy: false, cat: null, pick: new Set(), pickSort: ["", 1], tab: "sets", setKey: null, html: {},
+           head: null, headT: 0, cur: null, last: null, nameEdited: false};
 
+// ---------- plumbing ----------
 async function api(path, body) {        // never throws: a network or server failure comes back as {ok: false, msg}
   let r;
   try { r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}); }
-  catch (e) { return {ok: false, msg: "panel server unreachable (" + path + "): " + e}; }
+  catch (e) { return {ok: false, msg: "The panel server does not answer (" + path + "): " + e}; }
   const j = await r.json().catch(() => ({ok: false, msg: "HTTP " + r.status + " from " + path}));
   if (!r.ok) { j.ok = false; if (body !== undefined && !j.confirm) toast((j.msg || "HTTP " + r.status) + " (" + path + ")", "bad", 12000); }
   return j;
@@ -277,7 +334,7 @@ function toast(msg, level, ms) {
   d.className = "toast " + (level || "");
   d.textContent = msg;
   $("#toasts").appendChild(d);
-  if (msg || ms) setTimeout(() => d.remove(), ms || 7000);
+  setTimeout(() => d.remove(), ms || 6000);
   return d;
 }
 function confirmBox(title, body, yes, danger) {
@@ -297,188 +354,355 @@ function confirmBox(title, body, yes, danger) {
   });
 }
 async function work(label, fn) {        // long backend calls: one at a time, with a sticky toast
-  if (S.busy) return toast("Still working on the previous action...", "bad");
+  if (S.busy) { toast("Still working on the previous action...", "bad"); return null; }
   S.busy = true;
-  const t = toast("", "", 600000);       // toast("") still returns the element (the old early return made this throw)
+  const t = toast("", "", 600000);
   t.innerHTML = '<span class="spin"></span>' + esc(label);
   try { return await fn(); } finally { t.remove(); S.busy = false; }
 }
 function setHTML(el, key, html) { if (S.html[key] !== html) { S.html[key] = html; el.innerHTML = html; } }
-function scoreCls(v) { return v == null ? "" : v >= ((S.meta && S.meta.score_max) || 1) ? "score-1" : v <= 0 ? "score-0" : "score-m"; }
+const smax = () => (S.meta && S.meta.score_max) || 1;
+function scoreCls(v) { return v == null ? "" : v >= smax() ? "score-1" : v <= 0 ? "score-0" : "score-m"; }
+const plain = s => String(s || "").replace(/double-click a row/g, "press ▶ on a track").replace(/resume on the panel/g, "press ▶ to resume")
+  .replace(/^panel loop /, "");
+const batchOf = run => (S.st.batches || []).find(b => b.run === run);
+const opt = name => S.meta.options.find(o => o.name === name);
+function driverLabel() {
+  const o = opt("driver");
+  if (!o) return "Human";
+  const v = S.st.control.options.driver ?? o.default;
+  const c = (o.choices || []).find(x => (Array.isArray(x) ? x[0] : x) === v);
+  return v === "human" ? "Human (phone)" : "model " + (Array.isArray(c) ? c[0] : v);
+}
+const isModel = () => opt("driver") && (S.st.control.options.driver || "human") !== "human";
+
+// ---------- plain-words state of the loop ----------
+function plainState() {
+  const L = S.st.loop, C = S.st.control, m = /, (\d+) s$/.exec(L.msg || ""), msg = plain((L.msg || "").replace(/, \d+ s$/, ""));
+  const secs = m ? +m[1] : null;
+  if (!L.alive) return L.other ? {h: "Another run is using the car", d: L.other, c: "bad"} : {h: "Stopped", d: "", c: "off"};
+  if (C.paused) return {h: "Paused", d: L.item ? "The car holds. Press ▶ to resume." : "No new track starts. Press ▶ to resume.", c: "wait", secs};
+  if (L.state === "loading") {
+    const h = /render stack/.test(msg) ? "Loading render stack…" : /model driver/.test(msg) ? "Starting model driver…"
+      : /^ending/.test(msg) ? "Ending track…" : /previous scene/.test(msg) ? "Waiting for the previous track to end…" : "Loading track…";
+    return {h, d: msg, c: "wait", secs, busy: true};
+  }
+  if (L.state === "driving") {
+    if (/press throttle/.test(msg)) return {h: "Ready — press throttle", d: "The track starts when you press the throttle on the phone.", c: "go"};
+    return {h: /driver: model/.test(msg) || isModel() ? "Model driving" : "Driving", d: msg, c: "go", live: true};
+  }
+  if (L.state === "paused") return {h: "Paused", d: msg, c: "wait"};
+  if (L.scoring > 0) return {h: "Scoring…", d: "Scoring the last track (a few seconds). " + msg, c: "wait", busy: true};
+  if (/failed|stopped/.test(msg)) return {h: "Problem", d: msg, c: "bad"};
+  if (/^all \d+ scenes driven/.test(msg)) return {h: "Playlist finished", d: msg + ". Reload the playlist to start over, or ▶ a track to replay it.", c: "go"};
+  return {h: "Waiting", d: msg || "Press ▶ to play the next track.", c: "wait"};
+}
 
 // ---------- render ----------
-function choiceOpts(ch, v) {    // choices: plain values, or [value, label, group] entries (consecutive groups as <optgroup>)
-  let out = "", g = null;
-  for (const x of ch) {
-    const [val, lab, grp] = Array.isArray(x) ? x : [x, x, ""];
-    if ((grp || "") !== (g || "")) { if (g) out += "</optgroup>"; g = grp || ""; if (g) out += `<optgroup label="${esc(g)}">`; }
-    out += `<option value="${esc(val)}" ${val === v ? "selected" : ""}>${esc(lab)}</option>`;
-  }
-  return out + (g ? "</optgroup>" : "");
-}
 function render() {
   const st = S.st, m = S.meta;
   if (!st || !m) return;
   const L = st.loop, C = st.control;
-  // header and loop
-  const pst = !L.alive ? "dead" : C.paused ? "paused" : ({driving: "driving", loading: "loading", paused: "paused", idle: "idle"}[L.state] || "");
-  $("#loopPill").className = "pill " + pst;
-  $("#loopPill").textContent = !L.alive ? "not running" : (L.state || "?") + (C.paused && L.state !== "paused" ? " · paused" : "");
-  const curItem = L.item ? (st.items.find(i => i.id === L.item) || {}).label || L.item : "";
-  $("#loopItem").textContent = curItem;
-  $("#loopItem").title = L.item || "";
-  $("#loopMsg").textContent = L.alive ? (L.msg || "") : (L.other ? "Not running; " + L.other : "Not running. Continue a batch or start a new one.");
-  $("#loopMsg").className = L.alive ? "" : "muted";
-  $("#loopRun").textContent = L.run ? "on " + base(L.run) : "";
-  const note = $("#showNote");
-  note.hidden = !(L.alive && L.run && st.shown && L.run !== st.shown);
-  if (!note.hidden) note.textContent = "Showing " + base(st.shown) + "; the loop runs on " + base(L.run) + ".";
-  $("#pauseBtn").textContent = C.paused ? "Resume" : "Pause";
-  $("#pauseBtn").className = "btn big" + (C.paused ? " primary" : "");
-  for (const [b, t] of [["#pauseBtn", "Pause / resume the loop"], ["#restartBtn", "Abort the running item and drive it again"],
-                        ["#nextBtn", "Skip the running item (not counted) and go on"], ["#stopBtn", "Abort the running item and stop the loop"]]) {
-    $(b).disabled = !L.alive; $(b).title = L.alive ? t : "no loop running: Continue a batch, New batch, or the play button of an item";
-  }
-  // inputs
+  if (L.item !== S.cur) { S.last = S.cur; S.cur = L.item; }
+  // header
+  setHTML($("#pins"), "pins", (m.pinned || []).map(n => opt(n)).filter(o => o && !o.choices).map(o => {
+    const vw = (S.st.viewer || {})[o.name], v = vw != null ? !!vw : !!(C.options[o.name] ?? o.default), [help] = o.help || [""];   // the viewer's own state wins (G there)
+    return `<label class="switch pin ${v ? "on" : ""}" title="${esc(help)}"><input type="checkbox" data-k="opt:${esc(o.name)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(o.label)} <span style="color:${v ? "var(--green)" : "var(--muted)"}">${v ? "ON" : "OFF"}</span></label>`;
+  }).join(""));
   setHTML($("#inputs"), "inputs", st.inputs.map(([t, l]) => `<span class="chip ${l}">${esc(t)}</span>`).join(""));
-  if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#lan").textContent = "LAN fallback " + st.phone.lan; }
-  // toggles (only rebuilt when the values change, so a click is never lost)
-  const tg = [["playlist", "Playlist (auto-advance)", C.playlist]].concat(m.options.map(o => ["opt:" + o.name, o.label, C.options[o.name] ?? o.default, o.choices]));
-  setHTML($("#toggles"), "toggles", tg.map(([k, l, v, ch]) => ch     // a choice option: a select; a toggle: a switch
-    ? `<label class="choice">${esc(l)} <select data-k="${esc(k)}">${choiceOpts(ch, v)}</select></label>`
-    : `<label class="switch"><input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(l)}</label>`).join(""));
-  // batches
-  setHTML($("#batchTable tbody"), "batches", st.batches.map(b => {
+  if ($("#url").textContent !== st.phone.url) { $("#url").textContent = st.phone.url; $("#url").href = st.phone.url; $("#url").title = "LAN fallback " + st.phone.lan; }
+  // library
+  setHTML($("#libList"), "lib", st.batches.map(b => {
     const pct = b.total ? Math.round(100 * b.driven / b.total) : 0;
-    return `<tr data-run="${esc(b.run)}" class="${b.run === st.shown ? "sel" : ""} ${b.current ? "cur" : ""}" title="${esc(b.run)}">
-      <td><span class="two">${esc(b.label)}${b.current ? '<span class="badge">LOOP</span>' : ""}</span><span class="two mono">${esc(b.name)}</span></td>
-      <td class="hide-n">${esc(b.created)}</td>
-      <td class="n">${b.driven} / ${b.total}<div class="bar"><i style="width:${pct}%"></i></div></td>
-      <td class="n ${scoreCls(b.mean)}">${esc(b.mean_s)}</td><td class="n hide-n">${esc(b.size)}</td>${S.meta.batch_extra ? `<td>${esc(b.extra || "")}</td>` : ""}</tr>`;
-  }).join("") || '<tr><td colspan="6" class="muted">no batch yet: New batch</td></tr>');
-  const shownB = st.batches.find(b => b.run === st.shown);
-  $("#contBtn").disabled = $("#delBtn").disabled = !shownB;
-  $("#contBtn").textContent = shownB ? (shownB.current ? "Restart loop on " : "Continue ") + shownB.label + " (" + shownB.name + ")" : "Continue this batch";
-  $("#contBtn").className = "btn" + (shownB && !L.alive ? " primary" : "");
-  $("#delBtn").disabled = !shownB || shownB.current;
-  $("#delBtn").title = shownB && shownB.current ? "The loop runs on this batch: Stop it first" : "Delete the shown batch";
-  $("#itemHead").textContent = shownB ? `${shownB.label} · ${shownB.driven} / ${shownB.total} driven${shownB.mean_s ? " · mean " + shownB.mean_s : ""}` : "";
-  renderItems();
+    return `<div class="pcard ${b.run === st.shown ? "open" : ""}" data-run="${esc(b.run)}" title="${esc(b.run)}">
+      <div class="nm">${b.current ? '<span class="eq"><i></i><i></i><i></i></span> ' : ""}${esc(b.label)}</div>
+      <div class="ln">${b.driven} / ${b.total} played${b.mean_s ? ` &middot; mean <span class="${scoreCls(b.mean)}">${esc(b.mean_s)}</span>` : ""}</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="ln">${esc(b.created)} &middot; ${esc(b.size)}</div>
+      <div>${b.current ? '<span class="tag play">NOW PLAYING</span>' : ""}${(b.badges || []).map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>`;
+  }).join("") || '<div class="muted">No playlist yet. Make one with <b>+ New playlist</b>.</div>');
+  renderPlaylist();
+  renderTransport();
+  renderSettings();
 }
 
-function groups() {
-  const items = S.st.items;
+function renderPlaylist() {
+  const st = S.st, L = st.loop, b = batchOf(st.shown);
+  $("#main").className = S.view === "lib" || !b ? "v-lib" : "v-pl";
+  $("#plEmpty").hidden = !!b; $("#plBody").hidden = !b;
+  if (!b) return;
+  $("#plTitle").textContent = b.label;
+  $("#plTitle").title = b.run;
+  $("#plMeta").innerHTML = `${b.total} tracks &middot; ${b.driven} played${b.mean_s ? ` &middot; your mean <b class="${scoreCls(b.mean)}">${esc(b.mean_s)}</b>` : ""} &middot; created ${esc(b.created)} &middot; ${esc(b.size)} on disk`;
+  $("#plBar").style.width = (b.total ? 100 * b.driven / b.total : 0) + "%";
+  setHTML($("#plTags"), "plTags", (b.current ? '<span class="tag play">NOW PLAYING</span>' : "") + (b.badges || []).map(x => `<span class="tag">${esc(x)}</span>`).join(""));
+  const playingHere = L.alive && L.run === st.shown, next = nextTodo();
+  $("#contBtn").innerHTML = next ? (b.driven ? `&#9654; Continue (track ${idxOf(next)})` : "&#9654; Play") : "All tracks played";
+  $("#contBtn").disabled = !next || (playingHere && !!L.item);
+  $("#contBtn").title = !next ? "Every track has a result: Reload the playlist to start over, or ▶ a single track to replay it"
+    : playingHere && L.item ? "This playlist is playing: use the transport bar" : "Play the next track without a result";
+  $("#delBtn").disabled = b.current;
+  $("#delBtn").title = b.current ? "This playlist is playing: stop it first (■)" : "Delete this playlist and everything driven in it";
+  const note = $("#plNote");
+  const other = L.alive && L.run !== st.shown ? batchOf(L.run) : null;
+  note.hidden = !other && C_record();
+  note.className = "note" + (C_record() ? "" : " warn");
+  note.textContent = (other ? `Now playing another playlist: "${other.label}". Playing a track here switches to this playlist. ` : "") +
+    (C_record() ? "" : "Record results is off (practice): what you drive now is not scored, counted or kept.");
+  // filters
+  const groups = [...new Set(st.items.map(i => i.group))];
+  $("#grpSel").hidden = groups.length < 2;
+  if (S.grp && !groups.includes(S.grp)) S.grp = "";
+  setHTML($("#grpSel"), "grp", `<option value="">All groups (${groups.length})</option>` + groups.map(g =>
+    `<option value="${esc(g)}" ${g === S.grp ? "selected" : ""}>${esc(g)} (${st.items.filter(i => i.group === g).length})</option>`).join(""));
+  renderTracks();
+}
+const C_record = () => S.st.control.record !== false || !S.meta.record;
+const idxOf = id => S.st.items.findIndex(i => i.id === id) + 1;
+function rows() {                       // the shown tracks, in the order auto-advance plays them
+  let r = S.st.items.filter(i => (!S.grp || i.group === S.grp) && (S.show === "all" || (S.show === "done") === (i.human != null)));
   if (S.sort === "score") {
     const k = it => [it.human == null && it.model == null ? 1 : 0, it.human != null ? it.human : (it.model || 0)];
-    return [[null, items.slice().sort((a, b) => { const x = k(a), y = k(b); return x[0] - y[0] || x[1] - y[1]; })]];
+    r = r.slice().sort((a, b) => { const x = k(a), y = k(b); return x[0] - y[0] || x[1] - y[1]; });
   }
-  const g = [];
-  for (const it of items) { if (!g.length || g[g.length - 1][0] !== it.group) g.push([it.group, []]); g[g.length - 1][1].push(it); }
-  return g;
+  return r;
+}
+function nextTodo() { const r = rows().filter(i => i.human == null); return r.length ? r[0].id : null; }
+function playOrder() {                  // shown order, rotated so that auto-advance continues from the anchor ("play from here")
+  const ids = rows().map(i => i.id), k = S.anchor ? ids.indexOf(S.anchor) : -1;
+  return k > 0 ? ids.slice(k).concat(ids.slice(0, k)) : ids;
+}
+async function sendOrder(force) {
+  const order = playOrder(), key = S.st.shown + "|" + order.join(",");
+  if (!S.st.shown || (key === S.orderKey && !force)) return;
+  S.orderKey = key;
+  await api("/api/order", {run: S.st.shown, order});
+}
+function renderTracks() {
+  const st = S.st, L = st.loop, r = rows(), live = L.alive && L.run === st.shown, filt = S.grp || S.show !== "all";
+  $("#shownN").textContent = filt ? `${r.length} of ${st.items.length} shown; auto-advance plays only these` : "";
+  sendOrder();
+  const fmtS = s => s == null ? "" : s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";
+  let h = "";
+  for (const it of r) {
+    const cur = live && L.item === it.id, n = idxOf(it.id), played = it.human != null;
+    const scoring = live && L.scoring > 0 && S.last === it.id && !played;
+    const drv = [played ? "you" + (it.attempts > 1 ? ` &middot; ${it.attempts} tries` : "") + (it.sim_s ? ` &middot; ${fmtS(it.sim_s)}` : "") : ""]
+      .concat((it.drives || []).map(d => `model ${esc(d.driver)} <span class="${scoreCls(d.score)}">${esc(d.score_s)}</span>`)).filter(Boolean);
+    h += `<tr data-id="${esc(it.id)}" class="${cur ? "cur" : ""}" title="${esc(it.id)}">
+      <td class="num">${cur ? '<span class="eq"><i></i><i></i><i></i></span>' : n}</td>
+      <td><span class="l1 mono">${esc(it.label)}</span><span class="l2">${esc(it.group)} &middot; ${esc(it.scenario)}</span></td>
+      <td class="n cRef">${esc(it.model_s)}<span class="l2">${esc(it.model_src || "")}</span></td>
+      <td>${cur ? `<span class="nowlbl">NOW PLAYING</span>` : scoring ? '<span class="muted"><span class="spin"></span>scoring&hellip;</span>'
+        : played ? `<span class="sc ${scoreCls(it.human)}">${esc(it.human_s)}</span> <span class="muted small">${esc(it.why)}</span>`
+        : `<span class="muted small">${esc(it.why || "not played")}</span>`}
+        ${drv.length ? `<span class="l2">${drv.join(" &middot; ")}</span>` : ""}</td>
+      <td class="cDrv small">${drv.join("<br>") || '<span class="muted">-</span>'}</td>
+      <td>${cur ? "" : `<button class="pbtn" data-play="${esc(it.id)}" title="${played ? "Replay this track (a new attempt; the newest counts)" : "Play this track"}${S.st.control.playlist ? ", then continue from here" : ""}">${played ? "&#8635;" : "&#9654;"}</button>`}</td></tr>`;
+  }
+  setHTML($("#trk tbody"), "tracks", h || '<tr><td colspan="6" class="muted" style="padding:14px">No track matches the filter.</td></tr>');
 }
 
-function renderItems() {
-  const st = S.st, L = st.loop, gs = groups();
-  const order = gs.flatMap(g => g[1].map(i => i.id));
-  const key = S.sort + "|" + st.shown + "|" + order.join(",");
-  if (key !== S.orderKey) {            // as the Tk panel: write the order when it changes (the server refuses for another batch)
-    S.orderKey = key;
-    if (st.shown) api("/api/order", {run: st.shown, order});
+function renderTransport() {
+  const st = S.st, L = st.loop, C = st.control, ps = plainState(), shown = batchOf(st.shown), lb = batchOf(L.run);
+  const head = ps.h + "|" + (L.item || "");
+  if (head !== S.head) { S.head = head; S.headT = Date.now(); }
+  const secs = ps.secs != null ? ps.secs : Math.round((Date.now() - S.headT) / 1000);
+  $("#npTrack").textContent = L.alive && L.item ? L.item_label || L.item : L.alive ? "No track loaded" : "Nothing playing";
+  $("#npTrack").title = L.item || "";
+  $("#npSub").textContent = L.alive ? `${lb ? lb.label : base(L.run)} · driver: ${driverLabel()}` : shown ? `Open: ${shown.label}` : "";
+  $("#npEq").className = "eq" + (L.alive && L.state === "driving" && !C.paused ? "" : " still");
+  $("#stHead").textContent = ps.h + (L.alive && ps.c !== "off" ? `  · ${secs} s` : "");
+  $("#stHead").className = ps.c;
+  const lv = L.live || {};
+  $("#stDetail").textContent = ps.live && lv.sim_t != null ? `${ps.d}  ·  ${lv.sim_t.toFixed(0)} s${lv.sim_total ? " of " + lv.sim_total.toFixed(0) + " s" : ""} driven${lv.speed != null ? ", " + (lv.speed * 3.6).toFixed(0) + " km/h" : ""}` : ps.d;
+  $("#stDetail").title = L.msg || "";
+  $("#stBarW").className = "bar" + (ps.busy ? " busy" : "");
+  $("#stBar").style.width = ps.live && lv.sim_t != null && lv.sim_total ? Math.min(100, 100 * lv.sim_t / lv.sim_total) + "%" : ps.busy ? "30%" : "0";
+  // buttons
+  const item = L.alive && L.item, why = [];
+  const P = $("#tbPlay");
+  if (!L.alive) { P.innerHTML = "&#9654;"; P.disabled = !shown || !nextTodo(); P.title = !shown ? "Open a playlist first" : !nextTodo() ? "Every track of this playlist has a result" : "Play " + shown.label; }
+  else if (C.paused) { P.innerHTML = "&#9654;"; P.disabled = false; P.title = "Resume"; }
+  else if (item) { P.innerHTML = "&#10074;&#10074;"; P.disabled = false; P.title = "Pause (the car holds)"; }
+  else { P.innerHTML = "&#9654;"; P.disabled = false; P.title = "Play the next track"; }
+  P.style.fontSize = item && !C.paused ? "1.4rem" : "";
+  $("#tbReplay").disabled = $("#tbNext").disabled = !item;
+  $("#tbStop").disabled = !L.alive;
+  $("#tbReplay").title = item ? "Replay track: restart this track from the beginning" : "Replay track (nothing is playing)";
+  $("#tbNext").title = item ? "Next track: skip this one (not counted)" : "Next track (nothing is playing)";
+  $("#tbStop").title = L.alive ? "Stop: end this track (not counted) and stop playing" : "Stop (nothing is playing)";
+  if (!L.alive) why.push(shown ? (nextTodo() ? `Nothing is playing. ▶ plays "${shown.label}" from track ${idxOf(nextTodo())}.` : `Every track of "${shown.label}" has a result.`) : "Nothing is playing. Open a playlist, then ▶.");
+  else if (!item) why.push(C.playlist ? "No track loaded: ▶ plays the next one." : "Auto-advance is off: ▶ (or a track's ▶, or the throttle) plays the next track.");
+  if (!C_record()) why.push("Practice: nothing from now on is scored or kept until Record results is on again.");
+  $("#tpWhy").textContent = why.join("  ");
+  $("#recSw").hidden = !S.meta.record;
+  $("#recIn").checked = C.record !== false;
+  $("#pracTag").hidden = C_record();
+  $("#autoIn").checked = !!C.playlist;
+}
+
+function renderSettings() {
+  if (!$("#setDlg").open) return;
+  const C = S.st.control, m = S.meta;
+  const blocks = [];
+  const order = m.options.slice().sort((a, b) => (b.name === "driver") - (a.name === "driver"));
+  for (const o of order) {
+    const v = C.options[o.name] ?? o.default, [help, when] = o.help || ["", ""];
+    const ctl = o.choices ? `<select data-k="opt:${esc(o.name)}">${choiceOpts(o.choices, v)}</select>`
+      : `<label class="switch"><input type="checkbox" data-k="opt:${esc(o.name)}" ${v ? "checked" : ""}><span class="knob"></span>${v ? "On" : "Off"}</label>`;
+    blocks.push(setBlock(o.name === "driver" ? "Driver" : o.label.replace(/ \(.*\)$/, ""), ctl, help, when));
   }
-  const live = L.alive && L.run === st.shown;
-  const fmt = (v, cls) => v ? `<span class="${cls}">${esc(v)}</span>` : "";
-  let h = "";
-  for (const [g, its] of gs) {
-    if (g !== null) {
-      const d = its.filter(i => i.human != null), f = S.folded.has(g);
-      const mean = d.length ? (d.reduce((a, i) => a + i.human, 0) / d.length) : null;
-      h += `<tr class="grp" data-g="${esc(g)}"><td colspan="2"><span class="caret">${f ? "&#9656;" : "&#9662;"}</span>${esc(g)} <span class="muted small">(${its.length})</span></td>
-        <td class="n ${scoreCls(mean)}">${mean == null ? "" : mean.toFixed(S.meta.score_dec)}</td><td></td><td class="muted">${d.length} / ${its.length} driven</td><td></td></tr>`;
-      if (f) continue;
-    }
-    for (const it of its) {
-      const cls = [live && L.item === it.id ? "cur" : "", it.human != null ? "done" : "", S.sel === it.id ? "sel" : ""].join(" ");
-      h += `<tr data-id="${esc(it.id)}" class="${cls}" title="${esc(it.id)}">
-        <td class="${g !== null ? "sub" : ""} mono">${esc(it.label)}</td>
-        <td class="hide-n" title="${esc(it.scenario)}">${esc(it.scenario)}</td>
-        <td class="n">${fmt(it.human_s, scoreCls(it.human))}</td>
-        <td class="n">${esc(it.model_s)}${it.model_src ? `<span class="src">${esc(it.model_src)}</span>` : ""}</td>
-        <td class="st" title="${esc(it.status)}">${esc(it.status)}</td>
-        <td><button class="btn icon play" data-play="${esc(it.id)}" title="Drive this item next">&#9654;</button></td></tr>`;
-    }
+  blocks.push(setBlock("Auto-advance", `<label class="switch"><input type="checkbox" data-k="playlist" ${C.playlist ? "checked" : ""}><span class="knob"></span>${C.playlist ? "On" : "Off"}</label>`,
+    "On: after a track ends, the next unplayed one in the playlist loads by itself. Off: each track waits for you to press ▶ or the throttle.", "Applies at once."));
+  if (m.record) blocks.push(setBlock("Record results", `<label class="switch rec"><input type="checkbox" data-k="record" ${C.record !== false ? "checked" : ""}><span class="knob"></span>${C.record !== false ? "On" : "Off (practice)"}</label>`,
+    "On: every finished track is scored and kept in the playlist. Off (practice): you drive, but nothing is scored, counted or kept; the recording is deleted when the track ends.",
+    "Decided when a track ends, so you can switch it while driving."));
+  setHTML($("#setBody"), "settings", blocks.join(""));
+}
+const setBlock = (t, ctl, help, when) => `<div class="set"><div class="h"><b>${esc(t)}</b>${ctl}</div>${help ? `<div class="help">${esc(help)}</div>` : ""}${when ? `<div class="when">${esc(when)}</div>` : ""}</div>`;
+function choiceOpts(ch, v) {    // choices: plain values, or [value, label, group] entries (consecutive groups as <optgroup>)
+  let out = "", g = null;
+  for (const x of ch) {
+    const [val, lab, grp] = Array.isArray(x) ? x : [x, x, ""];
+    if ((grp || "") !== (g || "")) { if (g) out += "</optgroup>"; g = grp || ""; if (g) out += `<optgroup label="${esc(g === "current" ? "Current checkpoints" : g)}">`; }
+    out += `<option value="${esc(val)}" ${val === v ? "selected" : ""}>${esc(lab)}</option>`;
   }
-  setHTML($("#itemTable tbody"), "items", h || '<tr><td colspan="6" class="muted">no items</td></tr>');
+  return out + (g ? "</optgroup>" : "");
 }
 
 // ---------- polling ----------
-async function poll() {
-  try {
-    const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : ""));
-    if (st.loop) {
-      if (S.boot && st.boot && st.boot !== S.boot) return location.reload();   // the server restarted (new code): reload the page
-      S.boot = st.boot;
-      S.st = st;
-      if (S.run && !st.batches.some(b => b.run === S.run)) S.run = null;
-      for (const n of st.notices) if (n.t > S.noticeT) { toast(n.msg, n.level === "bad" ? "bad" : ""); S.noticeT = n.t; }
-      render();
-    }
-  } catch (e) { $("#loopPill").className = "pill dead"; $("#loopPill").textContent = "panel server unreachable"; }
-  setTimeout(poll, 1000);
+async function poll1() {
+  const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : ""));
+  if (!st.loop) { $("#stHead").textContent = "Panel server not answering"; $("#stHead").className = "bad"; return; }
+  if (S.boot && st.boot && st.boot !== S.boot) return location.reload();   // the server restarted (new code): reload the page
+  S.boot = st.boot;
+  if (S.run && !st.batches.some(b => b.run === S.run)) S.run = null;
+  S.st = st;
+  if (!S.run && st.shown) S.run = st.shown;
+  for (const n of st.notices) if (n.t > S.noticeT) { toast(n.msg, n.level === "bad" ? "bad" : ""); S.noticeT = n.t; }
+  render();
 }
+async function poll() { try { await poll1(); } finally { setTimeout(poll, 1000); } }
 
 // ---------- actions ----------
-async function control(d) { const r = await api("/api/control", d); if (S.st && r.control) { S.st.control = r.control; render(); } return r; }
+async function control(d, msg) {
+  const r = await api("/api/control", d);
+  if (r.control && S.st) { S.st.control = Object.assign(S.st.control, r.control); render(); }
+  if (r.ok && msg) toast(msg, "ok", 3500);
+  return r;
+}
 async function act(kind, item) { const r = await api("/api/act", {kind, item}); if (!r.ok) toast(r.msg || "failed", "bad", 10000); return r; }
+async function takeOver(path, body, label, ask, okMsg) {      // ask: [title, text] shown before anything is sent (and then force);
+                                                              // okMsg: the toast on success (the server's text names dirs)
+  if (ask) { if (!await confirmBox(ask[0], ask[1], ask[2] || "Go on", ask[3])) return null; body = Object.assign({force: true}, body); }
+  let r = await work(label, () => api(path, body));
+  if (r && r.confirm) {
+    if (!await confirmBox("Another run is using the car", r.confirm, "Stop it and go on", true)) return null;
+    r = await work("Stopping the other run, then: " + label.toLowerCase(), () => api(path, Object.assign({}, body, {force: true})));
+  }
+  if (!r) return null;
+  toast(r.ok && okMsg ? okMsg : plain(r.msg) || (r.ok ? "Done" : "Failed"), r.ok ? "ok" : "bad", 9000);
+  if (r.run) { S.run = r.run; S.view = "pl"; }
+  await poll1();
+  return r;
+}
+async function playItem(id, run) {      // play a track of the open playlist: starts or switches the loop when needed
+  run = run || S.st.shown;
+  const L = S.st.loop, it = S.st.items.find(i => i.id === id) || {label: id}, b = batchOf(run) || {label: base(run)};
+  S.anchor = id;
+  if (L.alive && L.run === run) {
+    await sendOrder(true);
+    const r = await act("play", id);
+    if (r.ok) toast(`Playing ${it.label}` + (L.item ? " (the current track gives way if it has not started)" : ""), "ok");
+    return;
+  }
+  const ask = L.alive ? [`Switch to "${b.label}"?`, `Now playing: "${(batchOf(L.run) || {}).label || base(L.run)}". Its current track stops (not counted) and "${b.label}" starts with ${it.label}.`, "Switch playlist"] : null;
+  const r = await takeOver("/api/play_start", {run, item: id}, "Starting " + b.label + " with " + it.label, ask,
+    `Playing "${b.label}" from ${it.label}. A cold render stack takes about a minute to start.`);
+  if (r && r.ok) { S.orderKey = null; sendOrder(true); }
+}
+function cont() { const n = nextTodo(); if (!n) return toast("Every track has a result. Reload the playlist to start over, or ▶ a track to replay it.", "bad"); S.anchor = null; playItem(n); }
 
-$("#pauseBtn").onclick = async () => {
-  const p = !S.st.control.paused, r = await control({paused: p});
-  if (r.ok) toast(p ? "Paused" : "Resumed", "ok", 2500);
+$("#tbPlay").onclick = async () => {
+  const L = S.st.loop, C = S.st.control;
+  if (!L.alive) return cont();
+  if (C.paused) return control({paused: false}, "Resumed");
+  if (L.item) return control({paused: true}, "Paused: the car holds");
+  if (L.run === S.st.shown) return cont();
+  const st = await api("/api/state?run=" + encodeURIComponent(L.run));      // the playing playlist is not the open one
+  const n = (st.items || []).find(i => i.human == null);
+  if (n) act("play", n.id).then(r => r.ok && toast("Playing " + n.label, "ok")); else toast("Every track of the playing playlist has a result.", "bad");
 };
-$("#restartBtn").onclick = () => act("restart").then(r => r.ok && toast("Restart sent", "ok", 3000));
-$("#nextBtn").onclick = () => act("next").then(r => r.ok && toast("Next sent", "ok", 3000));
-$("#stopBtn").onclick = async () => {
-  if (await confirmBox("Stop the loop?", "The current item is aborted (it can be driven again) and the loop exits.", "Stop", true))
-    act("stop").then(r => r.ok && toast("Stop sent: the loop ends the item and exits", "ok", 5000));
+$("#tbReplay").onclick = () => act("restart").then(r => r.ok && toast("Replaying the track from the beginning", "ok"));
+$("#tbNext").onclick = () => act("next").then(r => r.ok && toast("Skipped (not counted)", "ok"));
+$("#tbStop").onclick = async () => {
+  const L = S.st.loop;
+  if (L.item && L.state === "driving" && !await confirmBox("Stop playing?", "The track you are driving ends now and is not counted. You can play it again later.", "Stop", true)) return;
+  act("stop").then(r => r.ok && toast("Stopping: the track ends, then playback stops", "ok", 5000));
 };
-$("#toggles").onchange = e => {
+$("#recIn").onchange = e => control({record: e.target.checked}, e.target.checked ? "Record results on: finished tracks are scored and kept" : "Practice: nothing is scored or kept");
+$("#autoIn").onchange = e => control({playlist: e.target.checked}, e.target.checked ? "Auto-advance on" : "Auto-advance off: each track waits for ▶ or the throttle");
+$("#pins").onchange = async e => {
+  const k = e.target.dataset.k, n = k && k.slice(4), v = e.target.checked;
+  if (!n) return;
+  if (!!S.st.control.options[n] === v) {     // the viewer was toggled by its own key: it follows only an option change, so flip twice
+    await control({option: n, value: !v});
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  control({option: n, value: v}, `${opt(n).label}: ${v ? "on" : "off"}`);
+};
+$("#setBtn").onclick = () => { S.html.settings = null; setDlg.showModal(); renderSettings(); };
+$("#setBody").onchange = e => {
   const k = e.target.dataset.k;
-  if (k === "playlist") control({playlist: e.target.checked});
-  else if (k && k.startsWith("opt:")) control({option: k.slice(4), value: e.target.tagName === "SELECT" ? e.target.value : e.target.checked});
+  if (!k) return;
+  const v = e.target.tagName === "SELECT" ? e.target.value : e.target.checked;
+  const o = k.startsWith("opt:") ? opt(k.slice(4)) : null;
+  const when = o ? (o.help || [])[1] || "Saved" : "Saved";
+  if (k === "playlist") control({playlist: v}, "Auto-advance " + (v ? "on" : "off"));
+  else if (k === "record") control({record: v}, v ? "Record results on" : "Practice: nothing is scored or kept");
+  else control({option: k.slice(4), value: v}, `${o.name === "driver" ? "Driver" : o.label}: ${e.target.tagName === "SELECT" ? e.target.selectedOptions[0].textContent : v ? "on" : "off"}. ${when}`);
+  S.html.settings = null;
 };
 $("#copyBtn").onclick = () => {
   const u = S.st.phone.url;
   const fallback = () => { const t = document.createElement("textarea"); t.value = u; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); };
   (navigator.clipboard ? navigator.clipboard.writeText(u).catch(fallback) : Promise.resolve(fallback())).then(() => toast("Copied " + u, "ok", 2500));
 };
-$("#batchTable tbody").onclick = e => {
-  const tr = e.target.closest("tr[data-run]");
-  if (tr && tr.dataset.run !== S.st.shown) { S.run = tr.dataset.run; S.sel = null; S.html.items = null; poll1(); }
-};
-async function poll1() { const st = await api("/api/state" + (S.run ? "?run=" + encodeURIComponent(S.run) : "")); if (st.loop) { S.st = st; render(); } }
-
-async function takeOver(path, body, label) {
-  let r = await work(label, () => api(path, body));
-  if (r && r.confirm) {
-    if (!await confirmBox("Another run is active", r.confirm, "Stop it and go on", true)) return;
-    r = await work("Stopping the other run, then " + label.toLowerCase(), () => api(path, Object.assign({force: true}, body)));
-  }
-  if (!r) return;
-  toast(r.msg || (r.ok ? "done" : "failed"), r.ok ? "ok" : "bad", 12000);
-  if (r.run) { S.run = r.run; S.sel = null; }
+$("#libList").onclick = e => {
+  const c = e.target.closest(".pcard");
+  if (!c) return;
+  if (c.dataset.run !== S.st.shown) { S.run = c.dataset.run; S.anchor = null; S.grp = ""; S.html.tracks = null; }
+  S.view = "pl";
   poll1();
-  return r;
-}
-$("#contBtn").onclick = () => S.st.shown && takeOver("/api/continue", {run: S.st.shown}, "Continuing " + base(S.st.shown));
-$("#delBtn").onclick = async () => {
-  const b = S.st.batches.find(x => x.run === S.st.shown);
+};
+$("#backBtn").onclick = () => { S.view = "lib"; render(); };
+$("#contBtn").onclick = cont;
+$("#trk tbody").onclick = e => { const p = e.target.closest("[data-play]"); if (p) playItem(p.dataset.play); };
+$("#trk tbody").ondblclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr && !e.target.closest("[data-play]") && !tr.classList.contains("cur")) playItem(tr.dataset.id); };
+for (const [sel, key] of [["#sortSeg", "sort"], ["#showSeg", "show"]])
+  $(sel).onclick = e => { const b = e.target.closest("button"); if (!b) return; S[key] = b.dataset.v; $(sel).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); S.anchor = null; renderTracks(); };
+$("#grpSel").onchange = e => { S.grp = e.target.value; S.anchor = null; renderTracks(); };
+$("#reloadBtn").onclick = async () => {
+  const b = batchOf(S.st.shown), L = S.st.loop;
   if (!b) return;
-  if (b.current) return toast("The loop is running on this batch. Stop it first, then delete.", "bad");
-  const ok = await confirmBox(`Delete the batch "${b.label}"?`,
-    `${b.name}, created ${b.created}, ${b.driven} / ${b.total} driven, ${b.size} on disk.\n\nThis removes the whole directory\n${b.run}\nwith every attempt, rollout and score. It cannot be undone.`,
-    "Delete " + b.name, true);
+  const stop = L.alive ? `\n\nPlaying "${(batchOf(L.run) || {}).label || base(L.run)}" stops first (its current track is not counted).` : "";
+  const ok = await confirmBox(`Reload "${b.label}"?`, `The playlist starts over from track 1.\n\nYour ${b.driven} result(s) are not deleted: they move to the playlist's archive folder (archive/<date-time> inside ${b.name}), are kept on disk and no longer count here.${stop}`, "Reload and play", false);
   if (!ok) return;
-  const r = await work("Deleting " + b.name, () => api("/api/delete", {run: b.run}));
-  if (r) { toast(r.msg, r.ok ? "ok" : "bad"); if (r.ok) S.run = null; poll1(); }
+  S.anchor = null; S.show = "all"; S.grp = ""; S.sort = "order";
+  document.querySelectorAll("#sortSeg button, #showSeg button").forEach(x => x.classList.toggle("on", x.dataset.v === "order" || x.dataset.v === "all"));
+  takeOver("/api/reload", Object.assign({run: b.run}, L.alive ? {force: true} : {}), "Reloading " + b.label, null,
+    `Reloaded "${b.label}": your previous results are in its archive folder. Playing from track 1.`);
+};
+$("#delBtn").onclick = async () => {
+  const b = batchOf(S.st.shown);
+  if (!b) return;
+  if (b.current) return toast("This playlist is playing. Stop it first (■), then delete.", "bad");
+  const ok = await confirmBox(`Delete the playlist "${b.label}"?`,
+    `${b.driven} of ${b.total} tracks played, created ${b.created}, ${b.size} on disk.\n\nThis removes its whole folder\n${b.run}\nwith every attempt, recording and score. It cannot be undone.`, "Delete playlist", true);
+  if (!ok) return;
+  const r = await work("Deleting " + b.label, () => api("/api/delete", {run: b.run}));
+  if (r) { toast(r.ok ? `Deleted "${b.label}".` : r.msg, r.ok ? "ok" : "bad"); if (r.ok) { S.run = null; S.view = "lib"; } poll1(); }
 };
 $("#offBtn").onclick = async () => {
   $("#offBody").innerHTML = '<span class="spin"></span>loading';
@@ -495,45 +719,14 @@ function mdTables(text) {      // markdown tables -> <table>, other lines as tex
       const rows = [];
       while (i < lines.length && lines[i].trim().startsWith("|")) rows.push(lines[i++].trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()));
       const al = rows[1] && rows[1].every(c => /^:?-+:?$/.test(c)) ? rows.splice(1, 1)[0].map(c => c.endsWith(":") ? "n" : "") : [];
-      out.push('<div class="tw" style="margin:6px 0"><table><thead><tr>' + rows[0].map((c, k) => `<th class="${al[k] || ""}">${esc(c)}</th>`).join("") +
+      out.push('<div class="tw" style="margin:6px 0;overflow:auto"><table><thead><tr>' + rows[0].map((c, k) => `<th class="${al[k] || ""}" style="top:0">${esc(c)}</th>`).join("") +
         "</tr></thead><tbody>" + rows.slice(1).map(r => "<tr>" + r.map((c, k) => `<td class="${al[k] || ""}">${esc(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table></div>");
     } else { const l = lines[i++]; out.push(l.trim() ? `<p style="margin:4px 0">${esc(l)}</p>` : ""); }
   }
   return out.join("");
 }
 
-// items: select, fold, play
-const itBody = $("#itemTable tbody");
-itBody.onclick = e => {
-  const p = e.target.closest("[data-play]");
-  if (p) return playItem(p.dataset.play);
-  const g = e.target.closest("tr.grp");
-  if (g) { S.folded.has(g.dataset.g) ? S.folded.delete(g.dataset.g) : S.folded.add(g.dataset.g); return renderItems(); }
-  const tr = e.target.closest("tr[data-id]");
-  if (tr) { S.sel = tr.dataset.id; renderItems(); }
-};
-itBody.ondblclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) playItem(tr.dataset.id); };
-function playItem(id) {
-  const it = S.st.items.find(i => i.id === id) || {label: id};
-  const L = S.st.loop, run = S.st.shown;
-  if (!L.alive)                          // no loop: start it on this batch and drive this item first (never queue silently)
-    return takeOver("/api/play_start", {run, item: id}, "Starting the loop on " + base(run) + " with " + it.label);
-  if (L.run && L.run !== run) return toast("The loop runs on another batch (" + base(L.run) + "). Continue this batch first.", "bad");
-  act("play", id).then(r => r.ok && toast("Drive next: " + it.label, "ok"));
-}
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
-  S.sort = b.dataset.sort;
-  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
-  renderItems();
-});
-$("#foldBtn").onclick = () => {
-  const gs = [...new Set(S.st.items.map(i => i.group))];
-  if (S.folded.size) S.folded.clear(); else gs.forEach(g => S.folded.add(g));
-  $("#foldBtn").textContent = S.folded.size ? "Expand all" : "Fold all";
-  renderItems();
-};
-
-// ---------- new batch dialog ----------
+// ---------- new playlist ----------
 function setTab(t) {
   S.tab = t;
   document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
@@ -545,10 +738,13 @@ function setTab(t) {
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
 $("#newBtn").onclick = () => {
   $("#sets").innerHTML = S.meta.sets.map(([k, l]) => `<button class="setopt ${k === S.setKey ? "on" : ""}" data-k="${esc(k)}">${esc(l)}</button>`).join("");
-  $("#pickTab").style.display = S.meta.catalog ? "" : "none";
+  $("#pickTab").hidden = !S.meta.catalog;
+  S.nameEdited = false;
+  $("#newName").value = "";
   setTab(S.meta.catalog ? S.tab : "sets");
   newDlg.showModal();
 };
+$("#newName").oninput = () => { S.nameEdited = !!$("#newName").value.trim(); newInfo(); };
 $("#sets").onclick = e => {
   const b = e.target.closest(".setopt");
   if (!b) return;
@@ -556,27 +752,30 @@ $("#sets").onclick = e => {
   document.querySelectorAll(".setopt").forEach(x => x.classList.toggle("on", x === b));
   newInfo();
 };
-$("#sets").ondblclick = e => { if (e.target.closest(".setopt")) $("#newGo").click(); };
 function newInfo() {
-  let txt, ok;
+  let txt, ok, dflt;
   if (S.tab === "sets") {
     const s = S.meta.sets.find(x => x[0] === S.setKey);
-    txt = s ? "Set: " + s[1] : "Pick a set";
-    ok = !!s;
+    txt = s ? "Tracks: " + s[1] : "Choose a scene set";
+    ok = !!s; dflt = s ? s[1] : "";
   } else {
     const tracks = new Set([...S.pick].map(id => (S.catById[id] || {}).track));
-    txt = S.pick.size + " scene(s) selected" + (tracks.size > 1 ? " (mixed tracks: pick PAI or nuPlan, not both)" : "");
-    ok = S.pick.size > 0 && tracks.size === 1;
+    txt = S.pick.size + " scene(s) selected" + (tracks.size > 1 ? " (mixed: pick PAI or nuPlan scenes, not both)" : "");
+    ok = S.pick.size > 0 && tracks.size === 1; dflt = S.pick.size ? `Custom pick (${S.pick.size})` : "";
   }
+  if (!S.nameEdited) $("#newName").value = dflt;
   $("#newInfo").textContent = txt;
-  $("#newGo").disabled = !ok;
-  $("#newGo").textContent = S.tab === "sets" ? "Start new batch" : `New batch from selection (${S.pick.size})`;
+  $("#newGo").disabled = !ok || !$("#newName").value.trim();
 }
 $("#newGo").onclick = async () => {
-  const body = S.tab === "sets" ? {key: S.setKey} : {key: "custom", ids: S.cat.filter(r => S.pick.has(r.id)).map(r => r.id)};
+  const name = $("#newName").value.trim();
+  const body = Object.assign(S.tab === "sets" ? {key: S.setKey} : {key: "custom", ids: S.cat.filter(r => S.pick.has(r.id)).map(r => r.id)}, {name, start: false});
   newDlg.close();
-  const r = await takeOver("/api/new_batch", body, "Creating the batch and starting the loop");
-  if (r && r.ok && S.tab === "pick") S.pick.clear();
+  const r = await work("Creating the playlist", () => api("/api/new_batch", body));
+  if (!r) return;
+  toast(r.ok ? `Playlist "${name}" created. Press ▶ Play to start it.` : r.msg || "Failed", r.ok ? "ok" : "bad", 8000);
+  if (r.ok) { if (S.tab === "pick") S.pick.clear(); if (r.run) { S.run = r.run; S.view = "pl"; S.anchor = null; S.grp = ""; } }
+  poll1();
 };
 async function loadCatalog() {
   if (S.cat) return renderPick();
@@ -611,7 +810,7 @@ function renderPick() {
     <td><input type="checkbox" ${S.pick.has(x.id) ? "checked" : ""}></td><td class="mono">${esc(x.label)}</td>
     <td class="hide-n" title="${esc(x.group)}">${esc(x.group)}</td><td class="n hide-n">${x.stage ?? ""}</td>
     <td class="n">${f2(x.ref_mean)}</td><td class="n ${scoreCls(x.r6dag)}">${f2(x.r6dag)}</td><td>${esc(x.fail)}</td>
-    <td class="n hide-n">${f2(x.model)}${x.model_src ? `<span class="src">${esc(x.model_src)}</span>` : ""}</td></tr>`).join("") ||
+    <td class="n hide-n">${f2(x.model)} <span class="muted small">${esc(x.model_src || "")}</span></td></tr>`).join("") ||
     '<tr><td colspan="8" class="muted">no scene matches</td></tr>';
   $("#pickAll").checked = rows.length > 0 && rows.every(x => S.pick.has(x.id));
   document.querySelectorAll("#pickTable th[data-k]").forEach(th => {
@@ -635,18 +834,24 @@ document.querySelectorAll("#pickTable th[data-k]").forEach(th => th.onclick = ()
 
 // ---------- start ----------
 (async () => {
-  S.meta = await api("/api/meta");
+  while (!(S.meta = await api("/api/meta")).sets) {      // the server may still be starting: try again each second
+    $("#stHead").textContent = "Waiting for the panel server\u2026"; $("#stHead").className = "wait";
+    await new Promise(r => setTimeout(r, 1000));
+  }
   document.title = S.meta.title;
   $("#title").textContent = S.meta.title;
-  $("#extraHead").textContent = S.meta.batch_extra || "";
-  if (!S.meta.batch_extra) { $("#extraCol").remove(); $("#extraHead").remove(); }
-  poll();
-  const h = location.hash.slice(1);           // #new / #pick / #official / #delete / #stop open a dialog (screenshots, links)
+  await poll1().catch(() => {});
+  setTimeout(poll, 1000);
+  setInterval(() => S.st && renderTransport(), 1000);    // the elapsed seconds tick between polls
+  new ResizeObserver(() => document.body.style.setProperty("--tpH", $("#tp").offsetHeight + "px")).observe($("#tp"));
+  const h = location.hash.slice(1);           // #new / #pick / #settings / #lib / #official / #delete / #reload open a view (screenshots, links)
   if (h) setTimeout(() => {
     if (h === "new" || h === "pick") { $("#newBtn").click(); if (h === "pick") setTab("pick"); }
+    else if (h === "settings") $("#setBtn").click();
+    else if (h === "lib") $("#backBtn").click();
     else if (h === "official") $("#offBtn").click();
     else if (h === "delete") $("#delBtn").click();
-    else if (h === "stop") $("#stopBtn").click();
+    else if (h === "reload") $("#reloadBtn").click();
   }, 600);
 })();
 </script>

@@ -224,6 +224,18 @@ class AlpaSimExam(Backend):
                "render": ("Render size", "auto", ["auto", "1080", "720", "540", "288"]),  # front camera height px (HUMAN_H); auto =
                "shadow": ("Shadow: human log", False)}                         # human_stack.sh's pairing; the viewer only (display; G there too)
     batch_extra = "harmonizer"
+    record = True                                                     # human_loop.py honours control "record" (practice)
+    pinned = ("shadow",)                                              # the user wants Shadow at hand, not in the drawer (G in the viewer too)
+    option_help = {
+        "driver": ("Who drives: you with the phone, or a model checkpoint that drives by itself while you watch. Model scores are kept "
+                   "apart from yours.", "From the next track. On PAI, switching between you and a model restarts the render stack once "
+                   "(about 1 min)."),
+        "harmonizer": ("PAI only: makes the rendered camera look more like a real photo. Frames come slower.",
+                       "Restarts the render stack (about 1 min) before the next track."),
+        "render": ("Height of the front camera picture in pixels. Smaller is faster; auto = the default for the Harmonizer setting.",
+                   "Restarts the render stack (about 1 min) before the next track."),
+        "shadow": ("Shows where the recorded human driver went, as a ghost path in the viewer.", "Viewer only; applies at once."),
+    }
 
     def __init__(self):
         self.sc = Scenes()
@@ -244,9 +256,14 @@ class AlpaSimExam(Backend):
         ids = ex.get("ids", [])
         done = [d for d in (read_json(Path(run, "done", i + ".json")) for i in ids) if d]
         h = [bool(d.get("harmonizer")) for d in done]
+        tags = sorted({p.name.split("@", 1)[1][:-5] for p in Path(run, "done").glob("*@*.json")})
+        hx = "-" if not h else "on" if all(h) else "off" if not any(h) else "mixed %d/%d" % (sum(h), len(h))
         return dict(label=ex.get("label") or ex.get("set", "?"), created=(ex.get("created") or "?")[5:16], driven=len(done), total=len(ids),
-                    mean=sum(d["score"] for d in done) / len(done) if done else None,
-                    extra="-" if not h else "on" if all(h) else "off" if not any(h) else "mixed %d/%d" % (sum(h), len(h)))
+                    mean=sum(d["score"] for d in done) / len(done) if done else None, extra=hx,
+                    badges=["harmonizer %s" % hx] * bool(h) + ["model: %s" % t for t in tags] + [ex.get("track", "pai").upper()])
+
+    def item_label(self, item):
+        return self.sc.meta.get(item, {}).get("label", item)
 
     def delete_batch(self, run):
         ok, msg = Backend.delete_batch(self, run)
@@ -314,8 +331,9 @@ class AlpaSimExam(Backend):
         return True, ("Loop started on %s (card 0, %s MiB free). The stack takes about a minute to start; each scene then holds "
                       "until the first throttle press." % (run, free))
 
-    def new_batch(self, key, ids=None):
-        """A run dir for set `key`, or for the picked `ids` (key "custom"; one track), then start the loop on it."""
+    def new_batch(self, key, ids=None, name=None, start=True):
+        """A run dir for set `key`, or for the picked `ids` (key "custom"; one track), labelled `name` if given; then start the loop on it
+        (`start`)."""
         if ids is not None:
             ids = list(dict.fromkeys(ids))
             bad = [i for i in ids if i not in self.sc.meta]
@@ -325,6 +343,7 @@ class AlpaSimExam(Backend):
             track, label = tracks.pop(), "Custom pick (%d)" % len(ids)
         else:
             ids, track, label = self.sc.ids(key), self.sc.pred[key][0], dict(self.sc.sets)[key]
+        label = (name or "").strip()[:80] or label
         run = RUNS / ("exam_%s_%s" % (track, time.strftime("%m%d-%H%M%S")))
         while run.exists():                                                   # two batches within one second
             run = run.with_name(run.name + "b")
@@ -332,7 +351,7 @@ class AlpaSimExam(Backend):
         (run / "exam.json").write_text(json.dumps({"track": track, "set": key, "label": label, "ids": list(ids),
                                                    "created": time.strftime("%F %T")}, indent=1))
         (run / "notes.txt").write_text("%s panel: new batch %s (%d scenes)\n" % (time.strftime("%F %T"), key, len(ids)))
-        return self.start_loop(run)
+        return self.start_loop(run) if start else (True, "Playlist \"%s\" created (%d scenes)." % (label, len(ids)))
 
     def ensure_side(self):
         msgs = []
@@ -371,7 +390,10 @@ class AlpaSimExam(Backend):
                 status = "; ".join([status] * bool(status) + ["model %s %.2f %s" % (k, v["score"], v["why"]) for k, v in md.items()])
             ms, src = self.sc.model(sid)
             out.append(dict(id=sid, label=m.get("label", sid), group=m.get("group", "?"), scenario=m.get("scenario", ""),
-                            human=d["score"] if d else None, model=ms, model_src=src, status=status))
+                            human=d["score"] if d else None, model=ms, model_src=src, status=status,
+                            why=d["why"] if d else (t or {}).get("status", ""), attempts=d.get("attempt", 1) if d else 0,
+                            sim_s=d.get("sim_s") if d else None, ref=m.get("ref"),
+                            drives=[dict(driver=k, score=v["score"], why=v["why"]) for k, v in md.items()]))
         return out
 
     def official(self):

@@ -188,14 +188,39 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
 `wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing. Since 2026-10-22 the
 panel is the web page `lib/exam_web.py` (port 8770; `http://100.108.238.8:8770/` from a phone or the Mac over Tailscale;
 `human_panel.sh --tk` = the old Tk window, `--restart` after a code update; details in phone_wheel's "Desktop panel").
-New batch has two tabs: the scene sets, and a custom pick over `catalog()` (search, track / revision / R6DAG failure
-filters, sortable columns: organisers' mean, R6DAG-s1 score and loss class, model; multi-select, "New batch from selection").
+Layout (2026-10-22 evening redesign, a music player; the user could not read the batch / loop / item version):
+- Playlists (left column; at phone width a separate view with "All playlists" to go back) = batches. Each card: name, played /
+  total with a bar, your mean, created, disk, badges (track, harmonizer on / off / mixed, model drivers that drove in it), NOW
+  PLAYING on the loop's. "+ New playlist": 1. choose the tracks (a scene set, or "Pick scenes yourself" = the custom pick over
+  `catalog()`), 2. name it (prefilled), "Create playlist". Creating does not start anything (`new_batch(..., start=False)`).
+- Playlist (right) = its tracks, one flat list in playlist order (no group folders): #, track (scene label; group and scenario under
+  it), Reference (the model score and its source), Your result (score + why; "scoring..." while the loop scores it; model drives under
+  it), Driven (you, tries, sim seconds; hidden below 1100 px), and a play button (&#9654; unplayed, &#8635; replay). Sort: playlist order /
+  lowest score first; show: all / to play / played; a group filter. Auto-advance plays the shown tracks in the shown order, and a
+  track's play button continues from that track ("play from here": the order sent to the loop starts there). Buttons: Play /
+  Continue (track N) = the first unplayed track, "Reload playlist" (start over from track 1: `archive_results()` moves done/,
+  tried/ and results.md to `<run>/archive/<stamp>/`, kept on disk, no longer counted; then the loop restarts on it), "Results table"
+  (= results.md), Delete (confirm; refused while it plays).
+- Transport bar (bottom, always visible): now playing (track, playlist, driver), the state in plain words (Loading render stack /
+  Loading track / Ready - press throttle / Driving / Model driving / Paused / Scoring / Playlist finished / Stopped, with seconds; the
+  loop's raw message as the line under it and its tooltip; sim seconds and speed from `<live>/state.json` while driving), and
+  &#9198; replay track (restart), &#9654; / &#10074;&#10074; play / pause, &#9197; next track (skip, not counted), &#9632; stop (confirm while a track is driven).
+  The line under it says why a button is off. "Record results" and "Auto-advance" switches sit on it too.
+- Record results off = practice (control `record` false; `human_loop.py`): the track is driven, but when it returns nothing is
+  scored, counted or kept (no done/ or tried/ record, its rollout dirs and thumbnails are deleted, one line in notes.txt); while it
+  stays off, auto-advance skips tracks practised in this loop. Decided when the track returns, so it can be switched while driving.
+  The transport bar shows "PRACTICE - not recorded" and the viewer banner's message starts with "practice, not recorded".
+- "Drive settings" (header, a drawer): Driver (Human, then the current checkpoints, then the others), Harmonizer, Render size, Shadow,
+  Auto-advance, Record results, each with one line on what it does and when it applies (the render stack restarts, about 1 min).
+- Header: the phone address (Copy), the input chips (phone live, keyboard, who drives) and a big "Shadow: human log" switch
+  (`Backend.pinned`; the user wants it at hand). It shows the viewer's own state (`<live>/viewer.json`), so G in the viewer still
+  toggles it and the switch follows.
 
 ![web panel](figs/panel_web.png)
 
-`figs/panel_web.png`: the web panel on the PAI stage-1 batch at the desktop size (1300 x 1800 screen px). Look at the
-batch list (LOOP badge and orange bar on the loop's batch, driven bar, mean coloured green 1 / orange / red 0) and the scene
-list grouped by revision with the group mean. `figs/panel_web_pick.png`: the custom pick tab.
+`figs/panel_web.png`: the panel at the Tokyo window size (1300 x 1800 screen px, device scale 1.4, ~930 CSS px) on a throwaway
+6-track PAI playlist with a fake stack: playlists left, tracks right with results, the transport bar at the bottom. Look at the
+plain state line and the buttons. `figs/panel_web_pick.png`: New playlist with the custom pick.
 
 - New batch: one set per filter over the scene table (`Scenes` in `lib/alpasim_exam.py`): PAI stage 1 (10), first 40, all 441
   (`fetch_all/all441.tsv`, only scenes whose `$NUREC/all-usdzs/<uuid>.usdz` is on disk; all 441 are on Tokyo), 26.01 (177) / 26.04
@@ -214,8 +239,8 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
   that batch. Nothing is deleted automatically. If the panel loop or a `human_pai.sh` / `human_nuplan.sh` stack
   from a terminal is running, the panel offers to stop it. If CARLA runs on card 0 (a B2D exam), the panel refuses to start
   and says so; it never stops the B2D side.
-- Scene list: grouped by PAI artifact revision (26.01 / 26.04) or by nuPlan log segment, with the group's human mean and
-  driven count; or sorted by score, low first. Columns: scene (last 12 characters of the clip id), stage and the organisers'
+- Scene data (the group is the PAI artifact revision 26.01 / 26.04 or the nuPlan log segment; until the redesign the list was
+  grouped by it, now it is a filter). Columns: scene (last 12 characters of the clip id), stage and the organisers'
   mean, human score, model score with its source (`P2H10` = P2H10-F-s0 on that scene: PAI stage 1 from `pai1/runs/a10_c4`,
   nuPlan from `native_ref/P2H10-F-s0`; `a1` = the organisers' alpamayo1 where we have no P2H10 read, i.e. PAI stage 2),
   status (pass / failure reason and progress, or "skipped (Next item)"). "Official table" shows `results.md` of the run: the

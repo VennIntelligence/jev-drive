@@ -18,6 +18,8 @@ The loop sends one scene per simulate request (scripts/human_feed.py protocol), 
 - restart: the current scene is aborted and requested again first (~10 s run-out + the scene load, no stack start).
 - stop: the current scene is aborted and the loop exits; the resident stack stays warm.
 - Pause: no new scene is requested; inside a scene the driver holds.
+- Record off (control "record" false, read when a scene returns): practice. Nothing is scored or kept (no done/ or tried/ record; the
+  scene's rollout dirs and thumbnails are deleted); while it stays off, auto-advance skips scenes practised in this loop.
 - Option "harmonizer" (PAI only) and option "render" (front camera height: auto = human_stack.sh's pairing with the harmonizer,
   else HUMAN_H) are fixed for a stack's whole life, so a change restarts the resident stack (about a minute) once no scene is
   being driven; a loading or held scene is requested again on the new stack.
@@ -420,8 +422,9 @@ def main():
     def progress(state, msg, t0=None, item=None):
         """loop.json (the panel's status line, with the elapsed seconds) and launcher.json (the viewer's banner; it adds them itself)."""
         el = "" if t0 is None else ", %.0f s" % (time.time() - t0)
-        report(item=item, state=state, msg=msg + el)
-        write_json(LIVE / "launcher.json", {"state": state, "msg": msg, "t0": t0, "run": str(run), "t": time.time(),
+        report(item=item, state=state, msg=msg + el, scoring=len(jobs))
+        practice = "" if ctl.read()["record"] else "practice, not recorded: "
+        write_json(LIVE / "launcher.json", {"state": state, "msg": practice + msg, "t0": t0, "run": str(run), "t": time.time(),
                                             "batch": [sum(done(i) for i in ids), len(ids)]})
 
     scorer = Scorer(run, sc, base_image())
@@ -441,6 +444,7 @@ def main():
 
     wheel = WheelClient()
     plays, skipped, chosen, driven = [], set(), set(), set()     # driven: finished, not skipped, maybe not scored yet
+    practised = set()                                            # driven with record off (not counted)
     res, batch, req, hold_error = None, None, None, ""          # req: the scene this loop asked for, until its request returns
     model, drv = ModelSvc(), "human"                             # model mode: the model service; the panel's driver now
     k, armed, t_wait, restart_why = len(list((run / "stacks").glob("*"))), True, time.time(), ""
@@ -449,8 +453,9 @@ def main():
         return dkey(s, drv) in driven or (run / "done" / (dkey(s, drv) + ".json")).exists()
 
     def unfinished():
-        order = [i for i in ctl.read()["order"] if i in ids] or ids
-        return [i for i in order if not done(i) and i not in skipped]
+        c = ctl.read()
+        order = [i for i in c["order"] if i in ids] or ids
+        return [i for i in order if not done(i) and i not in skipped and (c["record"] or i not in practised)]
 
     def view():
         """The driver's live state of this loop's scene (fresh, from the resident stack, that scene only)."""
@@ -466,6 +471,18 @@ def main():
         if req and req.get("abort") and v and not v.get("aborted") and time.time() - req["t_abort"] > 2:
             write_json(LIVE / "abort.json", {"scene": req["scene"], "t": time.time(), "by": req["abort"]})
             req["t_abort"] = time.time()
+
+    def discard(scene, r):
+        """Record off: the returned rollouts are never scored and their files go."""
+        for u in {x["uuid"] for x in r.get("rollouts", []) if x.get("uuid")}:
+            scorer.seen.add(u)
+            shutil.rmtree(str(batch.dir / "sim/rollouts" / scene / u), ignore_errors=True)
+            try:
+                (batch.dir / "driver/thumbs" / (u + ".jpg")).unlink()
+            except OSError:
+                pass
+        practised.add(scene)
+        note("practice: %s not recorded (rollouts deleted)" % scene)
 
     def collect():
         for scene, rd, close in scorer.pending(batch, final=True):
@@ -574,6 +591,10 @@ def main():
                 if r is not None:
                     batch.take(req["scene"], r)
                     bad = r.get("error") or not any(x.get("success") for x in r.get("rollouts", []))
+                    if not ctl.read()["record"]:
+                        discard(req["scene"], r)
+                        req, armed, t_wait = None, False, time.time()
+                        continue
                     if req.get("abort"):                          # aborted: never scored (with or without a complete rollout)
                         for x in r.get("rollouts", []):
                             scorer.abort_status[x["uuid"]] = None

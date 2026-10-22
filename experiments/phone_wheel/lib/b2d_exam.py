@@ -41,6 +41,7 @@ class B2DExam(Backend):
     live = os.environ.get("HUMAN_LIVE", "/data/runs/human_drive/live")
     options = {"stop_on_collision": ("Stop route at first collision", False)}
     score_max = 100.0              # DS; the web panel colours a full score green
+    option_help = {"stop_on_collision": ("End the route at the first collision instead of driving on.", "From the next route.")}
 
     def __init__(self):
         root = ET.parse(str(XML)).getroot()
@@ -76,7 +77,8 @@ class B2DExam(Backend):
         notes = (Path(run, "notes.txt").read_text().split("\n", 1)[0] if Path(run, "notes.txt").exists() else "")
         key = notes.split("new batch ", 1)[1].split()[0] if "new batch " in notes else None
         ds = [h for h in (self.human(run, r)[0] for r in ids) if h is not None]
-        return dict(label=dict(self.batch_sets()).get(key, "terminal run (%d routes)" % len(ids)), driven=len(ds), total=len(ids),
+        name = Path(run, "name.txt").read_text().strip() if Path(run, "name.txt").exists() else ""
+        return dict(label=name or dict(self.batch_sets()).get(key, "terminal run (%d routes)" % len(ids)), driven=len(ds), total=len(ids),
                     created=time.strftime("%m-%d %H:%M", time.localtime(Path(run, "routes.txt").stat().st_mtime)),
                     mean=sum(ds) / len(ds) if ds else None)
 
@@ -125,15 +127,20 @@ class B2DExam(Backend):
         free = sh("nvidia-smi -i 0 --query-gpu=memory.free --format=csv,noheader,nounits").strip()
         return True, "Loop started on %s (card 0, %s MiB free). The first route loads and holds until the throttle." % (run, free)
 
-    def new_batch(self, key):
+    def item_label(self, item):
+        return "route %s (%s)" % (item, self.meta.get(item, ("?",))[0])
+
+    def new_batch(self, key, name=None, start=True):
         ids = self.set_ids(key)
         run = RUNS / time.strftime("%m%d-%H%M%S")
         run.mkdir(parents=True)
         (run / "routes.txt").write_text(",".join(ids))
         (run / "notes.txt").write_text("%s panel: new batch %s (%d routes); stop_on per route in the loop lines below\n"
                                        % (time.strftime("%F %T"), key, len(ids)))
+        if (name or "").strip():
+            (run / "name.txt").write_text(name.strip()[:80] + "\n")
         self.cache.clear()
-        return self.start_loop(run)
+        return self.start_loop(run) if start else (True, "Playlist created (%d routes)." % len(ids))
 
     def continue_batch(self, run):
         (Path(run) / "DONE").unlink() if (Path(run) / "DONE").exists() else None
@@ -181,7 +188,8 @@ class B2DExam(Backend):
             if h is None and Path(run, "attempts", rid).exists():
                 status = "not finished"
             m = self.model.get(rid) or {}
-            out.append(dict(id=rid, group=town, scenario=scen, human=h, model=m.get("ds"), status=status or ""))
+            out.append(dict(id=rid, label="route %s" % rid, group=town, scenario=scen, human=h, model=m.get("ds"), status=status or "",
+                            why=status or ""))
         return out
 
     def official(self):

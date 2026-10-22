@@ -176,6 +176,11 @@ AlpaSim, bound to 127.0.0.1 and the Tailscale IPv4 only) and opens it as a Chrom
 the same lock, so close one before the other). From a phone or the Mac: `http://100.108.238.8:8771/` (8770 for AlpaSim) over
 Tailscale; narrow screens hide the secondary columns. The page polls `/api/state` every second; the shown batch is per page,
 so a phone can look at another batch than the desktop. Same Backend and `control.json` / `loop.json` protocol as the Tk panel.
+Since the 2026-10-22 evening redesign the page is a music player: playlists (batches) -> tracks (routes, one flat list), a transport
+bar for the loop (replay route = restart, play / pause, next = skip, stop) and a "Drive settings" drawer; layout in
+[alpasim_human](../alpasim_human/README.md), "Desktop panel". B2D has no custom pick and no "Record results" (its loop keeps every
+finished route); "Reload playlist" moves done/ to `<run>/archive/<stamp>/` and restarts the loop. The list below names the
+older buttons; on the page: Continue = Play / Continue, Restart item = replay track, Next item = next track.
 
 - New batch: pick Full val suite (220), Hard list (45, `results/exam_hard45.txt`), Junction turns (54) or Model failure routes
   (10). It writes a new run dir with `routes.txt` (town-grouped as in "The full exam") and starts the loop.

@@ -7,11 +7,11 @@ AlpaSim: experiments/alpasim_human/lib/alpasim_exam.py (README of alpasim_human,
 Protocol between the panel and a backend's long-lived drive loop. Two JSON files sit in the backend's live dir, and each has
 exactly one writer:
   <live>/control.json  (written only by the panel, through Control.update / Control.act)
-      {"paused": bool, "playlist": bool, "options": {name: value}, "order": [item ids in the panel's current order],
+      {"paused": bool, "playlist": bool, "record": bool, "options": {name: value}, "order": [item ids in the panel's current order],
        "actions": [{"id": int, "kind": "play" | "next" | "restart" | "stop", "item": id or null, "t": unix s}]}
   <live>/loop.json     (written only by the loop, through write_json)
       {"run": dir, "item": id or null, "state": "loading" | "driving" | "paused" | "idle" | "stopped", "msg": str,
-       "consumed": [action ids handled], "pid": int, "t": unix s}
+       "consumed": [action ids handled], "pid": int, "t": unix s, "scoring": rollouts waiting for a score (optional)}
 The loop handles an action once (it records the action's id in consumed):
   - play: run that item next, even if it was already driven.
   - next: abort the running item and go on.
@@ -19,10 +19,14 @@ The loop handles an action once (it records the action's id in consumed):
   - stop: abort the running item and exit.
 "paused" holds at the next item boundary; the agent may also hold mid-item. "playlist" makes the loop auto-advance to the next
 unfinished item in "order"; without it the loop waits for a play action or the driver's own start signal.
+"record" (default true; only for a backend with record = True): false = practice, the loop drives the item but scores, counts and keeps
+nothing (no done/ or tried/ record, the rollout files are deleted when the item returns); it is read when an item returns, and auto-advance
+skips items practised in this loop while it stays false.
 Batches: a list of the backend's run dirs (runs()), newest first, with set label, created time, driven / total, mean human score,
 disk size (du, cached; the running batch re-measured every 60 s) and an optional backend column (batch_extra). Selecting one shows its
 items; "Continue this batch" (re)starts the loop on it, "Delete this batch" removes its whole dir after a confirmation naming it and its
-size, never while the loop runs on it. Nothing is ever deleted automatically.
+size, never while the loop runs on it. Nothing is ever deleted automatically. "Reload" (web panel) starts a batch over: archive_results()
+moves its results (done/, tried/, results.md) into <run>/archive/<stamp>/, kept on disk but no longer counted, then the loop restarts.
 The top of the panel shows the phone page address (from `tailscale status --json`, with a Copy button) and the live input status
 from the wheel daemon's status file (WHEEL_STATUS, default $DATA_DIR/tmp/wheel/status.json; experiments/phone_wheel/scripts/wheel_server.py).
 """
@@ -30,6 +34,7 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -43,14 +48,15 @@ def read_json(path, default=None):
 
 def write_json(path, obj):
     path = Path(path)
-    tmp = path.with_name("." + path.name + ".%d" % os.getpid())
+    tmp = path.with_name("." + path.name + ".%d.%d" % (os.getpid(), threading.get_ident()))   # the web server writes from several threads
     tmp.write_text(json.dumps(obj))
     os.replace(str(tmp), str(path))
 
 
 class Control(object):
     """control.json: the panel writes it, the loop and the agent read it."""
-    DEFAULT = {"paused": False, "playlist": True, "options": {}, "order": [], "actions": []}
+    DEFAULT = {"paused": False, "playlist": True, "record": True, "options": {}, "order": [], "actions": []}
+    LOCK = threading.RLock()       # read-modify-write by several server threads of one panel must not lose an update
 
     def __init__(self, live):
         self.path = Path(live) / "control.json"
@@ -59,17 +65,19 @@ class Control(object):
         return dict(self.DEFAULT, **(read_json(self.path, {}) or {}))
 
     def update(self, **kw):
-        c = self.read()
-        c.update(kw)
-        write_json(self.path, c)
-        return c
+        with self.LOCK:
+            c = self.read()
+            c.update(kw)
+            write_json(self.path, c)
+            return c
 
     def act(self, kind, item=None):
-        c = self.read()
-        aid = max([a["id"] for a in c["actions"]] + [0]) + 1
-        c["actions"] = (c["actions"] + [{"id": aid, "kind": kind, "item": item, "t": time.time()}])[-50:]
-        write_json(self.path, c)
-        return aid
+        with self.LOCK:
+            c = self.read()
+            aid = max([a["id"] for a in c["actions"]] + [0]) + 1
+            c["actions"] = (c["actions"] + [{"id": aid, "kind": kind, "item": item, "t": time.time()}])[-50:]
+            write_json(self.path, c)
+            return aid
 
     def pending(self, consumed):
         """Actions the loop has not handled yet, oldest first."""
@@ -88,13 +96,16 @@ class Backend(object):
                                    # or (label, default str, [choices]) = a choice, e.g. {"size": ("Size", "auto", ["auto", "720"])};
                                    # a choice may be [value, label, group] (the web panel shows the label, grouped)
     batch_extra = None             # title of an extra column of the batch list (batch_info "extra"), or None
+    record = False                 # the loop honours control "record" (practice mode); the web panel hides the toggle otherwise
+    option_help = {}               # name -> (what it does, when it applies): one plain line each for the web panel's settings
+    pinned = ()                    # toggle options the web panel also shows as a big switch in its header (always visible)
     selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
     def batch_sets(self):          # [(key, label)] offered by "New batch"
         raise NotImplementedError
 
-    def new_batch(self, key, ids=None):  # run dir for set `key` (or for the picked `ids`, key "custom"), start the loop; (ok, message)
-        raise NotImplementedError
+    def new_batch(self, key, ids=None, name=None, start=True):  # run dir for set `key` (or the picked `ids`, key "custom"), labelled
+        raise NotImplementedError                                 # `name` if given; start the loop on it if `start`; (ok, message)
 
     def catalog(self):             # every selectable item for a custom pick, as dicts (backend-specific fields); [] = none
         return []
@@ -110,6 +121,19 @@ class Backend(object):
 
     def batch_info(self, run):     # dict(label, created, driven, total, mean (or None), extra)
         raise NotImplementedError
+
+    def archive_results(self, run):  # "Reload": move the batch's results into <run>/archive/<stamp>/ (kept, no longer counted)
+        if run not in self.runs():
+            return False, "%s is not a batch of this panel" % run
+        dst = Path(run, "archive", time.strftime("%m%d-%H%M%S"))
+        moved = [f for f in ("done", "tried", "results.md") if Path(run, f).exists()]
+        dst.mkdir(parents=True, exist_ok=True)
+        for f in moved:
+            shutil.move(str(Path(run, f)), str(dst / f))
+        return True, "previous results moved to %s" % dst if moved else "no previous results"
+
+    def item_label(self, item):    # short display name of an item of any batch (the web panel's now-playing line)
+        return item
 
     def delete_batch(self, run):   # remove a batch dir (the panel has confirmed it and checked that no loop runs on it)
         if run not in self.runs():

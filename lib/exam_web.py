@@ -3,12 +3,18 @@ panel in lib/exam_panel.py (its docstring has the protocol); this module only re
 
     serve(backend, port)        # 127.0.0.1:<port> and <tailscale IPv4>:<port> (never 0.0.0.0)
 
-API (JSON): GET /api/state?run=<dir> (everything the page shows: phone address, input status, loop, batches, the items of the shown
-batch), GET /api/meta (title, sets, options), GET /api/catalog (backend.catalog(), for the custom pick), GET /api/official?run=,
-POST /api/control {paused | playlist | option + value}, /api/act {kind, item} (refused when no loop runs), /api/order {run, order},
-/api/new_batch {key, ids, force}, /api/continue {run, force}, /api/play_start {run, item, force} (continue, then drive that item
-first), /api/delete {run}, /api/ensure_side. new_batch / continue answer {"confirm": text} when
-backend.busy_other() reports another run; the page asks and posts again with force (stop_other() first), as the Tk panel does.
+The page is a music player: the library = batches ("playlists"), a playlist = its items ("tracks", flat, in run order), a transport
+bar for the loop (replay track = restart, play / pause, next, stop), a "Drive settings" drawer (options, auto-advance = "playlist",
+record) and Record results on / off (control "record": off = practice, nothing is kept; backends with record = True only).
+
+API (JSON): GET /api/state?run=<dir> (everything the page shows: phone address, input status, loop (+ scoring count, the now-playing
+label and the driver's live sim time), the viewer's own toggles (viewer.json, e.g. shadow after its G key), batches, the items of the shown batch), GET /api/meta (title, sets, options with help, record),
+GET /api/catalog (backend.catalog(), for the custom pick), GET /api/official?run=,
+POST /api/control {paused | playlist | record | option + value}, /api/act {kind, item} (refused when no loop runs), /api/order {run, order},
+/api/new_batch {key, ids, name, start} (start false: only create it), /api/continue {run, force}, /api/play_start {run, item, force}
+(continue, then drive that item first), /api/reload {run, force} (archive_results, then continue from the first item), /api/delete {run},
+/api/ensure_side. continue / play_start / reload (and new_batch with start) answer {"confirm": text} when backend.busy_other() reports
+another run; the page asks and posts again with force (stop_other() first), as the Tk panel does.
 The shown batch is per request (?run=), so the desktop window and a phone can look at different batches.
 """
 import json
@@ -97,7 +103,7 @@ class App(object):
             except Exception:  # noqa: BLE001
                 i = dict(label="?", created="?", driven=0, total=0, mean=None, extra="")
             out.append(dict(run=r, name=os.path.basename(r), label=i["label"], created=i["created"], driven=i["driven"],
-                            total=i["total"], mean=i["mean"], extra=i.get("extra", "")))
+                            total=i["total"], mean=i["mean"], extra=i.get("extra", ""), badges=i.get("badges", [])))
         return out
 
     def fmt(self, v):
@@ -114,7 +120,8 @@ class App(object):
         return shown, [dict(id=it["id"], label=it.get("label") or it["id"], group=it["group"], scenario=it["scenario"],
                             human=it["human"], model=it["model"], human_s=self.fmt(it["human"]),
                             model_s=self.fmt(it["model"]), model_src=it.get("model_src") if it["model"] is not None else None,
-                            status=it["status"]) for it in items]
+                            status=it["status"], why=it.get("why", it["status"]), attempts=it.get("attempts"), sim_s=it.get("sim_s"),
+                            drives=[dict(d, score_s=self.fmt(d["score"])) for d in it.get("drives", [])]) for it in items]
 
     def state(self, run):
         st = read_json(Path(self.b.live) / "loop.json", {}) or {}
@@ -127,20 +134,28 @@ class App(object):
             x["size"] = human_size(self.sizes[x["run"]][1]) if x["run"] in self.sizes else "..."
             x["mean_s"] = self.fmt(x["mean"])
             x["current"] = x["run"] == cur
+        item = st.get("item") if alive else None
+        drv = read_json(Path(self.b.live) / "state.json", {}) or {} if item else {}
+        live = dict(sim_t=drv.get("sim_t"), sim_total=drv.get("sim_total") or None, speed=drv.get("speed")) \
+            if drv.get("scene") == item and time.time() - drv.get("t", 0) < 5 and not drv.get("closed") else {}
+        vw = read_json(Path(self.b.live) / "viewer.json", {}) or {}      # the viewer's own toggles (its G key flips shadow)
         return dict(
             phone=dict(url=self.url, lan=self.lan), inputs=wheel_status(),
-            loop=dict(alive=alive, state=st.get("state") if alive else "not running", item=st.get("item") if alive else None,
-                      msg=st.get("msg", "") if alive else "", run=st.get("run") if alive else None,
+            loop=dict(alive=alive, state=st.get("state") if alive else "not running", item=item,
+                      item_label=self.b.item_label(item) if item else "", scoring=st.get("scoring", 0) if alive else 0,
+                      msg=st.get("msg", "") if alive else "", run=st.get("run") if alive else None, live=live,
                       other="" if alive else self.cached("busy", 5, self.b.busy_other)),
-            control=dict(paused=c["paused"], playlist=c["playlist"], options=c["options"]),
+            control=dict(paused=c["paused"], playlist=c["playlist"], record=c["record"], options=c["options"]),
+            viewer={k: v for k, v in vw.items() if k not in ("pid", "t")} if time.time() - (vw.get("t") or 0) < 5 else {},
             shown=shown, batches=bat, items=items, notices=self.notices, boot=BOOT, t=time.time())
 
     def meta(self):
         dec = re.search(r"\.(\d)", self.b.score_fmt)
         return dict(title=self.b.title, batch_extra=self.b.batch_extra, score_max=getattr(self.b, "score_max", 1.0),
                     score_dec=int(dec.group(1)) if dec else 2, sets=[list(s) for s in self.b.batch_sets()],
-                    options=[dict(name=n, label=o[0], default=o[1], choices=o[2] if len(o) > 2 else None) for n, o in self.b.options.items()],
-                    catalog=type(self.b).catalog is not Backend.catalog)
+                    options=[dict(name=n, label=o[0], default=o[1], choices=o[2] if len(o) > 2 else None,
+                                  help=list(self.b.option_help.get(n, ("", "")))) for n, o in self.b.options.items()],
+                    catalog=type(self.b).catalog is not Backend.catalog, record=bool(self.b.record), pinned=list(self.b.pinned))
 
     # ---- actions ----
     def take_over(self, force):
@@ -151,15 +166,17 @@ class App(object):
             self.notice(self.b.stop_other())
         return None
 
-    def new_batch(self, key, ids=None, force=False):
-        ask = self.take_over(force)
-        if ask:
-            return ask
-        if self.ctl.read()["paused"]:
-            self.ctl.update(paused=False)
+    def new_batch(self, key, ids=None, force=False, name=None, start=True):
+        if start:
+            ask = self.take_over(force)
+            if ask:
+                return ask
+            if self.ctl.read()["paused"]:
+                self.ctl.update(paused=False)
         before = set(self.b.runs())
+        kw = dict(name=name, start=start, **({} if ids is None else dict(ids=ids)))
         try:
-            ok, msg = self.b.new_batch(key, ids=ids) if ids is not None else self.b.new_batch(key)
+            ok, msg = self.b.new_batch(key, **kw)
         except TypeError:
             ok, msg = False, "This backend has no custom pick (new_batch takes no id list)."
         self.cache.clear()
@@ -187,6 +204,23 @@ class App(object):
             threading.Thread(target=self.play_when_up, args=(run, item, old), daemon=True).start()
             msg += "\n\nDriving %s first." % item
         return dict(ok=ok, msg=msg, run=run)
+
+    def reload(self, run, force=False):
+        """Start a batch over: its results go to <run>/archive/<stamp>/ (archive_results), then the loop continues it from the top."""
+        if run not in self.b.runs():
+            return dict(ok=False, msg="%s is not a batch of this panel" % run)
+        ask = self.take_over(force)
+        if ask:
+            return ask
+        if self.b.loop_run():
+            return dict(ok=False, msg="The loop is still running; try again in a moment.")
+        ok, amsg = self.b.archive_results(run)
+        self.cache.clear()
+        if not ok:
+            return dict(ok=False, msg=amsg)
+        r = self.continue_batch(run, True)
+        r["msg"] = "Reloaded: %s.\n%s" % (amsg, r.get("msg", ""))
+        return r
 
     def play_when_up(self, run, item, old, wait=180):
         t = time.time()
@@ -219,14 +253,16 @@ class App(object):
             self.ctl.update(paused=bool(d["paused"]))
         if "playlist" in d:
             self.ctl.update(playlist=bool(d["playlist"]))
+        if "record" in d:
+            self.ctl.update(record=bool(d["record"]))
         o = self.b.options.get(d.get("option"))
         if o:                                  # a toggle takes a bool, a choice one of its values
             v = bool(d.get("value")) if len(o) < 3 else str(d.get("value"))
             vals = [x[0] if isinstance(x, (list, tuple)) else x for x in o[2]] if len(o) > 2 else None   # [value, label, group] entries
             if vals is not None and v not in vals:
                 return dict(ok=False, msg="%s: %r is not one of %s" % (d["option"], v, vals))
-            c = self.ctl.read()
-            self.ctl.update(options=dict(c["options"], **{d["option"]: v}))
+            with Control.LOCK:
+                self.ctl.update(options=dict(self.ctl.read()["options"], **{d["option"]: v}))
         return dict(ok=True, control=self.ctl.read())
 
     def official(self, run):
@@ -252,11 +288,13 @@ class App(object):
         if path == "/api/order":
             return self.order(d.get("run"), d.get("order") or [])
         if path == "/api/new_batch":
-            return self.new_batch(d.get("key"), d.get("ids"), bool(d.get("force")))
+            return self.new_batch(d.get("key"), d.get("ids"), bool(d.get("force")), d.get("name"), d.get("start", True) is not False)
         if path == "/api/continue":
             return self.continue_batch(d.get("run"), bool(d.get("force")))
         if path == "/api/play_start":
             return self.continue_batch(d.get("run"), bool(d.get("force")), d.get("item"))
+        if path == "/api/reload":
+            return self.reload(d.get("run"), bool(d.get("force")))
         if path == "/api/delete":
             return self.delete(d.get("run"))
         if path == "/api/ensure_side":
