@@ -1,0 +1,82 @@
+{
+ "scenes": 1031,
+ "scenes_ok": 1021,
+ "failed": {
+  "2021.08.30.14.54.34_veh-40_00439_00835-1ca75f05f31d51cc": "ValueError: Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg",
+  "2021.08.30.14.54.34_veh-40_00439_00835-673a88a4037f5b6b": "ValueError: Waypoint 11 fails sanity check: route folds back on itself with angle 179.16 deg",
+  "2021.09.09.18.29.25_veh-39_00427_00556-cd4e4564d732554e": "ValueError: Waypoint 47 fails sanity check: route folds back on itself with angle 180.00 deg",
+  "2021.09.16.19.12.04_veh-42_01438_01677-3d37ed78124057a1": "ValueError: Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg",
+  "2021.09.16.19.27.01_veh-45_00472_00711-e5599a8884235d93": "ValueError: Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg",
+  "2021.09.16.19.27.01_veh-45_01749_03230-10909749099354e6": "ValueError: Waypoint 23 fails sanity check: route folds back on itself with angle 178.18 deg",
+  "2021.09.29.19.02.14_veh-28_00540_00917-b12f2581dde259f4": "ValueError: Waypoint 67 fails sanity check: route folds back on itself with angle 179.45 deg",
+  "2021.09.29.19.02.14_veh-28_00964_01689-b762ea96cfa75157": "ValueError: Waypoint 17 fails sanity check: route folds back on itself with angle 179.39 deg",
+  "2021.09.29.19.02.14_veh-28_03198_03360-f1ceb70bd72a5048": "ValueError: Waypoint 9 fails sanity check: route folds back on itself with angle 179.26 deg",
+  "2021.09.29.19.02.14_veh-28_02911_03005-498c6f15e5c856bb": "ValueError: Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg"
+ },
+ "states": 10335,
+ "why": {
+  "ok": 10335
+ },
+ "table": {
+  "all": {
+   "states": 10335,
+   "e2h": 0.072,
+   "e4h": 0.09,
+   "e2h_p90": 0.8416000000000003,
+   "e4h_p90": 0.9556000000000003,
+   "e2": 0.226,
+   "e4": 0.272,
+   "d0": 0.296,
+   "d0_signed": 0.068
+  },
+  "all but lane-change": {
+   "states": 9795,
+   "e2h": 0.072,
+   "e4h": 0.092,
+   "e2h_p90": 0.8396000000000003,
+   "e4h_p90": 0.9556000000000003,
+   "e2": 0.224,
+   "e4": 0.27,
+   "d0": 0.294,
+   "d0_signed": 0.064
+  },
+  "turn": {
+   "states": 1595,
+   "e2h": 0.27,
+   "e4h": 0.227,
+   "e2h_p90": 0.9358000000000011,
+   "e4h_p90": 1.052,
+   "e2": 0.438,
+   "e4": 0.443,
+   "d0": 0.42,
+   "d0_signed": 0.1
+  },
+  "other": {
+   "states": 8200,
+   "e2h": 0.057,
+   "e4h": 0.077,
+   "e2h_p90": 0.7573000000000011,
+   "e4h_p90": 0.9185000000000019,
+   "e2": 0.202,
+   "e4": 0.251,
+   "d0": 0.277,
+   "d0_signed": 0.059
+  },
+  "lane-change": {
+   "states": 540,
+   "e2h": 0.071,
+   "e4h": 0.064,
+   "e2h_p90": 1.1340999999999999,
+   "e4h_p90": 0.9422000000000009,
+   "e2": 0.259,
+   "e4": 0.303,
+   "d0": 0.331,
+   "d0_signed": 0.1505
+  }
+ },
+ "passed": true,
+ "turn_inspect": false,
+ "switch_scenes": 51,
+ "h_clip_share_mean": 0.2558807727644787,
+ "h_offset_med": 0.053382372178169456
+}
