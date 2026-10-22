@@ -64,8 +64,11 @@ def stack(fs, A):
     return {k: torch.cat([f[k] for f in fs]).repeat_interleave(A, 0) for k in fs[0]}
 
 
+AMP = False   # bf16 autocast (the repo's HUGSIM adapter precision); TF32 is a global switch (--tf32)
+
+
 def run_batched(A_, fs, pca, arms=KS):
-    with Batched(A_.model, pca, arms) as b, torch.no_grad():
+    with Batched(A_.model, pca, arms) as b, torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=AMP):
         out = A_.model.predict_trajectory(stack(fs, len(arms))).float().cpu().numpy().astype(np.float32)
     return out.reshape(len(fs), len(arms), *out.shape[1:]).transpose(1, 0, 2, 3), b.feat     # [A, T, 8, 3]
 
@@ -100,13 +103,23 @@ def cmd_profile(a):
         sync(); t_sweep = (time.time() - t0) / len(fs)
     res = dict(n=len(fs), load_s_per_token_amortised=t_load, plain_call_s=t_plain, encoder_s=float(np.mean(enc_t)),
                planner_s=t_plain - float(np.mean(enc_t)), sweep_8arms_batch1_s=t_sweep)
-    for T in a.batch:
-        sync(); t0 = time.time()
-        for i in range(0, len(fs), T):
-            run_batched(A_, fs[i:i + T], pca)
-        sync()
-        res[f"batched_T{T}_s_per_token"] = (time.time() - t0) / len(fs)
-        res[f"batched_T{T}_vram_gb"] = torch.cuda.max_memory_allocated() / 1e9
+    global AMP
+    ref = None
+    for mode in ("fp32", "tf32", "bf16"):
+        torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = mode == "tf32"
+        AMP = mode == "bf16"
+        for T in a.batch:
+            sync(); t0 = time.time()
+            out = np.concatenate([run_batched(A_, fs[i:i + T], pca)[0] for i in range(0, len(fs), T)], 1)
+            sync()
+            res[f"{mode}_T{T}_s_per_token"] = (time.time() - t0) / len(fs)
+            res[f"{mode}_T{T}_vram_gb"] = torch.cuda.max_memory_allocated() / 1e9
+            if ref is None:
+                ref = out
+            res[f"{mode}_T{T}_max_abs_m_vs_fp32_T{a.batch[0]}"] = float(np.abs(out - ref).max())
+            res[f"{mode}_T{T}_ade_m_vs_fp32_T{a.batch[0]}"] = float(np.linalg.norm(out[..., :2] - ref[..., :2], axis=-1).mean())
+    torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = False
+    AMP = False
     (W.OUT / "profile.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 
