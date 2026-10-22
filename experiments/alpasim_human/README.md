@@ -49,7 +49,7 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
     age, stale, pose, sleep) and one `close` record per scene (sim s, wall per sim s, unpaced, stale calls, wait).
 - `scripts/human_viewer.py` is the window "alpasim human drive (phone wheel)" on DISPLAY=:0. It shows:
   - the front camera exactly as the driver receives it (side cameras when they are rendered);
-  - a top-down inset with the route waypoints (blue) and the 4 s plan from the phone (orange);
+  - a top-down inset: AlpaSim's own top view of the scene with the evaluator's offroad / corridor verdict ("AlpaSim top view" below);
   - speed, the applied angle and acceleration, and the phone bars with input age and stale;
   - scene i of n, sim progress, wall s per sim s;
   - an orange "DRIVER: HUMAN (phone)" tag, and a status line: WAITING FOR PHONE / PHONE OK, PRESS THROTTLE TO START (or CLICK TO START) / DRIVING.
@@ -157,6 +157,59 @@ harmonizer's resolution do. Card peak = `usage.jsonl` peak on the card (one stac
   from 58.9 + 43.8 s (empty cache, run `test/jit_a`) to 19.2 + 29.2 s (warm cache, `test/jit_b`), about 54 s saved per
   launch. What is left is not traced.
 - The window shows "LOADING NEXT SCENE (n/10)" between scenes.
+
+### Scene-to-scene gap and prefetch (2026-10-22)
+
+**Where the gap goes** (resident stack, warm; `scripts/gap_probe.py <resident dir>` over the user's runs of 10-22, medians in
+seconds; from A's last drive call to B's first frame / B held at the hand-off):
+
+| run | pairs | metrics (A last drive -> A completed) | dispatch | runtime load | NRE load | start -> first frame | run-up to hold | gap to first frame | gap to hold |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| PAI human `pai-1022-171756` | 29 | 3.8 | 0.6 | 4.2 (0.2-12.4) | 4.0 | 0.9 | 1.2 | **13.6** | 14.8 |
+| PAI model NTV0 `pai-1022-200352` | 26 | 4.1 | 0.6 | 1.7 (0.4-18) | 4.3 | 1.1 | 2.7 | 13.4 | 15.8 |
+| PAI model R6DAG `pai-1022-182311` | 67 | 3.5 | 0.6 | 2.9 | 4.1 | 1.1 | 2.5 | 13.0 | 15.7 |
+| nuPlan model `nuplan-1022-192735` | 47 | 0.7 | 0.6 | 0.5 | 0.4 | 1.8 | 0.4 | 4.2 | 4.6 |
+
+Metrics is AlpaSim's in-rollout work after the last step (sim end event, metrics, asl). The driver's close_session comes only after it.
+Runtime load is the runtime-side scene load before it asks the renderer for cameras (artifact, map, traffic). It varies most, up to
+18 s on some scenes. NRE load is the renderer's backend creation. Dispatch (feeder + loop) is 0.6 s. There is no human-mode nuPlan
+data on a resident stack.
+
+**Prefetch** (`HUMAN_PREFETCH=1`, or the flag file `/data/runs/alpasim_human/prefetch.on` for the panel's loops; **off by default**).
+AlpaSim is unchanged; only the wizard settings and our scripts change. The resident runtime runs two rollouts at once:
+`n_concurrent_rollouts` 2 on renderer / physics / controller / driver; `runtime.nr_workers` 2, so each rollout has its own worker
+process and one rollout's load or metrics never blocks the other's loop; `nre_cache_size` 3. The feeder keeps two requests in flight.
+The loop requests the next scene of the playlist (or the double-clicked one) once the current scene's session exists.
+
+The driver shows one session at a time. The other one loads and runs its run-up unseen: no state.json, no JPEGs, no camera.json, and
+the model view is gated through `<live>/active.json`. It then waits at its hand-off point. The shown session hands over at its
+predicted last drive call. The predicted step count is min(200, floor((log end - first drive) / step)), with the log end taken from
+the recorded ground truth (`HUMAN_GT=1`). It matched the runtime's count on every probe scene (0 refinishes). The shown session also
+hands over when it is skipped or when it closes.
+
+After the hand-over, the next scene holds as before. A human starts it with the throttle, no sooner than `HUMAN_PROMOTE_MIN_S` (1 s)
+after it is shown. A model session starts at once. Next / Restart / play act on the shown scene. A prefetched scene that has not
+started gives way unscored to a play, a restart, a driver change or a stack-setting change. Scoring per rollout is unchanged.
+`Batch.take` now keeps a prefetched session's log lines until its own request returns.
+
+Measured on Tokyo card 1 (probe prefix `hpf`, `scripts/prefetch_probe.py`, scratch runs `/data/tmp/hpf/runs`):
+
+| run | gap to first frame / hold | active scene wall / sim | 478d6ec4 | card peak |
+|---|---|--:|--:|--:|
+| model NTV0, prefetch off (`m_off`, new loop, 5 scenes) | 8.6-14.3 / 10.8-16.7 s (3 warm pairs) | 0.97-1.19 (unpaced) | 0.9028 slow | 15.1 GB |
+| model NTV0, prefetch on (`m_on1`, 5 scenes) | **0.02-0.05 s** (4 pairs) | 1.28-1.52 (unpaced) | 0.9028 slow | 10.9 GB (with the model) |
+| human fake wheel, paced, prefetch on (`h_on`, 5 scenes) | **0.00-0.03 s** (4 pairs) | 1.03-1.16 (unpaced 0.60-0.78), 1-3 late re-anchors per scene | (fake wheel) | 11.7 GB |
+
+- The cost is contention. The next scene's load and run-up (renderer, runtime CPU, and in model mode the model card) run beside the
+  shown scene. Unpaced, model mode goes from 1.03-1.10 wall s per sim s (the user's runs above) to 1.28-1.52. The scene to scene
+  rate still improves, because the 13 s gap is gone and the drive is only 25-40 % slower. In human mode the shown scene's mean
+  unpaced speed stays below real time (0.60-0.78 against 0.54-0.62 without a neighbour), but the neighbour's scene load stalls it.
+  That gives 1-3 re-anchors per scene of more than 0.5 s each, so the paced wall / sim is 1.03-1.16 instead of 1.00. The user sees
+  it as stutter while the next scene loads, about 5-10 s after each scene starts.
+- Default off because of that stutter. Also, semantics (Next / play / restart while a scene is prefetched) are implemented but were
+  checked only in code, not on a live stack. The harmonizer case (renderer memory with two scenes, speed) is unmeasured. Model
+  mode, which is unpaced and watched like a recording, is the case that gains most. A possible next step: send the prefetch request
+  only after the shown scene has run a few seconds, or only in model mode.
 
 ## Results
 
@@ -359,6 +412,19 @@ plain state line and the buttons. `figs/panel_web_pick.png`: New playlist with t
   message built from the asl's `RolloutMetadata.ego_rig_recorded_ground_truth_trajectory` (the same object the runtime sends).
   On the user's 10 scenes of 2026-10-22, during the forced log replay (first 1.7 s) the gap and the lateral offset are 0.0, so
   frames and timestamps line up. Not yet checked on a live stack with the flag on.
+- AlpaSim top view (inset; 2026-10-22, replaces the hand-drawn one, which stays as the fallback while the map loads): the eval
+  video's map panel of the live rollout, drawn by AlpaSim's own code (`eval.video_data.ShapelyMap` for lane centres / lane edges /
+  road edges / stop lines, `ActorPolygons.render_at_time` for agents and ego, the driver's plan, the route; with the shadow on the log
+  path and the log ego's box, lime), plus the nuPlan road areas (grey; nuPlan has no road edges, its offroad test uses them). Ego
+  faces up, 50 m square. The ego box turns red while the evaluator says offroad and orange while it says left_corridor_laterally
+  (4 m off the log path); "not scored" during the force-GT run-up. Privileged and display only: `lib/alpasim_bev.py` runs in the
+  AlpaSim runtime image (container `alpasim-bev-<uid>-<hash>`, started by the viewer, `HUMAN_BEV=0` = off), reads the runtime's
+  `rollout.asl` as it grows and the map the runtime loads (`build_scene_loader` on the run's `generated-user-config-0.yaml`), and
+  runs the shipped `OffRoadScorer` / `GroundTruthScorer` with the run's `eval-config.yaml` on the last three steps. The driver gets
+  nothing new. Checked offline (`alpasim_bev.py check <rollout.asl>`, the full evaluator over the whole rollout against the live
+  three-step verdict): 3 PAI and 1 nuPlan offroad rollouts, every step equal, offroad and corridor onsets on the same step. Cost:
+  verdict 10-40 ms and picture 9-30 ms per step in the side container; the viewer only blits the frame. Screenshots: `tmp/bev_map/`
+  (Mac, not committed).
 - Viewer layout (2026-10-22): derived from the window's aspect. In 16:9 fullscreen (F11, or the window manager) the camera image
   fills the height, the readout is one compact strip under it with a one-line legend, and the right column is the scene gallery:
   every finished scene of the loop's batch, newest first, as the last front frame before it closed (the driver saves
@@ -519,8 +585,11 @@ Not verified:
 - `human_panel.py` / `human_panel.sh` (scripts): the panel and its desktop entry
 - `fake_stack.py` (scripts): stand-in for a resident human_stack.sh in loop tests
 - `human_feed.py` (scripts): one simulate request per scene to the resident stack's runtime daemon
+- `gap_probe.py` (scripts): scene-to-scene gap of a resident stack by phase, from its logs (section "Scene-to-scene gap")
+- `prefetch_probe.py` (scripts): gap / wall-sim / score probe of the loop with and without prefetch on Tokyo card 1
 - `replay_asl.py` (scripts): replays finished rollouts through the driver (shadow, thumbs, viewer tests without a GPU)
 - `model_driver.sh` (scripts): model mode: one checkpoint served by a submission image's driver beside the stack
+- `alpasim_bev.py` (lib): AlpaSim's own top view and offroad / corridor verdict of the live rollout, for the viewer's inset
 - `model_view.py` (lib): model mode: the served driver wrapped so the viewer sees the model frames it fed the policy
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026

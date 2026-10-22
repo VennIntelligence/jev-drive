@@ -15,6 +15,9 @@ while the previous one is still being written replaces it, so a slow disk never 
   model.json       {t, n, track, tag, valid (8), poses (8, 3: the model's own plan, rear axle x, y, yaw at 0.5 .. 4 s in the t0 frame, before
                    any serving switch), cam_t, K_wide, view_from_device}: the viewer projects a rig-frame point p into the frame
                    as K_wide @ view_from_device @ ((p - cam_t) * [1, -1, -1])
+Prefetch (lib/human_driver.py HUMAN_PREFETCH=1): two sessions may be open; only decisions of the session named in <live>/active.json
+(re-read at most every 0.1 s) are written, so the standby session's run-up never reaches the viewer. Without that file, or with its
+"prefetch" false, every decision is written, as before.
 Env: HUMAN_LIVE (required), SH30_TAG (the tag, as the drivers read it), JEV_LIB (the image's driver directory), HUMAN_MODEL_VIEW (1;
 0 = no hook, the image's driver alone: for measuring the view's cost).
 """
@@ -92,12 +95,29 @@ class View:
                 time.sleep(0.2)
 
 
+class Active:
+    """The shown session from <live>/active.json (lib/human_driver.py), cached for 0.1 s; None = every session is shown."""
+    t, val, lock = 0.0, None, threading.Lock()
+
+    @classmethod
+    def shows(cls, uuid: str) -> bool:
+        with cls.lock:
+            if time.time() - cls.t > 0.1:
+                cls.t = time.time()
+                try:
+                    a = json.loads((LIVE / "active.json").read_text())
+                    cls.val = a.get("session") if a.get("prefetch") else None
+                except (OSError, ValueError):
+                    cls.val = None
+            return cls.val is None or cls.val == uuid
+
+
 def in_drive(cls):
-    """cls.drive with TLS.on set for its duration."""
+    """cls.drive with TLS.on set for its duration (only for the shown session)."""
     f = cls.drive
 
     def drive(self, req, ctx):
-        TLS.on = True
+        TLS.on = Active.shows(req.session_uuid)
         try:
             return f(self, req, ctx)
         finally:

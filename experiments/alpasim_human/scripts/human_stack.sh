@@ -21,6 +21,9 @@
 #   HUMAN_GT (1: the runtime sends the recorded log ego trajectory to the driver every step, send_recording_ground_truth, for the
 #   viewer's shadow; display only, scoring unchanged; 0 = as shipped). HUMAN_FAST_ABORT (default = HUMAN_SERVE): a skipped scene's
 #   next drive call fails, so the runtime ends that rollout at once (unscored) instead of running it out (lib/human_driver.py).
+#   HUMAN_PREFETCH (0 | 1, resident only; README "Scene-to-scene gap"): the runtime runs two rollouts at once (n_concurrent_rollouts 2 on
+#   renderer / physics / controller / driver, runtime.nr_workers 2 so each rollout has its own worker process, nre_cache_size 3), the
+#   feeder keeps two requests in flight (HUMAN_PIPE 2) and the driver shows one session while the next loads and holds at its hand-off.
 # HUMAN_SERVE=1 (scripts/human_loop.py): a resident stack. The runtime runs in AlpaSim's shipped daemon mode (wizard.run_mode=SERVER,
 #   runtime port HUMAN_BASEPORT + 4); after `compose up -d` the services and the driver stay up and scripts/human_feed.py (in the
 #   driver image) sends one simulate request per scene from <out>/feed/req/ until <out>/feed/stop, SIGTERM, a dead service or
@@ -70,6 +73,8 @@ BASE=${BASE:-alpasim-base:$(sed -n 's/^version = "\(.*\)"/\1/p' "$SRC/pyproject.
 P0=${HUMAN_BASEPORT:-6700}; DPORT=${HUMAN_DRV_PORT:-6790}; MODE=${HUMAN_MODE:-fast}
 NAME=$PFX-$(basename "$OUT" | tr -c 'a-zA-Z0-9\n' '-' | tr 'A-Z' 'a-z'); N=$NAME-drv; R=$OUT/sim
 SERVE=${HUMAN_SERVE:-0}; RT=$((P0 + 4)); T0=$(date +%s.%N)
+PRE=0; [[ $SERVE == 1 && ${HUMAN_PREFETCH:-0} == 1 ]] && PRE=1
+NC=$((PRE + 1)); NW=$((PRE + 1)); NRE_CACHE=$((PRE + 2))       # concurrent rollouts, runtime workers, NRE scene backends
 rm -f "$OUT"/{DONE,ERROR,.stop}; mkdir -p "$R" "$OUT/driver" "$LIVE"; exec > >(tee -a "$OUT/log.txt") 2>&1; echo $$ > "$OUT/pid"
 st() { echo "$(date '+%F %T') $*" | tee "$OUT/STATUS"; }
 phase() { python3 -c 'import json,sys,time; print(json.dumps(dict(phase=sys.argv[1], msg=sys.argv[2], t0=float(sys.argv[3]), t=time.time())))' \
@@ -96,14 +101,16 @@ if [[ $TRACK == pai ]]; then
   HOLD=1.7 SIM=20; FI=${HUMAN_FI_MS:-$([[ $HARM == 1 ]] && echo 200 || echo 100)}
   wiz=(+e2e_challenge=dev "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "scenes.scene_cache=$NUREC"
        "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" "services.renderer.gpus=[$GPU]"
-       "services.physics.gpus=[$GPU]" runtime.endpoints.physics.n_concurrent_rollouts=1)
+       "services.physics.gpus=[$GPU]" runtime.endpoints.physics.n_concurrent_rollouts=$NC)
+  (( PRE )) && wiz+=(runtime.nr_workers=$NW)
   cam="{logical_id:camera_front_wide_120fov,height:$H,width:$W,frame_interval_us:$((FI * 1000)),shutter_duration_us:30000}"
   [[ $PHYS == 0 && $MODE == fast ]] && lever+=(runtime.simulation_config.physics_update_mode=NONE)
   mounts=(-v "$NUREC:$NUREC")
 else
   HOLD=0.5 SIM=5.5; FI=${HUMAN_FI_MS:-500}
   cap=$(nvidia-smi -i "$GPU" --query-gpu=compute_cap --format=csv,noheader)
-  wiz=(+e2e_challenge_nuplan=full runtime.nr_workers=1 "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "services.renderer.gpus=[$GPU]")
+  wiz=(+e2e_challenge_nuplan=full runtime.nr_workers=$NW "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "services.renderer.gpus=[$GPU]")
+  (( PRE )) && wiz+=(runtime.endpoints.physics.n_concurrent_rollouts=$NC)
   # gsplat's shipped arch list (8.9;9.0+PTX) has no kernel for an RTX 3090 (sm_86): the card's own arch, as docker/smoke.sh does
   [[ $(echo "$cap < 8.9" | bc) == 1 ]] && wiz+=("services.renderer.environments=[\"UV_LINK_MODE=copy\",\"TORCH_CUDA_ARCH_LIST=$cap\"]")
   cam="{logical_id:CAM_F0,height:$H,width:$W,frame_interval_us:$((FI * 1000))}"
@@ -113,20 +120,20 @@ if [[ $MODE == fast ]]; then
   [[ $CAMS == front ]] && lever+=("runtime.simulation_config.cameras=[$cam]")
   lever+=("eval.video.render_video=$([[ $VIDEO == 1 ]] && echo true || echo false)")
 fi
-wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_rollouts=1 runtime.endpoints.driver.n_concurrent_rollouts=1
-     runtime.endpoints.controller.n_concurrent_rollouts=1 defines.nre_cache_size=2 "wizard.baseport=$P0" wizard.run_method=NONE
+wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_rollouts=$NC runtime.endpoints.driver.n_concurrent_rollouts=$NC
+     runtime.endpoints.controller.n_concurrent_rollouts=$NC defines.nre_cache_size=$NRE_CACHE "wizard.baseport=$P0" wizard.run_method=NONE
      "wizard.log_dir=$R" "${lever[@]}" "$@")
 [[ ${HUMAN_GT:-1} == 1 ]] && wiz+=(runtime.simulation_config.send_recording_ground_truth=true)
 [[ $SERVE == 1 ]] && wiz+=(wizard.run_mode=SERVER "wizard.runtime_server_port=$RT")
 
 phase driver "starting the driver container"
-st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM"
+st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM, prefetch $PRE"
 docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
   -e "HUMAN_N_SCENES=$([[ $SERVE == 1 ]] && echo 0 || echo "$n")" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
   -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_MODEL_REALTIME=${HUMAN_MODEL_REALTIME:-0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" -e "HUMAN_CONTROL=${HUMAN_CONTROL:-}" \
-  -e "HUMAN_HARMONIZER=$HARM" -e "HUMAN_TRACK_GATE=${HUMAN_TRACK_GATE:-1}" -e "HUMAN_FAST_ABORT=${HUMAN_FAST_ABORT:-$SERVE}" \
+  -e "HUMAN_HARMONIZER=$HARM" -e "HUMAN_TRACK_GATE=${HUMAN_TRACK_GATE:-1}" -e "HUMAN_FAST_ABORT=${HUMAN_FAST_ABORT:-$SERVE}" -e "HUMAN_PREFETCH=$PRE" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)
 until docker logs "$N" 2>&1 | grep -q "listening on"; do
@@ -197,7 +204,7 @@ for k, s in yaml.safe_load(open(sys.argv[1]))["services"].items():
   st "services up after $(( $(date +%s) - t1 )) s; feeder on 127.0.0.1:$RT"
   docker rm -f "$NAME-feed" >/dev/null 2>&1
   docker run -d --name "$NAME-feed" --init --network host --user "$(id -u):$(id -g)" -v "$OUT:$OUT" -v "$REPO:$REPO:ro" -v "$LIVE:$LIVE" \
-    -e "HUMAN_IDLE_S=${HUMAN_IDLE_S:-1200}" --entrypoint python "$IMG" "$here/human_feed.py" "$OUT" "127.0.0.1:$RT" "$LIVE" >/dev/null || die "feeder docker run"
+    -e "HUMAN_IDLE_S=${HUMAN_IDLE_S:-1200}" -e "HUMAN_PIPE=$NC" --entrypoint python "$IMG" "$here/human_feed.py" "$OUT" "127.0.0.1:$RT" "$LIVE" >/dev/null || die "feeder docker run"
   docker logs -f "$NAME-feed" > "$OUT/feed.log" 2>&1 &
   phase ready "ready: renderer, controller, runtime and driver up"
   launcher running "resident $TRACK stack ready$([[ $HARM == 1 ]] && echo ", harmonizer on")" "$OUT"

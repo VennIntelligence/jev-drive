@@ -7,10 +7,11 @@ The runtime runs in its shipped daemon mode (wizard.run_mode=SERVER, `alpasim_ru
 box): renderer, physics, controller, runtime and the human driver stay up, and every scene is one `simulate` request
 (RolloutSpec(scene, nr_rollouts=1); no driver in the request, so the runtime uses the configured driver pool = the human driver).
 Protocol, all files in <stack dir>/feed/ (written atomically by both sides):
-  req/<name>.json   {"scene", "owner", "t"}       a client (scripts/human_loop.py) asks for one scene; served in name order, one at a time
+  req/<name>.json   {"scene", "owner", "t"}       a client (scripts/human_loop.py) asks for one scene; served in name order, at most
+                                                  HUMAN_PIPE (1; 2 with HUMAN_PREFETCH: the runtime then runs two rollouts) in flight
   lease-<owner>.json {"t", "run"}                 the client's heartbeat; a request whose owner's lease is older than LEASE_S is
                                                   dropped, and a running one is aborted (<live>/abort.json, as the panel's Next)
-  busy.json         {"name", "scene", "t_sent"}   the request in flight
+  busy.json         {"name", "scene", "t_sent", "items": [{"name", "scene", "t_sent"}]}   the requests in flight (name = the oldest)
   res/<name>.json   {"scene", "t_sent", "t_done", "rollouts": [{"uuid", "success", "error"}], "error"}
   ready.json, alive.json {"t"}                   the runtime answered / the feeder's heartbeat (1 s)
   stop                                            ask the feeder to exit (the stack script then takes the stack down)
@@ -28,6 +29,7 @@ from alpasim_grpc.v0 import runtime_pb2, runtime_pb2_grpc
 out, addr, live = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
 F = out / "feed"
 IDLE, LEASE_S = float(os.environ.get("HUMAN_IDLE_S", "1200")), 20.0
+PIPE = max(1, int(os.environ.get("HUMAN_PIPE", "1")))
 for d in ("req", "res"):
     (F / d).mkdir(parents=True, exist_ok=True)
 
@@ -61,16 +63,50 @@ stub = runtime_pb2_grpc.RuntimeServiceStub(ch)
 put(F / "ready.json", {"t": time.time(), "addr": addr})
 log("runtime %s ready" % addr)
 last = time.time()
+fly = {}                                                         # name -> (future, rec, owner, aborted at)
+
+
+def busy_put():
+    items = [{"name": n, "scene": r["scene"], "t_sent": r["t_sent"]} for n, (_, r, _, _) in sorted(fly.items())]
+    if items:
+        put(F / "busy.json", {**items[0], "items": items})
+    else:
+        try:
+            (F / "busy.json").unlink()
+        except OSError:
+            pass
+
+
 while not (F / "stop").exists():
-    put(F / "alive.json", {"t": time.time()})
-    todo = sorted(p for p in (F / "req").glob("*.json") if not (F / "res" / p.name).exists())
-    if not todo:
-        if lease_age() < LEASE_S:
+    put(F / "alive.json", {"t": time.time(), **({"busy": sorted(fly)} if fly else {})})
+    for name in sorted(fly):                                     # returned requests
+        fut, rec, owner, aborted = fly[name]
+        if not fut.done():
+            if lease_age(owner) > LEASE_S and time.time() - aborted > 5:   # the client is gone: end its scene (held or driven)
+                put(live / "abort.json", {"scene": rec["scene"], "t": time.time(), "by": "feed"})
+                fly[name] = (fut, rec, owner, time.time())
+            continue
+        del fly[name]
+        try:
+            ret = fut.result()
+            rec["rollouts"] = [{"uuid": x.rollout_uuid, "success": x.success, "error": x.error[:2000]} for x in ret.rollout_returns]
+        except grpc.RpcError as e:
+            rec["error"] = "%s: %s" % (e.code().name, (e.details() or "")[:2000])
+        rec["t_done"] = time.time()
+        put(F / "res" / name, rec)
+        busy_put()
+        log("done %s in %.1f s %s" % (rec["scene"], rec["t_done"] - rec["t_sent"], rec["error"] or [x["success"] for x in rec["rollouts"]]))
+        last = time.time()
+        if rec["error"].startswith("UNAVAILABLE"):               # the runtime is gone; other errors are per request
+            sys.exit(2)
+    todo = sorted(p for p in (F / "req").glob("*.json") if not (F / "res" / p.name).exists() and p.name not in fly)
+    if not todo or len(fly) >= PIPE:
+        if fly or lease_age() < LEASE_S:
             last = time.time()
         elif time.time() - last > IDLE:
             log("idle for %.0f s with no client: exiting" % IDLE)
             sys.exit(0)
-        time.sleep(0.2)
+        time.sleep(0.2 if not fly else 0.1)
         continue
     p = todo[0]
     r = get(p, {}) or {}
@@ -80,26 +116,8 @@ while not (F / "stop").exists():
         rec.update(error="dropped: no scene or the client is gone", t_done=time.time())
         put(F / "res" / p.name, rec)
         continue
-    put(F / "busy.json", {"name": p.name, "scene": scene, "t_sent": rec["t_sent"]})
-    log("simulate %s (%s)" % (scene, p.name))
-    fut = stub.simulate.future(runtime_pb2.SimulationRequest(rollout_specs=[runtime_pb2.RolloutSpec(scenario_id=scene, nr_rollouts=1)]))
-    aborted = 0.0
-    while not fut.done():
-        put(F / "alive.json", {"t": time.time(), "busy": p.name})
-        if lease_age(owner) > LEASE_S and time.time() - aborted > 5:   # the client is gone: end its scene (held or driven)
-            put(live / "abort.json", {"scene": scene, "t": time.time(), "by": "feed"})
-            aborted = time.time()
-        time.sleep(0.5)
-    try:
-        ret = fut.result()
-        rec["rollouts"] = [{"uuid": x.rollout_uuid, "success": x.success, "error": x.error[:2000]} for x in ret.rollout_returns]
-    except grpc.RpcError as e:
-        rec["error"] = "%s: %s" % (e.code().name, (e.details() or "")[:2000])
-    rec["t_done"] = time.time()
-    put(F / "res" / p.name, rec)
-    (F / "busy.json").unlink()
-    log("done %s in %.1f s %s" % (scene, rec["t_done"] - rec["t_sent"], rec["error"] or [x["success"] for x in rec["rollouts"]]))
-    last = time.time()
-    if rec["error"].startswith("UNAVAILABLE"):                   # the runtime is gone; other errors are per request
-        sys.exit(2)
+    log("simulate %s (%s)%s" % (scene, p.name, ", %d in flight" % len(fly) if fly else ""))
+    fly[p.name] = (stub.simulate.future(runtime_pb2.SimulationRequest(rollout_specs=[runtime_pb2.RolloutSpec(scenario_id=scene, nr_rollouts=1)])),
+                   rec, owner, 0.0)
+    busy_put()
 log("stop file: exiting")

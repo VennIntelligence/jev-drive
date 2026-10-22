@@ -63,6 +63,9 @@ RESIDENTS = Path(os.environ.get("HUMAN_RESIDENT_DIR", str(D / "runs/alpasim_huma
 GPU = os.environ.get("HUMAN_GPU", "0")
 MODEL_SCRIPT = REPO / "experiments/alpasim_human/scripts/model_driver.sh"
 MODEL_PORT = os.environ.get("HUMAN_MODEL_PORT", "6791")
+# README "Scene-to-scene gap": the next scene loads and holds while one drives. Off by default; on with HUMAN_PREFETCH=1 or the flag file
+# /data/runs/alpasim_human/prefetch.on (read at loop start; the panel's loops then use it, and the resident stack restarts once).
+PREFETCH = os.environ.get("HUMAN_PREFETCH", "1" if (D / "runs/alpasim_human/prefetch.on").exists() else "0") == "1"
 MODEL_WIZ = {"pai": os.environ.get("HUMAN_MODEL_WIZ", "controller.gains.rel_front_steering_angle_weight=10").split(), "nuplan": []}
 
 
@@ -179,17 +182,19 @@ class Resident(object):
         self.size = info.get("size", "auto")                    # render option (HUMAN_H, or auto)
         self.wiz = list(info.get("wiz", []))                    # extra wizard overrides (model mode: the steering weight)
         self.model = bool(info.get("model"))                    # PAI model mode: the preset's 10 Hz camera (also with the harmonizer)
-        self.key = (self.harm, self.size, tuple(self.wiz), self.model)
+        self.prefetch = bool(info.get("prefetch"))              # two rollouts at once (human_stack.sh HUMAN_PREFETCH)
+        self.key = (self.harm, self.size, tuple(self.wiz), self.model, self.prefetch)
         self.ids, self.feed = set(info["ids"]), Path(info["dir"]) / "feed"
 
     @classmethod
-    def start(cls, track, harm, size, ids, wiz=(), model=False):
+    def start(cls, track, harm, size, ids, wiz=(), model=False, prefetch=False):
         d = RESIDENTS / ("%s%s%s-%s" % (track, "-harm" if harm else "", "" if size == "auto" else "-h" + size, time.strftime("%m%d-%H%M%S")))
         d.mkdir(parents=True)
         (d / "scenes.txt").write_text("\n".join(ids) + "\n")
         env = dict(os.environ, HUMAN_FG="1", HUMAN_VIEWER="0", HUMAN_SERVE="1", HUMAN_CONTROL=str(LIVE / "control.json"),
                    HUMAN_LIVE=str(LIVE), HUMAN_WAIT_MAX_S=os.environ.get("HUMAN_WAIT_MAX_S", "1800"), HUMAN_GPU=GPU,
-                   HUMAN_HARMONIZER="1" if harm else "0", HUMAN_PREFIX=os.environ.get("HUMAN_PREFIX", "hres"))
+                   HUMAN_HARMONIZER="1" if harm else "0", HUMAN_PREFIX=os.environ.get("HUMAN_PREFIX", "hres"),
+                   HUMAN_PREFETCH="1" if prefetch else "0")
         if size != "auto":
             env["HUMAN_H"] = size
         if model:                                               # the served camera: 10 Hz, shipped harmonizer resolution (human_stack.sh)
@@ -197,7 +202,7 @@ class Resident(object):
         with open(str(d / "stack.out"), "a") as log:
             proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(d), str(d / "scenes.txt")] + list(wiz),
                                     env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
-        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "size": size, "wiz": list(wiz), "model": model, "gpu": GPU, "ids": list(ids), "t": time.time(),
+        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "size": size, "wiz": list(wiz), "model": model, "prefetch": prefetch, "gpu": GPU, "ids": list(ids), "t": time.time(),
                 "prefix": env["HUMAN_PREFIX"]}
         write_json(cls.REG, info)
         return cls(info, proc)
@@ -281,6 +286,7 @@ class Batch(object):
             (self.dir / d).mkdir(parents=True, exist_ok=True)
         (self.dir / "resident").write_text(str(res.dir) + "\n")
         self.off = {f: self._size(res.dir / "driver" / f) for f in ("sessions.jsonl", "drive.jsonl")}
+        self.buf = {f: [] for f in self.off}                    # lines read but not yet claimed (a prefetched session's, until it returns)
 
     @staticmethod
     def _size(p):
@@ -307,7 +313,9 @@ class Batch(object):
                 continue
             data = data[:data.rfind(b"\n") + 1]
             self.off[f] += len(data)
-            mine = [ln for ln in data.decode("utf-8", "replace").splitlines() if ln.strip() and json.loads(ln).get("session") in uu]
+            lines = self.buf[f] + [ln for ln in data.decode("utf-8", "replace").splitlines() if ln.strip()]
+            mine = [ln for ln in lines if json.loads(ln).get("session") in uu]
+            self.buf[f] = [ln for ln in lines if json.loads(ln).get("session") not in uu][-100000:]
             if mine:
                 with open(str(self.dir / "driver" / f), "a") as fh:
                     fh.write("\n".join(mine) + "\n")
@@ -445,32 +453,77 @@ def main():
     wheel = WheelClient()
     plays, skipped, chosen, driven = [], set(), set(), set()     # driven: finished, not skipped, maybe not scored yet
     practised = set()                                            # driven with record off (not counted)
-    res, batch, req, hold_error = None, None, None, ""          # req: the scene this loop asked for, until its request returns
+    res, batch, hold_error = None, None, ""
+    reqs = []                                                    # this loop's requests in flight, oldest first (2 with prefetch)
     model, drv = ModelSvc(), "human"                             # model mode: the model service; the panel's driver now
     k, armed, t_wait, restart_why = len(list((run / "stacks").glob("*"))), True, time.time(), ""
+    t_push = 0.0
 
     def done(s):                                                 # by the driver chosen now
         return dkey(s, drv) in driven or (run / "done" / (dkey(s, drv) + ".json")).exists()
 
-    def unfinished():
+    def unfinished(exclude=()):
         c = ctl.read()
         order = [i for i in c["order"] if i in ids] or ids
-        return [i for i in order if not done(i) and i not in skipped and (c["record"] or i not in practised)]
+        return [i for i in order if not done(i) and i not in skipped and i not in exclude and (c["record"] or i not in practised)]
+
+    def live_sessions():
+        """The driver's open sessions (<live>/sessions.json; drivers before prefetch do not write it: [])."""
+        d = read_json(LIVE / "sessions.json", {}) or {}
+        return d.get("open", []) if res and d.get("run") == str(res.dir) and time.time() - d.get("t", 0) < 3600 else []
+
+    def bind(opn):
+        """Map requests to their sessions (same scene, created after the request was written, not taken by another request)."""
+        taken = {r.get("session") for r in reqs}
+        for r in reqs:
+            if r.get("session") is None:
+                x = next((o for o in opn if o["scene"] == r["scene"] and o["t_created"] >= r["t"] - 0.5 and o["session"] not in taken), None)
+                if x:
+                    r["session"] = x["session"]
+                    taken.add(x["session"])
+            o = next((o for o in opn if o["session"] == r.get("session")), None)
+            if o:
+                r["started"] = r.get("started") or o["started"]
 
     def view():
-        """The driver's live state of this loop's scene (fresh, from the resident stack, that scene only)."""
+        """(request, the driver's live state) of the session the viewer shows, if it is one of this loop's; else (None, {})."""
         s = read_json(LIVE / "state.json", {}) or {}
-        ok = res and req and s.get("run") == str(res.dir) and s.get("scene") == req["scene"] and time.time() - s.get("t", 0) < 5
-        return s if ok and not s.get("closed") else {}
+        if not (res and s.get("run") == str(res.dir) and time.time() - s.get("t", 0) < 5) or s.get("closed"):
+            return None, {}
+        for r in reqs:
+            if (s.get("session") and s.get("session") == r.get("session")) or (r.get("session") is None and s.get("scene") == r["scene"]
+                                                                               and not (s.get("session") and any(q.get("session") == s.get("session") for q in reqs))):
+                if s.get("started"):
+                    r["started"] = True
+                r["seen"] = True
+                return r, s
+        return None, {}
 
-    def abort(why_, status=None):
-        """End this loop's scene: abort.json now, and again once its session exists (the driver ignores older aborts)."""
-        req.update(abort=why_, status=status, t_abort=0.0)
+    def abort(r, why_, status=None):
+        """End request r: unsent, it is withdrawn; sent, its session is skipped (abort.json, by uuid once known)."""
+        r.update(abort=why_, status=status, t_abort=0.0)
+        if not any(b.get("name") == r["name"] for b in res.busy().get("items", [res.busy()] if res.busy() else [])):
+            try:
+                (res.feed / "req" / r["name"]).unlink()
+                r["withdrawn"] = time.time()
+            except OSError:
+                pass
 
-    def push_abort(v):
-        if req and req.get("abort") and v and not v.get("aborted") and time.time() - req["t_abort"] > 2:
-            write_json(LIVE / "abort.json", {"scene": req["scene"], "t": time.time(), "by": req["abort"]})
-            req["t_abort"] = time.time()
+    def push_abort(opn):
+        """abort.json: one item per aborted request still open, re-written every 2 s (the driver ignores scene-only items older than a
+        session, so an item is written again once the session exists)."""
+        nonlocal t_push
+        items = []
+        for r in reqs:
+            if not r.get("abort") or r.get("withdrawn"):
+                continue
+            o = next((o for o in opn if o["session"] == r.get("session")), None)
+            if o and o["aborted"]:
+                continue
+            items.append({"scene": r["scene"], "t": time.time(), "by": r["abort"], **({"session": r["session"]} if r.get("session") else {})})
+        if items and time.time() - t_push > 2:
+            write_json(LIVE / "abort.json", {**items[-1], "items": items})
+            t_push = time.time()
 
     def discard(scene, r):
         """Record off: the returned rollouts are never scored and their files go."""
@@ -484,14 +537,52 @@ def main():
         practised.add(scene)
         note("practice: %s not recorded (rollouts deleted)" % scene)
 
-    def collect():
+    def collect(rq):
         for scene, rd, close in scorer.pending(batch, final=True):
             if all(j[2] != rd for j in jobs):
                 jobs.append((batch, scene, rd, close))
                 if not close.get("aborted"):
-                    driven.add(dkey(scene, close.get("driver") or (req or {}).get("driver")))
+                    driven.add(dkey(scene, close.get("driver") or rq.get("driver")))
                     skipped.discard(scene)
         wake.set()
+
+    def returned(r, out):
+        """Request r came back with result `out` (None: withdrawn before it was sent)."""
+        nonlocal hold_error
+        reqs.remove(r)
+        if out is None:
+            note("%s withdrawn before it was sent (%s)" % (r["scene"], r.get("abort")))
+            return
+        batch.take(r["scene"], out)
+        bad = out.get("error") or not any(x.get("success") for x in out.get("rollouts", []))
+        if not ctl.read()["record"]:
+            discard(r["scene"], out)
+            return
+        if r.get("abort"):                                       # aborted: never scored (with or without a complete rollout)
+            for x in out.get("rollouts", []):
+                scorer.abort_status[x["uuid"]] = None
+            if r.get("status"):
+                write_json(run / "tried" / (r["scene"] + ".json"), {"status": r["status"], "t": time.time()})
+        if bad and not r.get("abort"):
+            err = (out.get("error") or "; ".join(x.get("error", "") for x in out.get("rollouts", [])))[:300]
+            write_json(run / "tried" / (r["scene"] + ".json"), {"status": "rollout failed: %s" % err, "t": time.time()})
+            hold_error = "%s failed: %s" % (label(r["scene"]), err)
+            note(hold_error)
+        note("%s returned after %.0f s%s" % (r["scene"], out.get("t_done", 0) - r["t"], " (aborted: %s)" % r["abort"] if r.get("abort") else ""))
+        collect(r)
+
+    def submit(todo, prefetch=False):
+        nonlocal t_wait
+        d = read_json(LIVE / "driver.json", {}) or {}
+        sc = {q["scene"]: (d.get("scenes") or {}).get(q["scene"]) for q in reqs if (d.get("scenes") or {}).get(q["scene"])}
+        sc[todo] = {"tag": drv, "addr": "127.0.0.1:%s" % MODEL_PORT if mm else ""}
+        write_json(LIVE / "driver.json", {"scene": todo, "tag": drv, "addr": sc[todo]["addr"], "track": track, "run": str(run), "t": time.time(),
+                                          "scenes": sc})
+        r = {"name": res.submit(todo, owner), "scene": todo, "t": time.time(), "driver": drv, "prefetch": prefetch}
+        reqs.append(r)
+        note("request %s (%s), %s, %s" % (todo, label(todo), hs, "prefetched while %s drives" % reqs[0]["scene"] if prefetch else
+                                          "%.1f s after the previous scene" % (time.time() - t_wait)))
+        return r
 
     try:
         while True:
@@ -502,12 +593,17 @@ def main():
             mm = drv != "human"
             if mm and (harm or size != "auto"):                  # model mode: the preset's front camera (auto unharmonised = 1080)
                 size = "1080"
-            key = (harm, size, tuple(MODEL_WIZ[track] if mm else ()), mm and track == "pai")
+            key = (harm, size, tuple(MODEL_WIZ[track] if mm else ()), mm and track == "pai", PREFETCH)
             hs = "harmonizer %s, render %s%s" % ("on" if harm else "off", size, ", driver %s" % drv if mm else "")
             if res:
                 res.lease(owner, run)
-            v = view()
-            started = bool(v.get("started"))                     # the driver took over (first throttle press)
+            opn = live_sessions()
+            bind(opn)
+            cur, v = view()                                      # the request the viewer shows (the current scene to the user)
+            live_reqs = [r for r in reqs if not r.get("abort")]
+            if cur is None and live_reqs:
+                cur = live_reqs[0]
+            started = bool(cur and cur.get("started"))           # the driver took over (first throttle press)
             for a in ctl.pending(st["consumed"]):
                 st["consumed"].append(a["id"])
                 if a["kind"] == "stop":
@@ -519,45 +615,45 @@ def main():
                     if model.err:                                # a model driver that failed to start is tried again
                         model.track = model.tag = None
                         model.err = ""
-                    if req and not req.get("abort") and not started and req["scene"] != a["item"]:
-                        abort("play %s" % a["item"])               # a loading / held scene gives way, unscored
-                elif a["kind"] == "next" and req and v and not req.get("abort"):
-                    abort("next", "skipped (Next item)")
-                    skipped.add(req["scene"])
-                    note("next: skipping %s" % req["scene"])
-                elif a["kind"] == "restart" and req and v and not req.get("abort"):
-                    abort("restart")
-                    plays.insert(0, req["scene"])
-                    chosen.add(req["scene"])
-                    note("restart: %s" % req["scene"])
-            push_abort(v)
+                    for r in reqs:                               # a loading / held / prefetched scene gives way, unscored
+                        if not r.get("abort") and not r.get("started") and r["scene"] != a["item"]:
+                            abort(r, "play %s" % a["item"])
+                elif a["kind"] == "next" and cur and v and not cur.get("abort"):
+                    abort(cur, "next", "skipped (Next item)")
+                    skipped.add(cur["scene"])
+                    note("next: skipping %s" % cur["scene"])
+                elif a["kind"] == "restart" and cur and v and not cur.get("abort"):
+                    abort(cur, "restart")
+                    for r in reqs:                               # the restarted scene goes first: a prefetched one gives way
+                        if r is not cur and not r.get("abort") and not r.get("started"):
+                            abort(r, "restart %s" % cur["scene"])
+                    plays.insert(0, cur["scene"])
+                    chosen.add(cur["scene"])
+                    note("restart: %s" % cur["scene"])
+            push_abort(opn)
             # ---- the resident stack ----
             if res is not None and not res.alive():
                 err = res.error()
                 note("resident stack %s ended: %s" % (res.dir.name, err))
-                if req:
-                    hold_error = "the render stack stopped during %s: %s (see %s)" % (label(req["scene"]), err, res.dir)
-                    req = None
+                if reqs:
+                    hold_error = "the render stack stopped during %s: %s (see %s)" % (label(reqs[0]["scene"]), err, res.dir)
+                    reqs.clear()
                 elif not res.ready():
                     hold_error = "the render stack failed to start: %s (see %s)" % (err, res.dir)
                 res, batch = None, None
-            if req and not req.get("abort") and not started and req.get("driver", "human") != drv:
-                abort("driver %s" % drv)                         # a loading scene is requested again with the new driver
-                if req["scene"] not in plays and (c["playlist"] or req["scene"] in chosen):
-                    plays.insert(0, req["scene"])
-            if not mm and model.tag is not None and not req:
+            for r in reqs:
+                if not r.get("abort") and not r.get("started") and (r.get("driver", "human") != drv or (res is not None and res.key != key)):
+                    abort(r, "driver %s" % drv if r.get("driver", "human") != drv else hs)   # requested again with the new setting
+                    if r["scene"] not in plays and (c["playlist"] or r["scene"] in chosen):
+                        plays.insert(0, r["scene"])
+            if not mm and model.tag is not None and not reqs:
                 note("model driver %s stopped (driver: human)" % model.tag)
                 model.stop()
-            if res is not None and res.key != key and not started:
-                if req and not req.get("abort"):
-                    abort(hs, None)
-                    if req["scene"] not in plays and (c["playlist"] or req["scene"] in chosen):
-                        plays.insert(0, req["scene"])
-                if req is None:
-                    note("stopping resident stack %s: %s" % (res.dir.name, hs))
-                    progress("loading", "%s: stopping the render stack (the renderer restarts with the new setting)" % hs, time.time())
-                    res.stop()
-                    res, batch, restart_why = None, None, "%s: restarting the render stack (about a minute)" % hs
+            if res is not None and res.key != key and not reqs:
+                note("stopping resident stack %s: %s" % (res.dir.name, hs))
+                progress("loading", "%s: stopping the render stack (the renderer restarts with the new setting)" % hs, time.time())
+                res.stop()
+                res, batch, restart_why = None, None, "%s: restarting the render stack (about a minute)" % hs
             if res is None:
                 if hold_error:
                     progress("idle", hold_error + "; double-click a row to try again")
@@ -571,8 +667,8 @@ def main():
                     res.stop()
                     res, restart_why = None, "switching the render stack to %s, %s (about a minute)" % (track.upper(), hs)
                 if res is None:
-                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)), key[2], key[3])
-                    note("resident stack %s: %s, %s, %d scenes" % (res.dir.name, track, hs, len(res.ids)))
+                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)), key[2], key[3], PREFETCH)
+                    note("resident stack %s: %s, %s, %d scenes%s" % (res.dir.name, track, hs, len(res.ids), ", prefetch" if PREFETCH else ""))
                 else:
                     note("reusing resident stack %s" % res.dir.name)
                 k += 1
@@ -585,55 +681,57 @@ def main():
                 time.sleep(0.3)
                 continue
             restart_why = ""
-            # ---- this loop's scene ----
-            if req:
-                r = res.result(req["name"])
-                if r is not None:
-                    batch.take(req["scene"], r)
-                    bad = r.get("error") or not any(x.get("success") for x in r.get("rollouts", []))
-                    if not ctl.read()["record"]:
-                        discard(req["scene"], r)
-                        req, armed, t_wait = None, False, time.time()
-                        continue
-                    if req.get("abort"):                          # aborted: never scored (with or without a complete rollout)
-                        for x in r.get("rollouts", []):
-                            scorer.abort_status[x["uuid"]] = None
-                        if req.get("status"):
-                            write_json(run / "tried" / (req["scene"] + ".json"), {"status": req["status"], "t": time.time()})
-                    if bad and not req.get("abort"):
-                        err = (r.get("error") or "; ".join(x.get("error", "") for x in r.get("rollouts", [])))[:300]
-                        write_json(run / "tried" / (req["scene"] + ".json"), {"status": "rollout failed: %s" % err, "t": time.time()})
-                        hold_error = "%s failed: %s" % (label(req["scene"]), err)
-                        note(hold_error)
-                    note("%s returned after %.0f s%s" % (req["scene"], r.get("t_done", 0) - req["t"],
-                                                        " (aborted: %s)" % req["abort"] if req.get("abort") else ""))
-                    collect()
-                    req, armed, t_wait = None, False, time.time()
-                    continue
-                b = res.busy()
-                if req.get("abort"):
-                    progress("loading", "ending %s (%s): the rollout runs out unscored" % (label(req["scene"]), req["abort"]),
-                             req.get("t_abort_0") or req.setdefault("t_abort_0", time.time()), req["scene"])
-                elif b.get("name") != req["name"]:
-                    progress("loading", "%s: waiting for the previous scene to end" % label(req["scene"]), req["t"], req["scene"])
+            # ---- returned requests ----
+            back = False
+            busy = res.busy()
+            names = {b.get("name") for b in busy.get("items", [busy] if busy else [])}
+            for r in list(reqs):
+                if r.get("withdrawn") and r["name"] in names:   # the feeder sent it as it was withdrawn: abort its session instead
+                    r.pop("withdrawn")
+                out = res.result(r["name"])
+                if out is not None:
+                    returned(r, out)
+                    back = True
+                elif r.get("withdrawn") and r["name"] not in names and time.time() - r["withdrawn"] > 2:
+                    returned(r, None)
+                    back = True
+            if back:
+                armed, t_wait = False, time.time()
+                continue
+            # ---- the scenes in flight: progress, and the next one prefetched ----
+            if reqs:
+                r0 = cur if cur is not None else reqs[0]
+                if r0.get("abort"):
+                    progress("loading", "ending %s (%s): the rollout runs out unscored" % (label(r0["scene"]), r0["abort"]),
+                             r0.get("t_abort_0") or r0.setdefault("t_abort_0", time.time()), r0["scene"])
+                elif r0["name"] not in names:
+                    progress("loading", "%s: waiting for the previous scene to end" % label(r0["scene"]), r0["t"], r0["scene"])
                 elif not v:
-                    progress("loading", "loading %s: renderer loading the scene" % label(req["scene"]), b.get("t_sent"), req["scene"])
+                    progress("loading", "loading %s: renderer loading the scene" % label(r0["scene"]), r0["t"], r0["scene"])
                 elif v.get("model_wait") is not None and not started:
-                    progress("loading", "loading %s: waiting for model driver %s to accept connections" % (label(req["scene"]), req["driver"]),
-                             b.get("t_sent"), req["scene"])
+                    progress("loading", "loading %s: waiting for model driver %s to accept connections" % (label(r0["scene"]), r0["driver"]),
+                             r0["t"], r0["scene"])
                 elif v.get("waiting") and not started:
                     progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else
-                             "%s held: press throttle" % label(req["scene"]), None, req["scene"])
+                             "%s held: press throttle" % label(r0["scene"]), None, r0["scene"])
                 else:
-                    state = "paused" if c["paused"] else "driving"
-                    model_req = req.get("driver", "human") != "human"
-                    progress(state, "resume on the panel" if c["paused"] else "%s%s%s%s" % (label(req["scene"]),
-                             "   harmonizer on" if res.harm else "", "   driver: model %s" % req["driver"] if model_req else "",
+                    model_req = r0.get("driver", "human") != "human"
+                    progress("paused" if c["paused"] else "driving", "resume on the panel" if c["paused"] else "%s%s%s%s" % (label(r0["scene"]),
+                             "   harmonizer on" if res.harm else "", "   driver: model %s" % r0["driver"] if model_req else "",
                              "   (model + harmonizer at shipped settings: about 4 wall s per sim s, slow motion)" if model_req and res.harm else ""),
-                             None, req["scene"])
+                             None, r0["scene"])
                 if res.key != key:
                     st["msg"] = "%s: the render stack restarts after this scene; %s" % (hs, st["msg"])
                     write_json(state_f, st)
+                # prefetch: one more request while the current scene's session exists (loaded), once nothing aborted is in flight
+                live_reqs = [r for r in reqs if not r.get("abort")]
+                if (PREFETCH and res.prefetch and len(reqs) == 1 and len(live_reqs) == 1 and (live_reqs[0].get("session") or live_reqs[0].get("seen"))
+                        and not hold_error and res.key == key and live_reqs[0].get("driver", "human") == drv and (not mm or model.ensure(track, drv))):
+                    nxt = plays[0] if plays else (unfinished(exclude={live_reqs[0]["scene"]}) or [None])[0] if c["playlist"] else None
+                    if nxt is not None and nxt != live_reqs[0]["scene"]:
+                        if plays:
+                            plays.pop(0)
+                        submit(nxt, prefetch=True)
                 time.sleep(0.3)
                 continue
             # ---- no scene: pick the next ----
@@ -672,11 +770,8 @@ def main():
                     left, len(ids), who, "" if c["playlist"] else " or press throttle")) if left else "all %d scenes driven%s" % (len(ids), who))
                 time.sleep(0.3)
                 continue
-            write_json(LIVE / "driver.json", {"scene": todo, "tag": drv, "addr": "127.0.0.1:%s" % MODEL_PORT if mm else "", "track": track,
-                                              "run": str(run), "t": time.time()})
-            req = {"name": res.submit(todo, owner), "scene": todo, "t": time.time(), "driver": drv}
-            note("request %s (%s), %s, %.1f s after the previous scene" % (todo, label(todo), hs, time.time() - t_wait))
-            progress("loading", "loading %s" % label(todo), req["t"], todo)
+            r = submit(todo)
+            progress("loading", "loading %s" % label(todo), r["t"], todo)
     except KeyboardInterrupt:
         pass
     finally:
@@ -686,14 +781,21 @@ def main():
         else:
             model.stop()
         if res is not None:
-            if req and res.result(req["name"]) is None:
-                if res.busy().get("name") == req["name"]:
-                    write_json(LIVE / "abort.json", {"scene": req["scene"], "t": time.time(), "by": "loop stop"})
+            busy = res.busy()
+            names = {b.get("name") for b in busy.get("items", [busy] if busy else [])}
+            items = []
+            for r in reqs:
+                if res.result(r["name"]) is not None:
+                    continue
+                if r["name"] in names:
+                    items.append({"scene": r["scene"], "t": time.time(), "by": "loop stop", **({"session": r["session"]} if r.get("session") else {})})
                 else:
                     try:
-                        (res.feed / "req" / req["name"]).unlink()
+                        (res.feed / "req" / r["name"]).unlink()
                     except OSError:
                         pass
+            if items:
+                write_json(LIVE / "abort.json", {**items[-1], "items": items})
             res.release(owner)
         write_json(LIVE / "launcher.json", {"state": "stopped", "msg": "panel loop stopped%s" % (
             "; the render stack stays warm for %d min" % (int(os.environ.get("HUMAN_IDLE_S", "1200")) // 60) if res else ""),

@@ -59,6 +59,20 @@ Everything else stays: the hold point (released at once unless paused), pause, s
 "plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions records carry "driver"). No pacing: a model session runs as fast as the stack and the model allow (HUMAN_MODEL_REALTIME, default 0,
 paces it as HUMAN_REALTIME paces the human; model drives are watched like recordings, so scenes per hour is what counts). A model
 error fails the drive call with the model's own status, as it would fail a served rollout.
+
+Prefetch (HUMAN_PREFETCH=1, README "Scene-to-scene gap"): the resident runtime runs two rollouts at once and the loop requests the next
+scene while the current one drives, so up to two sessions are open. The shown ("active") session is the oldest open one that still
+drives; the other is on standby: it loads, runs its force-GT run-up and holds at the hand-off point, writes nothing to the live dir
+(state.json, JPEGs, camera.json, the nuPlan fill; <live>/active.json tells lib/model_view.py which session's view to write) and is
+not released while on standby (standby time does not count towards HUMAN_WAIT_MAX_S). A session stops being the active one at its
+predicted last drive call (n = min(HUMAN_SIM_STEPS, floor((log end - first drive) / step)) steps; log end = the last recorded ground
+truth pose, so it needs HUMAN_GT=1), when it is skipped, when it closes, or, near its end without a prediction, after HUMAN_IDLE_END_S
+(1.5) without a drive call; a drive call after a predicted end takes the view back (counted as "refinish"). The promoted session then
+holds as usual: the human's throttle starts it no sooner than HUMAN_PROMOTE_MIN_S (1.0) after it is shown, a model session starts at
+once. A model session on standby is forwarded concurrently (the served drivers keep per-session state and serialise the card).
+sessions.jsonl gets an "active" record when a session is first shown; <live>/sessions.json lists the open sessions for the loop.
+Abort requests (<live>/abort.json) may carry a list "items" of {scene, session?, t}: a session uuid hits that session, a bare scene hits
+its sessions created before t.
 """
 from __future__ import annotations
 
@@ -93,6 +107,9 @@ HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HU
 FAST_ABORT = E("HUMAN_FAST_ABORT", "0") == "1"
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
 CONTROL = Path(E("HUMAN_CONTROL", "")) if E("HUMAN_CONTROL") else None
+PREFETCH = E("HUMAN_PREFETCH", "0") == "1"                         # two open sessions: one shown, one on standby at its hand-off
+PROMOTE_MIN_S, IDLE_END_S = float(E("HUMAN_PROMOTE_MIN_S", "1.0")), float(E("HUMAN_IDLE_END_S", "1.5"))
+N_STEPS, SIM_S = int(E("HUMAN_SIM_STEPS", "200")), float(E("HUMAN_SIM_S", "0"))
 # HUMAN_TRACK_GATE=1: the plan goes through the model drivers' feasible-reference gate (experiments/alpasim/lib/track_ref.py, mode gate,
 # decision 309; JEV_TRACK_CFG overrides its constants), so a hard brake never hands the MPC a deceleration step it can only follow by
 # steering (results/brake_spin.md). Default on; 0 = the plan as rolled out.
@@ -137,9 +154,12 @@ class Panel:
         return self
 
     def skip(self, s) -> bool:
-        """The loop asked to skip this session's scene (written after the session started)."""
+        """The loop asked to skip this session: by uuid, or by scene for sessions created before the request."""
         a = self.abort
-        return bool(a) and a.get("scene") == s.scene and a.get("t", 0) > s.t_created
+        for i in (a.get("items") or ([a] if a else [])):
+            if i.get("session") == s.uuid or (not i.get("session") and i.get("scene") == s.scene and i.get("t", 0) > s.t_created):
+                return True
+        return False
 
 
 def yaw_of(q) -> float:
@@ -268,6 +288,10 @@ class Session:
         self.gt, self.shadow_s, self.prev_now = None, 0.0, None         # gt: (step us, (n, 4) t, x, y, z rig frame)
         self.thumb = False
         self.model, self.driver, self.model_ms = None, "human", None     # Model mode: the delegate, "human" or its tag, last drive ms
+        self.uuid, self.calib = req.session_uuid, None
+        # prefetch: finished = no longer the shown session (why: "end" predicted, "idle", "abort", "close"); active_t = first shown
+        self.finished, self.why_fin, self.active_t, self.standby_s, self.n_refinish = False, "", None, 0.0, 0
+        self.dt_us, self.gt_end, self.t_hold0 = None, None, None
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
@@ -286,12 +310,74 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         self.models = {}                                               # (tag, addr) -> Model (one channel each)
         self.meta = {"track": E("HUMAN_TRACK", "?"), "n_scenes": int(E("HUMAN_N_SCENES", "0")), "sim_total": float(E("HUMAN_SIM_S", "0")),
                      "start_mode": START, "run": E("HUMAN_RUN", ""), "harmonizer": E("HUMAN_HARMONIZER", "0") == "1"}
+        self.order = []                             # open session uuids in start order
+        put(LIVE / "active.json", json.dumps({"prefetch": PREFETCH, "session": None, "t": time.time()}).encode())
+        self._sess_put()
 
     def _s(self, uuid, ctx) -> Session:
         s = self.sessions.get(uuid)
         if s is None:
             ctx.abort(grpc.StatusCode.NOT_FOUND, f"unknown session {uuid}")
         return s
+
+    # ---- prefetch: which open session is shown ----
+    def _active(self):
+        """uuid of the shown session: the oldest open one still driving (an idle one near its end without a prediction counts as
+        finished); None when every open session finished. Without HUMAN_PREFETCH sessions never finish early, so it is the oldest."""
+        with self.lock:
+            for u in self.order:
+                s = self.sessions.get(u)
+                if s is None or s.finished:
+                    continue
+                if PREFETCH and s.started is not None and s.last is not None and s.gt_end is None and SIM_S > 0 \
+                        and (s.last[1] - s.t_first) / 1e6 >= SIM_S - 1.0 and time.time() - s.last[0] > IDLE_END_S and not self.panel.paused:
+                    self._finish(s, "idle")
+                    continue
+                return u
+        return None
+
+    def _finish(self, s: Session, why: str):
+        if PREFETCH and not s.finished:
+            s.finished, s.why_fin = True, why
+            LOG.info("session %d %s: no longer shown (%s)", s.n, s.scene, why)
+
+    def _is_shown(self, s: Session) -> bool:
+        """The viewer shows s: always without prefetch; with it, s is the active session (or none is and s is the newest open one,
+        e.g. its close record)."""
+        if not PREFETCH:
+            return True
+        a = self._active()
+        if a is None:
+            with self.lock:
+                a = next((u for u in reversed(self.order) if u in self.sessions), None)
+        if a == s.uuid and s.active_t is None:
+            self._activate(s)
+        return a == s.uuid
+
+    def _activate(self, s: Session):
+        """s is shown for the first time: its camera calibration, the fill, active.json, an "active" record."""
+        s.active_t = time.time()
+        if self.fill:
+            self.fill.calib(s.calib)
+        try:
+            put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(s.calib or {})}).encode())
+            put(LIVE / "active.json", json.dumps({"prefetch": PREFETCH, "session": s.uuid, "scene": s.scene, "t": s.active_t}).encode())
+        except OSError as e:
+            LOG.warning("camera.json / active.json: %r", e)
+        self.sess_log.write(json.dumps({"kind": "active", "t": s.active_t, "session": s.uuid, "n": s.n, "scene": s.scene,
+                                        "driver": s.driver}) + "\n")
+        LOG.info("session %d %s shown", s.n, s.scene)
+        self._sess_put()
+
+    def _sess_put(self):
+        """<live>/sessions.json: the open sessions (the loop maps its requests to sessions with it)."""
+        with self.lock:
+            rows = [{"session": u, "scene": s.scene, "t_created": s.t_created, "shown": s.active_t is not None, "started": s.started is not None,
+                     "aborted": s.aborted, "finished": s.finished, "driver": s.driver} for u in self.order if (s := self.sessions.get(u))]
+        try:
+            put(LIVE / "sessions.json", json.dumps({"t": time.time(), "run": self.meta["run"], "prefetch": PREFETCH, "open": rows}).encode())
+        except OSError as e:
+            LOG.warning("sessions.json: %r", e)
 
     def _wheel(self):
         with self.wlock:                                           # one socket, several gRPC threads
@@ -325,32 +411,45 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         with self.lock:
             s = self.sessions[req.session_uuid] = Session(req, self.nsess)
             self.nsess += 1
+            self.order.append(s.uuid)
         try:
             d = json.loads((LIVE / "driver.json").read_text())
         except (OSError, ValueError):
             d = {}
-        if d.get("scene") == s.scene and d.get("tag") not in (None, "", "human"):
+        d = (d.get("scenes") or {}).get(s.scene) or d                 # per scene (two requests in flight), else the single entry
+        if d.get("scene", s.scene) == s.scene and d.get("tag") not in (None, "", "human"):
             key = (d["tag"], d["addr"])
             s.model = self.models.get(key) or self.models.setdefault(key, Model(*key))
             s.driver = d["tag"]
             self._model_start(s, req, ctx)
-        calib = front_camera(req.rollout_spec.vehicle)
+        calib = s.calib = front_camera(req.rollout_spec.vehicle)
         self.start.write(json.dumps({"t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "cams": s.cams,
                                      "L": s.L, **(calib or {})}) + "\n")
-        if self.fill:
-            self.fill.calib(calib)
-        try:
-            put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(calib or {})}).encode())
-        except OSError as e:
-            LOG.warning("camera.json: %r", e)
         self.sess_log.write(json.dumps({"kind": "start", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
                                         "driver": s.driver}) + "\n")
+        if not PREFETCH:                                           # shown at once (prefetch: when it becomes the active session)
+            if self.fill:
+                self.fill.calib(calib)
+            try:
+                put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(calib or {})}).encode())
+            except OSError as e:
+                LOG.warning("camera.json: %r", e)
+        else:
+            self._is_shown(s)
+            self._sess_put()
         LOG.info("session %d %s, cameras %s, wheelbase %.2f m, driver %s", s.n, s.scene, s.cams, s.L, s.driver)
         return common_pb2.SessionRequestStatus()
 
     def close_session(self, req, ctx):
+        s = self.sessions.get(req.session_uuid)
+        shown = True
+        if s is not None and PREFETCH:                             # its close record is shown only when no other session is
+            self._finish(s, "close")
+            shown = self._is_shown(s)
         with self.lock:
             s = self.sessions.pop(req.session_uuid, None)
+            if req.session_uuid in self.order:
+                self.order.remove(req.session_uuid)
         if s is not None and s.model is not None:
             try:
                 s.model.stub.close_session(req, timeout=30)
@@ -365,14 +464,20 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                    "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept - s.paused_s) / sim, 3) if sim > 0 else None,
                    "late": s.n_late, "realtime": RT if s.model is None else RT_MODEL, "aborted": s.aborted, "paused_s": round(s.paused_s, 1),
                    "shadow_s": round(s.shadow_s, 1), "gt": s.gt is not None, "driver": s.driver}
+            if PREFETCH:
+                rec.update(prefetch=True, standby_s=round(s.standby_s, 1), why_fin=s.why_fin, refinish=s.n_refinish, gt_end=s.gt_end,
+                           t_first=s.t_first, last_now=t1, dt_us=s.dt_us, active_t=s.active_t)
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
-            self._live(s, {"waiting": False, "closed": True})
+            if shown:
+                self._live(s, {"waiting": False, "closed": True}, force=True)
         if s is not None and not s.thumb:
             self._thumb(req.session_uuid, s)
         if s is not None:                                          # every session (it was written only without a handoff thumbnail)
             self.sess_log.write(json.dumps({"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
                                             "started": s.started is not None, "aborted": s.aborted, "drives": s.k, "driver": s.driver}) + "\n")
+            if PREFETCH:
+                self._sess_put()
         return common_pb2.Empty()
 
     def submit_image_observation(self, req, ctx):
@@ -443,15 +548,17 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         except OSError as e:
             LOG.warning("thumb: %r", e)
 
-    def _live(self, s: Session, extra: dict):
-        """state.json + the newest JPEGs into the live dir for the viewer; never raises."""
+    def _live(self, s: Session, extra: dict, force: bool = False):
+        """state.json + the newest JPEGs into the live dir for the viewer, only for the shown session (prefetch); never raises."""
+        if not force and not self._is_shown(s):
+            return
         try:
             for name, (ts, jpg) in list(s.frames.items()):
                 if s.written.get(name) != ts and not (name == "front" and self.fill):     # front.jpg: the fill thread
                     put(LIVE / f"{name}.jpg", jpg)
                     s.written[name] = ts
             st = {**self.meta, "t": time.time(), "running": True, "scene": s.scene, "scene_i": s.n + 1, "cams": s.cams,
-                  "frames": sorted(s.frames), "route": s.route, "box": s.box, "driver": s.driver, "model_ms": s.model_ms, **extra}
+                  "frames": sorted(s.frames), "route": s.route, "box": s.box, "driver": s.driver, "model_ms": s.model_ms, "session": s.uuid, **extra}
             with self.stlock:
                 self.st = st
                 put(LIVE / "state.json", json.dumps({**st, **(self.fill.state() if self.fill else {})}).encode())
@@ -472,6 +579,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             return False
         if s.model is not None:                                     # model mode: the scene starts by itself
             return True
+        if s.active_t is not None and s.active_t > s.t_hold0 and time.time() - s.active_t < PROMOTE_MIN_S:
+            return False                                            # prefetch: a promoted scene is seen before the throttle starts it
         st = self._wheel()
         thr = not st["stale"] and st["raw_throttle"] > 0.2
         if START == "throttle":
@@ -490,9 +599,18 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return thr and not viewer                                   # no viewer running: the throttle path
 
     def _hold(self, s: Session, base: dict):
-        t_hold = t_wait = t_prev = time.time()
-        while time.time() - t_wait < WAIT_MAX:                     # time spent paused does not count towards WAIT_MAX
+        t_hold = t_wait = t_prev = s.t_hold0 = time.time()
+        while time.time() - t_wait < WAIT_MAX:                     # time spent paused or on standby does not count towards WAIT_MAX
             st, t_now = self._wheel(), time.time()
+            if PREFETCH and not self._is_shown(s):                 # standby: held unseen until the shown session ends
+                t_wait += t_now - t_prev
+                s.standby_s += t_now - t_prev
+                t_prev = t_now
+                if self.panel.poll().skip(s):
+                    s.aborted = True
+                    break
+                time.sleep(0.05)
+                continue
             if self.panel.poll().paused:
                 t_wait += t_now - t_prev
             t_prev = t_now
@@ -521,16 +639,26 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             x, y, z, yaw, v = s.poses[ta]
         if s.t_first is None:
             s.t_first = now
+        elif s.dt_us is None:
+            s.dt_us = now - s.t_first                              # the policy step (PAI 0.1 s, nuPlan 0.5 s)
+        if s.finished and s.why_fin in ("end", "idle") and not s.aborted:   # a call after a predicted end: it takes the view back
+            s.finished, s.n_refinish = False, s.n_refinish + 1
+            LOG.warning("session %d %s: drive call after its predicted end (%s): shown again", s.n, s.scene, s.why_fin)
         sim_t = (now - s.t_first) / 1e6
         base = {"sim_t": round(sim_t, 2), "speed": round(v, 2), **self._shadow(s, now)}
         if s.started is None and now - s.t_first >= HOLD_US:
             self._thumb(req.session_uuid, s)
             self._hold(s, base)
             s.started = s.anchor = (time.time(), now)
+            if PREFETCH:
+                self._sess_put()
         p = self.panel.poll()
         if s.started is not None and not s.aborted and p.skip(s):
             s.aborted = True
             LOG.info("session %d %s: skipped by the panel", s.n, s.scene)
+        if s.aborted and PREFETCH and not s.finished:
+            self._finish(s, "abort")
+            self._sess_put()
         if s.aborted and FAST_ABORT:                               # HUMAN_FAST_ABORT: the runtime ends (fails) this rollout now, unscored
             ctx.abort(grpc.StatusCode.CANCELLED, "skipped by the panel")
         if s.started is not None and not s.aborted and p.paused:   # hold mid-scene: this drive call does not return until resume
@@ -580,7 +708,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 traj.poses.append(common_pb2.PoseAtTime(timestamp_us=ta + int(round(i * DT * 1e6)), pose=common_pb2.Pose(
                     vec=common_pb2.Vec3(x=float(px), y=float(py), z=float(z)),
                     quat=common_pb2.Quat(w=math.cos(pyaw / 2), x=0.0, y=0.0, z=math.sin(pyaw / 2)))))
-        if self.fill:
+        if self.fill and self._is_shown(s):
             self.fill.drive(s, now, ta, traj_xyv, s.started is not None)
         wall = time.time()
         s.last = (wall, now)
@@ -599,6 +727,14 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                        "plan": plan, "wall_per_sim": wps, "realtime": rt, "late": s.n_late,
                        "unpaced_per_sim": round(((wall - s.started[0]) - s.slept - s.paused_s) / ((now - s.started[1]) / 1e6), 3) if wps else None, "started": s.started is not None,
                        "paused": False, "aborted": s.aborted})
+        if PREFETCH and s.started is not None and not s.finished:
+            if s.gt_end is None and s.gt is not None:
+                s.gt_end = int(s.gt[1][-1, 0])
+            if s.gt_end and s.dt_us:                               # the runtime's step count: min(n_sim_steps, steps that fit the log)
+                n = min(N_STEPS, (s.gt_end - s.t_first) // s.dt_us)
+                if now >= s.t_first + (n - 1) * s.dt_us:
+                    self._finish(s, "end")
+                    self._sess_put()
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
