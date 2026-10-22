@@ -16,6 +16,11 @@
 | PAI top 30 recoverable losses (all candidates) | 30 | 三个 PAI 模型合并，每场景取价值最高的那个模型；stored 列钉在副行写的模型上 |
 | nuPlan top 30 recoverable losses (all candidates) | 30 | 三个 nuPlan 模型合并，同上 |
 
+![loss playlists](../../experiments/alpasim_human/figs/panel_loss_playlists.png)
+
+`experiments/alpasim_human/figs/panel_loss_playlists.png`：面板（同一代码、只读副本实例，Tokyo headless Chrome）打开 "PAI R8K-s2 losses by value"。
+看 "R8K STORED" 列（R8K 自己的存档分与 why）、副行开头的 `#名次 value`，以及 Reference 列（面板原有的 R6DAG 参照分）。
+
 面板一个播放列表只能放一条赛道，所以"两赛道合并 top 30"拆成两个。
 
 ## 顺序怎么算
