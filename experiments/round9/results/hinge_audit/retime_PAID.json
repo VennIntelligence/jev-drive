@@ -1,0 +1,12 @@
+{
+ "rows": 5449,
+ "label_arc4_over_human_med": 1.0884483199674049,
+ "label_longer_than_human": 0.5667094879794458,
+ "human_also_violates": 0.008441915947880345,
+ "human_t0_ahead_of_student_med": -0.019264107570052147,
+ "human_t0_behind_student": 0.43384107175628556,
+ "human_timing_still_violates": 0.524499908240044,
+ "min_timing_still_violates": 0.7436226830611121,
+ "station_matched_still_violates": 0.4353092310515691,
+ "min_station_still_violates": 0.6615892824371444
+}

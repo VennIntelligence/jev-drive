@@ -1,0 +1,26 @@
+{
+ "fixed": {
+  "rows": 1498,
+  "la_rows": 1498,
+  "term_reduced": 0.9766355156898499,
+  "term_rel_reduction_med": 0.7734822034835815,
+  "arc_rel_change_med": 0.00011653693624331482,
+  "end_speed_change_med": 0.00026894996826420936,
+  "toward_fut": 0.8391188251001335,
+  "away_from_fut_line": 0.19292389853137518,
+  "toward_log": 0.7755847953216374,
+  "away_from_log_line": 0.24926900584795322
+ },
+ "spec": {
+  "rows": 1995,
+  "la_rows": 1995,
+  "term_reduced": 0.9709272980690002,
+  "term_rel_reduction_med": 0.8491584062576294,
+  "arc_rel_change_med": 0.0001772652522393605,
+  "end_speed_change_med": 0.0,
+  "toward_fut": 0.8406015037593985,
+  "away_from_fut_line": 0.20300751879699247,
+  "toward_log": 0.7844311377245509,
+  "away_from_log_line": 0.23843222645617856
+ }
+}

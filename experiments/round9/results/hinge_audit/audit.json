@@ -1,0 +1,3736 @@
+{
+ "S": {
+  "rows": 87012,
+  "candidates": 68939,
+  "ctx_margins": {
+   "ag_c|0.5-3|junction": 0.3,
+   "ag_c|0.5-3|lead<20m": 0.3,
+   "ag_c|0.5-3|parked beside": 0.3,
+   "ag_c|0.5-3|straight free": 0.3,
+   "ag_c|0.5-3|turn>30": 0.3,
+   "ag_c|13-17|junction": 0.3,
+   "ag_c|13-17|parked beside": 0.3,
+   "ag_c|13-17|straight free": 0.3,
+   "ag_c|3-8|junction": 0.3,
+   "ag_c|3-8|lead<20m": 0.3,
+   "ag_c|3-8|parked beside": 0.3,
+   "ag_c|3-8|straight free": 0.3,
+   "ag_c|3-8|turn>30": 0.3,
+   "ag_c|8-13|junction": 0.3,
+   "ag_c|8-13|lead<20m": 0.3,
+   "ag_c|8-13|parked beside": 0.3,
+   "ag_c|8-13|straight free": 0.3,
+   "ag_c|8-13|turn>30": 0.3,
+   "ag_c|<0.5|standing": 0.3,
+   "ag_s|0.5-3|junction": 0.0,
+   "ag_s|0.5-3|lead<20m": 0.0,
+   "ag_s|0.5-3|parked beside": 0.0,
+   "ag_s|0.5-3|straight free": 0.0,
+   "ag_s|0.5-3|turn>30": 0.0,
+   "ag_s|13-17|junction": 0.0,
+   "ag_s|13-17|parked beside": 0.0,
+   "ag_s|13-17|straight free": 0.0,
+   "ag_s|3-8|junction": 0.0,
+   "ag_s|3-8|lead<20m": 0.0,
+   "ag_s|3-8|parked beside": 0.0,
+   "ag_s|3-8|straight free": 0.0,
+   "ag_s|3-8|turn>30": 0.0,
+   "ag_s|8-13|junction": 0.0,
+   "ag_s|8-13|lead<20m": 0.0,
+   "ag_s|8-13|parked beside": 0.0,
+   "ag_s|8-13|straight free": 0.0,
+   "ag_s|8-13|turn>30": 0.0,
+   "ag_s|<0.5|standing": 0.0,
+   "road|0.5-3|junction": 0.011,
+   "road|0.5-3|lead<20m": -0.032,
+   "road|0.5-3|parked beside": 0.097,
+   "road|0.5-3|straight free": -0.013,
+   "road|0.5-3|turn>30": -0.035,
+   "road|13-17|junction": 0.3,
+   "road|13-17|parked beside": 0.3,
+   "road|13-17|straight free": 0.3,
+   "road|3-8|junction": 0.007,
+   "road|3-8|lead<20m": -0.039,
+   "road|3-8|parked beside": 0.186,
+   "road|3-8|straight free": -0.005,
+   "road|3-8|turn>30": -0.022,
+   "road|8-13|junction": 0.025,
+   "road|8-13|lead<20m": 0.3,
+   "road|8-13|parked beside": -0.048,
+   "road|8-13|straight free": 0.095,
+   "road|8-13|turn>30": 0.132,
+   "road|<0.5|standing": 0.043,
+   "sd|0.5-3|junction": 0.4,
+   "sd|0.5-3|lead<20m": 0.4,
+   "sd|0.5-3|parked beside": 0.4,
+   "sd|0.5-3|straight free": 0.4,
+   "sd|0.5-3|turn>30": 0.4,
+   "sd|13-17|junction": 0.4,
+   "sd|13-17|parked beside": 0.4,
+   "sd|13-17|straight free": 0.4,
+   "sd|3-8|junction": 0.4,
+   "sd|3-8|lead<20m": 0.4,
+   "sd|3-8|parked beside": 0.4,
+   "sd|3-8|straight free": 0.4,
+   "sd|3-8|turn>30": 0.4,
+   "sd|8-13|junction": 0.4,
+   "sd|8-13|lead<20m": 0.4,
+   "sd|8-13|parked beside": 0.315,
+   "sd|8-13|straight free": 0.4,
+   "sd|8-13|turn>30": 0.4,
+   "sd|<0.5|standing": 0.4,
+   "onc|0.5-3|junction": 0.0,
+   "onc|0.5-3|lead<20m": 0.0,
+   "onc|0.5-3|parked beside": 0.521,
+   "onc|0.5-3|straight free": 0.0,
+   "onc|0.5-3|turn>30": 0.04,
+   "onc|13-17|junction": 0.0,
+   "onc|13-17|parked beside": 0.0,
+   "onc|13-17|straight free": 0.0,
+   "onc|3-8|junction": 0.0,
+   "onc|3-8|lead<20m": 0.0,
+   "onc|3-8|parked beside": 0.0,
+   "onc|3-8|straight free": 0.0,
+   "onc|3-8|turn>30": 0.315,
+   "onc|8-13|junction": 0.0,
+   "onc|8-13|lead<20m": 0.0,
+   "onc|8-13|parked beside": 0.0,
+   "onc|8-13|straight free": 0.0,
+   "onc|8-13|turn>30": 0.0,
+   "onc|<0.5|standing": 0.0,
+   "soft|0.5-3|junction": 0.0,
+   "soft|0.5-3|lead<20m": 0.0,
+   "soft|0.5-3|parked beside": 0.0,
+   "soft|0.5-3|straight free": 1.437,
+   "soft|0.5-3|turn>30": 0.0,
+   "soft|13-17|junction": 0.0,
+   "soft|13-17|parked beside": 0.0,
+   "soft|13-17|straight free": 0.77,
+   "soft|3-8|junction": 0.0,
+   "soft|3-8|lead<20m": 0.0,
+   "soft|3-8|parked beside": 0.0,
+   "soft|3-8|straight free": 1.142,
+   "soft|3-8|turn>30": 0.0,
+   "soft|8-13|junction": 0.543,
+   "soft|8-13|lead<20m": 0.0,
+   "soft|8-13|parked beside": 0.279,
+   "soft|8-13|straight free": 1.252,
+   "soft|8-13|turn>30": 0.0,
+   "soft|<0.5|standing": 0.0
+  },
+  "audit": {
+   "agent": {
+    "log": {
+     "n": 68939,
+     "viol": 0.001073412727193606,
+     "mass_mean": 0.0006630419142769099
+    },
+    "fut": {
+     "n": 68939,
+     "viol": 0.020293302774916956,
+     "mass_mean": 0.12538858875371445
+    },
+    "plan": {
+     "n": 20608,
+     "viol": 0.06536296583850931,
+     "mass_mean": 0.3032305208516204
+    },
+    "plan_active": 0.06536296583850931,
+    "log_viol_given_active": 0.011878247958426132,
+    "log_viol_uncond_same_rows": 0.0010190217391304348,
+    "fut_viol_given_active": 0.19376391982182628,
+    "fut_viol_uncond_same_rows": 0.0187791149068323
+   },
+   "road": {
+    "log": {
+     "n": 68939,
+     "viol": 0.16214334411581252,
+     "mass_mean": 0.1974999720277013
+    },
+    "fut": {
+     "n": 68939,
+     "viol": 0.14247378116885942,
+     "mass_mean": 0.3263138471417399
+    },
+    "plan": {
+     "n": 20608,
+     "viol": 0.12543672360248448,
+     "mass_mean": 0.4984344355829374
+    },
+    "plan_active": 0.12543672360248448,
+    "log_viol_given_active": 0.5539651837524178,
+    "log_viol_uncond_same_rows": 0.15833656832298137,
+    "fut_viol_given_active": 0.7264990328820116,
+    "fut_viol_uncond_same_rows": 0.140625
+   },
+   "onc": {
+    "log": {
+     "n": 27647,
+     "viol": 0.010380873150793939,
+     "mass_mean": 0.06623185195340582
+    },
+    "fut": {
+     "n": 27647,
+     "viol": 0.011321300683618475,
+     "mass_mean": 0.035062301671797746
+    },
+    "plan": {
+     "n": 8299,
+     "viol": 0.020363899264971685,
+     "mass_mean": 0.08718238125107118
+    },
+    "plan_active": 0.020363899264971685,
+    "log_viol_given_active": 0.15384615384615385,
+    "log_viol_uncond_same_rows": 0.010242197855163273,
+    "fut_viol_given_active": 0.5029585798816568,
+    "fut_viol_uncond_same_rows": 0.011447162308711893
+   },
+   "soft": {
+    "log": {
+     "n": 27647,
+     "viol": 0.05975331862408218,
+     "mass_mean": 0.12018158462942974
+    },
+    "fut": {
+     "n": 27647,
+     "viol": 0.06601077874633776,
+     "mass_mean": 0.06852204504539364
+    },
+    "plan": {
+     "n": 8299,
+     "viol": 0.04072779852994337,
+     "mass_mean": 0.03108436790255556
+    },
+    "plan_active": 0.04072779852994337,
+    "log_viol_given_active": 0.5118343195266272,
+    "log_viol_uncond_same_rows": 0.05795879021568864,
+    "fut_viol_given_active": 0.6479289940828402,
+    "fut_viol_uncond_same_rows": 0.06229666224846367
+   },
+   "side": {
+    "log": {
+     "n": 68939,
+     "viol": 0.009341591842063273,
+     "mass_mean": 0.005436883657018838
+    },
+    "fut": {
+     "n": 68939,
+     "viol": 0.02832939265147449,
+     "mass_mean": 0.013875000025476942
+    },
+    "plan": {
+     "n": 20608,
+     "viol": 0.042798913043478264,
+     "mass_mean": 0.020638144348142554
+    },
+    "plan_active": 0.042798913043478264,
+    "log_viol_given_active": 0.09523809523809523,
+    "log_viol_uncond_same_rows": 0.009802018633540372,
+    "fut_viol_given_active": 0.4376417233560091,
+    "fut_viol_uncond_same_rows": 0.02877523291925466
+   }
+  },
+  "strata": [
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 16347,
+    "share": 0.23712267366802536,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 681,
+    "share": 0.009878298205660076,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 36649,
+    "share": 0.5316149059313307,
+    "human_viol": 0.0020191546836202897,
+    "human_mass_share": 1.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 12074,
+    "share": 0.17514034146129187,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "junction",
+    "rows": 12808,
+    "share": 0.18578743526886088,
+    "human_viol": 0.0012492192379762648,
+    "human_mass_share": 0.15892242051673222
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 6412,
+    "share": 0.09300976225358651,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 5294,
+    "share": 0.07679252672652635,
+    "human_viol": 0.005855685681904042,
+    "human_mass_share": 0.7070879572692108
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 32729,
+    "share": 0.4747530425448585,
+    "human_viol": 0.0004888630877814782,
+    "human_mass_share": 0.1298409860405554
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 8508,
+    "share": 0.12341345247247566,
+    "human_viol": 0.0012929007992477667,
+    "human_mass_share": 0.004148636173501597
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 29,
+    "share": 0.0004206617444407375,
+    "human_viol": 1.0,
+    "human_mass_share": 0.010937261330910155
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 330,
+    "share": 0.004786840540187702,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 45,
+    "share": 0.0006527509827528685,
+    "human_viol": 1.0,
+    "human_mass_share": 0.98906273866909
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 47837,
+    "share": 0.6939033058210882,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 20698,
+    "share": 0.3002364409115305,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 16347,
+    "share": 0.23712267366802536,
+    "human_viol": 0.16351624151220406,
+    "human_mass_share": 0.23787303908122837
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 681,
+    "share": 0.009878298205660076,
+    "human_viol": 0.10425844346549193,
+    "human_mass_share": 0.001183614952554261
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 36649,
+    "share": 0.5316149059313307,
+    "human_viol": 0.16868127370460312,
+    "human_mass_share": 0.5785121928700782
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 12074,
+    "share": 0.17514034146129187,
+    "human_viol": 0.1516481696206725,
+    "human_mass_share": 0.13911818878526105
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.13205771643663738,
+    "human_mass_share": 0.04331296431087829
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "junction",
+    "rows": 12808,
+    "share": 0.18578743526886088,
+    "human_viol": 0.17715490318550906,
+    "human_mass_share": 0.15729223780087176
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 6412,
+    "share": 0.09300976225358651,
+    "human_viol": 0.15065502183406113,
+    "human_mass_share": 0.1644445568401749
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 5294,
+    "share": 0.07679252672652635,
+    "human_viol": 0.09954665659236872,
+    "human_mass_share": 0.022769458216933023
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.13205771643663738,
+    "human_mass_share": 0.04331296431087829
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 32729,
+    "share": 0.4747530425448585,
+    "human_viol": 0.1773961929787039,
+    "human_mass_share": 0.5773767738081035
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 8508,
+    "share": 0.12341345247247566,
+    "human_viol": 0.13975082275505407,
+    "human_mass_share": 0.03480400902303864
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 2696,
+    "share": 0.03910703665559408,
+    "human_viol": 1.0,
+    "human_mass_share": 0.1434108244780054
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 6324,
+    "share": 0.09173327144286979,
+    "human_viol": 1.0,
+    "human_mass_share": 0.09875152711670895
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 26611,
+    "share": 0.3860079200452574,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 2158,
+    "share": 0.03130303601734867,
+    "human_viol": 1.0,
+    "human_mass_share": 0.7578376484052856
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 31150,
+    "share": 0.4518487358389301,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 6021,
+    "share": 0.21778131442832857,
+    "human_viol": 0.013619000166085369,
+    "human_mass_share": 0.2530056738723723
+   },
+   {
+    "term": "onc",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 283,
+    "share": 0.010236191991897856,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 14610,
+    "share": 0.5284479328679422,
+    "human_viol": 0.013963039014373716,
+    "human_mass_share": 0.7469093037893583
+   },
+   {
+    "term": "onc",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 5195,
+    "share": 0.18790465511628748,
+    "human_viol": 0.00019249278152069297,
+    "human_mass_share": 8.502233826942255e-05
+   },
+   {
+    "term": "onc",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 1538,
+    "share": 0.05562990559554382,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "junction",
+    "rows": 12808,
+    "share": 0.463269070785257,
+    "human_viol": 0.009212991880074952,
+    "human_mass_share": 0.3459333837948786
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 1210,
+    "share": 0.043766050566065036,
+    "human_viol": 0.006611570247933884,
+    "human_mass_share": 0.00955664925464927
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 1238,
+    "share": 0.04477881867833761,
+    "human_viol": 0.022617124394184167,
+    "human_mass_share": 0.012604656567345338
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 1538,
+    "share": 0.05562990559554382,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 7488,
+    "share": 0.27084312945346695,
+    "human_viol": 0.003605769230769231,
+    "human_mass_share": 0.21649895816699088
+   },
+   {
+    "term": "onc",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 3365,
+    "share": 0.12171302492132963,
+    "human_viol": 0.03150074294205052,
+    "human_mass_share": 0.4154063522161359
+   },
+   {
+    "term": "onc",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 28,
+    "share": 0.0010127681122725793,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 72,
+    "share": 0.0026042608601294895,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 988,
+    "share": 0.03573624624733244,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "onc",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 287,
+    "share": 0.010380873150793939,
+    "human_viol": 1.0,
+    "human_mass_share": 1.0
+   },
+   {
+    "term": "onc",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 26272,
+    "share": 0.9502658516294715,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "soft",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 6021,
+    "share": 0.21778131442832857,
+    "human_viol": 0.04932735426008968,
+    "human_mass_share": 0.2184701290869813
+   },
+   {
+    "term": "soft",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 283,
+    "share": 0.010236191991897856,
+    "human_viol": 0.06713780918727916,
+    "human_mass_share": 0.012309522726818676
+   },
+   {
+    "term": "soft",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 14610,
+    "share": 0.5284479328679422,
+    "human_viol": 0.05982203969883641,
+    "human_mass_share": 0.5487327901227423
+   },
+   {
+    "term": "soft",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 5195,
+    "share": 0.18790465511628748,
+    "human_viol": 0.08296438883541868,
+    "human_mass_share": 0.18822512767295113
+   },
+   {
+    "term": "soft",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 1538,
+    "share": 0.05562990559554382,
+    "human_viol": 0.020156046814044214,
+    "human_mass_share": 0.03226243039050641
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "junction",
+    "rows": 12808,
+    "share": 0.463269070785257,
+    "human_viol": 0.05629294191130543,
+    "human_mass_share": 0.4727491830920334
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 1210,
+    "share": 0.043766050566065036,
+    "human_viol": 0.030578512396694214,
+    "human_mass_share": 0.02709264334204636
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 1238,
+    "share": 0.04477881867833761,
+    "human_viol": 0.09612277867528271,
+    "human_mass_share": 0.0789886553168241
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 1538,
+    "share": 0.05562990559554382,
+    "human_viol": 0.020156046814044214,
+    "human_mass_share": 0.03226243039050641
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 7488,
+    "share": 0.27084312945346695,
+    "human_viol": 0.07785790598290598,
+    "human_mass_share": 0.32495838665977705
+   },
+   {
+    "term": "soft",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 3365,
+    "share": 0.12171302492132963,
+    "human_viol": 0.047845468053491824,
+    "human_mass_share": 0.06394870119881256
+   },
+   {
+    "term": "soft",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 43,
+    "share": 0.0015553224581328897,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "soft",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 81,
+    "share": 0.0029297934676456756,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "soft",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 1276,
+    "share": 0.0461532896878504,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "soft",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 1652,
+    "share": 0.05975331862408218,
+    "human_viol": 1.0,
+    "human_mass_share": 1.0
+   },
+   {
+    "term": "soft",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 24595,
+    "share": 0.8896082757622888,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 16347,
+    "share": 0.23712267366802536,
+    "human_viol": 0.016761485287820396,
+    "human_mass_share": 0.7715377676037574
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 681,
+    "share": 0.009878298205660076,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 36649,
+    "share": 0.5316149059313307,
+    "human_viol": 0.007858331741657345,
+    "human_mass_share": 0.20787757980727178
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 12074,
+    "share": 0.17514034146129187,
+    "human_viol": 0.004306774888189498,
+    "human_mass_share": 0.004168000838983028
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.009410288582183186,
+    "human_mass_share": 0.016416651749987778
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "junction",
+    "rows": 12808,
+    "share": 0.18578743526886088,
+    "human_viol": 0.012492192379762648,
+    "human_mass_share": 0.2361814556248937
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 6412,
+    "share": 0.09300976225358651,
+    "human_viol": 0.016063630692451654,
+    "human_mass_share": 0.21182114478357253
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 5294,
+    "share": 0.07679252672652635,
+    "human_viol": 0.03475632791839819,
+    "human_mass_share": 0.3564380278749896
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 3188,
+    "share": 0.046243780733692105,
+    "human_viol": 0.009410288582183186,
+    "human_mass_share": 0.016416651749987778
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 32729,
+    "share": 0.4747530425448585,
+    "human_viol": 0.004308105961074277,
+    "human_mass_share": 0.16783181770833386
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 8508,
+    "share": 0.12341345247247566,
+    "human_viol": 0.0030559473436765397,
+    "human_mass_share": 0.01131090225822255
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 77,
+    "share": 0.0011169294593771305,
+    "human_viol": 1.0,
+    "human_mass_share": 0.42899326317213304
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 299,
+    "share": 0.0043371676409579485,
+    "human_viol": 1.0,
+    "human_mass_share": 0.5113480828101102
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 11668,
+    "share": 0.16925107703912154,
+    "human_viol": 0.02296880356530682,
+    "human_mass_share": 0.05965865401775666
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 53027,
+    "share": 0.7691872524985857,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 3868,
+    "share": 0.05610757336195767,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   }
+  ],
+  "root_causes": {
+   "log": {
+    "agent": {
+     "n": 74,
+     "first_match": {
+      "initial": 0.06756756756756757,
+      "margin_front_extension": 0.3918918918918919,
+      "margin": 0.0,
+      "geometry": 0.5405405405405406,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.09025593632996243,
+      "margin_front_extension": 0.010937261330910154,
+      "margin": 0.0,
+      "geometry": 0.8988068023391275,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin_front_extension": 0.3918918918918919,
+      "margin": 0.0,
+      "geometry": 0.6081081081081081,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin_front_extension": 0.010937261330910154,
+      "margin": 0.0,
+      "geometry": 0.9890627386690898,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.06756756756756757,
+      "margin_front_extension": 0.3918918918918919,
+      "margin": 0.0,
+      "geometry": 0.6081081081081081,
+      "box_inflation": 0.6081081081081081,
+      "time_shift": 0.06756756756756757,
+      "real_overlap": 0.6081081081081081,
+      "static_boxes_would_clear": 0.8243243243243243
+     }
+    },
+    "road": {
+     "n": 11178,
+     "first_match": {
+      "initial": 0.3955984970477724,
+      "margin": 0.5245124351404544,
+      "raster_gap": 0.00823045267489712,
+      "coverage": 0.02961173734120594,
+      "geometry": 0.0409733404902487,
+      "residual": 0.0010735373054213634
+     },
+     "first_match_mass": {
+      "initial": 0.7294219809663947,
+      "margin": 0.08624710804517435,
+      "raster_gap": 0.005070557439277541,
+      "coverage": 0.12788725409785592,
+      "geometry": 0.047993011648358064,
+      "residual": 0.0033800878029394328
+     },
+     "clearance_first": {
+      "margin": 0.8069422079083914,
+      "raster_gap": 0.011540526033279656,
+      "coverage": 0.04830917874396135,
+      "geometry": 0.1290033995348005,
+      "initial": 0.0031311504741456434,
+      "residual": 0.0010735373054213634
+     },
+     "clearance_first_mass": {
+      "margin": 0.24216235159471433,
+      "raster_gap": 0.008943778662961492,
+      "coverage": 0.495479997622974,
+      "geometry": 0.24532640399704692,
+      "initial": 0.004707380319363762,
+      "residual": 0.0033800878029394328
+     },
+     "incidence": {
+      "initial": 0.3955984970477724,
+      "margin": 0.8069422079083914,
+      "raster_gap": 0.011540526033279656,
+      "coverage": 0.11182680264805869,
+      "geometry": 0.15780998389694043,
+      "centre_outside": 0.017802826981570943
+     }
+    },
+    "onc": {
+     "n": 287,
+     "first_match": {
+      "initial": 0.1672473867595819,
+      "depth_lt_0p3": 0.15331010452961671,
+      "legit_turn_or_pass": 0.4076655052264808,
+      "residual": 0.27177700348432055
+     },
+     "first_match_mass": {
+      "initial": 0.35194822478963766,
+      "depth_lt_0p3": 0.002789431032749731,
+      "legit_turn_or_pass": 0.4294444416424488,
+      "residual": 0.21581790253516375
+     },
+     "clearance_first": {
+      "depth_lt_0p3": 0.1916376306620209,
+      "legit_turn_or_pass": 0.43902439024390244,
+      "initial": 0.0975609756097561,
+      "residual": 0.27177700348432055
+     },
+     "clearance_first_mass": {
+      "depth_lt_0p3": 0.003546185466606236,
+      "legit_turn_or_pass": 0.48824108375257175,
+      "initial": 0.2923948282456582,
+      "residual": 0.21581790253516375
+     },
+     "incidence": {
+      "initial": 0.1672473867595819,
+      "depth_lt_0p3": 0.1916376306620209,
+      "legit_turn_or_pass": 0.5958188153310104,
+      "turn": 0.3693379790940767
+     }
+    },
+    "soft": {
+     "n": 1652,
+     "first_match": {
+      "initial": 0.4001210653753027,
+      "depth_lt_0p3": 0.06295399515738499,
+      "legit_lane_change": 0.274818401937046,
+      "residual": 0.26210653753026636
+     },
+     "first_match_mass": {
+      "initial": 0.6077876383590554,
+      "depth_lt_0p3": 0.001364785927819833,
+      "legit_lane_change": 0.18985667452500463,
+      "residual": 0.2009909011881201
+     },
+     "clearance_first": {
+      "depth_lt_0p3": 0.07445520581113801,
+      "legit_lane_change": 0.3771186440677966,
+      "initial": 0.286319612590799,
+      "residual": 0.26210653753026636
+     },
+     "clearance_first_mass": {
+      "depth_lt_0p3": 0.0018179453674598057,
+      "legit_lane_change": 0.3464414409403317,
+      "initial": 0.45074971250408824,
+      "residual": 0.2009909011881201
+     },
+     "incidence": {
+      "initial": 0.4001210653753027,
+      "depth_lt_0p3": 0.07445520581113801,
+      "legit_lane_change": 0.40980629539951574
+     }
+    },
+    "side": {
+     "n": 644,
+     "first_match": {
+      "initial": 0.2717391304347826,
+      "margin": 0.7282608695652174,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.48264493058203173,
+      "margin": 0.5173550694179684,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.2717391304347826,
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0
+     }
+    }
+   },
+   "fut": {
+    "agent": {
+     "n": 1399,
+     "first_match": {
+      "initial": 0.08934953538241601,
+      "margin_front_extension": 0.04503216583273767,
+      "margin": 0.06504646175839886,
+      "geometry": 0.13581129378127232,
+      "box_inflation": 0.007147962830593281,
+      "time_shift": 0.19728377412437456,
+      "residual": 0.4603288062902073
+     },
+     "first_match_mass": {
+      "initial": 0.05875394909228749,
+      "margin_front_extension": 0.004607489836339621,
+      "margin": 0.020519369840121465,
+      "geometry": 0.04660544528090524,
+      "box_inflation": 0.0019457750959713564,
+      "time_shift": 0.18729537874110663,
+      "residual": 0.6802725921132682
+     },
+     "clearance_first": {
+      "margin_front_extension": 0.0636168691922802,
+      "margin": 0.09864188706218728,
+      "geometry": 0.14081486776268765,
+      "box_inflation": 0.008577555396711936,
+      "time_shift": 0.20514653323802717,
+      "initial": 0.0228734810578985,
+      "residual": 0.4603288062902073
+     },
+     "clearance_first_mass": {
+      "margin_front_extension": 0.0056739865988744585,
+      "margin": 0.023832948541102024,
+      "geometry": 0.050627226921608266,
+      "box_inflation": 0.0024660649494019746,
+      "time_shift": 0.19806871960961597,
+      "initial": 0.039058461266129066,
+      "residual": 0.6802725921132682
+     },
+     "incidence": {
+      "initial": 0.08934953538241601,
+      "margin_front_extension": 0.0636168691922802,
+      "margin": 0.09864188706218728,
+      "geometry": 0.14081486776268765,
+      "box_inflation": 0.14224446032880628,
+      "time_shift": 0.27305218012866334,
+      "real_overlap": 0.8377412437455325,
+      "static_boxes_would_clear": 0.5832737669764118
+     }
+    },
+    "road": {
+     "n": 9822,
+     "first_match": {
+      "initial": 0.30686214620240276,
+      "margin": 0.6099572388515577,
+      "raster_gap": 0.005396049684382,
+      "coverage": 0.0010181225819588678,
+      "geometry": 0.06943596008959478,
+      "residual": 0.007330482590103849
+     },
+     "first_match_mass": {
+      "initial": 0.8664725858407384,
+      "margin": 0.05673143661455342,
+      "raster_gap": 0.001374265964143597,
+      "coverage": 0.0006123261425083683,
+      "geometry": 0.04005432958010696,
+      "residual": 0.034755055857949066
+     },
+     "clearance_first": {
+      "margin": 0.7775402158419874,
+      "raster_gap": 0.008348605172062717,
+      "coverage": 0.001934432905721849,
+      "geometry": 0.16503767053553248,
+      "initial": 0.039808592954591736,
+      "residual": 0.007330482590103849
+     },
+     "clearance_first_mass": {
+      "margin": 0.10850789098562105,
+      "raster_gap": 0.003213152851199197,
+      "coverage": 0.0021788019470385875,
+      "geometry": 0.12406510791635539,
+      "initial": 0.7272799904418366,
+      "residual": 0.034755055857949066
+     },
+     "incidence": {
+      "initial": 0.30686214620240276,
+      "margin": 0.7775402158419874,
+      "raster_gap": 0.008348605172062717,
+      "coverage": 0.006923233557320301,
+      "geometry": 0.1739971492567705,
+      "centre_outside": 0.02056607615556913
+     }
+    },
+    "onc": {
+     "n": 313,
+     "first_match": {
+      "initial": 0.43130990415335463,
+      "depth_lt_0p3": 0.23322683706070288,
+      "legit_turn_or_pass": 0.11182108626198083,
+      "residual": 0.22364217252396165
+     },
+     "first_match_mass": {
+      "initial": 0.5702875313082589,
+      "depth_lt_0p3": 0.0113442080087425,
+      "legit_turn_or_pass": 0.07859416728434168,
+      "residual": 0.33977409339865683
+     },
+     "clearance_first": {
+      "depth_lt_0p3": 0.24920127795527156,
+      "legit_turn_or_pass": 0.23003194888178913,
+      "initial": 0.2971246006389776,
+      "residual": 0.22364217252396165
+     },
+     "clearance_first_mass": {
+      "depth_lt_0p3": 0.0120556029366544,
+      "legit_turn_or_pass": 0.2927287488590788,
+      "initial": 0.35544155480560996,
+      "residual": 0.33977409339865683
+     },
+     "incidence": {
+      "initial": 0.43130990415335463,
+      "depth_lt_0p3": 0.24920127795527156,
+      "legit_turn_or_pass": 0.36741214057507987,
+      "turn": 0.13738019169329074
+     }
+    },
+    "soft": {
+     "n": 1825,
+     "first_match": {
+      "initial": 0.041643835616438356,
+      "depth_lt_0p3": 0.11123287671232877,
+      "legit_lane_change": 0.5775342465753425,
+      "residual": 0.26958904109589044
+     },
+     "first_match_mass": {
+      "initial": 0.045199950002068674,
+      "depth_lt_0p3": 0.00503404037127242,
+      "legit_lane_change": 0.6073073177592805,
+      "residual": 0.34245869186737854
+     },
+     "clearance_first": {
+      "depth_lt_0p3": 0.12438356164383561,
+      "legit_lane_change": 0.589041095890411,
+      "initial": 0.016986301369863014,
+      "residual": 0.26958904109589044
+     },
+     "clearance_first_mass": {
+      "depth_lt_0p3": 0.005194824033584805,
+      "legit_lane_change": 0.6286328586035598,
+      "initial": 0.023713625495476925,
+      "residual": 0.34245869186737854
+     },
+     "incidence": {
+      "initial": 0.041643835616438356,
+      "depth_lt_0p3": 0.12438356164383561,
+      "legit_lane_change": 0.6520547945205479
+     }
+    },
+    "side": {
+     "n": 1953,
+     "first_match": {
+      "initial": 0.2780337941628264,
+      "margin": 0.7219662058371735,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.42384787588925216,
+      "margin": 0.5761521241107479,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.2780337941628264,
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0
+     }
+    }
+   },
+   "lag_sweep_log": {
+    "-0.5": 0.00282719624879327,
+    "-0.3": 0.001172252103158185,
+    "-0.1": 0.0008504574081735852,
+    "+0.0": 0.0008504574081735852,
+    "+0.1": 0.000517170045510964,
+    "+0.3": 0.0007929940697834781,
+    "+0.5": 0.0013561347860065278
+   },
+   "lag_sweep_fut": {
+    "-0.5": 0.020652323817404495,
+    "-0.3": 0.020319036454741875,
+    "-0.1": 0.020514411805268237,
+    "+0.0": 0.021123523192203373,
+    "+0.1": 0.021376361881119847,
+    "+0.3": 0.024456396818829586,
+    "+0.5": 0.028639727853629386
+   }
+  },
+  "plan_road_oow": {
+   "rows_with_oow": 0.010723990683229814,
+   "road_mass_share_oow": 0.0008949862209971461,
+   "by_speed": {
+    "0.5-3": 0.0,
+    "13-17": 0.77,
+    "3-8": 0.002021129995406523,
+    "8-13": 0.012461921905289393,
+    "<0.5": 0.0
+   }
+  },
+  "designs": {
+   "fixed": {
+    "active": 0.2227775621118012,
+    "la": 0.09326475155279501,
+    "la_per_batch": 2.9844720496894404,
+    "unlearnable": 0.1297069099378882,
+    "mass_mean": 0.8699300297047668,
+    "learnable_mass": 0.2503087528154006,
+    "learnable_mass_agent_road_def": 0.3200618275532521,
+    "hard_mass_mean": 0.8574121158255302,
+    "agent_human_viol": 0.001073412727193606,
+    "agent_fut_viol": 0.020293302774916956,
+    "agent_fut_viol_given_active": 0.19376391982182628,
+    "agent_active": 0.0653629658385093,
+    "agent_la": 0.04304153726708074,
+    "agent_mass_share": 0.34856886243429186,
+    "road_human_viol": 0.16214334411581252,
+    "road_fut_viol": 0.14247378116885942,
+    "road_fut_viol_given_active": 0.7264990328820116,
+    "road_active": 0.12543672360248442,
+    "road_la": 0.03163819875776397,
+    "road_mass_share": 0.572959224952947,
+    "onc_human_viol": 0.010380873150793939,
+    "onc_fut_viol": 0.011321300683618475,
+    "onc_fut_viol_given_active": 0.5029585798816568,
+    "onc_active": 0.008200698757763974,
+    "onc_la": 0.003493788819875776,
+    "onc_mass_share": 0.040358435556874725,
+    "soft_human_viol": 0.05975331862408218,
+    "soft_fut_viol": 0.06601077874633776,
+    "soft_fut_viol_given_active": 0.6479289940828402,
+    "soft_active": 0.01640139751552795,
+    "soft_la": 0.005434782608695652,
+    "soft_mass_share": 0.01438956404744978,
+    "side_human_viol": 0.009341591842063273,
+    "side_fut_viol": 0.02832939265147449,
+    "side_fut_viol_given_active": 0.4376417233560091,
+    "side_active": 0.04279891304347826,
+    "side_la": 0.01853649068322981,
+    "side_mass_share": 0.023723913008436594,
+    "cover_per_batch": {
+     "turn_inside": 0.38509316770186325,
+     "straight_offroad": 0.5869565217391305,
+     "drift": 0.0,
+     "collision": 0.7531055900621116,
+     "gt13": 0.015527950310559004
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0,
+     "straight_offroad": 1.0,
+     "drift": null,
+     "collision": 1.0,
+     "gt13": 1.0
+    }
+   },
+   "gate": {
+    "active": 0.10592973602484469,
+    "la": 0.10335791925465837,
+    "la_per_batch": 3.307453416149068,
+    "unlearnable": 0.014751552795031053,
+    "mass_mean": 0.26336738516715386,
+    "learnable_mass": 0.9611416577767852,
+    "learnable_mass_agent_road_def": 0.9611416577767852,
+    "hard_mass_mean": 0.26098343324540907,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.052697981366459624,
+    "agent_la": 0.05070846273291924,
+    "agent_mass_share": 0.866175074210882,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.030667701863354036,
+    "road_la": 0.030667701863354036,
+    "road_mass_share": 0.07359538711947773,
+    "onc_human_viol": 0.0,
+    "onc_fut_viol": 0.0,
+    "onc_fut_viol_given_active": 0.0,
+    "onc_active": 0.0037849378881987567,
+    "onc_la": 0.003687888198757763,
+    "onc_mass_share": 0.02091304020163155,
+    "soft_human_viol": 0.0,
+    "soft_fut_viol": 0.0,
+    "soft_fut_viol_given_active": 0.0,
+    "soft_active": 0.005531832298136646,
+    "soft_la": 0.005531832298136646,
+    "soft_mass_share": 0.00905181148467489,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.02387422360248447,
+    "side_la": 0.022903726708074532,
+    "side_mass_share": 0.03026468698333384,
+    "cover_per_batch": {
+     "turn_inside": 0.3881987577639751,
+     "straight_offroad": 0.6273291925465837,
+     "drift": 0.0,
+     "collision": 0.888198757763975,
+     "gt13": 0.015527950310559004
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0080645161290325,
+     "straight_offroad": 1.0687830687830684,
+     "drift": null,
+     "collision": 1.179381443298969,
+     "gt13": 1.0
+    }
+   },
+   "ec_log": {
+    "active": 0.17046777950310557,
+    "la": 0.10413431677018632,
+    "la_per_batch": 3.3322981366459623,
+    "unlearnable": 0.06909937888198757,
+    "mass_mean": 0.710905425942905,
+    "learnable_mass": 0.3230098482110734,
+    "learnable_mass_agent_road_def": 0.390074944476087,
+    "hard_mass_mean": 0.7061856886131476,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.01978560756610917,
+    "agent_fut_viol_given_active": 0.18810408921933086,
+    "agent_active": 0.06526591614906832,
+    "agent_la": 0.045855978260869554,
+    "agent_mass_share": 0.42561412633776907,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.04540245724481063,
+    "road_fut_viol_given_active": 0.4829581993569132,
+    "road_active": 0.07545613354037266,
+    "road_la": 0.03687888198757763,
+    "road_mass_share": 0.4997211965958208,
+    "onc_human_viol": 0.0,
+    "onc_fut_viol": 0.009223423879625275,
+    "onc_fut_viol_given_active": 0.47333333333333333,
+    "onc_active": 0.007278726708074533,
+    "onc_la": 0.003493788819875776,
+    "onc_mass_share": 0.04432639165234099,
+    "soft_human_viol": 0.0,
+    "soft_fut_viol": 0.021051108619380043,
+    "soft_fut_viol_given_active": 0.28426395939086296,
+    "soft_active": 0.009559394409937888,
+    "soft_la": 0.00655085403726708,
+    "soft_mass_share": 0.00663905093071622,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.023905191546149493,
+    "side_fut_viol_given_active": 0.3786407766990291,
+    "side_active": 0.03998447204968943,
+    "side_la": 0.0218361801242236,
+    "side_mass_share": 0.02369923448335285,
+    "cover_per_batch": {
+     "turn_inside": 0.3990683229813664,
+     "straight_offroad": 0.7313664596273292,
+     "drift": 0.0,
+     "collision": 0.8059006211180123,
+     "gt13": 0.018633540372670804
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0362903225806452,
+     "straight_offroad": 1.2460317460317458,
+     "drift": null,
+     "collision": 1.0701030927835051,
+     "gt13": 1.2
+    }
+   },
+   "ec_wit": {
+    "active": 0.13523874223602483,
+    "la": 0.1295613354037267,
+    "la_per_batch": 4.145962732919254,
+    "unlearnable": 0.014751552795031053,
+    "mass_mean": 0.35340921060189634,
+    "learnable_mass": 0.8778609509862457,
+    "learnable_mass_agent_road_def": 0.8778609509862457,
+    "hard_mass_mean": 0.3504378762164016,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.059151785714285705,
+    "agent_la": 0.057065217391304345,
+    "agent_mass_share": 0.6787818235548774,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.05095108695652173,
+    "road_la": 0.047651397515527945,
+    "road_mass_share": 0.26018036981228976,
+    "onc_human_viol": 0.0,
+    "onc_fut_viol": 0.0,
+    "onc_fut_viol_given_active": 0.0,
+    "onc_active": 0.005725931677018633,
+    "onc_la": 0.005434782608695652,
+    "onc_mass_share": 0.027661629815548518,
+    "soft_human_viol": 0.0,
+    "soft_fut_viol": 0.0,
+    "soft_fut_viol_given_active": 0.0,
+    "soft_active": 0.007569875776397513,
+    "soft_la": 0.007521350931677018,
+    "soft_mass_share": 0.008407631426566975,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.029454580745341612,
+    "side_la": 0.028484083850931673,
+    "side_mass_share": 0.024968545390717457,
+    "cover_per_batch": {
+     "turn_inside": 0.5124223602484472,
+     "straight_offroad": 0.9301242236024844,
+     "drift": 0.0,
+     "collision": 1.0046583850931676,
+     "gt13": 0.02795031055900621
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.330645161290323,
+     "straight_offroad": 1.5846560846560844,
+     "drift": null,
+     "collision": 1.3340206185567012,
+     "gt13": 1.8
+    }
+   },
+   "ctx": {
+    "active": 0.15091226708074534,
+    "la": 0.08545225155279501,
+    "la_per_batch": 2.7344720496894404,
+    "unlearnable": 0.06579968944099378,
+    "mass_mean": 0.7772037105304597,
+    "learnable_mass": 0.2917695933146445,
+    "learnable_mass_agent_road_def": 0.3694205690969654,
+    "hard_mass_mean": 0.769510809933741,
+    "agent_human_viol": 0.001073412727193606,
+    "agent_human_viol_test_half": 0.0,
+    "agent_fut_viol": 0.020293302774916956,
+    "agent_fut_viol_given_active": 0.19376391982182628,
+    "agent_active": 0.0653629658385093,
+    "agent_la": 0.045855978260869554,
+    "agent_mass_share": 0.3901557812232502,
+    "road_human_viol": 0.03742438967783113,
+    "road_human_viol_test_half": 0.04130976246886581,
+    "road_fut_viol": 0.0382657131667126,
+    "road_fut_viol_given_active": 0.5503018108651911,
+    "road_active": 0.048233695652173905,
+    "road_la": 0.020234860248447204,
+    "road_mass_share": 0.5302751597775923,
+    "onc_human_viol": 0.009729807935761565,
+    "onc_human_viol_test_half": 0.005993475457097337,
+    "onc_fut_viol": 0.010453213730241979,
+    "onc_fut_viol_given_active": 0.5228758169934641,
+    "onc_active": 0.007424301242236022,
+    "onc_la": 0.0032026397515527946,
+    "onc_mass_share": 0.04322641305553435,
+    "soft_human_viol": 0.04861286938908381,
+    "soft_human_viol_test_half": 0.05067900766254457,
+    "soft_fut_viol": 0.050059680978044634,
+    "soft_fut_viol_given_active": 0.6653696498054474,
+    "soft_active": 0.0124708850931677,
+    "soft_la": 0.003930512422360248,
+    "soft_mass_share": 0.00989817790688122,
+    "side_human_viol": 0.009007963561989586,
+    "side_human_viol_test_half": 0.009902193062389892,
+    "side_fut_viol": 0.02801026994879531,
+    "side_fut_viol_given_active": 0.43707093821510296,
+    "side_active": 0.04241071428571428,
+    "side_la": 0.020962732919254656,
+    "side_mass_share": 0.026444468036741754,
+    "cover_per_batch": {
+     "turn_inside": 0.29658385093167694,
+     "straight_offroad": 0.5155279503105589,
+     "drift": 0.0,
+     "collision": 0.7981366459627328,
+     "gt13": 0.015527950310559004
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 0.7701612903225806,
+     "straight_offroad": 0.878306878306878,
+     "drift": null,
+     "collision": 1.0597938144329897,
+     "gt13": 1.0
+    }
+   },
+   "spec": {
+    "active": 0.13053183229813664,
+    "la": 0.12495147515527948,
+    "la_per_batch": 3.9984472049689432,
+    "unlearnable": 0.014751552795031053,
+    "mass_mean": 0.3327440512452272,
+    "learnable_mass": 0.8729656105008341,
+    "learnable_mass_agent_road_def": 0.8729656105008341,
+    "hard_mass_mean": 0.3297727168597325,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.05250388198757763,
+    "agent_la": 0.05061141304347826,
+    "agent_mass_share": 0.6561654142041452,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.0514363354037267,
+    "road_la": 0.04808812111801242,
+    "road_mass_share": 0.2790060096627747,
+    "onc_human_viol": 0.0,
+    "onc_fut_viol": 0.0,
+    "onc_fut_viol_given_active": 0.0,
+    "onc_active": 0.005725931677018633,
+    "onc_la": 0.005434782608695652,
+    "onc_mass_share": 0.02937956282160613,
+    "soft_human_viol": 0.0,
+    "soft_fut_viol": 0.0,
+    "soft_fut_viol_given_active": 0.0,
+    "soft_active": 0.007569875776397513,
+    "soft_la": 0.007521350931677018,
+    "soft_mass_share": 0.008929789651761206,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.029454580745341612,
+    "side_la": 0.028484083850931673,
+    "side_mass_share": 0.026519223659712668,
+    "cover_per_batch": {
+     "turn_inside": 0.5217391304347826,
+     "straight_offroad": 0.9270186335403726,
+     "drift": 0.0,
+     "collision": 0.8944099378881987,
+     "gt13": 0.018633540372670804
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.3548387096774197,
+     "straight_offroad": 1.579365079365079,
+     "drift": null,
+     "collision": 1.1876288659793817,
+     "gt13": 1.2
+    }
+   }
+  }
+ },
+ "PAID": {
+  "rows": 110981,
+  "candidates": 90300,
+  "ctx_margins": {
+   "ag_c|0.5-3|lead<20m": 0.3,
+   "ag_c|0.5-3|parked beside": 0.3,
+   "ag_c|0.5-3|straight free": 0.3,
+   "ag_c|0.5-3|turn>30": 0.3,
+   "ag_c|13-17|lead<20m": 0.3,
+   "ag_c|13-17|parked beside": 0.3,
+   "ag_c|13-17|straight free": 0.3,
+   "ag_c|13-17|turn>30": 0.3,
+   "ag_c|3-8|lead<20m": 0.3,
+   "ag_c|3-8|parked beside": 0.3,
+   "ag_c|3-8|straight free": 0.3,
+   "ag_c|3-8|turn>30": 0.3,
+   "ag_c|8-13|lead<20m": 0.3,
+   "ag_c|8-13|parked beside": 0.3,
+   "ag_c|8-13|straight free": 0.3,
+   "ag_c|8-13|turn>30": 0.3,
+   "ag_c|<0.5|standing": 0.275,
+   "ag_c|>17|lead<20m": 0.3,
+   "ag_c|>17|parked beside": 0.3,
+   "ag_c|>17|straight free": 0.3,
+   "ag_c|>17|turn>30": 0.3,
+   "ag_s|0.5-3|lead<20m": 0.0,
+   "ag_s|0.5-3|parked beside": 0.0,
+   "ag_s|0.5-3|straight free": 0.0,
+   "ag_s|0.5-3|turn>30": 0.0,
+   "ag_s|13-17|lead<20m": 0.0,
+   "ag_s|13-17|parked beside": 0.0,
+   "ag_s|13-17|straight free": 0.0,
+   "ag_s|13-17|turn>30": 0.0,
+   "ag_s|3-8|lead<20m": 0.0,
+   "ag_s|3-8|parked beside": 0.0,
+   "ag_s|3-8|straight free": 0.0,
+   "ag_s|3-8|turn>30": 0.0,
+   "ag_s|8-13|lead<20m": 0.0,
+   "ag_s|8-13|parked beside": 0.0,
+   "ag_s|8-13|straight free": 0.0,
+   "ag_s|8-13|turn>30": 0.0,
+   "ag_s|<0.5|standing": 0.0,
+   "ag_s|>17|lead<20m": 0.0,
+   "ag_s|>17|parked beside": 0.0,
+   "ag_s|>17|straight free": 0.0,
+   "ag_s|>17|turn>30": 0.0,
+   "road|0.5-3|lead<20m": 0.093,
+   "road|0.5-3|parked beside": 0.177,
+   "road|0.5-3|straight free": 0.187,
+   "road|0.5-3|turn>30": -1.75,
+   "road|13-17|lead<20m": 0.3,
+   "road|13-17|parked beside": 0.3,
+   "road|13-17|straight free": -0.852,
+   "road|13-17|turn>30": -4.97,
+   "road|3-8|lead<20m": 0.209,
+   "road|3-8|parked beside": 0.3,
+   "road|3-8|straight free": 0.086,
+   "road|3-8|turn>30": -1.672,
+   "road|8-13|lead<20m": 0.092,
+   "road|8-13|parked beside": 0.297,
+   "road|8-13|straight free": 0.072,
+   "road|8-13|turn>30": -3.855,
+   "road|<0.5|standing": 0.213,
+   "road|>17|lead<20m": 0.3,
+   "road|>17|parked beside": 0.3,
+   "road|>17|straight free": -3.318,
+   "road|>17|turn>30": -14.242,
+   "sd|0.5-3|lead<20m": 0.377,
+   "sd|0.5-3|parked beside": 0.382,
+   "sd|0.5-3|straight free": 0.4,
+   "sd|0.5-3|turn>30": 0.4,
+   "sd|13-17|lead<20m": 0.4,
+   "sd|13-17|parked beside": 0.384,
+   "sd|13-17|straight free": 0.4,
+   "sd|13-17|turn>30": 0.4,
+   "sd|3-8|lead<20m": 0.4,
+   "sd|3-8|parked beside": 0.159,
+   "sd|3-8|straight free": 0.4,
+   "sd|3-8|turn>30": 0.4,
+   "sd|8-13|lead<20m": 0.4,
+   "sd|8-13|parked beside": 0.4,
+   "sd|8-13|straight free": 0.4,
+   "sd|8-13|turn>30": 0.4,
+   "sd|<0.5|standing": 0.4,
+   "sd|>17|lead<20m": 0.4,
+   "sd|>17|parked beside": 0.4,
+   "sd|>17|straight free": 0.4,
+   "sd|>17|turn>30": 0.4
+  },
+  "audit": {
+   "agent": {
+    "log": {
+     "n": 79960,
+     "viol": 0.0019259629814907455,
+     "mass_mean": 0.002313111653656751
+    },
+    "fut": {
+     "n": 90300,
+     "viol": 0.06429678848283499,
+     "mass_mean": 0.2812809997109113
+    },
+    "plan": {
+     "n": 27042,
+     "viol": 0.03535241476222173,
+     "mass_mean": 0.1509030353354701
+    },
+    "plan_active": 0.03535241476222173,
+    "log_viol_given_active": 0.01812004530011325,
+    "log_viol_uncond_same_rows": 0.0023717388590687805,
+    "fut_viol_given_active": 0.7248953974895398,
+    "fut_viol_uncond_same_rows": 0.06582353376229569
+   },
+   "road": {
+    "log": {
+     "n": 79960,
+     "viol": 0.12512506253126562,
+     "mass_mean": 1.4106241176240608
+    },
+    "fut": {
+     "n": 90300,
+     "viol": 0.11124031007751937,
+     "mass_mean": 0.18094790909261527
+    },
+    "plan": {
+     "n": 27042,
+     "viol": 0.11940684860587235,
+     "mass_mean": 0.2089232058321635
+    },
+    "plan_active": 0.11940684860587235,
+    "log_viol_given_active": 0.48349381017881704,
+    "log_viol_uncond_same_rows": 0.12574376898431325,
+    "fut_viol_given_active": 0.6463301331681636,
+    "fut_viol_uncond_same_rows": 0.11034686783521928
+   },
+   "side": {
+    "log": {
+     "n": 79960,
+     "viol": 0.011830915457728864,
+     "mass_mean": 0.005395824256372871
+    },
+    "fut": {
+     "n": 90300,
+     "viol": 0.05548172757475083,
+     "mass_mean": 0.029807434688308543
+    },
+    "plan": {
+     "n": 27042,
+     "viol": 0.030360180460025147,
+     "mass_mean": 0.01243997827575652
+    },
+    "plan_active": 0.030360180460025147,
+    "log_viol_given_active": 0.1815856777493606,
+    "log_viol_uncond_same_rows": 0.011858694295343902,
+    "fut_viol_given_active": 0.5773447015834349,
+    "fut_viol_uncond_same_rows": 0.05598698321130094
+   }
+  },
+  "strata": [
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 3436,
+    "share": 0.042971485742871435,
+    "human_viol": 0.002910360884749709,
+    "human_mass_share": 0.07594396181570183
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 9703,
+    "share": 0.12134817408704353,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 26416,
+    "share": 0.33036518259129566,
+    "human_viol": 0.004088431253785585,
+    "human_mass_share": 0.7198108866159154
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 24460,
+    "share": 0.30590295147573787,
+    "human_viol": 0.0014717906786590352,
+    "human_mass_share": 0.20424515156838277
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 15945,
+    "share": 0.19941220610305152,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 7347,
+    "share": 0.09188344172086044,
+    "human_viol": 0.004763849190145638,
+    "human_mass_share": 0.1501224400727756
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 8630,
+    "share": 0.10792896448224112,
+    "human_viol": 0.00544611819235226,
+    "human_mass_share": 0.5446911645807693
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 56353,
+    "share": 0.7047648824412206,
+    "human_viol": 0.0012776604617322947,
+    "human_mass_share": 0.30518639534645525
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 7630,
+    "share": 0.09542271135567784,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 27,
+    "share": 0.0003376688344172086,
+    "human_viol": 1.0,
+    "human_mass_share": 0.1729194547603284
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 71,
+    "share": 0.000887943971985993,
+    "human_viol": 1.0,
+    "human_mass_share": 0.22765807209284283
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 173,
+    "share": 0.0021635817908954476,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 56,
+    "share": 0.0007003501750875437,
+    "human_viol": 1.0,
+    "human_mass_share": 0.5994224731468288
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 50212,
+    "share": 0.6279639819909955,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 29421,
+    "share": 0.36794647323661833,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 3436,
+    "share": 0.042971485742871435,
+    "human_viol": 0.07305005820721769,
+    "human_mass_share": 0.023643146300624175
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 9703,
+    "share": 0.12134817408704353,
+    "human_viol": 0.15129341440791508,
+    "human_mass_share": 0.20137122958599613
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 26416,
+    "share": 0.33036518259129566,
+    "human_viol": 0.09452604482132042,
+    "human_mass_share": 0.28170925718512363
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 24460,
+    "share": 0.30590295147573787,
+    "human_viol": 0.1116516762060507,
+    "human_mass_share": 0.24708570425426632
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 15945,
+    "share": 0.19941220610305152,
+    "human_viol": 0.19178425838820948,
+    "human_mass_share": 0.24619066267398973
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 7347,
+    "share": 0.09188344172086044,
+    "human_viol": 0.09228256431196406,
+    "human_mass_share": 0.059232014503872124
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 8630,
+    "share": 0.10792896448224112,
+    "human_viol": 0.02618771726535342,
+    "human_mass_share": 0.005996446122936155
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 56353,
+    "share": 0.7047648824412206,
+    "human_viol": 0.1288839990772452,
+    "human_mass_share": 0.7328972253706932
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 7630,
+    "share": 0.09542271135567784,
+    "human_viol": 0.24089121887287024,
+    "human_mass_share": 0.20187431400249833
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 1141,
+    "share": 0.014269634817408705,
+    "human_viol": 1.0,
+    "human_mass_share": 0.006125003198424037
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 3094,
+    "share": 0.038694347173586795,
+    "human_viol": 1.0,
+    "human_mass_share": 0.004564932290794105
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 17326,
+    "share": 0.21668334167083542,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 5770,
+    "share": 0.07216108054027014,
+    "human_viol": 1.0,
+    "human_mass_share": 0.9893100645107817
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 52629,
+    "share": 0.658191595797899,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 3436,
+    "share": 0.042971485742871435,
+    "human_viol": 0.026484284051222353,
+    "human_mass_share": 0.07582056911247
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 9703,
+    "share": 0.12134817408704353,
+    "human_viol": 0.0020612181799443473,
+    "human_mass_share": 0.00519936413670887
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 26416,
+    "share": 0.33036518259129566,
+    "human_viol": 0.021804966686856452,
+    "human_mass_share": 0.6690050783899195
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 24460,
+    "share": 0.30590295147573787,
+    "human_viol": 0.01009811937857727,
+    "human_mass_share": 0.24514885088901836
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 15945,
+    "share": 0.19941220610305152,
+    "human_viol": 0.0007525870178739417,
+    "human_mass_share": 0.00482613747188315
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 7347,
+    "share": 0.09188344172086044,
+    "human_viol": 0.03892745338233292,
+    "human_mass_share": 0.17182029106783167
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 8630,
+    "share": 0.10792896448224112,
+    "human_viol": 0.04727694090382387,
+    "human_mass_share": 0.539974804352853
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 56353,
+    "share": 0.7047648824412206,
+    "human_viol": 0.004223377637392863,
+    "human_mass_share": 0.2866412657898735
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 7630,
+    "share": 0.09542271135567784,
+    "human_viol": 0.001834862385321101,
+    "human_mass_share": 0.0015636387894418513
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 70,
+    "share": 0.0008754377188594297,
+    "human_viol": 1.0,
+    "human_mass_share": 0.25726602492023215
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 349,
+    "share": 0.004364682341170586,
+    "human_viol": 1.0,
+    "human_mass_share": 0.6152670080095825
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 8795,
+    "share": 0.10999249624812406,
+    "human_viol": 0.05992040932347925,
+    "human_mass_share": 0.12746696707018532
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 64451,
+    "share": 0.8060405202601301,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 6295,
+    "share": 0.07872686343171585,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   }
+  ],
+  "root_causes": {
+   "log": {
+    "agent": {
+     "n": 154,
+     "first_match": {
+      "initial": 0.18181818181818182,
+      "margin_front_extension": 0.18181818181818182,
+      "margin": 0.487012987012987,
+      "geometry": 0.14935064935064934,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.1712114969869477,
+      "margin_front_extension": 0.048746854040110865,
+      "margin": 0.4235702035866407,
+      "geometry": 0.3564714453863006,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin_front_extension": 0.22727272727272727,
+      "margin": 0.5844155844155844,
+      "geometry": 0.18831168831168832,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin_front_extension": 0.05824281447456331,
+      "margin": 0.4902818369292605,
+      "geometry": 0.4514753485961762,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.18181818181818182,
+      "margin_front_extension": 0.22727272727272727,
+      "margin": 0.5844155844155844,
+      "geometry": 0.18831168831168832,
+      "box_inflation": 0.18831168831168832,
+      "time_shift": 0.07792207792207792,
+      "real_overlap": 0.18831168831168832,
+      "static_boxes_would_clear": 0.577922077922078
+     }
+    },
+    "road": {
+     "n": 10005,
+     "first_match": {
+      "initial": 0.2592703648175912,
+      "margin": 0.30654672663668164,
+      "raster_gap": 0.0,
+      "coverage": 0.4191904047976012,
+      "geometry": 0.014992503748125937,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.3038331767869412,
+      "margin": 0.005376706802671273,
+      "raster_gap": 0.0,
+      "coverage": 0.6893289032046723,
+      "geometry": 0.0014612132057152942,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 0.42328835582208896,
+      "raster_gap": 0.0,
+      "coverage": 0.5426286856571714,
+      "geometry": 0.03408295852073963,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 0.010689935489218143,
+      "raster_gap": 0.0,
+      "coverage": 0.9833641722152674,
+      "geometry": 0.0059458922955143755,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.2592703648175912,
+      "margin": 0.42328835582208896,
+      "raster_gap": 0.0,
+      "coverage": 0.7080459770114943,
+      "geometry": 0.11894052973513243,
+      "centre_outside": 0.3563218390804598
+     }
+    },
+    "side": {
+     "n": 946,
+     "first_match": {
+      "initial": 0.3128964059196617,
+      "margin": 0.6871035940803383,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.41462259957118586,
+      "margin": 0.5853774004288141,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.3128964059196617,
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0
+     }
+    }
+   },
+   "fut": {
+    "agent": {
+     "n": 5806,
+     "first_match": {
+      "initial": 0.021357216672407853,
+      "margin_front_extension": 0.026352049603858077,
+      "margin": 0.10420254908715122,
+      "geometry": 0.16724078539441956,
+      "box_inflation": 0.005683775404753703,
+      "time_shift": 0.13279366172924562,
+      "residual": 0.542369962108164
+     },
+     "first_match_mass": {
+      "initial": 0.014470106749455465,
+      "margin_front_extension": 0.0006233581680844741,
+      "margin": 0.013994595593221403,
+      "geometry": 0.06141790810428165,
+      "box_inflation": 0.001717933973640951,
+      "time_shift": 0.10007537954537746,
+      "residual": 0.8077007178659386
+     },
+     "clearance_first": {
+      "margin_front_extension": 0.029107819497071995,
+      "margin": 0.1105752669652084,
+      "geometry": 0.1727523251808474,
+      "box_inflation": 0.005683775404753703,
+      "time_shift": 0.13675508095074063,
+      "initial": 0.002755769893213917,
+      "residual": 0.542369962108164
+     },
+     "clearance_first_mass": {
+      "margin_front_extension": 0.0009413663940962965,
+      "margin": 0.015321897613645587,
+      "geometry": 0.06299794871440799,
+      "box_inflation": 0.001717933973640951,
+      "time_shift": 0.10281737237218516,
+      "initial": 0.008502763066085434,
+      "residual": 0.8077007178659386
+     },
+     "incidence": {
+      "initial": 0.021357216672407853,
+      "margin_front_extension": 0.029107819497071995,
+      "margin": 0.1105752669652084,
+      "geometry": 0.1727523251808474,
+      "box_inflation": 0.17292456079917326,
+      "time_shift": 0.17705821563899415,
+      "real_overlap": 0.8603169135377196,
+      "static_boxes_would_clear": 0.3801240096451946
+     }
+    },
+    "road": {
+     "n": 10045,
+     "first_match": {
+      "initial": 0.1713290194126431,
+      "margin": 0.4379293180686909,
+      "raster_gap": 0.0,
+      "coverage": 0.31587854654056746,
+      "geometry": 0.0627177700348432,
+      "residual": 0.01214534594325535
+     },
+     "first_match_mass": {
+      "initial": 0.11059149835870352,
+      "margin": 0.04662696182056047,
+      "raster_gap": 0.0,
+      "coverage": 0.777167801394185,
+      "geometry": 0.03937301220083278,
+      "residual": 0.026240726225718224
+     },
+     "clearance_first": {
+      "margin": 0.5499253359880537,
+      "raster_gap": 0.0,
+      "coverage": 0.33409656545545047,
+      "geometry": 0.10214036834245893,
+      "initial": 0.0016923842707814833,
+      "residual": 0.01214534594325535
+     },
+     "clearance_first_mass": {
+      "margin": 0.09103266416185543,
+      "raster_gap": 0.0,
+      "coverage": 0.803191179457822,
+      "geometry": 0.07650273584131187,
+      "initial": 0.0030326943132925758,
+      "residual": 0.026240726225718224
+     },
+     "incidence": {
+      "initial": 0.1713290194126431,
+      "margin": 0.5499253359880537,
+      "raster_gap": 0.0,
+      "coverage": 0.4680935788949726,
+      "geometry": 0.18924838227974117,
+      "centre_outside": 0.1810851169736187
+     }
+    },
+    "side": {
+     "n": 5010,
+     "first_match": {
+      "initial": 0.11417165668662675,
+      "margin": 0.8858283433133732,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.1257685011102312,
+      "margin": 0.874231498889769,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.11417165668662675,
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0
+     }
+    }
+   },
+   "lag_sweep_log": {
+    "-0.5": 0.014946110231393982,
+    "-0.3": 0.008489554068549829,
+    "-0.1": 0.0045767993053072486,
+    "+0.0": 0.004106860090923022,
+    "+0.1": 0.0036675690861725494,
+    "+0.3": 0.0035960565970271237,
+    "+0.5": 0.00411707616080094
+   },
+   "lag_sweep_fut": {
+    "-0.5": 0.06471377983618817,
+    "-0.3": 0.06280354294879303,
+    "-0.1": 0.06347933430046585,
+    "+0.0": 0.06441643164145214,
+    "+0.1": 0.06566889827988574,
+    "+0.3": 0.06938124543840837,
+    "+0.5": 0.07279624440219497
+   }
+  },
+  "plan_road_oow": {
+   "rows_with_oow": 0.32664004141705494,
+   "road_mass_share_oow": 0.5828609592589311,
+   "by_speed": {
+    "0.5-3": 0.0,
+    "13-17": 0.7642550582464746,
+    "3-8": 0.006561085972850679,
+    "8-13": 0.09837251356238698,
+    ">17": 0.9902173913043478
+   }
+  },
+  "designs": {
+   "fixed": {
+    "active": 0.16969898676133421,
+    "la": 0.05539531099770727,
+    "la_per_batch": 0.8863249759633163,
+    "unlearnable": 0.11430367576362695,
+    "mass_mean": 0.37226621944339006,
+    "learnable_mass": 0.15516874094069572,
+    "learnable_mass_agent_road_def": 0.18686818297131974,
+    "hard_mass_mean": 0.37226621944339006,
+    "agent_human_viol": 0.0019259629814907455,
+    "agent_fut_viol": 0.06429678848283499,
+    "agent_fut_viol_given_active": 0.7248953974895398,
+    "agent_active": 0.03535241476222173,
+    "agent_la": 0.007987574883514533,
+    "agent_mass_share": 0.4053632251701465,
+    "road_human_viol": 0.12512506253126562,
+    "road_fut_viol": 0.11124031007751937,
+    "road_fut_viol_given_active": 0.6463301331681636,
+    "road_active": 0.11940684860587235,
+    "road_la": 0.04064048517121515,
+    "road_mass_share": 0.561219887596957,
+    "side_human_viol": 0.011830915457728864,
+    "side_fut_viol": 0.05548172757475083,
+    "side_fut_viol_given_active": 0.5773447015834349,
+    "side_active": 0.030360180460025147,
+    "side_la": 0.009947489091043562,
+    "side_mass_share": 0.03341688723289664,
+    "cover_per_batch": {
+     "turn_inside": 0.24021891871902964,
+     "straight_offroad": 0.22897714666074995,
+     "drift": 0.06330892685452259,
+     "collision": 0.11241772058279713,
+     "gt13": 0.2242437689520006
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0,
+     "straight_offroad": 1.0,
+     "drift": 1.0,
+     "collision": 1.0,
+     "gt13": 1.0
+    }
+   },
+   "gate": {
+    "active": 0.05262184749648695,
+    "la": 0.05262184749648695,
+    "la_per_batch": 0.8419495599437912,
+    "unlearnable": 0.0019229346941794245,
+    "mass_mean": 0.05855007331877791,
+    "learnable_mass": 1.0,
+    "learnable_mass_agent_road_def": 1.0,
+    "hard_mass_mean": 0.05855007331877791,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.009725612010945937,
+    "agent_la": 0.009725612010945937,
+    "agent_mass_share": 0.5527183031008717,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.03468678352192885,
+    "road_la": 0.03468678352192885,
+    "road_mass_share": 0.398231129233651,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.011537608165076547,
+    "side_la": 0.011537608165076547,
+    "side_mass_share": 0.04905056766547734,
+    "cover_per_batch": {
+     "turn_inside": 0.23489386879668664,
+     "straight_offroad": 0.20176022483544118,
+     "drift": 0.06035056578655425,
+     "collision": 0.13253457584498188,
+     "gt13": 0.19584350269950448
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 0.977832512315271,
+     "straight_offroad": 0.8811369509043928,
+     "drift": 0.9532710280373832,
+     "collision": 1.1789473684210525,
+     "gt13": 0.8733509234828496
+    }
+   },
+   "ec_log": {
+    "active": 0.1359366910731455,
+    "la": 0.05746616374528511,
+    "la_per_batch": 0.9194586199245618,
+    "unlearnable": 0.0787293839213076,
+    "mass_mean": 0.2509181782947861,
+    "learnable_mass": 0.22807447669500125,
+    "learnable_mass_agent_road_def": 0.26213504737411175,
+    "hard_mass_mean": 0.2509181782947861,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.06427464008859357,
+    "agent_fut_viol_given_active": 0.7235602094240837,
+    "agent_active": 0.035315435248872123,
+    "agent_la": 0.008283410990311367,
+    "agent_mass_share": 0.5963365692928235,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.067452934662237,
+    "road_fut_viol_given_active": 0.502125850340136,
+    "road_active": 0.08697581539826936,
+    "road_la": 0.04200872716515051,
+    "road_mass_share": 0.36914088744052587,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.05300110741971207,
+    "side_fut_viol_given_active": 0.5274431057563588,
+    "side_active": 0.027623696472154426,
+    "side_la": 0.010428222764588418,
+    "side_mass_share": 0.034522543266650545,
+    "cover_per_batch": {
+     "turn_inside": 0.241402263146217,
+     "straight_offroad": 0.25027734635012205,
+     "drift": 0.07100066563124029,
+     "collision": 0.11360106500998447,
+     "gt13": 0.2242437689520006
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0049261083743843,
+     "straight_offroad": 1.0930232558139537,
+     "drift": 1.1214953271028036,
+     "collision": 1.0105263157894737,
+     "gt13": 1.0
+    }
+   },
+   "ec_wit": {
+    "active": 0.08838103690555432,
+    "la": 0.08760446712521264,
+    "la_per_batch": 1.4016714740034022,
+    "unlearnable": 0.0019229346941794245,
+    "mass_mean": 0.0887768544488002,
+    "learnable_mass": 0.9964886526285505,
+    "learnable_mass_agent_road_def": 0.9964886526285505,
+    "hard_mass_mean": 0.0887768544488002,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.020042896235485542,
+    "agent_la": 0.020042896235485542,
+    "agent_mass_share": 0.48091934817750026,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.05813179498557799,
+    "road_la": 0.057355225205236296,
+    "road_mass_share": 0.47714918623211927,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.01619702684712669,
+    "side_la": 0.01619702684712669,
+    "side_mass_share": 0.04193146559038054,
+    "cover_per_batch": {
+     "turn_inside": 0.33015309518526736,
+     "straight_offroad": 0.3100362399230826,
+     "drift": 0.11892611493232749,
+     "collision": 0.2757192515346498,
+     "gt13": 0.3502699504474521
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.374384236453202,
+     "straight_offroad": 1.3540051679586562,
+     "drift": 1.8785046728971964,
+     "collision": 2.4526315789473685,
+     "gt13": 1.562005277044855
+    }
+   },
+   "ctx": {
+    "active": 0.08346276163005695,
+    "la": 0.030101323866577916,
+    "la_per_batch": 0.48162118186524666,
+    "unlearnable": 0.05435988462391835,
+    "mass_mean": 0.1915497738033991,
+    "learnable_mass": 0.2263395214628211,
+    "learnable_mass_agent_road_def": 0.27363704920886645,
+    "hard_mass_mean": 0.1915497738033991,
+    "agent_human_viol": 0.0019259629814907455,
+    "agent_human_viol_test_half": 0.0017224468314155164,
+    "agent_fut_viol": 0.06429678848283499,
+    "agent_fut_viol_given_active": 0.7248953974895398,
+    "agent_active": 0.03535241476222173,
+    "agent_la": 0.008320390503660971,
+    "agent_mass_share": 0.7878006449141121,
+    "road_human_viol": 0.0483991995997999,
+    "road_human_viol_test_half": 0.055309681586564914,
+    "road_fut_viol": 0.02681063122923588,
+    "road_fut_viol_given_active": 0.5392491467576792,
+    "road_active": 0.0325049922343022,
+    "road_la": 0.014422010206345684,
+    "road_mass_share": 0.16282480272150116,
+    "side_human_viol": 0.00910455227613807,
+    "side_human_viol_test_half": 0.008707925647711777,
+    "side_fut_viol": 0.048538205980066446,
+    "side_fut_viol_given_active": 0.5412087912087912,
+    "side_active": 0.026921085718511945,
+    "side_la": 0.00983655055099475,
+    "side_mass_share": 0.04937455236438683,
+    "cover_per_batch": {
+     "turn_inside": 0.08697581539826936,
+     "straight_offroad": 0.13549293691295022,
+     "drift": 0.010650099844686045,
+     "collision": 0.11774277050514015,
+     "gt13": 0.07750905998077065
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 0.3620689655172414,
+     "straight_offroad": 0.5917312661498708,
+     "drift": 0.16822429906542058,
+     "collision": 1.0473684210526315,
+     "gt13": 0.34564643799472294
+    }
+   },
+   "spec": {
+    "active": 0.0745137193994527,
+    "la": 0.07377412913246062,
+    "la_per_batch": 1.18038606611937,
+    "unlearnable": 0.0019229346941794245,
+    "mass_mean": 0.07653665785534235,
+    "learnable_mass": 0.996112671363117,
+    "learnable_mass_agent_road_def": 0.996112671363117,
+    "hard_mass_mean": 0.07653665785534235,
+    "agent_human_viol": 0.0,
+    "agent_fut_viol": 0.0,
+    "agent_fut_viol_given_active": 0.0,
+    "agent_active": 0.00976259152429554,
+    "agent_la": 0.00976259152429554,
+    "agent_mass_share": 0.40999902724479237,
+    "road_human_viol": 0.0,
+    "road_fut_viol": 0.0,
+    "road_fut_viol_given_active": 0.0,
+    "road_active": 0.05302862214333259,
+    "road_la": 0.05228903187634051,
+    "road_mass_share": 0.5413635783111249,
+    "side_human_viol": 0.0,
+    "side_fut_viol": 0.0,
+    "side_fut_viol_given_active": 0.0,
+    "side_active": 0.01619702684712669,
+    "side_la": 0.01619702684712669,
+    "side_mass_share": 0.04863739444408271,
+    "cover_per_batch": {
+     "turn_inside": 0.3390281783891724,
+     "straight_offroad": 0.2928777457288662,
+     "drift": 0.0479254493010872,
+     "collision": 0.13253457584498188,
+     "gt13": 0.2319355077287183
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.4113300492610836,
+     "straight_offroad": 1.2790697674418605,
+     "drift": 0.7570093457943926,
+     "collision": 1.1789473684210525,
+     "gt13": 1.0343007915567282
+    }
+   }
+  }
+ },
+ "PAIH": {
+  "rows": 135793,
+  "candidates": 135793,
+  "ctx_margins": {
+   "ag_c|0.5-3|lead<20m": 0.3,
+   "ag_c|0.5-3|parked beside": 0.023,
+   "ag_c|0.5-3|straight free": 0.3,
+   "ag_c|0.5-3|turn>30": 0.3,
+   "ag_c|13-17|lead<20m": 0.3,
+   "ag_c|13-17|parked beside": 0.3,
+   "ag_c|13-17|straight free": 0.3,
+   "ag_c|13-17|turn>30": 0.3,
+   "ag_c|3-8|lead<20m": 0.3,
+   "ag_c|3-8|parked beside": 0.3,
+   "ag_c|3-8|straight free": 0.3,
+   "ag_c|3-8|turn>30": 0.3,
+   "ag_c|8-13|lead<20m": 0.3,
+   "ag_c|8-13|parked beside": 0.3,
+   "ag_c|8-13|straight free": 0.3,
+   "ag_c|8-13|turn>30": 0.3,
+   "ag_c|<0.5|standing": 0.3,
+   "ag_c|>17|lead<20m": 0.3,
+   "ag_c|>17|parked beside": 0.3,
+   "ag_c|>17|straight free": 0.3,
+   "ag_c|>17|turn>30": 0.3,
+   "ag_s|0.5-3|lead<20m": 0.0,
+   "ag_s|0.5-3|parked beside": 0.0,
+   "ag_s|0.5-3|straight free": 0.0,
+   "ag_s|0.5-3|turn>30": 0.0,
+   "ag_s|13-17|lead<20m": 0.0,
+   "ag_s|13-17|parked beside": 0.0,
+   "ag_s|13-17|straight free": 0.0,
+   "ag_s|13-17|turn>30": 0.0,
+   "ag_s|3-8|lead<20m": 0.0,
+   "ag_s|3-8|parked beside": 0.0,
+   "ag_s|3-8|straight free": 0.0,
+   "ag_s|3-8|turn>30": 0.0,
+   "ag_s|8-13|lead<20m": 0.0,
+   "ag_s|8-13|parked beside": 0.0,
+   "ag_s|8-13|straight free": 0.0,
+   "ag_s|8-13|turn>30": 0.0,
+   "ag_s|<0.5|standing": 0.0,
+   "ag_s|>17|lead<20m": 0.0,
+   "ag_s|>17|parked beside": 0.0,
+   "ag_s|>17|straight free": 0.0,
+   "ag_s|>17|turn>30": 0.0,
+   "road|0.5-3|lead<20m": 0.3,
+   "road|0.5-3|parked beside": 0.298,
+   "road|0.5-3|straight free": 0.3,
+   "road|0.5-3|turn>30": 0.275,
+   "road|13-17|lead<20m": 0.3,
+   "road|13-17|parked beside": 0.3,
+   "road|13-17|straight free": -0.387,
+   "road|13-17|turn>30": -17.55,
+   "road|3-8|lead<20m": 0.287,
+   "road|3-8|parked beside": 0.3,
+   "road|3-8|straight free": 0.286,
+   "road|3-8|turn>30": -6.487,
+   "road|8-13|lead<20m": 0.271,
+   "road|8-13|parked beside": 0.3,
+   "road|8-13|straight free": 0.3,
+   "road|8-13|turn>30": -13.05,
+   "road|<0.5|standing": 0.3,
+   "road|>17|lead<20m": 0.3,
+   "road|>17|parked beside": 0.3,
+   "road|>17|straight free": -4.223,
+   "road|>17|turn>30": -17.3,
+   "sd|0.5-3|lead<20m": 0.4,
+   "sd|0.5-3|parked beside": 0.38,
+   "sd|0.5-3|straight free": 0.4,
+   "sd|0.5-3|turn>30": 0.4,
+   "sd|13-17|lead<20m": 0.4,
+   "sd|13-17|parked beside": 0.381,
+   "sd|13-17|straight free": 0.4,
+   "sd|13-17|turn>30": 0.4,
+   "sd|3-8|lead<20m": 0.4,
+   "sd|3-8|parked beside": 0.27,
+   "sd|3-8|straight free": 0.4,
+   "sd|3-8|turn>30": 0.4,
+   "sd|8-13|lead<20m": 0.4,
+   "sd|8-13|parked beside": 0.344,
+   "sd|8-13|straight free": 0.4,
+   "sd|8-13|turn>30": 0.4,
+   "sd|<0.5|standing": 0.386,
+   "sd|>17|lead<20m": 0.4,
+   "sd|>17|parked beside": 0.4,
+   "sd|>17|straight free": 0.4,
+   "sd|>17|turn>30": 0.4
+  },
+  "audit": {
+   "agent": {
+    "log": {
+     "n": 135793,
+     "viol": 0.004506859705581289,
+     "mass_mean": 0.012814607251012213
+    },
+    "plan": {
+     "n": 8148,
+     "viol": 0.03325969563082965,
+     "mass_mean": 0.11385844424219918
+    },
+    "plan_active": 0.03325969563082965,
+    "log_viol_given_active": 0.12177121771217712,
+    "log_viol_uncond_same_rows": 0.004909180166912126
+   },
+   "road": {
+    "log": {
+     "n": 123184,
+     "viol": 0.0,
+     "mass_mean": 0.0
+    },
+    "plan": {
+     "n": 7388,
+     "viol": 0.041283161884136436,
+     "mass_mean": 0.03539677831567683
+    },
+    "plan_active": 0.041283161884136436,
+    "log_viol_given_active": 0.0,
+    "log_viol_uncond_same_rows": 0.0
+   },
+   "side": {
+    "log": {
+     "n": 135793,
+     "viol": 0.014315907300081742,
+     "mass_mean": 0.006058936788619135
+    },
+    "plan": {
+     "n": 8148,
+     "viol": 0.023809523809523808,
+     "mass_mean": 0.012741103901375967
+    },
+    "plan_active": 0.023809523809523808,
+    "log_viol_given_active": 0.5257731958762887,
+    "log_viol_uncond_same_rows": 0.015832106038291605
+   }
+  },
+  "strata": [
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 15071,
+    "share": 0.11098510232486211,
+    "human_viol": 0.0073651383451662136,
+    "human_mass_share": 0.037576165962166216
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 13378,
+    "share": 0.09851759663605635,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 36564,
+    "share": 0.26926277495894485,
+    "human_viol": 0.0035007110819385186,
+    "human_mass_share": 0.08818092081181732
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 31081,
+    "share": 0.2288851413548563,
+    "human_viol": 0.0009973939062449728,
+    "human_mass_share": 0.018534283000778213
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 18588,
+    "share": 0.13688481733226307,
+    "human_viol": 0.018398967075532603,
+    "human_mass_share": 0.8557086302252385
+   },
+   {
+    "term": "agent",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 21111,
+    "share": 0.1554645673930173,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 15801,
+    "share": 0.11636093171223848,
+    "human_viol": 0.0076577431808113414,
+    "human_mass_share": 0.035272176664214346
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 11589,
+    "share": 0.08534313256206137,
+    "human_viol": 0.00595392182241781,
+    "human_mass_share": 0.07269731346391817
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 18588,
+    "share": 0.13688481733226307,
+    "human_viol": 0.018398967075532603,
+    "human_mass_share": 0.8557086302252385
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 76291,
+    "share": 0.5618183558799055,
+    "human_viol": 0.0009961856575480725,
+    "human_mass_share": 0.03617591874314111
+   },
+   {
+    "term": "agent",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 13524,
+    "share": 0.09959276251353162,
+    "human_viol": 0.0002957704821058858,
+    "human_mass_share": 0.00014596090348812952
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 54,
+    "share": 0.0003976640916689373,
+    "human_viol": 1.0,
+    "human_mass_share": 0.028851865471511005
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 255,
+    "share": 0.0018778582106588704,
+    "human_viol": 1.0,
+    "human_mass_share": 0.06376430551775224
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 824,
+    "share": 0.006068059472874154,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "<0",
+    "rows": 303,
+    "share": 0.0022313374032534813,
+    "human_viol": 1.0,
+    "human_mass_share": 0.907383829010737
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 89642,
+    "share": 0.6601371204701273,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "agent",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 44715,
+    "share": 0.3292879603514172,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 14202,
+    "share": 0.11529094687621769,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 11783,
+    "share": 0.09565365631900247,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 33778,
+    "share": 0.27420768931030004,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 28847,
+    "share": 0.23417814001818418,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 17667,
+    "share": 0.1434195999480452,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 16907,
+    "share": 0.13724996752825042,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 14407,
+    "share": 0.11695512404208339,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 11258,
+    "share": 0.09139173918690739,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 17667,
+    "share": 0.1434195999480452,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 68133,
+    "share": 0.5530994284972074,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 11719,
+    "share": 0.0951341083257566,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 33680,
+    "share": 0.2734121314456423,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "road",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 89504,
+    "share": 0.7265878685543578,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "0.5-3",
+    "rows": 15071,
+    "share": 0.11098510232486211,
+    "human_viol": 0.023687877380399444,
+    "human_mass_share": 0.23076805949859458
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "13-17",
+    "rows": 13378,
+    "share": 0.09851759663605635,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "3-8",
+    "rows": 36564,
+    "share": 0.26926277495894485,
+    "human_viol": 0.02168799912482223,
+    "human_mass_share": 0.42071297753395526
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "8-13",
+    "rows": 31081,
+    "share": 0.2288851413548563,
+    "human_viol": 0.008847849168302177,
+    "human_mass_share": 0.08860390912399778
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": "<0.5",
+    "rows": 18588,
+    "share": 0.13688481733226307,
+    "human_viol": 0.027921239509360877,
+    "human_mass_share": 0.25991505384345237
+   },
+   {
+    "term": "side",
+    "by": "speed",
+    "bin": ">17",
+    "rows": 21111,
+    "share": 0.1554645673930173,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "lead<20m",
+    "rows": 15801,
+    "share": 0.11636093171223848,
+    "human_viol": 0.02911208151382824,
+    "human_mass_share": 0.1855487257570337
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "parked beside",
+    "rows": 11589,
+    "share": 0.08534313256206137,
+    "human_viol": 0.05677797911812926,
+    "human_mass_share": 0.38100906258307804
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "standing",
+    "rows": 18588,
+    "share": 0.13688481733226307,
+    "human_viol": 0.027921239509360877,
+    "human_mass_share": 0.25991505384345237
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "straight free",
+    "rows": 76291,
+    "share": 0.5618183558799055,
+    "human_viol": 0.0028836953244812625,
+    "human_mass_share": 0.13246204612577672
+   },
+   {
+    "term": "side",
+    "by": "scene",
+    "bin": "turn>30",
+    "rows": 13524,
+    "share": 0.09959276251353162,
+    "human_viol": 0.006433007985803017,
+    "human_mass_share": 0.04106511169065914
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0-0.1",
+    "rows": 153,
+    "share": 0.0011267149263953222,
+    "human_viol": 1.0,
+    "human_mass_share": 0.24403783785749614
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.1-0.3",
+    "rows": 659,
+    "share": 0.004852974748330179,
+    "human_viol": 1.0,
+    "human_mass_share": 0.529000607528996
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "0.3-1",
+    "rows": 18501,
+    "share": 0.13624413629568535,
+    "human_viol": 0.06118588184422464,
+    "human_mass_share": 0.22696155461350775
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": ">1",
+    "rows": 107345,
+    "share": 0.7905046651889273,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   },
+   {
+    "term": "side",
+    "by": "clearance",
+    "bin": "none",
+    "rows": 9135,
+    "share": 0.0672715088406619,
+    "human_viol": 0.0,
+    "human_mass_share": 0.0
+   }
+  ],
+  "root_causes": {
+   "log": {
+    "agent": {
+     "n": 612,
+     "first_match": {
+      "initial": 0.35294117647058826,
+      "margin_front_extension": 0.29411764705882354,
+      "margin": 0.2761437908496732,
+      "geometry": 0.07679738562091504,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.7462003213442465,
+      "margin_front_extension": 0.03878522829429587,
+      "margin": 0.11913730467073357,
+      "geometry": 0.09587714569072396,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin_front_extension": 0.34477124183006536,
+      "margin": 0.3545751633986928,
+      "geometry": 0.1781045751633987,
+      "box_inflation": 0.0,
+      "time_shift": 0.0016339869281045752,
+      "initial": 0.12091503267973856,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin_front_extension": 0.043478695902702494,
+      "margin": 0.15219944930768953,
+      "geometry": 0.19342809166612168,
+      "box_inflation": 0.0,
+      "time_shift": 0.0010994914624595628,
+      "initial": 0.6097942716610265,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.35294117647058826,
+      "margin_front_extension": 0.34477124183006536,
+      "margin": 0.3545751633986928,
+      "geometry": 0.1781045751633987,
+      "box_inflation": 0.1781045751633987,
+      "time_shift": 0.042483660130718956,
+      "real_overlap": 0.3006535947712418,
+      "static_boxes_would_clear": 0.4493464052287582
+     }
+    },
+    "road": {
+     "n": 0
+    },
+    "side": {
+     "n": 1944,
+     "first_match": {
+      "initial": 0.39351851851851855,
+      "margin": 0.6064814814814815,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "first_match_mass": {
+      "initial": 0.4559225733469708,
+      "margin": 0.5440774266530292,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "clearance_first_mass": {
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0,
+      "initial": 0.0,
+      "residual": 0.0
+     },
+     "incidence": {
+      "initial": 0.39351851851851855,
+      "margin": 1.0,
+      "geometry": 0.0,
+      "box_inflation": 0.0,
+      "time_shift": 0.0
+     }
+    }
+   },
+   "lag_sweep_log": {
+    "-0.5": 0.013314382921063678,
+    "-0.3": 0.008093200680447445,
+    "-0.1": 0.004889795497558785,
+    "+0.0": 0.004506859705581289,
+    "+0.1": 0.0041975654120610046,
+    "+0.3": 0.003976640916689373,
+    "+0.5": 0.004418489907432636
+   }
+  },
+  "plan_road_oow": {
+   "rows_with_oow": 0.25785468826705943,
+   "road_mass_share_oow": 0.30501737029250947,
+   "by_speed": {
+    "0.5-3": 0.0,
+    "13-17": 0.8163771712158809,
+    "3-8": 0.003216911764705882,
+    "8-13": 0.08476454293628809,
+    "<0.5": 0.0,
+    ">17": 0.9961180124223602
+   }
+  },
+  "designs": {
+   "fixed": {
+    "active": 0.0857879234167894,
+    "la": 0.0705694648993618,
+    "la_per_batch": 2.258222876779578,
+    "unlearnable": 0.01521845851742759,
+    "mass_mean": 0.1586947123797338,
+    "learnable_mass": 0.7927099452950747,
+    "learnable_mass_agent_road_def": 0.8427448016789542,
+    "hard_mass_mean": 0.1586947123797338,
+    "agent_human_viol": 0.004506859705581289,
+    "agent_active": 0.03325969563082965,
+    "agent_la": 0.028227785959744723,
+    "agent_mass_share": 0.717468418038732,
+    "road_human_viol": 0.0,
+    "road_active": 0.03743249877270496,
+    "road_la": 0.037309769268532154,
+    "road_mass_share": 0.20224469835743153,
+    "side_human_viol": 0.014315907300081742,
+    "side_active": 0.023809523809523808,
+    "side_la": 0.010677466863033874,
+    "side_mass_share": 0.0802868836038363,
+    "cover_per_batch": {
+     "turn_inside": 0.40844378988708885,
+     "straight_offroad": 0.32204221894943547,
+     "drift": 0.05891016200294551,
+     "collision": 0.21600392734413354,
+     "gt13": 0.22778595974472263
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0,
+     "straight_offroad": 1.0,
+     "drift": 1.0,
+     "collision": 1.0,
+     "gt13": 1.0
+    }
+   },
+   "gate": {
+    "active": 0.07228767795778106,
+    "la": 0.07228767795778106,
+    "la_per_batch": 2.313205694648994,
+    "unlearnable": 0.0,
+    "mass_mean": 0.12938909997691003,
+    "learnable_mass": 1.0,
+    "learnable_mass_agent_road_def": 1.0,
+    "hard_mass_mean": 0.12938909997691003,
+    "agent_human_viol": 0.0,
+    "agent_active": 0.029209621993127148,
+    "agent_la": 0.029209621993127148,
+    "agent_mass_share": 0.7100881112776305,
+    "road_human_viol": 0.0,
+    "road_active": 0.03743249877270496,
+    "road_la": 0.03743249877270496,
+    "road_mass_share": 0.2480515301666533,
+    "side_human_viol": 0.0,
+    "side_active": 0.011291114383897889,
+    "side_la": 0.011291114383897889,
+    "side_mass_share": 0.04186035855571622,
+    "cover_per_batch": {
+     "turn_inside": 0.40844378988708885,
+     "straight_offroad": 0.3338242513500245,
+     "drift": 0.05891016200294551,
+     "collision": 0.22778595974472263,
+     "gt13": 0.22778595974472263
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0,
+     "straight_offroad": 1.0365853658536583,
+     "drift": 1.0,
+     "collision": 1.0545454545454545,
+     "gt13": 1.0
+    }
+   },
+   "ec_log": {
+    "active": 0.07498772704958272,
+    "la": 0.07498772704958272,
+    "la_per_batch": 2.399607265586647,
+    "unlearnable": 0.0,
+    "mass_mean": 0.13444230623285686,
+    "learnable_mass": 1.0,
+    "learnable_mass_agent_road_def": 1.0,
+    "hard_mass_mean": 0.13444230623285686,
+    "agent_human_viol": 0.0,
+    "agent_active": 0.031541482572410406,
+    "agent_la": 0.031541482572410406,
+    "agent_mass_share": 0.7190540366197892,
+    "road_human_viol": 0.0,
+    "road_active": 0.03632793323514973,
+    "road_la": 0.03632793323514973,
+    "road_mass_share": 0.2363390686299019,
+    "side_human_viol": 0.0,
+    "side_active": 0.014236622484045164,
+    "side_la": 0.014236622484045164,
+    "side_mass_share": 0.04460689475030886,
+    "cover_per_batch": {
+     "turn_inside": 0.41237113402061853,
+     "straight_offroad": 0.3495336278841433,
+     "drift": 0.05891016200294551,
+     "collision": 0.22778595974472263,
+     "gt13": 0.22778595974472263
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0096153846153846,
+     "straight_offroad": 1.0853658536585364,
+     "drift": 1.0,
+     "collision": 1.0545454545454545,
+     "gt13": 1.0
+    }
+   },
+   "ec_wit": {
+    "active": 0.07498772704958272,
+    "la": 0.07498772704958272,
+    "la_per_batch": 2.399607265586647,
+    "unlearnable": 0.0,
+    "mass_mean": 0.13444230623285686,
+    "learnable_mass": 1.0,
+    "learnable_mass_agent_road_def": 1.0,
+    "hard_mass_mean": 0.13444230623285686,
+    "agent_human_viol": 0.0,
+    "agent_active": 0.031541482572410406,
+    "agent_la": 0.031541482572410406,
+    "agent_mass_share": 0.7190540366197892,
+    "road_human_viol": 0.0,
+    "road_active": 0.03632793323514973,
+    "road_la": 0.03632793323514973,
+    "road_mass_share": 0.2363390686299019,
+    "side_human_viol": 0.0,
+    "side_active": 0.014236622484045164,
+    "side_la": 0.014236622484045164,
+    "side_mass_share": 0.04460689475030886,
+    "cover_per_batch": {
+     "turn_inside": 0.41237113402061853,
+     "straight_offroad": 0.3495336278841433,
+     "drift": 0.05891016200294551,
+     "collision": 0.22778595974472263,
+     "gt13": 0.22778595974472263
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 1.0096153846153846,
+     "straight_offroad": 1.0853658536585364,
+     "drift": 1.0,
+     "collision": 1.0545454545454545,
+     "gt13": 1.0
+    }
+   },
+   "ctx": {
+    "active": 0.06553755522827688,
+    "la": 0.05228276877761414,
+    "la_per_batch": 1.6730486008836525,
+    "unlearnable": 0.013254786450662739,
+    "mass_mean": 0.13269888502146004,
+    "learnable_mass": 0.7721771284202289,
+    "learnable_mass_agent_road_def": 0.8216385833694645,
+    "hard_mass_mean": 0.13269888502146004,
+    "agent_human_viol": 0.004418489907432636,
+    "agent_human_viol_test_half": 0.0036841441719080506,
+    "agent_active": 0.03325969563082965,
+    "agent_la": 0.028227785959744723,
+    "agent_mass_share": 0.8392980066090021,
+    "road_human_viol": 0.0,
+    "road_human_viol_test_half": 0.0,
+    "road_active": 0.019391261659302897,
+    "road_la": 0.019268532155130094,
+    "road_mass_share": 0.08457298709103048,
+    "side_human_viol": 0.011745819003925092,
+    "side_human_viol_test_half": 0.010730245002591508,
+    "side_active": 0.02110947471772214,
+    "side_la": 0.009941089837997054,
+    "side_mass_share": 0.07612900629996752,
+    "cover_per_batch": {
+     "turn_inside": 0.047128129602356406,
+     "straight_offroad": 0.2709867452135493,
+     "drift": 0.015709376534118802,
+     "collision": 0.21600392734413354,
+     "gt13": 0.05891016200294551
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 0.11538461538461539,
+     "straight_offroad": 0.8414634146341462,
+     "drift": 0.26666666666666666,
+     "collision": 1.0,
+     "gt13": 0.25862068965517243
+    }
+   },
+   "spec": {
+    "active": 0.06786941580756013,
+    "la": 0.06786941580756013,
+    "la_per_batch": 2.1718213058419242,
+    "unlearnable": 0.0,
+    "mass_mean": 0.10595136299957914,
+    "learnable_mass": 1.0,
+    "learnable_mass_agent_road_def": 1.0,
+    "hard_mass_mean": 0.10595136299957914,
+    "agent_human_viol": 0.0,
+    "agent_active": 0.026755031909671084,
+    "agent_la": 0.026755031909671084,
+    "agent_mass_share": 0.7353335310027854,
+    "road_human_viol": 0.0,
+    "road_active": 0.03313696612665685,
+    "road_la": 0.03313696612665685,
+    "road_mass_share": 0.2080645184952502,
+    "side_human_viol": 0.0,
+    "side_active": 0.014236622484045164,
+    "side_la": 0.014236622484045164,
+    "side_mass_share": 0.05660195050196438,
+    "cover_per_batch": {
+     "turn_inside": 0.4005891016200295,
+     "straight_offroad": 0.32989690721649484,
+     "drift": 0.015709376534118802,
+     "collision": 0.20422189494354442,
+     "gt13": 0.15316642120765833
+    },
+    "cover_rel_fixed": {
+     "turn_inside": 0.9807692307692308,
+     "straight_offroad": 1.024390243902439,
+     "drift": 0.26666666666666666,
+     "collision": 0.9454545454545454,
+     "gt13": 0.6724137931034483
+    }
+   }
+  }
+ },
+ "navtrain": {
+  "rows": 172860,
+  "human_viol": 0.14254309846118246,
+  "human_overlap": 0.03589031586254773,
+  "human_minsdf_q": [
+   -0.21032302856445312,
+   0.05980292540043598,
+   0.49568935483694077,
+   1.0465607643127441
+  ],
+  "plan_active": 0.140691889390258,
+  "human_viol_given_plan_active": 0.7623355263157895,
+  "human_viol_margin_0.2": 0.10463380770565776,
+  "human_viol_margin_0.1": 0.06729144972810366,
+  "human_viol_margin_0.0": 0.03589031586254773
+ }
+}
