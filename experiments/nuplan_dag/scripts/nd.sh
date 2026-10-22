@@ -131,15 +131,27 @@ json.dump(m, open(f"{R}/manifest.json", "w"), indent=1)
 print(len(m), "of", len(cs), "chunks"); sys.exit(len(m) != len(cs))
 PY
   $NAV $ONR geo --name $N --roll $R --workers ${ND_GEO_WORKERS:-24} || die "on_rows geo rc $?" ;;
+tokgate)  # tokgate <pool>: the R1 / R2 check of tok alone (after an amendment)
+  N=$2; TOKGATE_ONLY=1 bash $ME tok $N ;;
+probe2)   # amendment 2: label -> plots -> chk1 (-> rest) after the tok gate re-checked (teach / tok outputs kept)
+  g=$(sub nd-tokgate-$NP --vram 0.1 --cpu 1 --ram 2 --timeout-h 1 -- bash $ME tokgate $NP) || exit 1
+  l=$(sub nd-label-$NP --after $g --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME label $NP) || exit 1
+  p=$(sub nd-plots-$NP --after $l --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME plots $NP) || exit 1
+  c=$(sub nd-chk1 --after $l,$p --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME chk1) || exit 1
+  echo "$(date '+%F %T') probe2 (code $(git rev-parse --short HEAD)): tokgate $g label $l plots $p chk1 $c" | tee -a $O/stages.txt ;;
 tok)      # tok <pool>: tokens + teacher + gate R1 (control smoke10e: the RB0 lineage, as practice_nuplan), R1 / R2 as pn.sh (amended lines)
-  N=$2; $TR $ONR tok --name $N --control smoke10e || die "on_rows tok rc $?"
+  N=$2; [[ -n ${TOKGATE_ONLY:-} ]] || $TR $ONR tok --name $N --control smoke10e || die "on_rows tok rc $?"
   python3 - $DATA_DIR/runs/onpol_nuplan/rows/$N <<'PY' || die "pool gates R1 / R2 failed ($N)"
 import json, sys
 d = sys.argv[1]; r1, r2 = json.load(open(f"{d}/r1.json")), json.load(open(f"{d}/r2.json"))
 ok2 = r2["ego_max_m"] <= 0.3 and r2["frame_err_max_m"] <= 0.1 and r2["act_share_within"] >= 0.995 and r2["act_median_m"] <= 0.05
 q = next(iter(r1["tags"].values()))
-ok1 = r1["a"] and r1["b"] and (r1["c"] or q["control_mu_share"] <= q["mu_share"] - 0.2)
-print("R1", r1["a"], r1["b"], r1["c"], ok1, "R2", ok2, "ego_max", r2["ego_max_m"], "act_share", r2["act_share_within"])
+# amendment 2: (a) also met at one fp16 ulp (mu_share_one_ulp >= 0.99, max <= 0.047 m = the largest in the admitted pools PN0 / L18RB0):
+# B2's fast plans put 37 % of the probe rows' points beyond 16 m, where one ulp (0.031 m) exceeds the 0.03 m line (L18RB0 in on1_JTX: 0.982)
+a1 = r1["a"] or (q["mu_share_one_ulp"] >= 0.99 and q["mu_max"] <= 0.047)
+ok1 = a1 and r1["b"] and (r1["c"] or q["control_mu_share"] <= q["mu_share"] - 0.2)
+print("R1", r1["a"], a1, r1["b"], r1["c"], ok1, "mu_share", q["mu_share"], "one ulp", q["mu_share_one_ulp"], "max", q["mu_max"], "control", q["control_mu_share"],
+      "R2", ok2, "ego_max", r2["ego_max_m"], "act_share", r2["act_share_within"])
 sys.exit(0 if ok1 and ok2 else 2)
 PY
   ;;
