@@ -1,8 +1,8 @@
 # awr_onpol: on-policy plans weighted by their consequences
 
-status: live
+status: paused
 decisions: none yet
-index: prepared, not launched: 2 688 train rows with advantage >= 0.1 vs near-identical peers; filtered-cloning pilot awaits the user
+index: prepared, never launched: 2 688 train rows with advantage >= 0.1 vs near-identical peers; shelved for this board by the user (2026-10-17 afternoon)
 
 **Question.** Can labels come from consequences instead of hand-made targets: clone the plan an on-policy policy actually output at a
 decision only where, in the simulator, it did better over the next 3 s than the other policies that stood in the same state, with no

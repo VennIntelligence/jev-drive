@@ -6,7 +6,7 @@
 结论稳定后在 `docs/` 或代码里写英文正式版。
 
 ## 主题页
-- [base-recipe/](base-recipe/index.html)：当前基座 RSG-L18-s0 的训练配方示意：模型冻结 / 训练 / 新模块、预处理、一个 batch 的损失、两段训练与 on-policy 回路。
+- [base-recipe/](base-recipe/index.html)：RSG-L18-s0 的训练配方示意（原写「当前基座」，那是 10-13 到 10-18 的状态；现候选 nuPlan B2 `STANDFMXH-L18-s1`、PAI NTV0-L18-s0 都是同一 RB0-F 底座上的 JTN 配方变体，见 [decisions.md](decisions.md) 现状块与 experiments/defect_fix）：模型冻结 / 训练 / 新模块、预处理、一个 batch 的损失、两段训练与 on-policy 回路。
 - [base-recipe-anim/](base-recipe-anim/index.html)：同一配方的动画版（纯 HTML / SVG，可播放、拖动、分步）：总览回路、9 槽上下文与缓存、偏航率行、路线记忆、on-policy 池、模型、六类损失画在道路上、两段学习率。
 - [midterm-2026-10/](midterm-2026-10/index.html)：中期组会页（2026-10-13）：09-29 以来全部决策的交互实验地图（按研究线与结论类型），各榜单位置，要解决和正在解决的问题，人在环与打标签，下阶段。
 - [openpilot-diagnosis/](openpilot-diagnosis/index.html)：openpilot 为什么在各榜上表现不一，接口归因、能力缺口与接入矩阵。
@@ -35,7 +35,7 @@
 - [round7/loss_diag/](round7/loss_diag/index.html)：R6DAG（当前最好的 PAI 臂）在 PAI 281（ACC + GAP）上还在哪里丢分（决策 436）：失分地图（按类的丢分、两种子稳定性、我们已有读数能否解、尺子权重、杠杆与估计收益）+ 每类 1–2 段代表视频（14 段，零分用存档 asl 离线渲染，视频不入库）：最大一块是停车点冲过但提交 serve 下无正例；最值得做的是转弯切内侧（DAgger 迭代）和无故减速部分分（尺子上的全部差距）。
 
 ## 记录与工具
-- [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
+- [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`（第 356 条起多在行内链接的结果页）；页首「现状」块是当前候选与已提交成绩。
 - [knowing-vs-doing.md](knowing-vs-doing.md)：论文主线候选（2026-10-19）：驾驶智能（看懂、知道该做什么）与驾驶能力（在自己身体上做到）分开，能力取决于可归因的试次；与第 286–363 条读数逐条对照。
 - [s-rows-and-paper.md](s-rows-and-paper.md)：S 行审计与论文候选（2026-10-21）：当前 R6DAG 配方的 batch 构成与梯度、S 池按来源 / 结局 / 情境的激活与可学性（只有 12 % 的抽取是可学的激活行）、改过 S 剂量 / 构成 / 抽样的全部实验与从未测过的项、文献位置、三个实验提议与论文候选排序；脚本 [s-rows/audit.py](s-rows/audit.py)。
 - [next-round/practice-plan.md](next-round/practice-plan.md)：按可归因试次改训练管线的方案（2026-10-19）：trainval 抽样修偏置、nuPlan 换起点、PAI 练习池、自我前向模型、纵向后果项，标直接做 / 先诊断 / 耗时长。
@@ -43,7 +43,7 @@
 - [next-round/closed-loop.md](next-round/closed-loop.md)：闭环训练线方案：全长（18–20 决策）训练、估算与排期。
 - [literature/anchored-planning-2026.md](literature/anchored-planning-2026.md)：文献笔记，Aim Short to Reach Far（Anchored Planning，arXiv 2609.30036）：冻结世界模型只把远目标换成近锚点，CEM 成功率 9.2% → 59.8%；与我们漂移的异同、serving 近锚点校正与短程锚点标签，三个两天内的小实验。
 - [others-turn.md](others-turn.md)：别人会转弯吗（2026-10-15）：第三方策略（WA-JEPA、AlpaSim 的 LTF / DiffusionDrive sample、主办方 garage TransFuser）在 held 24 个转弯上原样闭环，完成 7 / 0 / 0 / 1 对 RSG 16；文献里别人怎么转弯、差异清单、为什么对我们难；对照页在桌面 others_turn/。
-- [recipes.md](recipes.md)：配方总表，活着的和已死的配方各一行，带决策号。
+- [recipes.md](recipes.md)：配方总表，活着的和已死的配方各一行，带决策号；只覆盖到 2026-10-12（决策 170–264），之后的配方看 decisions.md 现状块。
 - [alpasim-read-profile.md](alpasim-read-profile.md)：AlpaSim read 作业剖析（2026-10-13）：时间、内存、显存花在哪，4 个 read 一张卡的依据；英文汇总在 [docs/speed.md](../docs/speed.md)。
 - [next-round/turn-night.md](next-round/turn-night.md)：转弯夜（2026-10-14 夜）自主迭代的交接记录。
 - [route-follow/lon-clips-accgap.html](route-follow/lon-clips-accgap.html)：决策 330 阶段 2（ACC + GAP）纵向片段对照页，与 [lon-clips-acc.html](route-follow/lon-clips-acc.html)、[lon-clips-g10.html](route-follow/lon-clips-g10.html) 同一套类别。

@@ -4,7 +4,8 @@ Read this when you work on the `alpasim` lane (experiments/alpasim): the challen
 contract, the scoring, and how AlpaSim runs on our box. Everything below was read on 2026-10-08 from the challenge
 page (https://nvidia-alpasime2eclosedloopchallenge2026.hf.space/), its Gradio config and public leaderboard API, the
 report template zip, and `NVlabs/alpasim` branch `e2e_challenge` (HEAD 2023534; the server deploys 0bb4c4b). Re-read
-the sources before acting on a date or a limit. Registration and submission are the user's actions, never an agent's.
+the sources before acting on a date or a limit. Registration and submission are the user's actions; an agent pushes or submits
+only a probe the user has explicitly handed to it (the PAI probe on 2026-10-18), after the audit and smoke gate.
 The submission path (image conventions, registry, CLI, service images) was read from the same branch on 2026-10-09:
 "Submission image" below.
 
@@ -22,8 +23,10 @@ The submission path (image conventions, registry, CLI, service images) was read 
 
 ## Registration and identity (quoted)
 
-- Our team: display name `Lao Siji`, team id `lao-siji`, registered by the user on 2026-10-09; status "Registration pending
-  review". The form sits in the Registration tab of the challenge page and appears only after a Hugging Face sign-in.
+- Our teams (corrected 2026-10-20; this line said only "`lao-siji`, registration pending review", the 10-09 state): `Lao Siji`
+  (`lao-siji`), `Venn Intelligence Foundation` (`vennai-org`, Tokyo profile `acct3`) and `UJS IV Squad` (`ujs-iv`). All three are
+  approved and have submitted. Tokyo `~/bin/ap <profile> ...`; the CLI token is a 12 h HF session per profile. Submissions, scores
+  and current candidates: experiments/alpasim/README.md "Submissions and candidates". Registration (lao-siji, 2026-10-09): The form sits in the Registration tab of the challenge page and appears only after a Hugging Face sign-in.
   Next after approval: CLI authentication, `terms show`, `ACCEPT <version>`. The challenge is not in the official NeurIPS
   2026 Competition Track list (16 competitions); its page says "NeurIPS 2026 workshop", workshop and venue not named.
 
@@ -103,6 +106,10 @@ route (first waypoint >= 5 m away: y > 2 m left, < -2 m right) and take velocity
   At-Fault Incidents (distance / count of `offroad_or_collision_at_fault`).
 
 ## Leaderboard, nuPlan track, 2026-10-08 (best entry per team, 30 teams, 96 entries)
+
+Historical snapshot. Later snapshots: experiments/alpasim_proxy/results/pai_board_20261019.md and the `leaderboard_*_20261019*.json`
+files beside it. On 2026-10-20 the nuPlan board had 42 teams, with #1 symphi at 1937 and the #3 team at 1630. The PAI board had 33 teams,
+with #1 acmlab-dow at 2256 and the #3 team at 2191.
 
 | Team | PCS | Avg scene score | At-fault distance |
 |---|--:|--:|--:|

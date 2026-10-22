@@ -23,10 +23,10 @@ ts() { local n=$1; shift; local t0; t0=$(date +%s%N); "$@" > $W/$n.log 2>&1; loc
 rd() { for t in ${T[@]} $B2 $NTV0; do echo $t=$J/arena/$t@off; done; }
 case ${1:-} in
 submit)
-  rm -f $B/DONE; o=$(sub rs-old --vram 0 --cpu 32 --ram 96 --timeout-h 2 -- bash $ME old) || exit 1
-  c=$(sub rs-chunk --vram 0 --cpu 6 --ram 30 --timeout-h 1 -- bash $ME chunk) || exit 1
-  f=$(sub rs-fill --after $c --vram 0 --cpu 32 --ram 96 --timeout-h 2 -- bash $ME fill) || exit 1
-  n=$(sub rs-new --after $o,$f --vram 0 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME new) || exit 1
+  rm -f $B/DONE; o=$(sub rs-old --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- bash $ME old) || exit 1
+  c=$(sub rs-chunk --vram 0.1 --cpu 6 --ram 30 --timeout-h 1 -- bash $ME chunk) || exit 1
+  f=$(sub rs-fill --after $c --vram 0.1 --cpu 32 --ram 96 --timeout-h 2 -- bash $ME fill) || exit 1
+  n=$(sub rs-new --after $o,$f --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- bash $ME new) || exit 1
   echo "$(date '+%F %T') submit (code $(git rev-parse --short HEAD)): old $o chunk $c fill $f new $n" | tee -a $B/stages.txt ;;
 old)    # nd.sh p1sum's commands (code dfdc59d2..2aef63fd), outputs into $B/old
   W=$B/old; rm -rf $W; mkdir -p $W

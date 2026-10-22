@@ -1,15 +1,35 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226, 247, 253, 254 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
-index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
+decisions: 356, 374 (submissions; ledger below), 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226, 247, 253, 254 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+index: submitted: nuPlan JTN-s1 stop3 PCS 1463 / native 1325, PAI RSG + ACC + GAP 2092; candidates nuPlan B2 native (d391), PAI NTV0 + ACC + GAP (d366); 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 
 **Question.** Can SH30 (openpilot Cinque + adapter + drivable hinge, navtest EPDMS 89.55) enter the nuPlan track of the AlpaSim E2E
 Closed Loop Challenge 2026 by 2026-10-31, and what does the public 1 485-scene closed-loop suite cost on our box.
 
 **Conclusion so far.** AlpaSim's nuPlan track runs natively on the box at the deployed commit (no Docker): 2.96 s per scene at 8
 concurrent rollouts on one card; the shipped LTF sample scores 0.8735 mean scene score on 48 public scenes (decision 184). A scene is
-5.5 s, 10 `drive` calls at 2 Hz, with no history before t = 0. Team `lao-siji` was registered by the user on 2026-10-09 (pending organiser review); nothing has been submitted. Both are the user's actions.
+5.5 s, 10 `drive` calls at 2 Hz, with no history before t = 0. Team `lao-siji` was registered by the user on 2026-10-09 (this line said
+"pending organiser review; nothing has been submitted" until 2026-10-20; that was true on 10-09 only, see the ledger below).
+
+**Submissions and candidates (state 2026-10-20; source of truth: research/decisions.md "现状" block).**
+
+| team (Tokyo `~/bin/ap` profile) | track | image tag | date (UTC) | private result | decision |
+|---|---|---|---|---|---|
+| lao-siji | nuPlan | `apy10m10-ab-s0-v1` | 10-11 | mean 0.640, PCS ~755-788 | AUD1 below |
+| lao-siji | nuPlan | `yr10m10-f-s0-v1` | 10-11 | mean 0.800, PCS ~1007-1017 (= go-straight baseline) | 260 |
+| vennai-org (acct3) | PAI | `rsg-l18-s0-acc-gap-v1` (RSG-L18-s0 + g10 + ACC + GAP 0.7,2.7) | 10-17 | mean 0.632, PCS 2092 (2094 on 10-20), 11th team | 356 |
+| ujs-iv | nuPlan | `jtn-l18-s1-native` | 10-19 | mean 0.916, PCS 1325 (1321) | 374 |
+| ujs-iv | nuPlan | `jtn-l18-s1-holdstop3` | 10-19 | mean 0.950, PCS 1463 (1470), 10th team | 374 |
+
+PCS is refitted over all submissions on every board call, so an entry drifts by tens of points. Official quota: 3 per team per UTC
+month, shared by both tracks. Counting the board, October slots left are lao-siji 1, vennai-org 2, ujs-iv 1; all three CLI sessions had
+expired on 10-20, so `limits` was not re-read. Current candidates: nuPlan native **B2 `STANDFMXH-L18-s1`** (decision 391; selection on
+native reads, decision 371). PAI **NTV0-L18-s0 + ACC + GAP** (decisions 366 / 370 / 392). Neither has an image yet. Built but never
+submitted: RSG + stop3 ([results/image_rsg_stop3.md](results/image_rsg_stop3.md)), RSG + leash3
+([results/image_rsg_leash3.md](results/image_rsg_leash3.md)), RSG / V2 nuPlan ([results/tokyo_image_rsg_v2.md](results/tokyo_image_rsg_v2.md)).
+Submitted image records: [results/pai_image.md](results/pai_image.md), [results/image_jtn_s1.md](results/image_jtn_s1.md). Pushing and
+submitting are the user's actions, unless the user hands a named probe to a session. That happened for the PAI probe on 10-18.
 
 **How to run.** [docs/alpasim.md](../../docs/alpasim.md#running-it-on-our-box-measured-2026-10-08-decision-184): `scripts/setup_env.sh`,
 `fetch_data.sh`, `setup_ltf.sh`, then `run.sh` as a pool job.
@@ -82,7 +102,7 @@ collisions and the 11 slow scenes; `--compile` trainers through navtest and clos
 ## Files
 
 
-[archive/](archive/) 4 one-off code · [results/](results/) 295 result files · [figs/](figs/) 75 figures · [plans/](plans/) 14 live plans · [lib/](lib/) 12 library · [scripts/](scripts/) 132 entry points
+[archive/](archive/) 4 one-off code · [results/](results/) 485 result files · [figs/](figs/) 75 figures · [plans/](plans/) 14 live plans · [lib/](lib/) 22 library · [scripts/](scripts/) 146 entry points
 <!-- files:end -->
 
 **CF1: confirmation read on untouched scenes (2026-10-09, decision 216, pre-registered).** YR10m10 minus P2H10 on part012-015 (391 scenes, 6 logs): -0.0069 [-0.0110, -0.0016], refuted; 791 fresh scenes +0.0043 [-0.0031, +0.0148], all 1491 +0.0052; the +0.0153 of decision 213 was a high draw. Exploratory APY10m10-AB minus YR10m10 on the 791 fresh scenes +0.0146 [+0.0006, +0.0266] (marginal candidate; all of it on part012-015, none on OT3's 400); all 1491: P2H10 0.9196, YR10m10 0.9248, APY10m10 0.9335. [results/cf1_confirm.md](results/cf1_confirm.md), plan [plans/2026-10-09-cf1-confirm-prereg.md](plans/2026-10-09-cf1-confirm-prereg.md). Code `scripts/cf1_chain.sh`, `scripts/cf1_report.py`. Amendment 1: AP2H10-AB (input standard, no rows) on the 791 fresh scenes: APY10m10 - AP2H10 +0.0081 [+0.0001, +0.0156] (rows add, marginally), AP2H10 - P2H10 +0.0108 [-0.0042, +0.0267] (791) / +0.0068 (1491), not past the line; the two fresh sets disagree on which part carries the gain; no untouched scenes remain.

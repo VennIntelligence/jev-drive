@@ -1,8 +1,8 @@
 # self_iter: open-loop self-iteration by hard-example mining
 
-status: live
+status: paused
 decisions: 338
-index: round 1 pilot STOP: trainval rows teach standstill holds, launches lag
+index: round 1 pilot STOP: trainval rows teach standstill holds, launches lag; round 2 shelved for this board by the user (2026-10-17 afternoon)
 
 **Question.** Can drawing the rows a policy gets wrong more often (labels from the human log, the right rows still mixed in) fix those errors
 without losing anything else, on navtrain plus the trainval logs on disk?
