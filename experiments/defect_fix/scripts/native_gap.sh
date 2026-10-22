@@ -9,7 +9,7 @@ set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/auto
 O=$DATA_DIR/runs/defect_fix/native_gap; ME=experiments/defect_fix/scripts/native_gap.sh; PY=experiments/defect_fix/scripts/native_gap.py
 TR=$DATA_DIR/envs/op-train/bin/python; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python
 AC=$DATA_DIR/datasets/alpasim_nuplan_arena/v1; KEY=runtime.scene_provider.trajdata; CFTAGS=${CFTAGS:-RSG JTN1}
-declare -A CK=([RSG]=RSG-L18-s0 [JTN1]=JTN-L18-s1 [JTN0]=JTN-L18-s0 [NTV0]=NTV0-L18-s0)
+declare -A CK=([RSG]=RSG-L18-s0 [JTN1]=JTN-L18-s1 [JTN0]=JTN-L18-s0 [NTV0]=NTV0-L18-s0 [B2]=STANDFMXH-L18-s1)
 mkdir -p $O/pool
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner defect-fix --name "$name" --tries ${TRIES:-1} --priority ${PRIO:-12} \

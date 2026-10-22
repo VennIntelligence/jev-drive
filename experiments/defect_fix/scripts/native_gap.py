@@ -46,7 +46,7 @@ AR = DATA / "runs/alpasim_proxy/arena"
 J = DATA / "runs/defect_fix/jt/arena"
 O = DATA / "runs/defect_fix/native_gap"
 READS = {"RSG": AR / "reads/RSG-L18-s0", "JTN1": J / "JTN-L18-s1@off", "JTN0": J / "JTN-L18-s0@off", "NTV0": J / "NTV0-L18-s0@off"}
-CKPT = {"RSG": "RSG-L18-s0", "JTN1": "JTN-L18-s1", "JTN0": "JTN-L18-s0", "NTV0": "NTV0-L18-s0"}
+CKPT = {"RSG": "RSG-L18-s0", "JTN1": "JTN-L18-s1", "JTN0": "JTN-L18-s0", "NTV0": "NTV0-L18-s0", "B2": "STANDFMXH-L18-s1"}
 FRONT, LEAD_LAT, LEAD_MAX = 3.9, 1.8, 40.0        # rear axle -> front bumper (Pacifica, m); lead corridor half width; look-ahead (m)
 T_H = np.array([1.5, 1.0, 0.5, 0.0])               # history keys, s before t0, oldest first
 

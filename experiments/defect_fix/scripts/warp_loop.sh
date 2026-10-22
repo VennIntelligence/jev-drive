@@ -7,6 +7,9 @@
 #   warp_loop.sh sdump         JTN1 static windows re-dumped with every decision (redline_probe's lists) -> cf -> report
 #   warp_loop.sh ident         stage 2 identity: 12 chunk-0 windows, switch off (WARP=none) and on (const), against the stored native read
 #   warp_loop.sh s2            stage 2: the 18 chunks -> $O/arena/JTN-L18-s1@warp-$WARP/c<chunk>/run
+#   warp_loop.sh slot          SLOT-RULE (plans/2026-10-22-slot-rule-prereg.md): B2 native dumps of native_gap's 270 windows -> warp_loop.py
+#                              slot per dump run (B2 new, NTV0 stored) -> slotreport
+#   warp_loop.sh slotident     SH30_SLOT off is the served code: lattice / lattice_gpu of this tree against git HEAD~ of sh30_core (OLD rev)
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 R=$DATA_DIR/runs/defect_fix; O=$R/warp_loop; NG=$R/native_gap; RP=$R/redline_probe; ME=experiments/defect_fix/scripts/warp_loop.sh
 PY=experiments/defect_fix/scripts/warp_loop.py; TR=$DATA_DIR/envs/op-train/bin/python
@@ -59,5 +62,15 @@ sdumpjob)
 ident)
   mkdir -p $O/ident; head -12 $AH/lists/c0.txt > $O/ident/c0.txt
   for W in none const; do sub wl-id-$W --vram 20 --cpu 6 --ram 40 --timeout-h 1 --env CL_HIST_KEY=alpasim-read4 -- env WARP=$W LIST=$O/ident/c0.txt bash $ME aread 0 || exit 1; done ;;
-*) sed -n 2,8p $0; exit 2 ;;
+slot)
+  ids=()
+  for k in 0 1 3 4 5 6; do
+    d=$(TRIES=2 sub sr-dump-B2-s$k --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash experiments/defect_fix/scripts/native_gap.sh dump B2 $k) || exit 1
+    ids+=($(sub sr-slot-B2-c$k --after $d --vram 10 --cpu 6 --ram 24 --timeout-h 2 -- $TR $PY slot --tag B2 --run $NG/dump/B2/c$k/run)) || exit 1
+    ids+=($(sub sr-slot-NTV0-c$k --vram 10 --cpu 6 --ram 24 --timeout-h 2 -- $TR $PY slot --tag NTV0 --run $NG/dump/NTV0/c$k/run)) || exit 1; done
+  r=$(sub sr-report --after $(csv ${ids[@]}) --vram 0.1 --cpu 4 --ram 32 --timeout-h 1 -- .venv/bin/python $PY slotreport) || exit 1
+  echo "$(date '+%F %T') SLOT-RULE: ${#ids[@]} slot jobs ${ids[0]} .. ${ids[-1]}, report $r" | tee -a $O/stages.txt ;;
+slotident)
+  sub sr-ident --vram 4 --cpu 8 --ram 16 --timeout-h 1 -- $TR experiments/defect_fix/scripts/slot_ident.py ${OLD:-HEAD~1} ;;
+*) sed -n 2,10p $0; exit 2 ;;
 esac

@@ -5,6 +5,9 @@ ego row fixed), against the same alternative tracks fed only through the ego row
 
   $TR warp_loop.py cf --tag T --run <dump run dir>   (box, GPU pool job) every dumped decision of that run -> $O/cf/<tag>__<name>.parquet
   .venv/bin/python warp_loop.py report               (box) the tables of results/warp_loop.md -> stdout and $O/report.json
+  $TR warp_loop.py slot --tag T --run <dump run dir> (box, GPU) SLOT-RULE (plans/2026-10-22-slot-rule-prereg.md): the plans with the
+                                                     synthesised slots' source key nearest (served) / fwd / bwd -> $O/slot/<tag>__<name>.parquet
+  .venv/bin/python warp_loop.py slotreport           (box) SLOT-RULE tables and verdict -> stdout and $O/slot_report.json
 
 Per decision (all from the dump, nothing re-simulated):
   keys      decisions are 0.5 s apart and the keyframes are the earlier decisions' t0 frames: key j of decision k = slot 7 of decision
@@ -206,6 +209,138 @@ def cmd_cf(a):
                           gate_n_max=float(df.gate_n.max()), gate_f_max=float(df.gate_f.max()), gate_f_p99=float(df.gate_f.quantile(0.99)))))
 
 
+# ---------------------------------------------------------------- SLOT-RULE (plans/2026-10-22-slot-rule-prereg.md)
+RULES = ("N", "fwd", "bwd")                                       # N = the nearest key, as served and trained (sh30_core SH30_SLOT)
+
+
+def cmd_slot(a):
+    """every dumped decision of a run -> $O/slot/<tag>__<name>.parquet: the plans of the dumped frames (F) and of the slots rebuilt along the
+    native track with each source-key rule (lattice_gpu rule= "" / fwd / bwd); keys / history / velocities as cmd_cf."""
+    import pandas as pd
+    import torch
+    sys.path[:0] = [str(REPO / "experiments/alpasim/lib"), str(REPO / "lib")]
+    import sh30_core as SC
+    from jevdrive import navsim_zs as Z
+    from jevdrive import op_interp as I
+    run = Path(a.run)
+    name = "_".join(run.parts[-3:-1]) if run.name == "run" else run.name
+    core = SC.Core(NG.CKPT[a.tag], "cuda", "backwarp")
+
+    def plan(cur, valid, ego, rmem, cam_t):
+        prev = np.concatenate([np.zeros((1,) + cur.shape[1:], np.uint8), cur[:-1]])
+        pp, cu = (torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
+        H = core.model.net.run_batched(core.A.vision_feeds(pp, cu), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *core.A.H_SHAPE)
+        r_ = np.r_[ego, np.asarray(rmem, np.float32)] if core.rm else ego
+        o = core.model(H, torch.from_numpy(r_[None].astype(np.float32)).to(core.dev), torch.tensor([[1.0, 0.0]], device=core.dev))
+        mu = (o[0] if isinstance(o, tuple) else o).float()[0, core.pi].reshape(33, 15).cpu().numpy()
+        return I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")[:, :3]
+
+    out, skip = [], 0
+    for sess, (n, sc, recs) in sorted(sessions(run / "driver-logs/drive.jsonl").items(), key=lambda x: x[1][0])[:a.limit or None]:
+        d = {}
+        for k in sorted(recs):
+            f = run / "driver-logs/dump" / f"s{n:02d}_k{k}.npz"
+            if f.exists():
+                z = np.load(f)
+                d[k] = {x: z[x] for x in ("cur", "valid", "poses", "ego", "cam_t")}
+        vmin = np.inf
+        for k in sorted(d):
+            r, z = recs[k], d[k]
+            v = float(np.linalg.norm(z["ego"][4:6].astype(np.float64) * 10.0))
+            prior_stop, vmin = vmin < 0.5, min(vmin, v)
+            m = min(k + 1, 4)
+            if any((k - j) not in d for j in range(m)) or any(recs[k - j]["t0"] != r["t0"] - 500000 * j for j in range(m)) or r["n_keys"] != m:
+                skip += 1
+                continue
+            e = 4 - m
+            K = SC.stack_keys([d[k - m + 1 + j]["cur"][7] for j in range(m)])
+            ego = z["ego"].astype(np.float32)
+            P = ego[8:20].reshape(4, 3).astype(np.float64) * [10.0, 10.0, 1.0]
+            V = np.zeros((4, 2))
+            for j in range(e, 4):
+                V[j] = d[k - 3 + j]["ego"][4:6].astype(np.float64) * 10.0
+            V[:e] = V[e]
+            cam_t, tr = z["cam_t"].astype(np.float64), I.track_navsim(P, V)
+            rec = dict(tag=a.tag, src=name, id=sc, k=k, t0=int(r["t0"]), v=v, prior_stop=prior_stop, hist_yaw=float(P[0, 2]))
+            with torch.no_grad():
+                res = {"F": plan(z["cur"], z["valid"], ego, r.get("rmem"), cam_t)}
+                for q in RULES:
+                    cur, valid = SC.lattice_gpu(K, e, tr, cam_t, "backwarp", core.dev, rule="" if q == "N" else q)
+                    cur = cur.cpu().numpy()
+                    if q == "N":
+                        rec["byte_diff"] = int((cur != z["cur"]).sum()) if np.array_equal(valid, z["valid"]) else -1
+                    res[q] = plan(cur, valid, ego, r.get("rmem"), cam_t)
+            for q, p in res.items():
+                rec[f"P_{q}"] = np.asarray(p, np.float32).ravel().tolist()
+                rec[f"gate_{q}"] = float(np.abs(p[:, :2] - z["poses"][:, :2]).max())
+            out.append(rec)
+    (O / "slot").mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(out)
+    df.to_parquet(a.out or O / "slot" / f"{a.tag}__{name}.parquet")
+    print(json.dumps(dict(tag=a.tag, run=str(run), decisions=len(df), skipped=skip, bytes_equal=int((df.byte_diff == 0).sum()),
+                          gate_N_p99=float(df.gate_N.quantile(0.99)), gate_N_max=float(df.gate_N.max()), gate_F_max=float(df.gate_F.max()))))
+
+
+def slot_metrics(D):
+    """D (slot parquet rows) -> per decision: class, arcs, plan speeds at 1 / 2 / 4 s, ADE / lateral ADE of each rule against N."""
+    P = {q: np.stack([np.asarray(x).reshape(8, 3) for x in D[f"P_{q}"]]) for q in ("F",) + RULES}
+    M = D[["tag", "src", "id", "k", "v"]].copy()
+    yaw4 = np.abs(P["N"][:, -1, 2])
+    M["cls"] = np.select([D.v < 0.5, (D.v < 6) & D.prior_stop, (D.v >= 2) & ((yaw4 >= np.radians(15)) | (np.abs(D.hist_yaw) >= np.radians(10))),
+                          D.v >= 2], ["stopped", "launching", "turning", "cruising"], "other")
+    nrm = np.stack([-np.sin(P["N"][..., 2]), np.cos(P["N"][..., 2])], -1)
+    for q, p in P.items():
+        xy = np.concatenate([np.zeros((len(p), 1, 2)), p[..., :2]], 1)
+        step = np.linalg.norm(np.diff(xy, axis=1), axis=2)          # (n, 8): 0 -> 0.5, ..., 3.5 -> 4 s
+        M[f"A_{q}"] = step.sum(1)
+        for t, i in ((1, 1), (2, 3), (4, 7)):
+            M[f"v{t}_{q}"] = step[:, i] / 0.5
+        if q != "N":
+            dd = p[..., :2] - P["N"][..., :2]
+            M[f"ade_{q}"] = np.linalg.norm(dd, axis=2).mean(1)
+            M[f"lat_{q}"] = np.abs((dd * nrm).sum(2)).mean(1)
+    return M
+
+
+def cmd_slotreport(a):
+    import pandas as pd
+    D = pd.concat([pd.read_parquet(f) for f in sorted(glob.glob(str(O / "slot/*.parquet")))], ignore_index=True)
+    J = {"gate": {t: dict(n=len(g), bytes_equal=float((g.byte_diff == 0).mean()), N_p99=float(g.gate_N.quantile(0.99)), N_max=float(g.gate_N.max()),
+                          F_p99=float(g.gate_F.quantile(0.99)), F_max=float(g.gate_F.max())) for t, g in D.groupby("tag")}}
+    J["gate_pass"] = {t: bool(x["N_p99"] <= 0.06 and x["N_max"] <= 0.15 and x["F_p99"] <= 0.06 and x["F_max"] <= 0.15) for t, x in J["gate"].items()}
+    print("gate", json.dumps(J["gate"], indent=1), J["gate_pass"])
+    M = slot_metrics(D[D.k >= 3].reset_index(drop=True))
+    rows = []
+    for tag, g0 in M.groupby("tag"):
+        for cls, g in [("all", g0)] + [(c, g0[g0.cls == c]) for c in ("stopped", "launching", "turning", "cruising", "other")]:
+            if len(g) < MINN:
+                continue
+            ids = g.id.values
+            r = dict(tag=tag, cls=cls, n=len(g), windows=g.id.nunique(), A_N=float(g.A_N.median()), noise_ade03=float((g.ade_F > 0.3).mean()))
+            for q in ("fwd", "bwd"):
+                aq, an = g[f"A_{q}"].values, g.A_N.values
+                r[f"R_{q}"] = boot(lambda i: aq[i].sum() / an[i].sum(), ids)
+                r[f"dA_{q}_med"] = float(np.median(aq - an))
+                for t in (1, 2, 4):
+                    r[f"dv{t}_{q}"] = float((g[f"v{t}_{q}"] - g[f"v{t}_N"]).mean())
+                r[f"ade_{q}_med"], r[f"ade_{q}_p90"] = float(g[f"ade_{q}"].median()), float(g[f"ade_{q}"].quantile(0.9))
+                r[f"lat_{q}_med"], r[f"lat_{q}_p90"] = float(g[f"lat_{q}"].median()), float(g[f"lat_{q}"].quantile(0.9))
+                s03 = (g[f"ade_{q}"] > 0.3).values.astype(float)
+                r[f"S03_{q}"] = boot(lambda i: s03[i].mean(), ids)
+            rows.append(r)
+    J["rows"] = rows
+    J["verdict"] = {}
+    for tag in M.tag.unique():
+        cr = next((r for r in rows if r["tag"] == tag and r["cls"] == "cruising"), None)
+        al = next(r for r in rows if r["tag"] == tag and r["cls"] == "all")
+        dev, s = abs(cr["R_fwd"][0] - 1) if cr else np.nan, al["S03_fwd"][0]
+        J["verdict"][tag] = "matters" if dev >= 0.03 or s >= 0.10 else ("does not matter" if dev < 0.015 and s < 0.05 else "small")
+    f3 = lambda t: f"{t[0]:.3f} [{t[1]:.3f}, {t[2]:.3f}]" if isinstance(t, tuple) else (f"{t:.3f}" if isinstance(t, float) else t)  # noqa: E731
+    print(pd.DataFrame([{k: f3(v) for k, v in r.items()} for r in rows]).T.to_string())
+    print("verdict", J["verdict"])
+    json.dump(J, open(O / "slot_report.json", "w"), indent=1, default=str)
+
+
 # ---------------------------------------------------------------- report
 def boot(fn, groups, B=2000, seed=0):
     """window-clustered bootstrap of fn(index array) -> (point, lo, hi)"""
@@ -365,5 +500,9 @@ if __name__ == "__main__":
     p = sp.add_parser("s2x")
     p.add_argument("--warp", default="const"), p.add_argument("--workers", type=int, default=32)
     p = sp.add_parser("s2report")
+    p = sp.add_parser("slot")
+    p.add_argument("--tag", required=True), p.add_argument("--run", required=True), p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--out", default="")
+    sp.add_parser("slotreport")
     a = ap.parse_args()
-    dict(cf=cmd_cf, report=cmd_report, s2x=cmd_s2x, s2report=cmd_s2report)[a.cmd](a)
+    dict(cf=cmd_cf, report=cmd_report, s2x=cmd_s2x, s2report=cmd_s2report, slot=cmd_slot, slotreport=cmd_slotreport)[a.cmd](a)

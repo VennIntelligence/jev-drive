@@ -143,6 +143,8 @@ def damp_history(P, V, gain: float):
 
 
 WARP = os.environ.get("SH30_WARP", "")                # DIAGNOSTIC only (WARP-LOOP stage 2, experiments/defect_fix): "" = off, as served
+SLOT = os.environ.get("SH30_SLOT", "")                # DIAGNOSTIC only (SLOT-RULE, experiments/defect_fix/plans/2026-10-22-slot-rule-prereg.md):
+assert SLOT in ("", "fwd", "bwd"), SLOT               # the synthesised slots' source key, "" = the nearest key, as served and trained
 
 
 def warp_track(P, V, mode: str):
@@ -169,25 +171,42 @@ def warp_track(P, V, mode: str):
 _POOL = None
 
 
-def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str):
+def slot_src(t: float, rule: str) -> int:
+    """DIAGNOSTIC rule "fwd" / "bwd": the source keyframe of a synthesised slot at t (between two keys) = the newest key at or before t /
+    the oldest key at or after t (op_interp.neighbours' i0 / i1). The served rule is synth_cpu's nearest key (lattice with rule "")."""
+    i0, i1, _ = I.neighbours(t)
+    return {"fwd": i0, "bwd": i1}[rule]
+
+
+def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str, rule: str | None = None):
     """keys (4, 2, 6, 128, 256) at op_interp.T_KEY, real from index e on -> the slot frames (8, 2, 6, 128, 256) and their validity.
-    One thread per warped slot (27 ms each on one core, numpy + cv2 outside the GIL); the frames are those of a serial synth_cpu call."""
+    One thread per warped slot (27 ms each on one core, numpy + cv2 outside the GIL); the frames are those of a serial synth_cpu call.
+    rule: the source key of the synthesised slots, None = SLOT ("" = the nearest key, as served and trained; "fwd" / "bwd": slot_src)."""
     global _POOL
     _POOL = _POOL or ThreadPoolExecutor(len(SLOT_T))
+    rule = SLOT if rule is None else rule
     real = SLOT_T >= I.T_KEY[e] - 1e-9
     valid = real | (cold == "backwarp")
-    one = lambda j: (I.synth_cpu(keys, "warp", SLOT_T[j:j + 1], track, cam_t)[0] if real[j] else  # noqa: E731
-                     I.warp_frame(keys[e], cam_t, track(SLOT_T[j]), track(I.T_KEY[e])))
+
+    def one(j):
+        t = SLOT_T[j]
+        if not real[j]:
+            return I.warp_frame(keys[e], cam_t, track(t), track(I.T_KEY[e]))
+        if not rule or np.isclose(I.T_KEY, t).any():
+            return I.synth_cpu(keys, "warp", SLOT_T[j:j + 1], track, cam_t)[0]
+        i = slot_src(t, rule)
+        return I.warp_frame(keys[i], cam_t, track(t), track(I.T_KEY[i]))
     cur = np.zeros((len(SLOT_T),) + FRAME, np.uint8)
     idx = np.flatnonzero(valid)
     cur[idx] = list(_POOL.map(one, idx))
     return cur, valid
 
 
-def lattice_gpu(keys, e: int, track, cam_t, cold: str, dev):
+def lattice_gpu(keys, e: int, track, cam_t, cold: str, dev, rule: str | None = None):
     """lattice with the slot warps as one batched GPU call (op_interp.warp_gpu) -> uint8 tensor (8, 2, 6, 128, 256) on dev, validity.
     keys: array or tensor. Same source keyframe and poses per slot as lattice; pixel agreement: results/lat1_frame_synthesis.md."""
     import torch
+    rule = SLOT if rule is None else rule
     real = SLOT_T >= I.T_KEY[e] - 1e-9
     valid = real | (cold == "backwarp")
     K = torch.as_tensor(keys, device=dev)
@@ -199,7 +218,7 @@ def lattice_gpu(keys, e: int, track, cam_t, cold: str, dev):
             cur[j] = K[k[0]]
             continue
         i0, i1, s = I.neighbours(SLOT_T[j]) if real[j] else (e, e, 0.0)
-        slot.append(j), src.append(i0 if s <= 0.5 else i1)
+        slot.append(j), src.append((i0 if s <= 0.5 else i1) if not rule or not real[j] else slot_src(SLOT_T[j], rule))
     if slot:
         cur[slot] = I.warp_gpu(K[src], cam_t, np.stack([track(SLOT_T[j]) for j in slot]), np.stack([track(I.T_KEY[i]) for i in src]))
     return cur, valid
