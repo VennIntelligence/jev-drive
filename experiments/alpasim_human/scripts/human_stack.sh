@@ -15,7 +15,7 @@
 #   HUMAN_PREFIX (hum: container / compose names; a probe beside the user's stack uses another), HUMAN_JIT_DIR, HUMAN_TRACK_GATE (1: the
 #   plan goes through track_ref's gate, lib/human_driver.py; 0 = the raw plan), HUMAN_BASEPORT (6700: renderer,
 #   physics, controller), HUMAN_DRV_PORT (6790), HUMAN_START (click | throttle | none), HUMAN_WHEEL_PORT (47800; 47801 = fake_wheel.py),
-#   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_MODEL_REALTIME (0: model mode's sessions unpaced; 1.0 = paced as the human), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE,
+#   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE,
 #   HUMAN_FG (0; 1 = run in the foreground after the checks instead of tmux human:alpa-drive: scripts/human_loop.py),
 #   HUMAN_CONTROL (the desktop panel's control.json: pause; lib/human_driver.py),
 #   HUMAN_GT (1: the runtime sends the recorded log ego trajectory to the driver every step, send_recording_ground_truth, for the
@@ -125,7 +125,7 @@ docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
   -e "HUMAN_N_SCENES=$([[ $SERVE == 1 ]] && echo 0 || echo "$n")" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
-  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_MODEL_REALTIME=${HUMAN_MODEL_REALTIME:-0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" -e "HUMAN_CONTROL=${HUMAN_CONTROL:-}" \
+  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" -e "HUMAN_CONTROL=${HUMAN_CONTROL:-}" \
   -e "HUMAN_HARMONIZER=$HARM" -e "HUMAN_TRACK_GATE=${HUMAN_TRACK_GATE:-1}" -e "HUMAN_FAST_ABORT=${HUMAN_FAST_ABORT:-$SERVE}" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)
