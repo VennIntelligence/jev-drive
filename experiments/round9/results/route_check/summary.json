@@ -1,0 +1,19 @@
+{
+ "mech": {
+  "R6DAG-s0": {
+   "on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge": 5,
+   "route in another lane than the human; ego follows the route": 3,
+   "route turn not taken": 2,
+   "route in another lane; human merges into it, ego stays": 1,
+   "human leaves the route's lane; ego stays on the route": 1,
+   "policy drift, route fine": 1,
+   "command flip (old rule L/R on a non-turn), route fine": 1
+  },
+  "R6DAG-s1": {
+   "on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge": 4,
+   "route in another lane than the human; ego follows the route": 3,
+   "route turn not taken": 2,
+   "route in another lane; human merges into it, ego stays": 1
+  }
+ }
+}

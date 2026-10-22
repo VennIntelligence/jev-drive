@@ -1,0 +1,25 @@
+read,scene,fclass_primary,v_leave,v_lu,t_leave,flips_lu,cmdLR_lu,cmd_to_route_lu,cmdH_LR_lu,dth40_lu,beyond_lu,arc4_lu,rh_start,rh_end,rh_absmax,y_rt0_end,d_log_end,d_ego_end,latcov_lu,d_rt20_lu,mech
+R6DAG-s0,0e05cb0c,cor_drift,31.799,32.117,-8.900,0,1.000,1.000,0.000,0.091,1.000,127.669,-3.840,0.390,3.856,-3.627,4.017,0.085,3.369,-3.546,"route in another lane; human merges into it, ego stays"
+R6DAG-s0,26004ca8,cor_lane_change,22.705,26.331,-2.600,1,0.946,0.946,0.000,9.402,1.000,93.408,-3.117,-3.107,3.227,0.856,-3.963,-0.810,1.000,-3.566,route in another lane than the human; ego follows the route
+R6DAG-s0,302c5c99,cor_straight_at_turn,4.811,4.347,-1.200,0,1.000,1.000,0.000,0.564,0.196,17.237,10.224,10.440,10.808,,-4.844,0.726,10.648,0.002,route turn not taken
+R6DAG-s0,404cc92f,cor_drift,16.557,19.414,-6.100,0,0.000,,0.000,0.237,0.706,78.467,-0.654,-3.452,3.452,0.531,-3.982,-0.541,0.599,0.002,human leaves the route's lane; ego stays on the route
+R6DAG-s0,4cb05d65,cor_drift,38.527,38.546,-3.400,1,0.902,0.902,0.000,0.373,1.000,154.108,3.585,3.329,3.585,-0.794,4.124,0.796,-2.726,3.609,route in another lane than the human; ego follows the route
+R6DAG-s0,4f7cb072,off_straight,20.544,22.493,0.000,0,1.000,1.000,0.000,5.471,0.862,84.663,3.316,3.388,3.388,4.598,-1.210,-1.015,-2.610,3.627,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s0,596af0c7,off_straight,19.184,23.187,-5.000,2,0.118,,0.000,9.096,0.922,80.468,-0.093,0.421,0.937,3.680,-3.259,-0.248,-0.510,0.032,"policy drift, route fine"
+R6DAG-s0,7750265d,off_straight,10.905,14.228,0.000,2,0.314,,0.000,11.681,0.000,44.188,-0.078,-0.582,1.362,-0.901,0.319,0.886,-0.103,-0.001,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s0,7dc59d0d,cor_drift,28.278,28.008,-9.400,1,0.804,0.804,0.000,0.265,1.000,112.047,3.233,3.562,3.562,-0.452,4.014,0.449,-2.738,3.604,route in another lane than the human; ego follows the route
+R6DAG-s0,a5599793,off_junc_straight,2.408,2.523,0.000,1,0.353,,0.000,,0.000,9.287,,,,,0.951,1.202,,0.018,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s0,a68ad579,off_junc_straight,10.635,12.925,-1.400,2,0.686,,0.275,16.157,0.000,44.345,0.486,-0.063,0.957,0.900,-0.963,-0.920,0.078,-0.014,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s0,baabc57d,off_straight,9.038,6.608,-0.600,1,0.863,,0.000,15.352,0.000,24.150,-1.239,-1.297,1.297,0.220,-1.517,-0.178,0.654,0.020,"command flip (old rule L/R on a non-turn), route fine"
+R6DAG-s0,e1c6ae9f,off_junc_straight,13.713,15.527,0.000,2,0.529,,0.000,5.606,0.000,60.047,-0.919,-0.222,0.919,0.550,-0.773,-0.432,0.809,0.055,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s0,e5e47fd2,cor_straight_at_turn,8.494,9.801,-1.400,1,0.620,,0.600,112.800,0.000,34.203,0.270,-0.479,0.479,3.689,-4.168,0.657,-1.281,-0.038,route turn not taken
+R6DAG-s1,0e05cb0c,cor_drift,31.780,32.036,-9.300,0,1.000,1.000,0.000,0.094,1.000,127.286,-3.831,0.405,3.855,-3.606,4.010,0.051,3.294,-3.546,"route in another lane; human merges into it, ego stays"
+R6DAG-s1,26004ca8,cor_lane_change,22.544,26.226,-2.900,1,0.947,0.947,0.000,9.248,1.000,93.356,-3.117,-3.186,3.226,0.816,-4.001,-0.764,1.109,-3.566,route in another lane than the human; ego follows the route
+R6DAG-s1,302c5c99,cor_straight_at_turn,4.502,4.329,-1.300,0,1.000,1.000,0.000,0.566,0.235,17.237,10.224,10.415,10.778,,-4.524,0.568,10.820,0.002,route turn not taken
+R6DAG-s1,4cb05d65,cor_drift,38.527,38.546,-3.400,1,0.902,0.902,0.000,0.373,1.000,154.108,3.585,3.329,3.585,-0.807,4.136,0.808,-2.687,3.609,route in another lane than the human; ego follows the route
+R6DAG-s1,4f7cb072,off_straight,20.793,22.546,-0.100,0,1.000,1.000,0.000,5.471,0.893,84.624,3.316,3.375,3.375,4.711,-1.336,-1.140,-2.669,3.628,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s1,7dc59d0d,cor_drift,29.303,28.288,-8.700,1,0.804,0.804,0.000,0.236,1.000,114.685,3.233,3.497,3.497,-0.515,4.012,0.515,-2.854,3.604,route in another lane than the human; ego follows the route
+R6DAG-s1,a5599793,off_junc_straight,2.865,2.870,0.000,1,0.255,,0.000,,0.000,10.530,,,,,0.972,1.223,,0.019,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s1,a68ad579,off_junc_straight,10.753,12.859,-1.500,2,0.686,,0.294,17.033,0.000,44.187,0.489,0.040,0.951,0.893,-0.853,-0.905,0.091,-0.013,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s1,b661da67,off_straight,3.826,2.911,0.000,0,0.000,,0.000,5.024,0.000,12.232,0.125,-0.444,0.538,-0.433,-0.011,0.409,0.389,-0.044,on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge
+R6DAG-s1,e5e47fd2,cor_straight_at_turn,8.187,9.925,-1.300,1,0.647,,0.627,112.829,0.000,33.889,0.271,-0.538,0.538,3.449,-3.987,0.998,-1.175,-0.044,route turn not taken

@@ -11,6 +11,7 @@ index: draft only; S adaptive pressure + speed-scaled route window, no reads
 **Next.** S-MIX offline value and route CPU checks (dispatched 10-22), then pre-register the S joint arm.
 
 **Read more.** Plan (Chinese, unregistered): [plans/2026-10-22-round9-draft.md](plans/2026-10-22-round9-draft.md).
+Route-branch CPU check (2026-10-22): [results/route_check/README.md](results/route_check/README.md). PBT fitness noise (CPU, from stored 281 reads): [results/fitness_noise/README.md](results/fitness_noise/README.md).
 
 <!-- files:begin -->
 ## Files

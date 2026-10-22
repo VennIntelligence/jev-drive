@@ -339,6 +339,205 @@ def cmd_band(a):
     print(json.dumps(dict(ckpt=a.ckpt, rows=len(df), sec=round(time.time() - t0, 1), horizon=int(base.shape[1]))), flush=True)
 
 
+# ---------------------------------------------------------------- report (pandas; --src = the dir holding dec / ev / meta / band files)
+CMD = np.array(["L", "S", "R", "U"])
+BINS = (0.5, 5, 10, 15, 20, 25, 45)
+
+
+def md(df, fmt="{:.2f}"):
+    cols = list(df.columns)
+    L = ["| " + " | ".join(map(str, cols)) + " |", "|" + "|".join(":--" if df[c].dtype == object else "--:" for c in cols) + "|"]
+    for _, r in df.iterrows():
+        L.append("| " + " | ".join(fmt.format(r[c]) if isinstance(r[c], (float, np.floating)) else str(r[c]) for c in cols) + " |")
+    return "\n".join(L)
+
+
+def sbin(v):
+    import pandas as pd
+    return pd.cut(v, BINS, right=False, labels=[f"{a}-{b}" for a, b in zip(BINS[:-1], BINS[1:])])
+
+
+def ev_summary(g, te, primary):
+    """decisions g of one read on one scene (dec + ev columns), event time te (t0 units) -> window summary with the mechanism label.
+    rh = the route's lateral offset from the human log at the ego's station (y_rt0 + d_log, + left); leave = the first decision in the last
+    15 s with |d_log| > 1 m (the ego leaves the human's path), else the event; lead-up = the 5 s before leave."""
+    w = g[(g.t0 >= te - 15e6) & (g.t0 <= te)]
+    if not len(w):
+        return None
+    rh = (w.y_rt0 + w.d_log).to_numpy()
+    off = np.flatnonzero(np.abs(w.d_log.to_numpy()) > 1.0)
+    tl = int(w.t0.iloc[off[0]]) if len(off) else te
+    lu = w[(w.t0 >= tl - PRE * 1e6) & (w.t0 <= tl)]
+    fin = np.isfinite(rh)
+    rh0 = float(rh[fin][0]) if fin.any() else np.nan
+    rh1 = float(rh[fin][-1]) if fin.any() else np.nan
+    last = w.iloc[-1]
+    side = float(np.sign(rh0)) if np.isfinite(rh0) and abs(rh0) >= 2.5 else 0.0
+    cmd_side = np.where(lu.cmd == 0, 1.0, np.where(lu.cmd == 2, -1.0, 0.0))
+    e = dict(fclass_primary=primary, v_leave=float(lu.v0.iloc[-1]) if len(lu) else np.nan, v_lu=float(lu.v0.mean()),
+             t_leave=(tl - te) / 1e6, flips_lu=int((np.diff(lu.cmd.to_numpy()) != 0).sum()),
+             cmdLR_lu=float((lu.cmd.isin([0, 2])).mean()), cmd_to_route_lu=float((cmd_side == side).mean()) if side else np.nan,
+             cmdH_LR_lu=float((lu.cmd_h.isin([0, 2])).mean()), dth40_lu=float(lu.dth40.abs().median()),
+             beyond_lu=float((lu.arc4 > lu["cov"]).mean()), arc4_lu=float(lu.arc4.median()),
+             rh_start=rh0, rh_end=rh1, rh_absmax=float(np.nanmax(np.abs(rh))) if fin.any() else np.nan,
+             y_rt0_end=float(last.y_rt0), d_log_end=float(last.d_log), d_ego_end=float(last.m_d_ego),
+             latcov_lu=float(lu.latcov.median()), d_rt20_lu=float(lu.m_d_rt20.median()))
+    near_route = np.isfinite(e["y_rt0_end"]) and abs(e["y_rt0_end"]) < 1.5
+    if primary == "cor_straight_at_turn":
+        m = "route turn not taken"
+    elif np.isfinite(rh0) and abs(rh0) >= 2.5 and near_route and abs(e["d_log_end"]) > 2.5:
+        m = "route in another lane than the human; ego follows the route"
+    elif np.isfinite(rh0) and abs(rh0) >= 2.5 and np.isfinite(rh1) and abs(rh1) < 1.5:
+        m = "route in another lane; human merges into it, ego stays"
+    elif np.isfinite(rh0) and abs(rh0) < 1.5 and np.isfinite(rh1) and abs(rh1) >= 2.5 and near_route:
+        m = "human leaves the route's lane; ego stays on the route"
+    elif np.isfinite(e["d_log_end"]) and abs(e["d_log_end"]) <= 1.5:
+        m = "on the route and the human's path (<= 1.5 m); offroad at a junction / lane edge"
+    elif e["cmdLR_lu"] > 0.2 and e["cmdH_LR_lu"] < 0.2:
+        m = "command flip (old rule L/R on a non-turn), route fine"
+    else:
+        m = "policy drift, route fine"
+    e["mech"] = m
+    return e
+
+
+def cmd_report(a):
+    import pandas as pd
+    src = Path(a.src) if a.src else O
+    D = pd.read_parquet(src / "dec.parquet")
+    EV = pd.read_parquet(src / "ev.parquet")
+    meta = pickle.load(open(src / "meta.pkl", "rb"))
+    RES.mkdir(parents=True, exist_ok=True)
+    X = D.merge(EV, on=["read", "scene", "t0"], how="inner", validate="1:1")
+    FA = {k: meta[k]["facts"].set_index("scene") for k in READS}
+    out, L = {}, []
+
+    # ---------------- A: events
+    evrows, ctr = [], []
+    for k in ("R6DAG-s0", "R6DAG-s1"):
+        F = FA[k]
+        for sc in sorted(X.scene.unique()):
+            if sc not in F.index or F.primary[sc] not in TARGET or not np.isfinite(F.t_ev_s[sc]) or sc not in meta[k]["c0"]:
+                continue
+            te = meta[k]["c0"][sc] + float(F.t_ev_s[sc]) * 1e6
+            g = X[(X.read == k) & (X.scene == sc)].sort_values("t0")
+            e = ev_summary(g, te, F.primary[sc])
+            if e is None:
+                continue
+            evrows.append(dict(read=k, scene=sc[7:15], **e))
+            w = g[(g.t0 >= te - 15e6) & (g.t0 <= te)]
+            st = w.st_log.dropna()
+            for o in READS:
+                Fo = FA[o]
+                h = X[(X.read == o) & (X.scene == sc)].sort_values("t0")
+                if len(st):
+                    h = h[(h.st_log >= st.min() - 5) & (h.st_log <= st.max())]
+                if not len(h):
+                    continue
+                rh = (h.y_rt0 + h.d_log)
+                side = np.sign(evrows[-1]["rh_start"]) if abs(evrows[-1]["rh_start"]) >= 2.5 else 0
+                cs = np.where(h.cmd == 0, 1.0, np.where(h.cmd == 2, -1.0, 0.0))
+                ctr.append(dict(event_read=k, scene=sc[7:15], read=o, score=float(Fo.score.get(sc, np.nan)), primary=Fo.primary.get(sc, ""),
+                                n=len(h), v=float(h.v0.mean()), cmdLR=float(h.cmd.isin([0, 2]).mean()),
+                                cmd_to_route=float((cs == side).mean()) if side else np.nan,
+                                beyond=float((h.arc4 > h["cov"]).mean()), latcov=float(h.latcov.median()),
+                                max_abs_d_log=float(h.d_log.abs().max()), end_y_rt0=float(h.y_rt0.iloc[-1]), end_d_log=float(h.d_log.iloc[-1]),
+                                followed=bool(abs(h.y_rt0.iloc[-1]) < 1.5 and abs(h.d_log.iloc[-1]) > 2.5)))
+    E, C = pd.DataFrame(evrows), pd.DataFrame(ctr)
+    E.to_csv(RES / "events.csv", index=False, float_format="%.3f")
+    C.to_csv(RES / "events_contrast.csv", index=False, float_format="%.3f")
+    out["mech"] = {k: E[E.read == k].mech.value_counts().to_dict() for k in ("R6DAG-s0", "R6DAG-s1")}
+    cols = ["read", "scene", "fclass_primary", "t_leave", "v_leave", "flips_lu", "cmdLR_lu", "cmd_to_route_lu", "cmdH_LR_lu", "dth40_lu",
+            "arc4_lu", "beyond_lu", "rh_start", "rh_end", "y_rt0_end", "d_log_end", "latcov_lu", "mech"]
+    L += ["## A. The target events (R6DAG-L18 s0 / s1)", "", md(E[cols]), ""]
+    piv = C.pivot_table(index=["event_read", "scene"], columns="read", values="score").reset_index()
+    L += ["Scores of every read on the same scenes:", "", md(piv), ""]
+    cc = C[C.read != C.event_read].pivot_table(index=["event_read", "scene"], columns="read", values="cmd_to_route").reset_index()
+    fo = C[C.read != C.event_read].pivot_table(index=["event_read", "scene"], columns="read", values="followed", aggfunc="max").reset_index()
+    L += ["Ego ends on the route and > 2.5 m from the human (followed the route into the other lane):", "", md(fo), ""]
+    L += ["Share of decisions whose stored command points to the route's side (route in another lane only), same human-log stretch:", "",
+          md(cc), ""]
+
+    # ---------------- B: population
+    rows = []
+    for k in READS:
+        d = D[(D.read == k) & (D.v0 >= 0.5)].copy()
+        d["bin"] = sbin(d.v0)
+        for b, x in d.groupby("bin", observed=True):
+            rows.append(dict(read=k, speed=str(b), n=len(x), arc4_p50=x.arc4.median(), arc4_p90=x.arc4.quantile(.9), cov_p50=x["cov"].median(),
+                             cov_lt72=100 * (x["cov"] < 72).mean(), no_slot_at_ego=100 * x.y_rt0.isna().mean(),
+                             beyond=100 * (x.arc4 > x["cov"]).mean(), beyond10=100 * (x.arc4 > x["cov"] + 10).mean(),
+                             beyond_m_p50=(x.arc4 - x["cov"]).clip(lower=0).median(), t_exit_p50=x.t_exit.replace(np.inf, np.nan).median(),
+                             arc4_gt72=100 * (x.arc4 > 72).mean()))
+    P = pd.DataFrame(rows)
+    P.to_csv(RES / "pop_speed.csv", index=False, float_format="%.3f")
+    L += ["## B. Plan 4 s arc vs route coverage, every decision (v >= 0.5 m/s)", "", md(P[P.read.str.startswith("R6DAG")]), ""]
+    rows = []
+    for k in READS:
+        d = D[(D.read == k) & (D.v0 >= 0.5)]
+        for nm, m in (("straight (|dth40| < 3), v >= 15", (d.dth40.abs() < 3) & (d.v0 >= 15)),
+                      ("straight, 10 <= v < 15", (d.dth40.abs() < 3) & (d.v0 >= 10) & (d.v0 < 15)),
+                      ("straight, v < 10", (d.dth40.abs() < 3) & (d.v0 < 10)),
+                      ("gentle (3-15), v >= 15", (d.dth40.abs().between(3, 15)) & (d.v0 >= 15)),
+                      ("no near slot (route gap at the ego)", d.dth40.isna())):
+            x = d[m]
+            rows.append(dict(read=k, segment=nm, n=len(x), cmd_L=100 * (x.cmd == 0).mean(), cmd_R=100 * (x.cmd == 2).mean(),
+                             cmdH_L=100 * (x.cmd_h == 0).mean(), cmdH_R=100 * (x.cmd_h == 2).mean(),
+                             flips_per_min=float(np.nan)))
+    Q = pd.DataFrame(rows)
+    # command flips per minute of straight high-speed driving (stored command), per read
+    for i, r in Q.iterrows():
+        d = D[D.read == r.read].sort_values(["scene", "t0"])
+        ch = (d.cmd.diff().fillna(0) != 0) & (d.scene == d.scene.shift())
+        m = {"straight (|dth40| < 3), v >= 15": (d.dth40.abs() < 3) & (d.v0 >= 15)}.get(r.segment)
+        if m is not None:
+            Q.loc[i, "flips_per_min"] = float(ch[m].sum() / (m.sum() / 600.0))
+    Q.to_csv(RES / "pop_cmd.csv", index=False, float_format="%.3f")
+    L += ["Command one-hot by segment (stored = what the model was fed; cmdH = the heading rule on the same memory; R7J was fed cmdH):", "",
+          md(Q), ""]
+    lat = []
+    for k in READS:
+        d = D[(D.read == k) & (D.v0 >= 0.5)].copy()
+        d["bin"] = sbin(d.v0)
+        d = d[d.dth40.abs() < 3]
+        for b, x in d.groupby("bin", observed=True):
+            lat.append(dict(read=k, speed=str(b), n=len(x), latcov_p50=x.latcov.median(), abs_latcov_p90=x.latcov.abs().quantile(.9),
+                            abs_lat4_p90_within=x.lat4.abs().quantile(.9)))
+        d = D[(D.read == k) & (D.v0 >= 0.5) & (D.dth40.abs() < 3)].copy()
+        d["bin"] = sbin(d.v0)
+        for b, x in d.groupby("bin", observed=True):
+            on = x[x.y_rt0.abs() < 1.0]
+            lat[-len(d.bin.cat.categories) + list(d.bin.cat.categories).index(b)].update(
+                on_route_n=len(on), on_route_abs_latcov_p90=on.latcov.abs().quantile(.9), on_route_latcov_gt1=100 * (on.latcov.abs() > 1).mean(),
+                route_side_ge2p5=100 * (x.y_rt0.abs() >= 2.5).mean()) if b in set(d.bin) else None
+    LT = pd.DataFrame(lat)
+    LT.to_csv(RES / "pop_lat.csv", index=False, float_format="%.3f")
+    L += ["Plan lateral vs the route at the last covered arc (straight route, + = plan left of route):", "", md(LT[LT.read.str.startswith("R6DAG")]), ""]
+
+    # ---------------- C: band
+    for f in sorted(src.glob("band_*.parquet")):
+        B = pd.read_parquet(f)
+        B["bin"] = pd.cut(B.speed, SPEED_BINS, right=False, labels=[f"{a}-{b}" for a, b in zip(SPEED_BINS[:-1], SPEED_BINS[1:])])
+        var = [c[4:] for c in B.columns if c.startswith("dy4_")]
+        rows = []
+        for (b, stt), x in B.groupby(["bin", "straight"], observed=True):
+            r = dict(speed=str(b), straight=bool(stt), n=len(x), cov_p50=x["cov"].median(), arc4_p50=x.arc4.median())
+            for v_ in var:
+                r[f"|dy4| {v_}"] = x[f"dy4_{v_}"].abs().median()
+            rows.append(r)
+        T_ = pd.DataFrame(rows)
+        T_.to_csv(RES / f"{f.stem}.csv", index=False, float_format="%.4f")
+        allr = {v_: dict(dy4_abs_p50=float(B[f"dy4_{v_}"].abs().median()), dy4_abs_p90=float(B[f"dy4_{v_}"].abs().quantile(.9)),
+                         dx4_abs_p50=float(B[f"dx4_{v_}"].abs().median()), dmax_p90=float(B[f"dmax_{v_}"].quantile(.9)),
+                         dy4_signed_p50=float(B[f"dy4_{v_}"].median())) for v_ in var}
+        out[f.stem] = allr
+        L += [f"## C. {f.stem}: median |plan 4 s lateral change| (m) per variant", "", md(T_, "{:.3f}"), "",
+              md(pd.DataFrame(allr).T.reset_index().rename(columns={"index": "variant"}), "{:.3f}"), ""]
+    (RES / "tables.md").write_text("\n".join(L) + "\n")
+    (RES / "summary.json").write_text(json.dumps(out, indent=1, default=float))
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -348,5 +547,7 @@ if __name__ == "__main__":
     p = sub.add_parser("band")
     p.add_argument("--ckpt", required=True), p.add_argument("--parts", default="pd,ph"), p.add_argument("--per", type=int, default=40)
     p.add_argument("--bs", type=int, default=256), p.add_argument("--threads", type=int, default=0), p.add_argument("--seed", type=int, default=0)
+    p = sub.add_parser("report")
+    p.add_argument("--src", default="")
     a = ap.parse_args()
-    dict(extract=cmd_extract, events=cmd_events, band=cmd_band)[a.cmd](a)
+    dict(extract=cmd_extract, events=cmd_events, band=cmd_band, report=cmd_report)[a.cmd](a)
