@@ -157,7 +157,13 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
 `lib/alpasim_exam.py`. One panel at a time (lock `/data/runs/alpasim_human/.panel.lock`); it starts the wheel daemon (tmux
 `wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing.
 
-- New batch: PAI stage 1 (10), PAI all 40 (`pai_scenes_40.tsv`) or nuPlan navtest 48 (`scenes_navtest_full_part001_48.txt`).
+- New batch: one set per filter over the scene table (`Scenes` in `lib/alpasim_exam.py`): PAI stage 1 (10), first 40, all 441
+  (`fetch_all/all441.tsv`, only scenes whose `$NUREC/all-usdzs/<uuid>.usdz` is on disk; all 441 are on Tokyo), 26.01 (177) / 26.04
+  (264), hard (organisers' mean <= 0.2, 270) / easy (>= 0.8, 4), R6DAG-s1 failures on PAI 281 (score < 1, 72) and one set per R6DAG
+  loss class (decision 436: turn inside 7, other offroad 5, stop overshoot 19, drift 4, slow partial 8, rear-ended moving 13 /
+  launch 8, at-fault collision 6, route turn 2), nuPlan navtest 48. R6DAG scores and classes: `results/model_ref_r6dag_281.tsv`
+  (copied from `experiments/round7/results/loss_map.csv`); the model column shows R6DAG first, then P2H10, then alpamayo1.
+  Custom pick: `catalog()` lists every scene, `new_batch("custom", ids)` makes a batch of any one-track id list.
   It writes `/data/runs/alpasim_human/exam_<track>_<stamp>/exam.json`, starts the loop, and the new batch appears at the top
   of the batch list.
 - Batch list (since 2026-10-22, generic in `lib/exam_panel.py`): every `exam_*` batch, newest first, with set label, created

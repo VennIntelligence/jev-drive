@@ -2,8 +2,10 @@
 
 Items = scenes. Groups: PAI = track + NuRec artifact revision (26.01 / 26.04), nuPlan = the navtest log segment.
 Human score = the AlpaSim scene score of the scene's latest finished, not skipped rollout in the run (done/<scene>.json, written by
-scripts/human_loop.py). Model score = P2H10-F-s0 on the same scene where a read exists (PAI stage 1: pai1/runs/a10_c4; nuPlan 48:
-native_ref/P2H10-F-s0), else the organisers' alpamayo1 (PAI tsv column); the source is shown after the score.
+scripts/human_loop.py). Model score = R6DAG-L18-s1 (PAI 281 ACC + GAP, results/model_ref_r6dag_281.tsv), else P2H10-F-s0 where a read
+exists (PAI stage 1: pai1/runs/a10_c4; nuPlan 48: native_ref/P2H10-F-s0), else the organisers' alpamayo1 (PAI tsv column); the source
+is shown after the score. Sets (Scenes): filters over the PAI 441 table (revision, organisers' mean, R6DAG score / loss class) plus a
+custom pick in the panel.
 A run dir: /data/runs/alpasim_human/exam_<track>_<stamp>/ with exam.json (track, set, ids), stacks/<one human_stack.sh out dir per
 stack launch>, done/<scene>.json, tried/<scene>.json, scores/<rollout id>/ (post-hoc aggregation), scores.jsonl, results.md, loop.log.
 The drive side is scripts/human_loop.py in tmux human:alpa-loop; the viewer is scripts/human_viewer.py in tmux human:alpa-viewer.
@@ -38,11 +40,6 @@ def sh(cmd):
     return subprocess.run(["bash", "-c", cmd], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True).stdout
 
 
-def pai_rows():
-    rows = [ln.split("\t") for ln in PAI_TSV.read_text().splitlines()]
-    return [dict(zip(rows[0], r)) for r in rows[1:]]
-
-
 def summary_scores(p):
     """scene -> mean score over the rollouts of a results-summary.json (file, run dir or its sim/ dir)."""
     for c in (p, p / "aggregate/results-summary.json", p / "sim/aggregate/results-summary.json"):
@@ -62,54 +59,104 @@ def why(r):
     return ", ".join(z) if z else "pass" if (r.get("score") or 0) >= 1 else "slow"
 
 
+R6DAG_TSV = REPO / "experiments/alpasim_human/results/model_ref_r6dag_281.tsv"
+ALL_TSV = A / "fetch_all/all441.tsv"
+NUREC = Path(os.environ.get("NUREC", D / "datasets/nurec"))
+# R6DAG-s1 loss classes (round7 loss map, decision 436) -> one "R6DAG fails" set each: (key, label, classes)
+FAIL_SETS = [("turnin", "offroad, turn inside", {"off-turn-in"}),
+             ("offother", "offroad, straight / junction / outside", {"off-straight", "off-junc-straight", "off-turn-out"}),
+             ("overshoot", "stop-line overshoot", {"overshoot"}), ("drift", "drift / lane change", {"drift"}),
+             ("slow", "unforced slow-down partial", {"slow", "near1"}), ("rearmove", "rear-ended while moving", {"rear-move"}),
+             ("rearlaunch", "slow launch, rear-ended", {"rear-launch"}), ("coll", "at-fault collision", {"coll-front", "coll-side"}),
+             ("routeturn", "route turn missed", {"route-turn"})]
+
+
+def tsv(path):
+    rows = [ln.split("\t") for ln in Path(path).read_text().splitlines()] if Path(path).exists() else []
+    return [dict(zip(rows[0], r)) for r in rows[1:]]
+
+
 class Scenes(object):
-    """Scene sets, groups and reference scores of both tracks (shared by the panel backend and the loop)."""
-    SETS = [("pai1", "PAI stage 1 (10)"), ("pai40", "PAI all 40"), ("nuplan48", "nuPlan navtest 48")]
+    """Scene sets, groups and reference scores of both tracks (shared by the panel backend and the loop).
+
+    PAI scenes = the 441 curated-validation scenes of fetch_all/all441.tsv whose NuRec artifact ($NUREC/all-usdzs/<uuid>.usdz)
+    is on disk (all are in sim_scenes.csv / sim_scenes_2604.csv, which human_stack.sh passes), else the 40 of pai1. A set is a
+    filter over that table (`PRED`); its label carries the scene count. R6DAG = R6DAG-L18-s1, PAI 281 ACC + GAP read, per-scene
+    score and loss class from experiments/round7/results/loss_map.csv (decision 436), copied to results/model_ref_r6dag_281.tsv."""
 
     def __init__(self):
         self.meta, self.refs = {}, {}
-        tsv = pai_rows() if PAI_TSV.exists() else []
-        self.pai = tsv
-        for k, r in enumerate(tsv):
+        in40 = {r["scene_id"] for r in tsv(PAI_TSV)}
+        rows = tsv(ALL_TSV) or tsv(PAI_TSV)
+        self.pai = [r for r in rows if (NUREC / "all-usdzs" / (r["uuid"] + ".usdz")).is_file()]
+        r6 = {r["scene_id"]: r for r in tsv(R6DAG_TSV)}
+        for k, r in enumerate(self.pai):
+            m = r6.get(r["scene_id"], {})
             self.meta[r["scene_id"]] = dict(track="pai", group="PAI %s" % r["revision"], stage=int(r["stage"]), k=k,
-                                            label=r["scene_id"][-12:],
-                                            scenario="stage %s, organisers' mean %.2f" % (r["stage"], float(r["ref_mean"])))
+                                            label=r["scene_id"][-12:], rev=r["revision"], ref=float(r["ref_mean"]), in40=r["scene_id"] in in40,
+                                            r6=float(m["score"]) if m else None, cat=m.get("category"),
+                                            scenario="stage %s, organisers %.2f%s" % (r["stage"], float(r["ref_mean"]),
+                                                                                   ", R6DAG: %s" % m["category"] if m and m["category"] != "ok" else ""))
         self.nuplan = NUPLAN_LIST.read_text().split() if NUPLAN_LIST.exists() else []
         for k, s in enumerate(self.nuplan):
             seg = s.split("_")[2:4] if s.count("_") >= 3 else ["?", "?"]     # <date>_<vehicle>_<start>_<end>-<token>
             self.meta[s] = dict(track="nuplan", group="nuPlan log %s_%s" % (seg[0], seg[1].split("-")[0]), k=k,
                                 label="%s_%s" % (seg[0], seg[1][:14]),
                                 scenario="navtest %s" % s.split("_")[0])
+        self.refs[("pai", "R6DAG")] = {i: float(r["score"]) for i, r in r6.items()}
         for track in ("pai", "nuplan"):
             for name, src in MODELS[track] + EXTRA[track]:
                 if str(src).startswith("tsv:"):
                     col = str(src)[4:]
-                    self.refs[(track, name)] = {r["scene_id"]: float(r[col]) for r in tsv if r.get(col) not in (None, "")}
-                else:
+                    self.refs[(track, name)] = {r["scene_id"]: float(r[col]) for r in self.pai if r.get(col) not in (None, "")}
+                elif (track, name) not in self.refs:
                     self.refs[(track, name)] = summary_scores(Path(src))
+        pai = lambda f: ("pai", f)  # noqa: E731
+        preds = [("pai1", "PAI stage 1", pai(lambda m: m["stage"] <= 1)), ("pai40", "PAI first 40", pai(lambda m: m["in40"])),
+                 ("pai441", "PAI all", pai(lambda m: True))]
+        preds += [("pai" + v, "PAI %s" % v, pai(lambda m, v=v: m["rev"] == v)) for v in sorted({r["revision"] for r in self.pai})]
+        preds += [("hard", "PAI hard (organisers' mean <= 0.2)", pai(lambda m: m["ref"] <= 0.2)),
+                  ("easy", "PAI easy (organisers' mean >= 0.8)", pai(lambda m: m["ref"] >= 0.8)),
+                  ("r6fail", "R6DAG fails on 281 (score < 1)", pai(lambda m: m["r6"] is not None and m["r6"] < 1))]
+        preds += [("r6_" + k, "R6DAG fails: " + t, pai(lambda m, c=c: m["cat"] in c)) for k, t, c in FAIL_SETS]
+        preds += [("nuplan48", "nuPlan navtest", ("nuplan", lambda m: True))]
+        self.pred = {k: p for k, _, p in preds}
+        self.sets = [(k, "%s (%d)" % (t, len(self.ids(k)))) for k, t, _ in preds]
+        self.sets = [s for s in self.sets if not s[1].endswith("(0)")]
 
     def ids(self, key):
-        if key.startswith("pai"):
-            rows = [r for r in self.pai if key == "pai40" or int(r["stage"]) <= 1]
-            ids = [r["scene_id"] for r in rows]
-            return sorted(ids, key=lambda i: (self.meta[i]["group"], self.meta[i]["stage"], self.meta[i]["k"]))
-        return sorted(self.nuplan, key=lambda i: (self.meta[i]["group"], self.meta[i]["k"]))
+        track, f = self.pred[key]
+        ids = [i for i, m in self.meta.items() if m["track"] == track and f(m)]
+        return sorted(ids, key=lambda i: (self.meta[i]["group"], self.meta[i].get("stage", 0), self.meta[i]["k"]))
 
     def model(self, scene):
-        """(score, source) of the best available model read on this scene: P2H10 first, else the organisers' alpamayo1."""
+        """(score, source) of the best available model read on this scene: R6DAG-s1 (PAI 281), then P2H10, else the organisers' alpamayo1."""
         track = self.meta.get(scene, {}).get("track", "pai")
-        for name, _ in MODELS[track] + EXTRA[track][:1]:
+        for name, _ in ([("R6DAG", None)] if track == "pai" else []) + MODELS[track] + EXTRA[track][:1]:
             v = self.refs.get((track, name), {}).get(scene)
             if v is not None:
                 return v, ("a1" if name == "alpamayo1" else name)
         return None, None
+
+    def catalog(self):
+        """Every selectable scene (custom pick), in set order: dict(id, track ("pai" / "nuplan"), group, label, revision (PAI
+        "26.01" / "26.04", else None), stage, ref_mean (organisers' mean, PAI), r6dag (R6DAG-s1 281 score or None), fail (R6DAG
+        loss class, "" = none / not read), model, model_src (the panel's model column))."""
+        out = []
+        for i in self.ids("pai441") + self.ids("nuplan48"):
+            m = self.meta[i]
+            ms, src = self.model(i)
+            out.append(dict(id=i, track=m["track"], group=m["group"], label=m["label"], revision=m.get("rev"), stage=m.get("stage"),
+                            ref_mean=m.get("ref"), r6dag=m.get("r6"), fail=m.get("cat") if m.get("cat") not in (None, "ok") else "",
+                            model=ms, model_src=src))
+        return out
 
     def table(self, run):
         """results.md of a panel run: one row per driven scene in run order, means over the driven scenes."""
         run = Path(run)
         ex = read_json(run / "exam.json", {}) or {}
         track = ex.get("track", "pai")
-        cols = [n for n, _ in MODELS[track] + EXTRA[track]]
+        cols = (["R6DAG"] if track == "pai" else []) + [n for n, _ in MODELS[track] + EXTRA[track]]
         rows = []
         for sid in ex.get("ids", []):
             d = read_json(run / "done" / (sid + ".json"))
@@ -140,7 +187,7 @@ class AlpaSimExam(Backend):
     title = "AlpaSim human exam"
     live = os.environ.get("HUMAN_LIVE", str(RUNS / "live"))
     score_fmt = "%.2f"
-    options = {"harmonizer": ("Diffusion Harmonizer (PAI, slower render)", False),   # human_loop.py: new stack at the next hold
+    options = {"harmonizer": ("Harmonizer (PAI, slower render)", False),   # human_loop.py: new stack at the next hold
                "shadow": ("Shadow: human log", False)}                              # the viewer only (display; G there too)
     batch_extra = "harmonizer"
 
@@ -148,7 +195,10 @@ class AlpaSimExam(Backend):
         self.sc = Scenes()
 
     def batch_sets(self):
-        return list(Scenes.SETS)
+        return list(self.sc.sets)
+
+    def catalog(self):
+        return self.sc.catalog()
 
     # ---- runs and the loop ----
     def runs(self):
@@ -161,7 +211,7 @@ class AlpaSimExam(Backend):
         h = [bool(d.get("harmonizer")) for d in done]
         return dict(label=ex.get("label") or ex.get("set", "?"), created=(ex.get("created") or "?")[5:16], driven=len(done), total=len(ids),
                     mean=sum(d["score"] for d in done) / len(done) if done else None,
-                    extra="-" if not h else "on" if all(h) else "off" if not any(h) else "mixed (%d of %d on)" % (sum(h), len(h)))
+                    extra="-" if not h else "on" if all(h) else "off" if not any(h) else "mixed %d/%d" % (sum(h), len(h)))
 
     def delete_batch(self, run):
         ok, msg = Backend.delete_batch(self, run)
@@ -229,12 +279,22 @@ class AlpaSimExam(Backend):
         return True, ("Loop started on %s (card 0, %s MiB free). The stack takes about a minute to start; each scene then holds "
                       "until the first throttle press." % (run, free))
 
-    def new_batch(self, key):
-        ids = self.sc.ids(key)
-        track = "pai" if key.startswith("pai") else "nuplan"
+    def new_batch(self, key, ids=None):
+        """A run dir for set `key`, or for the picked `ids` (key "custom"; one track), then start the loop on it."""
+        if ids is not None:
+            ids = list(dict.fromkeys(ids))
+            bad = [i for i in ids if i not in self.sc.meta]
+            tracks = {self.sc.meta[i]["track"] for i in ids if i in self.sc.meta}
+            if bad or len(tracks) != 1:
+                return False, ("Unknown scenes: %s" % ", ".join(bad[:5])) if bad else "Pick scenes of one track (PAI or nuPlan)."
+            track, label = tracks.pop(), "Custom pick (%d)" % len(ids)
+        else:
+            ids, track, label = self.sc.ids(key), self.sc.pred[key][0], dict(self.sc.sets)[key]
         run = RUNS / ("exam_%s_%s" % (track, time.strftime("%m%d-%H%M%S")))
+        while run.exists():                                                   # two batches within one second
+            run = run.with_name(run.name + "b")
         run.mkdir(parents=True)
-        (run / "exam.json").write_text(json.dumps({"track": track, "set": key, "label": dict(Scenes.SETS)[key], "ids": ids,
+        (run / "exam.json").write_text(json.dumps({"track": track, "set": key, "label": label, "ids": list(ids),
                                                    "created": time.strftime("%F %T")}, indent=1))
         (run / "notes.txt").write_text("%s panel: new batch %s (%d scenes)\n" % (time.strftime("%F %T"), key, len(ids)))
         return self.start_loop(run)

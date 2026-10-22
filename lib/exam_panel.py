@@ -90,8 +90,11 @@ class Backend(object):
     def batch_sets(self):          # [(key, label)] offered by "New batch"
         raise NotImplementedError
 
-    def new_batch(self, key):      # make a run dir for that set, start the loop on it; return (ok, message)
+    def new_batch(self, key, ids=None):  # run dir for set `key` (or for the picked `ids`, key "custom"), start the loop; (ok, message)
         raise NotImplementedError
+
+    def catalog(self):             # every selectable item for a custom pick, as dicts (backend-specific fields); [] = none
+        return []
 
     def start_loop(self, run):     # (re)start the drive loop on that run dir; return (ok, message)
         raise NotImplementedError
