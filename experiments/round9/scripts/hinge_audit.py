@@ -699,7 +699,7 @@ def cmd_report(a):
         res["root_causes"] = rc
         # ---- 4. designs
         DES = ["fixed", "gate", "ec_log", "ec_wit", "ctx"]
-        if "plan" in P.paths:
+        if "plan" in P.paths and (z["plan__ok"] & cand).any():
             pm = z["plan__ok"] & cand
             w_ = live[pm] if name == "S" else np.ones(pm.sum())
             base_cov = None
