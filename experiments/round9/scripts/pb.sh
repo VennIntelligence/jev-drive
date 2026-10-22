@@ -41,7 +41,8 @@ if v == "base":
     put("--tag", tag)
     if k:                                     # mode imit: no row carries the agent hinge, = what rm_train makes of RB0-F's --agent-on-only
         a.remove("--agent-on-only"); put("--agent-lam", "0")
-        a += ["--on", "on1_JTPH", "--on-k", str(k), "--on-mode", "imit", "--on-normal", "--on-wfile", f"{D}/runs/round9/pai_base/w/RB0P.npz"]
+        a += ["--on", "on1_JTPH", "--on-k", str(k), "--on-mode", "imit", "--on-normal", "--on-wfile", f"{D}/runs/round9/pai_base/w/RB0P.npz",
+              "--probe-n", "0"]               # monitoring only: R6FIX's grp labels would switch on JT's wait / launch probes (they need nr1_lat)
 elif v == "l18":
     put("--tag", sys.argv[3]); put("--seed", sys.argv[2])
     put("--init", open(f"{D}/runs/round9/pai_base/CARRY").read().split()[0] if sys.argv[2:3] else "")
@@ -64,7 +65,13 @@ arena() {  # arena <tag> <after> -> 18 chunk ids (jt.sh aread, native: off)
 case ${1:-} in
 all)
   [[ ! -e $O/GATES && ! -e $O/DONE && ! -e $O/CARRY ]] || die "already ran"
-  for X in RB0-P30-s0 RB0-P50-s0 RB0-P70-s0 RB0-PSM-s0 RB0-FR-s0 PBNT-L18-s0 PBNT-L18-s1 PBDAG-L18-s0 PBDAG-L18-s1; do [[ ! -e $RUNS/$X ]] || die "$X exists"; done
+  last() { awk -v n=$1 '$2 == n {x = $1} END {print x}' $O/jobs.txt; }
+  if [[ -n ${REUSE:-} ]]; then                         # resubmit after a failed smoke: keep the identity rerun and RB0-F-s0's reads (independent)
+    ic=$(last pb-ident); rft=$(last pai_fix-tax-RB0-F-s0-281ag); RAR=(); for c in $(seq 0 17); do RAR+=($(last pb-ar-RB0-F-s0-c$c)); done
+    [[ -n $ic && -n $rft && ${#RAR[@]} == 18 ]] || die "REUSE: ids"; rm -rf $RUNS/RB0-PSM-s0 $DATA_DIR/runs/route_mem/train-RB0-PSM-s0 $DATA_DIR/tmp/pcs_pb
+    echo "$(date '+%F %T') REUSE: identity $ic, RB0-F-s0 281 tax $rft, arena ${RAR[0]} .. ${RAR[-1]}" | tee -a $O/stages.txt; fi
+  for X in RB0-P30-s0 RB0-P50-s0 RB0-P70-s0 RB0-PSM-s0 PBNT-L18-s0 PBNT-L18-s1 PBDAG-L18-s0 PBDAG-L18-s1 ${REUSE:-RB0-FR-s0}; do
+    [[ $X == 1 || ! -e $RUNS/$X ]] || die "$X exists"; done
   for f in NTV0-L18-s0-281ag NTV0-L18-s0-281agH R6DAG-L18-s0-281ag R6DAG-L18-s1-281ag R6DAG-L18-s2-281ag R6DAG-L18-s0-281agH R6DAG-L18-s1-281agH \
            R6DAG-L18-s2-281agH; do [[ -s $F_/$f.csv ]] || die "no stored $f"; done
   P0=$DATA_DIR/tmp/pcs_r8k2; PT=$DATA_DIR/tmp/pcs_pb; [[ ! -e $PT ]] || die "$PT exists"; for f in $P0/rows.csv.gz $P0/out/fits/paimix.npz; do [[ -s $f ]] || die "no $f"; done
@@ -72,15 +79,15 @@ all)
   # --- gates: draw file + data check, smoke, identity
   wf=$(sub 22 pb-wfile --vram 0.1 --cpu 2 --ram 24 --timeout-h 1 -- bash $ME wfile) || exit 1
   sm=$(sub 22 pb-smoke --after $wf "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 1 -- bash -c "bash $ME train base 58 RB0-PSM-s0 300 && bash $ME smoke") || exit 1
-  ir=$(sub 21 pb-ident-run "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 2 -- bash $ME train base 0 RB0-FR-s0) || exit 1
-  ic=$(sub 21 pb-ident --after $ir --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident) || exit 1
-  echo "$(date '+%F %T') gates (code $h): wfile $wf smoke $sm identity $ir $ic" | tee -a $O/stages.txt
+  [[ -n ${REUSE:-} ]] || { ir=$(sub 21 pb-ident-run "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 2 -- bash $ME train base 0 RB0-FR-s0) || exit 1
+    ic=$(sub 21 pb-ident --after $ir --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME ident) || exit 1; }
+  echo "$(date '+%F %T') gates (code $h): wfile $wf smoke $sm identity ${ir:-reused} $ic" | tee -a $O/stages.txt
   # --- the three bases in parallel (one fanout), each with its own reads; RB0-F-s0's reads now
   mapfile -t FO < <($V -m jevdrive.cl fanout --name pb-base --arms 30,50,70 --owner round9-pb --priority 21 --tries 1 --no-check --after $sm \
       --log-dir "$O/pool/pb-base-{arm}" "${FT[@]}" --env JEV_RM_EAGER=1 --timeout-h 2 -- bash $ME train base {arm} < /dev/null | grep -E '^[0-9]')
   [[ ${#FO[@]} == 3 ]] || die "fanout: ${FO[*]}"; printf '%s\n' "${FO[@]}" >> $O/jobs.txt
   declare -A TB; for l in "${FO[@]}"; do TB[${l##*-}]=${l%% *}; done
-  y=($(read281 RB0-F-s0 ag "" 21)) || exit 1; G=(${y[-1]} $ic); AR=($(arena RB0-F-s0 "")) || exit 1
+  if [[ -n ${REUSE:-} ]]; then y=($rft); AR=(${RAR[@]}); else y=($(read281 RB0-F-s0 ag "" 21)) || exit 1; AR=($(arena RB0-F-s0 "")) || exit 1; fi; G=(${y[-1]} $ic)
   echo "$(date '+%F %T') RB0-F-s0: 281 OFF ${y[*]} arena ${AR[0]} .. ${AR[-1]}" | tee -a $O/stages.txt
   for s in 30 50 70; do t=${TB[$s]}; [[ -n $t ]] || die "no base id $s"
     y=($(read281 RB0-P$s-s0 ag $t 21)) || exit 1
