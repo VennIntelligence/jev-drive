@@ -68,7 +68,11 @@ def submit(drivers, ref, out, also=(), boards=("hugsim",), scenarios="all64", re
     out.mkdir(parents=True, exist_ok=True)
     (out / "DONE").unlink(missing_ok=True)
     after, dirs = [], []
+    from .models import resolve
     for mdl, bench, preset in runs:
+        if bench != "hugsim" and resolve(mdl).stored.get(bench):        # a stored reference (WA-JEPA on NAVSIM): read, never re-run
+            print(f"{mdl} on {bench}: stored result {resolve(mdl).stored[bench]}")
+            continue
         d = bench_run(mdl, bench, dry=dry, priority=priority, **_kw(bench, preset, scenarios, repeat, workers, jobs))
         dirs.append(str(d))
         if not dry:
