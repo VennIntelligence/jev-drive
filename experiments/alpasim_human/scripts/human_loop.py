@@ -12,7 +12,7 @@ the start (about 45 s); a new batch, Continue, play and restart do not. It stops
 The loop sends one scene per simulate request (scripts/human_feed.py protocol), so it decides the order itself:
 - Playlist on: the next unfinished scene in the panel's order (control "order", else exam.json). Each scene loads and holds until
   the first throttle press (lib/human_driver.py). Playlist off: the next scene only on a double-click or a new throttle press.
-- play <id>: drive it next (even if finished). A scene that is loading or held (not started) is dropped for it (abort, the
+- play <id>: drive it next (even if finished); a repeated play of a scene already queued or in flight is ignored. A scene that is loading or held (not started) is dropped for it (abort, the
   rollout runs out unscored at the stack's speed, ~10 s); a scene being driven finishes first.
 - next: the driver skips the current scene (abort.json); not counted, not offered again in this session.
 - restart: the current scene is aborted and requested again first (~10 s run-out + the scene load, no stack start).
@@ -34,6 +34,8 @@ The loop sends one scene per simulate request (scripts/human_feed.py protocol), 
   Scores of a model drive go to done/<scene>@<tag>.json ("driver" = tag), the human's to done/<scene>.json ("driver" = "human"): the two never mix.
 Run dir layout per resident stack used: stacks/<run>-sNN/ with sim/rollouts/<scene>/<uuid>/ (moved out of the resident dir when its
 request returns), sim/eval-config.yaml, driver/{sessions,drive}.jsonl (that run's sessions) and driver/thumbs/, resident (its path).
+A request that returns without a usable rollout (feeder or rollout error, or no complete rollout dir) is requested again once; a
+second failure writes tried/<scene>.json with the reason and the playlist moves on (this loop does not offer it again; play does).
 Scoring: every finished rollout that was not aborted is scored with AlpaSim's own aggregation (alpasim-aggregation in the
 alpasim-base image, CPU, ~7 s) on a copy of its metrics.parquet -> done/<scene>.json; results.md after each.
 """
@@ -462,6 +464,7 @@ def main():
     wheel = WheelClient()
     plays, skipped, chosen, driven = [], set(), set(), set()     # driven: finished, not skipped, maybe not scored yet
     practised = set()                                            # driven with record off (not counted)
+    fails, failed = {}, set()                                    # scene -> failed returns in this loop; scenes given up after a retry
     res, batch, hold_error = None, None, ""
     reqs = []                                                    # this loop's requests in flight, oldest first (2 with prefetch)
     model, drv = ModelSvc(), "human"                             # model mode: the model service; the panel's driver now
@@ -474,7 +477,7 @@ def main():
     def unfinished(exclude=()):
         c = ctl.read()
         order = [i for i in c["order"] if i in ids] or ids
-        return [i for i in order if not done(i) and i not in skipped and i not in exclude and (c["record"] or i not in practised)]
+        return [i for i in order if not done(i) and i not in skipped and i not in failed and i not in exclude and (c["record"] or i not in practised)]
 
     def live_sessions():
         """The driver's open sessions (<live>/sessions.json; drivers before prefetch do not write it: [])."""
@@ -557,7 +560,6 @@ def main():
 
     def returned(r, out):
         """Request r came back with result `out` (None: withdrawn before it was sent)."""
-        nonlocal hold_error
         reqs.remove(r)
         if out is None:
             note("%s withdrawn before it was sent (%s)" % (r["scene"], r.get("abort")))
@@ -572,13 +574,29 @@ def main():
                 scorer.abort_status[x["uuid"]] = None
             if r.get("status"):
                 write_json(run / "tried" / (r["scene"] + ".json"), {"status": r["status"], "t": time.time()})
-        if bad and not r.get("abort"):
-            err = (out.get("error") or "; ".join(x.get("error", "") for x in out.get("rollouts", [])))[:300]
-            write_json(run / "tried" / (r["scene"] + ".json"), {"status": "rollout failed: %s" % err, "t": time.time()})
-            hold_error = "%s failed: %s" % (label(r["scene"]), err)
-            note(hold_error)
         note("%s returned after %.0f s%s" % (r["scene"], out.get("t_done", 0) - r["t"], " (aborted: %s)" % r["abort"] if r.get("abort") else ""))
         collect(r)
+        if r.get("abort"):
+            return
+        err = ""
+        if bad:
+            err = (out.get("error") or "; ".join(x.get("error", "") for x in out.get("rollouts", [])) or "no successful rollout")[:300]
+        elif dkey(r["scene"], r.get("driver")) not in driven:
+            err = "no complete rollout dir (sim/rollouts/%s)" % r["scene"]
+        if not err:
+            fails.pop(r["scene"], None)
+            return
+        fails[r["scene"]] = n = fails.get(r["scene"], 0) + 1
+        if n == 1:                                               # one automatic retry, first in line
+            note("%s failed (%s): requesting it once more" % (label(r["scene"]), err))
+            if r["scene"] not in plays:
+                plays.insert(0, r["scene"])
+            return
+        while r["scene"] in plays:
+            plays.remove(r["scene"])
+        failed.add(r["scene"])
+        write_json(run / "tried" / (r["scene"] + ".json"), {"status": "rollout failed twice: %s" % err, "t": time.time()})
+        note("%s failed twice (%s): marked tried, moving on" % (label(r["scene"]), err))
 
     def submit(todo, prefetch=False):
         nonlocal t_wait
@@ -619,7 +637,12 @@ def main():
                 if a["kind"] == "stop":
                     raise KeyboardInterrupt
                 if a["kind"] == "play" and a["item"] in ids:
+                    if a["item"] in plays or any(r["scene"] == a["item"] and not r.get("abort") for r in reqs):
+                        note("play %s: already queued or in flight, ignored" % a["item"])
+                        continue
                     plays.append(a["item"])
+                    failed.discard(a["item"])
+                    fails.pop(a["item"], None)
                     chosen.add(a["item"])
                     hold_error = ""
                     if model.err:                                # a model driver that failed to start is tried again
