@@ -106,7 +106,7 @@ class _Basis:
 
     def energy(self, x: torch.Tensor, ks) -> dict:
         """sum ||x - mu||^2 (key 'total') and sum ||x - P_k x||^2 per k over the rows of x (held-out explained variance)."""
-        c = (x.float() - self.mu).reshape(-1, x.shape[-1])
+        c = (x.detach().float() - self.mu).reshape(-1, x.shape[-1])
         z = c @ self.U                                          # coordinates in the PCA basis
         tot = float(c.pow(2).sum())
         cum = torch.cumsum(z.pow(2).sum(0), 0)

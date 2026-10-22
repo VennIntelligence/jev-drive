@@ -10,7 +10,7 @@ no grafted model) drives as well as WA-JEPA on the boards we may report, under t
 
 **Conclusion.** P2: pending (decision 453).
 
-**Next.** P2 reads running (2026-10-22 evening); P1 section to be added by its lane.
+**Next.** P2 reads running (2026-10-22 evening); P1 level (a) on WA-JEPA running (section P1).
 
 **Read more.** [plans/2026-10-22-p2-match-prereg.md](plans/2026-10-22-p2-match-prereg.md) (P2 pre-registration, read-out lines);
 [research/paper-outline](../../research/paper-outline/index.html) sections 3.2 and 5.
@@ -51,6 +51,52 @@ Not reported: navtest / navhard (contaminated and not served), WOD (data deleted
 ### Results
 
 Pending: `results/p2_match/`.
+
+## P1: how much of the grafted model does the driving head read (usage probes)
+
+Pre-registration: [plans/2026-10-22-p1-usage-prereg.md](plans/2026-10-22-p1-usage-prereg.md). Level (a): project one named
+feature tensor onto its top-k navtrain principal directions, run the unchanged planner on navtest, score each k with the
+standard devkit through `jevdrive.bench`; read off the smallest k that keeps 95 % / 99 % of EPDMS (paired CIs over logs).
+
+### Plugging in a new model (interface)
+
+`lib/usage_probe.py` is torch-only (no repo imports), so it runs inside the model's own env. A model needs four things:
+
+1. **A feature site**: an object and attribute whose call returns the feature tensor `[..., D]` (a method such as
+   `model._encode_scene_context`, or an `nn.Module` attribute). `with Probe(owner, "attr") as p:` wraps it on the instance;
+   off by default and bit-identical when off.
+2. **An input stream** of the bench's tokens and a `call()` that runs the unchanged model on one sample and returns its
+   (8, 3) rear-axle poses (NAVSIM convention). `call` must be deterministic for fixed inputs (diffusion / flow heads: fixed
+   or per-call re-seeded noise; check with the determinism gate).
+3. **Steps** (all in `usage_probe`):
+   - fit: `p.capture(Moments(), stop=True)` around the model call on navtrain samples (catch `Captured`; shard over cards,
+     merge with `Moments.merge`, then `Moments.fit(...) -> PCA`, `PCA.save / load`).
+   - identity gate: `identity_gate(plain, hooked)` on a few tokens: no hook vs hook off vs `sweep` arm `None`, plus two plain
+     calls (determinism). Every line must be bit-identical before a sweep runs.
+   - sweep: `p.use_pca(pca, device)`; `p.sweep(call, [None, 8, 16, ...])` returns `{k: poses}`; the producer of the feature
+     runs once per sample (cached), the rest of the model once per k; `p.energy` accumulates held-out explained variance
+     (`explained_heldout`).
+   - level (b): `with skip_blocks(model.encoder.blocks, idx):` drops residual blocks (identity).
+4. **Scoring**: write `np.savez(pred_file, tokens=..., poses=(n, 8, 3))` for each arm at
+   `jevdrive.bench.navsim.pred_file(resolve("PROBE-<tag>-<arm>"), "navtest")` (bench family `pred`: supplied poses, scored
+   only), then `scripts/p1_readout.py --tag <tag> --arms off k8 ... --ev ev.json --out <dir>` (one CPU pool job: submits
+   the navtest scoring of every arm, sharded over the box's cores, waits inside the pool, writes the bench paired tables vs
+   `off` and `p1_readout.{md,csv,json}` with k95 / k99).
+
+`scripts/p1_wajepa.py` is the worked example (WA-JEPA: commands `gate / fit / pca / sweep / merge`; about 150 model-specific
+lines: agent construction, the NAVSIM loader, the feature builder) and `scripts/p1_lane.sh` submits the whole chain at once
+(fit shards and sweep shards = one pool job per card; `--when-exists` / `--after` between stages). Copy both for a new model
+and change the agent, loader and `SITE`.
+
+### WA-JEPA (level (a))
+
+Site: `MultiViewCausalFutureMaskedJEPA._encode_scene_context` output `context_scene` [1, 4096, 512] (V-JEPA 2.1 ViT-L history
+tokens after the planner's own LayerNorm + Linear 1024 -> 512 projector; 4 cameras x 2 tubelets x 16 x 32 patches), the only
+image input of the flow planner. PCA fit on navtrain logs of the `navtrain_{current,history}_3` archives (re-downloaded for
+this, cameras L0 / F0 / R0 / B0 only), arms off, k 8 .. 512. Outputs: `$DATA_DIR/runs/wm_surplus/p1_usage/` (pca, gate,
+sweep chunks, ev.json; bench runs `runs/bench/navtest/PROBE-wajepa-ctx-*`), small results in `results/p1_usage/`.
+
+Results: pending (decision 454).
 
 <!-- files:begin -->
 ## Files
