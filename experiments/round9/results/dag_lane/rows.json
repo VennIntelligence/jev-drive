@@ -1,0 +1,90 @@
+{
+ "rows": 110981,
+ "drawable": 90300,
+ "G_L0": {
+  "max_abs_m": 0.0,
+  "coverage": 1.0,
+  "b3L_eq_b3_no_qualifying": true
+ },
+ "scenes_qualifying": 134,
+ "scenes": 718,
+ "by_speed": [
+  {
+   "speed": "2-10",
+   "drawable": 46266,
+   "b3_off_human_4s": 4505,
+   "b3_off_human_2s": 6414,
+   "b3L_off_human_4s": 3180,
+   "moved_03": 2781,
+   "moved_1": 2059,
+   "target": 1265,
+   "lane_rule_w05": 2304
+  },
+  {
+   "speed": "10-15",
+   "drawable": 21314,
+   "b3_off_human_4s": 2405,
+   "b3_off_human_2s": 3132,
+   "b3L_off_human_4s": 1185,
+   "moved_03": 1717,
+   "moved_1": 1460,
+   "target": 1205,
+   "lane_rule_w05": 1361
+  },
+  {
+   "speed": "15-20",
+   "drawable": 8886,
+   "b3_off_human_4s": 1865,
+   "b3_off_human_2s": 2052,
+   "b3L_off_human_4s": 379,
+   "moved_03": 1819,
+   "moved_1": 1670,
+   "target": 1478,
+   "lane_rule_w05": 1703
+  },
+  {
+   "speed": "20-25",
+   "drawable": 5171,
+   "b3_off_human_4s": 1206,
+   "b3_off_human_2s": 1457,
+   "b3L_off_human_4s": 126,
+   "moved_03": 1303,
+   "moved_1": 1159,
+   "target": 1078,
+   "lane_rule_w05": 1303
+  },
+  {
+   "speed": ">=25",
+   "drawable": 8663,
+   "b3_off_human_4s": 1544,
+   "b3_off_human_2s": 2255,
+   "b3L_off_human_4s": 62,
+   "moved_03": 1742,
+   "moved_1": 1572,
+   "target": 1483,
+   "lane_rule_w05": 1802
+  }
+ ],
+ "G_L1": {
+  "target_rows": 4039,
+  "line_rows": 300,
+  "fixed_share": 0.9992572418915573,
+  "line_share": 0.9
+ },
+ "changed_rows": 14475,
+ "changed_hi": 6157,
+ "G_L4": {
+  "p99_final": 3.6822959056503803,
+  "p99_b3": 3.6266268141931617,
+  "over": 0,
+  "over_share": 0.0,
+  "reverted": 1734
+ },
+ "student_off_human_t0": 7678,
+ "gates": {
+  "G_L0": true,
+  "G_L1": true,
+  "G_L4": true
+ },
+ "passed": true
+}

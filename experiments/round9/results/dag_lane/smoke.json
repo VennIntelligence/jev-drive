@@ -1,0 +1,83 @@
+{
+ "tag": "R9DLSM-L18-s0",
+ "ctrl": "R9DLSC-L18-s0",
+ "grad_ratio": {
+  "arm": 0.24160924338839684,
+  "control": 0.24464410313194965,
+  "rel": 0.9875947970758324
+ },
+ "dev_ade": 0.5569084286689758,
+ "cmd_rule": {
+  "rule": "heading",
+  "rows": 556934,
+  "changed": 128459,
+  "parts": {
+   "ph": {
+    "rows": 135793,
+    "old_lr": 0.4455,
+    "new_lr": 0.2434,
+    "old_unk": 0.0,
+    "changed": 0.2223
+   },
+   "ph05": {
+    "rows": 123879,
+    "old_lr": 0.4493,
+    "new_lr": 0.2459,
+    "old_unk": 0.0,
+    "changed": 0.2241
+   },
+   "ph15": {
+    "rows": 99269,
+    "old_lr": 0.4557,
+    "new_lr": 0.2551,
+    "old_unk": 0.0,
+    "changed": 0.2203
+   },
+   "pd": {
+    "rows": 110981,
+    "old_lr": 0.4163,
+    "new_lr": 0.2171,
+    "old_unk": 0.0,
+    "changed": 0.224
+   },
+   "rb0": {
+    "rows": 17429,
+    "old_lr": 0.5407,
+    "new_lr": 0.3027,
+    "old_unk": 0.0,
+    "changed": 0.2648
+   },
+   "rtb1": {
+    "rows": 17489,
+    "old_lr": 0.5256,
+    "new_lr": 0.2965,
+    "old_unk": 0.0,
+    "changed": 0.2559
+   },
+   "y": {
+    "rows": 17306,
+    "old_lr": 0.5563,
+    "new_lr": 0.3083,
+    "old_unk": 0.0,
+    "changed": 0.2769
+   },
+   "ys": {
+    "rows": 34788,
+    "old_lr": 0.5593,
+    "new_lr": 0.3038,
+    "old_unk": 0.0,
+    "changed": 0.2845
+   }
+  }
+ },
+ "ok": {
+  "done": true,
+  "finite": true,
+  "batch": true,
+  "shares": true,
+  "grad": true,
+  "dev": true,
+  "cmd": true
+ },
+ "passed": true
+}

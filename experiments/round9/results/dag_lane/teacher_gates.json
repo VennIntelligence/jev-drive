@@ -1,0 +1,41 @@
+{
+ "T1": {
+  "states": 18745,
+  "b3": {
+   "e2": 0.075,
+   "e4": 0.089
+  },
+  "b3L": {
+   "e2": 0.057,
+   "e4": 0.068
+  },
+  "disagree": {
+   "states": 2172,
+   "b3_e4": 2.529,
+   "b3L_e4": 0.2045
+  }
+ },
+ "T2": {
+  "b3": {
+   "events": 65,
+   "teacher_inside": 62,
+   "served_inside": 55,
+   "beyond": 20,
+   "share": 0.9538461538461539,
+   "passed": true
+  },
+  "b3L": {
+   "events": 65,
+   "teacher_inside": 62,
+   "served_inside": 55,
+   "beyond": 20,
+   "share": 0.9538461538461539,
+   "passed": true
+  }
+ },
+ "gates": {
+  "G_L2": true,
+  "G_L3": true
+ },
+ "passed": true
+}

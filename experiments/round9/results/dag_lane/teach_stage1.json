@@ -1,0 +1,11 @@
+{
+ "scenes": 6,
+ "files": 6,
+ "drawable": 788,
+ "found": 788,
+ "b3_max_abs": 0.0,
+ "finite_L": 1.0,
+ "b3L_eq_b3_no_qualifying": true,
+ "qualifying_scenes": 0,
+ "passed": true
+}
