@@ -613,91 +613,95 @@ def cmd_report(a):
                     st.append(dict(term=t, by=lab, bin=str(b), rows=int(s.sum()), share=float(s.sum() / max(m.sum(), 1)),
                                    human_viol=float(hv[s].mean()), human_mass_share=float(V["log"][t][s].sum() / max(V["log"][t][m].sum(), 1e-12))))
         res["strata"] = st
-        # ---- 2. root causes of the human (log) violations
-        rc = {}
-        cf_rows = z["log__cf_rows"] if "log__cf_rows" in z.files else np.zeros(0, int)
-        cpos = {int(r): i for i, r in enumerate(cf_rows)}
+        # ---- 2. root causes of the human (log) and the recovery label / teacher (fut) violations
+        RC = {}
+        for RP in [q for q in ("log", "fut") if q in P.paths]:
+            rc = {}
+            cf_rows = z[f"{RP}__cf_rows"] if f"{RP}__cf_rows" in z.files else np.zeros(0, int)
+            cpos = {int(r): i for i, r in enumerate(cf_rows)}
 
-        def cf_ok(var, rows):
-            i = np.array([cpos[int(r)] for r in rows], int)
-            ac, as_ = z[f"log__cf_{var}_ag_c"][i].astype(float), z[f"log__cf_{var}_ag_s"][i].astype(float)
-            return np.minimum(ac, as_).min(1) >= 0, z[f"log__cf_{var}_sd"][i].astype(float)[:, 1:].min(1) >= 0
-        L9 = z["log__P9"]
-        for t in P.terms:
-            m = P.ok(t) & z["log__ok"] & cand & (V["log"][t] > 0)
-            rows = np.flatnonzero(m)
-            if not len(rows):
-                rc[t] = dict(n=0)
-                continue
-            cause = np.full(len(rows), "residual", object)
-            inc = {}
-            if t == "agent":
-                ac, as_ = P.g("log", "ag_c")[rows], P.g("log", "ag_s")[rows]
-                init = (np.maximum(MARGIN - ac[:, 0], 0) + np.maximum(-as_[:, 0], 0)) > 0
-                pc, ps = P.g("log", "agp_c")[rows].min(1), P.g("log", "agp_s")[rows].min(1)
-                real = np.minimum(pc, ps) < 0
-                front_only = ~real & (pc >= MARGIN)
-                o_geo, _ = cf_ok("ego_shrink", rows)
-                o_box, _ = cf_ok("obj_shrink", rows)
-                o_t = np.zeros(len(rows), bool)
-                for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
-                    o_t |= cf_ok(vn, rows)[0]
-                o_st, _ = cf_ok("static", rows)
-                inc = dict(initial=init, margin_front_extension=front_only, margin=~real & ~front_only, geometry=real & o_geo, box_inflation=real & o_box,
-                           time_shift=real & o_t, real_overlap=real, static_boxes_would_clear=o_st)
-                order = ["initial", "margin_front_extension", "margin", "geometry", "box_inflation", "time_shift"]
-            elif t == "road":
-                rd = P.g("log", "road")[rows]
-                init = rd[:, 0].min(1) < MARGIN
-                mn = rd.min((1, 2))
-                marg = mn >= 0
-                gap = np.zeros(len(rows), bool)
-                if P.name == "S":
-                    dv = P.g("log", "drv")[rows]
-                    neg = rd < 0
-                    gap = ~marg & np.where(neg, dv >= 0, True).all((1, 2))
-                oow = z["log__oow"][rows].any(1)
-                pts = P.g("log", "pts")[rows].min((1, 2)) >= 0
-                geo = ~marg & pts & (mn > -0.5)
-                inc = dict(initial=init, margin=marg, raster_gap=gap, coverage=oow, geometry=geo, centre_outside=P.g("log", "pts")[rows].min((1, 2)) < 0)
-                order = ["initial", "margin", "raster_gap", "coverage", "geometry"]
-            elif t in ("onc", "soft"):
-                x = P.g("log", t)[rows]
-                init = x[:, :2].min(1) < 0 if x.shape[1] == 80 else x[:, :1].min(1) < 0
-                shallow = (-x.min(1)) < 0.3
-                Lr = L9[rows].astype(float)
-                c0, s0 = np.cos(Lr[:, 0, 2]), np.sin(Lr[:, 0, 2])
-                lat_disp = np.abs(-s0 * (Lr[:, 8, 0] - Lr[:, 0, 0]) + c0 * (Lr[:, 8, 1] - Lr[:, 0, 1]))
-                if t == "onc":
-                    legit = (dpsi[rows] > 30) | z["parked"][rows].astype(bool) | ((z["lead_d"][rows] < 25) & ~z["lead_moving"][rows].astype(bool))
-                    inc = dict(initial=init, depth_lt_0p3=shallow, legit_turn_or_pass=legit, turn=dpsi[rows] > 30)
-                else:
-                    legit = lat_disp > 1.5
-                    inc = dict(initial=init, depth_lt_0p3=shallow, legit_lane_change=legit)
-                order = list(inc)[:3]
-            else:                                            # side
-                sd = P.g("log", "sd")[rows]
-                init = sd[:, 1] < BUF
-                marg = sd[:, 1:].min(1) >= 0
-                _, g_ = cf_ok("ego_shrink", rows)
-                _, b_ = cf_ok("obj_shrink", rows)
-                tt = np.zeros(len(rows), bool)
-                for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
-                    tt |= cf_ok(vn, rows)[1]
-                inc = dict(initial=init, margin=marg, geometry=~marg & g_, box_inflation=~marg & b_, time_shift=~marg & tt)
-                order = ["initial", "margin", "geometry", "box_inflation", "time_shift"]
-            for k in reversed(order):
-                cause = np.where(inc[k], k, cause)
-            order2 = [k for k in order if k != "initial"] + ["initial"]          # clearance-first reading (initial is a context, not a cause)
-            cause2 = np.full(len(rows), "residual", object)
-            for k in reversed(order2):
-                cause2 = np.where(inc[k], k, cause2)
-            vals = V["log"][t][rows]
-            rc[t] = dict(n=int(len(rows)), first_match={k: float((cause == k).mean()) for k in order + ["residual"]},
-                         first_match_mass={k: float(vals[cause == k].sum() / vals.sum()) for k in order + ["residual"]},
-                         clearance_first={k: float((cause2 == k).mean()) for k in order2 + ["residual"]},
-                         clearance_first_mass={k: float(vals[cause2 == k].sum() / vals.sum()) for k in order2 + ["residual"]},
-                         incidence={k: float(np.mean(x)) for k, x in inc.items()})
+            def cf_ok(var, rows):
+                i = np.array([cpos[int(r)] for r in rows], int)
+                ac, as_ = z[f"{RP}__cf_{var}_ag_c"][i].astype(float), z[f"{RP}__cf_{var}_ag_s"][i].astype(float)
+                return np.minimum(ac, as_).min(1) >= 0, z[f"{RP}__cf_{var}_sd"][i].astype(float)[:, 1:].min(1) >= 0
+            L9 = z[f"{RP}__P9"]
+            for t in P.terms:
+                m = P.ok(t) & z[f"{RP}__ok"] & cand & (V[RP][t] > 0)
+                rows = np.flatnonzero(m)
+                if not len(rows):
+                    rc[t] = dict(n=0)
+                    continue
+                cause = np.full(len(rows), "residual", object)
+                inc = {}
+                if t == "agent":
+                    ac, as_ = P.g(RP, "ag_c")[rows], P.g(RP, "ag_s")[rows]
+                    init = (np.maximum(MARGIN - ac[:, 0], 0) + np.maximum(-as_[:, 0], 0)) > 0
+                    pc, ps = P.g(RP, "agp_c")[rows].min(1), P.g(RP, "agp_s")[rows].min(1)
+                    real = np.minimum(pc, ps) < 0
+                    front_only = ~real & (pc >= MARGIN)
+                    o_geo, _ = cf_ok("ego_shrink", rows)
+                    o_box, _ = cf_ok("obj_shrink", rows)
+                    o_t = np.zeros(len(rows), bool)
+                    for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
+                        o_t |= cf_ok(vn, rows)[0]
+                    o_st, _ = cf_ok("static", rows)
+                    inc = dict(initial=init, margin_front_extension=front_only, margin=~real & ~front_only, geometry=real & o_geo, box_inflation=real & o_box,
+                               time_shift=real & o_t, real_overlap=real, static_boxes_would_clear=o_st)
+                    order = ["initial", "margin_front_extension", "margin", "geometry", "box_inflation", "time_shift"]
+                elif t == "road":
+                    rd = P.g(RP, "road")[rows]
+                    init = rd[:, 0].min(1) < MARGIN
+                    mn = rd.min((1, 2))
+                    marg = mn >= 0
+                    gap = np.zeros(len(rows), bool)
+                    if P.name == "S":
+                        dv = P.g(RP, "drv")[rows]
+                        neg = rd < 0
+                        gap = ~marg & np.where(neg, dv >= 0, True).all((1, 2))
+                    oow = z[f"{RP}__oow"][rows].any(1)
+                    pts = P.g(RP, "pts")[rows].min((1, 2)) >= 0
+                    geo = ~marg & pts & (mn > -0.5)
+                    inc = dict(initial=init, margin=marg, raster_gap=gap, coverage=oow, geometry=geo, centre_outside=P.g(RP, "pts")[rows].min((1, 2)) < 0)
+                    order = ["initial", "margin", "raster_gap", "coverage", "geometry"]
+                elif t in ("onc", "soft"):
+                    x = P.g(RP, t)[rows]
+                    init = x[:, :2].min(1) < 0 if x.shape[1] == 80 else x[:, :1].min(1) < 0
+                    shallow = (-x.min(1)) < 0.3
+                    Lr = L9[rows].astype(float)
+                    c0, s0 = np.cos(Lr[:, 0, 2]), np.sin(Lr[:, 0, 2])
+                    lat_disp = np.abs(-s0 * (Lr[:, 8, 0] - Lr[:, 0, 0]) + c0 * (Lr[:, 8, 1] - Lr[:, 0, 1]))
+                    if t == "onc":
+                        legit = (dpsi[rows] > 30) | z["parked"][rows].astype(bool) | ((z["lead_d"][rows] < 25) & ~z["lead_moving"][rows].astype(bool))
+                        inc = dict(initial=init, depth_lt_0p3=shallow, legit_turn_or_pass=legit, turn=dpsi[rows] > 30)
+                    else:
+                        legit = lat_disp > 1.5
+                        inc = dict(initial=init, depth_lt_0p3=shallow, legit_lane_change=legit)
+                    order = list(inc)[:3]
+                else:                                            # side
+                    sd = P.g(RP, "sd")[rows]
+                    init = sd[:, 1] < BUF
+                    marg = sd[:, 1:].min(1) >= 0
+                    _, g_ = cf_ok("ego_shrink", rows)
+                    _, b_ = cf_ok("obj_shrink", rows)
+                    tt = np.zeros(len(rows), bool)
+                    for vn in ("shift_m05", "shift_m025", "shift_p025", "shift_p05"):
+                        tt |= cf_ok(vn, rows)[1]
+                    inc = dict(initial=init, margin=marg, geometry=~marg & g_, box_inflation=~marg & b_, time_shift=~marg & tt)
+                    order = ["initial", "margin", "geometry", "box_inflation", "time_shift"]
+                for k in reversed(order):
+                    cause = np.where(inc[k], k, cause)
+                order2 = [k for k in order if k != "initial"] + ["initial"]          # clearance-first reading (initial is a context, not a cause)
+                cause2 = np.full(len(rows), "residual", object)
+                for k in reversed(order2):
+                    cause2 = np.where(inc[k], k, cause2)
+                vals = V[RP][t][rows]
+                rc[t] = dict(n=int(len(rows)), first_match={k: float((cause == k).mean()) for k in order + ["residual"]},
+                             first_match_mass={k: float(vals[cause == k].sum() / vals.sum()) for k in order + ["residual"]},
+                             clearance_first={k: float((cause2 == k).mean()) for k in order2 + ["residual"]},
+                             clearance_first_mass={k: float(vals[cause2 == k].sum() / vals.sum()) for k in order2 + ["residual"]},
+                             incidence={k: float(np.mean(x)) for k, x in inc.items()})
+            RC[RP] = rc
+        rc = RC
         if "log__lag_sweep" in z.files:
             rc["lag_sweep_log"] = json.loads(str(z["log__lag_sweep"]))
         if "fut__lag_sweep" in z.files:
