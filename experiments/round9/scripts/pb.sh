@@ -8,7 +8,7 @@
 #                    --init PBNT-L18-s<s>) -> PAI 281 OFF + ON each -> ruler (collect + 20 boots) -> final report -> $O/DONE
 #   pb.sh wait [M]   one run_in_background waiter: the marker (default DONE), or a failed / cancelled job of this lane
 #   pb.sh printargv base <K> <tag> | l18 <seed> <tag> | dag <seed> <init> <tag>
-#   job bodies: wfile | train base <K> <tag> [steps] | train l18 <seed> | train dag <seed> | smoke | draws <share> | ident | arena-sum |
+#   job bodies: wfile | train base <K> <tag> [steps] | train l18 <seed> | train dag <seed> | smoke | draws <share> | ident | arena-sum ["tags"] |
 #               gate | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round9/pai_base; ME=experiments/round9/scripts/pb.sh; PY=experiments/round9/scripts/pb.py
@@ -129,7 +129,7 @@ ident)
       --extra-ok --note "RB0-F-s0's argv (10-13, code 2962dc63 dirty) rerun on HEAD, eager, 10 000 steps: the PAI-share-0 base"; r=$?
   mv experiments/defect_fix/results/round9_pb_identity.json $O/results/identity.json || r=4; exit $r ;;
 arena-sum)
-  $V -m jevdrive.facts table --bench arena --tags RB0-P30-s0@off RB0-P50-s0@off RB0-P70-s0@off --refs RB0-F-s0@off --out $O/results/arena_base.md \
+  T=(${2:-RB0-P30-s0 RB0-P50-s0 RB0-P70-s0}); $V -m jevdrive.facts table --bench arena --tags "${T[@]/%/@off}" --refs RB0-F-s0@off --out $O/results/arena_base.md \
       --title "nuPlan arena held, native (guard, informational): RB0-P vs RB0-F" || die "arena table" ;;
 gate)
   rd=(RB0F-ag=$F_/RB0-F-s0-281ag.csv); pr=(); for s in 30 50 70; do rd+=(RB0P$s-ag=$F_/RB0-P$s-s0-281ag.csv); pr+=(RB0P$s-ag:RB0F-ag); done
