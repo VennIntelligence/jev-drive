@@ -295,6 +295,8 @@ def cmd_band(a):
         return torch.stack([x, y], -1).cpu().numpy()
 
     variants = ["base"] + [f"{k}:{b}" for k in ("mask", "shift") for b in BANDS] + ["cmd:S", "cmd:L", "cmd:R", "cmd:H"]
+    if a.only:
+        variants = ["base"] + a.only.split(",")
     out = {k: [] for k in variants}
     t0 = time.time()
     for j in range(0, len(sel), a.bs):
@@ -309,8 +311,8 @@ def cmd_band(a):
                 P = e[:, E0:E0 + RM.DIM].view(-1, RM.N_PT, RM.NF)
                 if kind == "mask":
                     P[:, cols] = 0.0
-                else:                                                            # 1 m to the left, valid slots only
-                    P[:, cols, 2] += (P[:, cols, 0] > 0.5).float() / 20.0
+                else:                                                            # a.shift m to the left (- = right), valid slots only
+                    P[:, cols, 2] += (P[:, cols, 0] > 0.5).float() * a.shift / 20.0
                 e[:, E0:E0 + RM.DIM] = P.reshape(-1, RM.DIM)
             elif k.startswith("cmd"):
                 c = k.split(":")[1]
@@ -335,7 +337,7 @@ def cmd_band(a):
         df[f"dx4_{k}"] = d[:, -1, 0]
         df[f"dmax_{k}"] = np.hypot(d[..., 0], d[..., 1]).max(1)
     O.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(O / f"band_{a.ckpt}.parquet")
+    df.to_parquet(O / f"band_{a.ckpt}{a.suffix}.parquet")
     print(json.dumps(dict(ckpt=a.ckpt, rows=len(df), sec=round(time.time() - t0, 1), horizon=int(base.shape[1]))), flush=True)
 
 
@@ -547,6 +549,7 @@ if __name__ == "__main__":
     p = sub.add_parser("band")
     p.add_argument("--ckpt", required=True), p.add_argument("--parts", default="pd,ph"), p.add_argument("--per", type=int, default=40)
     p.add_argument("--bs", type=int, default=256), p.add_argument("--threads", type=int, default=0), p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--shift", type=float, default=1.0), p.add_argument("--only", default=""), p.add_argument("--suffix", default="")
     p = sub.add_parser("report")
     p.add_argument("--src", default="")
     a = ap.parse_args()
