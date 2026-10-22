@@ -501,6 +501,7 @@ the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in t
   | nuPlan 82cd1227, JTN-L18-s1 | 0.753 slow | 0.746 (`native_ref/JTN-L18-s1-native`) |
   | nuPlan 6fed9368, JTN-L18-s1, switched from a held human scene | the held scene ended unscored, the model service listened 24 s later, then 0.935 slow, wall / sim 1.01 | 0.934 |
   | PAI 478d6ec4, R6DAG-L18-s1, Harmonizer on, switched from a held human scene | stack restarted with 1080 px / 100 ms / shipped harmonizer resolution / steering weight 10; 0.895 slow, 200 frames at 1920 x 1080, 0 input errors, wall / sim 4.4 | - |
+  | nuPlan 0a0d91d5 / 34d782c0, STANDFMXH-L18-s1 (B2; 10-22 late, prefix `hb2`, `prefetch_probe.py`, prefetch off; JTN-L18-s1 image, every switch off, eager) | 1.0 / 1.0 pass, 4.5 sim s each | held 460 @18: 1.0 / 0.0 (corridor). The panel runs the public scene's ~5 s; the @18 read runs on the 160-step cache and leaves the corridor later, so only the pass is comparable. B2's read (box, 10-19 21:49) ran the image's driver code plus e3c5794e (SH30_WARP, off by default, same calls) |
   Model drives landed in `done/<scene>@<tag>.json`; the human (fake wheel) attempt of 82cd1227 stayed in `done/<scene>.json`.
   The comparison is a sanity check, not identity: the stored reads ran all cameras and other stacks.
   R6DAG-L18-s1 and R8K-L18-s2 were copied from the GPU box to Tokyo for this (sha256 checked against the box).
