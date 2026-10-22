@@ -117,7 +117,45 @@ s1 is within 1-2 points of s0 in every cell.
 
 ## C. Route dependence by distance band (CPU forwards)
 
-PENDING
+Setup:
+- Model: R6DAG-L18 s0 / s1, eval mode, CPU. The store is built exactly as in R6DAG's own train line (`rm_train.py rely`), on rows of
+  on1_JTPHD.
+- Rows: 800 per checkpoint, half `pd` (DAgger closed-loop states on the PAI train scenes) and half `ph` (PAI human rows). They are
+  stratified over 5 speed bins (0.5-45 m/s) x straight / non-straight route, with 40 rows per cell. Every row has a slot at the ego and
+  at least 10 valid slots.
+- Variants of the fed input:
+  - `mask` zeroes the slots of a band.
+  - `shift` moves the valid slots of a band 1 m (second run: 3.5 m, one lane) to the left.
+  - `cmd` forces the command to S / L / R, or to the heading rule (H).
+- Measure: change of the plan's 4 s point.
+- Cost: 12 min per checkpoint for 16 variants (~40 cores), 2.3 min for the 3-variant 3.5 m run.
+
+Tables: [band_R6DAG-L18-s0.csv](band_R6DAG-L18-s0.csv), [band_R6DAG-L18-s1.csv](band_R6DAG-L18-s1.csv), and the `_sh35` files.
+
+Median 4 s lateral change (m), s0 / s1:
+
+| variant | all rows | straight, >= 20 m/s | non-straight, >= 20 m/s |
+|---|---|---|---|
+| shift 1 m, whole route (signed) | +0.079 / +0.074 | 0.05 / 0.05 | 0.10-0.12 |
+| shift 1 m, -6..0 / 0-20 / 20-40 / 40-72 m (s0; s1 alike) | 0.000 / 0.001 / 0.035 / 0.040 | ~0 / 0.002 / 0.015 / 0.04 | |
+| shift 3.5 m, whole route (signed) | +0.22 / +0.21 (p90 0.74-0.76; > 1 m on 5-6 % of rows) | +0.15 / +0.14 | +0.36 / +0.39 |
+| shift 3.5 m, 0-20 m only | +0.003 / +0.002 | -0.003 / -0.006 | |
+| shift 3.5 m, 40-72 m only | +0.14 / +0.13 | +0.14 / +0.13 | +0.30 / +0.30 |
+| mask 40-72 m (\|.\|) | 0.06 / 0.07 (p90 0.61 / 0.66) | 0.06 / 0.12 | 0.16 / 0.30 |
+| mask all (\|.\|) | 0.08 / 0.07 (p90 0.51 / 0.43) | 0.06 / 0.05 | 0.11 / 0.08 |
+| command forced L (\|.\|) | 0.09 / 0.08 (p90 0.53 / 0.39) | 0.12 / 0.10 | 0.23 / 0.20 |
+
+Reading:
+
+1. **The plan follows the route weakly in one step.** A one-lane (3.5 m) shift of the whole route moves the 4 s point by 0.14-0.15 m on
+   straight high-speed rows (4 %). In closed loop the events still crossed a lane over 3-5 s. That fits a small per-decision pull that
+   accumulates, together with the command, which pulls about as hard (forced L: 0.10-0.12 m at >= 20 m/s).
+2. **Only the far part of the route matters.** The 0-20 m band has no effect, even shifted 3.5 m: < 0.01 m. The 40-72 m band carries
+   about 60 % of the whole-route response, and masking it alone moves the plan about as much as masking everything (p90 0.61-0.66 m against 0.43-0.51 m). Masking a band never occurs in
+   training (only the whole memory is dropped, 25 %), so `mask` mixes out-of-distribution effects in; `shift` is the cleaner probe.
+3. **What this means for a speed-scaled window.** The model already reads the far end, and reads it more on curves and at speed. A longer
+   window would give it more far-route geometry. Nothing here says that geometry is what is missing in the failures: section A finds the
+   decisive offset at the ego's own station.
 
 ## D. Points plausibly recoverable on PAI 281 (scene points per seed, s0 / s1)
 
@@ -138,7 +176,10 @@ Recommendation:
    in the lateral teacher: where the route's lane is a parallel neighbour of the student's current lane with no turn or fork within the
    window, label the current lane instead of joining the route's lane. This rests on the teacher's definition and has not been verified on
    rows (open). It cannot fix 0e05cb0c, where following the route would have been right.
-4. Lateral overshoot at very high speed (R6DAG / R7J 1.1-1.5 m past the target lane centre at 38.5 m/s, NTV0 < 0.5 m) is a separate,
+4. If the route branch is revisited at all, a cheaper probe than a base retrain is the C harness with a speed-scaled window built
+   offline. That needs re-built features, so it is not free. The open-loop question to ask first: does the policy's response to a
+   one-lane route offset depend on whether the offset is parallel (stay in lane) or converging (lane change ahead)?
+5. Lateral overshoot at very high speed (R6DAG / R7J 1.1-1.5 m past the target lane centre at 38.5 m/s, NTV0 < 0.5 m) is a separate,
    smaller effect, seen on 4cb05d65.
 
 ## Caveats
