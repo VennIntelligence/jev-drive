@@ -1,0 +1,18 @@
+{
+ "kind": "llm",
+ "note": "ReCogDrive-2B-RL (xiaomi-research): InternVL3-2B VLM (Qwen2.5 LM) last hidden state -> DiT diffusion planner, DiffGRPO; run as shipped",
+ "repo": "$DATA_DIR/third_party/recogdrive",
+ "commit": "5831ee83c7a6a40bf6919715b96b0e9ba2b48335",
+ "env": "p0-recogdrive",
+ "ckpt": "$DATA_DIR/models/recogdrive/ReCogDrive-2B-RL/ReCogDrive_Diffusion_Planner_2B_RL.ckpt",
+ "overrides": ["train_test_split=navtest", "agent=recogdrive_agent",
+               "agent.checkpoint_path='$DATA_DIR/models/recogdrive/ReCogDrive-2B-RL/ReCogDrive_Diffusion_Planner_2B_RL.ckpt'",
+               "agent.vlm_path='$DATA_DIR/models/recogdrive/ReCogDrive-VLM-2B'",
+               "agent.cam_type=single", "agent.grpo=False", "agent.cache_hidden_state=False", "agent.vlm_type=internvl",
+               "agent.dit_type=small", "agent.vlm_size=small", "agent.sampling_method=ddim"],
+ "inputs": ["CAM_F0 (single camera, as the 2B eval script)", "ego status / history in the prompt", "command"],
+ "published": {"metric": "PDMS v1", "value": 90.8, "source": "README checkpoint table, ReCogDrive-Base-RL (2B)"},
+ "tolerance": 0.5,
+ "vram": 16, "cpu": 6, "ram": 32, "chunks": 10, "min_chunk": 200,
+ "licence": "Apache-2.0"
+}

@@ -1,0 +1,16 @@
+{
+ "kind": "non-foundation",
+ "note": "DiffusionDrive (hustvl, ResNet-34 TransFuser + truncated diffusion, 60 M), released navtest checkpoint, run as shipped",
+ "repo": "$DATA_DIR/third_party/diffusiondrive",
+ "commit": "9b52ed0ec06b073d82d6f392ab084c7b301c8681",
+ "env": "p0-navsim1-gpu",
+ "ckpt": "$DATA_DIR/models/diffusiondrive/diffusiondrive_navsim_88p1_PDMS",
+ "overrides": ["train_test_split=navtest", "agent=diffusiondrive_agent",
+               "agent.checkpoint_path=$DATA_DIR/models/diffusiondrive/diffusiondrive_navsim_88p1_PDMS"],
+ "inputs": ["CAM_L0 / F0 / R0 (current frame)", "LiDAR MergedPointCloud (current frame)", "ego velocity / acceleration", "command"],
+ "published": {"metric": "PDMS v1", "value": 88.1, "source": "README + released per-token CSV diffusiondrive_88p1_PDMS.csv",
+               "per_token_csv": "$DATA_DIR/models/diffusiondrive/diffusiondrive_88p1_PDMS.csv"},
+ "tolerance": 0.5,
+ "vram": 8, "cpu": 6, "ram": 24, "chunks": 10, "min_chunk": 200,
+ "licence": "MIT (code), Apache-2.0 (weights card)"
+}

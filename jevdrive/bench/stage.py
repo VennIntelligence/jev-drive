@@ -32,6 +32,12 @@ def main(argv: list) -> None:
     elif name == "navsim-score":
         from .navsim import score_shard
         score_shard(*args)
+    elif name == "agent-merge":
+        from .navsim import agent_merge
+        agent_merge(*args)
+    elif name == "agent-score-v1":
+        from .navsim import agent_score_v1
+        agent_score_v1(*args)
     elif name == "navsim-collect":
         from .navsim import collect
         collect(*args)

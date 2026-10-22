@@ -1,0 +1,24 @@
+{
+ "dataset": "navsim",
+ "name": "p0-smoke-logs",
+ "version": 1,
+ "unit": "log",
+ "n": 8,
+ "sha256": "11783d008e1dc9e5d3958e618b75130fc52f4a1bd557ca4c4ba0231ea1c1dc8d",
+ "origin": "8 of the 136 navtest logs in bench token order (jevdrive.bench.sets.navsim_tokens), numpy default_rng(0).choice without replacement, sorted; 540 tokens",
+ "used_by": [
+  "experiments/wm_surplus P0 subject reproduction smoke"
+ ],
+ "status": "frozen",
+ "notes": "smoke slice of the third-party navtest reproduction gate",
+ "members": [
+  "2021.05.25.14.16.10_veh-35_01690_02183",
+  "2021.05.25.14.16.10_veh-35_04097_04328",
+  "2021.05.25.15.59.03_veh-30_00625_00855",
+  "2021.06.03.18.47.39_veh-35_00123_00246",
+  "2021.06.28.15.10.57_veh-16_02438_02580",
+  "2021.09.09.17.18.51_veh-48_00098_00328",
+  "2021.09.16.13.53.10_veh-42_00630_00818",
+  "2021.09.29.15.23.04_veh-28_00601_00802"
+ ]
+}

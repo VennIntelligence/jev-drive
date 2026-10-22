@@ -34,6 +34,10 @@ Families
                   `:noside` masks the memory at test time, `:mshuf` feeds the memory of a token of another log, `:sideoff` (VT-W
                   only: three-view branch, F0 from the pixel cache, CAM_L0 / CAM_R0 from lib/side_store.py) masks the two side
                   views and keeps the F0 view. VT-F / VT-F0 are plain P2 checkpoints (family parity). Not on HUGSIM
+  agent           third-party NAVSIM agents run as shipped (experiments/wm_surplus P0 subjects: DiffusionDrive, ReCogDrive, WoTE ...),
+                  one JSON per model in jevdrive/bench/agents/<name>.json (env, fork checkout, hydra overrides of its published eval
+                  script, published navtest score): navtest only; poses by jevdrive/bench/agent_poses.py in the model's own env,
+                  scored with the v2 devkit (EPDMS, our board) and the v1.1 devkit (PDMS, the metric the papers publish)
   wajepa          WA-JEPA released checkpoint ($DATA_DIR/models/wajepa): stored navtest / navhard references (its own runner,
                   experiments/top10), HUGSIM through its shipped client (zs_run agent `wajepa`, exam preset)
 """
@@ -110,6 +114,19 @@ STATIC = {
                              "navhard": "runs/op_parity/navhard/harness/wajepa",
                              "hugsim:exam": "experiments/hugsim/results/hugsim-exam/scored_wajepa.csv#wajepa"}),
 }
+AGENT_DIR = Path(__file__).resolve().parent / "agents"
+
+
+def agent_cfg(name: str) -> dict:
+    """Registry JSON of a third-party NAVSIM agent (family `agent`), $DATA_DIR expanded in every string; {} if none."""
+    f = AGENT_DIR / f"{name}.json"
+    if not f.exists():
+        return {}
+    def ex(v):
+        return expand(v) if isinstance(v, str) else [ex(x) for x in v] if isinstance(v, list) else {k: ex(x) for k, x in v.items()} if isinstance(v, dict) else v
+    return ex(json.loads(f.read_text()))
+
+
 ALIASES = {"wajepa": "WA-JEPA", "wa-jepa": "WA-JEPA", "shipped": "cinque"}
 
 
@@ -167,6 +184,10 @@ def resolve(spec: str, check: bool = False) -> Model:
         raise ValueError(f"{spec}: unknown frame protocol {frames!r} (one of {FRAMES})")
     if name in STATIC:
         m = STATIC[name]
+    elif agent_cfg(name):
+        c = agent_cfg(name)
+        m = Model(name, "agent", ckpt=c.get("ckpt", ""), note=f"{c['kind']}: {c['note']}", inputs=tuple(c.get("inputs", ())),
+                  benches=("navtest",))
     elif re.fullmatch(r"P0|P[123]-init", name):
         m = Model(name, "parity", "warp", note="shipped Cinque through the parity path" + (" (untrained adapter, bias 0)" if name != "P0" else ""),
                   inputs=PARITY_INPUTS)
@@ -226,6 +247,9 @@ def listing() -> list:
     for n, c in guard_candidates().items():
         if n != "shipped" and not (c.get("command_adapter") or c.get("route_adapter")):
             rows.append(dict(name=n, family="onnx", frames="gimm", weights=expand(c["onnx"]), note=c.get("note", "")[:80]))
+    for f in sorted(AGENT_DIR.glob("*.json")):
+        c = agent_cfg(f.stem)
+        rows.append(dict(name=f.stem, family="agent", frames="", weights=c.get("ckpt", ""), note=f"{c['kind']}: {c['note']}"[:80]))
     runs = parity_root() / "runs"
     if runs.is_dir():
         for d in sorted(runs.iterdir()):

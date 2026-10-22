@@ -254,6 +254,36 @@ class TestPredFamily(TmpData):
         self.assertTrue(str(NV.pred_file(m, "navtest")).endswith("preds/PROBE-wajepa-ctx-k16__base.npz"))
 
 
+class TestAgentFamily(TmpData):
+    def test_stages_merge(self):
+        """Third-party NAVSIM agents (jevdrive/bench/agents/*.json): poses chunks of whole logs in the model env -> merge ->
+        v2 shards + v1 PDMS -> collect; the pred file lives in the run dir; merge keeps bench token order."""
+        import numpy as np
+        from jevdrive.bench import navsim as NV
+        m = M.resolve("DiffusionDrive")
+        self.assertEqual((m.family, m.benches), ("agent", ("navtest",)))
+        toks = np.array([f"t{i}" for i in range(6)])
+        logs = np.array(["a", "a", "b", "b", "c", "c"])
+        run = self.D / "r"
+        with mock.patch.object(NV, "navsim_tokens", return_value=(toks, logs)), mock.patch.object(NV, "R_cores", return_value=24.0):
+            st = NV.stages(m, "navtest", run, shards=2)
+            names = [x.name for x in st]
+            self.assertEqual(names, ["poses0of1", "merge", "score0of2", "score1of2", "score_v1", "collect"])  # min_chunk 200 -> 1 chunk
+            cmd = st[0].cmd
+            self.assertTrue(cmd[0].endswith("envs/p0-navsim1-gpu/bin/python") and cmd[1].endswith("agent_poses.py"))
+            ov = cmd[cmd.index("--") + 1:]
+            self.assertIn("agent=diffusiondrive_agent", ov)
+            self.assertTrue(any(str(self.D) in x for x in ov))                      # $DATA_DIR expanded
+            self.assertEqual(st[0].env["PYTHONPATH"], str(self.D / "third_party/diffusiondrive"))
+            self.assertEqual((run / "poses/c0of1.tsv").read_text().split("\n")[0], "t0\ta")
+            self.assertEqual(st[-1].after, ["score0of2", "score1of2", "score_v1"])
+            np.savez(run / "poses/c0of1.npz", tokens=toks[::-1], poses=np.arange(6 * 24, dtype=np.float32).reshape(6, 8, 3)[::-1], wall_s=3.0)
+            NV.agent_merge("DiffusionDrive", "navtest", str(run))
+        z = np.load(NV.preds_of(m, "navtest", run))
+        self.assertEqual(z["tokens"].tolist(), toks.tolist())
+        self.assertEqual(float(z["poses"][1, 0, 0]), 24.0)
+
+
 class TestRunner(TmpData):
     def test_submit_graph(self):
         pool = self.D / "runs" / "pool"

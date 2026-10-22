@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 
 from . import runner as R
-from .models import REPO, TS_OPTS, Model, data_dir, resolve
+from .models import REPO, TS_OPTS, Model, agent_cfg, data_dir, resolve
 from .sets import NAVSIM, log_shards, navsim_tokens
 
 OL_REL = "bench/ol"                          # OPI_ROOT (relative to $DATA_DIR/runs)
@@ -80,6 +80,8 @@ def cache_dir(data: str, frames: str) -> Path:
 
 # ---------------------------------------------------------------- stages
 def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "", procs: int = 0) -> list:
+    if m.family == "agent":                                   # third-party NAVSIM agent run as shipped: its own poses stages
+        return agent_stages(m, bench, run_dir, shards, subset)
     data = NAVSIM[bench]["data"]
     ol_root(data)                                            # plans/ and the meta.json link that op_interp reads
     if m.family == "vt":                                      # vis_train: its own plans stage, then the parity tail (export, scoring, collect)
@@ -360,7 +362,7 @@ def score_shard(spec: str, bench: str, run_dir: str, i: int, k: int, subset: str
     env = dict(os.environ, TOKENS_FILE=str(tf))
     t0 = time.time()
     with open(d / f"score_s{i}of{k}.log", "w") as log:
-        subprocess.run(["bash", str(SCORE_SH), "score", "v2", NAVSIM[bench]["split"], name, str(pred_file(m, bench))], check=True,
+        subprocess.run(["bash", str(SCORE_SH), "score", "v2", NAVSIM[bench]["split"], name, str(preds_of(m, bench, run_dir))], check=True,
                        cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
     fs = [f for f in (data_dir() / "runs" / "navsim" / "eval" / f"v2_{NAVSIM[bench]['split']}_{name}").glob("*/*.csv")
           if f.stat().st_mtime >= t0 - 5]
@@ -405,8 +407,141 @@ def collect(spec: str, bench: str, run_dir: str, subset: str = "") -> None:
         u = g.assign(log=[lg.get(o, "?") for o in g.orig])
         s = json.loads((run_dir / "harness" / "harness_summary.json").read_text())
         summ = {"n": len(u), **{k: float(s[k]) for k in ("combined", "stage1", "stage2")}}
+    if m.family == "agent":
+        summ |= agent_v1_summary(m, run_dir)
     u.to_csv(run_dir / "units.csv", index=False)
     summ |= {"model": m.spec, "bench": bench, "subset": subset}
     R.atomic_write(run_dir / "summary.json", json.dumps(summ, indent=1))
     R.status(run_dir, "done " + ", ".join(f"{k} {v:.2f}" for k, v in summ.items() if isinstance(v, float)))
     R.atomic_write(run_dir / "DONE", json.dumps(dict(t=time.strftime("%F %T"), **summ)) + "\n")
+
+
+# ---------------------------------------------------------------- third-party NAVSIM agents (family `agent`)
+V1_SUBS = {"NC": "no_at_fault_collisions", "DAC": "drivable_area_compliance", "DDC": "driving_direction_compliance",
+           "EP": "ego_progress", "TTC": "time_to_collision_within_bound", "C": "comfort"}
+AGENT_POSES = REPO / "jevdrive/bench/agent_poses.py"
+
+
+def preds_of(m: Model, bench: str, run_dir) -> Path:
+    """Prediction file a scoring stage reads: <run>/preds.npz for third-party agents (one per run, so a smoke subset never
+    overwrites the full run), the shared bench/ol pred file otherwise."""
+    return Path(run_dir) / "preds.npz" if m.family == "agent" else pred_file(m, bench)
+
+
+def agent_env(c: dict) -> dict:
+    nav = data_dir() / "datasets" / "navsim"
+    return {"NUPLAN_MAP_VERSION": "nuplan-maps-v1.0", "NUPLAN_MAPS_ROOT": str(nav / "maps"), "OPENSCENE_DATA_ROOT": str(nav),
+            "NAVSIM_EXP_ROOT": str(data_dir() / "runs" / "navsim" / "eval"), "NAVSIM_DEVKIT_ROOT": c["repo"], "PYTHONPATH": c["repo"],
+            "OPENBLAS_CORETYPE": "Haswell", "HF_HUB_OFFLINE": "1", **c.get("env_vars", {})}
+
+
+def agent_cmd(c: dict, tokens: Path, out: Path) -> list:
+    """runner `agent`: agent_poses.py with the fork's hydra config + overrides; runner `cmd`: the JSON's own argv template
+    ({py} {repo} {tokens} {out}) for models whose shipped inference is not a NAVSIM agent (it must write the same npz)."""
+    py = str(data_dir() / "envs" / c["env"] / "bin" / "python")
+    if c.get("runner", "agent") == "cmd":
+        return [str(x).format(py=py, repo=c["repo"], tokens=tokens, out=out) for x in c["cmd"]]
+    return [py, str(AGENT_POSES), "--repo", c["repo"], "--config-name", c.get("config_name", "default_run_pdm_score"),
+            *(["--config-dir", c["config_dir"]] if c.get("config_dir") else []), "--tokens", str(tokens), "--out", str(out),
+            "--", *c.get("overrides", [])]
+
+
+def agent_stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "") -> list:
+    """poses c<i>of<K> (GPU, the model's env, whole logs per chunk) -> merge -> v2 EPDMS shards + v1.1 PDMS -> collect."""
+    if bench != "navtest":
+        raise SystemExit(f"{m.name}: third-party agents are registered for navtest only")
+    c = agent_cfg(m.name)
+    toks, logs = navsim_tokens(bench, subset)
+    ul = sorted(set(logs.tolist()))
+    k = max(1, min(int(c.get("chunks", 8)), len(ul), -(-len(toks) // int(c.get("min_chunk", 200)))))
+    pd_ = Path(run_dir) / "poses"
+    pd_.mkdir(parents=True, exist_ok=True)
+    lg = dict(zip(toks.tolist(), logs.tolist()))
+    S = []
+    for i, part in enumerate(log_shards(logs, k)):
+        part = set(part)
+        tsv, out = pd_ / f"c{i}of{k}.tsv", pd_ / f"c{i}of{k}.npz"
+        if not tsv.exists():
+            R.atomic_write(tsv, "".join(f"{t}\t{lg[t]}\n" for t in toks.tolist() if lg[t] in part))
+        S.append(R.Stage(f"poses{i}of{k}", agent_cmd(c, tsv, out), done=str(out), vram=float(c.get("vram", 16)), cpu=int(c.get("cpu", 6)),
+                         ram=float(c.get("ram", 32)), env=agent_env(c), tries=2))
+    S.append(R.Stage("merge", R.stage_cmd("jev", "agent-merge", m.spec, bench, run_dir, subset), done=str(preds_of(m, bench, run_dir)),
+                     vram=0.5, cpu=2, ram=8, after=[s.name for s in S]))
+    n = shards or default_shards()
+    thr = max(4, min(16, int(R_cores() // max(n, 1)) - 1))
+    for i in range(n):
+        S.append(R.Stage(f"score{i}of{n}", R.stage_cmd("jev", "navsim-score", m.spec, bench, run_dir, i, n, subset),
+                         done=str(run_dir / "score" / f"s{i}of{n}.csv"), vram=0.5, cpu=thr + 1, ram=24,
+                         env={"NAVSIM_THREADS": str(thr)}, after=["merge"], tries=2))
+    t1 = max(8, min(24, int(R_cores()) // 4))
+    S.append(R.Stage("score_v1", R.stage_cmd("jev", "agent-score-v1", m.spec, bench, run_dir, subset), done=str(run_dir / "v1" / "pdms.csv"),
+                     vram=0.5, cpu=t1 + 1, ram=32, env={"NAVSIM_THREADS": str(t1)}, after=["merge"], tries=2))
+    S.append(R.Stage("collect", R.stage_cmd("jev", "navsim-collect", m.spec, bench, run_dir, subset), done=str(run_dir / "DONE"),
+                     vram=0.5, cpu=2, ram=8, after=[s.name for s in S if s.name.startswith("score")]))
+    return S
+
+
+def agent_merge(spec: str, bench: str, run_dir: str, subset: str = "") -> None:
+    """Chunk npz files -> <run>/preds.npz in bench token order; fails on a missing / duplicated token or a non-finite pose."""
+    run_dir = Path(run_dir)
+    toks, _ = navsim_tokens(bench, subset)
+    got, wall = {}, 0.0
+    for f in sorted((run_dir / "poses").glob("c*of*.npz")):
+        z = np.load(f)
+        wall += float(z["wall_s"]) if "wall_s" in z else 0.0
+        for t, p in zip(z["tokens"].tolist(), z["poses"]):
+            assert t not in got, f"token {t} in two chunks"
+            got[t] = p
+    miss = [t for t in toks.tolist() if t not in got]
+    if miss:
+        raise RuntimeError(f"{len(miss)} of {len(toks)} tokens have no poses, e.g. {miss[:3]}")
+    P = np.stack([got[t] for t in toks.tolist()]).astype(np.float32)
+    assert P.shape[1:] == (8, 3) and np.isfinite(P).all()
+    _save_plans(preds_of(resolve(spec), bench, run_dir), tokens=toks.astype(str), poses=P, poses_wall_s=wall)
+    R.status(run_dir, f"merged poses of {len(toks)} tokens ({wall / 3600:.2f} GPU-job h)")
+
+
+def agent_score_v1(spec: str, bench: str, run_dir: str, subset: str = "") -> None:
+    """NAVSIM v1.1 PDMS of the run's poses (navsim_zs_score.sh score v1: PrecomputedAgent, envs/navsim1, v1_navtest metric cache);
+    a subset is passed as TOKENS_FILE (the full split needs none: a 12 k-token hydra list exceeds the argv limit)."""
+    m = resolve(spec)
+    run_dir = Path(run_dir)
+    d = run_dir / "v1"
+    d.mkdir(parents=True, exist_ok=True)
+    toks, _ = navsim_tokens(bench, subset)
+    env = dict(os.environ)
+    if subset:
+        (d / "tokens.txt").write_text("\n".join(toks.tolist()) + "\n")
+        env["TOKENS_FILE"] = str(d / "tokens.txt")
+    name = f"bench_{bench}_{stem(m)}" + (f"_{subset.replace('/', '-')}" if subset else "")
+    t0 = time.time()
+    with open(d / "score.log", "w") as log:
+        subprocess.run(["bash", str(SCORE_SH), "score", "v1", NAVSIM[bench]["split"], name, str(preds_of(m, bench, run_dir))], check=True,
+                       cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
+    fs = [f for f in (data_dir() / "runs" / "navsim" / "eval" / f"v1_{NAVSIM[bench]['split']}_{name}").glob("*/*.csv") if f.stat().st_mtime >= t0 - 5]
+    if not fs:
+        raise RuntimeError(f"v1 devkit wrote no CSV for {name}; see {d}/score.log")
+    import pandas as pd
+    t = pd.read_csv(sorted(fs)[-1])
+    t = t[~t.token.astype(str).str.startswith("average")]
+    miss = set(toks.tolist()) - set(t.token.astype(str))
+    if miss:
+        raise RuntimeError(f"{len(miss)} of {len(toks)} tokens missing from the v1 CSV")
+    _copy_into(sorted(fs)[-1], d / "pdms.csv")
+
+
+def agent_v1_summary(m: Model, run_dir: Path) -> dict:
+    """PDMS (v1.1) next to the published number: mean over tokens (failed tokens count 0, as the devkit's average row) and
+    the gate verdict |PDMS - published| <= tolerance (full navtest only; a subset is a smoke read)."""
+    import pandas as pd
+    c = agent_cfg(m.name)
+    t = pd.read_csv(run_dir / "v1" / "pdms.csv")
+    t = t[~t.token.astype(str).str.startswith("average")]
+    t.to_csv(run_dir / "units_v1.csv", index=False)
+    out = {"PDMS_v1": 100 * float(t.score.fillna(0).mean()), "v1_valid": int(t.valid.astype(bool).sum()) if "valid" in t else len(t)}
+    out |= {f"v1_{k}": 100 * float(t[col].mean()) for k, col in V1_SUBS.items() if col in t}
+    pub = c.get("published", {})
+    if pub.get("value") is not None:
+        out |= {"published": float(pub["value"]), "published_metric": pub.get("metric", "PDMS v1"), "tolerance": float(c.get("tolerance", 0.5)),
+                "delta_vs_published": out["PDMS_v1"] - float(pub["value"])}
+    return out
