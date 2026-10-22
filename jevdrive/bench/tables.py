@@ -222,6 +222,17 @@ def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str
                 r["spin (any end)"] = np.mean([u.spin.fillna(False).astype(bool).sum() for u in U])
         r["source"] = "; ".join(sorted({src.split(" ")[0] for _, _, src in v}))
         rows.append(r)
+    if bench == "hugsim":                                     # capability profile per manoeuvre class (profile.py), every arm incl. refs
+        try:
+            import pandas as pd
+            from . import hugsim as H
+            from .profile import NOTE, profile
+            rts = H.routes()
+            prow = [r for lab, v in arm_data.items()
+                    for r in profile(pd.concat([u.loc[common] for _, u, _ in v]).rename_axis("scenario").reset_index(), rts, lab)]
+            res["profile"] = stats.write_table(prow, outd / f"{tag}_profile", floatfmt=".3f", note=NOTE)
+        except Exception as e:                                # the profile must never cost the standard tables
+            print(f"profile skipped: {type(e).__name__}: {e}")
     note = {"navtest": "navtest, devkit navsim main @0a380a9 v2 EPDMS x 100 (token mean); seed means per token",
             "navhard": "navhard_two_stage v2 EPDMS, devkit two-stage aggregation per scene-mapping group (official = mean over groups)",
             "hugsim": f"HUGSIM, preset {preset}; HD-Score mean over scenarios; class = spin, else the runner's end; counts are seed means"}[bench]

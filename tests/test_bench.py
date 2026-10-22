@@ -105,6 +105,35 @@ class TestModels(TmpData):
                 M.resolve(adapted[0])
 
 
+class TestProfile(unittest.TestCase):
+    def test_route_classes_and_passage(self):
+        import pandas as pd
+        from jevdrive.bench import profile as PF
+        s = np.linspace(0, 100, 101)
+        straight = dict(xz=np.c_[0 * s, s].tolist(), yaw=[0.0] * 101)
+        yaw = np.r_[np.zeros(40), np.linspace(0, np.pi / 2, 21), np.full(40, np.pi / 2)]   # 90 deg right turn (x right, yaw + = right)
+        xz = np.cumsum(np.c_[np.sin(yaw), np.cos(yaw)], 0) - [np.sin(yaw[0]), np.cos(yaw[0])]
+        right = dict(xz=xz.tolist(), yaw=yaw.tolist())
+        shift = dict(xz=np.c_[np.clip((s - 40) / 20, 0, 1) * -3.5, s].tolist(), yaw=[0.0] * 101)       # 3.5 m to the left (x right)
+        rts = {"a": straight, "b": right, "c": shift}
+        self.assertEqual(PF.route_class(straight)["manoeuvre"], "straight")
+        r = PF.route_class(right)
+        self.assertEqual((r["manoeuvre"], r["sharp"]), ("turn R", "60-100"))
+        self.assertTrue(30 < r["s_in"] < r["s_out"] < 70)
+        c = PF.route_class(shift)
+        self.assertEqual(c["manoeuvre"], "lateral shift")
+        self.assertGreater(c["end_offset"], 0)                                      # end_offset > 0: to the left
+        u = pd.DataFrame(dict(scenario=["a-e", "b-e", "b-h", "c-e"], scene=["a", "b", "b", "c"], rc=[1.0, 0.2, 0.5, 1.0],
+                              cls=["complete", "off_route", "spin", "complete"], end=["complete", "off_route", "off_route", "complete"],
+                              hdscore=[0.9, 0.1, 0.2, 0.8]))
+        d = PF.classify(u, rts)
+        self.assertEqual(list(d.turn_pass), ["", "before", "inside", ""])
+        self.assertEqual(list(d.end_class), ["complete", "off_route", "spin", "complete"])
+        rows = PF.profile(u, rts, "X")
+        self.assertEqual([r["class"] for r in rows if r["by"] == "class"], ["straight", "lateral shift", "turn R"])
+        self.assertEqual(rows[-1]["scenarios"], 4)
+
+
 class TestSets(unittest.TestCase):
     def test_hugsim_sets(self):
         self.assertEqual(len(ST.hugsim_scenarios("all64")), 64)
