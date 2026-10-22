@@ -113,8 +113,8 @@ def plan(A, f) -> np.ndarray:
 
 
 def workers() -> int:
-    from jevdrive.common import n_cpus
-    return max(1, n_cpus() - 2)
+    """DataLoader workers = the cores this job was granted (the pool's taskset), minus one for the main process."""
+    return max(1, len(os.sched_getaffinity(0)) - 1)
 
 
 # ---------------------------------------------------------------- commands
@@ -202,25 +202,26 @@ def cmd_sweep(a):
     d.mkdir(parents=True, exist_ok=True)
     pca = UP.PCA.load(OUT / "pca.npz")
     ks = [None] + KS
-    t0, n = time.time(), 0
+    chunks = [(c0, mine[c0:c0 + a.chunk]) for c0 in range(0, len(mine), a.chunk) if not (d / f"c{c0:06d}.npz").exists()]
+    todo = [t for _, c in chunks for t in c]
+    t0, n, T, P = time.time(), 0, [], []
     with UP.Probe(A.model, SITE) as p:
         p.use_pca(pca, "cuda")
-        for c0 in range(0, len(mine), a.chunk):
-            f_out = d / f"c{c0:06d}.npz"
-            if f_out.exists():
-                continue
-            p.energy = {}
-            T, P = [], []
-            for t, f in batches(A, L, mine[c0:c0 + a.chunk], workers()):
+        it = batches(A, L, todo, workers())
+        for c0, c in chunks:
+            p.energy, T, P = {}, [], []
+            for _ in c:
+                t, f = next(it)
                 r = p.sweep(lambda: plan(A, f), ks)
                 T.append(t)
                 P.append(np.stack([r[k] for k in ks]))
+            assert T == list(c), "token order"
             n += len(T)
             e = p.energy
             np.savez(d / "tmp.npz", tokens=np.array(T), poses=np.stack(P, 1), ks=np.array([kname(k) for k in ks]),
                      e_total=e["total"], e_res=np.array([e[k] for k in KS]))
-            os.replace(d / "tmp.npz", f_out)
-            print(f"[sweep] {c0 + len(T)}/{len(mine)} {(time.time() - t0) / max(n, 1):.2f} s/token", flush=True)
+            os.replace(d / "tmp.npz", d / f"c{c0:06d}.npz")
+            print(f"[sweep] chunk {c0}: {n}/{len(todo)} to do, {(time.time() - t0) / max(n, 1):.2f} s/token", flush=True)
     (d / "DONE").write_text(json.dumps(dict(tokens=len(mine), wall_s=time.time() - t0)))
 
 

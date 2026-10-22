@@ -13,6 +13,7 @@ Model-agnostic measurement hooks (torch only; no repo imports, so it runs inside
                            the inputs (gate: `determinism_gate`).
   Moments / PCA            float64 accumulator -> eigendecomposition (mean, components, explained variance); npz on disk
   project(x, pca, k)       mu + (x - mu) U_k U_k^T in fp32, cast back to x.dtype; k = None or D keeps every direction
+  .apply(fn)               replace the feature by fn(feature) (token pruning, slice ablations); .off() restores
   skip_blocks(blocks, idx) level (b): context manager that replaces the listed entries of an nn.ModuleList by identity
 
 Projection unit: every row of the feature (all leading dims flattened, the last dim D) is one vector; the principal
@@ -165,10 +166,14 @@ class Probe:
             return out
         if self.mode == "project":
             return self.basis.project(out, self.k)
+        if self.mode == "apply":
+            return self.fn(out)
         # cached: first call stores the producer's output; every call returns it projected for the current k
         if self.cache is None:
             self.cache = out
-        return self.basis.project(self.cache, self.k)
+        if callable(self.k):
+            return self.k(self.cache)
+        return self.cache if self.k is None else self.basis.project(self.cache, self.k)
 
     # -- steps
     def capture(self, moments: Moments, stop: bool = False) -> "Probe":
@@ -176,28 +181,46 @@ class Probe:
         self.mode, self.moments, self.stop = "capture", moments, stop
         return self
 
+    def apply(self, fn) -> "Probe":
+        """Replace the feature by fn(feature) on every call (ablations: token pruning, slice-to-mean, noise); off() undoes it."""
+        self.mode, self.fn = "apply", fn
+        return self
+
+    def off(self) -> "Probe":
+        self.mode = "off"
+        return self
+
     def use_pca(self, pca: PCA, device) -> "Probe":
         self.basis = _Basis(pca, device)
         return self
 
-    def sweep(self, call, ks, energy: bool = True) -> dict:
-        """{k: call()} for k in ks; the producer runs once (the first k must be None or the cache is filled projected).
-        With energy, self.energy[k] accumulates the residual energy of the cached feature per k (held-out explained variance)."""
-        assert self.basis is not None, "use_pca first"
+    def sweep(self, call, ks, energy: bool = True, on_arm=None) -> dict:
+        """{arm: call()} for arm in ks; the producer runs once per sample (cached), the rest of the model once per arm.
+        An arm is None (unprojected), an int k (top-k PCA projection; needs use_pca) or a (name, fn) pair (fn(feature),
+        e.g. token pruning; the result is keyed by name). on_arm(key) runs before each arm's call (e.g. to set a second
+        probe that must change with the arm). With energy and a PCA, self.energy[k] accumulates the residual energy of the
+        cached feature per int k (held-out explained variance)."""
         self.mode, self.cache, out = "cached", None, {}
         try:
             self.k = None
+            if on_arm:
+                on_arm(None)
             out[None] = call()
-            if energy and self.cache is not None:
-                for key, v in self.basis.energy(self.cache, ks).items():
+            ints = [k for k in ks if isinstance(k, int)]
+            if energy and self.basis is not None and self.cache is not None:
+                for key, v in self.basis.energy(self.cache, ints).items():
                     self.energy[key] = self.energy.get(key, 0.0) + v
             for k in ks:
                 if k is None:
                     continue
-                self.k = k
-                out[k] = call()
+                key, self.k = (k[0], k[1]) if isinstance(k, tuple) else (k, k)
+                if on_arm:
+                    on_arm(key)
+                out[key] = call()
         finally:
             self.mode, self.cache, self.k = "off", None, None
+            if on_arm:
+                on_arm(None)
         return out
 
 
@@ -207,12 +230,12 @@ def explained_heldout(energy: dict) -> dict:
 
 
 @contextlib.contextmanager
-def skip_blocks(blocks: torch.nn.ModuleList, idx):
-    """Level (b): the listed blocks return their first input unchanged (residual blocks -> the layer is dropped)."""
+def skip_blocks(blocks: torch.nn.ModuleList, idx, passthrough=None):
+    """Level (b): the listed blocks return their first input unchanged (residual blocks -> the layer is dropped).
+    passthrough(x, *a, **kw) builds the return value when a block returns more than x (V-JEPA blocks: (x, attn) ->
+    `lambda x, *a, **kw: (x, None)`)."""
     saved = {i: blocks[i].forward for i in idx}
-
-    def ident(x, *a, **kw):
-        return x
+    ident = passthrough or (lambda x, *a, **kw: x)
     try:
         for i in idx:
             blocks[i].forward = ident
