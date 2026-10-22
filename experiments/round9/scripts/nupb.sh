@@ -85,8 +85,8 @@ train)
   C=$(cmd $2) || exit 1; echo "$(date '+%F %T') train $(tag $2) (code $(git rev-parse --short HEAD)): $C" | tee -a $O/stages.txt; exec $C ;;
 sum)
   T=(); for a in $ARMS; do T+=($(tag $a)); done
-  $AP -m jevdrive.facts fill --bench arena --keys ${T[@]/%/@off} || die "fill arena"     # chunks a read did not cache (the tables' own fill
-  $AP -m jevdrive.facts fill --bench held460 --keys ${T[@]} || die "fill held460"         # runs in .venv, which has no scene loader)
+  $AP -m jevdrive.facts fill --bench arena --keys ${T[@]/%/@off} ${REFS// /@off }@off RB0-P70-s0@off RB0-F-s0@off || die "fill arena"     # chunks a read did not cache (the tables' own fill
+  $AP -m jevdrive.facts fill --bench held460 --keys ${T[@]} $REFS || die "fill held460"         # runs in .venv, which has no scene loader)
   $V -m jevdrive.facts table --bench arena --tags ${T[@]} --refs $REFS --out $O/arena.md --title "nuPlan arena held, native: NPB (PAI-mixed base + B2 recipe) vs B2 / JTN-L18-s1" \
     || die "arena table"
   $V -m jevdrive.facts table --bench held460 --tags ${T[@]} --refs $REFS --out $O/held460.md --title "held 460 @18: NPB vs B2 / JTN-L18-s1" || die "held table"
