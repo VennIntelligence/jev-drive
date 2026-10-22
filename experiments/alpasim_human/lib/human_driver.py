@@ -34,6 +34,14 @@ a held scene stays held (the throttle does not start it) and a running scene is 
 advance); pacing re-anchors on resume. <live>/abort.json {"scene", "t"} from the loop (Next item) skips the current scene: the hold is
 released, pacing is off and the plan brakes to a stop, so the rollout ends at the stack's own speed; its close record says aborted and
 the loop does not count it. sessions.jsonl (log dir) has one start and one close record per session for the loop.
+
+Shadow (display only, never touches control): with runtime.simulation_config.send_recording_ground_truth=true (human_stack.sh,
+HUMAN_GT=1) the runtime sends the recorded log ego trajectory every step (submit_recording_ground_truth: unbound.gt_ego_trajectory,
+the whole log at 20 Hz on PAI, in the rig frame of the step). state.json "shadow" = the log path from 5 m behind to 120 m ahead of
+the ego's projection with the log speed, the log ego ("ghost") at the current sim time, and the gaps (you behind / ahead in m and s,
+lateral offset from the log path). The viewer's toggle (viewer.json "shadow") is integrated per scene as shadow_s (sim s driven with
+the shadow on) in the close record. close_session also saves the last front frame as <log dir>/thumbs/<session>.jpg (480 px wide;
+session uuid = rollout dir name) for the viewer's scene gallery.
 """
 from __future__ import annotations
 
@@ -69,7 +77,7 @@ CONTROL = Path(E("HUMAN_CONTROL", "")) if E("HUMAN_CONTROL") else None
 class Panel:
     """The panel's pause flag (control.json) and the loop's skip request (abort.json), re-read at most every 0.2 s."""
     def __init__(self):
-        self.t, self.paused, self.abort = 0.0, False, {}
+        self.t, self.paused, self.abort, self.shadow = 0.0, False, {}, False
 
     def poll(self):
         if time.time() - self.t > 0.2:
@@ -82,6 +90,11 @@ class Panel:
                 self.abort = json.loads((LIVE / "abort.json").read_text())
             except (OSError, ValueError):
                 self.abort = {}
+            try:
+                v = json.loads((LIVE / "viewer.json").read_text())
+                self.shadow = bool(v.get("shadow")) and time.time() - v["t"] < 5
+            except (OSError, ValueError, KeyError):
+                self.shadow = False
         return self
 
     def skip(self, s) -> bool:
@@ -134,6 +147,37 @@ def front_camera(veh):
     return {"cam": c.logical_id, "spec": spec, "R": R, "cam_t": [t.x, t.y, t.z]}
 
 
+def shadow(P, now: int):
+    """Recorded log ego (n, 4: t us, x, y, z in the rig frame at `now`, ego at the origin) -> the viewer's shadow block: path from 5 m
+    behind to 120 m ahead of the ego's projection (x, y, z, log km/h every 2 m), ghost (x, y, z, yaw) at `now`, log speed now, gap_m /
+    gap_s (+ = you are behind the log), off_m (+ = you are left of the log path), ended (sim time past the log)."""
+    t, xy = P[:, 0], P[:, 1:3]
+    seg = np.hypot(*np.diff(xy, axis=0).T)
+    s = np.r_[0.0, np.cumsum(seg)]
+    v, w = np.gradient(s, t / 1e6), np.ones(min(5, len(P)))
+    v = np.convolve(v, w, "same") / np.convolve(np.ones_like(v), w, "same")         # 5-tap mean, ends not padded with zeros
+    a, d = xy[:-1], np.diff(xy, axis=0)
+    u = np.clip(-(a * d).sum(1) / np.maximum((d * d).sum(1), 1e-9), 0, 1)          # projection of the origin on each segment
+    q = a + u[:, None] * d
+    i = int(np.argmin(np.hypot(*q.T)))
+    s_e = s[i] + u[i] * seg[i]
+    off = float(np.sign(d[i, 1] * a[i, 0] - d[i, 0] * a[i, 1]) * np.hypot(*q[i]))   # cross(d, origin - a) > 0: origin left of the path
+    k = np.r_[True, seg > 1e-3]                                                      # strictly increasing s for s -> x interpolation
+    sk = s[k]
+    at = lambda ss, col: np.interp(ss, sk, col[k])  # noqa: E731
+    ss = np.arange(max(0.0, s_e - 5), min(s_e + 120, s[-1]) + 1e-6, 2.0)
+    path = np.stack([at(ss, P[:, 1]), at(ss, P[:, 2]), at(ss, P[:, 3]), 3.6 * at(ss, v)], -1).round(2).tolist()
+    tn = min(max(now, t[0]), t[-1])
+    s_g = float(np.interp(tn, t, s))
+    j = int(np.clip(np.searchsorted(sk, s_g), 1, len(sk) - 1))
+    dx, dy = np.diff(xy[k][j - 1:j + 1], axis=0)[0]
+    j2 = int(np.clip(np.searchsorted(s, s_e, side="left"), 1, len(s) - 1))            # first time the log reached your position
+    t_e = t[j2 - 1] + (s_e - s[j2 - 1]) / max(seg[j2 - 1], 1e-6) * (t[j2] - t[j2 - 1])
+    return {"path": path, "ghost": [round(float(np.interp(tn, t, P[:, c])), 2) for c in (1, 2, 3)] + [round(math.atan2(dy, dx), 3)],
+            "v_log": round(float(np.interp(tn, t, v)), 2), "gap_m": round(float(s_g - s_e), 1), "off_m": round(off, 2),
+            "gap_s": round(float(now - t_e) / 1e6, 1) if s_e < s[-1] - 0.5 else None, "ended": bool(now > t[-1])}
+
+
 def put(path: Path, data: bytes):
     tmp = path.with_suffix(".tmp")
     tmp.write_bytes(data)
@@ -153,6 +197,7 @@ class Session:
         self.anchor, self.slept, self.n_late = None, 0.0, 0
         self.written = {}
         self.t_created, self.aborted, self.paused_s = time.time(), False, 0.0
+        self.gt, self.shadow_s, self.prev_now = None, 0.0, None         # gt: (step us, (n, 4) t, x, y, z rig frame)
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
@@ -160,6 +205,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         self.wheel, self.wlock = WheelClient(port=int(E("HUMAN_WHEEL_PORT", "47800"))), threading.Lock()
         self.sessions, self.nsess, self.lock = {}, 0, threading.Lock()
         log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_dir = log_dir
         LIVE.mkdir(parents=True, exist_ok=True)
         self.out = open(log_dir / "drive.jsonl", "a", buffering=1)
         self.start = open(log_dir / "start.jsonl", "a", buffering=1)
@@ -203,11 +249,13 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                    "sim_s": round((t1 - s.t_first) / 1e6, 2), "driven_sim_s": round(sim, 2), "driven_wall_s": round(w1 - w0, 2),
                    "wall_per_sim": round((w1 - w0 - s.paused_s) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
                    "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept - s.paused_s) / sim, 3) if sim > 0 else None,
-                   "late": s.n_late, "realtime": RT, "aborted": s.aborted, "paused_s": round(s.paused_s, 1)}
+                   "late": s.n_late, "realtime": RT, "aborted": s.aborted, "paused_s": round(s.paused_s, 1),
+                   "shadow_s": round(s.shadow_s, 1), "gt": s.gt is not None}
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
             self._live(s, {"waiting": False, "closed": True})
         if s is not None:
+            self._thumb(req.session_uuid, s)
             self.sess_log.write(json.dumps({"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
                                             "started": s.started is not None, "aborted": s.aborted, "drives": s.k}) + "\n")
         return common_pb2.Empty()
@@ -237,7 +285,38 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
+        s, g = self._s(req.session_uuid, ctx), req.ground_truth
+        P = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, p.pose.vec.z) for p in g.trajectory.poses], float).reshape(-1, 4)
+        if len(P) > 1:
+            s.gt = (int(g.timestamp_us), P)
         return common_pb2.Empty()
+
+    def _shadow(self, s: Session, now: int):
+        try:
+            return {"shadow": shadow(s.gt[1], now)} if s.gt else {}
+        except Exception as e:  # noqa: BLE001  (display only)
+            LOG.warning("shadow: %r", e)
+            return {}
+
+    def _thumb(self, uuid: str, s: Session):
+        """Last front frame of the session, 480 px wide, as <log dir>/thumbs/<session>.jpg (the viewer's scene gallery)."""
+        f = s.frames.get("front")
+        if not f:
+            return
+        try:
+            import io
+            from PIL import Image
+            im, b = Image.open(io.BytesIO(f[1])), io.BytesIO()
+            im.thumbnail((480, 480))
+            im.convert("RGB").save(b, "JPEG", quality=80)
+            data = b.getvalue()
+        except Exception:  # noqa: BLE001  (no PIL: the full frame)
+            data = f[1]
+        try:
+            (self.log_dir / "thumbs").mkdir(exist_ok=True)
+            put(self.log_dir / "thumbs" / f"{uuid}.jpg", data)
+        except OSError as e:
+            LOG.warning("thumb: %r", e)
 
     def _live(self, s: Session, extra: dict):
         """state.json + the newest JPEGs into the live dir for the viewer; never raises."""
@@ -309,7 +388,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         if s.t_first is None:
             s.t_first = now
         sim_t = (now - s.t_first) / 1e6
-        base = {"sim_t": round(sim_t, 2), "speed": round(v, 2)}
+        base = {"sim_t": round(sim_t, 2), "speed": round(v, 2), **self._shadow(s, now)}
         if s.started is None and now - s.t_first >= HOLD_US:
             self._hold(s, base)
             s.started = s.anchor = (time.time(), now)
@@ -339,6 +418,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         st = self._wheel()                                         # read after the sleep: freshest input
         delta, a = controls(st, v, s.L) if not s.aborted else (0.0, -A_BRK)
         s.n_stale += st["stale"] and s.started is not None
+        if s.started is not None and not s.aborted and self.panel.shadow and s.prev_now is not None:
+            s.shadow_s += (now - s.prev_now) / 1e6
+        s.prev_now = now
         traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
         k0 = max(0, math.ceil((now - ta) / (DT * 1e6) - 1e-9))
         traj = common_pb2.Trajectory()

@@ -13,7 +13,9 @@
 #   physics, controller), HUMAN_DRV_PORT (6790), HUMAN_START (click | throttle | none), HUMAN_WHEEL_PORT (47800; 47801 = fake_wheel.py),
 #   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE,
 #   HUMAN_FG (0; 1 = run in the foreground after the checks instead of tmux human:alpa-drive: scripts/human_loop.py),
-#   HUMAN_CONTROL (the desktop panel's control.json: pause; lib/human_driver.py).
+#   HUMAN_CONTROL (the desktop panel's control.json: pause; lib/human_driver.py),
+#   HUMAN_GT (1: the runtime sends the recorded log ego trajectory to the driver every step, send_recording_ground_truth, for the
+#   viewer's shadow; display only, scoring unchanged; 0 = as shipped).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, run.json, usage.jsonl (card VRAM, 2 s), driver/{drive,start}.jsonl, driver.log,
 #   sim/ (aggregate/results-summary.json, rollouts/, txt-logs/), results.md / results.json (human_results.py)}.
 set -uo pipefail
@@ -97,6 +99,7 @@ fi
 wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_rollouts=1 runtime.endpoints.driver.n_concurrent_rollouts=1
      runtime.endpoints.controller.n_concurrent_rollouts=1 defines.nre_cache_size=2 "wizard.baseport=$P0" wizard.run_method=NONE
      "wizard.log_dir=$R" "${lever[@]}" "$@")
+[[ ${HUMAN_GT:-1} == 1 ]] && wiz+=(runtime.simulation_config.send_recording_ground_truth=true)
 
 st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM"
 docker rm -f "$N" >/dev/null 2>&1
@@ -157,7 +160,7 @@ stop_all; wait "$sampler"; rm -f "$OUT/.stop"; trap - INT TERM
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
 python3 -c 'import json,sys; k=sys.argv[1::2]; v=sys.argv[2::2]; print(json.dumps(dict(zip(k, v))))' track "$TRACK" mode "$MODE" scenes "$n" wall_s "$wall" \
-  gpu "$GPU" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" image "$IMG" base "$BASE" \
+  gpu "$GPU" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" gt "${HUMAN_GT:-1}" image "$IMG" base "$BASE" \
   peak_mib "$(tail -1 "$OUT/usage.jsonl" | python3 -c 'import json,sys; print(json.load(sys.stdin)["peak_mib"])')" > "$OUT/run.json"
 python3 "$here/human_results.py" "$OUT" || st "results table failed"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"; launcher finished "$n scenes done: $OUT/results.md" "$OUT"

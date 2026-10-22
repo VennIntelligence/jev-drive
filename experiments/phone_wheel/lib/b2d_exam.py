@@ -67,7 +67,19 @@ class B2DExam(Backend):
         return sorted(ids, key=lambda i: (town_key(self.meta[i][0]), pos[i]))
 
     # ---- runs and the loop ----
-    def run_dir(self):
+    def runs(self):
+        return [str(p.parent) for p in sorted(RUNS.glob("*/routes.txt"), key=lambda p: -p.stat().st_mtime)]
+
+    def batch_info(self, run):
+        ids = Path(run, "routes.txt").read_text().strip().split(",")
+        notes = (Path(run, "notes.txt").read_text().split("\n", 1)[0] if Path(run, "notes.txt").exists() else "")
+        key = notes.split("new batch ", 1)[1].split()[0] if "new batch " in notes else None
+        ds = [h for h in (self.human(run, r)[0] for r in ids) if h is not None]
+        return dict(label=dict(self.batch_sets()).get(key, "terminal run (%d routes)" % len(ids)), driven=len(ds), total=len(ids),
+                    created=time.strftime("%m-%d %H:%M", time.localtime(Path(run, "routes.txt").stat().st_mtime)),
+                    mean=sum(ds) / len(ds) if ds else None)
+
+    def default_run(self):
         st = read_json(Path(self.live) / "loop.json", {}) or {}
         if st.get("run") and Path(st["run"], "routes.txt").exists():
             return st["run"]
@@ -84,7 +96,7 @@ class B2DExam(Backend):
             out = re.search(r"--out (\S+)", procs)
             return "A human_drive.sh run is active on %s (started from a terminal)." % (out.group(1) if out else "?")
         if self.loop_alive():
-            return "The panel loop is already running on %s." % self.run_dir()
+            return "The panel loop is already running on %s." % self.default_run()
         return ""
 
     def stop_other(self):
@@ -122,10 +134,7 @@ class B2DExam(Backend):
         self.cache.clear()
         return self.start_loop(run)
 
-    def resume_last(self):
-        run = self.run_dir()
-        if not run:
-            return False, "no run with routes.txt in %s" % RUNS
+    def continue_batch(self, run):
         (Path(run) / "DONE").unlink() if (Path(run) / "DONE").exists() else None
         return self.start_loop(run)
 

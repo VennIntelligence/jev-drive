@@ -191,6 +191,11 @@ system Python (`/usr/bin/python3`; envs/carla has no Tcl).
   off-screen CARLA server (card 0, server index 4, GPU placement checked as in human_drive.sh), with a full `load_world` every
   route as the leaderboard ships. After every route it runs `human_results.py` and, in the background, `human_official.py`.
   The loop takes commands from `<live>/control.json` and reports in `<live>/loop.json`; the protocol is in `lib/exam_panel.py`.
+- Batch list (2026-10-22, `lib/exam_panel.py`, both panels): the runs (dirs with `routes.txt`), newest first, with set label
+  (or "terminal run"), created time, driven / total, mean human DS and disk size. Selecting one shows its routes; "Continue
+  this batch" replaces "Resume last"; "Delete this batch" removes the run dir after a confirmation naming it and its size, never
+  while the loop runs on it.
+- Viewer: the route keeps its 10 / 20 / 40 / 80 m dots; only the nearest visible one is labelled.
 - Generic: `lib/exam_panel.py` is the panel and the protocol over a `Backend` (items with id / group / scenario / human /
   model / status; batch sets, new batch, resume, takeover of a foreign run, official table, side processes).
   `lib/b2d_exam.py` is the Bench2Drive backend; the AlpaSim backend is in [alpasim_human](../alpasim_human/README.md), section "Desktop panel".

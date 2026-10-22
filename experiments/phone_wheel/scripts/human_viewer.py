@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Window for the human driver: openpilot's wide model frame (as lib/human_agent.py publishes it through
-scripts/drive_runtime/preview) with the route command banner, the benchmark route (blue, 10/20/40/80 m dots), ego state
+scripts/drive_runtime/preview) with the route command banner, the benchmark route (blue, 10/20/40/80 m dots, the nearest visible one
+labelled), ego state
 and the phone-wheel block. Read-only, no CARLA connection; Q / Escape closes only this window. Python 3.8, envs/carla.
 While the window has focus the keyboard drives too (arrows / WASD, Space handbrake; lib/keyboard_wheel.py, merged with the phone in
 the wheel daemon).
@@ -100,9 +101,12 @@ def draw(canvas, state, images, font, big, status, tag, live, kb=""):
         pts = [tuple(p) for p in state.get("route_px", [])]
         if len(pts) > 1:
             pygame.draw.lines(img, BLUE, False, pts, 4)
-        for dm, u, v in state.get("route_marks", []):
+        labelled = False
+        for dm, u, v in state.get("route_marks", []):                # dots on all, the label on the nearest visible one only
             pygame.draw.circle(img, BLUE, (int(u), int(v)), 6)
-            img.blit(font.render("%d m" % dm, True, BLUE), (int(u) + 8, int(v) - 12))
+            if not labelled and 0 <= u < img.get_width() and 0 <= v < img.get_height():
+                img.blit(font.render("%d m" % dm, True, BLUE), (int(u) + 8, int(v) - 12))
+                labelled = True
         canvas.blit(pygame.transform.smoothscale(img, (W, H)), (20, 48))
     code, dist = state.get("cmd_code", 0), state.get("cmd_dist")
     head = big.render("%s%s" % (state.get("cmd", "-").upper(), "" if dist is None else "  in %d m" % dist), True, WHITE)

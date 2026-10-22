@@ -117,13 +117,13 @@ class Scenes(object):
                 rows.append((sid, d, [self.refs.get((track, n), {}).get(sid) for n in cols]))
         L = ["%s, set %s: %d of %d scenes driven (latest finished attempt per scene; skipped attempts do not count)" % (
             track, ex.get("set"), len(rows), len(ex.get("ids", []))), "",
-            "| scene | group | human | why | progress | driven / GT m | wall per sim s | stale | attempts | harmonizer | " + " | ".join(cols) + " |",
-            "|---|---|--:|---|--:|--:|--:|--:|--:|---|" + "--:|" * len(cols)]
+            "| scene | group | human | why | progress | driven / GT m | wall per sim s | stale | attempts | harmonizer | shadow s | " +
+            " | ".join(cols) + " |", "|---|---|--:|---|--:|--:|--:|--:|--:|---|--:|" + "--:|" * len(cols)]
         for sid, d, refs in rows:
-            L.append("| %s | %s | %.3f | %s | %s | %s / %s | %s | %s | %s | %s | %s |" % (
+            L.append("| %s | %s | %.3f | %s | %s | %s / %s | %s | %s | %s | %s | %.0f | %s |" % (
                 self.meta.get(sid, {}).get("label", sid), self.meta.get(sid, {}).get("group", "?"), d["score"], d["why"],
                 d.get("progress"), d.get("driven_m"), d.get("gt_m"), d.get("wall_per_sim"), d.get("stale"), d.get("attempt", 1),
-                "on" if d.get("harmonizer") else "off",
+                "on" if d.get("harmonizer") else "off", d.get("shadow_s") or 0,
                 " | ".join("-" if v is None else "%.3f" % v for v in refs)))
         if rows:
             mean = lambda v: sum(v) / len(v)  # noqa: E731
@@ -140,7 +140,9 @@ class AlpaSimExam(Backend):
     title = "AlpaSim human exam"
     live = os.environ.get("HUMAN_LIVE", str(RUNS / "live"))
     score_fmt = "%.2f"
-    options = {"harmonizer": ("Diffusion Harmonizer (PAI, slower render)", False)}   # human_loop.py: new stack at the next hold
+    options = {"harmonizer": ("Diffusion Harmonizer (PAI, slower render)", False),   # human_loop.py: new stack at the next hold
+               "shadow": ("Shadow: human log", False)}                              # the viewer only (display; G there too)
+    batch_extra = "harmonizer"
 
     def __init__(self):
         self.sc = Scenes()
@@ -149,7 +151,28 @@ class AlpaSimExam(Backend):
         return list(Scenes.SETS)
 
     # ---- runs and the loop ----
-    def run_dir(self):
+    def runs(self):
+        return [str(p.parent) for p in sorted(RUNS.glob("exam_*/exam.json"), key=lambda p: -p.stat().st_mtime)]
+
+    def batch_info(self, run):
+        ex = read_json(Path(run, "exam.json"), {}) or {}
+        ids = ex.get("ids", [])
+        done = [d for d in (read_json(Path(run, "done", i + ".json")) for i in ids) if d]
+        h = [bool(d.get("harmonizer")) for d in done]
+        return dict(label=ex.get("label") or ex.get("set", "?"), created=(ex.get("created") or "?")[5:16], driven=len(done), total=len(ids),
+                    mean=sum(d["score"] for d in done) / len(done) if done else None,
+                    extra="-" if not h else "on" if all(h) else "off" if not any(h) else "mixed (%d of %d on)" % (sum(h), len(h)))
+
+    def delete_batch(self, run):
+        ok, msg = Backend.delete_batch(self, run)
+        if not ok and Path(run).parent == RUNS and Path(run).name.startswith("exam_"):      # root-owned leftovers of the stack
+            base = sh("docker images --format '{{.Repository}}:{{.Tag}}' | grep '^alpasim-base:' | head -1").strip()
+            sh("docker run --rm -v %s:%s %s rm -rf %s" % (RUNS, RUNS, base, run)) if base else None
+            ok = not Path(run).exists()
+            msg = "deleted %s" % run if ok else msg
+        return ok, msg
+
+    def default_run(self):
         st = read_json(Path(self.live) / "loop.json", {}) or {}
         if st.get("run") and Path(st["run"], "exam.json").exists():
             return st["run"]
@@ -168,7 +191,7 @@ class AlpaSimExam(Backend):
 
     def busy_other(self):
         if self.loop_alive():
-            return "The panel loop is already running on %s." % self.run_dir()
+            return "The panel loop is already running on %s." % self.default_run()
         hum = sh("docker ps --format '{{.Names}}' | grep '^hum-'").split()
         if hum:
             return "An AlpaSim human stack started from a terminal is running (%s)." % ", ".join(hum)
@@ -216,12 +239,6 @@ class AlpaSimExam(Backend):
         (run / "notes.txt").write_text("%s panel: new batch %s (%d scenes)\n" % (time.strftime("%F %T"), key, len(ids)))
         return self.start_loop(run)
 
-    def resume_last(self):
-        run = self.run_dir()
-        if not run:
-            return False, "no panel run (exam_*/exam.json) in %s" % RUNS
-        return self.start_loop(run)
-
     def ensure_side(self):
         msgs = []
         if sh("tmux has-session -t wheel 2>/dev/null && echo yes").strip() != "yes":
@@ -247,8 +264,9 @@ class AlpaSimExam(Backend):
             d = read_json(Path(run, "done", sid + ".json"))
             t = read_json(Path(run, "tried", sid + ".json"))
             if d:
-                status = "%s, progress %s%s%s" % (d["why"], d.get("progress"), ", attempt %d" % d["attempt"] if d.get("attempt", 1) > 1 else "",
-                                                  ", harmonized" if d.get("harmonizer") else "")
+                status = "%s, progress %s%s%s%s" % (d["why"], d.get("progress"), ", attempt %d" % d["attempt"] if d.get("attempt", 1) > 1 else "",
+                                                  ", harmonized" if d.get("harmonizer") else "",
+                                                  ", shadow on %.0f s" % d["shadow_s"] if d.get("shadow_s") else "")
             elif t:
                 status = t.get("status", "not finished")
             else:

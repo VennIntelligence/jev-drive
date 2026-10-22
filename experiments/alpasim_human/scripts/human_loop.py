@@ -149,6 +149,7 @@ class Scorer(object):
                "progress": round(sm.get("progress_clipped_rel") or 0.0, 3), "driven_m": round(m.get("dist_traveled_m") or 0.0, 1),
                "gt_m": round(m.get("gt_dist_traveled_m") or 0.0, 1), "sim_s": drv.get("sim_s"), "wall_per_sim": drv.get("wall_per_sim"),
                "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"), "harmonizer": stack.harm,
+               "shadow_s": drv.get("shadow_s") or 0.0,
                "attempt": prev.get("attempt", 0) + 1, "t": time.time()}
         write_json(self.run / "done" / (scene + ".json"), rec)
         self.log(rec)

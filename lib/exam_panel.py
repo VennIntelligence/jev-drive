@@ -18,11 +18,16 @@ The loop handles an action once (it records the action's id in consumed):
   - stop: abort the running item and exit.
 "paused" holds at the next item boundary; the agent may also hold mid-item. "playlist" makes the loop auto-advance to the next
 unfinished item in "order"; without it the loop waits for a play action or the driver's own start signal.
+Batches: a list of the backend's run dirs (runs()), newest first, with set label, created time, driven / total, mean human score,
+disk size (du, cached; the running batch re-measured every 60 s) and an optional backend column (batch_extra). Selecting one shows its
+items; "Continue this batch" (re)starts the loop on it, "Delete this batch" removes its whole dir after a confirmation naming it and its
+size, never while the loop runs on it. Nothing is ever deleted automatically.
 The top of the panel shows the phone page address (from `tailscale status --json`, with a Copy button) and the live input status
 from the wheel daemon's status file (WHEEL_STATUS, default $DATA_DIR/tmp/wheel/status.json; experiments/phone_wheel/scripts/wheel_server.py).
 """
 import json
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -79,6 +84,8 @@ class Backend(object):
     score_fmt = "%.1f"             # human / model / group-mean cells
     live = None                    # live dir (control.json / loop.json)
     options = {}                   # name -> (label, default bool), e.g. {"stop_on_collision": ("Stop on collision", False)}
+    batch_extra = None             # title of an extra column of the batch list (batch_info "extra"), or None
+    selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
     def batch_sets(self):          # [(key, label)] offered by "New batch"
         raise NotImplementedError
@@ -86,8 +93,23 @@ class Backend(object):
     def new_batch(self, key):      # make a run dir for that set, start the loop on it; return (ok, message)
         raise NotImplementedError
 
-    def resume_last(self):         # take over / restart the loop on the latest run dir; return (ok, message)
+    def start_loop(self, run):     # (re)start the drive loop on that run dir; return (ok, message)
         raise NotImplementedError
+
+    def continue_batch(self, run):  # "Continue this batch"; return (ok, message)
+        return self.start_loop(run)
+
+    def runs(self):                # the batches (run dirs, str), newest first
+        raise NotImplementedError
+
+    def batch_info(self, run):     # dict(label, created, driven, total, mean (or None), extra)
+        raise NotImplementedError
+
+    def delete_batch(self, run):   # remove a batch dir (the panel has confirmed it and checked that no loop runs on it)
+        if run not in self.runs():
+            return False, "%s is not a batch of this panel" % run
+        shutil.rmtree(run, ignore_errors=True)
+        return (not os.path.exists(run)), ("deleted %s" % run if not os.path.exists(run) else "could not delete all of %s" % run)
 
     def busy_other(self):          # a non-panel run that must be stopped before the panel takes over, as text, or ""
         return ""
@@ -95,8 +117,16 @@ class Backend(object):
     def stop_other(self):          # stop that run cleanly; return message
         return ""
 
-    def run_dir(self):             # the run the panel shows
+    def run_dir(self):             # the run the panel shows: the selected batch, else default_run()
+        return self.selected if self.selected and os.path.isdir(self.selected) else self.default_run()
+
+    def default_run(self):         # the loop's run, else the newest
         raise NotImplementedError
+
+    def loop_run(self):            # the run the drive loop is working on, or None
+        st = read_json(Path(self.live) / "loop.json", {}) or {}
+        alive = st.get("pid") and os.path.exists("/proc/%s" % st["pid"]) and st.get("state") != "stopped"
+        return st.get("run") if alive else None
 
     def items(self):               # items of run_dir() in run order
         raise NotImplementedError
@@ -136,6 +166,17 @@ def wheel_line(path=WHEEL_STATUS):
         "keyboard idle (focus a viewer window to drive with it)"
     src = st.get("source")
     return "input: %s;  %s;  driving: %s" % (p, k, src or "NOBODY (car brakes)"), "#2e7d32" if src else "#c05000"
+
+
+def du(path):
+    try:
+        return int(subprocess.run(["du", "-sb", str(path)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60).stdout.split()[0])
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return None
+
+
+def human_size(b):
+    return "-" if b is None else "%.1f GB" % (b / 1e9) if b >= 1e9 else "%.0f MB" % (b / 1e6) if b >= 1e6 else "%.0f kB" % (b / 1e3)
 
 
 def model_key(it):
@@ -180,6 +221,7 @@ def panel(backend):
 
     row1 = ttk.Frame(root, padding=(8, 2))
     row1.pack(fill="x")
+    ttk.Label(row1, text="New:").pack(side="left")
     sets = backend.batch_sets()
     set_var = tk.StringVar(value=sets[0][1] if sets else "")
     ttk.Combobox(row1, textvariable=set_var, values=[s[1] for s in sets], state="readonly", width=34).pack(side="left")
@@ -195,14 +237,95 @@ def panel(backend):
     def new_batch():
         key = dict((l, k) for k, l in sets).get(set_var.get())
         if key and take_over():
+            before = set(backend.runs())
             info(backend.new_batch(key)[1])
+            new = [r for r in backend.runs() if r not in before]
+            backend.selected = new[0] if new else backend.selected
+            refresh_batches(True)
 
-    def resume_last():
-        if take_over():
-            info(backend.resume_last()[1])
+    def chosen():
+        sel = btree.selection()
+        return sel[0] if sel else None
+
+    def continue_batch():
+        run = chosen()
+        if run and take_over():
+            backend.selected = run
+            info(backend.continue_batch(run)[1])
+            refresh_batches(True)
+
+    def delete_batch():
+        run = chosen()
+        if not run:
+            return
+        if run == backend.loop_run():
+            return info("The loop is running on this batch:\n%s\n\nStop it first (Stop), then delete." % run)
+        b, size = backend.batch_info(run), human_size(du(run))
+        if not messagebox.askyesno(backend.title, "Delete the batch \"%s\" (%s, created %s, %d / %d driven, %s on disk)?\n\nThis removes "
+                                   "the whole directory\n%s\nwith every attempt, rollout and score. It cannot be undone." % (
+                                       b["label"], os.path.basename(run), b["created"], b["driven"], b["total"], size, run), icon="warning"):
+            return
+        info(backend.delete_batch(run)[1])
+        sizes.pop(run, None)
+        if backend.selected == run:
+            backend.selected = None
+        refresh_batches(True)
     ttk.Button(row1, text="New batch", command=new_batch).pack(side="left", padx=4)
-    ttk.Button(row1, text="Resume last", command=resume_last).pack(side="left", padx=4)
     ttk.Button(row1, text="Official table", command=lambda: show_text("Official table", backend.official())).pack(side="right")
+
+    bcols = ("created", "driven", "mean", "size") + (("extra",) if backend.batch_extra else ())
+    bframe = ttk.Frame(root, padding=(8, 2))
+    bframe.pack(fill="x")
+    btree = ttk.Treeview(bframe, columns=bcols, show="tree headings", selectmode="browse", height=5)
+    btree.heading("#0", text="batch")
+    btree.column("#0", width=470)
+    for c, w, t in zip(bcols, (170, 120, 110, 110, 130), ("created", "driven / total", "mean human", "disk", backend.batch_extra)):
+        btree.heading(c, text=t)
+        btree.column(c, width=w, anchor="w" if c in ("created", "extra") else "e")
+    bsb = ttk.Scrollbar(bframe, orient="vertical", command=btree.yview)
+    btree.configure(yscrollcommand=bsb.set)
+    bsb.pack(side="right", fill="y")
+    btree.pack(fill="x", expand=True)
+    btree.tag_configure("current", background="#ffe9b0")
+    brow = ttk.Frame(root, padding=(8, 2))
+    brow.pack(fill="x")
+    ttk.Button(brow, text="Continue this batch", command=continue_batch).pack(side="left", padx=4)
+    ttk.Button(brow, text="Delete this batch", command=delete_batch).pack(side="left", padx=4)
+    ttk.Label(brow, text="select a batch to show its items; the running loop's batch is highlighted").pack(side="left", padx=8)
+    sizes, bstate = {}, {"t": 0.0, "busy": False}
+
+    def on_bselect(_):
+        run = chosen()
+        if run and not bstate["busy"] and run != backend.run_dir():
+            backend.selected = run
+            refresh(True)
+    btree.bind("<<TreeviewSelect>>", on_bselect)
+
+    def refresh_batches(force=False):
+        if not force and time.time() - bstate["t"] < 5:
+            return
+        bstate["t"], bstate["busy"] = time.time(), True
+        try:
+            runs, cur, shown = backend.runs(), backend.loop_run(), backend.run_dir()
+            if list(btree.get_children()) != runs:
+                btree.delete(*btree.get_children())
+                for r in runs:
+                    btree.insert("", "end", iid=r)
+            for r in runs:
+                if r not in sizes or (r == cur and time.time() - sizes[r][0] > 60):
+                    sizes[r] = (time.time(), du(r))
+                try:
+                    b = backend.batch_info(r)
+                except Exception:  # noqa: BLE001  (a half-written batch must not kill the panel)
+                    b = dict(label="?", created="?", driven=0, total=0, mean=None, extra="")
+                btree.item(r, text="%s   %s" % (b["label"], os.path.basename(r)), tags=("current",) if r == cur else (),
+                           values=(b["created"], "%d / %d" % (b["driven"], b["total"]), fmt(b["mean"]), human_size(sizes[r][1]))
+                           + ((b.get("extra", ""),) if backend.batch_extra else ()))
+            if shown in runs and chosen() != shown:
+                btree.selection_set(shown)
+                btree.see(shown)
+        finally:
+            bstate["busy"] = False
 
     row2 = ttk.Frame(root, padding=(8, 2))
     row2.pack(fill="x")
@@ -285,8 +408,9 @@ def panel(backend):
         w, col = wheel_line()
         wheel_var.set(w)
         wheel_lab.configure(foreground=col)
-        run_var.set("run: %s" % (backend.run_dir() or "-"))
         alive = st.get("pid") and os.path.exists("/proc/%s" % st.get("pid"))
+        run_var.set("shown: %s%s" % (backend.run_dir() or "-", "" if not alive or st.get("run") == backend.run_dir() else
+                                      "   (the loop runs on %s)" % os.path.basename(st.get("run") or "")))
         other = "" if alive else backend.busy_other()
         state_var.set("loop: %s%s%s   %s" % (st.get("state", "-") if alive else ("not running; " + other if other else "not running"),
                                             "  item %s" % st["item"] if st.get("item") and alive else "",
@@ -315,9 +439,10 @@ def panel(backend):
                 for it in its:
                     tree.insert(parent, "end", iid=it["id"], text=it.get("label") or it["id"])
             shape["key"] = key
-            ctl.update(order=[it["id"] for it in order])
+            if not alive or st.get("run") == backend.run_dir():      # viewing another batch never reorders the loop's
+                ctl.update(order=[it["id"] for it in order])
         for it in order:
-            tags = ("current",) if alive and st.get("item") == it["id"] else ("done",) if it["human"] is not None else ()
+            tags = ("current",) if alive and st.get("run") == backend.run_dir() and st.get("item") == it["id"] else ("done",) if it["human"] is not None else ()
             model = fmt(it["model"]) + (" %s" % it["model_src"] if it.get("model_src") and it["model"] is not None else "")
             tree.item(it["id"], values=(it["scenario"], fmt(it["human"]), model, it["status"]), tags=tags)
         for g, its in groups:
@@ -327,6 +452,7 @@ def panel(backend):
 
     def tick():
         try:
+            refresh_batches()
             refresh()
         finally:
             root.after(1000, tick)

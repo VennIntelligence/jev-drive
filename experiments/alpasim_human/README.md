@@ -149,8 +149,14 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
 `wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing.
 
 - New batch: PAI stage 1 (10), PAI all 40 (`pai_scenes_40.tsv`) or nuPlan navtest 48 (`scenes_navtest_full_part001_48.txt`).
-  It writes `/data/runs/alpasim_human/exam_<track>_<stamp>/exam.json` and starts the loop. Resume last: restart the loop
-  on the latest `exam_*` run; driven scenes are skipped. If the panel loop or a `human_pai.sh` / `human_nuplan.sh` stack
+  It writes `/data/runs/alpasim_human/exam_<track>_<stamp>/exam.json`, starts the loop, and the new batch appears at the top
+  of the batch list.
+- Batch list (since 2026-10-22, generic in `lib/exam_panel.py`): every `exam_*` batch, newest first, with set label, created
+  time, driven / total, mean human score, disk size (`du`, the running batch re-measured every 60 s) and harmonizer (on / off /
+  mixed over the driven scenes). Selecting a batch shows its scenes. "Continue this batch" restarts the loop on it (driven
+  scenes are skipped; this replaces "Resume last"). "Delete this batch" asks for confirmation, naming the batch and its size,
+  then removes the whole batch dir (root-owned stack leftovers through the alpasim-base image). It refuses while the loop runs on
+  that batch. Nothing is deleted automatically. If the panel loop or a `human_pai.sh` / `human_nuplan.sh` stack
   from a terminal is running, the panel offers to stop it. If CARLA runs on card 0 (a B2D exam), the panel refuses to start
   and says so; it never stops the B2D side.
 - Scene list: grouped by PAI artifact revision (26.01 / 26.04) or by nuPlan log segment, with the group's human mean and
@@ -190,10 +196,34 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
   table" has a harmonizer column, so harmonized and unharmonized attempts stay apart.
 - Phone address and input: the panel's top line shows the phone page URL (from `tailscale status --json`, Copy button) and
   the live input status (phone connected / last frame, keyboard active, which source drives); phone_wheel README.
+- Shadow: human log (checkbox, off by default; viewer hotkey G, the last change wins): display only, it never touches control.
+  With it on, the viewer shows the recorded human drive of the scene: its path ahead on the road and in the inset, coloured by the
+  log's speed (violet slow, magenta, yellow fast; legend 0-60 km/h), a wireframe box labelled LOG where the log car is at the
+  current sim time, and a readout "LOG x km/h  YOU y km/h  n m / n s behind (ahead)  n m left (right) of the log path".
+  Source: the stack sets `runtime.simulation_config.send_recording_ground_truth=true` (`HUMAN_GT=1`, default; the runtime ships
+  it off). The runtime then calls `submit_recording_ground_truth` every step with the scene's recorded ego trajectory
+  (`unbound.gt_ego_trajectory`, PAI: 202 poses at 20 Hz over 20 s) in the rig frame of the step; the driver turns it into
+  state.json "shadow". Scoring is unchanged. Time with the shadow on is logged per scene (`shadow_s` in the close record,
+  `done/<scene>.json`, status column, results.md), because a drive with the log in view is not a blind attempt.
+  Checked offline: `scripts/replay_asl.py` replays a finished `rollout.asl` through the driver's own gRPC methods, with a GT
+  message built from the asl's `RolloutMetadata.ego_rig_recorded_ground_truth_trajectory` (the same object the runtime sends).
+  On the user's 10 scenes of 2026-10-22, during the forced log replay (first 1.7 s) the gap and the lateral offset are 0.0, so
+  frames and timestamps line up. Not yet checked on a live stack with the flag on.
+- Viewer layout (2026-10-22): derived from the window's aspect. In 16:9 fullscreen (F11, or the window manager) the camera image
+  fills the height, the readout is one compact strip under it with a one-line legend, and the right column is the scene gallery:
+  every finished scene of the loop's batch, newest first, as the last front frame before it closed (the driver saves
+  `stacks/<stack>/driver/thumbs/<rollout>.jpg`, 480 px, at close_session) with score and why; the mouse wheel scrolls it. The
+  blue route keeps its 10 m dots but labels only the nearest visible one.
 - Viewer: shows "PAUSED: resume on the panel", "SKIPPING THIS SCENE" and a green "HARMONIZER ON" tag. Scene i of n counts
   within the current stack. With the viewer window focused the keyboard drives too (arrows / WASD, Space; phone_wheel README).
 - Test without a GPU: `scripts/fake_stack.py` stands in for `human_stack.sh` (`HUMAN_STACK_SCRIPT=...`). It writes the same
   files, honours pause and skip, and copies real `metrics.parquet` files of an earlier run, so scoring is real.
+
+![viewer 16:9](figs/viewer_16x9_shadow.jpg)
+
+`figs/viewer_16x9_shadow.jpg`: the viewer at 3840x2160 (Xvfb) on a replay of the user's 2026-10-22 drive of 49597f01 at sim 5 s,
+shadow on. Look at the yellow log path (78 km/h) left of the orange plan, the readout under the image (4.5 m right of the log
+path), the single "50 m" route label and the gallery on the right. "PHONE SILENT" is the replay (no phone attached).
 
 ![panel](figs/panel_alpasim.png)
 
@@ -254,6 +284,7 @@ Not verified:
 - `human_loop.py` (scripts): long-lived drive loop of the desktop panel
 - `human_panel.py` / `human_panel.sh` (scripts): the panel and its desktop entry
 - `fake_stack.py` (scripts): stand-in for human_stack.sh in loop tests
+- `replay_asl.py` (scripts): replays finished rollouts through the driver (shadow, thumbs, viewer tests without a GPU)
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026
 

@@ -4,7 +4,7 @@
     HUMAN_STACK_SCRIPT=experiments/alpasim_human/scripts/fake_stack.py python3 experiments/alpasim_human/scripts/human_loop.py --run ...
 
 Same call (<track> <out dir> <scene list>) and the same files the loop reads: <out>/driver/sessions.jsonl and drive.jsonl close
-records, <live>/state.json (run = out dir, scene, waiting, closed), sim/rollouts/<scene>/<id>/{metrics.parquet, _complete} and
+records and thumbs/<rollout>.jpg (a copy of FAKE_THUMB, default <live>/front.jpg), <live>/state.json (run = out dir, scene, waiting, closed), sim/rollouts/<scene>/<id>/{metrics.parquet, _complete} and
 sim/eval-config.yaml, ERROR on failure. Per scene: FAKE_LOAD_S of loading, a hold until the start (FAKE_START_S after the hold
 begins, or a throttle > 0.2 on HUMAN_WHEEL_PORT; never while control.json says paused), FAKE_DRIVE_S of driving (frozen while
 paused), then the rollout files. abort.json skips the scene as lib/human_driver.py does. metrics.parquet is copied from a real
@@ -26,6 +26,7 @@ live = Path(E("HUMAN_LIVE", "/data/runs/alpasim_human/live"))
 ctl = Path(E("HUMAN_CONTROL", str(live / "control.json")))
 src = Path(E("FAKE_METRICS_FROM", "/data/runs/alpasim_human/pai_1013-2305_rt"))
 LOAD, START, DRIVE = float(E("FAKE_LOAD_S", "3")), float(E("FAKE_START_S", "2")), float(E("FAKE_DRIVE_S", "6"))
+thumb = Path(E("FAKE_THUMB", str(live / "front.jpg")))
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
 ids = [x for x in lst.read_text().split() if x]
 (out / "driver").mkdir(parents=True, exist_ok=True)
@@ -52,7 +53,7 @@ time.sleep(float(E("FAKE_STACK_START_S", "4")))
 for n, scene in enumerate(ids):
     state(scene=scene, closed=True, scene_i=n)
     time.sleep(LOAD)
-    sid, t_created = str(uuid.uuid4()), time.time()
+    sid, t_created = str(uuid.uuid4()), time.time()             # session uuid = rollout dir name, as in AlpaSim
     sess.write(json.dumps({"kind": "start", "t": t_created, "session": sid, "n": n, "scene": scene}) + "\n")
     skip = lambda: (j(live / "abort.json", {}) or {}).get("scene") == scene and j(live / "abort.json")["t"] > t_created  # noqa: E731
     t_hold, aborted = time.time(), False
@@ -84,7 +85,10 @@ for n, scene in enumerate(ids):
                             "aborted": aborted, "paused_s": round(t_p, 1)}) + "\n")
     sess.write(json.dumps({"kind": "close", "t": time.time(), "session": sid, "n": n, "scene": scene, "started": True,
                            "aborted": aborted}) + "\n")
-    rd = out / "sim/rollouts" / scene / str(uuid.uuid4())
+    rd = out / "sim/rollouts" / scene / sid
+    if thumb.is_file():                                          # the driver's last front frame (scene gallery)
+        (out / "driver/thumbs").mkdir(exist_ok=True)
+        shutil.copy(str(thumb), str(out / "driver/thumbs" / (sid + ".jpg")))
     rd.mkdir(parents=True)
     real = next(iter(sorted(src.glob("sim/rollouts/%s/*/metrics.parquet" % scene))), None)
     shutil.copy(str(real), str(rd / "metrics.parquet")) if real else (rd / "metrics.parquet").write_bytes(b"")

@@ -1,12 +1,21 @@
 #!/usr/bin/env python
 """Window for the human AlpaSim driver ("alpasim human drive (phone wheel)", DISPLAY=:0): the front camera as the driver receives it
-with the route projected onto the road (blue, distance dots; the phone's 4 s plan orange) through the session's front-camera
-calibration (<live>/camera.json from the driver; for older sessions the scene's start.jsonl of a pai_driver / human run), a turn
-banner from the route's shape, a small top-down inset (rig frame), side cameras when rendered, speed, applied steering /
-acceleration, the phone panel, scene progress, sim vs wall time, and "DRIVER: HUMAN (phone)". Reads <live>/state.json and *.jpg
-(lib/human_driver.py). A left click anywhere writes <live>/start: the held scene starts. Heartbeat <live>/viewer.json. Q / Esc closes.
-While the window has focus the keyboard drives too (arrows / WASD, Space handbrake; experiments/phone_wheel/lib/keyboard_wheel.py,
-merged with the phone in the wheel daemon). "HARMONIZER ON" shows when the stack renders with the diffusion harmonizer.
+with the route projected onto the road (blue, dots every 10 m, the nearest visible dot labelled; the phone's 4 s plan orange) through
+the session's front-camera calibration (<live>/camera.json from the driver; for older sessions the scene's start.jsonl of a pai_driver /
+human run), a turn banner from the route's shape, a small top-down inset (rig frame), side cameras when rendered, a compact strip
+under the image (speed, applied steering / acceleration, phone bars, scene clock), and "DRIVER: HUMAN (phone)". Reads
+<live>/state.json and *.jpg (lib/human_driver.py). A left click anywhere writes <live>/start: the held scene starts. Heartbeat
+<live>/viewer.json (with the shadow toggle). Q / Esc closes, F11 toggles fullscreen. While the window has focus the keyboard drives too
+(arrows / WASD, Space handbrake; experiments/phone_wheel/lib/keyboard_wheel.py, merged with the phone in the wheel daemon).
+"HARMONIZER ON" shows when the stack renders with the diffusion harmonizer.
+
+Layout: derived from the window's aspect (canvas 1120 units high). The image takes the full height left by the top bar, the strip and a
+one-line legend; the right column is the scene gallery: every finished scene of the panel run (<run>/done/*.json, run from
+<live>/loop.json), newest first, as the last front frame before the scene closed (<run>/stacks/<stack>/driver/thumbs/<rollout>.jpg,
+written by the driver) with score and why; the mouse wheel scrolls it.
+Shadow (display only; G, or the panel's "Shadow: human log", the last change wins): the recorded human log's path ahead coloured by
+the log speed (violet slow, magenta, yellow fast), a wireframe box where the log ego is at the current sim time, and a readout "LOG x
+km/h  YOU y km/h  n m / n s behind (ahead)  n m left (right) of the log path", in the front view and the inset (state.json "shadow").
 
     /data/envs/carla/bin/python experiments/alpasim_human/scripts/human_viewer.py --dir /data/runs/alpasim_human/live
 """
@@ -26,7 +35,9 @@ from keyboard_wheel import KeyboardWheel, pygame_keys  # noqa: E402
 
 TITLE = "alpasim human drive (phone wheel)"
 BLUE, WHITE, GREY, ORANGE, RED, GREEN = (70, 170, 250), (230, 235, 240), (150, 150, 150), (255, 150, 60), (240, 70, 60), (80, 220, 120)
-CW, CH, IW, IH = 1600, 1120, 1560, 780
+GHOST, LBL = (235, 215, 255), (150, 200, 255)
+SPEED = ((0, (150, 60, 220)), (25, (225, 70, 200)), (50, (255, 215, 90)), (70, (255, 245, 170)))   # km/h -> shadow colour
+CH, GW_MIN, INFO, LEG = 1120, 280, 118, 30
 CALIB_GLOBS = ("/data/runs/alpasim_human/*/driver/start.jsonl", "/data/runs/alpasim/pai1/runs/*/driver/start.jsonl",
                "/data/runs/alpasim/*/runs/*/driver/start.jsonl")
 
@@ -56,36 +67,44 @@ class Calib:
         return self.db.get(scene)
 
 
-def project(pts, cal):
-    """Rig-frame points (n, 3), rig origin on the ground -> pixels of the native image (n, 2) for the points in view, else []."""
+def uvs(pts, cal):
+    """Rig-frame points (n, 3), rig origin on the ground -> pixels of the native image (n, 2), NaN where not in view."""
     P = np.asarray(pts, float).reshape(-1, 3)
-    if cal is None or not len(P):
-        return np.zeros((0, 2))
     pc = (P - np.asarray(cal["cam_t"])) @ np.asarray(cal["R"])          # R^T (p - t): camera frame x right, y down, z forward
-    pc = pc[pc[:, 2] > 1.0]
     sp = cal["spec"]
     cx, cy = sp["c"]
-    if sp.get("model") == "ftheta":
-        rho = np.hypot(pc[:, 0], pc[:, 1])
-        th = np.arctan2(rho, pc[:, 2])
-        k = th < sp.get("max_angle", 1.5)
-        pc, rho, th = pc[k], np.maximum(rho[k], 1e-9), th[k]
-        r = np.polyval(sp["fw"][::-1], th)
-        uv = np.stack([cx + r * pc[:, 0] / rho, cy + r * pc[:, 1] / rho], -1)
-    else:
-        fx, fy = sp["f"]
-        uv = np.stack([cx + fx * pc[:, 0] / pc[:, 2], cy + fy * pc[:, 1] / pc[:, 2]], -1)
-    w, h = sp["native"]
-    return uv[(uv[:, 0] > -w) & (uv[:, 0] < 2 * w) & (uv[:, 1] > -h) & (uv[:, 1] < 2 * h)]
+    with np.errstate(all="ignore"):
+        if sp.get("model") == "ftheta":
+            rho = np.maximum(np.hypot(pc[:, 0], pc[:, 1]), 1e-9)
+            th = np.arctan2(rho, pc[:, 2])
+            r = np.polyval(sp["fw"][::-1], th)
+            uv, bad = np.stack([cx + r * pc[:, 0] / rho, cy + r * pc[:, 1] / rho], -1), th >= sp.get("max_angle", 1.5)
+        else:
+            fx, fy = sp["f"]
+            uv, bad = np.stack([cx + fx * pc[:, 0] / pc[:, 2], cy + fy * pc[:, 1] / pc[:, 2]], -1), np.zeros(len(P), bool)
+        w, h = sp["native"]
+        bad |= (pc[:, 2] <= 1.0) | ~((uv[:, 0] > -w) & (uv[:, 0] < 2 * w) & (uv[:, 1] > -h) & (uv[:, 1] < 2 * h))
+    uv[bad] = np.nan
+    return uv
+
+
+def project(pts, cal):
+    """uvs() of the points in view only, else []."""
+    if cal is None or not np.asarray(pts).size:
+        return np.zeros((0, 2))
+    uv = uvs(pts, cal)
+    return uv[np.isfinite(uv).all(1)]
 
 
 def dense(xy, step=1.0):
-    xy = np.asarray(xy, float).reshape(-1, 2)
+    """Resample a polyline (n, >= 2 columns, arc length from the first two) every `step` m; the other columns are interpolated."""
+    xy = np.asarray(xy, float)
+    xy = xy.reshape(-1, xy.shape[-1] if xy.ndim == 2 else 2)
     if len(xy) < 2:
         return xy
-    s = np.r_[0, np.cumsum(np.hypot(*np.diff(xy, axis=0).T))]
+    s = np.r_[0, np.cumsum(np.hypot(*np.diff(xy[:, :2], axis=0).T))]
     t = np.arange(0, s[-1] + 1e-6, step)
-    return np.stack([np.interp(t, s, xy[:, 0]), np.interp(t, s, xy[:, 1])], -1)
+    return np.stack([np.interp(t, s, xy[:, c]) for c in range(xy.shape[1])], -1)
 
 
 def maneuver(route):
@@ -117,11 +136,30 @@ def arrow(surface, code, center, s, color):
     pygame.draw.polygon(surface, (0, 0, 0), pts, 2)
 
 
-def overlay(img, st, cal, font):
-    """Route (blue line, 10 m dots) and the 4 s plan (orange) drawn on the road in the native image."""
+def speed_col(kmh):
+    for (a, ca), (b, cb) in zip(SPEED[:-1], SPEED[1:]):
+        if kmh <= b:
+            f = max(0.0, (kmh - a) / (b - a))
+            return tuple(int(x + f * (y - x)) for x, y in zip(ca, cb))
+    return SPEED[-1][1]
+
+
+def ghost_corners(g, z=True):
+    """The log ego's box (rear axle origin, 5.2 x 1.9 m, 1.5 m high) at ghost (x, y, z, yaw): (8, 3) bottom then top, or (4, 2)."""
+    x, y, gz, yaw = g
+    c, s = math.cos(yaw), math.sin(yaw)
+    fp = [(-1.1, -0.95), (4.1, -0.95), (4.1, 0.95), (-1.1, 0.95)]
+    if not z:
+        return [(x + c * a - s * b, y + s * a + c * b) for a, b in fp]
+    return [[x + c * a - s * b, y + s * a + c * b, gz + hz] for hz in (0.0, 1.5) for a, b in fp]
+
+
+def overlay(img, st, cal, font, shadow_on):
+    """Route (blue line, 10 m dots, the nearest visible one labelled), the 4 s plan (orange) and the shadow drawn in the native image."""
     if cal is None:
         return
     sc = img.get_width() / cal["spec"]["native"][0]
+    W, H = img.get_size()
     for xy, col, wdt in ((st.get("plan") or [], ORANGE, 6), (st.get("route") or [], BLUE, 9)):
         d = dense(xy, 0.5)
         if len(d) < 2:
@@ -129,9 +167,25 @@ def overlay(img, st, cal, font):
         uv = project(np.c_[d, np.zeros(len(d))], cal) * sc
         if len(uv) > 1:
             pygame.draw.lines(img, col, False, [tuple(p) for p in uv], max(2, int(wdt * sc)))
+    sh = st.get("shadow") if shadow_on else None
+    if sh and len(sh.get("path") or []) > 1:
+        P = dense(sh["path"], 0.5)
+        uv = uvs(P[:, :3], cal) * sc
+        for a, b, kmh in zip(uv[:-1], uv[1:], P[:-1, 3]):
+            if np.isfinite(a).all() and np.isfinite(b).all():
+                pygame.draw.line(img, speed_col(kmh), tuple(a), tuple(b), max(2, int(5 * sc)))
+    if sh and sh.get("ghost"):
+        uv = uvs(ghost_corners(sh["ghost"]), cal) * sc
+        for i, j in [(i, (i + 1) % 4) for i in range(4)] + [(4 + i, 4 + (i + 1) % 4) for i in range(4)] + [(i, i + 4) for i in range(4)]:
+            if np.isfinite(uv[i]).all() and np.isfinite(uv[j]).all():
+                pygame.draw.line(img, GHOST, tuple(uv[i]), tuple(uv[j]), max(2, int(4 * sc)))
+        top = uv[4:][np.isfinite(uv[4:]).all(1)]
+        if len(top):
+            t = font.render("LOG", True, GHOST)
+            img.blit(t, (int(top[:, 0].mean()) - t.get_width() // 2, int(top[:, 1].min()) - t.get_height() - 4))
     d = dense(st.get("route") or [], 0.5)
     if len(d):
-        dist = np.hypot(d[:, 0], d[:, 1])
+        dist, labelled = np.hypot(d[:, 0], d[:, 1]), False
         for m in range(10, 130, 10):
             k = int(np.argmin(np.abs(dist - m)))
             if abs(dist[k] - m) < 0.6:
@@ -140,7 +194,9 @@ def overlay(img, st, cal, font):
                     u, v = map(int, uv[0])
                     pygame.draw.circle(img, BLUE, (u, v), max(4, int(14 * sc)))
                     pygame.draw.circle(img, WHITE, (u, v), max(4, int(14 * sc)), 2)
-                    img.blit(font.render("%d m" % m, True, WHITE), (u + int(18 * sc), v - 12))
+                    if not labelled and 0 <= u < W and 0 <= v < H:
+                        img.blit(font.render("%d m" % m, True, WHITE), (u + int(18 * sc), v - 12))
+                        labelled = True
 
 
 def bar(c, x, y, w, h, v, col, centered=False):
@@ -154,7 +210,7 @@ def bar(c, x, y, w, h, v, col, centered=False):
         pygame.draw.rect(c, col, (x, y, int(w * max(0.0, min(1.0, v))), h))
 
 
-def inset(c, st, x0, y0, size, font):
+def inset(c, st, x0, y0, size, font, shadow_on):
     """Top-down, rig frame (x forward = up, y left = left), ego at the bottom centre, 80 m ahead."""
     s = pygame.Surface((size, size), pygame.SRCALPHA)
     s.fill((10, 14, 20, 210))
@@ -164,6 +220,12 @@ def inset(c, st, x0, y0, size, font):
         pygame.draw.circle(s, (50, 60, 72), (int(ox), int(oy)), int(d * k), 1)
     for p in st.get("route") or []:
         pygame.draw.circle(s, BLUE, P(p), 4)
+    sh = st.get("shadow") if shadow_on else None
+    if sh:
+        for p in sh.get("path") or []:
+            pygame.draw.circle(s, speed_col(p[3]), P(p), 2)
+        if sh.get("ghost"):
+            pygame.draw.polygon(s, GHOST, [P(q) for q in ghost_corners(sh["ghost"], z=False)], 2)
     plan = st.get("plan") or []
     if len(plan) > 1:
         pygame.draw.lines(s, ORANGE, False, [P(p) for p in plan], 3)
@@ -190,16 +252,96 @@ def fit(img, w, h):
     return pygame.transform.smoothscale(img, (int(img.get_width() * r), int(img.get_height() * r)))
 
 
-def draw(c, st, live, imgs, F, status, cal=None, kb=""):
-    font, big, tag, huge = F
+def layout(W, H, aspect):
+    """(image, strip, gallery) rects of a W x H canvas: the image as large as the strip, the legend and a GW_MIN gallery allow."""
+    ih = int(min(H - 52 - INFO - LEG - 8, (W - 56 - GW_MIN) / aspect))
+    img = pygame.Rect(20, 52, int(ih * aspect), ih)
+    return img, pygame.Rect(20, img.bottom + 6, img.w, INFO), pygame.Rect(img.right + 16, 52, W - img.right - 36, H - 52 - LEG - 6)
+
+
+class Gallery:
+    """Finished scenes of the panel run (<live>/loop.json run -> done/*.json), newest first, with the driver's last front frame."""
+    def __init__(self, live):
+        self.live, self.t, self.items, self.run, self.scroll, self.cache, self.total = live, 0.0, [], None, 0, {}, 0
+
+    def update(self):
+        if time.time() - self.t < 2:
+            return
+        self.t = time.time()
+        try:
+            run = json.load(open(os.path.join(self.live, "loop.json"))).get("run")
+        except (OSError, ValueError):
+            run = None
+        out = []
+        for f in glob.glob(os.path.join(run or "/nonexistent", "done", "*.json")):
+            try:
+                d = json.load(open(f))
+            except (OSError, ValueError):
+                continue
+            d["thumb"] = os.path.join(run, "stacks", d.get("stack", ""), "driver", "thumbs", "%s.jpg" % d.get("rollout"))
+            out.append(d)
+        self.run, self.items = run, sorted(out, key=lambda d: -d.get("t", 0))
+
+    def thumb(self, path, w, h):
+        try:
+            key = (path, os.stat(path).st_mtime_ns, w)
+        except OSError:
+            return None
+        if key not in self.cache:
+            try:
+                self.cache[key] = fit(pygame.image.load(path).convert(), w, h)
+            except (pygame.error, OSError):
+                self.cache[key] = None
+        return self.cache[key]
+
+    def draw(self, c, r, font, small):
+        pygame.draw.rect(c, (24, 29, 38), r, border_radius=8)
+        c.blit(small.render("FINISHED SCENES (%d), newest first" % len(self.items), True, LBL), (r.x + 8, r.y + 6))
+        if not self.items:
+            c.blit(small.render("no finished scene in this run yet" if self.run else "no panel run", True, GREY), (r.x + 8, r.y + 36))
+            return
+        tw = r.w - 16
+        th, step = tw * 9 // 16, tw * 9 // 16 + 62
+        self.total = step * len(self.items)
+        self.scroll = max(0, min(self.scroll, self.total - (r.h - 34)))
+        c.set_clip(pygame.Rect(r.x, r.y + 30, r.w, r.h - 30))
+        y = r.y + 34 - self.scroll
+        for d in self.items:
+            if r.y < y + step and y < r.bottom:
+                im = self.thumb(d["thumb"], tw, th)
+                if im is not None:
+                    c.blit(im, (r.x + 8, y))
+                else:
+                    pygame.draw.rect(c, (40, 46, 56), (r.x + 8, y, tw, th))
+                    c.blit(small.render("no frame saved", True, GREY), (r.x + 16, y + th // 2 - 10))
+                sc = d.get("score") or 0.0
+                t = font.render("%.2f %s" % (sc, d.get("why", "")), True, GREEN if sc >= 1 else RED if sc <= 0 else ORANGE)
+                c.blit(t if t.get_width() <= tw else small.render("%.2f %s" % (sc, d.get("why", "")), True, GREEN if sc >= 1 else RED if sc <= 0 else ORANGE),
+                       (r.x + 8, y + th + 4))
+                extra = [d.get("scene", "")[-12:]] + (["attempt %d" % d["attempt"]] if d.get("attempt", 1) > 1 else []) + \
+                        (["harmonized"] if d.get("harmonizer") else []) + (["shadow %.0f s" % d["shadow_s"]] if d.get("shadow_s") else [])
+                c.blit(small.render("  ".join(extra), True, GREY), (r.x + 8, y + th + 32))
+            y += step
+        c.set_clip(None)
+
+
+def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=None):
+    font, big, tag, huge, small = F
+    CW, H = c.get_size()
+    front = imgs.get("front")
+    R, S, G = layout(CW, H, front.get_width() / front.get_height() if front is not None else 16 / 9.0)
     lab = lambda m, p, col=WHITE, f=None: c.blit((f or font).render(m, True, col), p)  # noqa: E731
     t = tag.render("DRIVER: HUMAN (phone)", True, (0, 0, 0))
     pygame.draw.rect(c, ORANGE, (14, 3, t.get_width() + 20, 42), border_radius=8)
     c.blit(t, (24, 24 - t.get_height() // 2))
-    if st.get("harmonizer"):
-        h = tag.render("HARMONIZER ON", True, (0, 0, 0))
-        pygame.draw.rect(c, GREEN, (CW - h.get_width() - 34, 3, h.get_width() + 20, 42), border_radius=8)
-        c.blit(h, (CW - h.get_width() - 24, 24 - h.get_height() // 2))
+    xr = CW - 14
+    for on, text, colr in ((st.get("harmonizer"), "HARMONIZER ON", GREEN), (shadow_on, "SHADOW ON (G)", GHOST)):
+        if on:
+            h = tag.render(text, True, (0, 0, 0))
+            xr -= h.get_width() + 20
+            pygame.draw.rect(c, colr, (xr, 3, h.get_width() + 20, 42), border_radius=8)
+            c.blit(h, (xr + 10, 24 - h.get_height() // 2))
+            xr -= 10
     waiting = st.get("waiting") and status == "LIVE"
     if status == "LIVE":
         line, col = ("SKIPPING", GREY) if st.get("aborted") else ("PAUSED", ORANGE) if st.get("paused") else ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
@@ -215,29 +357,46 @@ def draw(c, st, live, imgs, F, status, cal=None, kb=""):
             line, col = (("LOADING NEXT SCENE (%d/%d)" % (i + 1, n)) if i < n else "ALL %d SCENES DRIVEN, SCORING" % n), ORANGE
     lab("%s   %s   scene %s of %s   %s" % (line, (st.get("track") or "").upper(), st.get("scene_i", "-"), st.get("n_scenes", "-"),
                                           st.get("scene", "")[-24:]), (t.get_width() + 50, 12), col)
-    pygame.draw.rect(c, (0, 0, 0), (20, 52, IW, IH))
-    front = imgs.get("front")
+    pygame.draw.rect(c, (0, 0, 0), R)
     if front is not None:
         f = front.copy()
         try:
-            overlay(f, st, cal, big)
+            overlay(f, st, cal, big, shadow_on and status == "LIVE")
         except Exception:  # noqa: BLE001  (a calibration surprise must not take the window down)
             pass
-        f = fit(f, IW, IH)
-        c.blit(f, (20 + (IW - f.get_width()) // 2, 52 + (IH - f.get_height()) // 2))
+        f = fit(f, R.w, R.h)
+        c.blit(f, (R.x + (R.w - f.get_width()) // 2, R.y + (R.h - f.get_height()) // 2))
     if st.get("route") and status == "LIVE":
         code, text, dist = maneuver(st["route"])
         head = big.render(text + ("" if dist is None else "  in %d m" % dist), True, WHITE)
         bw = head.get_width() + 140
-        pygame.draw.rect(c, (0, 0, 0), (20 + (IW - bw) // 2, 58, bw, 84), border_radius=10)
-        arrow(c, code, (20 + (IW - bw) // 2 + 60, 100), 34, WHITE if code in (1, 2) else GREY)
-        c.blit(head, (20 + (IW - bw) // 2 + 115, 100 - head.get_height() // 2))
+        pygame.draw.rect(c, (0, 0, 0), (R.centerx - bw // 2, R.y + 6, bw, 84), border_radius=10)
+        arrow(c, code, (R.centerx - bw // 2 + 60, R.y + 48), 34, WHITE if code in (1, 2) else GREY)
+        c.blit(head, (R.centerx - bw // 2 + 115, R.y + 48 - head.get_height() // 2))
     for i, name in enumerate(("left", "right")):
         im = imgs.get(name)
         if im is not None and name in (st.get("frames") or []):
             f = fit(im, 320, 180)
-            c.blit(f, (30 if i == 0 else 20 + IW - 10 - f.get_width(), 52 + IH - 10 - f.get_height()))
-    inset(c, st, 20 + IW - 250, 152, 240, font)
+            c.blit(f, (R.x + 10 if i == 0 else R.right - 10 - f.get_width(), R.bottom - 10 - f.get_height()))
+    isz = max(200, min(300, R.w // 6))
+    inset(c, st, R.right - isz - 10, R.y + 100, isz, font, shadow_on and status == "LIVE")
+    sh = st.get("shadow") if shadow_on and status == "LIVE" else None
+    if sh:
+        gap = "log ended" if sh.get("ended") else "past the end of the log" if sh.get("gap_s") is None else \
+            "%.0f m / %.1f s %s" % (abs(sh["gap_m"]), abs(sh["gap_s"]), "behind" if sh["gap_m"] > 0 else "ahead")
+        text = "LOG %.0f km/h   YOU %.0f km/h   %s   %.1f m %s of the log path" % (
+            3.6 * (sh.get("v_log") or 0), 3.6 * (st.get("speed") or 0), gap, abs(sh.get("off_m") or 0),
+            "left" if (sh.get("off_m") or 0) > 0 else "right")
+        m = tag.render(text, True, GHOST)
+        m = m if m.get_width() + 250 < R.w else font.render(text, True, GHOST)
+        bw = m.get_width() + 250
+        x0, y0 = R.centerx - bw // 2, R.bottom - 64
+        pygame.draw.rect(c, (0, 0, 0), (x0, y0, bw, 52), border_radius=10)
+        c.blit(m, (x0 + 14, y0 + 26 - m.get_height() // 2))
+        for k in range(20):                                       # speed legend: 0 .. 60 km/h
+            pygame.draw.rect(c, speed_col(3 * k), (x0 + bw - 226 + 7 * k, y0 + 10, 7, 14))
+        lab("0", (x0 + bw - 226, y0 + 26), GREY, small)
+        lab("60 km/h", (x0 + bw - 226 + 72, y0 + 26), GREY, small)
     msg = None
     if status == "LIVE" and st.get("aborted"):
         msg = ("SKIPPING THIS SCENE (Next item)", GREY)
@@ -252,39 +411,41 @@ def draw(c, st, live, imgs, F, status, cal=None, kb=""):
         msg = (line[:60], col)
     if msg:
         m = (huge if waiting else big).render(msg[0], True, msg[1])
-        pygame.draw.rect(c, (0, 0, 0), (20 + (IW - m.get_width()) // 2 - 20, 52 + IH // 2 - m.get_height() // 2 - 10,
+        pygame.draw.rect(c, (0, 0, 0), (R.centerx - m.get_width() // 2 - 20, R.centery - m.get_height() // 2 - 10,
                                         m.get_width() + 40, m.get_height() + 20))
-        c.blit(m, (20 + (IW - m.get_width()) // 2, 52 + IH // 2 - m.get_height() // 2))
+        c.blit(m, (R.centerx - m.get_width() // 2, R.centery - m.get_height() // 2))
         if waiting and not st.get("paused") and not st.get("aborted"):
-            lab("held %.0f s; the scene clock starts on your %s" % (st.get("wait_s", 0), "click (left mouse button, anywhere in this window)"
-                if st.get("start_mode") == "click" else "first throttle press"),
-                (20 + (IW - 900) // 2, 52 + IH // 2 + 60), ORANGE)
-    y0, x1, x2, x3 = 850, 20, 560, 1100
-    lab("EGO", (x1, y0), (150, 200, 255))
-    lab("%.0f km/h" % (3.6 * (st.get("speed") or 0)), (x1, y0 + 30), WHITE, big)
-    lab("applied: wheel angle %+.1f deg (+ = left)" % (st.get("delta_deg") or 0), (x1, y0 + 90))
-    lab("applied: accel %+.1f m/s^2" % (st.get("accel") or 0), (x1, y0 + 120))
-    lab("PHONE", (x2, y0), (150, 200, 255))
+            h = font.render("held %.0f s; the scene clock starts on your %s" % (st.get("wait_s", 0), "click (left mouse button, anywhere in "
+                            "this window)" if st.get("start_mode") == "click" else "first throttle press"), True, ORANGE)
+            c.blit(h, (R.centerx - h.get_width() // 2, R.centery + 60))
+    x1, x2, x3, y0 = S.x, S.x + int(S.w * 0.34), S.x + int(S.w * 0.67), S.y      # the strip: ego | phone | scene clock
+    lab("EGO", (x1, y0), LBL)
+    lab("%.0f km/h" % (3.6 * (st.get("speed") or 0)), (x1, y0 + 26), WHITE, big)
+    lab("wheel %+.1f deg (+ left)" % (st.get("delta_deg") or 0), (x1 + 210, y0 + 30))
+    lab("accel %+.1f m/s^2" % (st.get("accel") or 0), (x1 + 210, y0 + 60))
+    lab("PHONE", (x2, y0), LBL)
+    bw = x3 - x2 - 130
     for i, (n, k, colr, cen) in enumerate((("steer", "steer_in", BLUE, True), ("throttle", "throttle_in", GREEN, False),
                                            ("brake", "brake_in", RED, False))):
-        lab(n, (x2, y0 + 34 + 30 * i))
-        bar(c, x2 + 100, y0 + 38 + 30 * i, 400, 18, st.get(k) or 0, colr, cen)
+        lab(n, (x2, y0 + 24 + 23 * i), WHITE, small)
+        bar(c, x2 + 90, y0 + 28 + 23 * i, bw, 14, st.get(k) or 0, colr, cen)
     age = st.get("age_ms")
-    lab("input age %s   %s   source %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if st.get("stale") else "ok",
-                                           st.get("source") or "-"), (x2, y0 + 128), RED if st.get("stale") else WHITE)
-    lab(kb, (x2, y0 + 158), GREY)
-    lab("SCENE / CLOCK", (x3, y0), (150, 200, 255))
+    lab("input age %s   %s   source %s   %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if st.get("stale") else "ok",
+                                                st.get("source") or "-", kb), (x2, y0 + 94), RED if st.get("stale") else GREY, small)
+    lab("SCENE / CLOCK", (x3, y0), LBL)
     tot = st.get("sim_total") or 0
-    lab("sim %.1f s of ~%.1f s" % (st.get("sim_t") or 0, tot), (x3, y0 + 34))
-    bar(c, x3, y0 + 66, 460, 18, (st.get("sim_t") or 0) / tot if tot else 0, BLUE)
+    lab("sim %.1f s of ~%.1f s" % (st.get("sim_t") or 0, tot), (x3, y0 + 24), WHITE, small)
+    bar(c, x3, y0 + 50, S.right - x3, 14, (st.get("sim_t") or 0) / tot if tot else 0, BLUE)
     w = st.get("wall_per_sim")
     lab("wall s per sim s %s (slow motion %s)" % ("-" if w is None else "%.2f" % w, "-" if w is None else "%.1fx" % w),
-        (x3, y0 + 96), ORANGE if w and w > 1.3 else WHITE)
+        (x3, y0 + 70), ORANGE if w and w > 1.3 else WHITE, small)
     u = st.get("unpaced_per_sim")
-    lab("paced to %sx real time   unpaced %s   late %s   start: %s" % (st.get("realtime", "-"), "-" if u is None else "%.2f" % u,
-                                                                     st.get("late", 0), st.get("start_mode", "-")), (x3 - 40, y0 + 126), GREY)
-    lab("blue: route on the road (dots every 10 m; the simulator sends it 40-80 m ahead)   orange: where your inputs take you in 4 s",
-        (20, 1088), (200, 200, 200))
+    lab("paced %sx   unpaced %s   late %s   start: %s" % (st.get("realtime", "-"), "-" if u is None else "%.2f" % u, st.get("late", 0),
+                                                         st.get("start_mode", "-")), (x3, y0 + 94), GREY, small)
+    lab("blue: route on the road (dots every 10 m; sent 40-80 m ahead)   orange: your inputs' next 4 s   G: shadow of the human log, "
+        "path by log speed + LOG box (%s)   F11: fullscreen" % ("on" if shadow_on else "off"), (20, H - LEG + 4), (200, 200, 200), small)
+    if gal is not None:
+        gal.draw(c, G, font, small)
 
 
 def main():
@@ -295,28 +456,48 @@ def main():
     a = ap.parse_args()
     pygame.display.init()
     pygame.font.init()
-    screen = pygame.display.set_mode(tuple(a.window_size), pygame.RESIZABLE)
+    win = tuple(a.window_size)
+    screen = pygame.display.set_mode(win, pygame.RESIZABLE)
     pygame.display.set_caption(TITLE)
-    c = pygame.Surface((CW, CH))
-    F = tuple(pygame.font.SysFont("DejaVu Sans", s, bold=b) for s, b in ((22, False), (44, True), (30, True), (90, True)))
+    canvas = lambda s: pygame.Surface((max(1200, int(round(CH * s.get_width() / max(1, s.get_height())))), CH))  # noqa: E731
+    c = canvas(screen)
+    F = tuple(pygame.font.SysFont("DejaVu Sans", s, bold=b) for s, b in ((22, False), (44, True), (30, True), (90, True), (19, False)))
     clock, cache, st, st_m, beat, calib, kb = pygame.time.Clock(), {}, {}, None, 0.0, Calib(a.dir), KeyboardWheel()
+    gal, shadow, t_ctl = Gallery(a.dir), {"on": False, "panel": None}, 0.0
     os.makedirs(a.dir, exist_ok=True)
     while True:
         for e in pygame.event.get():
             if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_q)):
                 pygame.quit()
                 return
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_g:
+                shadow["on"], beat = not shadow["on"], 0.0
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_F11:
+                full = not (screen.get_flags() & pygame.FULLSCREEN)
+                screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN) if full else pygame.display.set_mode(win, pygame.RESIZABLE)
+                c = canvas(screen)
             if e.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode(e.size, pygame.RESIZABLE)
+                c = canvas(screen)
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button in (4, 5):
+                gal.scroll += 120 if e.button == 5 else -120
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 with open(os.path.join(a.dir, "start"), "w") as fh:
                     fh.write(json.dumps({"t": time.time()}))
         kb.update(pygame_keys(pygame))
+        if time.time() - t_ctl > 0.5:                             # the panel's option: a change there sets the toggle
+            t_ctl = time.time()
+            try:
+                opt = bool(json.load(open(os.path.join(a.dir, "control.json"))).get("options", {}).get("shadow"))
+            except (OSError, ValueError, AttributeError):
+                opt = shadow["panel"]
+            if opt is not None and opt != shadow["panel"]:
+                shadow["panel"], shadow["on"], beat = opt, opt, 0.0
         if time.time() - beat > 1:
             beat = time.time()
-            tmp = os.path.join(a.dir, "viewer.tmp")
+            tmp = os.path.join(a.dir, ".viewer.%d.tmp" % os.getpid())
             with open(tmp, "w") as fh:
-                json.dump({"t": beat, "pid": os.getpid()}, fh)
+                json.dump({"t": beat, "pid": os.getpid(), "shadow": shadow["on"]}, fh)
             os.replace(tmp, os.path.join(a.dir, "viewer.json"))
         p = os.path.join(a.dir, "state.json")
         try:
@@ -328,13 +509,14 @@ def main():
         age = time.time() - st.get("t", 0)
         status = "BETWEEN" if st.get("closed") and age < 120 else ("LIVE" if st and age < 10 and not st.get("closed") else "IDLE")
         imgs = {k: load(os.path.join(a.dir, k + ".jpg"), cache) for k in ("front", "left", "right")} if st else {}
+        gal.update()
         c.fill((17, 21, 29))
-        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None, kb.text())
-        r = min(screen.get_width() / CW, screen.get_height() / CH)
+        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None, kb.text(), shadow["on"], gal)
         screen.fill((0, 0, 0))
-        screen.blit(pygame.transform.smoothscale(c, (max(1, int(CW * r)), max(1, int(CH * r)))), (0, 0))
+        r = min(screen.get_width() / c.get_width(), screen.get_height() / c.get_height())
+        screen.blit(pygame.transform.smoothscale(c, (max(1, int(c.get_width() * r)), max(1, int(c.get_height() * r)))), (0, 0))
         pygame.display.flip()
-        if a.snapshot and status == "LIVE":
+        if a.snapshot and status == "LIVE" and (not os.environ.get("SNAPSHOT_SIM_T") or (st.get("sim_t") or 0) >= float(os.environ["SNAPSHOT_SIM_T"])):
             pygame.image.save(c, a.snapshot)
             pygame.quit()
             return
