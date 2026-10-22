@@ -36,7 +36,7 @@ MG=$(sub merge --after "$(join "${S[@]}")" --vram 0.1 --cpu 2 --ram 16 -- env $E
 ARMS=$(.venv/bin/python -c "
 import sys; sys.path.insert(0, 'experiments/wm_surplus/scripts')
 D = int(sys.argv[1]); print(' '.join(['off'] + [f'k{2**i}' for i in range(3, 20) if 2**i < D] + [f'k{D}']))" "${DIM:-1536}")
-R=$(sub readout --after "$MG" --vram 0.1 --cpu 1 --ram 8 -- .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
+R=$(sub readout --after "$MG" --vram 0.1 --cpu 1 --ram 8 -- env PYTHONPATH="$PWD" .venv/bin/python experiments/wm_surplus/scripts/p1_readout.py \
   --tag "$TAG" --arms $ARMS --ev "$O/ev.json" --out "$O/results" --priority "$PRIO")
 K=$(sub knowdo --after "$MG" --vram 0.1 --cpu 8 --ram 16 -- .venv/bin/python experiments/wm_surplus/scripts/p1_knowdo.py \
   --feats "$O/knowdo_feats.npz" --plans "PROBE-$TAG-off" --name "$TAG" --out "$O/knowdo")
