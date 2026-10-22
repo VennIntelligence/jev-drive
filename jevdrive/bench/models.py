@@ -121,6 +121,20 @@ def parity_ckpt(tag: str) -> Path:
     return parity_root() / "runs" / tag / "ckpt-final.pt"
 
 
+def lineage_pools(tag: str) -> list:
+    """On-policy pools (rm_train --on) along a route-memory checkpoint's --init chain (route_mem.json sidecars), newest first."""
+    out, seen = [], set()
+    while tag and tag not in seen:
+        seen.add(tag)
+        f = parity_root() / "runs" / tag / "route_mem.json"
+        if not f.exists():
+            break
+        c = json.loads(f.read_text())
+        out += [c["on"]] if c.get("on") else []
+        tag = c.get("init", "")
+    return out
+
+
 def parity_frames(tag: str) -> str:
     """Default front protocol of a parity tag: the protocol it was trained on (Stage B G / W / N, the pilot's GIMM, V's 1.40 m camera)."""
     if "-G-" in tag or re.fullmatch(r"P\d-s\d+", tag):
@@ -174,6 +188,12 @@ def resolve(spec: str, check: bool = False) -> Model:
                              f"candidate and no checkpoint {ck}")
         m = Model(name, "parity", parity_frames(name), ckpt=str(ck), note="op_parity checkpoint (pp_train / pp_unfreeze format)",
                   inputs=PARITY_INPUTS)
+        if ck.with_name("route_mem.json").exists():
+            pools = lineage_pools(name)
+            m = replace(m, benches=("hugsim",), inputs=PARITY_INPUTS + ("route memory: empty on HUGSIM (no route source)",),
+                        note="route-memory checkpoint (rm_train): HUGSIM only, the navsim plans path does not serve the branch"
+                             + (f"; lineage trained on AlpaSim nuPlan / PAI pool rows {'+'.join(pools)} (nuPlan scenes = navtest logs): "
+                                "never report navtest / navhard" if pools else ""))
     if frames:
         if m.family == "vt" and frames != "warp":
             raise ValueError(f"{spec}: vis_train arms read the protocol-W pixel cache only")

@@ -70,6 +70,28 @@ class TestModels(TmpData):
         with self.assertRaises(FileNotFoundError):
             M.resolve("P2-F-s0", check=True)
 
+    def test_route_mem_lineage(self):
+        R = self.D / "runs/op_parity/runs"
+        for tag, side in (("RB0-F-s0", dict(init="", on="")), ("NTV0-L18-s0", dict(init="RB0-F-s0", on="on1_JT")),
+                          ("R6DAG-L18-s1", dict(init="NTV0-L18-s0", on="on1_JTPHD"))):
+            (R / tag).mkdir(parents=True)
+            (R / tag / "ckpt-final.pt").write_bytes(b"")
+            (R / tag / "route_mem.json").write_text(json.dumps(side))
+        self.assertEqual(M.lineage_pools("R6DAG-L18-s1"), ["on1_JTPHD", "on1_JT"])
+        self.assertEqual(M.lineage_pools("RB0-F-s0"), [])
+        m = M.resolve("R6DAG-L18-s1")
+        self.assertEqual(m.benches, ("hugsim",))
+        self.assertIn("never report navtest", m.note)
+        self.assertNotIn("never report", M.resolve("RB0-F-s0").note)
+        self.assertEqual(M.resolve("RB0-F-s0").benches, ("hugsim",))   # the navsim plans path does not serve the branch
+        from jevdrive.bench import match as MT
+        runs, skipped = MT.cells(["R6DAG-L18-s1", "RB0-F-s0"], "WA-JEPA", boards=["hugsim", "navtest", "hugsim:spec"])
+        self.assertEqual(runs, [("R6DAG-L18-s1", "hugsim", "exam"), ("RB0-F-s0", "hugsim", "exam"), ("WA-JEPA", "hugsim", "exam")])
+        self.assertEqual([(m_, b) for m_, b, _ in skipped], [("R6DAG-L18-s1", "navtest"), ("RB0-F-s0", "navtest"),
+                                                             ("R6DAG-L18-s1", "hugsim:spec"), ("RB0-F-s0", "hugsim:spec")])
+        with self.assertRaises(ValueError):
+            MT.board("wod")
+
     def test_guard_candidates(self):
         c = M.guard_candidates()
         plain = [k for k, v in c.items() if k != "shipped" and not (v.get("command_adapter") or v.get("route_adapter"))]

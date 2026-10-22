@@ -9,7 +9,8 @@ of all 9 policy context frames. Served as
                ego features (+ the side / rear key frames for an arm that reads them); the arm's ParityAdapter returns the bias; side
                tokens come from the arm's own frozen Cinque vision encoder (port, fp16), the encoder pp_prep cached for training
 Tags: P0 / P*-init = shipped weights (P0 has no adapter, P*-init an untrained one: bias exactly 0), a pp_train run tag (P2-s0), or a
-checkpoint path (.pt).
+checkpoint path (.pt). A run tag with the ROUTE-MEM branch (route_mem.json sidecar: RB0-F and every AlpaSim-lineage checkpoint after it)
+is served with an empty route memory (tail_row): HUGSIM has no route messages, and the empty memory is in the training distribution.
 
   onnx   (op-train)   pp_hugsim.py onnx --tag P2-s0 --out X.onnx
   serve  (op-train)   pp_hugsim.py serve --tag P2-s0 --socket S [--ready-file F]
@@ -41,9 +42,39 @@ def is_shipped(tag: str) -> bool:
     return tag == "P0" or tag.endswith("-init")
 
 
+def route_mem(tag: str) -> bool:
+    """A run tag with the ROUTE-MEM branch (experiments/route_mem/lib/rmem.py sidecar route_mem.json beside ckpt-final.pt)."""
+    src = None if tag.endswith(".pt") or is_shipped(tag) else ckpt_path(tag)
+    return bool(src is not None and src.with_name("route_mem.json").exists())
+
+
+def _rmem():
+    if str(_R / "experiments/route_mem/lib") not in _sys.path:
+        _sys.path.insert(0, str(_R / "experiments/route_mem/lib"))
+    import rmem
+    return rmem
+
+
+def tail_row(tag: str) -> np.ndarray:
+    """What a route-memory checkpoint reads after the 20 ego numbers when no route source exists (HUGSIM sends no AlpaSim route
+    messages): an empty memory (zeros of the head's DIM; the "memory off" input, rm_train --rm-drop, 25 % of the training rows), then
+    the reflex module's empty self-state if the checkpoint has one (sh30_core.Core.plan with route=None, selfstate=None). Empty for any
+    other tag."""
+    if not route_mem(tag):
+        return np.zeros(0, np.float32)
+    RM = _rmem()
+    parts = [np.zeros(RM.dim_of(tag), np.float32)]
+    if RM.reflex_of(tag) is not None:
+        import reflex
+        parts.append(np.asarray(reflex.empty(), np.float32))
+    return np.concatenate(parts)
+
+
 def pmodel(tag: str, dev):
     import torch
     import pp_train as T
+    if route_mem(tag):
+        return _rmem().load_pmodel(tag, dev)
     if tag.endswith(".pt"):
         ck = torch.load(tag, map_location="cpu", weights_only=False)
         m = T.PModel(ck["model"]["arm"]).to(dev).eval()
@@ -85,8 +116,10 @@ def serve(a):
     dev = torch.device("cuda")
     m = pmodel(a.tag, dev)
     ad = m.adapter
+    tail = tail_row(a.tag)                                  # route-memory checkpoints: empty memory (+ empty reflex state) after the ego row
     info = {"tag": a.tag, "arm": m.arm, "use_ego": bool(ad is not None and ad.use_ego), "use_side": bool(ad is not None and ad.use_side),
-            "adapter_params": int(sum(p.numel() for p in ad.parameters())) if ad is not None else 0}
+            "adapter_params": int(sum(p.numel() for p in ad.parameters())) if ad is not None else 0,
+            "route_mem": "empty" if route_mem(a.tag) else "none", "row": PA.EGO_DIM + len(tail)}
     gpu = threading.Lock()
     selector = None
     if a.select:                                            # turn selector (turn_selhug.py): the same server answers `select` requests
@@ -99,7 +132,8 @@ def serve(a):
     def bias(arrays):
         if ad is None:
             return np.zeros(A_SHAPE, np.float16)
-        ego = torch.from_numpy(np.asarray(arrays["ego"], np.float32).reshape(1, PA.EGO_DIM)).to(dev)
+        row = np.r_[np.asarray(arrays["ego"], np.float32).reshape(PA.EGO_DIM), tail]
+        ego = torch.from_numpy(row[None]).to(dev)
         side = encode_side(m.net, torch.from_numpy(np.ascontiguousarray(arrays["side"])).to(dev)[None]) if ad.use_side else None
         return ad(ego, side, None)[0].to(torch.float16).cpu().numpy()      # fp16, as adapter.apply casts it to H's dtype
 

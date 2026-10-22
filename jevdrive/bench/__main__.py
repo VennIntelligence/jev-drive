@@ -1,10 +1,12 @@
-"""python -m jevdrive.bench {models, sets, run, status, report, score-poses}   (docs/bench.md)
+"""python -m jevdrive.bench {models, sets, run, status, report, match, score-poses}   (docs/bench.md)
 
   run     --model M [M ...] --bench navtest|navhard|hugsim [--preset exam|spec|spec_plan] [--scenarios all64|turn23|...]
           [--shards K] [--workers W] [--jobs K] [--subset SPLIT] [--wait] [--dry]
   status  [--model M ... --bench B --preset P]      (no args: every run dir with a live job)
   report  --bench B --arms A [A ...] [--vs REF ...] [--preset P] [--out DIR] [--scenarios SET]
           arm = label=spec+spec (seeds) or one spec; e.g. --arms P2=P2-F-s0+P2-F-s1 P0 --vs WA-JEPA
+  match   --drivers M [M ...] --ref R [--also M ...] --boards hugsim[:preset] navtest navhard --out DIR [--repeat L] [--dry]
+          (jevdrive/bench/match.py: every allowed cell a pool run, one report job after all -> DIR/match.md, DIR/DONE)
   score-poses --poses f.npz [--keys K ...] [--tokens t.txt] --out o.csv [--traffic non_reactive] [--mcache v2_navtrain] [--cpu C] [--jobs K] [--wait] [--dry]
 """
 from __future__ import annotations
@@ -64,6 +66,19 @@ def main(argv=None) -> int:
     p.add_argument("--out", default="")
     p.add_argument("--scenarios", default="", help="HUGSIM: restrict the tables to a scenario set (e.g. turn23)")
     p.add_argument("--no-strata", action="store_true")
+    mt = sp.add_parser("match", help="drivers x boards vs one reference: every cell a pool run, one report job -> <out>/match.md")
+    mt.add_argument("--drivers", nargs="+", required=True)
+    mt.add_argument("--ref", required=True, help="the reference every driver is paired against (e.g. WA-JEPA)")
+    mt.add_argument("--also", nargs="*", default=[], help="extra arms run and tabled beside the drivers (e.g. P0)")
+    mt.add_argument("--boards", nargs="+", default=["hugsim"], help="hugsim[:preset] navtest navhard")
+    mt.add_argument("--scenarios", default="all64")
+    mt.add_argument("--repeat", default="", help="HUGSIM repeat label of every cell (a fresh paired read; the same label resumes)")
+    mt.add_argument("--workers", type=int, default=6)
+    mt.add_argument("--jobs", type=int, default=0)
+    mt.add_argument("--priority", type=float, default=0.0)
+    mt.add_argument("--out", required=True)
+    mt.add_argument("--report-only", action="store_true")
+    mt.add_argument("--dry", action="store_true")
     q = sp.add_parser("score-poses", help="devkit pdm_score + DAC diagnostics of (N, 8, 3) pose arrays on navtest tokens")
     q.add_argument("--poses", required=True, help="npz with `tokens` and (N, 8, 3) pose arrays")
     q.add_argument("--keys", nargs="*", default=[], help="pose arrays to score (default: every (N, 8, 3) array)")
@@ -81,6 +96,9 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
 
     from . import runner as RN
+    if a.cmd == "match":
+        from .match import main as match_main
+        return match_main(a)
     if a.cmd == "score-poses":
         from . import poses
         from .poses import read_tokens

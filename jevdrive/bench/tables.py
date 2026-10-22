@@ -178,8 +178,10 @@ def _arm_units(bench, specs, preset, need, **kw):
     return [(s, u.loc[common], src) for s, u, src in got], common
 
 
-def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str = "", strata: bool = True, units_subset=None, **kw) -> dict:
-    """Write <out>/<bench>_{arms,paired[,shapley,strata]}.{md,csv}; returns the DataFrames."""
+def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str = "", strata: bool = True, units_subset=None,
+           cluster: str = "", **kw) -> dict:
+    """Write <out>/<bench>_{arms,paired[,shapley,strata]}.{md,csv}; returns the DataFrames. cluster (HUGSIM): a units column to
+    cluster the paired bootstrap on ('scene': the difficulty variants of one nuScenes / KITTI scene resampled together)."""
     import pandas as pd
     from .. import stats
     allarms = [parse_arm(a) for a in list(arms) + [v for v in vs if v not in arms]]
@@ -226,7 +228,8 @@ def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str
     res["arms"] = stats.write_table(rows, outd / f"{tag}_arms", floatfmt=".3f" if bench == "hugsim" else ".2f", note=note)
     # paired contrasts
     first = next(iter(arm_data.values()))[0][1]
-    groups = None if bench == "hugsim" else first.loc[common, "log"].astype(str).to_numpy()
+    groups = (first.loc[common, cluster].astype(str).to_numpy() if cluster in first.columns else None) if bench == "hugsim" else \
+        first.loc[common, "log"].astype(str).to_numpy()
     refs = [parse_arm(v)[0] for v in vs]
     pairs = [(a, b) for a, _ in allarms for b in refs if a != b and a not in refs] + \
             [(a, b) for i, a in enumerate(refs) for b in refs[i + 1:]]
@@ -237,13 +240,16 @@ def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str
         row = {"pair": f"{a} - {b}", **{k: r[k] for k in ("mean", "lo", "hi", "mean_a", "mean_b", "n", "units")}}
         if bench == "navtest":
             row |= {f"d{k}": 100 * (np.nanmean(A[k]) - np.nanmean(B[k])) for k in ("EP", "DAC", "NC", "TTC", "EC")}
+        if bench == "hugsim":                                # the HD parts: route completion and the per-step driving-score terms
+            row |= {f"d{k}": A[k].mean() - B[k].mean() for k in ("rc", "nc", "dac", "ttc", "c")}
         if bench == "navhard":
             for k in ("stage1", "stage2"):
                 rk = stats.paired(A[k].to_numpy(float), B[k].to_numpy(float), groups=groups)
                 row[f"d{k}"] = f"{rk['mean']:.2f} [{rk['lo']:.2f}, {rk['hi']:.2f}]"
         pr.append(row)
     unit = {"navtest": "per-token EPDMS x 100, cluster bootstrap over navtest logs", "navhard": "per-group EPDMS, cluster bootstrap over the "
-            "stage-1 logs of the groups", "hugsim": "per-scenario HD-Score, bootstrap over scenarios"}[bench]
+            "stage-1 logs of the groups", "hugsim": "per-scenario HD-Score, bootstrap over " + (f"{cluster}s" if cluster else "scenarios")
+            + "; d<part> = mean difference of RC / NC / DAC / TTC / COM"}[bench]
     if pr:
         res["paired"] = stats.write_table(pr, outd / f"{tag}_paired", floatfmt=".3f" if bench == "hugsim" else ".2f",
                                           note=f"{unit} (B 10000, seed 0); seeds averaged per unit first")
