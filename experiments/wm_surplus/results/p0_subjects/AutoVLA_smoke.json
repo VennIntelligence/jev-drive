@@ -1,0 +1,11 @@
+{
+ "model": "AutoVLA",
+ "smoke_run": "/root/autodl-tmp/ujs/runs/bench/navtest/AutoVLA_navsim-p0-smoke-logs",
+ "n": 540,
+ "PDMS_v1": 92.85298120997986,
+ "EPDMS": 92.48533929758472,
+ "published": 89.11,
+ "delta": 3.7429812099798596,
+ "rule": "smoke PDMS >= published - 3",
+ "passed": true
+}
