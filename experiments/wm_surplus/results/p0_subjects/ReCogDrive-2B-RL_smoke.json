@@ -1,0 +1,11 @@
+{
+ "model": "ReCogDrive-2B-RL",
+ "smoke_run": "/root/autodl-tmp/ujs/runs/bench/navtest/ReCogDrive-2B-RL_navsim-p0-smoke-logs",
+ "n": 540,
+ "PDMS_v1": 92.5248167362377,
+ "EPDMS": 85.30230934444315,
+ "published": 90.8,
+ "delta": 1.724816736237699,
+ "rule": "smoke PDMS >= published - 3",
+ "passed": true
+}

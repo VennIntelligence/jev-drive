@@ -1,0 +1,10 @@
+{
+ "model": "SimScale-LTF",
+ "smoke_run": "/root/autodl-tmp/ujs/runs/bench/navtest/SimScale-LTF_navsim-p0-smoke-logs",
+ "n": 540,
+ "PDMS_v1": 89.1877053081846,
+ "EPDMS": 90.19308077382206,
+ "published": null,
+ "rule": "no published navtest number: execution check only (all tokens scored)",
+ "passed": true
+}

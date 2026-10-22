@@ -1,0 +1,10 @@
+{
+ "model": "SimScale-DD",
+ "smoke_run": "/root/autodl-tmp/ujs/runs/bench/navtest/SimScale-DD_navsim-p0-smoke-logs",
+ "n": 540,
+ "PDMS_v1": 88.84671306717128,
+ "EPDMS": 88.78926463154806,
+ "published": null,
+ "rule": "no published navtest number: execution check only (all tokens scored)",
+ "passed": true
+}
