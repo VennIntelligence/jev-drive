@@ -2,7 +2,8 @@
 """Window for the human AlpaSim driver ("alpasim human drive (phone wheel)", DISPLAY=:0): the front camera as the driver receives it
 with the route projected onto the road (blue, dots every 10 m, the nearest visible dot labelled; the phone's 4 s plan orange) through
 the session's front-camera calibration (<live>/camera.json from the driver; for older sessions the scene's start.jsonl of a pai_driver /
-human run), a turn banner from the route's shape, a small top-down inset (rig frame), side cameras when rendered, a compact strip
+human run), a turn banner from the route's shape, a top-down inset (rig frame, to scale, 35 m ahead and 15 m behind: the ego box in cyan, with the
+shadow the log car's box in violet), side cameras when rendered, a compact strip
 under the image (speed, applied steering / acceleration, phone bars, scene clock), and "DRIVER: HUMAN (phone)". Reads
 <live>/state.json and *.jpg (lib/human_driver.py). A left click anywhere writes <live>/start: the held scene starts. Heartbeat
 <live>/viewer.json (with the shadow toggle). Q / Esc closes, F11 toggles fullscreen. While the window has focus the keyboard drives too
@@ -19,7 +20,8 @@ one-line legend; the right column is the scene gallery: every finished scene of 
 <live>/loop.json), newest first, as the last front frame before the scene closed (<run>/stacks/<stack>/driver/thumbs/<rollout>.jpg,
 written by the driver) with score and why; the mouse wheel scrolls it.
 Shadow (display only; G, or the panel's "Shadow: human log", the last change wins): the recorded human log's path ahead coloured by
-the log speed (violet slow, magenta, yellow fast), a wireframe box where the log ego is at the current sim time, and a readout "LOG x
+the log speed (violet slow, magenta, yellow fast), a wireframe box where the log ego is at the current sim time (the
+ego's own box dimensions, state.json "box"; in the top view a violet filled box, an arrow at the edge when out of view), and a readout "LOG x
 km/h  YOU y km/h  n m / n s behind (ahead)  n m left (right) of the log path", in the front view and the inset (state.json "shadow").
 
     /data/envs/carla/bin/python experiments/alpasim_human/scripts/human_viewer.py --dir /data/runs/alpasim_human/live
@@ -41,6 +43,7 @@ from keyboard_wheel import KeyboardWheel, pygame_keys  # noqa: E402
 TITLE = "alpasim human drive (phone wheel)"
 BLUE, WHITE, GREY, ORANGE, RED, GREEN = (70, 170, 250), (230, 235, 240), (150, 150, 150), (255, 150, 60), (240, 70, 60), (80, 220, 120)
 GHOST, LBL, TEAL, YEL = (235, 215, 255), (150, 200, 255), (40, 210, 190), (255, 225, 80)
+EGO, LOGF, AHEAD, BEHIND = (60, 230, 255), (165, 70, 235, 190), 35, 15   # top view: ego outline, log fill; metres shown ahead / behind
 SPEED = ((0, (150, 60, 220)), (25, (225, 70, 200)), (50, (255, 215, 90)), (70, (255, 245, 170)))   # km/h -> shadow colour
 CH, GW_MIN, INFO, LEG = 1120, 280, 118, 30
 CALIB_GLOBS = ("/data/runs/alpasim_human/*/driver/start.jsonl", "/data/runs/alpasim/pai1/runs/*/driver/start.jsonl",
@@ -141,14 +144,19 @@ def speed_col(kmh):
     return SPEED[-1][1]
 
 
-def ghost_corners(g, z=True):
-    """The log ego's box (rear axle origin, 5.2 x 1.9 m, 1.5 m high) at ghost (x, y, z, yaw): (8, 3) bottom then top, or (4, 2)."""
+BOX = (5.2, 1.9, 1.5, 1.5, 0.0)                                      # state.json "box" fallback: length, width, height, centre x, y
+
+
+def ghost_corners(g, z=True, box=None):
+    """The ego box (state.json "box": length, width, height, centre x / y in the rig frame, origin = rear axle) at rig pose g (x, y, z,
+    yaw): (8, 3) bottom then top, or (4, 2) footprint rear right, front right, front left, rear left."""
     x, y, gz, yaw = g
+    ln, wd, ht, bx, by = box or BOX
     c, s = math.cos(yaw), math.sin(yaw)
-    fp = [(-1.1, -0.95), (4.1, -0.95), (4.1, 0.95), (-1.1, 0.95)]
+    fp = [(bx + a * ln / 2, by + b * wd / 2) for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
     if not z:
         return [(x + c * a - s * b, y + s * a + c * b) for a, b in fp]
-    return [[x + c * a - s * b, y + s * a + c * b, gz + hz] for hz in (0.0, 1.5) for a, b in fp]
+    return [[x + c * a - s * b, y + s * a + c * b, gz + hz] for hz in (0.0, ht) for a, b in fp]
 
 
 def overlay(img, st, uvf, sc, font, shadow_on, lw=None, extra=()):
@@ -173,7 +181,7 @@ def overlay(img, st, uvf, sc, font, shadow_on, lw=None, extra=()):
             if np.isfinite(a).all() and np.isfinite(b).all():
                 pygame.draw.line(img, speed_col(kmh), tuple(a), tuple(b), max(2, int(5 * lw)))
     if sh and sh.get("ghost"):
-        uv = uvf(np.asarray(ghost_corners(sh["ghost"]), float)) * sc
+        uv = uvf(np.asarray(ghost_corners(sh["ghost"], box=st.get("box")), float)) * sc
         for i, j in [(i, (i + 1) % 4) for i in range(4)] + [(4 + i, 4 + (i + 1) % 4) for i in range(4)] + [(i, i + 4) for i in range(4)]:
             if np.isfinite(uv[i]).all() and np.isfinite(uv[j]).all():
                 pygame.draw.line(img, GHOST, tuple(uv[i]), tuple(uv[j]), max(2, int(4 * lw)))
@@ -237,12 +245,15 @@ def bar(c, x, y, w, h, v, col, centered=False):
 
 
 def inset(c, st, x0, y0, size, font, shadow_on):
-    """Top-down, rig frame (x forward = up, y left = left), ego at the bottom centre, 80 m ahead."""
+    """Top-down, rig frame (x forward = up, y left = left), to scale: AHEAD m ahead, BEHIND m behind the rear axle. The ego box at its
+    pose (cyan outline, state.json "box") always; with the shadow the log car's box at the same sim time (violet fill, lavender outline;
+    out of view: a violet arrow at the edge towards it). No numbers."""
     s = pygame.Surface((size, size), pygame.SRCALPHA)
-    s.fill((10, 14, 20, 210))
-    k, ox, oy = (size - 30) / 80.0, size / 2, size - 20
-    P = lambda p: (int(ox - p[1] * k), int(oy - p[0] * k))  # noqa: E731
-    for d in (20, 40, 60, 80):
+    s.fill((10, 14, 20, 215))
+    k = (size - 12) / float(AHEAD + BEHIND)
+    ox, oy = size / 2, 6 + AHEAD * k
+    P = lambda p: (ox - p[1] * k, oy - p[0] * k)  # noqa: E731
+    for d in range(10, AHEAD + 1, 10):
         pygame.draw.circle(s, (50, 60, 72), (int(ox), int(oy)), int(d * k), 1)
     for p in st.get("route") or []:
         pygame.draw.circle(s, BLUE, P(p), 4)
@@ -250,13 +261,27 @@ def inset(c, st, x0, y0, size, font, shadow_on):
     if sh:
         for p in sh.get("path") or []:
             pygame.draw.circle(s, speed_col(p[3]), P(p), 2)
-        if sh.get("ghost"):
-            pygame.draw.polygon(s, GHOST, [P(q) for q in ghost_corners(sh["ghost"], z=False)], 2)
     plan = st.get("plan") or []
     if len(plan) > 1:
         pygame.draw.lines(s, ORANGE, False, [P(p) for p in plan], 3)
-    pygame.draw.polygon(s, WHITE, [(ox, oy - 10), (ox - 6, oy + 6), (ox + 6, oy + 6)])
-    s.blit(font.render("top view, rings 20 m", True, GREY), (6, 4))
+    box = st.get("box")
+    if sh and sh.get("ghost"):
+        g = [P(q) for q in ghost_corners(sh["ghost"], z=False, box=box)]
+        cx, cy = np.mean(g, 0)
+        if 0 <= cx < size and 0 <= cy < size:
+            pygame.draw.polygon(s, LOGF, g)
+            pygame.draw.polygon(s, GHOST, g, 2)
+            pygame.draw.line(s, GHOST, g[1], g[2], 4)                    # front edge
+        else:                                                         # off the view: an arrow at the edge pointing at the log car
+            u = np.array([cx - ox, cy - oy]) / max(1e-6, math.hypot(cx - ox, cy - oy))
+            r = min(((size - 14 - o) / d if d > 0 else (14 - o) / d) for o, d in ((ox, u[0]), (oy, u[1])) if abs(d) > 1e-6)
+            tip, n = np.array([ox, oy]) + u * r, np.array([-u[1], u[0]])
+            pygame.draw.polygon(s, LOGF[:3], [tuple(tip + u * 10), tuple(tip - u * 8 + n * 9), tuple(tip - u * 8 - n * 9)])
+    e = [P(q) for q in ghost_corners((0.0, 0.0, 0.0, 0.0), z=False, box=box)]
+    pygame.draw.polygon(s, EGO, e, 3)
+    pygame.draw.line(s, EGO, e[1], e[2], 5)                           # front edge
+    s.blit(font.render("top view", True, GREY), (6, 4))
+    pygame.draw.rect(s, (60, 70, 84), s.get_rect(), 1)
     c.blit(s, (x0, y0))
 
 
@@ -425,8 +450,8 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
         if im is not None and name in (st.get("frames") or []) and not mview:
             f = fit(im, 320, 180)
             c.blit(f, (R.x + 10 if i == 0 else R.right - 10 - f.get_width(), R.bottom - 10 - f.get_height()))
-    isz = max(200, min(300, R.w // 6))
-    inset(c, st, R.right - isz - 10, R.y + 100, isz, font, shadow_on and status == "LIVE")
+    isz = max(240, min(400, R.w // 4, R.h - 300))                     # top view: 316 px in the 2480 x 1736 window, 400 at 16:9 fullscreen
+    inset(c, st, R.right - isz - 10, R.y + 130, isz, font, shadow_on and status == "LIVE")
     sh = st.get("shadow") if shadow_on and status == "LIVE" else None
     if sh:
         gap = "log ended" if sh.get("ended") else "past the end of the log" if sh.get("gap_s") is None else \

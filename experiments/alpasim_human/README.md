@@ -313,9 +313,15 @@ plain state line and the buttons. `figs/panel_web_pick.png`: New playlist with t
   With it on, the viewer shows the recorded human drive of the scene: its path ahead on the road and in the inset, coloured by the
   log's speed (violet slow, magenta, yellow fast; legend 0-60 km/h), a wireframe box labelled LOG where the log car is at the
   current sim time, and a readout "LOG x km/h  YOU y km/h  n m / n s behind (ahead)  n m left (right) of the log path".
+  Top view (inset, top right; 2026-10-22): to scale, 35 m ahead and 15 m behind the rear axle (rig origin), no numbers. The
+  ego's true footprint is always drawn (cyan outline, front edge thicker) from the session's VehicleDefinition (`bounding_box`,
+  `rig_to_bounding_box`; state.json "box": PAI about 5.3 x 2.1 m centred 1.4 m ahead of the rear axle, nuPlan 5.18 x 2.30 m,
+  1.46 m). With the shadow on, the log car's footprint at the same sim time (same box at the log rig pose, yaw from the log poses)
+  is a violet filled box with a lavender outline; out of view it is a violet arrow at the edge pointing at it. The front-view
+  wireframe uses the same box. Inset 316 px in the 2480 x 1736 window, 400 px at 16:9 fullscreen.
   Source: the stack sets `runtime.simulation_config.send_recording_ground_truth=true` (`HUMAN_GT=1`, default; the runtime ships
   it off). The runtime then calls `submit_recording_ground_truth` every step with the scene's recorded ego trajectory
-  (`unbound.gt_ego_trajectory`, PAI: 202 poses at 20 Hz over 20 s) in the rig frame of the step; the driver turns it into
+  (`unbound.gt_ego_trajectory`, PAI: 202 poses at 10 Hz over 20 s; nuPlan: 56 at 10 Hz, with orientation) in the rig frame of the step; the driver turns it into
   state.json "shadow". Scoring is unchanged. Time with the shadow on is logged per scene (`shadow_s` in the close record,
   `done/<scene>.json`, status column, results.md), because a drive with the log in view is not a blind attempt.
   Checked offline: `scripts/replay_asl.py` replays a finished `rollout.asl` through the driver's own gRPC methods, with a GT

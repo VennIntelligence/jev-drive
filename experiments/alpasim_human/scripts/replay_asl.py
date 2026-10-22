@@ -4,7 +4,7 @@
 The logged session request, camera JPEGs, ego trajectory and route go to the driver's own gRPC methods in log order; before every logged
 drive request comes a recording ground-truth message built as the runtime builds it with send_recording_ground_truth (events/policy.py:
 the scene's recorded ego trajectory, RolloutMetadata.ego_rig_recorded_ground_truth_trajectory = unbound.gt_ego_trajectory, moved into
-the rig frame of the step; here the ego pose comes from the logged ego trajectory the driver received). The driver then writes the live
+the rig frame of the step (positions and the yaw of each log pose); here the ego pose comes from the logged ego trajectory the driver received). The driver then writes the live
 dir (state.json with the shadow, front.jpg, camera.json) and its log dir (drive.jsonl, sessions.jsonl, thumbs/<rollout>.jpg) as in a
 real run, so the viewer and the gallery can be tested on real scenes. The driver's own plan is not used: the world replays the logged
 drive. Paced by HUMAN_REALTIME (1.0 = real time, 0 = as fast as possible). Runs in the driver image (alpasim_grpc, numpy, PIL):
@@ -13,6 +13,7 @@ drive. Paced by HUMAN_REALTIME (1.0 = real time, 0 = as fast as possible). Runs 
     -e HUMAN_START=none -e HUMAN_WHEEL_PORT=47809 -e HUMAN_REALTIME=1 --entrypoint python jev-alpasim:p2h10-f-s0-6f3d05d1 \
     $REPO/experiments/alpasim_human/scripts/replay_asl.py <rollout.asl> [...]
 """
+import math
 import struct
 import sys
 from pathlib import Path
@@ -46,12 +47,14 @@ def rot(q):
 
 
 def replay(drv, asl, ctx):
-    gt, ego, uuid, n = None, {}, None, 0
+    gt, gq, ego, uuid, n = None, None, {}, None, 0
     for e in entries(asl):
         k = e.WhichOneof("log_entry")
         m = getattr(e, k)
         if k == "rollout_metadata":
-            gt = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, p.pose.vec.z) for p in m.ego_rig_recorded_ground_truth_trajectory.poses])
+            gtp = m.ego_rig_recorded_ground_truth_trajectory.poses
+            gt = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, p.pose.vec.z) for p in gtp])
+            gq = np.array([rot(p.pose.quat) for p in gtp])
         elif k == "driver_session_request":
             uuid = m.session_uuid
             drv.start_session(m, ctx)
@@ -66,11 +69,14 @@ def replay(drv, asl, ctx):
             ts = max([t for t in ego if t <= m.time_now_us], default=None)
             if gt is not None and ts is not None:
                 v = ego[ts].vec
-                P = (gt[:, 1:] - [v.x, v.y, v.z]) @ rot(ego[ts].quat)          # local -> rig of the step: R^T (p - t)
+                Re = rot(ego[ts].quat)
+                P = (gt[:, 1:4] - [v.x, v.y, v.z]) @ Re                        # local -> rig of the step: R^T (p - t)
+                Rr = np.einsum("ji,njk->nik", Re, gq)                          # R^T R_gt: the log pose's rotation in the rig frame
+                h = np.arctan2(Rr[:, 1, 0], Rr[:, 0, 0]) / 2                   # sent as its yaw (about z), enough for the shadow
                 drv.submit_recording_ground_truth(egodriver_pb2.GroundTruthRequest(session_uuid=uuid, ground_truth=egodriver_pb2.GroundTruth(
                     timestamp_us=m.time_now_us, trajectory=common_pb2.Trajectory(poses=[common_pb2.PoseAtTime(
-                        timestamp_us=int(t), pose=common_pb2.Pose(vec=common_pb2.Vec3(x=x, y=y, z=z), quat=common_pb2.Quat(w=1.0)))
-                        for t, (x, y, z) in zip(gt[:, 0], P)]))), ctx)
+                        timestamp_us=int(t), pose=common_pb2.Pose(vec=common_pb2.Vec3(x=x, y=y, z=z), quat=common_pb2.Quat(w=math.cos(a), z=math.sin(a))))
+                        for t, (x, y, z), a in zip(gt[:, 0], P, h)]))), ctx)
             drv.drive(m, ctx)
             n += 1
     drv.close_session(egodriver_pb2.DriveSessionCloseRequest(session_uuid=uuid), ctx)

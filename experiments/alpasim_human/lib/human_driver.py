@@ -25,7 +25,9 @@ figure (without the sleeps) and the sleeps are logged and shown.
 
 Logs (ALPASIM_DRIVER_LOG_DIR): drive.jsonl, one `drive` record per call (phone input, applied delta / accel, speed, input age,
 stale, pose, wall) and one `close` record per session (sim s, wall s, wall per sim s after the start, stale calls, wait s);
-start.jsonl (scene, cameras, box). Live (HUMAN_LIVE): state.json + front.jpg / left.jpg / right.jpg (the received JPEGs, atomic
+start.jsonl (scene, cameras, box). Live (HUMAN_LIVE): state.json ("box": the ego box length, width, height and centre x, y in the
+rig frame from the session's VehicleDefinition, for the viewer's top view; PAI ~5.3 x 2.1 m centred 1.4 m ahead of the rear axle,
+nuPlan 5.18 x 2.30 m, 1.46 m) + front.jpg / left.jpg / right.jpg (the received JPEGs, atomic
 rename) and camera.json (front camera calibration, for the route drawn on the image) for scripts/human_viewer.py; on nuPlan
 front.jpg is the model drivers' 0.2 s slot frame instead (lib/frame_fill.py, state.json "fill"; HUMAN_FILL=0 = the raw keyframes). Env: ALPASIM_DRIVER_HOST / _PORT, HUMAN_WHEEL_PORT (47800; fake_wheel.py uses 47801),
 HUMAN_TRACK, HUMAN_N_SCENES, HUMAN_SIM_S (scene length for the progress bar). Needs grpc, alpasim_grpc, numpy (the driver image).
@@ -39,8 +41,9 @@ the loop does not count it. sessions.jsonl (log dir) has one start and one close
 
 Shadow (display only, never touches control): with runtime.simulation_config.send_recording_ground_truth=true (human_stack.sh,
 HUMAN_GT=1) the runtime sends the recorded log ego trajectory every step (submit_recording_ground_truth: unbound.gt_ego_trajectory,
-the whole log at 20 Hz on PAI, in the rig frame of the step). state.json "shadow" = the log path from 5 m behind to 120 m ahead of
-the ego's projection with the log speed, the log ego ("ghost") at the current sim time, and the gaps (you behind / ahead in m and s,
+the whole log, PAI 202 poses at 10 Hz, nuPlan 56 at 10 Hz, in the rig frame of the step). state.json "shadow" = the log path from 5 m
+behind to 120 m ahead of the ego's projection with the log speed, the log ego ("ghost", rig pose and yaw from the log poses) at the
+current sim time, and the gaps (you behind / ahead in m and s,
 lateral offset from the log path). The viewer's toggle (viewer.json "shadow") is integrated per scene as shadow_s (sim s driven with
 the shadow on) in the close record. The first front frame of the scene (at the handoff, as the hold for the start begins; at close
 when the scene never got there) is saved as <log dir>/thumbs/<session>.jpg (480 px wide; session uuid = rollout dir name) for the
@@ -84,6 +87,7 @@ FRONT = ("CAM_F0", "camera_front_wide_120fov")
 SIDES = {"left": ("CAM_L0", "camera_cross_left_120fov"), "right": ("CAM_R0", "camera_cross_right_120fov")}
 E = os.environ.get
 RT = float(E("HUMAN_REALTIME", "1.0"))
+BOX = [5.2, 1.9, 1.5, 1.5, 0.0]                                     # length, width, height, box centre x / y in the rig frame (fallback)
 RT_MODEL = float(E("HUMAN_MODEL_REALTIME", "0"))                    # model mode: unpaced (watched like a recording)
 HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "throttle")
 FAST_ABORT = E("HUMAN_FAST_ABORT", "0") == "1"
@@ -207,8 +211,9 @@ def front_camera(veh):
 
 
 def shadow(P, now: int):
-    """Recorded log ego (n, 4: t us, x, y, z in the rig frame at `now`, ego at the origin) -> the viewer's shadow block: path from 5 m
-    behind to 120 m ahead of the ego's projection (x, y, z, log km/h every 2 m), ghost (x, y, z, yaw) at `now`, log speed now, gap_m /
+    """Recorded log ego (n, 4 or 5: t us, x, y, z[, yaw] of the log rig in the rig frame at `now`, ego at the origin) -> the viewer's
+    shadow block: path from 5 m behind to 120 m ahead of the ego's projection (x, y, z, log km/h every 2 m), ghost (x, y, z, yaw) at
+    `now` (yaw from the log poses when given, else the path heading), log speed now, gap_m /
     gap_s (+ = you are behind the log), off_m (+ = you are left of the log path), ended (sim time past the log)."""
     t, xy = P[:, 0], P[:, 1:3]
     seg = np.hypot(*np.diff(xy, axis=0).T)
@@ -232,7 +237,8 @@ def shadow(P, now: int):
     dx, dy = np.diff(xy[k][j - 1:j + 1], axis=0)[0]
     j2 = int(np.clip(np.searchsorted(s, s_e, side="left"), 1, len(s) - 1))            # first time the log reached your position
     t_e = t[j2 - 1] + (s_e - s[j2 - 1]) / max(seg[j2 - 1], 1e-6) * (t[j2] - t[j2 - 1])
-    return {"path": path, "ghost": [round(float(np.interp(tn, t, P[:, c])), 2) for c in (1, 2, 3)] + [round(math.atan2(dy, dx), 3)],
+    yaw = float(np.interp(tn, t, np.unwrap(P[:, 4]))) if P.shape[1] > 4 else math.atan2(dy, dx)
+    return {"path": path, "ghost": [round(float(np.interp(tn, t, P[:, c])), 2) for c in (1, 2, 3)] + [round(yaw, 3)],
             "v_log": round(float(np.interp(tn, t, v)), 2), "gap_m": round(float(s_g - s_e), 1), "off_m": round(off, 2),
             "gap_s": round(float(now - t_e) / 1e6, 1) if s_e < s[-1] - 0.5 else None, "ended": bool(now > t[-1])}
 
@@ -248,6 +254,9 @@ class Session:
         veh = req.rollout_spec.vehicle
         self.n, self.scene = n, req.debug_info.scene_id if req.HasField("debug_info") else ""
         self.L = float(np.clip(0.56 * veh.bounding_box.size_x, 2.5, 3.3)) if veh.bounding_box.size_x else 2.9
+        b, c = veh.bounding_box, veh.rig_to_bounding_box.vec                 # ego box in the rig frame (origin = rear axle), for the viewer
+        self.box = [round(v, 3) for v in (b.size_x, b.size_y, b.size_z, c.x, c.y)] if b.size_x and veh.HasField("rig_to_bounding_box") \
+            else [round(b.size_x, 3), round(b.size_y, 3), round(b.size_z, 3)] + BOX[3:] if b.size_x else BOX
         self.cams = [c.logical_id for c in veh.available_cameras]
         self.poses, self.frames, self.route = {}, {}, []      # ts -> (x, y, z, yaw, speed); name -> (ts, jpeg); latest route (rig frame)
         self.lock = threading.Lock()
@@ -399,7 +408,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
 
     def submit_recording_ground_truth(self, req, ctx):
         s, g = self._s(req.session_uuid, ctx), req.ground_truth
-        P = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, p.pose.vec.z) for p in g.trajectory.poses], float).reshape(-1, 4)
+        P = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, p.pose.vec.z,
+                       math.atan2(2 * (p.pose.quat.w * p.pose.quat.z + p.pose.quat.x * p.pose.quat.y),
+                                  1 - 2 * (p.pose.quat.y ** 2 + p.pose.quat.z ** 2))) for p in g.trajectory.poses], float).reshape(-1, 5)
         if len(P) > 1:
             s.gt = (int(g.timestamp_us), P)
         return common_pb2.Empty()
@@ -440,7 +451,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                     put(LIVE / f"{name}.jpg", jpg)
                     s.written[name] = ts
             st = {**self.meta, "t": time.time(), "running": True, "scene": s.scene, "scene_i": s.n + 1, "cams": s.cams,
-                  "frames": sorted(s.frames), "route": s.route, "driver": s.driver, "model_ms": s.model_ms, **extra}
+                  "frames": sorted(s.frames), "route": s.route, "box": s.box, "driver": s.driver, "model_ms": s.model_ms, **extra}
             with self.stlock:
                 self.st = st
                 put(LIVE / "state.json", json.dumps({**st, **(self.fill.state() if self.fill else {})}).encode())
