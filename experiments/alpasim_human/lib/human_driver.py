@@ -52,8 +52,8 @@ submission image with the tag's checkpoint, lib/model_view.py, at driver.json "a
 service does not accept connections yet: state.json "model_wait"), the camera, egomotion and route
 submissions, drive and close_session are forwarded unchanged; the recorded ground truth is not (served runs have it off). The model's
 trajectory is returned as it came back: no phone input, no HUMAN_TRACK_GATE (the model's own served configuration has its own gate).
-Everything else stays: the hold point (released at once unless paused), pause, skip, the live view (state.json "driver" = the tag, "plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions
-records carry "driver"). No pacing: a model session runs as fast as the stack and the model allow (HUMAN_MODEL_REALTIME, default 0,
+Everything else stays: the hold point (released at once unless paused), pause, skip, the live view (state.json "driver" = the tag,
+"plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions records carry "driver"). No pacing: a model session runs as fast as the stack and the model allow (HUMAN_MODEL_REALTIME, default 0,
 paces it as HUMAN_REALTIME paces the human; model drives are watched like recordings, so scenes per hour is what counts). A model
 error fails the drive call with the model's own status, as it would fail a served rollout.
 """

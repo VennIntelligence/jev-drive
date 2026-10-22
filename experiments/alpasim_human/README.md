@@ -393,12 +393,28 @@ the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in t
   Model drives landed in `done/<scene>@<tag>.json`; the human (fake wheel) attempt of 82cd1227 stayed in `done/<scene>.json`.
   The comparison is a sanity check, not identity: the stored reads ran all cameras and other stacks.
   R6DAG-L18-s1 and R8K-L18-s2 were copied from the GPU box to Tokyo for this (sha256 checked against the box).
+- Speed of model mode (Tokyo card 1, 2026-10-22 evening, NTV0-L18-s0, PAI, Harmonizer off, a fresh resident stack per run, 4 scenes
+  559d4ad6 (warm-up, not counted), 478d6ec4, 054b5901, 4ecc114d; probe prefix `hmp`, scratch runs `/data/tmp/hmp_runs`). Scenes per
+  hour = 3 / (first request sent .. last request returned), so it includes the scene-to-scene gap:
+  | run | scenes / h | s per scene | wall / sim while driving | model call (median) | 478d6ec4 score |
+  |---|---|---|---|---|---|
+  | before (2d1ba2e0: paced to real time, road + wide + 8-slot view), warm caches | 95.5 | 37.7 | 1.07 | 36.2-37.2 ms | 0.9028 |
+  | after (unpaced, one wide frame) | 96.1 | 37.5 | 1.03 | 36.5-37.5 ms | 0.9028 |
+  | after, no view hook (`HUMAN_MODEL_VIEW=0`) | 96.7 | 37.2 | 1.01 | 36.3-36.8 ms | 0.9028 |
+  The other three scenes scored 0.0 (left_corridor_laterally) in every run, so the served behaviour is unchanged. The change buys
+  about 1 %: the stack plus the model already runs at about real time (wall / sim 0.95-1.18 unpaced), so pacing slept only 0-1.2 s per
+  scene, and the view costs at most about 0.5 ms per decision, which is within the noise. Where a warm scene's ~30-35 s goes
+  (request to return): the runtime loads the scene before start_session (4-10 s), the force-GT run-up to the 1.7 s hold point
+  (about 2.5 s), driving 17-21 s, and metrics after the last drive (2-4 s). The loop and feeder add under 1 s. Scoring runs in a
+  thread beside the next scene. The first one or two scenes of a fresh stack (or of a JIT cache) load for another 20-45 s. More
+  scenes per hour would need AlpaSim-side changes (overlapping the next scene's load with the current drive), not viewer changes.
 
 ![model mode](figs/viewer_model_mode.jpg)
 
-`figs/viewer_model_mode.jpg`: the viewer in model mode (Xvfb, 3840 x 2160) on R6DAG-L18-s1 driving PAI 478d6ec4 with the
-Harmonizer on, sim 5 s. Look at the teal "DRIVER: MODEL" tag, the road and wide model frames as the model was fed them with the
-served trajectory (orange) over its own plan (yellow), the 8 slots on the right and the slow-motion note.
+`figs/viewer_model_mode.jpg`: the viewer in model mode (Xvfb, 3840 x 2160, re-rendered from a copied live state, so the
+"decision ... s ago" readout is meaningless) on NTV0-L18-s0 driving PAI 478d6ec4 unharmonised, sim 9 s, shadow on. Look at the teal
+"DRIVER: MODEL" tag, the one wide model frame filling the image area as the human view's camera does, the served trajectory (orange)
+beside the model's own plan (yellow), the route dot at 50 m, the LOG box and readout, and the gallery on the right.
 
 ![viewer 16:9](figs/viewer_16x9_shadow.jpg)
 
