@@ -2,8 +2,7 @@
 """Window for the human AlpaSim driver ("alpasim human drive (phone wheel)", DISPLAY=:0): the front camera as the driver receives it
 with the route projected onto the road (blue, dots every 10 m, the nearest visible dot labelled; the phone's 4 s plan orange) through
 the session's front-camera calibration (<live>/camera.json from the driver; for older sessions the scene's start.jsonl of a pai_driver /
-human run), a turn banner from the route's shape, a top-down inset (rig frame, to scale, 35 m ahead and 15 m behind: the ego box in cyan, with the
-shadow the log car's box in violet), side cameras when rendered, a compact strip
+human run), a turn banner from the route's shape, a top-down inset (AlpaSim's own top view of the scene, below), side cameras when rendered, a compact strip
 under the image (speed, applied steering / acceleration, phone bars, scene clock), and "DRIVER: HUMAN (phone)". Reads
 <live>/state.json and *.jpg (lib/human_driver.py). A left click anywhere writes <live>/start: the held scene starts. Heartbeat
 <live>/viewer.json (with the shadow toggle). Q / Esc closes, F11 toggles fullscreen. While the window has focus the keyboard drives too
@@ -24,14 +23,27 @@ the log speed (violet slow, magenta, yellow fast), a wireframe box where the log
 ego's own box dimensions, state.json "box"; in the top view a violet filled box, an arrow at the edge when out of view), and a readout "LOG x
 km/h  YOU y km/h  n m / n s behind (ahead)  n m left (right) of the log path", in the front view and the inset (state.json "shadow").
 
+Top view (privileged, display only): AlpaSim's eval map panel of the live rollout, rendered by lib/alpasim_bev.py in a side container
+of the AlpaSim runtime image (started here, docker name alpasim-bev-<uid>-<live dir hash>, HUMAN_BEV=0 = off; it exits 30 s after the
+viewer's heartbeat stops): the scene map the runtime loads (lane centres blue dashed, lane edges blue, road edges black, nuPlan road
+areas grey), the other agents, the route and the driver's plan, with the shadow the log path and the log ego's box (lime), ego facing
+up 12.5 m above the bottom edge, 50 m square. The ego box is red while the evaluator's own OffRoadScorer says offroad and orange while
+GroundTruthScorer says left_corridor_laterally (4 m from the log path), computed from the runtime's rollout log and map, never seen by
+the driver; "not scored" during the force-GT run-up. The picture is the step at the viewer's sim time (<live>/bev.rgba + bev.json);
+until it is there (map loading, no docker) the inset falls back to the hand-drawn rig-frame view (35 m ahead, 15 m behind, ego cyan,
+log car violet).
+
     /data/envs/carla/bin/python experiments/alpasim_human/scripts/human_viewer.py --dir /data/runs/alpasim_human/live
 """
 import argparse
 import glob
 import json
 import math
+import hashlib
 import os
+import subprocess
 import sys
+import threading
 import time
 
 import numpy as np
@@ -46,6 +58,52 @@ GHOST, LBL, TEAL, YEL = (235, 215, 255), (150, 200, 255), (40, 210, 190), (255, 
 EGO, LOGF, AHEAD, BEHIND = (60, 230, 255), (165, 70, 235, 190), 35, 15   # top view: ego outline, log fill; metres shown ahead / behind
 SPEED = ((0, (150, 60, 220)), (25, (225, 70, 200)), (50, (255, 215, 90)), (70, (255, 245, 170)))   # km/h -> shadow colour
 CH, GW_MIN, INFO, LEG = 1120, 280, 118, 30
+HERE = os.path.dirname(os.path.abspath(__file__))
+BEV = {"px": 400}                                                     # the inset's size in canvas px, sent to the BEV renderer
+
+
+def bev_daemon(live):
+    """Keeps lib/alpasim_bev.py running in the AlpaSim runtime image for this live dir (thread; one container per live dir, shared by
+    viewers of the same dir). Mounts as the runtime's: the AlpaSim source, NuRec scenes at /mnt/nre-data, nuPlan, runs (read only)."""
+    D, src = os.environ.get("DATA_DIR", "/data"), os.environ.get("ALPASIM_SRC", os.environ.get("DATA_DIR", "/data") + "/third_party/alpasim")
+    img = os.environ.get("HUMAN_BEV_IMG") or "alpasim-base:" + next((ln.split('"')[1] for ln in open(src + "/pyproject.toml")
+                                                                     if ln.startswith("version = ")), "latest")
+    repo, live = os.path.realpath(os.path.join(HERE, "../../..")), os.path.realpath(live)
+    name = "alpasim-bev-%d-%s" % (os.getuid(), hashlib.md5(live.encode()).hexdigest()[:8])
+    nuplan = os.environ.get("NUPLAN_ROOT", D + "/datasets/alpasim_nuplan")
+    cmd = ["docker", "run", "-d", "--rm", "--name", name, "--network", "none", "-e", "MPLCONFIGDIR=/tmp/mpl",
+           "-v", src + "/src:/repo/src:ro", "-v", src + "/plugins:/repo/plugins:ro", "-v", os.environ.get("NUREC", D + "/datasets/nurec") + ":/mnt/nre-data:ro",
+           "-v", "%s:%s" % (nuplan, nuplan), "-v", D + "/runs:" + D + "/runs:ro", "-v", "%s:%s" % (live, live), "-v", "%s:%s:ro" % (repo, repo),
+           "--entrypoint", "bash", img, "-c", 'umask 0000; exec /repo/.venv/bin/python "$0" live --dir "$1"',
+           repo + "/experiments/alpasim_human/lib/alpasim_bev.py", live]
+    while True:
+        try:
+            up = subprocess.run(["docker", "ps", "-q", "-f", "name=^%s$" % name], capture_output=True, text=True, timeout=20).stdout.strip()
+            if not up:
+                subprocess.run(cmd, capture_output=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        time.sleep(20)
+
+
+def bev_frame(live, st, cache):
+    """(surface, bev.json) of the renderer's last frame when it is this session's and within 1 s of the shown sim time, else
+    (None, bev.json or {})."""
+    try:
+        m = os.stat(os.path.join(live, "bev.json")).st_mtime_ns
+        if cache.get("m") != m:
+            cache["m"], cache["j"] = m, json.load(open(os.path.join(live, "bev.json")))
+            j = cache["j"]
+            if j.get("state") == "ok":
+                with open(os.path.join(live, "bev.rgba"), "rb") as fh:
+                    b = fh.read()
+                if len(b) == 4 * j["px"] ** 2:
+                    cache["s"] = pygame.image.frombuffer(b, (j["px"], j["px"]), "RGBA").convert()
+    except (OSError, ValueError, KeyError, pygame.error):
+        pass
+    j = cache.get("j") or {}
+    ok = j.get("state") == "ok" and j.get("session") == st.get("session") and j.get("scene") == st.get("scene") and abs((j.get("sim_t") or 0) - (st.get("sim_t") or 0)) < 1.0
+    return (cache.get("s") if ok else None), j
 CALIB_GLOBS = ("/data/runs/alpasim_human/*/driver/start.jsonl", "/data/runs/alpasim/pai1/runs/*/driver/start.jsonl",
                "/data/runs/alpasim/*/runs/*/driver/start.jsonl")
 
@@ -244,10 +302,24 @@ def bar(c, x, y, w, h, v, col, centered=False):
         pygame.draw.rect(c, col, (x, y, int(w * max(0.0, min(1.0, v))), h))
 
 
-def inset(c, st, x0, y0, size, font, shadow_on):
-    """Top-down, rig frame (x forward = up, y left = left), to scale: AHEAD m ahead, BEHIND m behind the rear axle. The ego box at its
+def inset(c, st, x0, y0, size, font, shadow_on, bev=(None, {})):
+    """AlpaSim's top view (bev_frame) when there is one: the picture, a red OFF ROAD / orange LEFT CORRIDOR tag, the evaluator's
+    lateral distance to the log path. Else the hand-drawn one: top-down, rig frame (x forward = up, y left = left), to scale: AHEAD m ahead, BEHIND m behind the rear axle. The ego box at its
     pose (cyan outline, state.json "box") always; with the shadow the log car's box at the same sim time (violet fill, lavender outline;
     out of view: a violet arrow at the edge towards it). No numbers."""
+    img, j = bev
+    if img is not None:
+        s = pygame.transform.smoothscale(img, (size, size)) if img.get_width() != size else img.copy()
+        tag = ("OFF ROAD", RED) if j.get("offroad") else ("LEFT CORRIDOR", ORANGE) if j.get("corridor") else None
+        if tag:
+            t = font.render(tag[0] + ("" if j.get("scored") else " (not scored)"), True, (0, 0, 0))
+            pygame.draw.rect(s, tag[1], (0, 0, t.get_width() + 16, t.get_height() + 8))
+            s.blit(t, (8, 4))
+        t = font.render("%.1f m from log" % (j.get("lat_m") or 0), True, (90, 90, 90))
+        s.blit(t, (size - t.get_width() - 6, 4))
+        pygame.draw.rect(s, (60, 70, 84), s.get_rect(), 1)
+        c.blit(s, (x0, y0))
+        return
     s = pygame.Surface((size, size), pygame.SRCALPHA)
     s.fill((10, 14, 20, 215))
     k = (size - 12) / float(AHEAD + BEHIND)
@@ -280,7 +352,8 @@ def inset(c, st, x0, y0, size, font, shadow_on):
     e = [P(q) for q in ghost_corners((0.0, 0.0, 0.0, 0.0), z=False, box=box)]
     pygame.draw.polygon(s, EGO, e, 3)
     pygame.draw.line(s, EGO, e[1], e[2], 5)                           # front edge
-    s.blit(font.render("top view", True, GREY), (6, 4))
+    s.blit(font.render("top view" + ("" if not j.get("state") or j.get("state") == "ok" else " (AlpaSim map: %s)" % j["state"][:40]),
+                       True, GREY), (6, 4))
     pygame.draw.rect(s, (60, 70, 84), s.get_rect(), 1)
     c.blit(s, (x0, y0))
 
@@ -377,7 +450,7 @@ class Gallery:
         c.set_clip(None)
 
 
-def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=None, model_view=True, mj=None):
+def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=None, model_view=True, mj=None, bev=(None, {})):
     font, big, tag, huge, small = F
     CW, H = c.get_size()
     front = imgs.get("front")
@@ -451,7 +524,8 @@ def draw(c, st, live, imgs, F, status, cal=None, kb="", shadow_on=False, gal=Non
             f = fit(im, 320, 180)
             c.blit(f, (R.x + 10 if i == 0 else R.right - 10 - f.get_width(), R.bottom - 10 - f.get_height()))
     isz = max(240, min(400, R.w // 4, R.h - 300))                     # top view: 316 px in the 2480 x 1736 window, 400 at 16:9 fullscreen
-    inset(c, st, R.right - isz - 10, R.y + 130, isz, font, shadow_on and status == "LIVE")
+    BEV["px"] = isz
+    inset(c, st, R.right - isz - 10, R.y + 130, isz, font, shadow_on and status == "LIVE", bev if status == "LIVE" else (None, {}))
     sh = st.get("shadow") if shadow_on and status == "LIVE" else None
     if sh:
         gap = "log ended" if sh.get("ended") else "past the end of the log" if sh.get("gap_s") is None else \
@@ -553,6 +627,9 @@ def main():
     clock, cache, st, st_m, beat, calib, kb = pygame.time.Clock(), {}, {}, None, 0.0, Calib(a.dir), KeyboardWheel()
     gal, shadow, t_ctl, mview, mj, mj_m = Gallery(a.dir), {"on": False, "panel": None}, 0.0, True, None, None
     os.makedirs(a.dir, exist_ok=True)
+    bcache, snap = {}, {}
+    if os.environ.get("HUMAN_BEV", "1") != "0":
+        threading.Thread(target=bev_daemon, args=(a.dir,), daemon=True).start()
     while True:
         for e in pygame.event.get():
             if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_q)):
@@ -587,7 +664,7 @@ def main():
             beat = time.time()
             tmp = os.path.join(a.dir, ".viewer.%d.tmp" % os.getpid())
             with open(tmp, "w") as fh:
-                json.dump({"t": beat, "pid": os.getpid(), "shadow": shadow["on"]}, fh)
+                json.dump({"t": beat, "pid": os.getpid(), "shadow": shadow["on"], "bev_px": BEV["px"]}, fh)
             os.replace(tmp, os.path.join(a.dir, "viewer.json"))
         p = os.path.join(a.dir, "state.json")
         try:
@@ -609,12 +686,14 @@ def main():
                 pass
         gal.update()
         c.fill((17, 21, 29))
-        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None, kb.text(), shadow["on"], gal, mview, mj)
+        bev = bev_frame(a.dir, st, bcache) if st else (None, {})
+        draw(c, st, a.dir, imgs, F, status, calib.get(st.get("scene")) if st.get("scene") else None, kb.text(), shadow["on"], gal, mview, mj, bev)
         screen.fill((0, 0, 0))
         r = min(screen.get_width() / c.get_width(), screen.get_height() / c.get_height())
         screen.blit(pygame.transform.smoothscale(c, (max(1, int(c.get_width() * r)), max(1, int(c.get_height() * r)))), (0, 0))
         pygame.display.flip()
-        if a.snapshot and status == "LIVE" and (not os.environ.get("SNAPSHOT_SIM_T") or (st.get("sim_t") or 0) >= float(os.environ["SNAPSHOT_SIM_T"])):
+        if a.snapshot and status == "LIVE" and (not os.environ.get("SNAPSHOT_SIM_T") or (st.get("sim_t") or 0) >= float(os.environ["SNAPSHOT_SIM_T"])) \
+                and (bev[1].get("sim_t") == st.get("sim_t") or time.time() - snap.setdefault("t", time.time()) > 5):   # the top view at this step
             pygame.image.save(c, a.snapshot)
             pygame.quit()
             return
