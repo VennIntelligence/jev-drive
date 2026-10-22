@@ -1,0 +1,34 @@
+{
+ "note": "SimScale LTF (camera-only latent TransFuser + SimScale sim data), AlpaSim sample checkpoint, as shipped; camera-only non-foundation reference",
+ "ckpt": "$DATA_DIR/models/alpasim_ltf/ltf_sim_navtest.ckpt",
+ "kind": "non-foundation",
+ "runner": "cmd",
+ "repo": "$DATA_DIR/third_party/alpasim/e2e_challenge",
+ "env": "alpasim-ltf",
+ "inputs": [
+  "CAM_L0 / F0 / R0 (current frame, 1920 x 1080)",
+  "command one-hot",
+  "ego velocity / acceleration"
+ ],
+ "published": {
+  "metric": "PDMS v1",
+  "value": null,
+  "source": "no navtest number published for this exact AlpaSim sample checkpoint; reference row, no reproduction gate"
+ },
+ "vram": 6,
+ "cpu": 6,
+ "ram": 24,
+ "chunks": 6,
+ "min_chunk": 400,
+ "licence": "see the AlpaSim e2e_challenge sample (NVIDIA / OpenDriveLab release)",
+ "cmd": [
+  "{py}",
+  "experiments/wm_surplus/scripts/simscale_navtest.py",
+  "--model",
+  "ss-ltf",
+  "--tokens",
+  "{tokens}",
+  "--out",
+  "{out}"
+ ]
+}

@@ -80,7 +80,7 @@ def cache_dir(data: str, frames: str) -> Path:
 
 # ---------------------------------------------------------------- stages
 def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "", procs: int = 0) -> list:
-    if m.family == "agent":                                   # third-party NAVSIM agent run as shipped: its own poses stages
+    if is_agent(m):                                           # third-party NAVSIM agent run as shipped: its own poses stages
         return agent_stages(m, bench, run_dir, shards, subset)
     data = NAVSIM[bench]["data"]
     ol_root(data)                                            # plans/ and the meta.json link that op_interp reads
@@ -407,7 +407,7 @@ def collect(spec: str, bench: str, run_dir: str, subset: str = "") -> None:
         u = g.assign(log=[lg.get(o, "?") for o in g.orig])
         s = json.loads((run_dir / "harness" / "harness_summary.json").read_text())
         summ = {"n": len(u), **{k: float(s[k]) for k in ("combined", "stage1", "stage2")}}
-    if m.family == "agent":
+    if is_agent(m):
         summ |= agent_v1_summary(m, run_dir)
     u.to_csv(run_dir / "units.csv", index=False)
     summ |= {"model": m.spec, "bench": bench, "subset": subset}
@@ -422,10 +422,15 @@ V1_SUBS = {"NC": "no_at_fault_collisions", "DAC": "drivable_area_compliance", "D
 AGENT_POSES = REPO / "jevdrive/bench/agent_poses.py"
 
 
+def is_agent(m: Model) -> bool:
+    """Family `agent`, or a model of another family with a navtest agent JSON (SimScale-LTF / -DD: HUGSIM drivers too)."""
+    return m.family == "agent" or bool(agent_cfg(m.name))
+
+
 def preds_of(m: Model, bench: str, run_dir) -> Path:
     """Prediction file a scoring stage reads: <run>/preds.npz for third-party agents (one per run, so a smoke subset never
     overwrites the full run), the shared bench/ol pred file otherwise."""
-    return Path(run_dir) / "preds.npz" if m.family == "agent" else pred_file(m, bench)
+    return Path(run_dir) / "preds.npz" if is_agent(m) else pred_file(m, bench)
 
 
 def agent_env(c: dict) -> dict:

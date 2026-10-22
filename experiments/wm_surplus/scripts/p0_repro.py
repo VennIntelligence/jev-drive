@@ -43,7 +43,10 @@ def smoke_verdict(model: str) -> dict:
     s = json.loads((d / "summary.json").read_text())
     pub = c["published"]
     v = dict(model=model, smoke_run=str(d), n=s["n"], PDMS_v1=s["PDMS_v1"], EPDMS=s["EPDMS"], published=pub["value"])
-    if pub.get("per_token_csv") and Path(pub["per_token_csv"]).exists():
+    if pub.get("value") is None:
+        v["rule"] = "no published navtest number: execution check only (all tokens scored)"
+        v["passed"] = bool(s["missing"] == 0)
+    elif pub.get("per_token_csv") and Path(pub["per_token_csv"]).exists():
         ref = pd.read_csv(pub["per_token_csv"])
         ref = ref[~ref.token.astype(str).str.startswith("average")].set_index("token")
         u = pd.read_csv(d / "units_v1.csv").set_index("token")
@@ -79,7 +82,7 @@ def cmd_verdict(a):
     tol = float(c.get("tolerance", 0.5))
     v = dict(model=a.model, kind=c["kind"], run=str(d), n=s["n"], missing=s["missing"], PDMS_v1=s["PDMS_v1"],
              published=s.get("published"), delta=s.get("delta_vs_published"), tolerance=tol,
-             reproduced=bool(s["missing"] == 0 and abs(s.get("delta_vs_published", 99)) <= tol),
+             reproduced=(None if s.get("published") is None else bool(s["missing"] == 0 and abs(s.get("delta_vs_published", 99)) <= tol)),
              EPDMS_v2=s["EPDMS"], v1_subscores={k: s[k] for k in s if k.startswith("v1_")},
              v2_subscores={k: s[k] for k in ("NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC") if k in s},
              poses_wall_h=None)

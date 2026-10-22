@@ -121,11 +121,11 @@ STATIC = {
                              "hugsim:exam": "experiments/hugsim/results/hugsim-exam/scored_wajepa.csv#wajepa"}),
     # base = the zs_run agent of the HUGSIM client (experiments/hugsim/scripts/simscale_hugsim_client.py)
     "SimScale-LTF": Model("SimScale-LTF", "simscale", base="ss-ltf", ckpt="$DATA_DIR/models/alpasim_ltf/ltf_sim_navtest.ckpt",
-                          note="SimScale LTF (camera-only TransFuser, AlpaSim sample, trained with SimScale sim data), as shipped; HUGSIM only",
-                          inputs=SS_INPUTS, benches=("hugsim",)),
+                          note="SimScale LTF (camera-only TransFuser, AlpaSim sample, trained with SimScale sim data), as shipped; HUGSIM + navtest (agents/SimScale-LTF.json)",
+                          inputs=SS_INPUTS, benches=("hugsim", "navtest")),
     "SimScale-DD": Model("SimScale-DD", "simscale", base="ss-dd", ckpt="$DATA_DIR/models/alpasim_dd/diffusiondrive_sim_navhard.ckpt",
-                         note="SimScale DiffusionDrive (camera-only, AlpaSim sample, navhard-sim checkpoint), as shipped; HUGSIM only",
-                         inputs=SS_INPUTS, benches=("hugsim",)),
+                         note="SimScale DiffusionDrive (camera-only, AlpaSim sample, navhard-sim checkpoint), as shipped; HUGSIM + navtest (agents/SimScale-DD.json)",
+                         inputs=SS_INPUTS, benches=("hugsim", "navtest")),
 }
 AGENT_DIR = Path(__file__).resolve().parent / "agents"
 
@@ -264,6 +264,8 @@ def listing() -> list:
         if n != "shipped" and not (c.get("command_adapter") or c.get("route_adapter")):
             rows.append(dict(name=n, family="onnx", frames="gimm", weights=expand(c["onnx"]), note=c.get("note", "")[:80]))
     for f in sorted(AGENT_DIR.glob("*.json")):
+        if f.stem in STATIC:
+            continue
         c = agent_cfg(f.stem)
         rows.append(dict(name=f.stem, family="agent", frames="", weights=c.get("ckpt", ""),
                          note=(f"DISABLED ({c['disabled']}) " if c.get("disabled") else "") + f"{c['kind']}: {c['note']}"[:80]))
