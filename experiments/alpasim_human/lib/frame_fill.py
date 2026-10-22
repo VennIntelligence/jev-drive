@@ -115,7 +115,7 @@ class Fill:
             f = s.frames.get("front")
         if f and f[0] not in self.keys:
             self.keys[f[0]] = decode(f[1], FILL_W)
-            if self.model_view:
+            if self.model_view and getattr(s, "model", None) is None:    # model mode: model.jpg is the model's own (model_view.py)
                 import sh30_core as C
                 c = self.cal
                 K = [[c["spec"]["f"][0], 0, c["spec"]["c"][0]], [0, c["spec"]["f"][1], c["spec"]["c"][1]], [0, 0, 1]]

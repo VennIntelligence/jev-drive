@@ -21,6 +21,14 @@ The loop sends one scene per simulate request (scripts/human_feed.py protocol), 
 - Option "harmonizer" (PAI only) and option "render" (front camera height: auto = human_stack.sh's pairing with the harmonizer,
   else HUMAN_H) are fixed for a stack's whole life, so a change restarts the resident stack (about a minute) once no scene is
   being driven; a loading or held scene is requested again on the new stack.
+- Option "driver" (README "Model mode"): "human" or a checkpoint tag. For a tag, scripts/model_driver.sh serves it (container
+  <prefix>-model on the same card, the submission image's driver and served configuration) and <live>/driver.json names the scene and
+  the model's address before each request, so lib/human_driver.py delegates that session to it. The scene starts by itself. A change
+  takes effect at the next hold point (a loading scene is requested again). Model mode renders the front camera as the preset does
+  (1080 px; PAI 10 Hz and the shipped harmonizer resolution also with the harmonizer) and, on PAI, with the submissions' steering weight
+  (HUMAN_MODEL_WIZ, default controller.gains.rel_front_steering_angle_weight=10), all fixed per resident stack, so on PAI switching
+  between human and model restarts the stack once (nuPlan: only with a render size other than auto). Scores of a model drive go to
+  done/<scene>@<tag>.json ("driver" = tag), the human's to done/<scene>.json ("driver" = "human"): the two never mix.
 Run dir layout per resident stack used: stacks/<run>-sNN/ with sim/rollouts/<scene>/<uuid>/ (moved out of the resident dir when its
 request returns), sim/eval-config.yaml, driver/{sessions,drive}.jsonl (that run's sessions) and driver/thumbs/, resident (its path).
 Scoring: every finished rollout that was not aborted is scored with AlpaSim's own aggregation (alpasim-aggregation in the
@@ -50,6 +58,60 @@ SRC = Path(os.environ.get("ALPASIM_SRC", str(D / "third_party/alpasim")))
 STACK = Path(os.environ.get("HUMAN_STACK_SCRIPT", str(REPO / "experiments/alpasim_human/scripts/human_stack.sh")))  # fake_stack.py in tests
 RESIDENTS = Path(os.environ.get("HUMAN_RESIDENT_DIR", str(D / "runs/alpasim_human/resident")))
 GPU = os.environ.get("HUMAN_GPU", "0")
+MODEL_SCRIPT = REPO / "experiments/alpasim_human/scripts/model_driver.sh"
+MODEL_PORT = os.environ.get("HUMAN_MODEL_PORT", "6791")
+MODEL_WIZ = {"pai": os.environ.get("HUMAN_MODEL_WIZ", "controller.gains.rel_front_steering_angle_weight=10").split(), "nuplan": []}
+
+
+def dkey(scene, driver):
+    """done/<key>.json of a scene's attempt by `driver`: the scene id for the human, <scene>@<tag> for a model."""
+    return scene if driver in (None, "", "human") else "%s@%s" % (scene, driver)
+
+
+class ModelSvc(object):
+    """The model driver service of model mode (scripts/model_driver.sh, container <prefix>-model), started without blocking the loop."""
+
+    def __init__(self):
+        self.name = "%s-model" % os.environ.get("HUMAN_PREFIX", "hres")
+        self.track = self.tag = self.proc = None
+        self.err, self.t0, self.out, self.ok, self.t_ok = "", 0.0, None, False, 0.0
+
+    def running(self):
+        if time.time() - self.t_ok > 5:                         # docker inspect at most every 5 s
+            self.ok, self.t_ok = sh("docker inspect -f '{{.State.Running}}' %s 2>/dev/null" % self.name).strip() == "true", time.time()
+        return self.ok
+
+    def ensure(self, track, tag):
+        """True once `tag` listens on MODEL_PORT for `track`; starts (or switches) it otherwise. self.err: why it failed."""
+        if (self.track, self.tag) == (track, tag):
+            if self.proc is not None and self.proc.poll() is not None:
+                rc, self.proc = self.proc.returncode, None
+                if rc:
+                    self.err = (self.out / "start.out").read_text().strip().splitlines()[-1:] or ["exit %d" % rc]
+                    self.err = "model driver %s did not start: %s" % (tag, self.err[0])
+            if self.proc is None:
+                return not self.err and self.running()
+            return False
+        self.stop()
+        self.track, self.tag, self.err, self.t0 = track, tag, "", time.time()
+        self.out = D / "runs/alpasim_human/models" / ("%s-%s-%s" % (track, tag, time.strftime("%m%d-%H%M%S")))
+        self.out.mkdir(parents=True, exist_ok=True)
+        env = dict(os.environ, HUMAN_GPU=GPU, HUMAN_MODEL_PORT=MODEL_PORT, HUMAN_LIVE=str(LIVE), HUMAN_PREFIX=self.name[:-6])
+        with open(str(self.out / "start.out"), "w") as log:
+            self.proc = subprocess.Popen(["bash", str(MODEL_SCRIPT), track, tag, str(self.out)], env=env, stdout=log,
+                                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        return False
+
+    def stop(self):
+        if self.proc is not None and self.proc.poll() is None:
+            self.proc.terminate()
+            self.proc.wait()
+        if self.tag is not None and self.out is not None:
+            sh("docker logs %s > %s/driver.log 2>&1" % (self.name, self.out))
+        sh("docker rm -f %s >/dev/null 2>&1" % self.name)
+        self.track = self.tag = self.proc = None
+        self.t_ok = 0.0
+        self.err = ""
 
 
 def base_image():
@@ -83,11 +145,13 @@ class Resident(object):
         self.info, self.proc = info, proc
         self.dir, self.pid, self.track, self.harm = Path(info["dir"]), info["pid"], info["track"], info["harm"]
         self.size = info.get("size", "auto")                    # render option (HUMAN_H, or auto)
-        self.key = (self.harm, self.size)
+        self.wiz = list(info.get("wiz", []))                    # extra wizard overrides (model mode: the steering weight)
+        self.model = bool(info.get("model"))                    # PAI model mode: the preset's 10 Hz camera (also with the harmonizer)
+        self.key = (self.harm, self.size, tuple(self.wiz), self.model)
         self.ids, self.feed = set(info["ids"]), Path(info["dir"]) / "feed"
 
     @classmethod
-    def start(cls, track, harm, size, ids):
+    def start(cls, track, harm, size, ids, wiz=(), model=False):
         d = RESIDENTS / ("%s%s%s-%s" % (track, "-harm" if harm else "", "" if size == "auto" else "-h" + size, time.strftime("%m%d-%H%M%S")))
         d.mkdir(parents=True)
         (d / "scenes.txt").write_text("\n".join(ids) + "\n")
@@ -96,10 +160,12 @@ class Resident(object):
                    HUMAN_HARMONIZER="1" if harm else "0", HUMAN_PREFIX=os.environ.get("HUMAN_PREFIX", "hres"))
         if size != "auto":
             env["HUMAN_H"] = size
+        if model:                                               # the served camera: 10 Hz, shipped harmonizer resolution (human_stack.sh)
+            env.update(HUMAN_FI_MS="100", HUMAN_HARM_RES="")
         with open(str(d / "stack.out"), "a") as log:
-            proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(d), str(d / "scenes.txt")],
+            proc = subprocess.Popen(["python3" if STACK.suffix == ".py" else "bash", str(STACK), track, str(d), str(d / "scenes.txt")] + list(wiz),
                                     env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
-        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "size": size, "gpu": GPU, "ids": list(ids), "t": time.time(),
+        info = {"dir": str(d), "pid": proc.pid, "track": track, "harm": harm, "size": size, "wiz": list(wiz), "model": model, "gpu": GPU, "ids": list(ids), "t": time.time(),
                 "prefix": env["HUMAN_PREFIX"]}
         write_json(cls.REG, info)
         return cls(info, proc)
@@ -269,14 +335,15 @@ class Scorer(object):
         r = summ["rollouts"][0]
         m, sm = r.get("metrics") or {}, r.get("score_metrics") or {}
         drv = {x.get("session"): x for x in jsonl(stack.dir / "driver/drive.jsonl") if x.get("kind") == "close"}.get(rd.name, {})
-        prev = read_json(self.run / "done" / (scene + ".json"), {}) or {}
+        driver = close.get("driver") or drv.get("driver") or "human"
+        prev = read_json(self.run / "done" / (dkey(scene, driver) + ".json"), {}) or {}
         rec = {"scene": scene, "score": r.get("score") or 0.0, "why": why(r), "rollout": rd.name, "stack": stack.dir.name,
                "progress": round(sm.get("progress_clipped_rel") or 0.0, 3), "driven_m": round(m.get("dist_traveled_m") or 0.0, 1),
                "gt_m": round(m.get("gt_dist_traveled_m") or 0.0, 1), "sim_s": drv.get("sim_s"), "wall_per_sim": drv.get("wall_per_sim"),
                "stale": drv.get("stale"), "wait_s": drv.get("wait_s"), "paused_s": drv.get("paused_s"), "harmonizer": stack.harm, "render": stack.res.size,
-               "shadow_s": drv.get("shadow_s") or 0.0,
+               "shadow_s": drv.get("shadow_s") or 0.0, "driver": driver,
                "attempt": prev.get("attempt", 0) + 1, "t": time.time()}
-        write_json(self.run / "done" / (scene + ".json"), rec)
+        write_json(self.run / "done" / (dkey(scene, driver) + ".json"), rec)
         self.log(rec)
         (self.run / "results.md").write_text(self.sc.table(self.run))
 
@@ -345,10 +412,11 @@ def main():
     wheel = WheelClient()
     plays, skipped, chosen, driven = [], set(), set(), set()     # driven: finished, not skipped, maybe not scored yet
     res, batch, req, hold_error = None, None, None, ""          # req: the scene this loop asked for, until its request returns
+    model, drv = ModelSvc(), "human"                             # model mode: the model service; the panel's driver now
     k, armed, t_wait, restart_why = len(list((run / "stacks").glob("*"))), True, time.time(), ""
 
-    def done(s):
-        return s in driven or (run / "done" / (s + ".json")).exists()
+    def done(s):                                                 # by the driver chosen now
+        return dkey(s, drv) in driven or (run / "done" / (dkey(s, drv) + ".json")).exists()
 
     def unfinished():
         order = [i for i in ctl.read()["order"] if i in ids] or ids
@@ -374,7 +442,7 @@ def main():
             if all(j[2] != rd for j in jobs):
                 jobs.append((batch, scene, rd, close))
                 if not close.get("aborted"):
-                    driven.add(scene)
+                    driven.add(dkey(scene, close.get("driver") or (req or {}).get("driver")))
                     skipped.discard(scene)
         wake.set()
 
@@ -383,8 +451,12 @@ def main():
             c = ctl.read()
             harm = track == "pai" and bool(c["options"].get("harmonizer"))
             size = str(c["options"].get("render") or "auto")
-            key = (harm, size)
-            hs = "harmonizer %s, render %s" % ("on" if harm else "off", size)
+            drv = str(c["options"].get("driver") or "human")
+            mm = drv != "human"
+            if mm and (harm or size != "auto"):                  # model mode: the preset's front camera (auto unharmonised = 1080)
+                size = "1080"
+            key = (harm, size, tuple(MODEL_WIZ[track] if mm else ()), mm and track == "pai")
+            hs = "harmonizer %s, render %s%s" % ("on" if harm else "off", size, ", driver %s" % drv if mm else "")
             if res:
                 res.lease(owner, run)
             v = view()
@@ -397,6 +469,9 @@ def main():
                     plays.append(a["item"])
                     chosen.add(a["item"])
                     hold_error = ""
+                    if model.err:                                # a model driver that failed to start is tried again
+                        model.track = model.tag = None
+                        model.err = ""
                     if req and not req.get("abort") and not started and req["scene"] != a["item"]:
                         abort("play %s" % a["item"])               # a loading / held scene gives way, unscored
                 elif a["kind"] == "next" and req and v and not req.get("abort"):
@@ -419,6 +494,13 @@ def main():
                 elif not res.ready():
                     hold_error = "the render stack failed to start: %s (see %s)" % (err, res.dir)
                 res, batch = None, None
+            if req and not req.get("abort") and not started and req.get("driver", "human") != drv:
+                abort("driver %s" % drv)                         # a loading scene is requested again with the new driver
+                if req["scene"] not in plays and (c["playlist"] or req["scene"] in chosen):
+                    plays.insert(0, req["scene"])
+            if not mm and model.tag is not None and not req:
+                note("model driver %s stopped (driver: human)" % model.tag)
+                model.stop()
             if res is not None and res.key != key and not started:
                 if req and not req.get("abort"):
                     abort(hs, None)
@@ -442,7 +524,7 @@ def main():
                     res.stop()
                     res, restart_why = None, "switching the render stack to %s, %s (about a minute)" % (track.upper(), hs)
                 if res is None:
-                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)))
+                    res = Resident.start(track, harm, size, list(dict.fromkeys(catalog + ids)), key[2], key[3])
                     note("resident stack %s: %s, %s, %d scenes" % (res.dir.name, track, hs, len(res.ids)))
                 else:
                     note("reusing resident stack %s" % res.dir.name)
@@ -490,8 +572,11 @@ def main():
                              "%s held: press throttle" % label(req["scene"]), None, req["scene"])
                 else:
                     state = "paused" if c["paused"] else "driving"
-                    progress(state, "resume on the panel" if c["paused"] else "%s%s" % (label(req["scene"]),
-                             "   harmonizer on" if res.harm else ""), None, req["scene"])
+                    model_req = req.get("driver", "human") != "human"
+                    progress(state, "resume on the panel" if c["paused"] else "%s%s%s%s" % (label(req["scene"]),
+                             "   harmonizer on" if res.harm else "", "   driver: model %s" % req["driver"] if model_req else "",
+                             "   (model + harmonizer at shipped settings: about 4 wall s per sim s, slow motion)" if model_req and res.harm else ""),
+                             None, req["scene"])
                 if res.key != key:
                     st["msg"] = "%s: the render stack restarts after this scene; %s" % (hs, st["msg"])
                     write_json(state_f, st)
@@ -501,6 +586,14 @@ def main():
             if c["paused"]:
                 progress("paused", "resume on the panel")
                 time.sleep(0.5)
+                continue
+            if mm and not model.ensure(track, drv):              # model mode: its service first (about 25 s on a switch)
+                if model.err and not hold_error:
+                    hold_error = model.err + " (see %s)" % model.out
+                    note(hold_error)
+                progress(*(("idle", hold_error + "; double-click a row to try again") if model.err else
+                           ("loading", "starting the model driver %s (%s, about 25 s)" % (drv, track.upper()), model.t0)))
+                time.sleep(0.3)
                 continue
             todo = None
             if plays:
@@ -520,17 +613,21 @@ def main():
                     chosen.add(todo)
             if todo is None:
                 left = sum(not done(i) for i in ids)
-                progress("idle", ("%d of %d scenes left: double-click a row%s" % (
-                    left, len(ids), "" if c["playlist"] else " or press throttle")) if left else "all %d scenes driven" % len(ids))
+                who = "" if not mm else " by %s" % drv
+                progress("idle", ("%d of %d scenes left%s: double-click a row%s" % (
+                    left, len(ids), who, "" if c["playlist"] else " or press throttle")) if left else "all %d scenes driven%s" % (len(ids), who))
                 time.sleep(0.3)
                 continue
-            req = {"name": res.submit(todo, owner), "scene": todo, "t": time.time()}
+            write_json(LIVE / "driver.json", {"scene": todo, "tag": drv, "addr": "127.0.0.1:%s" % MODEL_PORT if mm else "", "track": track,
+                                              "run": str(run), "t": time.time()})
+            req = {"name": res.submit(todo, owner), "scene": todo, "t": time.time(), "driver": drv}
             note("request %s (%s), %s, %.1f s after the previous scene" % (todo, label(todo), hs, time.time() - t_wait))
             progress("loading", "loading %s" % label(todo), req["t"], todo)
     except KeyboardInterrupt:
         pass
     finally:
         report(item=None, state="stopped", msg="")
+        model.stop()
         if res is not None:
             if req and res.result(req["name"]) is None:
                 if res.busy().get("name") == req["name"]:

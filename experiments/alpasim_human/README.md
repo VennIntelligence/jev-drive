@@ -297,6 +297,64 @@ list grouped by revision with the group mean. `figs/panel_web_pick.png`: the cus
 - Test without a GPU: `scripts/fake_stack.py` stands in for `human_stack.sh` (`HUMAN_STACK_SCRIPT=...`). It writes the same
   files, honours pause and skip, and copies real `metrics.parquet` files of an earlier run, so scoring is real.
 
+### Model mode: a checkpoint drives the same scenes (2026-10-22)
+
+The panel's "Driver" select: "Human (phone)", the current tags (marked from decisions.md "现状": NTV0-L18-s0 = PAI p1021a, the lead
+family R8K-L18-s2 / R6DAG-L18-s1, RSG-L18-s0, nuPlan JTN-L18-s1), then every other checkpoint under `/data/runs/op_parity/runs/` (not
+the TB-, ONP- or AP* tags). The chosen checkpoint drives the batch's scenes in the same resident stack and viewer.
+
+- How: `lib/human_driver.py` stays the stack's driver and delegates. Before each request the loop writes `<live>/driver.json` (scene,
+  tag, address); a session of that scene forwards start_session, the camera / egomotion / route submissions, drive and close_session
+  to the model driver and returns its trajectory unchanged (no phone, no `HUMAN_TRACK_GATE`). Pacing to real time (after the model
+  call), pause, Next / Restart, the live view, shadow, thumbnails and scoring are the human path's. The scene starts by itself at the
+  hold point. AlpaSim's daemon can also take a driver address per request (`SimulationRequest.available_drivers`), but then the live view,
+  pacing and the fast abort would be lost, so it is not used.
+- The model driver (`scripts/model_driver.sh`, container `<prefix>-model`, port 6791, same card): the driver of a submission image
+  with the tag's checkpoint mounted, and the image's baked serving switches. PAI uses the p1021a image
+  (`jev-alpasim:ntv0-l18-s0-0d417ee4-pai-vc1.0-lead-acc-gap0.7_2.7`: `pai_driver.py`, JEV_VCONT 1.0, JEV_LEAD, JEV_ACC, JEV_GAP 0.7,2.7,
+  JEV_TRACK gate). nuPlan uses the native JTN-L18-s1 image (`jev-alpasim:jtn-l18-s1-ba3ef44d`: `sh30_driver.py`, every switch off). Any
+  sh30-family tag gets that track's served configuration (`HUMAN_MODEL_ENV` adds `-e` flags). It starts in about 22 s, the first time
+  model mode is used in a loop and when the tag changes. It stops when the driver goes back to human or the loop exits.
+- Stack: model mode renders the front camera as the preset does, whatever the "Render size" is: 1080 px (auto unharmonised is
+  1080 already). On PAI it also keeps the 10 Hz frame interval and the shipped harmonizer resolution when the harmonizer is on, and it
+  uses the submissions' steering weight (`controller.gains.rel_front_steering_angle_weight=10`, `HUMAN_MODEL_WIZ`). These are fixed per
+  resident stack. On PAI, switching between human and model therefore restarts the stack once (about a minute). On nuPlan it restarts
+  only when the render size is not auto. Switching between two tags never restarts it. With the Harmonizer on, model mode therefore
+  runs at the shipped settings (1080 px, 100 ms, harmonizer 576 x 1024), not the human's real-time defaults. That is 3.7 wall s per sim
+  s for the render alone and 4.4-4.6 with the model on a 3090: slow motion, fine for watching. The viewer and the panel status say so.
+- A driver change takes effect at the next hold point: a loading scene is requested again with the new driver, and a scene being
+  driven finishes first.
+- Model view (viewer, default in model mode; M toggles the raw front camera): `lib/model_view.py` wraps the image's own driver and
+  writes what the policy was fed at each decision. It shows the openpilot road and wide model frames of the newest slot (512 x 256 each;
+  PAI: from the rendered 10 Hz frames through the session's f-theta maps; nuPlan: the slots that `sh30_core` synthesises from the 2 Hz
+  keyframes) and the decision's 8 slots on their 0.2 s clock (oldest at the top; dark = invalid). The route (blue), the served trajectory
+  (orange) and the model's own plan before any serving switch (yellow) are drawn in each frame. The tag reads "DRIVER: MODEL <tag>" in
+  teal. The view updates at the decision rate (PAI 10 Hz, nuPlan 2 Hz). It is display only: the hook copies the arrays after the
+  model's call and a separate thread encodes them.
+- Scores: a model attempt goes to `done/<scene>@<tag>.json` (`"driver": <tag>`), a human attempt to `done/<scene>.json` (`"driver":
+  "human"`). The human score column, the batch means and "Official table"'s human rows read only the human files. The item status
+  appends "model <tag> <score> <why>", "Official table" has a separate "Model drives" table with a mean per tag, and the gallery
+  labels model drives "MODEL <tag>". Playlist order in model mode skips the scenes that tag has already driven.
+- These reads are for watching, not leaderboard numbers. They run at real-time pacing, front camera only, with one rollout and
+  scores from the post-hoc aggregation. A model's local-read scores come from `pai_eval.sh` / `pai_box.sh`.
+- Deferred: a human takeover (disengage by a pedal press).
+- Checked on Tokyo card 1 (2026-10-22, probe prefix `hmt`, its own live dir and ports, scratch runs under `/data/tmp/hm_runs`):
+  | case | result | stored read of the same scene |
+  |---|---|---|
+  | PAI 478d6ec4, NTV0-L18-s0, unharmonised | 0.9028 slow, twice (deterministic); 199 inferences, 0 errors, model drive 35-43 ms; wall / sim 1.20-1.22 (the model call makes the 0.1 s step slower than real time) | 0.9028 (p1021a image smoke, containerised and native) |
+  | nuPlan 82cd1227, JTN-L18-s1 | 0.753 slow | 0.746 (`native_ref/JTN-L18-s1-native`) |
+  | nuPlan 6fed9368, JTN-L18-s1, switched from a held human scene | the held scene ended unscored, the model service listened 24 s later, then 0.935 slow, wall / sim 1.01 | 0.934 |
+  | PAI 478d6ec4, R6DAG-L18-s1, Harmonizer on, switched from a held human scene | stack restarted with 1080 px / 100 ms / shipped harmonizer resolution / steering weight 10; 0.895 slow, 200 frames at 1920 x 1080, 0 input errors, wall / sim 4.4 | - |
+  Model drives landed in `done/<scene>@<tag>.json`; the human (fake wheel) attempt of 82cd1227 stayed in `done/<scene>.json`.
+  The comparison is a sanity check, not identity: the stored reads ran all cameras and other stacks.
+  R6DAG-L18-s1 and R8K-L18-s2 were copied from the GPU box to Tokyo for this (sha256 checked against the box).
+
+![model mode](figs/viewer_model_mode.jpg)
+
+`figs/viewer_model_mode.jpg`: the viewer in model mode (Xvfb, 3840 x 2160) on R6DAG-L18-s1 driving PAI 478d6ec4 with the
+Harmonizer on, sim 5 s. Look at the teal "DRIVER: MODEL" tag, the road and wide model frames as the model was fed them with the
+served trajectory (orange) over its own plan (yellow), the 8 slots on the right and the slow-motion note.
+
 ![viewer 16:9](figs/viewer_16x9_shadow.jpg)
 
 `figs/viewer_16x9_shadow.jpg`: the viewer at 3840x2160 (Xvfb) on a replay of the user's 2026-10-22 drive of 49597f01 at sim 5 s,
@@ -364,6 +422,8 @@ Not verified:
 - `fake_stack.py` (scripts): stand-in for a resident human_stack.sh in loop tests
 - `human_feed.py` (scripts): one simulate request per scene to the resident stack's runtime daemon
 - `replay_asl.py` (scripts): replays finished rollouts through the driver (shadow, thumbs, viewer tests without a GPU)
+- `model_driver.sh` (scripts): model mode: one checkpoint served by a submission image's driver beside the stack
+- `model_view.py` (lib): model mode: the served driver wrapped so the viewer sees the model frames it fed the policy
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026
 

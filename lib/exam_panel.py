@@ -85,7 +85,8 @@ class Backend(object):
     score_fmt = "%.1f"             # human / model / group-mean cells
     live = None                    # live dir (control.json / loop.json)
     options = {}                   # name -> (label, default bool) = a toggle, e.g. {"stop_on_collision": ("Stop on collision", False)},
-                                   # or (label, default str, [choices]) = a choice, e.g. {"size": ("Size", "auto", ["auto", "720"])}
+                                   # or (label, default str, [choices]) = a choice, e.g. {"size": ("Size", "auto", ["auto", "720"])};
+                                   # a choice may be [value, label, group] (the web panel shows the label, grouped)
     batch_extra = None             # title of an extra column of the batch list (batch_info "extra"), or None
     selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
@@ -364,7 +365,7 @@ def panel(backend):
             ctl.update(options=dict(c["options"], **{name: v.get()}))
         if choices:
             ttk.Label(row3, text=label + ":").pack(side="left", padx=(8, 2))
-            ttk.OptionMenu(row3, v, v.get(), *choices[0], command=set_opt).pack(side="left")
+            ttk.OptionMenu(row3, v, v.get(), *[x[0] if isinstance(x, (list, tuple)) else x for x in choices[0]], command=set_opt).pack(side="left")
         else:
             ttk.Checkbutton(row3, text=label, variable=v, command=set_opt).pack(side="left", padx=8)
     if any(name not in c0["options"] for name in opt_vars):

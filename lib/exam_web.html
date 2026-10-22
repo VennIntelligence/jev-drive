@@ -307,6 +307,15 @@ function setHTML(el, key, html) { if (S.html[key] !== html) { S.html[key] = html
 function scoreCls(v) { return v == null ? "" : v >= ((S.meta && S.meta.score_max) || 1) ? "score-1" : v <= 0 ? "score-0" : "score-m"; }
 
 // ---------- render ----------
+function choiceOpts(ch, v) {    // choices: plain values, or [value, label, group] entries (consecutive groups as <optgroup>)
+  let out = "", g = null;
+  for (const x of ch) {
+    const [val, lab, grp] = Array.isArray(x) ? x : [x, x, ""];
+    if ((grp || "") !== (g || "")) { if (g) out += "</optgroup>"; g = grp || ""; if (g) out += `<optgroup label="${esc(g)}">`; }
+    out += `<option value="${esc(val)}" ${val === v ? "selected" : ""}>${esc(lab)}</option>`;
+  }
+  return out + (g ? "</optgroup>" : "");
+}
 function render() {
   const st = S.st, m = S.meta;
   if (!st || !m) return;
@@ -336,7 +345,7 @@ function render() {
   // toggles (only rebuilt when the values change, so a click is never lost)
   const tg = [["playlist", "Playlist (auto-advance)", C.playlist]].concat(m.options.map(o => ["opt:" + o.name, o.label, C.options[o.name] ?? o.default, o.choices]));
   setHTML($("#toggles"), "toggles", tg.map(([k, l, v, ch]) => ch     // a choice option: a select; a toggle: a switch
-    ? `<label class="choice">${esc(l)} <select data-k="${esc(k)}">${ch.map(x => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>`
+    ? `<label class="choice">${esc(l)} <select data-k="${esc(k)}">${choiceOpts(ch, v)}</select></label>`
     : `<label class="switch"><input type="checkbox" data-k="${esc(k)}" ${v ? "checked" : ""}><span class="knob"></span>${esc(l)}</label>`).join(""));
   // batches
   setHTML($("#batchTable tbody"), "batches", st.batches.map(b => {

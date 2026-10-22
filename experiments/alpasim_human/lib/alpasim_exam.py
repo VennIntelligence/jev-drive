@@ -33,6 +33,28 @@ MODELS = {"pai": [("P2H10", A / "pai1/runs/a10_c4")], "nuplan": [("P2H10", A / "
 EXTRA = {"pai": [("alpamayo1", "tsv:alpamayo1"), ("organisers' mean", "tsv:ref_mean")],
          "nuplan": [("SH30-F-s0", A / "native_ref/sh30_full48_c8")]}
 FAIL = ("collision_at_fault", "offroad", "left_corridor_laterally")
+CKPTS = D / "runs/op_parity/runs"
+# Driver choices marked from research/decisions.md "现状" (2026-10-22): tag -> note. Every other checkpoint on Tokyo follows, alphabetical.
+CURRENT = {"NTV0-L18-s0": "PAI submitted p1021a", "R8K-L18-s2": "PAI lead family", "R6DAG-L18-s1": "PAI lead family",
+           "RSG-L18-s0": "PAI submitted (vennai)", "JTN-L18-s1": "nuPlan submitted"}
+NOT_DRIVERS = re.compile(r"^(TB-|ONP-|AP)")                 # trajectory-bank probes, identity tests, AlpaSim-standard (ap2) family
+
+
+def driver_choices():
+    """The panel's Driver choices: [value, label, group]: human, then the current tags (CURRENT), then every other sh30-family checkpoint on
+    disk (CKPTS/<tag>/ckpt-final.pt)."""
+    tags = sorted(p.parent.name for p in CKPTS.glob("*/ckpt-final.pt") if not NOT_DRIVERS.match(p.parent.name))
+    return ([["human", "Human (phone)", ""]] + [[t, "%s  (%s)" % (t, n), "current"] for t, n in CURRENT.items() if t in tags] +
+            [[t, t, "other checkpoints"] for t in tags if t not in CURRENT])
+
+
+def driver_of(d):
+    return (d or {}).get("driver") or "human"
+
+
+def model_drives(run, sid):
+    """{tag: done record} of the model drives of a scene in a run (done/<scene>@<tag>.json, scripts/human_loop.py)."""
+    return {driver_of(d): d for d in (read_json(p) for p in sorted(Path(run, "done").glob(sid + "@*.json"))) if d}
 ENV = "export DISPLAY=:0 XAUTHORITY=/run/user/1001/gdm/Xauthority DATA_DIR=%s" % D
 
 
@@ -179,6 +201,17 @@ class Scenes(object):
                 v = [r[j] for _, _, r in rows if r[j] is not None]
                 parts.append("%s %s%s" % (n, "%.3f" % mean(v) if v else "-", "" if len(v) == len(rows) else " (%d scenes)" % len(v)))
             L += ["", "Means over the %d driven scenes: %s." % (len(rows), "; ".join(parts))]
+        M = [(sid, d) for sid in ex.get("ids", []) for d in model_drives(run, sid).values()]
+        if M:                                                    # model mode: never mixed into the human rows or means
+            L += ["", "Model drives (driver option, README \"Model mode\"; real-time paced, front camera only: for watching, not leaderboard "
+                  "numbers):", "", "| scene | driver | score | why | progress | driven / GT m | attempts | harmonizer |", "|---|---|--:|---|--:|--:|--:|---|"]
+            for sid, d in M:
+                L.append("| %s | %s | %.3f | %s | %s | %s / %s | %s | %s |" % (self.meta.get(sid, {}).get("label", sid), driver_of(d), d["score"],
+                         d["why"], d.get("progress"), d.get("driven_m"), d.get("gt_m"), d.get("attempt", 1), "on" if d.get("harmonizer") else "off"))
+            L.append("")
+            for tag in sorted({driver_of(d) for _, d in M}):
+                v = [d["score"] for _, d in M if driver_of(d) == tag]
+                L.append("%s: mean %.3f over %d scenes." % (tag, sum(v) / len(v), len(v)))
         L += ["", "Fast mode (front camera only): a human experience, not a leaderboard number (README, section Speed)."]
         return "\n".join(L) + "\n"
 
@@ -194,6 +227,7 @@ class AlpaSimExam(Backend):
 
     def __init__(self):
         self.sc = Scenes()
+        self.options = dict(type(self).options, driver=("Driver", "human", driver_choices()))   # human_loop.py: at the next hold point
 
     def batch_sets(self):
         return list(self.sc.sets)
@@ -332,6 +366,9 @@ class AlpaSimExam(Backend):
                 status = t.get("status", "not finished")
             else:
                 status = ""
+            md = model_drives(run, sid)
+            if md:                                               # model drives, apart from the human score
+                status = "; ".join([status] * bool(status) + ["model %s %.2f %s" % (k, v["score"], v["why"]) for k, v in md.items()])
             ms, src = self.sc.model(sid)
             out.append(dict(id=sid, label=m.get("label", sid), group=m.get("group", "?"), scenario=m.get("scenario", ""),
                             human=d["score"] if d else None, model=ms, model_src=src, status=status))

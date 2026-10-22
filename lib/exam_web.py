@@ -222,8 +222,9 @@ class App(object):
         o = self.b.options.get(d.get("option"))
         if o:                                  # a toggle takes a bool, a choice one of its values
             v = bool(d.get("value")) if len(o) < 3 else str(d.get("value"))
-            if len(o) > 2 and v not in o[2]:
-                return dict(ok=False, msg="%s: %r is not one of %s" % (d["option"], v, o[2]))
+            vals = [x[0] if isinstance(x, (list, tuple)) else x for x in o[2]] if len(o) > 2 else None   # [value, label, group] entries
+            if vals is not None and v not in vals:
+                return dict(ok=False, msg="%s: %r is not one of %s" % (d["option"], v, vals))
             c = self.ctl.read()
             self.ctl.update(options=dict(c["options"], **{d["option"]: v}))
         return dict(ok=True, control=self.ctl.read())

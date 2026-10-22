@@ -45,6 +45,15 @@ lateral offset from the log path). The viewer's toggle (viewer.json "shadow") is
 the shadow on) in the close record. The first front frame of the scene (at the handoff, as the hold for the start begins; at close
 when the scene never got there) is saved as <log dir>/thumbs/<session>.jpg (480 px wide; session uuid = rollout dir name) for the
 viewer's scene gallery.
+
+Model mode (README "Model mode"): when <live>/driver.json (written by scripts/human_loop.py before it requests the scene) names this
+session's scene and a model tag, the session is delegated to that model driver service (scripts/model_driver.sh: the served driver of a
+submission image with the tag's checkpoint, lib/model_view.py, at driver.json "addr"). start_session, the camera, egomotion and route
+submissions, drive and close_session are forwarded unchanged; the recorded ground truth is not (served runs have it off). The model's
+trajectory is returned as it came back: no phone input, no HUMAN_TRACK_GATE (the model's own served configuration has its own gate).
+Everything else stays: the hold point (released at once unless paused), pause, skip, real-time pacing (after the model call), the live
+view (state.json "driver" = the tag, "plan" = the served trajectory, "model_ms"), shadow, thumbnails, logs (drive / close / sessions
+records carry "driver"). A model error fails the drive call with the model's own status, as it would fail a served rollout.
 """
 from __future__ import annotations
 
@@ -84,6 +93,13 @@ GATE = E("HUMAN_TRACK_GATE", "1") != "0"
 if GATE:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "alpasim" / "lib"))
     import track_ref as TR  # noqa: E402
+
+
+class Model:
+    """A model driver service a session delegates to: the tag and a stub on its address."""
+    def __init__(self, tag: str, addr: str):
+        self.tag, self.addr = tag, addr
+        self.stub = egodriver_pb2_grpc.EgodriverServiceStub(grpc.insecure_channel(addr, options=[("grpc.max_send_message_length", 256 << 20)]))
 
 
 class Panel:
@@ -148,6 +164,20 @@ def gate_ref(tr, x, y, yaw, v, a0, **kw):
     rig = np.c_[d @ [c, sn], d @ [-sn, c], tr[:, 2] - yaw]
     (_, rx, ry, rh), _ = TR.build(rig[5::5], v, 0.0, "gate", a0, **kw)
     return np.c_[x + c * rx - sn * ry, y + sn * rx + c * ry, yaw + rh, tr[:, 3]]
+
+
+def model_xyv(traj, ta: int, n: int = N_OUT) -> np.ndarray:
+    """A returned trajectory (local-frame poses with timestamps) -> (n, 4) x, y, yaw, speed on the 0.1 s grid from ta (clamped to its
+    span; speed from the path), the shape rollout() gives, for the live view and frame_fill only."""
+    P = np.array([(p.timestamp_us, p.pose.vec.x, p.pose.vec.y, yaw_of(p.pose.quat)) for p in traj.poses], float).reshape(-1, 4)
+    if len(P) < 2:
+        P = np.r_[P, P] if len(P) else np.zeros((2, 4))
+        P[1, 0] += 1e5
+    t = ta + np.arange(n) * DT * 1e6
+    x, y, h = (np.interp(t, P[:, 0], c) for c in (P[:, 1], P[:, 2], np.unwrap(P[:, 3])))
+    v = np.r_[np.hypot(np.diff(x), np.diff(y)) / DT, 0.0]
+    v[-1] = v[-2]
+    return np.c_[x, y, h, v]
 
 
 def front_camera(veh):
@@ -221,6 +251,7 @@ class Session:
         self.t_created, self.aborted, self.paused_s = time.time(), False, 0.0
         self.gt, self.shadow_s, self.prev_now = None, 0.0, None         # gt: (step us, (n, 4) t, x, y, z rig frame)
         self.thumb = False
+        self.model, self.driver, self.model_ms = None, "human", None     # Model mode: the delegate, "human" or its tag, last drive ms
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
@@ -236,6 +267,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         self.panel = Panel()
         self.st, self.stlock = {}, threading.Lock()                    # last state.json (the fill thread re-writes it with its "fill")
         self.fill = FF.Fill(LIVE, put, self._state_put) if FF.enabled() else None
+        self.models = {}                                               # (tag, addr) -> Model (one channel each)
         self.meta = {"track": E("HUMAN_TRACK", "?"), "n_scenes": int(E("HUMAN_N_SCENES", "0")), "sim_total": float(E("HUMAN_SIM_S", "0")),
                      "start_mode": START, "run": E("HUMAN_RUN", ""), "harmonizer": E("HUMAN_HARMONIZER", "0") == "1"}
 
@@ -249,10 +281,26 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         with self.wlock:                                           # one socket, several gRPC threads
             return self.wheel.state()
 
+    def _fwd(self, s: Session, name: str, req, ctx, timeout: float = 60.0):
+        """The same call on the session's model driver; its error fails this call with the model's status."""
+        try:
+            return getattr(s.model.stub, name)(req, timeout=timeout)
+        except grpc.RpcError as e:
+            ctx.abort(e.code(), f"model {s.model.tag} {name}: {e.details()}")
+
     def start_session(self, req, ctx):
         with self.lock:
             s = self.sessions[req.session_uuid] = Session(req, self.nsess)
             self.nsess += 1
+        try:
+            d = json.loads((LIVE / "driver.json").read_text())
+        except (OSError, ValueError):
+            d = {}
+        if d.get("scene") == s.scene and d.get("tag") not in (None, "", "human"):
+            key = (d["tag"], d["addr"])
+            s.model = self.models.get(key) or self.models.setdefault(key, Model(*key))
+            s.driver = d["tag"]
+            self._fwd(s, "start_session", req, ctx)
         calib = front_camera(req.rollout_spec.vehicle)
         self.start.write(json.dumps({"t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "cams": s.cams,
                                      "L": s.L, **(calib or {})}) + "\n")
@@ -262,13 +310,19 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(calib or {})}).encode())
         except OSError as e:
             LOG.warning("camera.json: %r", e)
-        self.sess_log.write(json.dumps({"kind": "start", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene}) + "\n")
-        LOG.info("session %d %s, cameras %s, wheelbase %.2f m", s.n, s.scene, s.cams, s.L)
+        self.sess_log.write(json.dumps({"kind": "start", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
+                                        "driver": s.driver}) + "\n")
+        LOG.info("session %d %s, cameras %s, wheelbase %.2f m, driver %s", s.n, s.scene, s.cams, s.L, s.driver)
         return common_pb2.SessionRequestStatus()
 
     def close_session(self, req, ctx):
         with self.lock:
             s = self.sessions.pop(req.session_uuid, None)
+        if s is not None and s.model is not None:
+            try:
+                s.model.stub.close_session(req, timeout=30)
+            except grpc.RpcError as e:
+                LOG.warning("model %s close_session: %s", s.model.tag, e.details())
         if s is not None and s.last is not None:
             (w0, t0), (w1, t1) = s.started or s.last[:2], s.last[:2]
             sim = (t1 - t0) / 1e6
@@ -277,14 +331,15 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                    "wall_per_sim": round((w1 - w0 - s.paused_s) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
                    "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept - s.paused_s) / sim, 3) if sim > 0 else None,
                    "late": s.n_late, "realtime": RT, "aborted": s.aborted, "paused_s": round(s.paused_s, 1),
-                   "shadow_s": round(s.shadow_s, 1), "gt": s.gt is not None}
+                   "shadow_s": round(s.shadow_s, 1), "gt": s.gt is not None, "driver": s.driver}
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
             self._live(s, {"waiting": False, "closed": True})
         if s is not None and not s.thumb:
             self._thumb(req.session_uuid, s)
+        if s is not None:                                          # every session (it was written only without a handoff thumbnail)
             self.sess_log.write(json.dumps({"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene,
-                                            "started": s.started is not None, "aborted": s.aborted, "drives": s.k}) + "\n")
+                                            "started": s.started is not None, "aborted": s.aborted, "drives": s.k, "driver": s.driver}) + "\n")
         return common_pb2.Empty()
 
     def submit_image_observation(self, req, ctx):
@@ -294,6 +349,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             with s.lock:
                 if im.frame_end_us >= s.frames.get(name, (-1,))[0]:
                     s.frames[name] = (int(im.frame_end_us), bytes(im.image_bytes))
+        if s.model is not None:
+            self._fwd(s, "submit_image_observation", req, ctx)
         return common_pb2.Empty()
 
     def submit_egomotion_observation(self, req, ctx):
@@ -305,11 +362,15 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 s.ax = d.linear_acceleration.x                     # latest measured acceleration (HUMAN_TRACK_GATE)
             for k in sorted(s.poses)[:-20]:
                 del s.poses[k]
+        if s.model is not None:
+            self._fwd(s, "submit_egomotion_observation", req, ctx)
         return common_pb2.Empty()
 
     def submit_route(self, req, ctx):
         s = self._s(req.session_uuid, ctx)
         s.route = [[round(w.x, 2), round(w.y, 2)] for w in req.route.waypoints if not (math.isnan(w.x) or math.isnan(w.y))]
+        if s.model is not None:
+            self._fwd(s, "submit_route", req, ctx)
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
@@ -355,7 +416,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                     put(LIVE / f"{name}.jpg", jpg)
                     s.written[name] = ts
             st = {**self.meta, "t": time.time(), "running": True, "scene": s.scene, "scene_i": s.n + 1, "cams": s.cams,
-                  "frames": sorted(s.frames), "route": s.route, **extra}
+                  "frames": sorted(s.frames), "route": s.route, "driver": s.driver, "model_ms": s.model_ms, **extra}
             with self.stlock:
                 self.st = st
                 put(LIVE / "state.json", json.dumps({**st, **(self.fill.state() if self.fill else {})}).encode())
@@ -374,6 +435,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             return True
         if p.paused:
             return False
+        if s.model is not None:                                     # model mode: the scene starts by itself
+            return True
         st = self._wheel()
         thr = not st["stale"] and st["raw_throttle"] > 0.2
         if START == "throttle":
@@ -444,6 +507,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.paused_s += time.time() - t_p
             s.aborted = self.panel.skip(s)
             s.anchor = (time.time(), now)                          # pacing restarts from here
+        resp = None
+        if s.model is not None and not s.aborted:                  # model mode: the model's trajectory, then the pacing sleep
+            t_m = time.time()
+            resp = self._fwd(s, "drive", req, ctx)
+            s.model_ms = round(1e3 * (time.time() - t_m), 1)
         slept = 0.0
         if s.started is not None and RT > 0 and not s.aborted:                       # pace: sim time never runs ahead of wall time x HUMAN_REALTIME
             wall = time.time()
@@ -455,23 +523,29 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 s.anchor, s.n_late = (wall, now), s.n_late + 1
         s.slept += slept
         st = self._wheel()                                         # read after the sleep: freshest input
-        delta, a = controls(st, v, s.L) if not s.aborted else (0.0, -A_BRK)
-        s.n_stale += st["stale"] and s.started is not None
         if s.started is not None and not s.aborted and self.panel.shadow and s.prev_now is not None:
             s.shadow_s += (now - s.prev_now) / 1e6
         s.prev_now = now
-        traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
-        if GATE:
-            traj_xyv = gate_ref(traj_xyv, x, y, yaw, v, getattr(s, "ax", 0.0))
+        if resp is not None:                                       # the model's trajectory as returned; traj_xyv only for the view
+            traj = resp.trajectory
+            traj_xyv = model_xyv(traj, ta)
+            a = float(traj_xyv[10, 3] - traj_xyv[0, 3])            # plan speed change over its first second (display)
+            delta = 0.0
+        else:
+            delta, a = controls(st, v, s.L) if not s.aborted else (0.0, -A_BRK)
+            s.n_stale += st["stale"] and s.started is not None
+            traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
+            if GATE:
+                traj_xyv = gate_ref(traj_xyv, x, y, yaw, v, getattr(s, "ax", 0.0))
+            k0 = max(0, math.ceil((now - ta) / (DT * 1e6) - 1e-9))
+            traj = common_pb2.Trajectory()
+            for i in range(k0, N_OUT):
+                px, py, pyaw, _ = traj_xyv[i]
+                traj.poses.append(common_pb2.PoseAtTime(timestamp_us=ta + int(round(i * DT * 1e6)), pose=common_pb2.Pose(
+                    vec=common_pb2.Vec3(x=float(px), y=float(py), z=float(z)),
+                    quat=common_pb2.Quat(w=math.cos(pyaw / 2), x=0.0, y=0.0, z=math.sin(pyaw / 2)))))
         if self.fill:
             self.fill.drive(s, now, ta, traj_xyv, s.started is not None)
-        k0 = max(0, math.ceil((now - ta) / (DT * 1e6) - 1e-9))
-        traj = common_pb2.Trajectory()
-        for i in range(k0, N_OUT):
-            px, py, pyaw, _ = traj_xyv[i]
-            traj.poses.append(common_pb2.PoseAtTime(timestamp_us=ta + int(round(i * DT * 1e6)), pose=common_pb2.Pose(
-                vec=common_pb2.Vec3(x=float(px), y=float(py), z=float(z)),
-                quat=common_pb2.Quat(w=math.cos(pyaw / 2), x=0.0, y=0.0, z=math.sin(pyaw / 2)))))
         wall = time.time()
         s.last = (wall, now)
         wps = None
@@ -479,7 +553,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             wps = round((wall - s.started[0] - s.paused_s) / ((now - s.started[1]) / 1e6), 3)
         rec = {"kind": "drive", "t": round(wall, 3), "session": req.session_uuid, "scene": s.scene, "k": s.k, "now": now, "tq": tq,
                "ta": ta, **self._panel(st), "delta": round(delta, 4), "accel": round(a, 3), "v": round(v, 3), "pose": [round(x, 3), round(y, 3),
-               round(yaw, 5)], "started": s.started is not None, "slept_ms": round(1e3 * slept, 1), "n_out": len(traj.poses), "ms": round(1e3 * (wall - t_in), 2)}
+               round(yaw, 5)], "started": s.started is not None, "slept_ms": round(1e3 * slept, 1), "n_out": len(traj.poses), "ms": round(1e3 * (wall - t_in), 2),
+               **({"driver": s.driver, "model_ms": s.model_ms} if resp is not None else {})}
         self.out.write(json.dumps(rec) + "\n")
         s.k += 1
         R = np.array([[math.cos(yaw), math.sin(yaw)], [-math.sin(yaw), math.cos(yaw)]])
