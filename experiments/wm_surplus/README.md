@@ -1,56 +1,57 @@
 # wm_surplus: do driving policies need grafted world models
 
 status: live
-decisions: PD1, PD2, PD4, PD5, PD6
-index: P2 match: current lineage vs WA-JEPA, HUGSIM 64 + AlpaSim held 460 (pending)
+decisions: PD1, PD2, PD4, PD5, PD6, PD7
+index: P2 profile: WA-JEPA completes 31/64 HUGSIM, right turns 1/7, >100 deg turns through 2/8
 
 **Question.** The paper (PD1) claims grafted foundation world models are surplus for end-to-end driving today. P1 measures how
-much of the grafted model the driving head actually uses; P2 asks whether our lineage (Cinque 382M + body-schema / S-row training,
-no grafted model) drives as well as WA-JEPA on the boards we may report, under the same runner and controller.
+much of the grafted model the driving head actually uses; P2 (scope PD7) profiles what third-party drivers, grafted foundation
+models included, can actually do on HUGSIM per manoeuvre (turns, straight, lane-shift proxy) and how they fail (C1).
 
-**Conclusion.** P2: pending (PD4).
+**Conclusion.** P2 (PD4): WA-JEPA, a grafted foundation world model on its authors' HUGSIM client, completes 31 / 64 scenarios
+(HD 0.484 [0.382, 0.591]; repeat 0.458); foreground collisions end 24; right turns complete 1 / 7 (3 leave the route), turns over
+100 deg get through 2 / 8, straight 11 / 18 complete. Traffic lights are not judged by HUGSIM (not measurable there).
 
-**Next.** P2 reads running (2026-10-22 evening); P1 level (a) on WA-JEPA running (section P1).
+**Next.** P2: the same profile for the camera-only subjects as they register (SimScale LTF / DiffusionDrive first: small HUGSIM client); P1 level (a) on WA-JEPA running (section P1).
 
-**Read more.** [plans/2026-10-22-p2-match-prereg.md](plans/2026-10-22-p2-match-prereg.md) (P2 pre-registration, read-out lines);
+**Read more.** [results/p2_match/README.md](results/p2_match/README.md) (P2 profile, HUGSIM limits, per-subject feasibility);
+[plans/2026-10-22-p2-match-prereg.md](plans/2026-10-22-p2-match-prereg.md) (P2 pre-registration; its cross-model lines superseded by PD7);
 [research/paper-outline](../../research/paper-outline/index.html) sections 3.2 and 5.
 
-## P2: paired match against WA-JEPA
+## P2: HUGSIM capability profile of third-party drivers (PD4, PD7)
 
-### The recipe (reusable for any grafted driver)
+### The recipe (reusable for every subject)
 
-One command reads a list of drivers against one reference on several boards. Every allowed driver x board is its own
-`jevdrive.bench` run in the GPU pool (HUGSIM: one worker job per card per run, so N drivers fill all free cards at once; navtest
-scoring shards sized from the box's cores), and one CPU report job, chained `after` all of them, writes the paired tables:
+One command reads a list of drivers on several boards. Every allowed driver x board is its own `jevdrive.bench` run in the GPU
+pool (HUGSIM: one worker job per card per run, slots per job clamped to what fits a card, so N drivers fill all free cards at
+once; navtest scoring shards sized from the box's cores), and one CPU report job, chained `after` all of them, writes the tables:
 
 ```bash
 cd ~/data/jev-drive; B=".venv/bin/python -m jevdrive.bench"
-$B match --drivers STANDFMXH-L18-s0 STANDFMXH-L18-s1 RB0-F-s0 RB0-F-s1 --ref WA-JEPA --also P0 \
-         --boards hugsim:exam navtest navhard --repeat p2 --out $DATA_DIR/runs/wm_surplus/p2_match/hugsim --drop-ply
+$B match --drivers <subject> [<subject> ...] --ref WA-JEPA --also P0 --boards hugsim:exam --repeat <label> \
+         --out $DATA_DIR/runs/wm_surplus/p2_match/<label> --drop-ply
 # returns at once; <out>/DONE appears when the tables are written (wait on that one file, do not poll)
 ```
 
-- Output: `<out>/match.md` (one row per driver x board: driver mean, reference mean, difference [95 % CI], HUGSIM HD parts
-  dRC / dNC / dDAC / dTTC / dC) and per board `<board>_{arms,paired,strata}.md` (bench `report`; HUGSIM CIs clustered by scene).
-- A cell the registry does not allow is not run and is listed with its reason (`Model.benches`): route-memory checkpoints are
-  HUGSIM-only (the navsim plans path does not serve the branch, and lineages with AlpaSim nuPlan pool rows saw navtest logs).
-- `--repeat L` makes a fresh, same-day paired read of every HUGSIM cell (the same label resumes); `--drop-ply` deletes the
-  38 MB / episode `.ply` scene copies after the tables (opt-in, because a match may reuse shared run dirs).
-- A new driver only needs a bench registry entry (`jevdrive/bench/models.py`, docs/bench.md "Adding things"); nothing here is
-  driver-specific. WA-JEPA is served on HUGSIM by its shipped client (preset `exam` only), so pair on `hugsim:exam`.
+- `<out>/hugsim_exam_profile.md`: **the capability profile** of every arm (drivers, reference and `--also`): per manoeuvre class
+  from the recorded route (turn left / right, by sharpness; bend; lateral shift = lane-change proxy; straight) the HD, the share of
+  each end (complete / fg / bg collision / off route / stuck / spin) with CIs clustered by scene, where turns ended (before /
+  inside / through the turn), and example scenario ids (`jevdrive/bench/profile.py`; every HUGSIM `report` writes it).
+- `<out>/match.md` and `<board>_{arms,paired,strata}.md`: whole-board numbers and driver - reference pairs (kept for later; under
+  PD7 no cross-model score comparison is read now).
+- A cell the registry does not allow is not run and is listed with its reason (`Model.benches`); stored references (WA-JEPA on
+  navtest / navhard) are read, not re-run. `--repeat L` makes a fresh same-day read; `--drop-ply` deletes the 38 MB / episode `.ply`
+  copies after the tables (opt-in, because a match may reuse shared run dirs).
+- A new subject needs a bench registry entry (`jevdrive/bench/models.py`) and, for HUGSIM, a client in HUGSIM's FIFO protocol
+  (`results/p2_match/README.md` lists what each camera-only subject needs). VRAM per slot is measured (docs/bench.md "VRAM sizing").
 
-### Drivers and boards read
+### Read so far
 
-See the pre-registration. HUGSIM 64, preset `exam` (PR #57 controller tree), repeat `p2`: WA-JEPA (reference), nuPlan
-candidate B2 `STANDFMXH-L18-s0 / s1`, PAI checkpoints `R6DAG-L18-s1`, `R8K-L18-s2`, `NTV0-L18-s0`, no-S base `RB0-F-s0 / s1`,
-anchors `P0`, `SH30-F-s0 / s1`; repeat `p2b` for WA-JEPA and `STANDFMXH-L18-s1`. Route-memory checkpoints get an empty route memory
-on HUGSIM (no route source; in the training distribution). AlpaSim: stored held 460 @18 reads only (WA-JEPA 2026-10-12,
-`alpasim_long/fam/wajepa0-3`, linked as read key `WA-JEPA-fam1012`), paired with `jevdrive.facts table --bench held460`.
-Not reported: navtest / navhard (contaminated and not served), WOD (data deleted), B2D (closed lane).
-
-### Results
-
-Pending: `results/p2_match/`.
+HUGSIM 64, preset `exam`: WA-JEPA twice (`p2`, `p2b`), shipped Cinque `P0` as the non-foundation reference. Our checkpoints were
+also read before PD7 (B2, PAI checkpoints, RB0-F, SH30); they stay as an input-mismatched reference only
+(`results/p2_match/reference_ours/`), as does a stored AlpaSim held-460 pairing (`scripts/held_pair.py`).
+Not read: navtest / navhard (our S-trained lineage saw navtest logs), WOD (data deleted), B2D (closed lane).
+Results and limits: [results/p2_match/README.md](results/p2_match/README.md).
 
 ## P1: how much of the grafted model does the driving head read (usage probes)
 
@@ -106,7 +107,7 @@ Results: pending (PD5).
 - `match.py` (jevdrive/bench): a list of drivers against one reference …
 - `index.html` (research/paper-outline): 
 
-[results/](results/) 2 result files · [plans/](plans/) 3 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 8 entry points
+[results/](results/) 15 result files · [plans/](plans/) 4 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 10 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

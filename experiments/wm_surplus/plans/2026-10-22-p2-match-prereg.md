@@ -2,6 +2,8 @@
 
 2026-10-22 21:55 写，HUGSIM 全量读数出来之前（只看过单场景冒烟：WA-JEPA 0.881、P0 0.059 与历史逐位相同）。论文骨架 research/paper-outline 3.2 / 五 P2，总表第 138、144、148、170 条，PD1；结论记为 PD4（research/paper/decisions.md）。
 
+补记 1（10-23）：用户定 PD7，P2 改为第三方模型的 HUGSIM 能力画像，不做跨模型比分，不读我们自己的 checkpoint；下面的读出线 (1)(2)(6) 未使用。已跑完的我们自己的读数只作「输入不匹配，不检验方法」参照（results/p2_match/reference_ours/）。结论见 PD4。
+
 ## 问题
 
 当前谱系（Cinque 382M + 路线记忆 + S 行 / DAgger 训练）在不污染的榜上离 WA-JEPA 多远；同一 runner、同一控制器、同一天配对重读。
