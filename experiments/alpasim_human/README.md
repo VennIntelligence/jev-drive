@@ -34,6 +34,9 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
   - Pedals: a = 3.0 t - 8.0 b - (0.25 + 0.0008 v^2). Full throttle is 3 m/s^2 (0-100 km/h in about 10 s), full brake
     8 m/s^2. Coasting slows the car by 0.25-0.6 m/s^2. Speed stays within 0-36 m/s; there is no reverse. Inputs are held
     over the 4 s horizon.
+  - Gate (default since 2026-10-22, `HUMAN_TRACK_GATE=0` turns it off): the rolled-out plan goes through the model drivers'
+    `track_ref` gate (-5 m/s^2, 10 m/s^3), so a hard brake no longer spins the car in the official MPC; full brake from 30 m/s
+    now stops in about 81 m instead of 50 m ([results/brake_spin.md](results/brake_spin.md)).
   - Wheelbase L = 0.56 x ego box length, which gives 2.9-3.0 m. A stale phone (no frame for 0.3 s) gives brake 1, so the
     car stops at 8 m/s^2.
   - Start: the world is held inside the first `drive` at or after the forced log replay (PAI 1.7 s, nuPlan 0.5 s), which is
@@ -139,6 +142,12 @@ Both sessions drove the 10 PAI stage-1 scenes (`pai_scenes_40.tsv`), front camer
 In session 2 the human passes 071d15c4, which the model zeros, and 5d794411, which the model passes too. The model scores
 above zero only on 49597f01 (0.538), where the human leaves the corridor. Most of the human zeros come from leaving the
 lateral corridor around the logged path, so a different line counts as a failure, not only a crash. Both sessions are one attempt per scene, made while the controls (gains, route cue) were still being changed.
+
+Probes (2026-10-22, Tokyo card 1):
+- [results/brake_spin.md](results/brake_spin.md): the hand mapping's step full brake spins the official MPC from 15 m/s (random
+  direction; drift below the spin threshold); the track_ref gate removes it (MPC steer <= 0.002 rad), at the cost of braking distance.
+- [results/render_lag.md](results/render_lag.md): the "shattered glass" when behind the log comes from the frame time, not the pose
+  or the actors; figures [figs/render_lag_213dfdac.png](figs/render_lag_213dfdac.png), [figs/render_lag_071d15c4.png](figs/render_lag_071d15c4.png).
 
 ## Desktop panel (Tokyo): scene sets, resume, pause, scene list
 

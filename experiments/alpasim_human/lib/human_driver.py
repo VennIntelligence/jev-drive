@@ -75,6 +75,13 @@ RT = float(E("HUMAN_REALTIME", "1.0"))
 HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "throttle")
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
 CONTROL = Path(E("HUMAN_CONTROL", "")) if E("HUMAN_CONTROL") else None
+# HUMAN_TRACK_GATE=1: the plan goes through the model drivers' feasible-reference gate (experiments/alpasim/lib/track_ref.py, mode gate,
+# decision 309; JEV_TRACK_CFG overrides its constants), so a hard brake never hands the MPC a deceleration step it can only follow by
+# steering (results/brake_spin.md). Default on; 0 = the plan as rolled out.
+GATE = E("HUMAN_TRACK_GATE", "1") != "0"
+if GATE:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "alpasim" / "lib"))
+    import track_ref as TR  # noqa: E402
 
 
 class Panel:
@@ -129,6 +136,16 @@ def rollout(x, y, yaw, v, delta, a, L, n=N_OUT):
         x, y = x + vm * math.cos(0.5 * (yaw + yaw1)) * DT, y + vm * math.sin(0.5 * (yaw + yaw1)) * DT
         yaw, v = yaw1, v1
     return out
+
+
+def gate_ref(tr, x, y, yaw, v, a0, **kw):
+    """(41, 4) local-frame rollout -> the same through track_ref's gate: its 8 points at 0.5 s in the rig frame of (x, y, yaw), the
+    reference rebuilt from speed v and measured acceleration a0, back to the local frame (column 3, speed, kept)."""
+    c, sn = math.cos(yaw), math.sin(yaw)
+    d = tr[:, :2] - [x, y]
+    rig = np.c_[d @ [c, sn], d @ [-sn, c], tr[:, 2] - yaw]
+    (_, rx, ry, rh), _ = TR.build(rig[5::5], v, 0.0, "gate", a0, **kw)
+    return np.c_[x + c * rx - sn * ry, y + sn * rx + c * ry, yaw + rh, tr[:, 3]]
 
 
 def front_camera(veh):
@@ -283,6 +300,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             for p, d in zip(req.trajectory.poses, req.dynamic_states):
                 q, t = p.pose.quat, p.pose.vec
                 s.poses[int(p.timestamp_us)] = (t.x, t.y, t.z, yaw_of(q), math.hypot(d.linear_velocity.x, d.linear_velocity.y))
+                s.ax = d.linear_acceleration.x                     # latest measured acceleration (HUMAN_TRACK_GATE)
             for k in sorted(s.poses)[:-20]:
                 del s.poses[k]
         return common_pb2.Empty()
@@ -439,6 +457,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.shadow_s += (now - s.prev_now) / 1e6
         s.prev_now = now
         traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
+        if GATE:
+            traj_xyv = gate_ref(traj_xyv, x, y, yaw, v, getattr(s, "ax", 0.0))
         if self.fill:
             self.fill.drive(s, now, ta, traj_xyv, s.started is not None)
         k0 = max(0, math.ceil((now - ta) / (DT * 1e6) - 1e-9))
