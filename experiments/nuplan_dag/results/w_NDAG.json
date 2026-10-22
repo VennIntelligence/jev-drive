@@ -1,0 +1,20 @@
+{
+ "base": "JTX00",
+ "pool": "on1_JTXD",
+ "k_on": 70,
+ "k_dag": 4,
+ "dag_rows": 10034,
+ "held_logs": 4,
+ "dag_rows_held_out": 2557,
+ "group_share": {
+  "S": 0.43243243243191554,
+  "c_braking": 0.1693611377405662,
+  "c_cruising": 0.14496259002181605,
+  "c_starting": 0.07089180448864628,
+  "c_stopped": 0.000311044579819286,
+  "c_turning": 0.12798693668258007,
+  "nd": 0.05405405405404512
+ },
+ "dag_draws_per_row_9500": 3.787123779150887,
+ "out": "NDAG"
+}

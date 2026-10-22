@@ -1,0 +1,87 @@
+{
+ "tag": "NDSM-L18-s0",
+ "pass_": true,
+ "checks": {
+  "done": [
+   true,
+   true,
+   true
+  ],
+  "finite": [
+   null,
+   null,
+   true
+  ],
+  "wfile": [
+   "runs/nuplan_dag/w/NDAG.npz",
+   "NDAG",
+   true
+  ],
+  "batch_rows": [
+   [
+    "45",
+    "13",
+    "74"
+   ],
+   [
+    "45",
+    "13",
+    "74"
+   ],
+   true
+  ],
+  "share_S": [
+   0.43243243243191554,
+   0.43243243243191554,
+   true
+  ],
+  "share_c_braking": [
+   0.1693611377405662,
+   0.1693611377405662,
+   true
+  ],
+  "share_c_cruising": [
+   0.14496259002181605,
+   0.14496259002181605,
+   true
+  ],
+  "share_c_starting": [
+   0.07089180448864628,
+   0.07089180448864628,
+   true
+  ],
+  "share_c_stopped": [
+   0.000311044579819286,
+   0.000311044579819286,
+   true
+  ],
+  "share_c_turning": [
+   0.12798693668258007,
+   0.12798693668258007,
+   true
+  ],
+  "share_nd": [
+   0.05405405405404512,
+   0.05405405405404512,
+   true
+  ]
+ },
+ "steps": 0,
+ "draw_shares": {
+  "on_wfile": "runs/nuplan_dag/w/NDAG.npz",
+  "rows_w0": 70336,
+  "group_share": {
+   "S": 0.43243243243191554,
+   "S_held": 0.0,
+   "c_braking": 0.1693611377405662,
+   "c_cruising": 0.14496259002181605,
+   "c_starting": 0.07089180448864628,
+   "c_stopped": 0.000311044579819286,
+   "c_turning": 0.12798693668258007,
+   "launch": 0.0,
+   "nd": 0.05405405405404512,
+   "stand_r": 0.0,
+   "stand_u": 0.0
+  }
+ }
+}

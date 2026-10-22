@@ -1,0 +1,21 @@
+{
+ "a": "NDIDA-L18-s1",
+ "b": "NDIDB-L18-s1",
+ "note": "B2 (STANDFMXH-L18-s1) argv 60 steps eager: on1_JTX / JTX00 vs on1_JTXD / NDAG0 (on1_NDAG rows at weight 0)",
+ "scalars": 314,
+ "scalar_keys_equal": true,
+ "scalar_max_abs_diff": 0.0,
+ "extra_keys_b": null,
+ "weight_max_abs_diff": 0.0,
+ "weight_keys_equal": true,
+ "dev_ade": [
+  0.5335007309913635,
+  0.5335007309913635
+ ],
+ "on_hash_60": [
+  "189d48846a85a428",
+  "189d48846a85a428"
+ ],
+ "want_hash": null,
+ "identical": true
+}

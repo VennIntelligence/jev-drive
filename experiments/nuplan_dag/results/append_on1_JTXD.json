@@ -1,0 +1,13 @@
+{
+ "out": "on1_JTXD",
+ "base_rows": 211392,
+ "added_rows": 17725,
+ "extra_keys_dropped": [
+  "served"
+ ],
+ "mismatch": [],
+ "modes": {
+  "self": 128798,
+  "both": 100319
+ }
+}
