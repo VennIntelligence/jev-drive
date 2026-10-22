@@ -56,6 +56,20 @@ Anchored layout (2026-10-17, results/align_audit.md "Minimal fix" C + D, check r
   scalars   memory_o's (d_turn / 60, known, min(trav, 200) / 100; to_order of the point block); DIM_O = 203.
   one rule  memory_a (offline rows: rm_build nav / pool / anchor, rm_align anchor) and Tracker(anchor=True) (served: sh30_driver and pai_driver
             set SERVE_ANCHOR from the checkpoint's sidecar, head_anchor) are the same function of the messages and their poses.
+
+Window layout (2026-10-22, never trained: the 10-22 base retrain was dropped, experiments/round9/results/route_check/README.md; rm_train --rm-win, sidecar head `order: true, anchor: true,
+win: {...}, cmd: "heading"`; the anchored layout's merge and arc, only the slot offsets and the command change; every other layout untouched):
+  slots     the 40 slots at offsets -BACK .. L(v), evenly spaced, L(v) = clip(T v + C, L_MIN, L_MAX) with v = the fed ego speed (10 x the ego
+            row's vx / 10 column, float32, as the training rows store it): T 5 s (the round9 draft's value), C 20 m, L_MIN 40 m, L_MAX 78 m (an AlpaSim
+            route message reaches 80 m from the car's projection, RouteGenerator.ROUTE_LOOKAHEAD_DISTANCE_M, so nothing beyond ~80 m ever
+            exists at serve), BACK 6 m: 1.18 m spacing below 4 m/s, 2.15 m from 11.6 m/s on. Point features as before (the positions carry the
+            spacing; the head's slot embeddings are learnt on this layout from the factory weights).
+  scalars   memory_a's three (d_turn / 60, known, trav / 100), from the fixed-grid block (the anchored block at OFFS: unchanged definition).
+  command   cmd_heading (40 m, 20 deg) on the float16 fixed-grid block: one-hot (4,) appended after the scalars -> DIM_W = 203 + 4. The
+            trainer feeds the first DIM_O numbers to the head and the command to the ego row's command columns of the AlpaSim-route pool rows
+            (round7's CMD_PARTS; navtrain rows keep NAVSIM's command); the drivers do the same with the served command (no JEV_CMD needed).
+  one rule  memory_w + compose_w (offline rows: rm_build win, round9 nb.py pai) and Tracker(anchor=True, win=...) (served) are the same
+            function of the messages, their poses and the fed speed.
 """
 from __future__ import annotations
 
@@ -95,6 +109,22 @@ SERVE_ANCHOR = False                             # anchored layout: Tracker() de
 A_ON = 2.0                                       # merge_a: the memory's end lies on a newer batch when within A_ON m of its segments
 SPC, N_FULL = 80.0 / 19.0, 10                    # memory_a: AlpaSim's waypoint spacing; waypoints of a message nothing extra was trimmed from
 A_TRIM = 1.5                                     # memory_a: a short message changes the trim count only if a hypothesis explains the step within this
+WIN = dict(T=5.0, C=20.0, L_MIN=40.0, L_MAX=78.0, BACK=6.0)   # window layout (module docstring): L(v) = clip(T v + C, L_MIN, L_MAX), slots -BACK .. L(v)
+SERVE_WIN = None                                 # window layout: Tracker() default in a driver, the sidecar head's `win` dict (head_win); None = off
+NCMD = 4                                         # window layout: the command one-hot appended after the scalars
+DIM_W = DIM_O + NCMD
+
+
+def win_offs(v, win=None):
+    """Fed speed(s) v (m/s; (...,)) -> the window layout's slot offsets (..., N_PT) (module docstring "Window layout")."""
+    w = WIN if win is None else win
+    L = np.clip(w["T"] * np.maximum(np.asarray(v, np.float64), 0.0) + w["C"], w["L_MIN"], w["L_MAX"])
+    return -w["BACK"] + (np.asarray(L)[..., None] + w["BACK"]) * np.linspace(0.0, 1.0, N_PT)
+
+
+def speed_of(e4) -> float:
+    """The ego row's vx / 10 column (float32, parity_adapter.ego_features) -> the fed speed (m/s) the window layout uses."""
+    return 10.0 * float(np.float32(e4))
 
 
 def to_local(a, X):
@@ -133,12 +163,12 @@ def merge(batches):
     return M
 
 
-def window(M, prog=None, info=None, s_fix=None):
+def window(M, prog=None, info=None, s_fix=None, offs=None):
     """Merged polyline (M, 2) in the current rear-axle frame -> (N_PT, NF) features (module docstring). prog = (p, c): the ordered layout's
     progress anchor instead of the ego's projection: p = the newest route message's first waypoint (rear-axle frame), which AlpaSim places
     L0 m of route arc ahead of the ego's projection at that message, c = the chord the ego has driven since -> s_e = arc(p) - L0 + c.
     s_fix: the anchored layout's arc (memory_a) used as s_e. info (dict, optional) receives s_geo (the projection's arc), s_e (the arc used)
-    and M0 (the merged polyline's first point)."""
+    and M0 (the merged polyline's first point). offs: the slot offsets (window layout, win_offs), default OFFS."""
     F = np.zeros((N_PT, NF), np.float32)
     if M is None or len(M) < 2:
         return F
@@ -174,7 +204,7 @@ def window(M, prog=None, info=None, s_fix=None):
         s_e = float(s_fix)
         if info is not None:
             info["s_e"] = s_e
-    s = s_e + OFFS
+    s = s_e + (OFFS if offs is None else offs)
     ok = (s >= 0.0) & (s <= cum[-1])
     if not ok.any():
         return F
@@ -270,6 +300,30 @@ def memory_a(batches_local, poses, anchor, info=None):
     """Anchored layout (DIM_O,) (module docstring): every route message up to the decision, oldest first, as the waypoints in the local frame
     (a (0, 2) array for a message without any) and its local pose (x, y, yaw); anchor = the current rear-axle pose. info (dict, optional)
     receives window's s_geo / s_e / M0 and s_msg: per message with waypoints (index, C_k, extra spacings m, s_k)."""
+    Me, sf, trav = _anchored(batches_local, poses, anchor, info)
+    if Me is None:
+        return to_order(np.zeros(DIM, np.float32), trav)
+    return to_order(window(Me, info=info, s_fix=sf).reshape(-1), trav)
+
+
+def memory_w(batches_local, poses, anchor, v, win=None, info=None):
+    """Window layout's raw blocks (module docstring "Window layout"): memory_a's inputs + the fed speed v -> (Fw (DIM,) the block at
+    win_offs(v), F0 (DIM,) the anchored block at OFFS (memory_a's), trav). compose_w makes the fed numbers."""
+    Me, sf, trav = _anchored(batches_local, poses, anchor, info)
+    if Me is None:
+        return np.zeros(DIM, np.float32), np.zeros(DIM, np.float32), trav
+    return window(Me, s_fix=sf, offs=win_offs(v, win)).reshape(-1), window(Me, info=info, s_fix=sf).reshape(-1), trav
+
+
+def compose_w(Fw, F0, trav):
+    """Window layout: blocks (..., DIM) and trav (...,) -> (..., DIM_W) float32 = the window block, memory_a's scalars of the fixed-grid block,
+    cmd_heading of the float16 fixed-grid block (the same numbers offline and served)."""
+    F0 = np.asarray(F0, np.float32)
+    return np.concatenate([np.asarray(Fw, np.float32), to_order(F0, trav)[..., N_PT_O * NF:], cmd_heading(F0.astype(np.float16))], -1).astype(np.float32)
+
+
+def _anchored(batches_local, poses, anchor, info=None):
+    """memory_a's merge and arc: -> (merged polyline in the rear-axle frame of anchor or None, the arc s_e it tracked, trav)."""
     B = [_clean(b) for b in batches_local]
     Q = [np.asarray(p, np.float64)[:2] for p in poses]
     a = np.asarray(anchor, np.float64)
@@ -277,7 +331,7 @@ def memory_a(batches_local, poses, anchor, info=None):
     sizes = []
     M = merge_a(B, sizes)
     if M is None or len(M) < 2:
-        return to_order(np.zeros(DIM, np.float32), trav)
+        return None, None, trav
     path = np.r_[0.0, np.cumsum(np.hypot(*np.diff(np.array(Q), axis=0).T))]       # chord driven from the first message's pose
     s = pk = None
     m = 0
@@ -296,7 +350,7 @@ def memory_a(batches_local, poses, anchor, info=None):
         hist.append((k, c, m, s))
     if info is not None:
         info["s_msg"] = hist
-    return to_order(window(in_ego(a, M), info=info, s_fix=s + trav - pk).reshape(-1), trav)
+    return in_ego(a, M), s + trav - pk, trav
 
 
 def summary(f):
@@ -402,16 +456,19 @@ def transform_rows(f, off):
 class Tracker:
     """Served memory of one driver session: route messages (rig-frame waypoints at their time) and the ego poses -> features at a decision."""
 
-    def __init__(self, order=None, anchor=None):
+    def __init__(self, order=None, anchor=None, win=None):
         self.routes = {}
         self.order = SERVE_ORDER if order is None else bool(order)
         self.anchor = SERVE_ANCHOR if anchor is None else bool(anchor)        # anchored layout (memory_a; sidecar head `anchor`)
+        self.win = SERVE_WIN if win is None else (win or None)                # window layout (memory_w; sidecar head `win`), None = off
+        assert self.win is None or self.anchor, "the window layout is the anchored layout's merge and arc"
 
     def add(self, ts: int, wp):
         self.routes[int(ts)] = np.asarray(wp, np.float64).reshape(-1, 2)
 
-    def features(self, t0: int, pose_of, anchor):
-        """pose_of(ts) -> (x, y, yaw) local rig pose or None; anchor = the pose at t0. Messages after t0 or without a pose are skipped."""
+    def features(self, t0: int, pose_of, anchor, v=None):
+        """pose_of(ts) -> (x, y, yaw) local rig pose or None; anchor = the pose at t0. Messages after t0 or without a pose are skipped.
+        v: the fed speed (speed_of of the ego row), required by the window layout (-> (DIM_W,))."""
         B, Q, last = [], [], None
         BA, PA = [], []                                                        # anchored layout: every message with a pose
         for ts in sorted(self.routes):
@@ -428,6 +485,9 @@ class Tracker:
             if self.anchor and p is not None:
                 BA.append(to_local(p, wp) if len(wp) else np.zeros((0, 2)))
                 PA.append(p)
+        if self.win is not None:
+            assert v is not None, "window layout: the fed speed"
+            return compose_w(*memory_w(BA, PA, anchor, v, self.win))
         if self.anchor:
             return memory_a(BA, PA, anchor)
         if not self.order:
@@ -454,9 +514,10 @@ def _torch():
     import parity_adapter as PA
 
     class RouteHead(nn.Module):
-        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False, latfeat=False, anchor=False):
+        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False, latfeat=False, anchor=False, win=None, cmd=None):
             super().__init__()
             assert order or not anchor, "anchor: the ordered slot format (order=True)"
+            assert win is None or anchor, "win: the anchored layout's slot format"   # window layout: no tensor of its own (fed DIM_O numbers)
             self.anchor = bool(anchor)                       # the anchored layout feeds the ordered format: no tensor of its own
             self.n_pt = N_PT_O if order else N_PT
             self.dim = DIM_O if order else DIM
@@ -560,6 +621,13 @@ def head_anchor(tag: str) -> bool:
     import pp_train as T
     p = T.proot("runs", tag) / SIDECAR
     return bool(p.exists() and json.loads(p.read_text()).get("head", {}).get("anchor", False))
+
+
+def head_win(tag: str):
+    """The checkpoint's sidecar head `win` (the window layout's dict; the drivers set SERVE_WIN from it), else None."""
+    import pp_train as T
+    p = T.proot("runs", tag) / SIDECAR
+    return json.loads(p.read_text()).get("head", {}).get("win") if p.exists() else None
 
 
 def dim_of(tag: str) -> int:
@@ -698,6 +766,31 @@ if __name__ == "__main__":                                   # self-test: straig
     assert inf["s_msg"][-1][2] == 0, inf["s_msg"]
     print(f"anchored layout: merge_a = merge without a fold, no fold-back at a U-turn (slots within {err:.2f} m of their arc); a one-spacing "
           f"trim {lead(fx):+.2f} m (ordered) -> {lead(fy):+.2f} m (anchored)")
+    # window layout: the fixed-grid block is memory_a's, the window block sits at win_offs(v) along the same arc, the command is cmd_heading's
+    assert np.allclose(win_offs([0.0, 5.0, 10.0, 30.0])[:, -1], [40.0, 45.0, 70.0, 78.0]) and np.allclose(win_offs(0.0)[0], -6.0)
+    for bb, pp, v_ in ((mz, pz, 3.0), (mz, pz, 12.0), (mu, pu, 25.0), ([np.zeros((0, 2))], pz[:1], 9.0)):
+        Fw, F0, tv_ = memory_w(bb, pp, pp[-1], v_)
+        fw = compose_w(Fw, F0, tv_)
+        assert fw.shape == (DIM_W,) and np.array_equal(fw[N_PT * NF:DIM_O], memory_a(bb, pp, pp[-1])[N_PT * NF:])
+        assert np.array_equal(F0, memory_a(bb, pp, pp[-1])[:N_PT * NF]) and np.array_equal(fw[DIM_O:], cmd_heading(F0.astype(np.float16)))
+        Pw = Fw.reshape(N_PT, NF)
+        if Pw[:, 0].any() and bb is mz:                                          # straight route along x: slot x = car arc + offset
+            vv = Pw[:, 0] > 0.5
+            assert vv.any() and np.allclose(Pw[vv, 1] * 20.0, win_offs(v_)[vv], atol=1e-4), (Pw[:, 1] * 20, win_offs(v_))
+    thq = np.linspace(0, np.pi / 2, 300)                                          # straight to x 45, then a left quarter circle (r 30 m)
+    Q = np.r_[np.c_[np.linspace(-10, 45, 551)[:-1], np.zeros(550)], np.c_[45 + 30 * np.sin(thq), 30 - 30 * np.cos(thq)]]
+    sQ = np.r_[0, np.cumsum(np.hypot(*np.diff(Q, axis=0).T))]
+    atQ = lambda s_: np.c_[np.interp(s_, sQ, Q[:, 0]), np.interp(s_, sQ, Q[:, 1])]   # noqa: E731
+    pq = [np.array([x_, 0.0, 0.0]) for x_ in (0.0, 10.0, 20.0)]
+    mq = [atQ(x_ + 10 + 80 / 19 * np.arange(10, 20)) for x_ in (0.0, 10.0, 20.0)]
+    fq = compose_w(*memory_w(mq, pq, pq[-1], 8.0))                              # the turn starts 25 m ahead of the car: LEFT
+    fs = compose_w(*memory_w(mq[:1], pq[:1], pq[0], 8.0))                        # 45 m ahead: STRAIGHT
+    assert fq[DIM_O] == 1.0 and fs[DIM_O + 1] == 1.0, (fq[DIM_O:], fs[DIM_O:])
+    tr = Tracker(anchor=True, win=WIN)
+    for t_, p_, b in zip((0, 500_000, 1_000_000), pz, mz):
+        tr.add(t_, in_ego(p_, b))
+    assert np.array_equal(tr.features(1_000_000, ps.get, pz[-1], v=12.0), compose_w(*memory_w([to_local(p_, in_ego(p_, b)) for p_, b in zip(pz, mz)], pz, pz[-1], 12.0)))
+    print(f"window layout: offsets at 0 / 10 / 30 m/s end at {win_offs([0, 10, 30])[:, -1]}, fixed-grid block = memory_a's, command LEFT on the r 30 m turn")
     try:
         import torch
         F = np.stack([memory([C], np.array([0.0, 0.0, 0.0])), memory([B0], a0), memory([B0, B1], np.array([50.0, 0.0, 0.0])), np.zeros(DIM, np.float32)])

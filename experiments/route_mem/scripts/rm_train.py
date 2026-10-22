@@ -268,6 +268,15 @@ as before:
             `order: true, anchor: true` (the drivers serve the layout from it, rmem.head_anchor); an --init with the old layout is converted
             as for --rm-order (rmem.order_state), an ordered init is taken as it is; refused with --lc-cf (no anchored lane-change rows).
 
+WIN (2026-10-22, never trained: the 10-22 base retrain was dropped, experiments/round9/results/route_check/README.md; lib/rmem.py "Window layout"); off (default) = every file, head and
+term as before:
+  --rm-win          the window layout (the anchored layout's merge and arc, 40 slots at -6 .. L(v) m with L(v) = clip(5 v + 20, 40, 78) of the
+            row's fed speed, the heading command): the head reads the first DIM_O numbers of feat/<data>.w.npz (rm_build.py win; round9 nb.py
+            pai for the PAI pool parts) for every data dir of the store; the file's command (rmem.cmd_heading of its fixed-grid block) replaces
+            the ego row's command on the pool rows of CMD_PARTS (AlpaSim-route rows, round7's --cmd-rule set; navtrain rows keep NAVSIM's);
+            sidecar head `order, anchor, win (rmem.WIN), cmd: heading` (the drivers serve the layout and the command from it). An --init must
+            carry the same `win` (no conversion); refused with --cmd-rule, --kd-lam, --lc-cf, --lane-lam.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -293,10 +302,11 @@ EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_featur
 EGO_SCALE_POW = [1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]                  # --ego-scale-speed: power of s per EGO_SPEED column (velocity, acceleration, pose)
 
 
-def feats(cfg_data, S, dev, order=False, old=False, anchor=False):
+def feats(cfg_data, S, dev, order=False, old=False, anchor=False, win=False, cmdout=None):
     """Route features (S.n, DIM | DIM_O with order) float32 on dev, and per Store row: junction distance / route turn (dev rows of the NAVSIM
     dirs, else nan), the source dir index. Asserts every file's names equal the Store tab's names of its dir. old: also the input layout's point
-    block (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; with order both come from the .o files)."""
+    block (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; with order both come from the .o files). win: the window
+    layout's file (.w; the route part = its first DIM_O numbers) and its command (S.n, 4) appended to the list cmdout."""
     import torch
     from jevdrive.common import data_dir
     root = data_dir() / "runs/route_mem/feat"
@@ -309,10 +319,14 @@ def feats(cfg_data, S, dev, order=False, old=False, anchor=False):
         f = z["f"].astype(np.float32)
         f[~z["ok"]] = 0
         if order:
-            zo = np.load(root / f"{d}{'.a' if anchor else '.o'}.npz")           # ANCHOR: the anchored layout's file (rm_build.py anchor)
-            assert np.array_equal(zo["names"], z["names"]) and np.array_equal(zo["ok"], z["ok"]), f"{d}.o: rows differ"
+            zo = np.load(root / f"{d}{'.w' if win else '.a' if anchor else '.o'}.npz")   # ANCHOR / WIN: the layout's file (rm_build.py anchor / win)
+            assert np.array_equal(zo["names"], z["names"]) and (win or np.array_equal(zo["ok"], z["ok"])), f"{d}.o: rows differ"
             TR.append(zo["trav"].astype(np.float32))
             f = zo["f"].astype(np.float32)
+            if win:                                                                     # WIN: route part | command (rmem.compose_w)
+                assert f.shape[1] == RM.DIM_W and not (zo["ok"] & ~z["ok"]).any(), f"{d}.w: width / ok"
+                cmdout.append(f[:, RM.DIM_O:].copy())
+                f = f[:, :RM.DIM_O]
             f[~zo["ok"]] = 0
         elif old:
             TR.append(np.zeros(n, np.float32))
@@ -326,6 +340,9 @@ def feats(cfg_data, S, dev, order=False, old=False, anchor=False):
         o += n
     assert o == S.n, (o, S.n)
     ex = (torch.as_tensor(np.concatenate(FO), device=dev), torch.as_tensor(np.concatenate(TR), device=dev)) if old else (None, None)
+    if win:
+        cmdout[:] = [np.concatenate(cmdout)]
+        assert len(cmdout[0]) == S.n
     return (torch.as_tensor(np.concatenate(F), device=dev), np.concatenate(JD), np.concatenate(TU), np.concatenate(src), okc) + ex
 
 
@@ -387,6 +404,10 @@ def head_of(a) -> dict:
         a.rm_anchor = RM.head_anchor(a.rm_from)
     if getattr(a, "rm_anchor", False):                                # ANCHOR: the ordered slot format, anchored at the car (rmem.memory_a)
         h = dict(HEAD, order=True, anchor=True)
+    if a.rm_from and RM.has_branch(a.rm_from):                        # WIN: the layout comes with the checkpoint (sidecar head `win`)
+        a.rm_win = RM.head_win(a.rm_from) is not None
+    if getattr(a, "rm_win", False):                                   # WIN: the anchored layout's slots at the speed-scaled window + the command
+        h = dict(HEAD, order=True, anchor=True, win=dict(RM.WIN), cmd="heading")
     if getattr(a, "rm_latfeat", False):
         assert h.get("order"), "--rm-latfeat needs --rm-order"
         h["latfeat"] = True
@@ -416,7 +437,8 @@ def build(a, dev):
         ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
         sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
         sh = sd.get("head", HEAD)
-        assert {k: v for k, v in sh.items() if k not in ("order", "latfeat", "anchor")} == HEAD, f"{src}: branch {sh} != {HEAD}"
+        assert {k: v for k, v in sh.items() if k not in ("order", "latfeat", "anchor", "win", "cmd")} == HEAD, f"{src}: branch {sh} != {HEAD}"
+        assert sh.get("win") == head.get("win") and sh.get("cmd") == head.get("cmd"), f"{src}: window layout {sh.get('win')} != {head.get('win')}"   # WIN
         assert sh.get("order", False) <= head.get("order", False), f"{src}: an ordered-layout branch needs --rm-order"
         assert sh.get("anchor", False) <= head.get("anchor", False), f"{src}: an anchored-layout branch needs --rm-anchor"   # ANCHOR
         if (head.get("order") and not sh.get("order")) or (head.get("latfeat") and not sh.get("latfeat")):   # route v2: converted init
@@ -434,9 +456,14 @@ def build(a, dev):
             ns.init = dict(init=src, with_branch=True, net_loaded=len(ck["model"]["net"]), adapter_loaded=len(st), max_abs_diff_after_load=0.0,
                            init_dev_ade=sd.get("dev_ade"), **({"converted_to_order": True} if ns.converted else {}))
     lane = getattr(a, "lane_lam", 0) > 0 or getattr(a, "lc_cf", False)
-    F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane, anchor=head.get("anchor", False))
+    cw = []
+    F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane, anchor=head.get("anchor", False),
+                                                   win=head.get("win") is not None, cmdout=cw)
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
     ns.cmd_rec = cmd_rule(ns, a.cmd_rule) if getattr(a, "cmd_rule", "") else None   # round7 joint arm: off (default) = nothing touched
+    if head.get("win") is not None:                                   # WIN: the file's heading command on the AlpaSim-route pool rows
+        assert not getattr(a, "cmd_rule", ""), "--rm-win carries its own command: not with --cmd-rule"
+        ns.cmd_rec = cmd_win(ns, cw[0])
     rp = list(ns.model.adapter.route.parameters())
     ns.rxp = list(ns.model.adapter.rx.parameters()) if ns.rx else []
     ids = {id(p) for p in rp + ns.rxp}
@@ -468,6 +495,33 @@ def cmd_rule(ns, rule):
     lab = lambda c: np.where(c.max(1) > 0.5, c.argmax(1), 3)  # noqa: E731
     lo, ln = lab(old), lab(new)
     rec = dict(rule=rule, rows=int(len(r)), changed=int((lo != ln).sum()), parts={})
+    for p in CMD_PARTS:
+        m = pr == p
+        if m.any():
+            rec["parts"][p] = dict(rows=int(m.sum()), old_lr=round(float(np.isin(lo[m], [0, 2]).mean()), 4), new_lr=round(float(np.isin(ln[m], [0, 2]).mean()), 4),
+                                   old_unk=round(float((lo[m] == 3).mean()), 4), changed=round(float((lo[m] != ln[m]).mean()), 4))
+    return rec
+
+
+def cmd_win(ns, C):
+    """--rm-win: the command of the fed row (ego cols 1:4) of every pool row of CMD_PARTS := the window file's command (rmem.cmd_heading of the
+    row's fixed-grid block, as the drivers serve it); navtrain rows and the other pool parts keep theirs. In place on S.ego; -> record."""
+    import torch
+    S = ns.S
+    rec = dict(rule="win-heading", rows=0, changed=0, parts={})
+    if not ns.n_on:
+        return rec
+    part = np.array([x.split(":")[1] for x in S.tab["names"][ns.on0:].astype(str)])
+    sel = ns.on0 + np.flatnonzero(np.isin(part, CMD_PARTS))
+    r = torch.as_tensor(sel, device=S.ego.device)
+    old = S.ego[r, 1:4].cpu().numpy()
+    new = C[sel, :3].astype(np.float32)
+    assert ((new == 0) | (new == 1)).all() and (new.sum(1) == 1).all(), "--rm-win: the command is a one-hot of L / S / R"
+    S.ego[r, 1:4] = torch.as_tensor(new, device=S.ego.device, dtype=S.ego.dtype)
+    pr = part[sel - ns.on0]
+    lab = lambda c: np.where(c.max(1) > 0.5, c.argmax(1), 3)  # noqa: E731
+    lo, ln = lab(old), lab(new)
+    rec.update(rows=int(len(sel)), changed=int((lo != ln).sum()))
     for p in CMD_PARTS:
         m = pr == p
         if m.any():
@@ -1680,6 +1734,7 @@ if __name__ == "__main__":
         p.add_argument("--lc-adapter-only", action="store_true", help="the stay-lane rows' gradient reaches the adapter + route branch only")
         p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
         p.add_argument("--rm-anchor", action="store_true", help="ANCHOR: the anchored memory layout (feat/<data>.a.npz, rmem.memory_a)")
+        p.add_argument("--rm-win", action="store_true", help="WIN: the speed-scaled window layout + heading command (feat/<data>.w.npz)")
         p.add_argument("--app-lam", type=float, default=0.0, help="approach course: weight W of on_approach's terms (--on-lon-lam 10 W; 0 = off)")
         p.add_argument("--app-v2", action="store_true", help="approach course v2 terms (on_approach.configure; needs --app-lam)")
         p.add_argument("--env-lam", type=float, default=0.0, help="RECOVERY-ENVELOPE L: weight W of on_envelope's terms (--on-lon-lam 10 W; 0 = off)")
@@ -1838,4 +1893,6 @@ if __name__ == "__main__":
     assert 0 <= getattr(a, "flat_p", 1.0) <= 1 and (getattr(a, "flat_p", 1.0) == 1 or getattr(a, "flat_brk", "")), "--flat-p in [0, 1], needs --flat-brk"
     assert 0 <= getattr(a, "lr_floor", 0.0) < 1 and getattr(a, "diag_every", 100) > 0, "--lr-floor in [0, 1), --diag-every > 0"
     assert not (getattr(a, "rm_anchor", False) and a.lc_cf), "--rm-anchor: no anchored --lc-cf rows (rf_cfpool builds the ordered layout)"   # ANCHOR
+    assert not getattr(a, "rm_win", False) or not (a.lc_cf or getattr(a, "kd_lam", 0) > 0 or getattr(a, "lane_lam", 0) > 0 or getattr(a, "cmd_rule", "")), \
+        "--rm-win: not with --lc-cf / --kd-lam / --lane-lam / --cmd-rule"   # WIN
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

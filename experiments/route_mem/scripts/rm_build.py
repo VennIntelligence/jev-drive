@@ -44,6 +44,13 @@ with AlpaSim's own RouteGenerator, as the served driver would have held it. Alpa
                                           pools on1_L18RB0 / on1_L18RTB1 / on1_L18NR1). PYTHONHASHSEED: AlpaSim's map route search (the NAVSIM
                                           rows' generator) depends on Python's hash seed; 6 of 277 sampled rows change with it (results/
                                           anchor_check.md), so a fixed seed makes the build repeatable (pmap's forked workers share it)
+  win    --data D .. [--pool P ..] [--cat NAME=SRC,..] [--merge NAME=POOL:prefix,..] [--limit N]
+                                          the window layout (rmem.memory_w + compose_w, rm_train --rm-win; never trained, the 10-22 base
+                                          retrain was dropped: round9 results/route_check): `anchor`'s messages, poses and arc, the slots at win_offs(v) with v
+                                          = the row's fed speed (rmem.speed_of of the Store tab's ego column 4; yr1_ rows: their source row's,
+                                          asserted equal), memory_a's scalars and the heading command of the fixed-grid block -> feat/<name>.w.npz
+                                          (names, f (n, DIM_W) f16: the route part zeroed where not ok, the command kept, ok, trav, v, f0 (n, DIM)
+                                          f16: the fixed-grid block, for the gate against feat/<name>.a.npz). Same command line as `anchor`.
 """
 from __future__ import annotations
 
@@ -103,11 +110,13 @@ def nav_one(u):
     split_dir, log, items, dev = u[:4]
     order = len(u) > 4 and u[4]
     anc = len(u) > 5 and u[5]                               # the anchored layout (rmem.memory_a): every message and its pose, empty ones kept
+    win = u[6] if len(u) > 6 else None                      # the window layout: {row: fed speed} (rmem.memory_w)
     fr, pos = AR.load_log(split_dir, log)
     vm, org = AR.city_map(fr.loc)
     n = len(items)
     F = np.zeros((n, RM.DIM), np.float32)
     FO, TV = np.zeros((n, RM.DIM_O), np.float32), np.zeros(n, np.float32)
+    FW, F0 = np.zeros((n, RM.DIM), np.float32), np.zeros((n, RM.DIM), np.float32)
     K, OK, NM = np.zeros(n, np.int8), np.zeros(n, bool), np.zeros(n, np.int8)
     FD, JD, TU = np.full((n, 8), np.nan, np.float32), np.full(n, np.nan, np.float32), np.full(n, np.nan, np.float32)
     geo = None
@@ -148,6 +157,8 @@ def nav_one(u):
         if anc:                                             # the anchored memory: messages at frames i - k .. i at their logged poses
             TV[m] = RM.travelled([p[:2] for p in PA], a)
             FO[m] = RM.memory_a(BA, PA, a)
+            if win is not None:                             # the window layout: the same messages, the slots at the row's fed speed
+                FW[m], F0[m], _ = RM.memory_w(BA, PA, a, win[items[m][0]])
         Mm = RM.merge(B)
         if Mm is not None and len(Mm) >= 2:
             Me = RM.in_ego(a, Mm)
@@ -177,6 +188,8 @@ def nav_one(u):
                 if geo.junction(p[0], p[1]):
                     JD[m] = s
                     break
+    if win is not None:
+        return np.array([r for r, _ in items]), FW, F0, OK, TV
     if order or anc:
         return np.array([r for r, _ in items]), FO, OK, TV
     return np.array([r for r, _ in items]), F, K, OK, NM, FD, JD, TU
@@ -322,12 +335,27 @@ def feats_of_a(W, A):
     return out
 
 
+def feats_of_w(W, A, V):
+    """feats_of_a for the window layout: {k: (Fw, F0, trav)} at the decisions of V ({k: fed speed}), the served Tracker(anchor, win) on the
+    same inputs."""
+    out, B, P = {}, [], []
+    for k in sorted(W):
+        wp = W[k][np.isfinite(W[k]).all(1)]
+        B.append(RM.to_local(A[k], wp) if len(wp) else np.zeros((0, 2)))
+        P.append(A[k])
+        if k in V:
+            out[k] = RM.memory_w(B, P, A[k], V[k])
+    return out
+
+
 def pool_one(job):
     run, scene, ks, cfg = job[:4]
     from ao_e1 import drive_records
     recs = drive_records(run)[scene]
     Fu = {}
     W, A = regen(scene, recs, cfg, Fu)
+    if len(job) > 6 and job[6] is not None:                 # the window layout only: job[6] = {k: fed speed}
+        return feats_of_w(W, A, job[6])
     if len(job) > 5 and job[5]:                             # the anchored layout only
         F = feats_of_a(W, A)
         return {k: F[k] for k in ks}
@@ -574,6 +602,116 @@ def cmd_anchor(a):
                         np.concatenate([x["trav"] for x in Za]), run, ".a", root)
 
 
+def write_win(name, names, FW, F0, ok, trav, v, run, root=None):
+    """Window layout file (module docstring `win`): compose_w of the blocks; the route part zeroed where not ok (the command kept)."""
+    ok = np.asarray(ok, bool)
+    f = RM.compose_w(FW, F0, trav)
+    f[~ok, :RM.DIM_O] = 0
+    (root or OUT / "feat").mkdir(parents=True, exist_ok=True)
+    np.savez((root or OUT / "feat") / f"{name}.w.npz", names=names, f=f.astype(np.float16), ok=ok, trav=np.asarray(trav, np.float32),
+             v=np.asarray(v, np.float32), f0=np.asarray(F0, np.float16))
+    P = RM.pts(f[ok, :RM.DIM_O])
+    lab = np.where(f[:, RM.DIM_O:].max(1) > 0.5, f[:, RM.DIM_O:].argmax(1), 3)
+    rec = dict(rows=len(names), ok=float(ok.mean()), v_med=float(np.median(v)) if len(v) else None,
+               near_first_empty=float((~(P[:, :, 0] > 0.5)[:, :N_NEAR]).all(1).mean()) if ok.any() else None,
+               cmd_lr=float(np.isin(lab, [0, 2]).mean()), cmd_unknown=float((lab == 3).mean()))
+    run.info(f"{name}.w: {json.dumps(rec)}")
+    run.summary[name + ".w"] = rec
+    return rec
+
+
+N_NEAR = 10                                                 # write_win's summary: the first 10 slots (the near third of the window)
+
+
+def cmd_win(a):
+    """The window layout (rmem.memory_w + compose_w) of every row (module docstring `win`): `anchor`'s messages, the row's fed speed."""
+    from jevdrive import par
+    from jevdrive.common import n_cpus
+    from jevdrive.run import Run
+    import ev as EV
+    root = OUT / ("win_sample" if a.limit else "feat")
+    spd = lambda d: np.array([RM.speed_of(x) for x in np.load(CR / d / "tab.npz")["ego"][:, 4]], np.float64)   # noqa: E731
+    with Run("route_mem", "build-win", config=vars(a)) as run:
+        for data in a.data:
+            if (root / f"{data}.w.npz").exists() and not a.force:
+                run.info(f"{data}.w: exists")
+                continue
+            z, tab = np.load(OUT / "feat" / f"{data}.npz"), np.load(CR / data / "tab.npz")
+            names, logs = tab["names"], tab["log"]
+            assert np.array_equal(z["names"], names)
+            V = spd(data)
+            split_dir = "test" if (data_dir() / "datasets/navsim/navsim_logs/test" / f"{logs[0]}.pkl").exists() else "trainval"
+            by = {}
+            for r, (t, lg) in enumerate(zip(names.tolist(), logs.tolist())):
+                by.setdefault(lg, []).append((r, t))
+            jobs = [(split_dir, lg, it, set(), False, True, {r: V[r] for r, _ in it}) for lg, it in sorted(by.items(), key=lambda x: -len(x[1]))][: a.limit or None]
+            res = par.pmap(nav_one, jobs, run=run, workers=a.workers or n_cpus(), desc=f"win {data}")
+            res.raise_if_failed()
+            n = len(names)
+            FW, F0, OK, TV = np.zeros((n, RM.DIM), np.float32), np.zeros((n, RM.DIM), np.float32), np.zeros(n, bool), np.zeros(n, np.float32)
+            for rows, fw, f0, ok, tv in res.values:
+                FW[rows], F0[rows], OK[rows], TV[rows] = fw, f0, ok, tv
+            assert a.limit or np.array_equal(OK, z["ok"]), f"{data}: ok differs from the nav build"
+            write_win(data, names, FW, F0, OK, TV, V, run, root)
+            yz = OUT / "feat" / f"yr1_{data}.npz"
+            if yz.exists():                                 # yaw-rate rows: the source row's blocks moved into the perturbed frame, re-scored
+                y, yt = np.load(yz), np.load(CR / f"yr1_{data}" / "tab.npz")
+                assert np.array_equal(y["names"], yt["names"])
+                sr = yt["src_row"]
+                assert np.array_equal(yt["ego"][:, 4], tab["ego"][sr, 4]), f"yr1_{data}: fed speed differs from the source row's"
+                write_win(f"yr1_{data}", y["names"], RM.transform_rows(FW[sr], yt["off"]), RM.transform_rows(F0[sr], yt["off"]), OK[sr], TV[sr],
+                          V[sr], run, root)
+        for name in a.pool:                                 # rm_build pool rows (the messages regenerated at the decision anchors)
+            z = np.load(OUT / "feat" / f"on1_{name}.npz")
+            m = np.load(data_dir() / "runs/onpol_nuplan/rows" / name / "meta.npz", allow_pickle=True)
+            assert np.array_equal(m["names"], z["names"])
+            V = spd(f"on1_{name}")
+            assert len(V) == len(z["names"])
+            by = {}
+            for i, (rn, sc, k) in enumerate(zip(m["run"].tolist(), m["scene"].tolist(), m["k"].tolist())):
+                by.setdefault((rn, sc), []).append((i, int(k)))
+            keys = sorted(by)[: a.limit or None]
+            res = par.pmap(pool_one, [(rn, sc, [k for _, k in by[rn, sc]], EV.CFG, False, False, {k: V[i] for i, k in by[rn, sc]}) for rn, sc in keys],
+                           run=run, workers=a.workers or n_cpus(), desc=f"win on1_{name}")
+            res.raise_if_failed()
+            n = len(z["names"])
+            FW, F0, ok, TV = np.zeros((n, RM.DIM), np.float32), np.zeros((n, RM.DIM), np.float32), np.zeros(n, bool), np.zeros(n, np.float32)
+            for key, v in zip(keys, res.values):
+                for i, k in by[key]:
+                    FW[i], F0[i], TV[i] = v[k]
+                    ok[i] = z["ok"][i]
+            write_win(f"on1_{name}", z["names"], FW, F0, ok, TV, V, run, root)
+        for spec in a.cat:                                  # NAME=SRC,..: a pool whose rows ("on:<token>") are rows of the sources (wt.py / df.py pack)
+            name, srcs = spec.split("=", 1)
+            z = np.load(OUT / "feat" / f"{name}.npz")
+            Vp = spd(name)
+            at, F = {}, {}
+            for src in srcs.split(","):
+                zw, zp = np.load(root / f"{src}.w.npz"), np.load(OUT / "feat" / f"{src}.npz")
+                assert np.array_equal(zw["names"], zp["names"]), src
+                at.update({t: (src, i) for i, t in enumerate(zp["names"].astype(str).tolist())})
+                F[src] = (zw, zp["f"])
+            ix = [at.get(t.split(":")[-1]) for t in z["names"].astype(str).tolist()]
+            assert all(x is not None for x in ix), f"{name}: {sum(x is None for x in ix)} rows without a source row"
+            assert all(np.array_equal(F[s_][1][i], z["f"][r]) for r, (s_, i) in enumerate(ix)), f"{name}: a pool row != its source row (old layout)"
+            g = lambda k: np.stack([F[s_][0][k][i] for s_, i in ix])  # noqa: E731
+            assert np.array_equal(g("v").astype(np.float32), Vp.astype(np.float32)), f"{name}: fed speed differs from the source rows'"
+            ok = g("ok") & z["ok"]
+            f = g("f")
+            f[~ok, :RM.DIM_O] = 0
+            np.savez(root / f"{name}.w.npz", names=z["names"], f=f, ok=ok, trav=g("trav"), v=g("v"), f0=g("f0"))
+            run.info(f"{name}.w: {len(f)} rows from {srcs}")
+        for spec in a.merge:                                # NAME=POOL:prefix,..: an rf_pait.py merge (rows renamed on:<prefix>:<token>, in order)
+            name, parts = spec.split("=", 1)
+            P = [x.split(":") for x in parts.split(",")]
+            z = np.load(OUT / "feat" / f"{name}.npz")
+            Zw, Zp = [np.load(root / f"{p}.w.npz") for p, _ in P], [np.load(OUT / "feat" / f"{p}.npz") for p, _ in P]
+            ren = np.concatenate([[f"on:{pre}:{t[3:]}" for t in zp["names"].astype(str).tolist()] for zp, (_, pre) in zip(Zp, P)])
+            assert np.array_equal(ren, z["names"].astype(str)) and np.array_equal(np.concatenate([zp["f"] for zp in Zp]), z["f"]), f"{name}: not the merge of {parts}"
+            np.savez(root / f"{name}.w.npz", names=z["names"], **{k: np.concatenate([x[k] for x in Zw]) for k in ("f", "ok", "trav", "v", "f0")})
+            run.info(f"{name}.w: merge of {parts}")
+
+
 def cmd_cover(a):
     import pandas as pd
     from ao_e1 import drive_records
@@ -633,5 +771,10 @@ if __name__ == "__main__":
     p.add_argument("--data", nargs="*", default=[]), p.add_argument("--pool", nargs="*", default=[]), p.add_argument("--cat", nargs="*", default=[])
     p.add_argument("--merge", nargs="*", default=[]), p.add_argument("--workers", type=int, default=0), p.add_argument("--force", action="store_true")
     p.add_argument("--limit", type=int, default=0, help="first N logs / rollouts, written to runs/route_mem/anchor_sample (a check)")
+    p = sub.add_parser("win")
+    p.add_argument("--data", nargs="*", default=[]), p.add_argument("--pool", nargs="*", default=[]), p.add_argument("--cat", nargs="*", default=[])
+    p.add_argument("--merge", nargs="*", default=[]), p.add_argument("--workers", type=int, default=0), p.add_argument("--force", action="store_true")
+    p.add_argument("--limit", type=int, default=0, help="first N logs / rollouts, written to runs/route_mem/win_sample (a check)")
     a = ap.parse_args()
-    dict(same=cmd_same, order=cmd_order, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover, anchor=cmd_anchor)[a.cmd](a)
+    dict(same=cmd_same, order=cmd_order, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover, anchor=cmd_anchor,
+         win=cmd_win)[a.cmd](a)
