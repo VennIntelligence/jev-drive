@@ -688,9 +688,15 @@ def cmd_report(a):
                 order = ["initial", "margin", "geometry", "box_inflation", "time_shift"]
             for k in reversed(order):
                 cause = np.where(inc[k], k, cause)
+            order2 = [k for k in order if k != "initial"] + ["initial"]          # clearance-first reading (initial is a context, not a cause)
+            cause2 = np.full(len(rows), "residual", object)
+            for k in reversed(order2):
+                cause2 = np.where(inc[k], k, cause2)
             vals = V["log"][t][rows]
             rc[t] = dict(n=int(len(rows)), first_match={k: float((cause == k).mean()) for k in order + ["residual"]},
                          first_match_mass={k: float(vals[cause == k].sum() / vals.sum()) for k in order + ["residual"]},
+                         clearance_first={k: float((cause2 == k).mean()) for k in order2 + ["residual"]},
+                         clearance_first_mass={k: float(vals[cause2 == k].sum() / vals.sum()) for k in order2 + ["residual"]},
                          incidence={k: float(np.mean(x)) for k, x in inc.items()})
         if "log__lag_sweep" in z.files:
             rc["lag_sweep_log"] = json.loads(str(z["log__lag_sweep"]))
