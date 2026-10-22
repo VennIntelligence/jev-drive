@@ -36,7 +36,7 @@ WJ = TP / "wajepa"
 sys.path[:0] = [str(REPO / "experiments/wm_surplus/lib"), str(WJ), str(TP / "navsim"), str(REPO)]
 import usage_probe as UP  # noqa: E402
 
-OUT = DATA / "runs/wm_surplus/p1_usage"
+OUT = Path(os.environ.get("P1_OUT", DATA / "runs/wm_surplus/p1_usage"))   # P1_OUT: smoke dirs
 CFG = WJ / "configs/wa_jepa_hugsim.yaml"
 CKPT = DATA / "models/wajepa/model_state_dict.pt"
 REF = DATA / "runs/top10_t2/navsim/wajepa/20260926-122804/trajectory_cache/navtest_trajectories.pkl"   # the 91.71 plans
