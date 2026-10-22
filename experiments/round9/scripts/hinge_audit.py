@@ -921,7 +921,10 @@ def cmd_retime(a):
     sf, sl = arc(F), arc(L)
     res = dict(rows=int(len(rows)), label_arc4_over_human_med=float(np.median(sf[:, -1] / np.maximum(sl[:, -1], 0.1))),
                label_longer_than_human=float((sf[:, -1] > sl[:, -1] + 0.5).mean()), human_also_violates=float((Vl["agent"][rows] > 0).mean()))
-    for nm, S_new in (("human_timing", sl), ("min_timing", np.minimum(sf, sl))):
+    st = np.maximum(L[:, :1, 0] + sl, 0.0)                     # the human's station along the ego heading at each step (station-matched)
+    res["human_t0_ahead_of_student_med"] = float(np.median(L[:, 0, 0]))
+    res["human_t0_behind_student"] = float((L[:, 0, 0] < -0.5).mean())
+    for nm, S_new in (("human_timing", sl), ("min_timing", np.minimum(sf, sl)), ("station_matched", st), ("min_station", np.minimum(sf, st))):
         G = np.concatenate([F[:, :1], retime(F, S_new)], 1)
         v = []
         for i in range(0, len(rows), 1024):
