@@ -840,6 +840,7 @@ def cmd_g5(a):
         names = z["names"][rows].astype(str)
         ah = AgentHinge(sp["agent"], names, "cpu", MARGIN, 0.0)
         road = Hinge(sp["road"], names, "cpu", MARGIN)
+        road.sdf[~road.ok] = 0.0                                          # unlabelled rows hold uninitialised rasters (NaN gradients)
         if sp["drv"] is not None:
             fb = np.flatnonzero(z["off_t0"][rows])
             if len(fb):
