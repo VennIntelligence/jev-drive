@@ -9,7 +9,9 @@ difference [95 % CI]), and touches <out>/DONE. A cell the registry does not allo
 HUGSIM-only and their lineage trained on navtest logs) is never run; match.md lists it with the reason.
 
   python -m jevdrive.bench match --drivers A B .. --ref WA-JEPA [--also P0] --boards hugsim[:preset] navtest navhard
-                                 [--scenarios all64] [--repeat LABEL] --out DIR [--priority P] [--dry]
+                                 [--scenarios all64] [--repeat LABEL] --out DIR [--priority P] [--drop-ply] [--dry]
+  --drop-ply: after the tables, the report job deletes the scene / ground .ply copies of this match's HUGSIM cells (38 MB / episode;
+              only experiments/hugsim/scripts spin attribution reads them). Off by default: a match may reuse shared run dirs.
   python -m jevdrive.bench match ... --report-only     (what the report job runs: tables of the finished cells)
 """
 from __future__ import annotations
@@ -85,6 +87,18 @@ def submit(drivers, ref, out, also=(), boards=("hugsim",), scenarios="all64", re
     return jid
 
 
+def drop_ply(out) -> int:
+    """Delete the per-episode scene / ground .ply copies (~38 MB per HUGSIM episode) of this match's finished HUGSIM cells; returns bytes freed.
+    Only run dirs listed in <out>/match.json with DONE; units.csv, videos and logs stay."""
+    n = 0
+    for d in json.loads((Path(out) / "match.json").read_text())["runs"]:
+        if "/hugsim/" in d and (Path(d) / "DONE").exists():
+            for f in Path(d).glob("bench/*/*/*.ply"):
+                n += f.stat().st_size
+                f.unlink()
+    return n
+
+
 def report(drivers, ref, out, also=(), boards=("hugsim",), scenarios="all64", repeat="") -> Path:
     """Tables of the finished cells: per board bench.tables.report, then match.{md,csv}."""
     import pandas as pd
@@ -132,8 +146,10 @@ def main(a) -> int:
     common = dict(also=a.also, boards=a.boards, scenarios=a.scenarios, repeat=a.repeat)
     if a.report_only:
         report(a.drivers, a.ref, a.out, **common)
+        if a.drop_ply:
+            print(f"dropped {drop_ply(a.out) / 1e9:.1f} GB of .ply")
         return 0
     argv = ["--drivers", *a.drivers, "--ref", a.ref, *(["--also", *a.also] if a.also else []), "--boards", *a.boards,
-            "--scenarios", a.scenarios, "--repeat", a.repeat, "--out", str(Path(a.out).resolve())]
+            "--scenarios", a.scenarios, "--repeat", a.repeat, "--out", str(Path(a.out).resolve())] + (["--drop-ply"] if a.drop_ply else [])
     submit(a.drivers, a.ref, a.out, workers=a.workers, jobs=a.jobs, priority=a.priority, dry=a.dry, argv=argv, **common)
     return 0

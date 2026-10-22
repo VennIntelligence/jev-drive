@@ -15,6 +15,18 @@ $B report --bench hugsim --preset spec --arms P2=P2-F-s0+P2-F-s1 --vs P0 WA-JEPA
 $B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv --wait   # devkit scores of your own pose arrays (navtest; --mcache v2_navtrain: navtrain turn tokens)
 ```
 
+`match` reads a list of drivers against one reference on several boards in one command: every allowed driver x board is its own
+`run`, one CPU report job chained after all of them writes `<out>/match.md` (driver, reference, difference [CI], HUGSIM HD parts) and
+the per-board tables, then `<out>/DONE`; cells the registry does not allow (`Model.benches`) are listed, not run
+(`jevdrive/bench/match.py`; worked example and the P2 read in experiments/wm_surplus/README.md):
+
+```bash
+$B match --drivers STANDFMXH-L18-s1 RB0-F-s0 --ref WA-JEPA --also P0 --boards hugsim:exam navtest --repeat p2 --out DIR [--drop-ply]
+```
+
+Route-memory checkpoints (`route_mem.json` beside `ckpt-final.pt`: RB0-F and every AlpaSim-lineage checkpoint) are HUGSIM-only: the
+bias server feeds them an empty route memory (`pp_hugsim.py tail_row`), and the note names the on-policy pools of their lineage.
+
 `run` submits every stage of every requested (model, bench, preset) to the GPU pool at once, chained with `after`, and returns;
 the pool places them (no card or port picked by hand). Re-running the same command resumes: finished stages are skipped, live
 jobs are reused. Python: `from jevdrive import bench; d = bench.run("P2-F-s0", "hugsim", preset="spec"); bench.wait([d]);

@@ -78,6 +78,7 @@ def main(argv=None) -> int:
     mt.add_argument("--priority", type=float, default=0.0)
     mt.add_argument("--out", required=True)
     mt.add_argument("--report-only", action="store_true")
+    mt.add_argument("--drop-ply", action="store_true", help="report job deletes this match's HUGSIM .ply copies after the tables")
     mt.add_argument("--dry", action="store_true")
     q = sp.add_parser("score-poses", help="devkit pdm_score + DAC diagnostics of (N, 8, 3) pose arrays on navtest tokens")
     q.add_argument("--poses", required=True, help="npz with `tokens` and (N, 8, 3) pose arrays")
