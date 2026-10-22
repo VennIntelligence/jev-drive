@@ -77,9 +77,13 @@ def cmd_fwd(a):
     assert len(pt["names"]) == ns.n_on and np.array_equal(S.tab["names"][ns.on0:], pt["names"]), "pool rows are not on1_JTX's"
     part = pt["pool"].astype(str)
     sel = np.flatnonzero((pt["mode"].astype(str) == "self") & np.isin(part, S_PARTS))
-    if a.frac < 1:
+    rand = np.ones(len(sel), bool)
+    if a.frac < 1:                         # stratified: every S-MIX target row (x4) + a seeded uniform frac of all rows (flag `rand`)
         rng = np.random.default_rng(a.seed)
-        sel = np.sort(rng.choice(sel, int(round(a.frac * len(sel))), replace=False))
+        u = rng.random(len(sel)) < a.frac
+        tgt = np.isin(pt["names"][sel].astype(str), rows_table().query("al").name.to_numpy()) if a.target_all else np.zeros(len(sel), bool)
+        keep = u | tgt
+        sel, rand = sel[keep], u[keep]
     pi_ = torch.as_tensor(S.pi, device=dev)
     wA, wR, wL = ra.ho_w * ra.agent_lam, ra.ho_w * ra.road_lam, ra.ho_w * ra.on_lon_lam
     cols = {}
@@ -106,6 +110,7 @@ def cmd_fwd(a):
             print(f"first batch {time.time() - t0:.1f} s, rows {len(sel)}", flush=True)
     df = pd.DataFrame({q: np.concatenate(v) for q, v in cols.items()})
     df.insert(0, "name", pt["names"][sel]), df.insert(1, "pool", part[sel]), df.insert(2, "speed", pt["speed"][sel])
+    df["rand"] = rand
     W.mkdir(parents=True, exist_ok=True)
     out = W / f"fwd_{a.ckpt}{'_cmdh' if a.cmd else ''}.parquet"
     df.to_parquet(out)
@@ -184,12 +189,16 @@ def cmd_learn(a):
         fw[tag] = pd.read_parquet(f).set_index("name")
     common = sorted(set.intersection(*[set(v.index) for v in fw.values()]) & set(t.index))
     t = t.loc[common]
+    rnd = pd.concat([v.loc[common, "rand"] for k, v in fw.items() if "rand" in v], axis=1).all(axis=1) if any("rand" in v for v in fw.values()) \
+        else pd.Series(True, index=common)
     # strata: the S-MIX target = learnable-active under R6DAG-s1 (multiplier 4); x2 = learnable, inactive, zero / partial source; x1 rest; x0 unlearnable
     strata = dict(target_x4=t.al.to_numpy(), x2=(~t.unlearn & ~t.act & t.outcome.isin(["zero", "partial"])).to_numpy(),
                   x1=(~t.unlearn & ~t.act & ~t.outcome.isin(["zero", "partial"])).to_numpy(), x0=t.unlearn.to_numpy(),
-                  all_live=(t.w_R6DAG > 0).to_numpy())
+                  all_live=((t.w_R6DAG > 0) & rnd).to_numpy())
+    for k in ("x2", "x1", "x0"):                                             # non-target strata: the uniform sample only (targets are all in)
+        strata[k] = strata[k] & rnd.to_numpy()
     # R7J's own draw weights (renormalised) for a draw-weighted view of the S slice
-    pr = t.w_R7J.to_numpy() / t.w_R7J.sum()
+    pr = (t.w_R7J * rnd).to_numpy() / (t.w_R7J * rnd).sum()
     out = dict(rows=len(common), strata={k: int(v.sum()) for k, v in strata.items()}, fwd={})
     for tag, f in fw.items():
         f = f.loc[common]
@@ -393,6 +402,7 @@ def main():
     sp = ap.add_subparsers(dest="cmd_", required=True)
     p = sp.add_parser("fwd")
     p.add_argument("--ckpt", required=True), p.add_argument("--cmd", default=""), p.add_argument("--frac", type=float, default=1.0)
+    p.add_argument("--target-all", type=int, default=1)
     p.add_argument("--seed", type=int, default=0), p.add_argument("--bs", type=int, default=512), p.add_argument("--threads", type=int, default=0)
     for c in ("batch", "learn", "cover", "pai"):
         sp.add_parser(c)
