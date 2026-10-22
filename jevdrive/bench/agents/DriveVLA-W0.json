@@ -1,0 +1,35 @@
+{
+ "kind": "world-model",
+ "note": "DriveVLA-W0 (BraveGroup): Emu3 8B world-model VLA (VQ image tokens + future-image modelling) with a flow-matching action expert (Emu3Pi0, 9.07 B params), checkpoint Emu3_Flow_Matching_Action_Expert_PDMS_87.2; their torchrun inference as shipped, nproc 1 per chunk",
+ "repo": "$DATA_DIR/third_party/drivevla-w0",
+ "commit": "a55766ce46ee55d9035b93816e57b8d933166482",
+ "env": "p0-drivevla-w0",
+ "runner": "cmd",
+ "ckpt": "$DATA_DIR/models/drivevla-w0/Emu3_Flow_Matching_Action_Expert_PDMS_87.2",
+ "inputs": [
+  "CAM_F0 as their released 256 x 144 VQ codes (test_vq_codes.zip): current frame and the frame 1 s earlier",
+  "command text (their test meta pickle)",
+  "previous 1 s actions (their test meta pickle)"
+ ],
+ "published": {
+  "metric": "PDMS v1",
+  "value": 87.2,
+  "source": "released checkpoint name Emu3_Flow_Matching_Action_Expert_PDMS_87.2 and inference/vla/infer_navsim_flow_matching_PDMS_87.2.sh (HF liyingyan/DriveVLA-W0); the README table's 90.2 / 93.0 are the query-based anchor variant and a best-of variant, not this checkpoint"
+ },
+ "deviations": "torch 2.8 cu128; sdpa (their inference config default) without flash-attn installed; PYTHONPATH += <repo>/utils (their setup_paths_early expects it under the old name train/); flow-matching noise unseeded as shipped",
+ "tolerance": 0.5,
+ "vram": 24,
+ "cpu": 6,
+ "ram": 32,
+ "chunks": 8,
+ "min_chunk": 200,
+ "licence": "see the DriveVLA-W0 repository (BraveGroup) and Emu3 (Apache-2.0)",
+ "cmd": [
+  "{py}",
+  "experiments/wm_surplus/scripts/drivevla_w0_navtest.py",
+  "--tokens",
+  "{tokens}",
+  "--out",
+  "{out}"
+ ]
+}
