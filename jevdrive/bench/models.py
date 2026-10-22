@@ -40,6 +40,10 @@ Families
                   scored with the v2 devkit (EPDMS, our board) and the v1.1 devkit (PDMS, the metric the papers publish)
   wajepa          WA-JEPA released checkpoint ($DATA_DIR/models/wajepa): stored navtest / navhard references (its own runner,
                   experiments/top10), HUGSIM through its shipped client (zs_run agent `wajepa`, exam preset)
+  simscale        SimScale camera-only NAVSIM models from the AlpaSim e2e_challenge samples, run as shipped in envs/alpasim-ltf:
+                  SimScale-LTF ($DATA_DIR/models/alpasim_ltf/ltf_sim_navtest.ckpt), SimScale-DD ($DATA_DIR/models/alpasim_dd/
+                  diffusiondrive_sim_navhard.ckpt); HUGSIM only (exam preset) through experiments/hugsim/scripts/simscale_hugsim_client.py
+                  (zs_run agents ss-ltf / ss-dd: HUGSIM's real per-step command, nuScenes front three cameras as L0 / F0 / R0)
 """
 from __future__ import annotations
 
@@ -62,7 +66,7 @@ def data_dir() -> Path:
 @dataclass(frozen=True)
 class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
-    family: str                     # onnx | parity | wajepa | pred (PROBE-*: supplied pose file, scoring only)
+    family: str                     # onnx | parity | wajepa | simscale | pred (PROBE-*: supplied pose file, scoring only)
     frames: str = ""                # navsim front protocol (default per family / tag)
     opt: str = ""                   # parity: noside | mshuf | sideoff (memory arms) | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving) | tsA | tsB | ts0 (turn selector)
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
@@ -102,6 +106,8 @@ OP_INPUTS = ("road + wide camera frame pairs (12 x 128 x 256 YUV, 0.2 s context)
              "traffic convention", "lateral control params / prev desired curvature")
 PARITY_INPUTS = OP_INPUTS + ("P2+: ego velocity / acceleration, 4-pose history (2 Hz), NAVSIM command",
                              "P3: CAM_L0 / CAM_R0 / CAM_B0 tokens from Cinque's own frozen encoder")
+SS_INPUTS = ("CAM_L0 / F0 / R0 at 1920 x 1080, current frame only (stitched 2048 x 512)", "NAVSIM command",
+             "ego velocity / acceleration")
 STATIC = {
     "cinque": Model("cinque", "onnx", "gimm", base="cinque", note="shipped openpilot Cinque (comma v3, 382 M), ONNX / TensorRT",
                     inputs=OP_INPUTS),
@@ -113,6 +119,13 @@ STATIC = {
                      stored={"navtest": "runs/top10_t2/navsim/wajepa/20260926-122804/v2/2026.09.26.16.32.53.csv",
                              "navhard": "runs/op_parity/navhard/harness/wajepa",
                              "hugsim:exam": "experiments/hugsim/results/hugsim-exam/scored_wajepa.csv#wajepa"}),
+    # base = the zs_run agent of the HUGSIM client (experiments/hugsim/scripts/simscale_hugsim_client.py)
+    "SimScale-LTF": Model("SimScale-LTF", "simscale", base="ss-ltf", ckpt="$DATA_DIR/models/alpasim_ltf/ltf_sim_navtest.ckpt",
+                          note="SimScale LTF (camera-only TransFuser, AlpaSim sample, trained with SimScale sim data), as shipped; HUGSIM only",
+                          inputs=SS_INPUTS, benches=("hugsim",)),
+    "SimScale-DD": Model("SimScale-DD", "simscale", base="ss-dd", ckpt="$DATA_DIR/models/alpasim_dd/diffusiondrive_sim_navhard.ckpt",
+                         note="SimScale DiffusionDrive (camera-only, AlpaSim sample, navhard-sim checkpoint), as shipped; HUGSIM only",
+                         inputs=SS_INPUTS, benches=("hugsim",)),
 }
 AGENT_DIR = Path(__file__).resolve().parent / "agents"
 
@@ -127,7 +140,7 @@ def agent_cfg(name: str) -> dict:
     return ex(json.loads(f.read_text()))
 
 
-ALIASES = {"wajepa": "WA-JEPA", "wa-jepa": "WA-JEPA", "shipped": "cinque"}
+ALIASES = {"wajepa": "WA-JEPA", "wa-jepa": "WA-JEPA", "shipped": "cinque", "ss-ltf": "SimScale-LTF", "ss-dd": "SimScale-DD"}
 
 
 def parity_root() -> Path:
@@ -184,6 +197,7 @@ def resolve(spec: str, check: bool = False) -> Model:
         raise ValueError(f"{spec}: unknown frame protocol {frames!r} (one of {FRAMES})")
     if name in STATIC:
         m = STATIC[name]
+        m = replace(m, ckpt=expand(m.ckpt)) if m.ckpt else m
     elif agent_cfg(name):
         c = agent_cfg(name)
         m = Model(name, "agent", ckpt=c.get("ckpt", ""), note=f"{c['kind']}: {c['note']}", inputs=tuple(c.get("inputs", ())),

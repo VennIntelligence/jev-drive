@@ -5,7 +5,7 @@ A run = (model, preset) over a scenario set; units are scenarios. Stages:
   onnx       parity arms: the arm's serving ONNX (pp_hugsim.py onnx: trained initializers + `intent_bias` input); an existing build
              under $DATA_DIR/runs/op_parity/hugsim/onnx is linked instead of rebuilt
   w<i>       K worker jobs (one per card by default), each starting its own servers (parity: bias server pp_hugsim.py serve +
-             policy server hugsim_zs_server.py --onnx; onnx: policy server; WA-JEPA: none, its client loads the model) and W
+             policy server hugsim_zs_server.py --onnx; onnx: policy server; WA-JEPA / SimScale: none, its client loads the model) and W
              scenario slots; with the agent opt `stateless` (parity arms; experiments/hugsim/results/stateless_cl.md) the job's only
              server is the training-protocol server stateless_server.py (sh30_core.Core) on the policy socket. The slots of all jobs pull from one shared queue (claim files), longest expected scenario first,
              so the cards finish together. Every scenario is one `zs_run.py run` of that single scenario (resumable rows in
@@ -52,7 +52,7 @@ PRESETS = tuple(HUGSIM_PRESETS)
 CONTROLLERS = ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long", "fixedc")
 CONTROLLER_ENV = ("OP_CTRL", "OP_CTRL_LONG", "LOWSPEED_CTRL", "LOWSPEED_SEL")
 TAG = "bench"
-AD = {"cinque": "zs", "lebowski": "zs", "small": "zs", "wajepa": "wj"}
+AD = {"cinque": "zs", "lebowski": "zs", "small": "zs", "wajepa": "wj", "ss-ltf": "ss", "ss-dd": "ss"}
 STALL_S, TIMEOUT_S = 420.0, 1500.0      # sim.log silent this long -> stuck; any scenario longer than this -> stuck (max seen 723 s)
 
 
@@ -108,7 +108,7 @@ def onnx_path(m: Model) -> Path:
 
 
 def agent_of(m: Model) -> str:
-    return "wajepa" if m.family == "wajepa" else m.base
+    return "wajepa" if m.family == "wajepa" else m.base                # simscale: base = its zs_run agent (ss-ltf / ss-dd)
 
 
 # ---------------------------------------------------------------- planning
@@ -148,8 +148,8 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     stateless = identity["opts"].get("stateless") is not None
     if stateless and m.family != "parity":
         raise ValueError("the stateless training protocol serves parity arms only")
-    if m.family == "wajepa" and preset != "exam":
-        raise SystemExit("WA-JEPA runs the exam preset only (its client has no openpilot lateral path)")
+    if m.family in ("wajepa", "simscale") and preset != "exam":
+        raise SystemExit(f"{m.name} runs the exam preset only (its client has no openpilot lateral path)")
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     cf = run_dir / "config.json"
@@ -166,7 +166,8 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
         f.unlink()                                                    # a new submit retries scenarios that failed before
     # VRAM per scenario slot = measured job peak / slots x 1.3 (2026-10-23, pool vram_peak of 58 parity jobs at 6 slots: max 43.7 GB,
     # 12 WA-JEPA jobs at 5 slots: max 57.1 GB; docs/bench.md "VRAM sizing"); the per-job servers are inside the slot figure
-    per = 14.9 if m.family == "wajepa" else 9.5
+    # SimScale LTF / DD: one fp16 model copy per slot client; sized as WA-JEPA until a match measures it
+    per = 14.9 if m.family in ("wajepa", "simscale") else 9.5
     base = 0.0
     cap = max(1, int((R.card_gb() - base) // per))                    # slots that fit one card (6 WA-JEPA slots = 81 GB never placed)
     w = max(1, min(workers, cap, len(todo) or 1))
@@ -180,7 +181,7 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     S = []
     if m.family in ("parity", "adapt_h"):
         S.append(R.Stage("onnx", R.stage_cmd("jev", "hugsim-onnx", m.spec), done=str(onnx_path(m)), vram=10, cpu=4, ram=24))
-    ram = (6 if m.family == "wajepa" else 4) * w + 8     # openpilot workers measured 22 GB at w = 6 (2026-10-08)
+    ram = (6 if m.family in ("wajepa", "simscale") else 4) * w + 8     # openpilot workers measured 22 GB at w = 6 (2026-10-08)
     if todo:
         for i in range(k):
             S.append(R.Stage(f"w{i}", R.stage_cmd("jev", "hugsim-worker", run_dir, i), done=str(run_dir / "workers" / f"w{i}.DONE"),

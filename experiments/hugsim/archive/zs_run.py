@@ -3,7 +3,7 @@
 
 One job = (scenario, agent, controller). Agents: alpamayo / cinque / lebowski (experiments/hugsim/lib/zs_agent.py against a
 resident experiments/hugsim/archive/hugsim_zs_server.py), cv / route (experiments/hugsim/archive/agent_client.py), ltf (the official LTF client),
-wajepa (WA-JEPA's shipped client, experiments/hugsim/scripts/wajepa_e2e.sh; ad slot `wj`), preset (the scene's logged trajectory as the plan, experiments/hugsim/archive/preset_agent.py; controller acceptance).
+wajepa (WA-JEPA's shipped client, experiments/hugsim/scripts/wajepa_e2e.sh; ad slot `wj`), ss-ltf / ss-dd (SimScale LTF / DiffusionDrive, experiments/hugsim/scripts/simscale_hugsim_client.py; ad slot `ss`), preset (the scene's logged trajectory as the plan, experiments/hugsim/archive/preset_agent.py; controller acceptance).
 Controllers run from private copies of the patched HUGSIM tree, so nobody else's apply / revert of the optional
 patch can touch a running job:  official = patches/hugsim/*.patch,  fixed = + optional/lqr-heading-fix.patch,
 ideal = + optional/ideal-tracker.patch (no iLQR: the ego moves exactly along the plan; reference for acceptance,
@@ -52,7 +52,8 @@ V2 = REPO / "patches" / "hugsim" / "optional" / "lqr-tracker-v2.patch"
 OPCTRL = REPO / "patches" / "hugsim" / "optional" / "op-ctrl.patch"
 CLAMP = REPO / "patches" / "hugsim" / "optional" / "command-index-clamp.patch"
 OPCTRL_LONG = REPO / "patches" / "hugsim" / "optional" / "op-ctrl-long.patch"
-AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre", "wajepa": "wj"}
+AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre", "wajepa": "wj",
+      "ss-ltf": "ss", "ss-dd": "ss"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
           "pdms", "steps", "end", "wall_s", "rc_code", "finished", "scene", "run_dir"]
 END = [("Collision with background", "bg_collision"), ("Collision with foreground", "fg_collision"),
@@ -166,7 +167,7 @@ def run_job(a, scen, tag_dir, traffic):
     base = tag_dir / f"base_{ds}.yaml"
     base.write_text(f"realcar_path: {DATA}/3DRealCar\nmodel_base: {DATA}/scenes/{ds}\n"
                     f"zs_path: {REPO}/experiments/hugsim/archive/zs_agent_e2e.sh\njev_path: {REPO}/experiments/hugsim/archive/agent_e2e.sh\n"
-                    f"ltf_path: {REPO}/experiments/hugsim/archive/ltf_e2e.sh\nwj_path: {REPO}/experiments/hugsim/scripts/wajepa_e2e.sh\npre_path: {REPO}/experiments/hugsim/archive/preset_agent_e2e.sh\n"
+                    f"ltf_path: {REPO}/experiments/hugsim/archive/ltf_e2e.sh\nwj_path: {REPO}/experiments/hugsim/scripts/wajepa_e2e.sh\nss_path: {REPO}/experiments/hugsim/scripts/simscale_e2e.sh\npre_path: {REPO}/experiments/hugsim/archive/preset_agent_e2e.sh\n"
                     f"output_dir: {tag_dir}/\n"
                     f"HD_map:\n  path: {DATA}/nusc_map_cache\n  version: nusc_trainval\n")
     run_dir = tag_dir / ad / f"{scene}_{mode}"
