@@ -1,0 +1,23 @@
+{
+ "tag": "INTP50-NR",
+ "a": 0.5,
+ "theta": "(1 - a) * A + a * B",
+ "A": "NTV0-L18-s0",
+ "B": "R8K-L18-s2",
+ "sha_A": "5fa544acf89bfcfaacd85d08685a01ce0d09f094d5a4deb397d7e04f65aa155b",
+ "sha_B": "03b0764983e14fc0cca0d76832d38fad1d95e2db3131294664309ac12fd81748",
+ "parts": {
+  "net": {
+   "tensors": 109,
+   "numel": 16211687,
+   "differ": 109
+  },
+  "parity": {
+   "tensors": 97,
+   "numel": 3156864,
+   "differ": 97
+  }
+ },
+ "nontensors": "cfg / onpol / route_mem / arm from R8K-L18-s2",
+ "code": "7f5ffbed"
+}

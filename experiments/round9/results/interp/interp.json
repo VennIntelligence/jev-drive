@@ -1,0 +1,373 @@
+{
+ "scenes": 277,
+ "rpc_excluded": 0,
+ "reads": {
+  "NTV0-s0": {
+   "new_mean": 0.8137093862815885,
+   "old_mean": 0.7451177127714558,
+   "new_zeros": 39,
+   "old_zeros": 58,
+   "zcls": {
+    "overshoot": 22,
+    "route-turn": 15,
+    "offroad": 12,
+    "AF-front": 3,
+    "side": 0,
+    "zero-other": 6
+   },
+   "pcls": {
+    "rear-hit": 26,
+    "slow": 11,
+    "hit": 0
+   }
+  },
+  "R8K-s2": {
+   "new_mean": 0.8719862815884476,
+   "old_mean": 0.8070045383103334,
+   "new_zeros": 28,
+   "old_zeros": 46,
+   "zcls": {
+    "overshoot": 19,
+    "route-turn": 2,
+    "offroad": 14,
+    "AF-front": 5,
+    "side": 2,
+    "zero-other": 4
+   },
+   "pcls": {
+    "rear-hit": 18,
+    "slow": 4,
+    "hit": 0
+   }
+  },
+  "INTP50-NR": {
+   "new_mean": 0.8357406253366101,
+   "old_mean": 0.7779788924846246,
+   "new_zeros": 36,
+   "old_zeros": 52,
+   "zcls": {
+    "overshoot": 17,
+    "route-turn": 5,
+    "offroad": 18,
+    "AF-front": 5,
+    "side": 1,
+    "zero-other": 6
+   },
+   "pcls": {
+    "rear-hit": 21,
+    "slow": 8,
+    "hit": 0
+   }
+  },
+  "INTP75-NR": {
+   "new_mean": 0.8786445416321108,
+   "old_mean": 0.813662592173627,
+   "new_zeros": 26,
+   "old_zeros": 44,
+   "zcls": {
+    "overshoot": 19,
+    "route-turn": 3,
+    "offroad": 10,
+    "AF-front": 5,
+    "side": 2,
+    "zero-other": 5
+   },
+   "pcls": {
+    "rear-hit": 18,
+    "slow": 4,
+    "hit": 0
+   }
+  }
+ },
+ "pairs": {
+  "INTP50-NR - NTV0-s0": {
+   "new": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.022031239055021707,
+    "lo": -0.009805238146683047,
+    "hi": 0.053201784884633674,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8357406253366101,
+    "mean_b": 0.8137093862815885
+   },
+   "old": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.03286117971316884,
+    "lo": 0.004091878706234189,
+    "hi": 0.061694007230213115,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7779788924846246,
+    "mean_b": 0.7451177127714558
+   },
+   "zeros_old": -6
+  },
+  "INTP50-NR - R8K-s2": {
+   "new": {
+    "n": 277,
+    "units": 277,
+    "mean": -0.0362456562518375,
+    "lo": -0.0738906372712945,
+    "hi": 0.0016162849259766534,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8357406253366101,
+    "mean_b": 0.8719862815884476
+   },
+   "old": {
+    "n": 277,
+    "units": 277,
+    "mean": -0.029025645825708754,
+    "lo": -0.0663301268452503,
+    "hi": 0.009442829950395894,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7779788924846246,
+    "mean_b": 0.8070045383103334
+   },
+   "zeros_old": 6
+  },
+  "INTP75-NR - NTV0-s0": {
+   "new": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.06493515535052234,
+    "lo": 0.02784701084564884,
+    "hi": 0.10201868189621457,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8786445416321108,
+    "mean_b": 0.8137093862815885
+   },
+   "old": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.06854487940217129,
+    "lo": 0.03136670940431426,
+    "hi": 0.10651499659789058,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.813662592173627,
+    "mean_b": 0.7451177127714558
+   },
+   "zeros_old": -14
+  },
+  "INTP75-NR - R8K-s2": {
+   "new": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.006658260043663148,
+    "lo": -0.017409178308444573,
+    "hi": 0.03227836775648772,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8786445416321108,
+    "mean_b": 0.8719862815884476
+   },
+   "old": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.006658053863293704,
+    "lo": -0.01925023499270414,
+    "hi": 0.0339060666768953,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.813662592173627,
+    "mean_b": 0.8070045383103334
+   },
+   "zeros_old": -2
+  },
+  "R8K-s2 - NTV0-s0": {
+   "new": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.058276895306859214,
+    "lo": 0.016225054151624545,
+    "hi": 0.09930088447653428,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8719862815884476,
+    "mean_b": 0.8137093862815885
+   },
+   "old": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.0618868255388776,
+    "lo": 0.017977920705381338,
+    "hi": 0.10447450905717703,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8070045383103334,
+    "mean_b": 0.7451177127714558
+   },
+   "zeros_old": -12
+  }
+ },
+ "flips": {
+  "new": {
+   "R8K-s2": {
+    "ntv0_full": 201,
+    "neg": 14,
+    "neg_zero": 9,
+    "neg_pts": 10.5302,
+    "fixed": 40,
+    "keeps_r8k_fixes": 40,
+    "r8k_fixes": 40,
+    "shares_r8k_negs": 14
+   },
+   "INTP50-NR": {
+    "ntv0_full": 201,
+    "neg": 9,
+    "neg_zero": 8,
+    "neg_pts": 8.510424807925087,
+    "fixed": 20,
+    "keeps_r8k_fixes": 17,
+    "r8k_fixes": 40,
+    "shares_r8k_negs": 2
+   },
+   "INTP75-NR": {
+    "ntv0_full": 201,
+    "neg": 8,
+    "neg_zero": 6,
+    "neg_pts": 6.732815061802355,
+    "fixed": 36,
+    "keeps_r8k_fixes": 33,
+    "r8k_fixes": 40,
+    "shares_r8k_negs": 6
+   }
+  },
+  "old": {
+   "R8K-s2": {
+    "ntv0_full": 182,
+    "neg": 15,
+    "neg_zero": 10,
+    "neg_pts": 11.530243109998084,
+    "fixed": 42,
+    "keeps_r8k_fixes": 42,
+    "r8k_fixes": 42,
+    "shares_r8k_negs": 15
+   },
+   "INTP50-NR": {
+    "ntv0_full": 182,
+    "neg": 6,
+    "neg_zero": 5,
+    "neg_pts": 5.510424807925087,
+    "fixed": 20,
+    "keeps_r8k_fixes": 17,
+    "r8k_fixes": 42,
+    "shares_r8k_negs": 2
+   },
+   "INTP75-NR": {
+    "ntv0_full": 182,
+    "neg": 8,
+    "neg_zero": 6,
+    "neg_pts": 6.732815061802355,
+    "fixed": 37,
+    "keeps_r8k_fixes": 34,
+    "r8k_fixes": 42,
+    "shares_r8k_negs": 6
+   }
+  }
+ },
+ "cost": {
+  "gpu_job_h": 6.091219037572542,
+  "read_h": 6.078961333235104,
+  "gpu_jobs": 17
+ },
+ "check": {
+  "dev": "cuda",
+  "gpu": "NVIDIA RTX 6000D",
+  "tags": [
+   "NTV0-L18-s0",
+   "R8K-L18-s2",
+   "INTPCHK0-NR",
+   "INTPCHK1-NR",
+   "INTP50-NR",
+   "INTP75-NR"
+  ],
+  "checks": {
+   "frozen equal R8K-L18-s2 #1": {
+    "ok": true
+   },
+   "encoder equal R8K-L18-s2 #1": {
+    "ok": true
+   },
+   "frozen equal INTPCHK0-NR #2": {
+    "ok": true
+   },
+   "encoder equal INTPCHK0-NR #2": {
+    "ok": true
+   },
+   "frozen equal INTPCHK1-NR #3": {
+    "ok": true
+   },
+   "encoder equal INTPCHK1-NR #3": {
+    "ok": true
+   },
+   "frozen equal INTP50-NR #4": {
+    "ok": true
+   },
+   "encoder equal INTP50-NR #4": {
+    "ok": true
+   },
+   "frozen equal INTP75-NR #5": {
+    "ok": true
+   },
+   "encoder equal INTP75-NR #5": {
+    "ok": true
+   },
+   "frozen equal NTV0-L18-s0 #6": {
+    "ok": true
+   },
+   "encoder equal NTV0-L18-s0 #6": {
+    "ok": true
+   },
+   "NTV0 reload == NTV0": {
+    "ok": true,
+    "max_abs": 0.0
+   },
+   "INTPCHK0-NR == NTV0-L18-s0": {
+    "ok": true,
+    "max_abs": 0.0
+   },
+   "INTPCHK1-NR == R8K-L18-s2": {
+    "ok": true,
+    "max_abs": 0.0
+   },
+   "NTV0 != R8K": {
+    "ok": true,
+    "max_abs": 12.25
+   },
+   "INTP50-NR finite, differs from both ends": {
+    "ok": true,
+    "max_abs_vs_A": 6.4375,
+    "max_abs_vs_B": 6.8125
+   },
+   "INTP75-NR finite, differs from both ends": {
+    "ok": true,
+    "max_abs_vs_A": 8.9375,
+    "max_abs_vs_B": 3.6875
+   }
+  },
+  "frozen": {
+   "tensors": 468,
+   "numel": 365378781,
+   "trained_in_ckpt": 109
+  },
+  "ok": true,
+  "failed": []
+ }
+}

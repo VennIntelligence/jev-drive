@@ -1,0 +1,83 @@
+{
+ "dev": "cuda",
+ "gpu": "NVIDIA RTX 6000D",
+ "tags": [
+  "NTV0-L18-s0",
+  "R8K-L18-s2",
+  "INTPCHK0-NR",
+  "INTPCHK1-NR",
+  "INTP50-NR",
+  "INTP75-NR"
+ ],
+ "checks": {
+  "frozen equal R8K-L18-s2 #1": {
+   "ok": true
+  },
+  "encoder equal R8K-L18-s2 #1": {
+   "ok": true
+  },
+  "frozen equal INTPCHK0-NR #2": {
+   "ok": true
+  },
+  "encoder equal INTPCHK0-NR #2": {
+   "ok": true
+  },
+  "frozen equal INTPCHK1-NR #3": {
+   "ok": true
+  },
+  "encoder equal INTPCHK1-NR #3": {
+   "ok": true
+  },
+  "frozen equal INTP50-NR #4": {
+   "ok": true
+  },
+  "encoder equal INTP50-NR #4": {
+   "ok": true
+  },
+  "frozen equal INTP75-NR #5": {
+   "ok": true
+  },
+  "encoder equal INTP75-NR #5": {
+   "ok": true
+  },
+  "frozen equal NTV0-L18-s0 #6": {
+   "ok": true
+  },
+  "encoder equal NTV0-L18-s0 #6": {
+   "ok": true
+  },
+  "NTV0 reload == NTV0": {
+   "ok": true,
+   "max_abs": 0.0
+  },
+  "INTPCHK0-NR == NTV0-L18-s0": {
+   "ok": true,
+   "max_abs": 0.0
+  },
+  "INTPCHK1-NR == R8K-L18-s2": {
+   "ok": true,
+   "max_abs": 0.0
+  },
+  "NTV0 != R8K": {
+   "ok": true,
+   "max_abs": 12.25
+  },
+  "INTP50-NR finite, differs from both ends": {
+   "ok": true,
+   "max_abs_vs_A": 6.4375,
+   "max_abs_vs_B": 6.8125
+  },
+  "INTP75-NR finite, differs from both ends": {
+   "ok": true,
+   "max_abs_vs_A": 8.9375,
+   "max_abs_vs_B": 3.6875
+  }
+ },
+ "frozen": {
+  "tensors": 468,
+  "numel": 365378781,
+  "trained_in_ckpt": 109
+ },
+ "ok": true,
+ "failed": []
+}
