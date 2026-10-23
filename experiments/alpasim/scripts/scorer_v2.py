@@ -94,6 +94,14 @@ READS = {
     "NT1N1-F-s0-ag": ("round9/ntv1_step1/pai281/NT1N1-F-s0-ag", "NT1N1-F-s0-281ag"),   # round9 ntv1_step1 (scored with --reads only)
     "NT1N2A-F-s0-ag": ("round9/ntv1_step1/pai281/NT1N2A-F-s0-ag", "NT1N2A-F-s0-281ag"),
     "NT1N2B-F-s0-ag": ("round9/ntv1_step1/pai281/NT1N2B-F-s0-ag", "NT1N2B-F-s0-281ag"),
+    "NT3D1-F-s0-ag": ("round9/ntv1_step3/pai281/NT3D1-F-s0-ag", "NT3D1-F-s0-281ag"),   # round9 ntv1_step3 (scored with --reads only; s1 / agH = the candidate tail)
+    "NT3D1-F-s0-agH": ("round9/ntv1_step3/pai281/NT3D1-F-s0-agH", "NT3D1-F-s0-281agH"),
+    "NT3D1-F-s1-ag": ("round9/ntv1_step3/pai281/NT3D1-F-s1-ag", "NT3D1-F-s1-281ag"),
+    "NT3D1-F-s1-agH": ("round9/ntv1_step3/pai281/NT3D1-F-s1-agH", "NT3D1-F-s1-281agH"),
+    "NT3D2-F-s0-ag": ("round9/ntv1_step3/pai281/NT3D2-F-s0-ag", "NT3D2-F-s0-281ag"),
+    "NT3D2-F-s0-agH": ("round9/ntv1_step3/pai281/NT3D2-F-s0-agH", "NT3D2-F-s0-281agH"),
+    "NT3D2-F-s1-ag": ("round9/ntv1_step3/pai281/NT3D2-F-s1-ag", "NT3D2-F-s1-281ag"),
+    "NT3D2-F-s1-agH": ("round9/ntv1_step3/pai281/NT3D2-F-s1-agH", "NT3D2-F-s1-281agH"),
     "R7J-L18-s1-ag": ("round7/joint/pai281/R7J-L18-s1-ag", "R7J-L18-s1-281ag"),
     "R7J-L18-s1-agH": ("round7/joint/pai281/R7J-L18-s1-agH", "R7J-L18-s1-281agH"),
     "R9DL-L18-s0-ag": ("round9/dag_lane/pai281/R9DL-L18-s0-ag", "R9DL-L18-s0-281ag"),

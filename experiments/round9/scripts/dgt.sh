@@ -130,6 +130,10 @@ sv2c) rm -rf $O/sv2c
   PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2c --reads $2-agH,$3-ag,$3-agH --workers 16 > $O/sv2c.log 2>&1 \
     || die "scorer_v2 new cand (log $O/sv2c.log)" ;;
 creport) $V $PY cverdict --dir $O --out $O/results/cand > $O/creport.log 2>&1 || die "cverdict (log $O/creport.log)"; date '+%F %T' > $O/DONE ;;
+rereport)  # attempt 2 (scorer_v2 had no READS entry for this lane's reads: a lane-script fault): the report job again, its inputs kept
+  [[ ! -f $O/DONE ]] || die "DONE"; h=$(git rev-parse --short HEAD); echo "$h rereport" >> $O/code.txt
+  rp=$(sub dgt-report --vram 0.1 --cpu 16 --ram 48 --timeout-h 3 -- bash $ME report) || exit 1
+  echo "$(date '+%F %T') rereport (code $h): report $rp" | tee -a $O/stages.txt ;;
 wait)
   until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
