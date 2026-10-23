@@ -18,6 +18,8 @@ from pathlib import Path
 from py123d_garage.evaluation.alpasim import evaluate
 from py123d_garage.evaluation.alpasim.help import driver_service as ds
 
+# The camera the policy reads, for lib/sim_fast.py (ALPASIM_FAST); the PAI track's front wide camera (GARAGE_CAM=CAM_F0 on nuPlan).
+CAM = os.environ.get("GARAGE_CAM", "camera_front_wide_120fov")
 LOG_DIR = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "driver-logs"))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 OUT = (LOG_DIR / "drive.jsonl").open("a", buffering=1)
