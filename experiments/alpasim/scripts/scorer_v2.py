@@ -75,6 +75,9 @@ READS = {
     "R7J-L18-s0-agH": ("round7/joint/pai281/R7J-L18-s0-agH", "R7J-L18-s0-281agH"),
     "NTV0NS-L18-s0-ag": ("round9/ntv0_nos/pai281/NTV0NS-L18-s0-ag", "NTV0NS-L18-s0-281ag"),   # round9 ntv0_nos (scored with --reads only)
     "RB0L-F-s0-ag": ("round9/rb0_long/pai281/RB0L-F-s0-ag", "RB0L-F-s0-281ag"),   # round9 rb0_long (scored with --reads only)
+    "PCL1-F-s0-ag": ("round9/pool_pilot/pai281/PCL1-F-s0-ag", "PCL1-F-s0-281ag"),   # round9 pool_pilot (scored with --reads only)
+    "PCL1B-F-s0-ag": ("round9/pool_pilot/pai281/PCL1B-F-s0-ag", "PCL1B-F-s0-281ag"),   # round9 pool_pilot (scored with --reads only)
+    "PCL0-L18-s0-ag": ("round9/pool_pilot/pai281/PCL0-L18-s0-ag", "PCL0-L18-s0-281ag"),   # round9 pool_pilot (scored with --reads only)
     "HF-s0-ag": ("round9/cmd_pilot/pai281/HF-s0-ag", "HF-s0-281ag"),   # round9 cmd_pilot (scored with --reads only)
     "HP50-s0-ag": ("round9/cmd_pilot/pai281/HP50-s0-ag", "HP50-s0-281ag"),
     "R7J-L18-s1-ag": ("round7/joint/pai281/R7J-L18-s1-ag", "R7J-L18-s1-281ag"),
