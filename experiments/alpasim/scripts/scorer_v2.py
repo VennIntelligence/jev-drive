@@ -85,6 +85,8 @@ READS = {
     "HF-s0-ag": ("round9/cmd_pilot/pai281/HF-s0-ag", "HF-s0-281ag"),   # round9 cmd_pilot (scored with --reads only)
     "INTP50-NR-ag": ("round9/interp/pai281/INTP50-NR-ag", "INTP50-NR-281ag"),   # round9 interp (scored with --reads only)
     "INTP75-NR-ag": ("round9/interp/pai281/INTP75-NR-ag", "INTP75-NR-281ag"),
+    "PCL1L-F-s0-agH": ("round9/diag_reads/pai281/PCL1L-F-s0-agH", "PCL1L-F-s0-281agH"),   # round9 diag_reads (scored with --reads only)
+    "INTP75-NR-ag-rr": ("round9/diag_reads/pai281/INTP75-NR-ag-rr", "INTP75-NR-281ag-rr"),   # same checkpoint and serve as INTP75-NR-ag, re-read
     "HP50-s0-ag": ("round9/cmd_pilot/pai281/HP50-s0-ag", "HP50-s0-281ag"),
     "NT1N1-F-s0-ag": ("round9/ntv1_step1/pai281/NT1N1-F-s0-ag", "NT1N1-F-s0-281ag"),   # round9 ntv1_step1 (scored with --reads only)
     "NT1N2A-F-s0-ag": ("round9/ntv1_step1/pai281/NT1N2A-F-s0-ag", "NT1N2A-F-s0-281ag"),
