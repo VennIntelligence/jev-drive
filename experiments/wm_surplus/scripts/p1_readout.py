@@ -29,11 +29,14 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--priority", type=float, default=0.0)
     ap.add_argument("--v1", action="store_true", help="also v1.1 PDMS per arm, paired vs the reference arm")
+    ap.add_argument("--v1-only", action="store_true", help="only score v1.1 PDMS of --arms into <out>/v1/<arm>/ (a shard of a fanned-out v1 pass) and exit")
     ap.add_argument("--subset", default="", help="score and pair on a jevdrive.data.splits subset of navtest only (subset bench runs)")
     a = ap.parse_args()
     spec = {x: f"PROBE-{a.tag}-{x}" for x in a.arms}
     if a.ref_spec:
         spec[a.ref] = a.ref_spec
+    if a.v1_only:
+        return v1_scores(a, spec, Path(a.out))
     dirs = [bench.run(s, "navtest", priority=a.priority, subset=a.subset) for s in spec.values()]
     if not bench.wait(dirs):
         raise SystemExit("a scoring run failed: " + ", ".join(str(d) for d in dirs if (d / "ERROR").exists()))
@@ -119,20 +122,27 @@ def main():
     print("\n".join(lines))
 
 
+def v1_scores(a, spec: dict, out: Path) -> dict:
+    """arm -> <out>/v1/<arm>/pdms.csv, scored with the v1.1 devkit unless already there (so fanned-out shards are reused)."""
+    from jevdrive.bench.models import resolve
+    from jevdrive.bench.navsim import pred_file, score_v1
+    fs = {}
+    for arm, s in spec.items():
+        f = fs[arm] = out / "v1" / arm / "pdms.csv"
+        if not f.exists():
+            score_v1(pred_file(resolve(s), "navtest"), f"probe_{a.tag}_{arm}" + (f"_{a.subset.replace('/', '-')}" if a.subset else ""),
+                     f.parent, "navtest", a.subset)
+    return fs
+
+
 def v1_table(a, spec: dict, out: Path) -> pd.DataFrame:
     """v1.1 PDMS per arm (devkit per-token scores, failed tokens 0 as the devkit's average row) and paired differences vs
     the reference arm with the log-cluster bootstrap of jevdrive.stats."""
     from jevdrive import stats
-    from jevdrive.bench.models import resolve
-    from jevdrive.bench.navsim import pred_file, score_v1
     from jevdrive.bench.sets import navsim_tokens
     toks, logs = navsim_tokens("navtest", a.subset)
     sc = {}
-    for arm, s in spec.items():
-        f = out / "v1" / arm / "pdms.csv"
-        if not f.exists():
-            score_v1(pred_file(resolve(s), "navtest"), f"probe_{a.tag}_{arm}" + (f"_{a.subset.replace('/', '-')}" if a.subset else ""),
-                     f.parent, "navtest", a.subset)
+    for arm, f in v1_scores(a, spec, out).items():
         t = pd.read_csv(f)
         t = t[~t.token.astype(str).str.startswith("average")].set_index("token")
         sc[arm] = t.score.fillna(0).reindex(toks.tolist()).to_numpy(float)
