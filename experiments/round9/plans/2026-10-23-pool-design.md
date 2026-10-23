@@ -273,3 +273,9 @@ v_ego / v_human 的中位、p10、< 0.85 与 > 1.10 份额、平均差；高速�
 
 **代价估计**：训练 P1 约 1.5 卡时（eager，RB0L 63 min + S 段 / diag 开销）、P1b 约 0.8、P0 约 0.4；闸约 0.3；读数 3 × 约 0.8；合计约 5.5 卡时，
 墙钟约 2.5 h（六卡全空）。
+
+**补充（2026-10-24，P1 seed 1，训练输出之前登记）**：P1 加 seed 1，判读线与 P1 相同（g ≥ 74 % 且 P1 − RB0L 配对 CI 下界 > 0 / g ≤ 21 % / 之间），
+新评分器为主、旧评分器并报。PCL1-F-s1 = PCL1-F-s0 的 argv 只改 `--seed 1` 与 `--tag`（盒上与 PCL1-F-s0 存档 meta.json 的 argv 逐词比对，其余相同），
+同一 wfile、同一池 on1_L18RB0、T = 10 000；闸只留 60 步冒烟（T = 30）+ 训练中梯度比闸 + 训练后 DONE / dev ADE。读数同 P1（PAI 281 ACC + GAP，Harmonizer 关，
+NTV0-L18-s0 的 8 个块表）。另报 P1 两 seed 均值对 NTV0 两 seed 均值、对 PCL1-F-s0 / NTV0-s0 / NTV0-s1 / RB0-F 的配对 CI、零分按类、dev ADE、卡时。
+车道脚本 scripts/p1s1.sh / p1s1.py（作业体沿用 pcl.sh），结果 results/pool_pilot/p1_s1.md。

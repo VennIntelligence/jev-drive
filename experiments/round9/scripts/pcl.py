@@ -84,7 +84,7 @@ def last_val(a, k):
     return a[len(a) - 1 - a[::-1].index(k) + 1]
 
 
-def build_argv(arm, tag, steps=None, on_start=None, save_at=None):
+def build_argv(arm, tag, steps=None, on_start=None, save_at=None, seed=None):
     if arm == "P1L":                                          # round9 P1L (plans/2026-10-24-p1l.md): P1's argv + NTV0-L18's schedule from T
         a, n = build_argv("P1", tag, steps, on_start, save_at), stored_argv("NTV0-L18-s0")
         return a + ["--lr2-at", last_val(a, "--on-start"), "--lr2-scale", last_val(n, "--lr-scale"), "--lr2-warmup", last_val(n, "--warmup"),
@@ -102,6 +102,8 @@ def build_argv(arm, tag, steps=None, on_start=None, save_at=None):
         a += ["--on-start", str(T_ON[arm] if on_start is None else on_start)]
     elif arm == "P0":                                         # NTV0's argv, only the wfile (and tag) changed
         put(a, "--on-wfile", WFILE)
+    if seed is not None:                                      # seed-1 repeat of an arm (p1s1.sh): only --seed changes
+        put(a, "--seed", str(seed))
     if steps is not None:
         put(a, "--steps", str(steps), last=True)
     if save_at is not None:
@@ -132,7 +134,7 @@ def cmd_wfile(a):
 
 
 def cmd_argv(a):
-    print("\n".join(build_argv(a.arm, a.tag, a.steps, a.on_start, a.save_at)))
+    print("\n".join(build_argv(a.arm, a.tag, a.steps, a.on_start, a.save_at, a.seed)))
 
 
 def cmd_diff(a):
@@ -533,7 +535,7 @@ def main():
     s.add_parser("wfile")
     p = s.add_parser("argv")
     p.add_argument("arm", choices=("P1", "P1B", "P0", "RB0F", "P1L")), p.add_argument("tag")
-    p.add_argument("--steps", type=int), p.add_argument("--on-start", type=int), p.add_argument("--save-at")
+    p.add_argument("--steps", type=int), p.add_argument("--on-start", type=int), p.add_argument("--save-at"), p.add_argument("--seed", type=int)
     p = s.add_parser("diff")
     p.add_argument("arm", choices=("P1", "P1B", "P0", "P1L"))
     p = s.add_parser("ident")
