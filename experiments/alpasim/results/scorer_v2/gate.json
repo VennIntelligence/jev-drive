@@ -1,0 +1,95 @@
+{
+ "rollouts": 13186,
+ "asl_evaluated": 2315,
+ "parquet_identical": 2309,
+ "parquet_differs": 6,
+ "scene_score_mismatch": 0,
+ "rpc_failed_rollouts": 21,
+ "mismatches": [],
+ "rpc_failed": [
+  {
+   "read": "NTV0-L18-s0-ag",
+   "scene": "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66"
+  },
+  {
+   "read": "R6DAG-L18-s0-agH",
+   "scene": "clipgt-0caa8f1a-3c23-4520-98b2-28be9697fbf4"
+  },
+  {
+   "read": "R6DAG-L18-s1-agH",
+   "scene": "clipgt-0caa8f1a-3c23-4520-98b2-28be9697fbf4"
+  },
+  {
+   "read": "R8K-L18-s0-agH",
+   "scene": "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02"
+  },
+  {
+   "read": "R8K-L18-s2-agH",
+   "scene": "clipgt-901c2cff-f4a4-4f21-8ba2-f2f357be7bb8"
+  },
+  {
+   "read": "JTN-L18-s1-ag",
+   "scene": "clipgt-288829f8-8808-46dc-a7e0-29ed1f7fddbc"
+  },
+  {
+   "read": "JTXS-L18-s1-ag",
+   "scene": "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560"
+  },
+  {
+   "read": "NTVX-L18-s0-ag",
+   "scene": "clipgt-91d84204-d511-464e-b986-6cab844794cc"
+  },
+  {
+   "read": "NTVXS-L18-s0-ag",
+   "scene": "clipgt-13d646af-4ff3-48e4-9a88-012a58eb6cd6"
+  },
+  {
+   "read": "R3MV-L18-s0-ag",
+   "scene": "clipgt-074e5ee3-d209-438e-8de4-40032539c331"
+  },
+  {
+   "read": "R3MV-L18-s1-ag",
+   "scene": "clipgt-288829f8-8808-46dc-a7e0-29ed1f7fddbc"
+  },
+  {
+   "read": "R3MV-L18-s1-ag",
+   "scene": "clipgt-009c69f0-6e5d-4716-b623-fb45f378fae4"
+  },
+  {
+   "read": "R3MV-L18-s1-ag",
+   "scene": "clipgt-054b5901-fdcb-4146-b125-eb2bb333cf02"
+  },
+  {
+   "read": "R5A-L18-s0-ag",
+   "scene": "clipgt-0cc7fa67-c767-443b-97b7-29539591dbaa"
+  },
+  {
+   "read": "R5LC-L18-s0-ag",
+   "scene": "clipgt-51242b4d-d47f-495e-943e-569541f15fb9"
+  },
+  {
+   "read": "R6FIX-L18-s0-ag",
+   "scene": "clipgt-92af888e-acdd-45e9-b8bb-06406f232300"
+  },
+  {
+   "read": "R7J-L18-s0-ag",
+   "scene": "clipgt-91d84204-d511-464e-b986-6cab844794cc"
+  },
+  {
+   "read": "R7J-L18-s1-ag",
+   "scene": "clipgt-0cc7fa67-c767-443b-97b7-29539591dbaa"
+  },
+  {
+   "read": "R7J-L18-s1-agH",
+   "scene": "clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3"
+  },
+  {
+   "read": "R7J-L18-s1-agH",
+   "scene": "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14"
+  },
+  {
+   "read": "R7J-L18-s1-agH",
+   "scene": "clipgt-444fca69-1f4c-47d2-8a21-ae6c11250b18"
+  }
+ ]
+}
