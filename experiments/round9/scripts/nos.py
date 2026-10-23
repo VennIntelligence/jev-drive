@@ -20,6 +20,8 @@ from jevdrive.common import data_dir  # noqa: E402
 DD = data_dir()
 RUNS = DD / "runs/op_parity/runs"
 LINE_HI, LINE_LO = 0.72, 0.67
+OLD_NTV0, OLD_RB0F = 0.744, 0.650                                      # registered old-scorer reference values
+SH_HI, SH_LO = (LINE_HI - OLD_RB0F) / (OLD_NTV0 - OLD_RB0F), (LINE_LO - OLD_RB0F) / (OLD_NTV0 - OLD_RB0F)   # amendment 1: gap shares
 S_TERM = re.compile(r"(^|/)on/|_ho(_pos)?$|^loss/act/pool_")
 
 
@@ -103,7 +105,17 @@ def sv2_pairs(o):
         sc = sorted(set(arm.dropna().index) & set(ref.dropna().index) - rpc)
         u, v = arm.reindex(sc).to_numpy(float), ref.reindex(sc).to_numpy(float)
         out["pairs"][lab] = dict(scenes=len(sc), arm=float(u.mean()), ref=float(v.mean()), diff=stats.paired(u, v), zeros_arm=int((u == 0).sum()),
-                                 zeros_ref=int((v == 0).sum()), partial_ref=partial)
+                                 zeros_ref=int((v == 0).sum()), partial_ref=partial, sc=sc)
+    c = sorted(set(out["pairs"]["NTV0-L18-s0-ag"]["sc"]) & set(out["pairs"]["RB0-F-s0-ag"]["sc"]))   # amendment 1: lines as gap shares
+    u, n0, r0 = arm.reindex(c).to_numpy(float), P["NTV0-L18-s0-ag"].reindex(c).to_numpy(float), P["RB0-F-s0-ag"].reindex(c).to_numpy(float)
+    hi, lo = r0.mean() + SH_HI * (n0.mean() - r0.mean()), r0.mean() + SH_LO * (n0.mean() - r0.mean())
+    m = float(u.mean())
+    out["lines"] = dict(scenes=len(c), arm=m, ntv0=float(n0.mean()), rb0f=float(r0.mean()), share_hi=SH_HI, share_lo=SH_LO, line_hi=float(hi),
+                        line_lo=float(lo), arm_gap_share=float((m - r0.mean()) / (n0.mean() - r0.mean())),
+                        line=("the S rows are not where NTV0's gain comes from" if m >= hi else "the S rows carry the gain" if m <= lo
+                              else "undecided (propose seed 1, not run)"))
+    for p in out["pairs"].values():
+        p.pop("sc")
     return out
 
 
@@ -137,6 +149,13 @@ def cmd_verdict(a):
         for lab, p in sv["pairs"].items():
             L.append(f"| {lab}{' (partial: zero ASLs mostly deleted)' if p['partial_ref'] else ''} | {p['scenes']} | {p['arm']:.3f} | {p['ref']:.3f} | "
                      f"{f3(p['diff'])} | {p['zeros_arm']} / {p['zeros_ref']} |")
+        q = sv["lines"]
+        same = q["line"] == line
+        L += ["", f"Amendment 1: lines as shares of the RB0-F -> NTV0-s0 gap ({q['share_hi']:.0%} / {q['share_lo']:.0%} from the old-scorer values "
+              f"{OLD_RB0F} / {OLD_NTV0}), on {q['scenes']} common scenes: RB0-F {q['rb0f']:.3f}, NTV0-s0 {q['ntv0']:.3f} -> lines {q['line_hi']:.3f} / "
+              f"{q['line_lo']:.3f}; NTV0NS {q['arm']:.3f} = {q['arm_gap_share']:.0%} of the gap -> **{q['line']}**.",
+              f"Old-scorer gap share for comparison: {(m - reads['RB0-F-s0']['mean']) / (reads['NTV0-L18-s0']['mean'] - reads['RB0-F-s0']['mean']):.0%}. "
+              + ("Both scorers land on the same line." if same else "**The two scorers land on different lines.**")]
     else:
         L += ["scorer_v2 new: not available (see sv2.log)."]
     Path(f"{a.out}.md").write_text("\n".join(L) + "\n")
