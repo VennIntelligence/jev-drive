@@ -1,0 +1,322 @@
+{
+ "student": "PCL1L-F-s0",
+ "teacher": "b3",
+ "pool": {
+  "name": "on1_PAIDC",
+  "rows": 112620,
+  "drawable": 92561,
+  "scenes": 719,
+  "slow": 17571,
+  "no_label": {
+   "heading": 4,
+   "no_proj": 8,
+   "far": 27
+  },
+  "classes": {
+   "stop_nolead": {
+    "rows": 24312,
+    "drawable": 18703,
+    "d0_med": 0.24971766769886017,
+    "d0_p90": 1.3065928936004634,
+    "d0_gt_05": 5611,
+    "d0_gt_1": 2918,
+    "lat4_med": 0.36186397075653076,
+    "lat4_p90": 1.811971092224121,
+    "alat_p99": 3.3255632877349846
+   },
+   "turn_sharp": {
+    "rows": 26228,
+    "drawable": 20609,
+    "d0_med": 0.38423967361450195,
+    "d0_p90": 1.873262882232666,
+    "d0_gt_05": 8646,
+    "d0_gt_1": 4755,
+    "lat4_med": 0.6712779998779297,
+    "lat4_p90": 2.7487172126770023,
+    "alat_p99": 3.8383581829071036
+   },
+   "launch": {
+    "rows": 11926,
+    "drawable": 6547,
+    "d0_med": 0.20330600440502167,
+    "d0_p90": 0.8448983788490296,
+    "d0_gt_05": 1322,
+    "d0_gt_1": 492,
+    "lat4_med": 0.2613717317581177,
+    "lat4_p90": 1.3003483295440676,
+    "alat_p99": 3.3648484325408936
+   },
+   "other": {
+    "rows": 50154,
+    "drawable": 46702,
+    "d0_med": 0.30073094367980957,
+    "d0_p90": 1.7049816966056823,
+    "d0_gt_05": 15646,
+    "d0_gt_1": 8388,
+    "lat4_med": 0.4010223150253296,
+    "lat4_p90": 2.08706111907959,
+    "alat_p99": 3.169109935760495
+   },
+   "all": {
+    "rows": 112620,
+    "drawable": 92561,
+    "d0_med": 0.2958143949508667,
+    "d0_p90": 1.6015714406967163,
+    "d0_gt_05": 31225,
+    "d0_gt_1": 16553,
+    "lat4_med": 0.42039012908935547,
+    "lat4_p90": 2.1925830841064453,
+    "alat_p99": 3.56758394241333
+   }
+  },
+  "d0_sign": {
+   "left_gt_05": 18059,
+   "right_gt_05": 13166,
+   "left_gt_1": 9450,
+   "right_gt_1": 7103,
+   "median_signed": 0.032897718250751495
+  }
+ },
+ "w": {
+  "NTV1D": {
+   "base": "runs/round9/pool_pilot/w/JT00S-rb0.npz",
+   "pool": "on1_JTDC",
+   "k_on": 32,
+   "k_dag": 8,
+   "rows": 282226,
+   "prefix_rows": 169606,
+   "dag_rows": 112620,
+   "dag_drawable": 92561,
+   "dag_scenes": 707,
+   "group_share": {
+    "S": 0.7999999999999454,
+    "pd": 0.1999999999998132
+   },
+   "by_cls": {
+    "stop_nolead": 18703,
+    "turn_sharp": 20609,
+    "launch": 6547,
+    "other": 46702
+   },
+   "out": "runs/round9/ntv1_step2/w/NTV1D.npz"
+  },
+  "NTV1D0": {
+   "base": "runs/round9/pool_pilot/w/JT00S-rb0.npz",
+   "pool": "on1_JTDC",
+   "k_on": 32,
+   "k_dag": 0,
+   "rows": 282226,
+   "prefix_rows": 169606,
+   "dag_rows": 112620,
+   "dag_drawable": 92561,
+   "dag_scenes": 707,
+   "group_share": {
+    "S": 0.99999999999993
+   },
+   "by_cls": {
+    "stop_nolead": 18703,
+    "turn_sharp": 20609,
+    "launch": 6547,
+    "other": 46702
+   },
+   "out": "runs/round9/ntv1_step2/w/NTV1D0.npz"
+  }
+ },
+ "roll": {
+  "P1L": {
+   "scenes": 719,
+   "mean": 0.6740696016950263,
+   "zeros": 198,
+   "zero_fclass": {
+    "zero-other": 19,
+    "overshoot": 65,
+    "side": 12,
+    "route-turn": 29,
+    "AF-front": 17,
+    "offroad": 56
+   },
+   "full": 396
+  },
+  "R5LC-L18-s0 (round-6 student, stored)": {
+   "scenes": 718,
+   "mean": 0.6625996626962455,
+   "zeros": 209,
+   "zero_fclass": {
+    "overshoot": 65,
+    "zero-other": 33,
+    "side": 12,
+    "offroad": 71,
+    "AF-front": 18,
+    "route-turn": 10
+   },
+   "full": 401
+  },
+  "paired P1L - R5LC": {
+   "n": 718,
+   "units": 718,
+   "mean": 0.01101599693986017,
+   "lo": -0.020680648418001112,
+   "hi": 0.042517210185976706,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.6736156596361057,
+   "mean_b": 0.6625996626962455,
+   "scenes": 718
+  }
+ },
+ "gates": {
+  "chk1": true,
+  "T1": {
+   "all": true,
+   "turn_inspect": false
+  },
+  "T2_in_canvas": {
+   "events": 65,
+   "teacher_inside": 62,
+   "served_inside": 55,
+   "beyond": 20,
+   "share": 0.9538461538461539,
+   "passed": true
+  },
+  "T3a": {
+   "bit_identical": true,
+   "scalars_compared": 131,
+   "identical": 131,
+   "steps": [
+    0,
+    25,
+    50,
+    75,
+    100
+   ]
+  },
+  "T3b": {
+   "pass_": true,
+   "scalars_compared": 231,
+   "identical": 231,
+   "pool_drawn": true
+  },
+  "T4": {
+   "line": 4.0,
+   "estimator": "positions (amendment 3)",
+   "alat_p99": 5.300007901191715,
+   "curvature_read_p99": 705.7037457275394,
+   "served_pos_p99": 3.5308683229570024,
+   "served_pos_over": 0.005020524155352068,
+   "over_share": 0.02645822754723912,
+   "alat_ref_p99": 3.8288030147552488,
+   "over": 2449,
+   "passed": false,
+   "fallback_rows_dropped": 2449,
+   "go_on": true
+  },
+  "r1in": {
+   "pool": "on1_PAIDC",
+   "tag": "PCL1L-F-s0",
+   "control": "RB0-F-s1",
+   "model": {
+    "share_over": 0.037151482862724204,
+    "median_m": 0.011148333549499512,
+    "p99_m": 0.07478342056274412,
+    "rows": 112620,
+    "missing": 0
+   },
+   "wrong": {
+    "share_over": 0.9954270999822412,
+    "median_m": 0.44057559967041016,
+    "p99_m": 2.8662496757507303,
+    "rows": 112620,
+    "missing": 0
+   },
+   "ok": true
+  },
+  "mfix": {
+   "mismatch": [],
+   "parts": {
+    "pd": 112620,
+    "rb0": 17429,
+    "rtb1": 17489,
+    "tv": 82594,
+    "y": 17306,
+    "ys": 34788
+   }
+  },
+  "smoke_a": true,
+  "smoke_b": true
+ },
+ "cmd_fields": {
+  "pool": "on1_PAIDC",
+  "fields": {
+   "feat": "runs/route_mem/feat/on1_PAIDC.npz: names, f (40 slots x 5, float16 = the fed route memory, old projected layout), k, ok",
+   "stored_command": "tab.ego[:, 1:4] (the served shipped-rule one-hot)",
+   "speed": "tab.speed"
+  },
+  "merged_tail_feat_identical": true,
+  "all": {
+   "rows": 112620,
+   "memory_valid": 1.0,
+   "feat_ok": 1.0,
+   "stored": {
+    "L": 0.1745,
+    "S": 0.6222,
+    "R": 0.2032,
+    "none": 0.0
+   },
+   "heading": {
+    "L": 0.1009,
+    "S": 0.7944,
+    "R": 0.1047,
+    "none": 0.0
+   },
+   "changed": 0.1943,
+   "lr_stored": 0.3778,
+   "lr_heading": 0.2056
+  },
+  "drawable": {
+   "rows": 92561,
+   "memory_valid": 1.0,
+   "feat_ok": 1.0,
+   "stored": {
+    "L": 0.1692,
+    "S": 0.6325,
+    "R": 0.1983,
+    "none": 0.0
+   },
+   "heading": {
+    "L": 0.0858,
+    "S": 0.8185,
+    "R": 0.0957,
+    "none": 0.0
+   },
+   "changed": 0.2094,
+   "lr_stored": 0.3675,
+   "lr_heading": 0.1815
+  }
+ },
+ "disk_gib": {
+  "roll": 0.911664891988039,
+  "rows": 37.94581154361367,
+  "teach": 0.04304886516183615,
+  "cache": 26.228621050715446,
+  "pool": 3.4665815960615873,
+  "pool_warp": 28.158426199108362,
+  "merged": 15.372670086100698,
+  "merged_warp": 1.6622354928404093,
+  "feat": 0.06639345362782478,
+  "feat_merged": 0.17899728752672672,
+  "fwd": 0.021817305125296116,
+  "tax": 0.43992042914032936
+ },
+ "cost": {
+  "train_h": 0.0,
+  "read_h": 8.171528098450766,
+  "gate_h": 0.4614661000172297,
+  "gpu_job_h": 8.632994198467996,
+  "wall_h": 2.2348821615510515,
+  "roll_stack_h": 7.873733348581526,
+  "roll_card_h": 2.624577782860509,
+  "roll_chunks": 30
+ },
+ "t": "2026-10-24 04:44:19"
+}

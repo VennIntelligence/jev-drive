@@ -1,0 +1,21 @@
+{
+ "base": "runs/round9/pool_pilot/w/JT00S-rb0.npz",
+ "pool": "on1_JTDC",
+ "k_on": 32,
+ "k_dag": 0,
+ "rows": 282226,
+ "prefix_rows": 169606,
+ "dag_rows": 112620,
+ "dag_drawable": 92561,
+ "dag_scenes": 707,
+ "group_share": {
+  "S": 0.99999999999993
+ },
+ "by_cls": {
+  "stop_nolead": 18703,
+  "turn_sharp": 20609,
+  "launch": 6547,
+  "other": 46702
+ },
+ "out": "runs/round9/ntv1_step2/w/NTV1D0.npz"
+}

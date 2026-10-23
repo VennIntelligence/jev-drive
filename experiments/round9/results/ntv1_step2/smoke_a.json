@@ -1,0 +1,151 @@
+{
+ "var": "a",
+ "tag": "NT1DSA-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1DSA-F-s0/20261024-044204",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "last_logged_step": 60,
+  "batch": [
+   "83",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "batch_want": [
+   "83",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "windows": {
+   "25": {
+    "pool": 0.0,
+    "want": 0.0,
+    "self": 0.0
+   },
+   "50": {
+    "pool": 32.0,
+    "want": 32.0,
+    "self": 25.96
+   },
+   "60": {
+    "pool": 40.0,
+    "want": 40.0,
+    "self": 32.7
+   }
+  },
+  "self_share_after_T": 0.8133333333333334,
+  "self_rows_before_T": 0.0,
+  "draw_group_share": {
+   "S": 0.7999999999999456,
+   "pd": 0.19999999999981324
+  },
+  "draw_group_share_want": {
+   "S": 0.7999999999999454,
+   "pd": 0.1999999999998132
+  },
+  "draw_shares_ok": true,
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  },
+  "s_terms_before_nonzero": [],
+  "cmd_rule": {
+   "rule": "heading-all",
+   "rows": 455086,
+   "changed": 94022,
+   "kept_no_memory": 6006,
+   "parts": {
+    "navtrain_full": {
+     "rows": 101499,
+     "old_lr": 0.3667,
+     "new_lr": 0.4111,
+     "old_unk": 0.0,
+     "kept": 0.0224,
+     "changed": 0.1672
+    },
+    "dev": {
+     "rows": 2938,
+     "old_lr": 0.3152,
+     "new_lr": 0.3598,
+     "old_unk": 0.0,
+     "kept": 0.0088,
+     "changed": 0.1498
+    },
+    "yr1_navtrain_full": {
+     "rows": 68423,
+     "old_lr": 0.3707,
+     "new_lr": 0.3901,
+     "old_unk": 0.0,
+     "kept": 0.0191,
+     "changed": 0.1571
+    },
+    "rb0": {
+     "rows": 17429,
+     "old_lr": 0.5407,
+     "new_lr": 0.3051,
+     "old_unk": 0.0,
+     "kept": 0.0044,
+     "changed": 0.2624
+    },
+    "rtb1": {
+     "rows": 17489,
+     "old_lr": 0.5256,
+     "new_lr": 0.2986,
+     "old_unk": 0.0,
+     "kept": 0.0042,
+     "changed": 0.2537
+    },
+    "ys": {
+     "rows": 34788,
+     "old_lr": 0.5593,
+     "new_lr": 0.3061,
+     "old_unk": 0.0,
+     "kept": 0.0047,
+     "changed": 0.2821
+    },
+    "y": {
+     "rows": 17306,
+     "old_lr": 0.5563,
+     "new_lr": 0.3105,
+     "old_unk": 0.0,
+     "kept": 0.0043,
+     "changed": 0.2747
+    },
+    "tv": {
+     "rows": 82594,
+     "old_lr": 0.1692,
+     "new_lr": 0.319,
+     "old_unk": 0.0723,
+     "kept": 0.0243,
+     "changed": 0.247
+    },
+    "pd": {
+     "rows": 112620,
+     "old_lr": 0.3778,
+     "new_lr": 0.2056,
+     "old_unk": 0.0,
+     "kept": 0.0,
+     "changed": 0.1943
+    }
+   }
+  },
+  "cmd_rule_pd": {
+   "rows": 112620,
+   "old_lr": 0.3778,
+   "new_lr": 0.2056,
+   "old_unk": 0.0,
+   "kept": 0.0,
+   "changed": 0.1943
+  }
+ },
+ "pass_": true
+}

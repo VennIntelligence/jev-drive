@@ -1,0 +1,64 @@
+{
+ "var": "b",
+ "tag": "NT1DSB-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1DSB-F-s0/20261024-044333",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "last_logged_step": 60,
+  "batch": [
+   "75",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "batch_want": [
+   "75",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "windows": {
+   "25": {
+    "pool": 0.0,
+    "want": 0.0,
+    "self": 0.0
+   },
+   "50": {
+    "pool": 32.0,
+    "want": 32.0,
+    "self": 25.96
+   },
+   "60": {
+    "pool": 40.0,
+    "want": 40.0,
+    "self": 32.7
+   }
+  },
+  "self_share_after_T": 0.8133333333333334,
+  "self_rows_before_T": 0.0,
+  "draw_group_share": {
+   "S": 0.7999999999999456,
+   "pd": 0.19999999999981324
+  },
+  "draw_group_share_want": {
+   "S": 0.7999999999999454,
+   "pd": 0.1999999999998132
+  },
+  "draw_shares_ok": true,
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  },
+  "s_terms_before_nonzero": [],
+  "cmd_rule": null
+ },
+ "pass_": true
+}

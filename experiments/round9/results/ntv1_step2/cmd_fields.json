@@ -1,0 +1,49 @@
+{
+ "pool": "on1_PAIDC",
+ "fields": {
+  "feat": "runs/route_mem/feat/on1_PAIDC.npz: names, f (40 slots x 5, float16 = the fed route memory, old projected layout), k, ok",
+  "stored_command": "tab.ego[:, 1:4] (the served shipped-rule one-hot)",
+  "speed": "tab.speed"
+ },
+ "merged_tail_feat_identical": true,
+ "all": {
+  "rows": 112620,
+  "memory_valid": 1.0,
+  "feat_ok": 1.0,
+  "stored": {
+   "L": 0.1745,
+   "S": 0.6222,
+   "R": 0.2032,
+   "none": 0.0
+  },
+  "heading": {
+   "L": 0.1009,
+   "S": 0.7944,
+   "R": 0.1047,
+   "none": 0.0
+  },
+  "changed": 0.1943,
+  "lr_stored": 0.3778,
+  "lr_heading": 0.2056
+ },
+ "drawable": {
+  "rows": 92561,
+  "memory_valid": 1.0,
+  "feat_ok": 1.0,
+  "stored": {
+   "L": 0.1692,
+   "S": 0.6325,
+   "R": 0.1983,
+   "none": 0.0
+  },
+  "heading": {
+   "L": 0.0858,
+   "S": 0.8185,
+   "R": 0.0957,
+   "none": 0.0
+  },
+  "changed": 0.2094,
+  "lr_stored": 0.3675,
+  "lr_heading": 0.1815
+ }
+}
