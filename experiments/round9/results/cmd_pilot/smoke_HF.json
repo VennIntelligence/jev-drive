@@ -1,0 +1,75 @@
+{
+ "tag": "CPLSM-HF-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-CPLSM-HF-s0/20261023-210330",
+ "checks": {
+  "done": true,
+  "scalars": 32,
+  "finite": true,
+  "last_logged_step": 60
+ },
+ "record": {
+  "rule": "heading-all",
+  "rows": 172860,
+  "changed": 28164,
+  "kept_no_memory": 3608,
+  "parts": {
+   "navtrain_full": {
+    "rows": 101499,
+    "old_lr": 0.3667,
+    "new_lr": 0.4111,
+    "old_unk": 0.0,
+    "kept": 0.0224,
+    "changed": 0.1672
+   },
+   "dev": {
+    "rows": 2938,
+    "old_lr": 0.3152,
+    "new_lr": 0.3598,
+    "old_unk": 0.0,
+    "kept": 0.0088,
+    "changed": 0.1498
+   },
+   "yr1_navtrain_full": {
+    "rows": 68423,
+    "old_lr": 0.3707,
+    "new_lr": 0.3901,
+    "old_unk": 0.0,
+    "kept": 0.0191,
+    "changed": 0.1571
+   }
+  }
+ },
+ "g5": {
+  "navtrain_full": {
+   "trainer": 0.1672,
+   "cmdd": 0.167,
+   "diff_pt": 0.02
+  }
+ },
+ "g5_pass": true,
+ "g0": {
+  "rows": 20000,
+  "fed_vs_cmdd_rule": 1.0,
+  "stored_vs_tab": 1.0,
+  "navtrain_rows": 11959,
+  "fed_vs_rows_parquet": 1.0,
+  "no_memory": 445,
+  "changed": 0.16535,
+  "by_group": {
+   "dev": {
+    "rows": 313,
+    "agree": 1.0
+   },
+   "navtrain_full": {
+    "rows": 11760,
+    "agree": 1.0
+   },
+   "yr1_navtrain_full": {
+    "rows": 7927,
+    "agree": 1.0
+   }
+  }
+ },
+ "g0_pass": true,
+ "pass_": true
+}

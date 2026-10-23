@@ -1,0 +1,9 @@
+{
+ "reads": {
+  "HF-s0-ag": {
+   "inferences": 55494,
+   "agree": 1.0
+  }
+ },
+ "passed": true
+}
