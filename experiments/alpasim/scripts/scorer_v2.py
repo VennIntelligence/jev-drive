@@ -83,6 +83,9 @@ READS = {
     "RB0-P30-s0-ag": ("round9/pai_base/pai281/RB0-P30-s0-ag", "RB0-P30-s0-281ag"),
     "RB0-P50-s0-ag": ("round9/pai_base/pai281/RB0-P50-s0-ag", "RB0-P50-s0-281ag"),
     "RB0-P70-s0-ag": ("round9/pai_base/pai281/RB0-P70-s0-ag", "RB0-P70-s0-281ag"),
+    # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
+    "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
+    "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
 }
 CORRIDOR_M = 4.0
 
@@ -430,8 +433,8 @@ def cmd_report(a):
     seeds = ("s0", "s1", "s2")
     rec = lambda r, m, S, c: np.mean([S[f"{r}-L18-{sd}-{m}"].reindex(c).to_numpy(float) for sd in seeds], 0)  # noqa: E731
     labs3 = [f"{r}-L18-{sd}-{m}" for r in ("R6DAG", "R8K") for sd in seeds for m in ("ag", "agH")] + ["NTV0-L18-s0-ag", "NTV0-L18-s0-agH"]
-    c = common(labs3)
-    for S, tag in ((So, "old"), (Sn, "new")):
+    c = common(labs3) if set(labs3) <= set(labels) else []
+    for S, tag in ((So, "old"), (Sn, "new")) if c else ():   # a root with other reads only (e.g. the anchors): gate and tables only
         n_off, n_on = S["NTV0-L18-s0-ag"].reindex(c).to_numpy(float), S["NTV0-L18-s0-agH"].reindex(c).to_numpy(float)
         for r in ("R6DAG", "R8K"):
             off, on = rec(r, "ag", S, c), rec(r, "agH", S, c)
@@ -444,8 +447,8 @@ def cmd_report(a):
             for r in ("R6DAG", "R8K"):
                 pairs[f"{tag}: {r}-{sd} - NTV0-s0"] = {q: boot(S[f"{r}-L18-{sd}-{m}"].reindex(c).to_numpy(float) - S[f"NTV0-L18-s0-{m}"].reindex(c).to_numpy(float))
                                                     for q, m in (("OFF", "ag"), ("ON", "agH"))}
-    cg = common(["NTV0-L18-s0-ag", "RSG-L18-s0-ag"])
-    for S, tag in ((So, "old"), (Sn, "new")):
+    cg = common(["NTV0-L18-s0-ag", "RSG-L18-s0-ag"]) if {"NTV0-L18-s0-ag", "RSG-L18-s0-ag"} <= set(labels) else []
+    for S, tag in ((So, "old"), (Sn, "new")) if cg else ():
         pairs[f"{tag}: NTV0-s0 - RSG-s0 (ACC + GAP, OFF)"] = boot(S["NTV0-L18-s0-ag"].reindex(cg).to_numpy(float) - S["RSG-L18-s0-ag"].reindex(cg).to_numpy(float)) + (
             float(S["NTV0-L18-s0-ag"].reindex(cg).mean()), float(S["RSG-L18-s0-ag"].reindex(cg).mean()))
     # Can a nonzero rollout without an ASL get worse? Only at its kept truncation step (plain GT distance first >= 4 m), and only if
