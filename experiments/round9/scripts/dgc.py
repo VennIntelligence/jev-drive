@@ -152,6 +152,13 @@ def cmd_smoke(a):
     sys.exit(0 if ok else 2)
 
 
+def same_u(x, y, same):
+    """dag.py same, except unicode arrays compare by value (attempt 2: tab.log is <U43 in the merge, <U38 in on1_JT, values equal; on1_JTPH <U43 too)."""
+    if x.dtype.kind == "U" and y.dtype.kind == "U":
+        return x.shape == y.shape and np.array_equal(x, y)
+    return same(x, y)
+
+
 def cmd_mfix(a):
     """dag.py mfix against on1_JT, tolerant of on1_JT's extra metadata keys (agent cls / log, road log / pose_global, tab acc / cmd / pose / vel:
     on1_JT's older build; rf_pait merge never writes them, on1_JTPH lacks the same keys): every COMMON key of the prefix bit for bit, ref-only
@@ -166,7 +173,7 @@ def cmd_mfix(a):
         n = len(np.load(R / "tab.npz", mmap_mode="r")["names"]) if f != "tab.npz" else len(zr["names"])
         ref_only += [f"{f}.{k}" for k in zr.files if k not in zp.files]
         bad += [f"{f}.{k}" for k in zr.files if k in zp.files and not (k == "ok" and f == "agent.npz") and zr[k].ndim and len(zr[k]) == n
-                and not DG.same(zp[k][:n], zr[k])]
+                and not same_u(zp[k][:n], zr[k], DG.same)]
     n = len(np.load(R / "tab.npz")["names"])
     fp, fr = np.load(FEAT / f"{POOL}.npz"), np.load(FEAT / "on1_JT.npz")
     bad += [f"feat.{k}" for k in fr.files if not DG.same(fp[k][:n], fr[k])]
