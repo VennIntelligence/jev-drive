@@ -1,0 +1,388 @@
+{
+ "A": {
+  "scenes": 279,
+  "rpc_excluded": 0,
+  "reads": {
+   "P1L OFF": {
+    "new_mean": 0.8133969149478298,
+    "old_mean": 0.7345438683528478,
+    "new_zeros": 39,
+    "old_zeros": 61,
+    "zcls": {
+     "overshoot": 24,
+     "route-turn": 10,
+     "offroad": 14,
+     "AF-front": 4,
+     "side": 3,
+     "zero-other": 6
+    }
+   },
+   "P1L ON": {
+    "new_mean": 0.8044393395490693,
+    "old_mean": 0.7327547517354492,
+    "new_zeros": 41,
+    "old_zeros": 61,
+    "zcls": {
+     "overshoot": 22,
+     "route-turn": 6,
+     "offroad": 18,
+     "AF-front": 7,
+     "side": 1,
+     "zero-other": 7
+    }
+   },
+   "NTV0-s0 OFF": {
+    "new_mean": 0.8150448028673836,
+    "old_mean": 0.7433605965508718,
+    "new_zeros": 39,
+    "old_zeros": 59,
+    "zcls": {
+     "overshoot": 23,
+     "route-turn": 15,
+     "offroad": 12,
+     "AF-front": 3,
+     "side": 0,
+     "zero-other": 6
+    }
+   },
+   "NTV0-s0 ON": {
+    "new_mean": 0.8094028673835125,
+    "old_mean": 0.7448867581271774,
+    "new_zeros": 40,
+    "old_zeros": 58,
+    "zcls": {
+     "overshoot": 21,
+     "route-turn": 9,
+     "offroad": 17,
+     "AF-front": 5,
+     "side": 0,
+     "zero-other": 6
+    }
+   },
+   "R8K-s2 OFF": {
+    "new_mean": 0.8729039426523296,
+    "old_mean": 0.8048037889317646,
+    "new_zeros": 28,
+    "old_zeros": 47,
+    "zcls": {
+     "overshoot": 20,
+     "route-turn": 2,
+     "offroad": 14,
+     "AF-front": 5,
+     "side": 2,
+     "zero-other": 4
+    }
+   },
+   "R8K-s2 ON": {
+    "new_mean": 0.8661691756272402,
+    "old_mean": 0.7944844345050314,
+    "new_zeros": 27,
+    "old_zeros": 47,
+    "zcls": {
+     "overshoot": 21,
+     "route-turn": 2,
+     "offroad": 15,
+     "AF-front": 4,
+     "side": 1,
+     "zero-other": 4
+    }
+   }
+  },
+  "harmonizer_loaded": {
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c000/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c001/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c002/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c003/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c004/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c005/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c006/sim/native-logs/renderer-0.log": true,
+   "pai281/PCL1L-F-s0-agH/runs/pcl1l-f-s0_c007/sim/native-logs/renderer-0.log": true
+  },
+  "pairs": {
+   "P1L ON - OFF": {
+    "new": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.0089575753987606,
+     "lo": -0.04022731394659843,
+     "hi": 0.022570658715307917,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8044393395490693,
+     "mean_b": 0.8133969149478298
+    },
+    "old": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.0017891166173985885,
+     "lo": -0.03452802705088653,
+     "hi": 0.03178892269374658,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.7327547517354492,
+     "mean_b": 0.7345438683528478
+    },
+    "zeros_old": 0
+   },
+   "NTV0-s0 ON - OFF": {
+    "new": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.005641935483870968,
+     "lo": -0.03995989247311827,
+     "hi": 0.028143360215053755,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8094028673835125,
+     "mean_b": 0.8150448028673836
+    },
+    "old": {
+     "n": 279,
+     "units": 279,
+     "mean": 0.0015261615763057,
+     "lo": -0.031464045359663975,
+     "hi": 0.03489432176683472,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.7448867581271774,
+     "mean_b": 0.7433605965508718
+    },
+    "zeros_old": -1
+   },
+   "R8K-s2 ON - OFF": {
+    "new": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.0067347670250896075,
+     "lo": -0.03652972222222222,
+     "hi": 0.02337551075268817,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8661691756272402,
+     "mean_b": 0.8729039426523296
+    },
+    "old": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.010319354426733337,
+     "lo": -0.0410649600232202,
+     "hi": 0.02023598237942607,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.7944844345050314,
+     "mean_b": 0.8048037889317646
+    },
+    "zeros_old": 0
+   },
+   "P1L ON - NTV0-s0 ON": {
+    "new": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.004963527834443209,
+     "lo": -0.04337217429733579,
+     "hi": 0.03323338242334758,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8044393395490693,
+     "mean_b": 0.8094028673835125
+    },
+    "old": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.012132006391728274,
+     "lo": -0.052009465585209004,
+     "hi": 0.027478343989372624,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.7327547517354492,
+     "mean_b": 0.7448867581271774
+    },
+    "zeros_old": 3
+   },
+   "P1L ON - R8K-s2 ON": {
+    "new": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.06172983607817081,
+     "lo": -0.10308067758323265,
+     "hi": -0.020722769089195014,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8044393395490693,
+     "mean_b": 0.8661691756272402
+    },
+    "old": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.06172968276958204,
+     "lo": -0.10498811871077852,
+     "hi": -0.01941124456931328,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.7327547517354492,
+     "mean_b": 0.7944844345050314
+    },
+    "zeros_old": 14
+   }
+  }
+ },
+ "B": {
+  "scenes": 278,
+  "rpc_excluded": 0,
+  "reads": {
+   "INTP75 first": {
+    "new_mean": 0.8790810720578945,
+    "old_mean": 0.8107357483168874,
+    "new_zeros": 26,
+    "old_zeros": 45,
+    "zcls": {
+     "overshoot": 20,
+     "route-turn": 3,
+     "offroad": 10,
+     "AF-front": 5,
+     "side": 2,
+     "zero-other": 5
+    }
+   },
+   "INTP75 re-read": {
+    "new_mean": 0.8790810720578945,
+    "old_mean": 0.8107357483168874,
+    "new_zeros": 26,
+    "old_zeros": 45,
+    "zcls": {
+     "overshoot": 20,
+     "route-turn": 3,
+     "offroad": 10,
+     "AF-front": 5,
+     "side": 2,
+     "zero-other": 5
+    }
+   },
+   "NTV0-s0 OFF": {
+    "new_mean": 0.8143794964028777,
+    "old_mean": 0.7424374332291124,
+    "new_zeros": 39,
+    "old_zeros": 59,
+    "zcls": {
+     "overshoot": 23,
+     "route-turn": 15,
+     "offroad": 12,
+     "AF-front": 3,
+     "side": 0,
+     "zero-other": 6
+    }
+   },
+   "R8K-s2 OFF": {
+    "new_mean": 0.8724467625899279,
+    "old_mean": 0.8041016442876342,
+    "new_zeros": 28,
+    "old_zeros": 47,
+    "zcls": {
+     "overshoot": 20,
+     "route-turn": 2,
+     "offroad": 14,
+     "AF-front": 5,
+     "side": 2,
+     "zero-other": 4
+    }
+   }
+  },
+  "agree": {
+   "new": {
+    "identical": 278,
+    "mean_abs_diff": 0.0,
+    "paired": {
+     "n": 278,
+     "units": 278,
+     "mean": 0.0,
+     "lo": 0.0,
+     "hi": 0.0,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8790810720578945,
+     "mean_b": 0.8790810720578945
+    }
+   },
+   "old": {
+    "identical": 278,
+    "mean_abs_diff": 0.0,
+    "paired": {
+     "n": 278,
+     "units": 278,
+     "mean": 0.0,
+     "lo": 0.0,
+     "hi": 0.0,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.8107357483168874,
+     "mean_b": 0.8107357483168874
+    }
+   }
+  },
+  "flips": {
+   "new": {
+    "R8K-s2 OFF": {
+     "ntv0_full": 202,
+     "neg": 14,
+     "neg_zero": 9,
+     "neg_pts": 10.5302
+    },
+    "INTP75 first": {
+     "ntv0_full": 202,
+     "neg": 8,
+     "neg_zero": 6,
+     "neg_pts": 6.732815061802355
+    },
+    "INTP75 re-read": {
+     "ntv0_full": 202,
+     "neg": 8,
+     "neg_zero": 6,
+     "neg_pts": 6.732815061802355
+    },
+    "both_reads_neg": 8,
+    "only_first": 0,
+    "only_reread": 0
+   },
+   "old": {
+    "R8K-s2 OFF": {
+     "ntv0_full": 182,
+     "neg": 15,
+     "neg_zero": 10,
+     "neg_pts": 11.530243109998084
+    },
+    "INTP75 first": {
+     "ntv0_full": 182,
+     "neg": 8,
+     "neg_zero": 6,
+     "neg_pts": 6.732815061802355
+    },
+    "INTP75 re-read": {
+     "ntv0_full": 182,
+     "neg": 8,
+     "neg_zero": 6,
+     "neg_pts": 6.732815061802355
+    },
+    "both_reads_neg": 8,
+    "only_first": 0,
+    "only_reread": 0
+   }
+  }
+ },
+ "cost": {
+  "gpu_job_h": 13.101932331257395,
+  "read_h": 13.101932331257395,
+  "gpu_jobs": 16
+ }
+}
