@@ -1,0 +1,54 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-PCL0-L18-s0/20261023-210845",
+ "upto": 50,
+ "steps": [
+  0,
+  25,
+  50
+ ],
+ "scalars_compared": 149,
+ "identical": 149,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "tag": "SSID-L18-s0",
+ "ref": "PCL0-L18-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-SSID-L18-s0/20261024-003703",
+ "trainer_rc_before_stop": null
+}
