@@ -194,9 +194,50 @@ def n_cpus():
         return len(os.sched_getaffinity(0))
 
 
+def run_shards(cmd, items, key_in, key_out, wdir, workers, attempts=3):
+    """Run items through `scorer_v2.py <cmd> <in.json> <out.jsonl>` in `workers` subprocesses (contiguous blocks); returns {key: result}."""
+    import subprocess
+    if wdir.exists():
+        shutil.rmtree(wdir)                                 # our own scratch from an earlier run
+    wdir.mkdir(parents=True)
+    res = {}
+    for att in range(attempts):
+        todo = [x for x in items if key_in(x) not in res]
+        if not todo:
+            break
+        n = min(workers, len(todo))
+        procs = []
+        for k in range(n):
+            blk = todo[k * len(todo) // n:(k + 1) * len(todo) // n]
+            fi, fo = wdir / f"a{att}_{k:03d}.json", wdir / f"a{att}_{k:03d}.jsonl"
+            fi.write_text(json.dumps(blk))
+            procs.append((subprocess.Popen([sys.executable, __file__, cmd, str(fi), str(fo)], stdout=subprocess.DEVNULL,
+                                           stderr=open(wdir / f"a{att}_{k:03d}.err", "w")), fo))
+        print(f"{cmd}: attempt {att + 1}, {len(todo)} items in {n} shards", flush=True)
+        for pr, fo in procs:
+            rc = pr.wait()
+            if rc:
+                print(f"{cmd}: shard {fo.name} exited {rc}", flush=True)
+            for ln in (fo.read_text().splitlines() if fo.exists() else []):
+                r = json.loads(ln)
+                if r["ok"] or att == attempts - 1:
+                    res[key_out(r)] = r
+                elif not r["ok"]:
+                    print(f"{cmd} ERROR {key_out(r)} {r['err'][-300:]}", flush=True)
+        print(f"{cmd}: {len(res)} / {len(items)} done", flush=True)
+    return res
+
+
+def cmd_shard(a):
+    fn = {"eval-shard": eval_one, "agg-shard": agg_one}[a.cmd]
+    with open(a.out, "a") as f:
+        for x in json.loads(Path(a.inp).read_text()):
+            f.write(json.dumps(fn(tuple(x) if isinstance(x, list) else x), default=float) + "\n")
+            f.flush()
+
+
 def cmd_score(a):
     import inspect
-    import multiprocessing as mp
     import eval.scorers.ground_truth as gt
     fixed = "1 m of displacement" in inspect.getsource(gt)
     assert fixed == (a.variant == "new"), f"variant {a.variant} but {gt.__file__} fixed={fixed}"
@@ -233,31 +274,16 @@ def cmd_score(a):
             sims.append(str(dst))
     workers = a.workers or n_cpus()
     print(f"{len(labels)} reads, {len(sims)} chunks, {len(meta)} rollouts, {len(tasks)} ASLs to evaluate, {workers} workers", flush=True)
-    # ProcessPoolExecutor: a dead worker raises BrokenProcessPool here instead of hanging the pool
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    from concurrent.futures.process import BrokenProcessPool
-    done, pending = {}, sorted(tasks, key=lambda t: t[2])
-    for attempt in range(4):                                # a worker killed by a native panic breaks the pool: redo what is left
-        try:
-            with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver")) as ex:   # no max_tasks_per_child: worker replacement hung (3.12, 10-23)
-                for f in as_completed([ex.submit(eval_one, t) for t in pending]):
-                    r = f.result()
-                    done[r["asl"]] = r
-                    if not r["ok"]:
-                        print("EVAL ERROR", r["asl"], r["err"], flush=True)
-                    if len(done) % 100 == 0:
-                        print(f"evaluated {len(done)} / {len(tasks)}", flush=True)
-            break
-        except BrokenProcessPool as e:
-            pending = [t for t in pending if t[0] not in done]
-            print(f"BROKEN POOL ({e}); {len(pending)} ASLs left, attempt {attempt + 2}", flush=True)
-    ev = list(done.values())
-    bad = [r for r in ev if not r["ok"]] + [dict(asl=t[0], ok=False, err="never evaluated") for t in tasks if t[0] not in done]
+    # Shards are plain subprocesses writing JSON lines (no multiprocessing queues: a ProcessPoolExecutor hung twice on the box,
+    # 10-23); a shard that dies only loses its unfinished items, which the next attempt reruns.
+    ev = run_shards("eval-shard", [list(t) for t in sorted(tasks, key=lambda t: t[2])], lambda t: t[0], lambda r: r["asl"], root / "shards_eval", workers)
+    bad = [r for r in ev.values() if not r["ok"]] + [dict(asl=t[0], ok=False, err="never evaluated") for t in tasks if t[0] not in ev]
     if bad:
         (root / "ERROR").write_text(json.dumps(bad, indent=1))
         sys.exit(f"{len(bad)} ASL evaluations failed; see {root / 'ERROR'}")
-    with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver")) as ex:
-        ag = list(ex.map(agg_one, sims))
+    ev = list(ev.values())
+    ag = list(run_shards("agg-shard", sims, lambda x: x, lambda r: r["sim"], root / "shards_agg", workers).values())
+    ag += [dict(sim=x, ok=False, err="never aggregated") for x in sims if x not in {r["sim"] for r in ag}]
     bad = [r for r in ag if not r["ok"]]
     if bad:
         (root / "ERROR").write_text(json.dumps(bad, indent=1))
@@ -409,11 +435,15 @@ def main():
     q.add_argument("--reads", default="")
     q.add_argument("--limit", type=int, default=None, help="evaluate only the first N ASLs (smoke)")
     q.add_argument("--workers", type=int, default=0)
+    for c in ("eval-shard", "agg-shard"):
+        q = s.add_parser(c)
+        q.add_argument("inp")
+        q.add_argument("out")
     q = s.add_parser("report")
     q.add_argument("--root", required=True)
     q.add_argument("--out", required=True)
     a = p.parse_args()
-    {"score": cmd_score, "report": cmd_report}[a.cmd](a)
+    {"score": cmd_score, "report": cmd_report, "eval-shard": cmd_shard, "agg-shard": cmd_shard}[a.cmd](a)
 
 
 if __name__ == "__main__":
