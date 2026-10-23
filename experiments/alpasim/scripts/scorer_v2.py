@@ -25,6 +25,12 @@ import sys
 import traceback
 from pathlib import Path
 
+# Each eval worker is single-threaded: polars / BLAS would otherwise start a thread per core in every worker, and 64 workers hit the
+# box's pids limit (polars panics with EAGAIN, the worker dies; 10-23 first run).
+for _k in ("POLARS_MAX_THREADS", "RAYON_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+           "NUMBA_NUM_THREADS"):
+    os.environ[_k] = "1"
+
 RUNS = Path(os.environ.get("DATA_DIR", os.path.expanduser("~/data"))) / "runs"
 FACTS = RUNS / "pai_fix/facts"
 # label -> (stored read dir under $DATA_DIR/runs, pai_fix facts file stem or "")
@@ -213,10 +219,12 @@ def cmd_score(a):
             sims.append(str(dst))
     workers = a.workers or n_cpus()
     print(f"{len(labels)} reads, {len(sims)} chunks, {len(meta)} rollouts, {len(tasks)} ASLs to evaluate, {workers} workers", flush=True)
-    ctx = mp.get_context("forkserver")
-    with ctx.Pool(workers, maxtasksperchild=50) as pool:
+    # ProcessPoolExecutor: a dead worker raises BrokenProcessPool here instead of hanging the pool
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver"), max_tasks_per_child=50) as ex:
         ev = []
-        for i, r in enumerate(pool.imap_unordered(eval_one, sorted(tasks, key=lambda t: t[2]), chunksize=1)):
+        for i, f in enumerate(as_completed([ex.submit(eval_one, t) for t in sorted(tasks, key=lambda t: t[2])])):
+            r = f.result()
             ev.append(r)
             if not r["ok"]:
                 print("EVAL ERROR", r["asl"], r["err"], flush=True)
@@ -226,7 +234,7 @@ def cmd_score(a):
         if bad:
             (root / "ERROR").write_text(json.dumps(bad, indent=1))
             sys.exit(f"{len(bad)} ASL evaluations failed; see {root / 'ERROR'}")
-        ag = pool.map(agg_one, sims, chunksize=1)
+        ag = list(ex.map(agg_one, sims))
     bad = [r for r in ag if not r["ok"]]
     if bad:
         (root / "ERROR").write_text(json.dumps(bad, indent=1))
