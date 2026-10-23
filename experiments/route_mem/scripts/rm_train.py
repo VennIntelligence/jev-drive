@@ -168,6 +168,8 @@ SELF-ITER (2026-10-17, experiments/self_iter; lib/self_iter.py); off (default) =
 ROUND7 joint arm (2026-10-22, experiments/round7/plans/2026-10-22-joint-arm.md); off (default) = nothing touched:
   --cmd-rule heading   the command (ego cols 1:4) of the pool rows of CMD_PARTS (PAI human, DAgger, S) := rmem.cmd_heading on the row's own fed
             route memory, the rule the PAI driver serves with JEV_CMD=heading; navtrain rows keep NAVSIM's command (cmd_rule).
+  --cmd-rule heading-all   the same rule on EVERY row (navtrain, yr1_, dev, every pool part), before --rm-drop; rows whose fed memory has no
+            valid slot keep their stored command (round9 CMD-PILOT, plans/2026-10-23-command-design.md; cmd_all).
 NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every flag off = the recipe above operation for operation:
   --on-wfile FILE   per-row draw weights of the --on pool rows from FILE (npz: `names` = the pool's tab names in order, `w`; defect_fix df.py
             weights): numpy's weighted choice on the pool stream [seed, 0, 53], as --on-weight; refused with --on-weight / --on-cap-scene / --si-scan.
@@ -460,7 +462,8 @@ def build(a, dev):
     F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane, anchor=head.get("anchor", False),
                                                    win=head.get("win") is not None, cmdout=cw)
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
-    ns.cmd_rec = cmd_rule(ns, a.cmd_rule) if getattr(a, "cmd_rule", "") else None   # round7 joint arm: off (default) = nothing touched
+    ns.cmd_rec = ((cmd_all(ns, src, getattr(a, "tag", "")) if a.cmd_rule == "heading-all" else cmd_rule(ns, a.cmd_rule))
+                  if getattr(a, "cmd_rule", "") else None)           # round7 joint arm / round9 CMD-PILOT: off (default) = nothing touched
     if head.get("win") is not None:                                   # WIN: the file's heading command on the AlpaSim-route pool rows
         assert not getattr(a, "cmd_rule", ""), "--rm-win carries its own command: not with --cmd-rule"
         ns.cmd_rec = cmd_win(ns, cw[0])
@@ -500,6 +503,43 @@ def cmd_rule(ns, rule):
         if m.any():
             rec["parts"][p] = dict(rows=int(m.sum()), old_lr=round(float(np.isin(lo[m], [0, 2]).mean()), 4), new_lr=round(float(np.isin(ln[m], [0, 2]).mean()), 4),
                                    old_unk=round(float((lo[m] == 3).mean()), 4), changed=round(float((lo[m] != ln[m]).mean()), 4))
+    return rec
+
+
+def cmd_all(ns, src, tag):
+    """--cmd-rule heading-all (round9 CMD-PILOT, plans/2026-10-23-command-design.md): the command of the fed row (ego cols 1:4) of EVERY Store
+    row (navtrain, yr1_, dev, every pool part) := rmem.cmd_heading on the row's own fed route memory (stored float16 features); --rm-drop acts
+    later, per batch. Rows whose fed memory has no valid slot (route not built) keep their stored command. In place on S.ego; -> record. A fixed
+    sample of 20 000 rows (dir, index in dir, stored / fed command) -> runs/route_mem/cmd_rule/<tag>.npz for the offline recomputation gate."""
+    import torch
+    from jevdrive.common import data_dir
+    assert not ns.head.get("order") and not ns.head.get("anchor"), "--cmd-rule heading-all: the old (projected) memory layout only"
+    S, dirs, lab = ns.S, list(ns.cfg.data), (lambda c: np.where(c.max(1) > 0.5, c.argmax(1), 3).astype(np.int8))
+    lo, ln, has = np.zeros(S.n, np.int8), np.zeros(S.n, np.int8), np.zeros(S.n, bool)
+    for c0 in range(0, S.n, 1 << 17):
+        sl = slice(c0, min(c0 + (1 << 17), S.n))
+        f = S.ego[sl, RM.EGO_DIM:RM.EGO_DIM + RM.DIM].cpu().numpy()
+        assert np.array_equal(f.astype(np.float16).astype(np.float32), f), "--cmd-rule: the fed memory is not the stored float16 features"
+        old = S.ego[sl, 1:4].cpu().numpy().copy()
+        h = (f.reshape(len(f), RM.N_PT, RM.NF)[..., 0] > 0.5).any(1)
+        new = np.where(h[:, None], RM.cmd_heading(f.astype(np.float16))[:, :3], old)
+        S.ego[sl, 1:4] = torch.as_tensor(new, device=S.ego.device, dtype=S.ego.dtype)
+        lo[sl], ln[sl], has[sl] = lab(old), lab(new), h
+    grp = np.array([d.split(".")[0] for d in dirs])[src].astype(object)
+    grp[np.r_[getattr(ns, "dv_o", []), getattr(ns, "dv_t", [])].astype(int)] = "dev"
+    if ns.n_on:
+        grp[ns.on0:] = [x.split(":")[1] for x in S.tab["names"][ns.on0:].astype(str)]
+    rec = dict(rule="heading-all", rows=int(S.n), changed=int((lo != ln).sum()), kept_no_memory=int((~has).sum()), parts={})
+    for g in dict.fromkeys(grp):
+        m = grp == g
+        rec["parts"][g] = dict(rows=int(m.sum()), old_lr=round(float(np.isin(lo[m], [0, 2]).mean()), 4), new_lr=round(float(np.isin(ln[m], [0, 2]).mean()), 4),
+                               old_unk=round(float((lo[m] == 3).mean()), 4), kept=round(float((~has[m]).mean()), 4), changed=round(float((lo[m] != ln[m]).mean()), 4))
+    k = np.sort(np.random.default_rng(0).choice(S.n, min(S.n, 20000), replace=False))
+    off = np.r_[0, np.cumsum(np.bincount(src, minlength=len(dirs)))]
+    if tag:
+        p = data_dir() / "runs/route_mem/cmd_rule" / f"{tag}.npz"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(p, dir=np.array(dirs)[src[k]], idx=k - off[src[k]], name=S.tab["names"][k].astype(str), old=lo[k], new=ln[k], has=has[k], grp=grp[k].astype(str))
     return rec
 
 
@@ -1764,7 +1804,8 @@ if __name__ == "__main__":
         p.add_argument("--kd-nav-k", type=int, default=0, help="RETAIN: navtrain approach rows per step, fed the constant-velocity history")
         p.add_argument("--ego-scale-speed", type=float, default=0.0, help="ANTI-COPY: share of the imitation rows with the speed history rescaled (0 = off)")
         p.add_argument("--ego-scale-max", type=float, default=0.2, help="ANTI-COPY: s ~ U[1 - M, 1 + M]")
-        p.add_argument("--cmd-rule", default="", choices=("", "heading"), help="round7 joint arm: pool rows' command from the route memory (cmd_rule)")
+        p.add_argument("--cmd-rule", default="", choices=("", "heading", "heading-all"),
+                       help="round7 joint arm: pool rows' command from the route memory (cmd_rule); heading-all: every row (cmd_all, round9 CMD-PILOT)")
         p.add_argument("--twin", default="", help="round7 HARM-MIX: <twin store>:<p>, a drawn pool row with a twin takes the twin's tokens with "
                        "probability p (lib/twin_tokens.py; '' = off)")
         p.add_argument("--on-wfile", default="", help="NR1: per-row draw weights of the pool rows (npz names, w; '' = off)")
