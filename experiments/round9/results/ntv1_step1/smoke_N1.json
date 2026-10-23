@@ -1,0 +1,63 @@
+{
+ "arm": "N1",
+ "tag": "NT1SM-N1-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1SM-N1-F-s0/20261024-013807",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "last_logged_step": 60,
+  "final": true,
+  "snapshot": true,
+  "batch": [
+   "83",
+   "13",
+   "32",
+   "mixed"
+  ],
+  "batch_want": [
+   "83",
+   "13",
+   "32",
+   "mixed"
+  ],
+  "windows": {
+   "25": {
+    "pool": 0.0,
+    "want": 0.0,
+    "self": 0.0
+   },
+   "50": {
+    "pool": 25.6,
+    "want": 25.6,
+    "self": 25.6
+   },
+   "60": {
+    "pool": 32.0,
+    "want": 32.0,
+    "self": 32.0
+   }
+  },
+  "self_share_after_T": 1.0,
+  "self_rows_before_T": 0.0,
+  "draw_group_share": {
+   "S": 0.9999999999999304
+  },
+  "draw_group_share_want": {
+   "S": 1.0
+  },
+  "draw_shares_ok": true,
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  },
+  "s_terms_before_nonzero": []
+ },
+ "pass_": true
+}

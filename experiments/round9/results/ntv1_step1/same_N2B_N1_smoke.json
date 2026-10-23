@@ -1,0 +1,52 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1SM-N1-F-s0/20261024-013807",
+ "upto": 25,
+ "steps": [
+  0,
+  25
+ ],
+ "scalars_compared": 79,
+ "identical": 79,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": true,
+ "bit_identical": true,
+ "a": "NT1SM-N2B-F-s0",
+ "b": "NT1SM-N1-F-s0",
+ "note": "informational (registered: reported, not a gate)"
+}

@@ -1,0 +1,24 @@
+{
+ "jt_prefix": true,
+ "rb0p_names": true,
+ "rb0_names": true,
+ "rb0_rows": 13793,
+ "pai_rows": 193850,
+ "overlap": 0,
+ "rb0_all_self": true,
+ "pai_all_ph_both": true,
+ "rb0_uniform": true,
+ "pai_prop": 0.0,
+ "grp_jt_equals_jt00s": true,
+ "shares": {
+  "S": 0.49999999999996475,
+  "ph": 0.2499999999998231,
+  "ph05": 0.12500000000000716,
+  "ph15": 0.12500000000008907
+ },
+ "mode_share": {
+  "both": 0.49999999999745454,
+  "self": 0.49999999999996475
+ },
+ "pass_": true
+}

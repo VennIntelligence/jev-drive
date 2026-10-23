@@ -1,0 +1,96 @@
+{
+ "arm": "N2A",
+ "tag": "NT1SM-N2A-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1SM-N2A-F-s0/20261024-013847",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "last_logged_step": 60,
+  "final": true,
+  "snapshot": true,
+  "batch": [
+   "51",
+   "13",
+   "64",
+   "mixed"
+  ],
+  "batch_want": [
+   "51",
+   "13",
+   "64",
+   "mixed"
+  ],
+  "windows": {
+   "25": {
+    "pool": 58.0,
+    "want": 58.0,
+    "self": 0.0
+   },
+   "50": {
+    "pool": 62.8,
+    "want": 62.8,
+    "self": 25.72
+   },
+   "60": {
+    "pool": 64.0,
+    "want": 64.0,
+    "self": 32.4
+   }
+  },
+  "self_share_after_T": 0.5036458333333333,
+  "self_rows_before_T": 0.0,
+  "draw_group_share": {
+   "S": 0.499999999999965,
+   "ph": 0.24999999999982322,
+   "ph05": 0.12500000000000722,
+   "ph15": 0.12500000000008912
+  },
+  "draw_group_share_want": {
+   "S": 0.5,
+   "ph": 0.25,
+   "ph05": 0.125,
+   "ph15": 0.125
+  },
+  "pre": {
+   "on_pre_wfile": "runs/round9/pai_base/w/RB0P.npz",
+   "k": 58,
+   "rows_w0": 334697,
+   "group_share": {
+    "S": 0.0,
+    "S_held": 0.0,
+    "c_braking": 0.0,
+    "c_cruising": 0.0,
+    "c_starting": 0.0,
+    "c_stopped": 0.0,
+    "c_turning": 0.0,
+    "launch": 0.0,
+    "ph": 0.49999999999964645,
+    "ph05": 0.25000000000001443,
+    "ph05_held": 0.0,
+    "ph15": 0.25000000000017825,
+    "ph15_held": 0.0,
+    "ph_held": 0.0,
+    "stand_r": 0.0,
+    "stand_u": 0.0
+   },
+   "mode_share": {
+    "both": 0.9999999999949095,
+    "self": 0.0
+   }
+  },
+  "draw_shares_ok": true,
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  },
+  "s_terms_before_nonzero": []
+ },
+ "pass_": true
+}

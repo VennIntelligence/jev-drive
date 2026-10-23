@@ -1,0 +1,211 @@
+{
+ "tag": "NT1SM-N2B-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1SM-N2B-F-s0/20261024-013846",
+ "checks": {
+  "done": true,
+  "scalars": 251,
+  "finite": true,
+  "last_logged_step": 60
+ },
+ "record": {
+  "rule": "heading-all",
+  "rows": 701407,
+  "changed": 151967,
+  "kept_no_memory": 6006,
+  "parts": {
+   "navtrain_full": {
+    "rows": 101499,
+    "old_lr": 0.3667,
+    "new_lr": 0.4111,
+    "old_unk": 0.0,
+    "kept": 0.0224,
+    "changed": 0.1672
+   },
+   "dev": {
+    "rows": 2938,
+    "old_lr": 0.3152,
+    "new_lr": 0.3598,
+    "old_unk": 0.0,
+    "kept": 0.0088,
+    "changed": 0.1498
+   },
+   "yr1_navtrain_full": {
+    "rows": 68423,
+    "old_lr": 0.3707,
+    "new_lr": 0.3901,
+    "old_unk": 0.0,
+    "kept": 0.0191,
+    "changed": 0.1571
+   },
+   "rb0": {
+    "rows": 17429,
+    "old_lr": 0.5407,
+    "new_lr": 0.3051,
+    "old_unk": 0.0,
+    "kept": 0.0044,
+    "changed": 0.2624
+   },
+   "rtb1": {
+    "rows": 17489,
+    "old_lr": 0.5256,
+    "new_lr": 0.2986,
+    "old_unk": 0.0,
+    "kept": 0.0042,
+    "changed": 0.2537
+   },
+   "ys": {
+    "rows": 34788,
+    "old_lr": 0.5593,
+    "new_lr": 0.3061,
+    "old_unk": 0.0,
+    "kept": 0.0047,
+    "changed": 0.2821
+   },
+   "y": {
+    "rows": 17306,
+    "old_lr": 0.5563,
+    "new_lr": 0.3105,
+    "old_unk": 0.0,
+    "kept": 0.0043,
+    "changed": 0.2747
+   },
+   "tv": {
+    "rows": 82594,
+    "old_lr": 0.1692,
+    "new_lr": 0.319,
+    "old_unk": 0.0723,
+    "kept": 0.0243,
+    "changed": 0.247
+   },
+   "ph": {
+    "rows": 135793,
+    "old_lr": 0.4455,
+    "new_lr": 0.2434,
+    "old_unk": 0.0,
+    "kept": 0.0,
+    "changed": 0.2223
+   },
+   "ph05": {
+    "rows": 123879,
+    "old_lr": 0.4493,
+    "new_lr": 0.2459,
+    "old_unk": 0.0,
+    "kept": 0.0,
+    "changed": 0.2241
+   },
+   "ph15": {
+    "rows": 99269,
+    "old_lr": 0.4557,
+    "new_lr": 0.2551,
+    "old_unk": 0.0,
+    "kept": 0.0,
+    "changed": 0.2203
+   }
+  }
+ },
+ "g5": {
+  "navtrain_full": {
+   "trainer": 0.1672,
+   "cmdd": 0.167,
+   "diff_pt": 0.02
+  },
+  "rb0": {
+   "trainer": 0.2624,
+   "cmdd": 0.2624,
+   "diff_pt": -0.0
+  },
+  "rtb1": {
+   "trainer": 0.2537,
+   "cmdd": 0.2537,
+   "diff_pt": -0.0
+  },
+  "ys": {
+   "trainer": 0.2821,
+   "cmdd": 0.2821,
+   "diff_pt": -0.0
+  },
+  "y": {
+   "trainer": 0.2747,
+   "cmdd": 0.2747,
+   "diff_pt": -0.0
+  },
+  "tv": {
+   "trainer": 0.247,
+   "cmdd": 0.247,
+   "diff_pt": -0.0
+  },
+  "ph": {
+   "trainer": 0.2223,
+   "cmdd": 0.2223,
+   "diff_pt": -0.0
+  },
+  "ph05": {
+   "trainer": 0.2241,
+   "cmdd": 0.2241,
+   "diff_pt": 0.0
+  },
+  "ph15": {
+   "trainer": 0.2203,
+   "cmdd": 0.2203,
+   "diff_pt": -0.0
+  }
+ },
+ "g5_pass": true,
+ "g0": {
+  "rows": 20000,
+  "fed_vs_cmdd_rule": 1.0,
+  "stored_vs_tab": 1.0,
+  "navtrain_rows": 2975,
+  "fed_vs_rows_parquet": 1.0,
+  "no_memory": 176,
+  "changed": 0.2154,
+  "by_group": {
+   "dev": {
+    "rows": 94,
+    "agree": 1.0
+   },
+   "navtrain_full": {
+    "rows": 2922,
+    "agree": 1.0
+   },
+   "ph": {
+    "rows": 3892,
+    "agree": 1.0
+   },
+   "ph05": {
+    "rows": 3535,
+    "agree": 1.0
+   },
+   "ph15": {
+    "rows": 2807,
+    "agree": 1.0
+   },
+   "rb0": {
+    "rows": 474,
+    "agree": 1.0
+   },
+   "rtb1": {
+    "rows": 499,
+    "agree": 1.0
+   },
+   "tv": {
+    "rows": 2332,
+    "agree": 1.0
+   },
+   "y": {
+    "rows": 513,
+    "agree": 1.0
+   },
+   "yr1_navtrain_full": {
+    "rows": 1962,
+    "agree": 1.0
+   },
+   "ys": {
+    "rows": 970,
+    "agree": 1.0
+   }
+  }
+ },
+ "g0_pass": true,
+ "pass_": true
+}

@@ -1,0 +1,56 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-PCL1L-F-s0/20261023-232903",
+ "upto": 100,
+ "steps": [
+  0,
+  25,
+  50,
+  75,
+  100
+ ],
+ "scalars_compared": 131,
+ "identical": 131,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "tag": "NT1ID1-F-s0",
+ "ref": "PCL1L-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT1ID1-F-s0/20261024-013743",
+ "trainer_rc_before_stop": null
+}

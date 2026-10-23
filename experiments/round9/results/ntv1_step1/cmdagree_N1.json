@@ -1,0 +1,9 @@
+{
+ "reads": {
+  "NT1N1-F-s0-ag": {
+   "inferences": 55693,
+   "agree": 1.0
+  }
+ },
+ "passed": true
+}
