@@ -87,6 +87,7 @@ READS = {
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
+    "GS5-v2": ("alpasim_proxy/pai_pcs_v2/GS5", ""),            # GS-v2's 5 thread-cap failures re-read (KEEP_ASL=1)
 }
 CORRIDOR_M = 4.0
 
@@ -368,7 +369,8 @@ def cmd_report(a):
         o = O[O.read == lab].drop_duplicates("scene", keep="last").set_index("scene")
         for sc, (rid, s, fr) in st.items():
             if sc not in o.index:
-                if "RpcError" in nfr(fr):                   # failed rollout, no metrics: nothing to rescore (excluded like the facts' rpc rows)
+                if "RpcError" in nfr(fr) or any(t in nfr(fr) for t in TRANSIENT):   # failed rollout (RPC, or the runtime hit the pids cap),
+                                                            # no metrics: nothing to rescore (excluded like the facts' rpc rows)
                     rpc_failed.append(dict(read=lab, scene=sc))
                 else:
                     rep.append(dict(read=lab, scene=sc, issue="missing in old rescore", stored=s))
