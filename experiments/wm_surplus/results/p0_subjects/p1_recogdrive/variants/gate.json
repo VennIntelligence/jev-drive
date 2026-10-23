@@ -1,0 +1,69 @@
+{
+ "model": "ReCogDrive-2B-RL",
+ "n": 24,
+ "variants": [
+  "cnorm",
+  "norm",
+  "rand",
+  "std",
+  "wpca"
+ ],
+ "kmax": {
+  "cnorm": 1536,
+  "norm": 1536,
+  "rand": 1536,
+  "std": 1536,
+  "wpca": 384
+ },
+ "read_in_shape": [
+  384,
+  1536
+ ],
+ "s_per_token_plain": 0.5450665950775146,
+ "s_per_cached_arm": 0.05922263264656067,
+ "G1_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G5_sweep_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G3_sweep_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "P0_projector_pca_equals_original": true,
+ "R": {
+  "cnorm-full": {
+   "max_abs_m": 3.814697265625e-06,
+   "mean_abs_xy_m": 2.942979335784912e-07
+  },
+  "norm-full": {
+   "max_abs_m": 3.814697265625e-06,
+   "mean_abs_xy_m": 2.5394061253791733e-07
+  },
+  "rand-full": {
+   "max_abs_m": 3.814697265625e-06,
+   "mean_abs_xy_m": 2.5394061253791733e-07
+  },
+  "std-full": {
+   "max_abs_m": 3.814697265625e-06,
+   "mean_abs_xy_m": 2.4586915969848633e-07
+  },
+  "wpca-full": {
+   "max_abs_m": 0.003253936767578125,
+   "mean_abs_xy_m": 0.00033406075090169907
+  }
+ },
+ "R_tol_mean_abs_xy_m": 0.01,
+ "passed": true
+}

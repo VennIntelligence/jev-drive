@@ -169,7 +169,10 @@ plan matches or beats the probe in every class, no sees-but-does-not-do (stop / 
 `scripts/p1_w0ctl_lane.sh`, fixed stratified 3 000-token subset `navsim/p1-w0-ctl`): restoring the row norm leaves k64 unchanged and
 recovers part of k512 / k2048 (k2048 -2.74 vs -6.51); projecting a single layer (16 or 31) at k64 costs nothing (+0.14 / +0.02,
 CIs span 0), so W0's full-width reading comes from projecting all 32 layers at once, not from any one layer reading a wide subspace
-([controls/p1_readout.md](results/p1_usage/DriveVLA-W0/controls/p1_readout.md)). ReCogDrive variants: running. Tables: `results/p0_subjects/*_full.json`,
+([controls/p1_readout.md](results/p1_usage/DriveVLA-W0/controls/p1_readout.md)). ReCogDrive variants (full navtest): k95 stays 512 under
+norm restore (centred or raw) and correlation PCA, random subspaces need 1536, but the planner-aligned PCA (through the DiT's
+Linear(1536, 384) read-in) needs only k95 = 64 (k64 -0.77 [-1.29, -0.20]): the planner reads ~64 of the 384 directions it can
+see; 512 came from input-space PCA misaligned with the read-in ([variants/p1_readout.md](results/p0_subjects/p1_recogdrive/variants/p1_readout.md)). Tables: `results/p0_subjects/*_full.json`,
 [results/p0_subjects/p1_recogdrive/p1_readout.md](results/p0_subjects/p1_recogdrive/p1_readout.md),
 [knowdo_recog-lmh.md](results/p0_subjects/p1_recogdrive/knowdo_recog-lmh.md).
 
