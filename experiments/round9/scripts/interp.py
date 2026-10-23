@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 DD = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 RUNS = DD / "runs/op_parity/runs"
 A0, A1 = "NTV0-L18-s0", "R8K-L18-s2"
