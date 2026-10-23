@@ -1,0 +1,13 @@
+{
+ "tag": "RB0LSM-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-RB0LSM-F-s0/20261023-190504",
+ "checks": {
+  "done": true,
+  "scalars": 32,
+  "finite": true,
+  "last_logged_step": 60,
+  "snapshot": true,
+  "final": true
+ },
+ "pass_": true
+}
