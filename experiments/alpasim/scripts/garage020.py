@@ -46,7 +46,7 @@ def cmd_report(a):
     pairs = [f"{LABEL}:{k}" for k in REFS]
     subprocess.run([sys.executable, str(REPO / "experiments/round2/scripts/r2.py"), "r281", "--read", *reads, "--pairs", *pairs,
                     "--out", str(out / "pai281_garage.md"), "--title",
-                    "PAI 281, Harmonizer OFF: py123d_garage v0.2.0 (ltf-base-joint64-68M posttrain seed 0, conditional, as shipped) vs our ACC + GAP reads"],
+                    f"PAI 281, Harmonizer OFF: py123d_garage v0.2.0 (ltf-base-joint64-68M, {a.label_title}, as shipped) vs our ACC + GAP reads"],
                    check=True, stdout=subprocess.DEVNULL)
     F = {k: pd.read_csv(f).set_index("scene") for k, f in (r.split("=", 1) for r in reads)}
     g, n0 = F[LABEL], F["NTV0-ag"]
@@ -138,6 +138,7 @@ def main():
     q = sp.add_parser("report")
     q.add_argument("--facts", required=True), q.add_argument("--rescore", required=True), q.add_argument("--theirs", required=True)
     q.add_argument("--ref-rescore", default=str(DATA / "runs/alpasim/scorer_v2")), q.add_argument("--out", required=True)
+    q.add_argument("--label-title", default="conditional, posttrain seed 0")
     a = ap.parse_args()
     {"rescore": cmd_rescore, "report": cmd_report}[a.cmd](a)
 
