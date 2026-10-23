@@ -152,6 +152,41 @@ def cmd_smoke(a):
     sys.exit(0 if ok else 2)
 
 
+def cmd_mfix(a):
+    """dag.py mfix against on1_JT, tolerant of on1_JT's extra metadata keys (agent cls / log, road log / pose_global, tab acc / cmd / pose / vel:
+    on1_JT's older build; rf_pait merge never writes them, on1_JTPH lacks the same keys): every COMMON key of the prefix bit for bit, ref-only
+    keys listed; then dag.py's agent-ok fix of the prefix. (Attempt 1: dag.py mfix raised KeyError on agent.cls.)"""
+    sys.path.insert(0, str(REPO / "experiments/round6/scripts"))
+    import dag as DG
+    from jevdrive.tokens import open_front
+    P, R = CR / POOL, CR / "on1_JT"
+    bad, ref_only = [], []
+    for f in ("tab.npz", "agent.npz", "road.npz", "drivable.npz", "route.npz"):
+        zp, zr = np.load(P / f), np.load(R / f)
+        n = len(np.load(R / "tab.npz", mmap_mode="r")["names"]) if f != "tab.npz" else len(zr["names"])
+        ref_only += [f"{f}.{k}" for k in zr.files if k not in zp.files]
+        bad += [f"{f}.{k}" for k in zr.files if k in zp.files and not (k == "ok" and f == "agent.npz") and zr[k].ndim and len(zr[k]) == n
+                and not DG.same(zp[k][:n], zr[k])]
+    n = len(np.load(R / "tab.npz")["names"])
+    fp, fr = np.load(FEAT / f"{POOL}.npz"), np.load(FEAT / "on1_JT.npz")
+    bad += [f"feat.{k}" for k in fr.files if not DG.same(fp[k][:n], fr[k])]
+    zp, zr = np.load(CR / f"{POOL}@warp/teacher.npz"), np.load(CR / "on1_JT@warp/teacher.npz")
+    bad += [f"teacher.{k}" for k in zr.files if not DG.same(zp[k][:n] if zr[k].ndim and len(zr[k]) == n else zp[k], zr[k])]
+    i = np.sort(np.random.default_rng(0).choice(n, 4000, replace=False))
+    if not DG.same(open_front(CR / f"{POOL}@warp/front.npy")[i], open_front(R.parent / "on1_JT@warp/front.npy")[i]):
+        bad.append("front sample")
+    ag, agr = dict(np.load(P / "agent.npz")), np.load(R / "agent.npz")
+    before = int((ag["ok"][:n] != agr["ok"]).sum())
+    ag["ok"] = np.concatenate([agr["ok"], ag["ok"][n:]])
+    np.savez(P / "agent.npz", **ag)
+    part = np.load(P / "tab.npz")["pool"].astype(str)
+    rec = dict(pool=POOL, ref="on1_JT", ref_rows=n, rows=len(part), parts={p: int((part == p).sum()) for p in np.unique(part)}, agent_ok_fixed=before,
+               ref_only_keys=ref_only, mismatch=bad)
+    C.dump(O / "checks" / f"mfix_{POOL}.json", rec)
+    print(json.dumps(rec))
+    sys.exit(2 if bad else 0)
+
+
 def lab(c):
     return np.where(c.max(1) > 0.5, c.argmax(1), 3).astype(np.int8)
 
@@ -249,9 +284,10 @@ def main():
     p.add_argument("--var", choices=("a", "b"), required=True), p.add_argument("--tag", required=True), p.add_argument("--on-start", type=int, required=True)
     p.add_argument("--out", required=True)
     s.add_parser("cmdf")
+    s.add_parser("mfix")
     s.add_parser("report")
     a = ap.parse_args()
-    dict(argv=cmd_argv, weights=cmd_weights, pair=cmd_pair, smoke=cmd_smoke, cmdf=cmd_cmdf, report=cmd_report)[a.sub](a)
+    dict(argv=cmd_argv, weights=cmd_weights, pair=cmd_pair, smoke=cmd_smoke, cmdf=cmd_cmdf, mfix=cmd_mfix, report=cmd_report)[a.sub](a)
 
 
 if __name__ == "__main__":

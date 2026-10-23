@@ -97,7 +97,21 @@ merge)
   [[ ! -e $CR/on1_$NM ]] || die "on1_$NM exists: never overwritten"
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 100 )) || die "free $free GB < 100 GB"
   $TR $RF/rf_pait.py merge --pools $PARTS on1_$NP:pd:both --out $NM --nan-keys fut_reg || die merge
-  $TR $DG mfix --root $O --pool on1_$NM --ref on1_JT || die "mfix: the merged prefix differs from on1_JT" ;;
+  bash $ME mfix ;;
+mfix) $TR $PY mfix || die "mfix: the merged prefix differs from on1_JT" ;;   # attempt 1's dag.py mfix raised KeyError on on1_JT's extra keys
+tail2)  # attempt 2 (after the mfix check-script fault): mfix -> weights -> T3 / smokes -> cmdf -> report; the merged pool on1_JTDC kept
+  [[ -f $CR/on1_$NM/tab.npz && ! -f $O/DONE ]] || die "no on1_$NM or DONE"; h=$(git rev-parse --short HEAD); echo "$h tail2" >> $O/code.txt
+  m=$(sub dgc-mfix --vram 0.1 --cpu 4 --ram 160 --timeout-h 2 -- bash $ME mfix) || exit 1
+  wt=$(sub dgc-weights --after $m --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME weights) || exit 1
+  ta=$(sub dgc-t3a --after $wt "${FE[@]}" --timeout-h 1 -- bash $ME t3a) || exit 1
+  pa=$(sub dgc-t3run-a --after $wt "${FE[@]}" --timeout-h 1 -- bash $ME t3run pa) || exit 1
+  pb=$(sub dgc-t3run-b --after $wt "${FE[@]}" --timeout-h 1 -- bash $ME t3run pb) || exit 1
+  tb=$(sub dgc-t3cmp --after $pa,$pb --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME t3cmp) || exit 1
+  sa=$(sub dgc-smoke-a --after $wt "${FE[@]}" --timeout-h 1 -- bash $ME smoke a) || exit 1
+  sb=$(sub dgc-smoke-b --after $wt "${FE[@]}" --timeout-h 1 -- bash $ME smoke b) || exit 1
+  cf=$(sub dgc-cmdf --after $m --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME cmdf) || exit 1
+  rp=$(sub dgc-report --after $ta,$tb,$sa,$sb,$cf --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- bash $ME report) || exit 1
+  echo "$(date '+%F %T') tail2 (code $h): mfix $m weights $wt T3a $ta T3b $pa $pb $tb smoke $sa $sb cmdf $cf report $rp" | tee -a $O/stages.txt ;;
 weights)
   $V $PY weights --k-dag 0 --out NTV1D0 || die NTV1D0
   $V $PY weights --k-dag 8 --out NTV1D || die NTV1D ;;
