@@ -117,7 +117,21 @@ def _end_shape(gt):
     return last, float(np.degrees(np.arccos(np.clip(old @ new, -1, 1))))
 
 
+TRANSIENT = ("can't start new thread", "Resource temporarily unavailable")   # box-wide pids limit, set by other jobs
+
+
 def eval_one(task):
+    """eval_try with retries on thread-start failures (the box's pids cgroup is shared with pool jobs of ~940 threads each)."""
+    import time
+    for k in range(8):
+        r = eval_try(task)
+        if r["ok"] or not any(t in r["err"] for t in TRANSIENT):
+            return r | dict(tries=k + 1)
+        time.sleep(5 + 10 * k)
+    return r | dict(tries=k + 1)
+
+
+def eval_try(task):
     """One ASL in the mirror -> metrics.parquet next to it (eval.main.process_asl_file minus video) + GT end shape."""
     asl, cfg_path, usdz_glob, stored_parquet = task
     try:
@@ -221,19 +235,28 @@ def cmd_score(a):
     print(f"{len(labels)} reads, {len(sims)} chunks, {len(meta)} rollouts, {len(tasks)} ASLs to evaluate, {workers} workers", flush=True)
     # ProcessPoolExecutor: a dead worker raises BrokenProcessPool here instead of hanging the pool
     from concurrent.futures import ProcessPoolExecutor, as_completed
-    with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver"), max_tasks_per_child=50) as ex:
-        ev = []
-        for i, f in enumerate(as_completed([ex.submit(eval_one, t) for t in sorted(tasks, key=lambda t: t[2])])):
-            r = f.result()
-            ev.append(r)
-            if not r["ok"]:
-                print("EVAL ERROR", r["asl"], r["err"], flush=True)
-            if (i + 1) % 100 == 0:
-                print(f"evaluated {i + 1} / {len(tasks)}", flush=True)
-        bad = [r for r in ev if not r["ok"]]
-        if bad:
-            (root / "ERROR").write_text(json.dumps(bad, indent=1))
-            sys.exit(f"{len(bad)} ASL evaluations failed; see {root / 'ERROR'}")
+    from concurrent.futures.process import BrokenProcessPool
+    done, pending = {}, sorted(tasks, key=lambda t: t[2])
+    for attempt in range(4):                                # a worker killed by a native panic breaks the pool: redo what is left
+        try:
+            with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver"), max_tasks_per_child=50) as ex:
+                for f in as_completed([ex.submit(eval_one, t) for t in pending]):
+                    r = f.result()
+                    done[r["asl"]] = r
+                    if not r["ok"]:
+                        print("EVAL ERROR", r["asl"], r["err"], flush=True)
+                    if len(done) % 100 == 0:
+                        print(f"evaluated {len(done)} / {len(tasks)}", flush=True)
+            break
+        except BrokenProcessPool as e:
+            pending = [t for t in pending if t[0] not in done]
+            print(f"BROKEN POOL ({e}); {len(pending)} ASLs left, attempt {attempt + 2}", flush=True)
+    ev = list(done.values())
+    bad = [r for r in ev if not r["ok"]] + [dict(asl=t[0], ok=False, err="never evaluated") for t in tasks if t[0] not in done]
+    if bad:
+        (root / "ERROR").write_text(json.dumps(bad, indent=1))
+        sys.exit(f"{len(bad)} ASL evaluations failed; see {root / 'ERROR'}")
+    with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver")) as ex:
         ag = list(ex.map(agg_one, sims))
     bad = [r for r in ag if not r["ok"]]
     if bad:
