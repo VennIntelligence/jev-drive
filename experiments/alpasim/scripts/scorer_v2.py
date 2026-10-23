@@ -80,6 +80,8 @@ READS = {
     "PCL0-L18-s0-ag": ("round9/pool_pilot/pai281/PCL0-L18-s0-ag", "PCL0-L18-s0-281ag"),   # round9 pool_pilot (scored with --reads only)
     "PCL1-F-s1-ag": ("round9/p1_s1/pai281/PCL1-F-s1-ag", "PCL1-F-s1-281ag"),   # round9 p1_s1 (scored with --reads only)
     "PCL1L-F-s0-ag": ("round9/p1l/pai281/PCL1L-F-s0-ag", "PCL1L-F-s0-281ag"),   # round9 p1l (scored with --reads only)
+    "SSNH-L18-s0-ag": ("round9/s_split/pai281/SSNH-L18-s0-ag", "SSNH-L18-s0-281ag"),   # round9 s_split (scored with --reads only)
+    "SSND-L18-s0-ag": ("round9/s_split/pai281/SSND-L18-s0-ag", "SSND-L18-s0-281ag"),
     "HF-s0-ag": ("round9/cmd_pilot/pai281/HF-s0-ag", "HF-s0-281ag"),   # round9 cmd_pilot (scored with --reads only)
     "INTP50-NR-ag": ("round9/interp/pai281/INTP50-NR-ag", "INTP50-NR-281ag"),   # round9 interp (scored with --reads only)
     "INTP75-NR-ag": ("round9/interp/pai281/INTP75-NR-ag", "INTP75-NR-281ag"),
