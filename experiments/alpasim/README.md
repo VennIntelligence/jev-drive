@@ -12,7 +12,7 @@ concurrent rollouts on one card; the shipped LTF sample scores 0.8735 mean scene
 5.5 s, 10 `drive` calls at 2 Hz, with no history before t = 0. Team `lao-siji` was registered by the user on 2026-10-09 (this line said
 "pending organiser review; nothing has been submitted" until 2026-10-20; that was true on 10-09 only, see the ledger below).
 
-**Submissions and candidates (state 2026-10-20; source of truth: research/decisions.md "现状" block).**
+**Submissions and candidates (state 2026-10-23; source of truth: research/decisions.md "现状" block).**
 
 | team (Tokyo `~/bin/ap` profile) | track | image tag | date (UTC) | private result | decision |
 |---|---|---|---|---|---|
@@ -21,9 +21,11 @@ concurrent rollouts on one card; the shipped LTF sample scores 0.8735 mean scene
 | vennai-org (acct3) | PAI | `rsg-l18-s0-acc-gap-v1` (RSG-L18-s0 + g10 + ACC + GAP 0.7,2.7) | 10-17 | mean 0.632, PCS 2092 (2094 on 10-20), 11th team | 356 |
 | ujs-iv | nuPlan | `jtn-l18-s1-native` | 10-19 | mean 0.916, PCS 1325 (1321) | 374 |
 | ujs-iv | nuPlan | `jtn-l18-s1-holdstop3` | 10-19 | mean 0.950, PCS 1463 (1470), 10th team | 374 |
+| ujs-iv | PAI | `p1021a` (NTV0-L18-s0 + g10 + ACC + GAP 0.7,2.7) | 10-21 | mean 0.716, PCS 2264 on 10-23 (2154 on 10-21), board row 4 | 426 |
+| vennai-org | PAI | `p1023a` (R8K-L18-s2 + g10 + ACC + GAP 0.7,2.7; [pai_image_r8k_s2.md](results/pai_image_r8k_s2.md)) | 10-23 | mean 0.757, **PCS 2353 [2289, 2417], board row 1 (rank interval 1-3)**, at-fault 0.663 km; read 2026-10-23 23:03 UTC, [snapshot](../alpasim_proxy/results/leaderboard_pai_20261023T2303Z.json); same call: ACM 2315, p1021a 2264, RSG 2198, garage 014-pai-0014 1835, go-straight 1439 | 468 |
 
 PCS is refitted over all submissions on every board call, so an entry drifts by tens of points. Official quota: 3 per team per UTC
-month, shared by both tracks. Counting the board, October slots left are lao-siji 1, vennai-org 2, ujs-iv 1; all three CLI sessions had
+month, shared by both tracks. Counting the board, October slots left are lao-siji 1, vennai-org 1 (RSG and p1023a used), ujs-iv 0 (two nuPlan entries and p1021a); all three CLI sessions had
 expired on 10-20, so `limits` was not re-read. Current candidates: nuPlan native **B2 `STANDFMXH-L18-s1`** (decision 391; selection on
 native reads, decision 371). PAI **NTV0-L18-s0 + ACC + GAP** (decisions 366 / 370 / 392). Neither has an image yet. Built but never
 submitted: RSG + stop3 ([results/image_rsg_stop3.md](results/image_rsg_stop3.md)), RSG + leash3
