@@ -170,6 +170,11 @@ ROUND7 joint arm (2026-10-22, experiments/round7/plans/2026-10-22-joint-arm.md);
             route memory, the rule the PAI driver serves with JEV_CMD=heading; navtrain rows keep NAVSIM's command (cmd_rule).
   --cmd-rule heading-all   the same rule on EVERY row (navtrain, yr1_, dev, every pool part), before --rm-drop; rows whose fed memory has no
             valid slot keep their stored command (round9 CMD-PILOT, plans/2026-10-23-command-design.md; cmd_all).
+ROUND9 NTV1 step 1 (2026-10-24, experiments/round9/plans/2026-10-24-ntv1-step1.md); off (default) = nothing touched:
+  --on-pre-k K --on-pre-wfile F   with --on-start T and --on-wfile: before step T, K pool rows of every batch are drawn with F's per-row weights
+            (npz names / w as --on-wfile, the held-out pool logs at weight 0) on their own stream [seed, 0, 191] and the normal rows shrink by K;
+            from T the --on-wfile draw of --on-k rows as before (the pool stream [seed, 0, 53] untouched before T, as without the flag).
+  --on-mix-log      monitoring only: log `on/batch_self_rows`, the pool rows of the batch whose tab `mode` is "self" (the S rows).
 NR1 (2026-10-17, experiments/defect_fix/plans/2026-10-17-nr1-prereg.md); every flag off = the recipe above operation for operation:
   --on-wfile FILE   per-row draw weights of the --on pool rows from FILE (npz: `names` = the pool's tab names in order, `w`; defect_fix df.py
             weights): numpy's weighted choice on the pool stream [seed, 0, 53], as --on-weight; refused with --on-weight / --on-cap-scene / --si-scan.
@@ -1023,6 +1028,27 @@ def cmd_train(a):
         hrec = dict(res=a.on_hold_res, pct=a.on_hold_pct, logs=len(ul_), held_logs=held_l, held_rows=int(held_m.sum()), drawn_rows=int((~held_m).sum()),
                     scored_held=len(HR), scored_fit=len(FR), eligible_rows=int(el_.sum()), held_weight_before=hwb_)
 
+    pw_pre, k_pre = None, 0
+    if a.on_pre_k:                                                    # NTV1 step 1: the pre-T pool draw (docstring); off: nothing added
+        from jevdrive.common import data_dir as _dp
+        assert a.on_start and a.on_wfile and 0 < a.on_pre_k < ns.nN + k_on and a.on_pre_wfile, "--on-pre-k: needs --on-start, --on-wfile, --on-pre-wfile"
+        tbp_ = np.load(_dp() / "runs/op_parity/cache" / a.on / "tab.npz")
+        wp_ = np.load(a.on_pre_wfile if a.on_pre_wfile.startswith("/") else _dp() / a.on_pre_wfile)
+        assert np.array_equal(wp_["names"].astype(str), tbp_["names"].astype(str)), "--on-pre-wfile: rows != the pool's"
+        w_ = wp_["w"].astype(np.float64)
+        assert (w_ >= 0).all() and w_.sum() > 0, "--on-pre-wfile: weights"
+        if onx is not None or hrec:                                   # the held-out pool logs stay undrawn before T too
+            w_ = np.where(held_m, 0.0, w_)
+        pw_pre, k_pre = w_ / w_.sum(), a.on_pre_k
+        prerng = np.random.default_rng([cfg.seed, 0, 191])
+        caprec["pre"] = dict(on_pre_wfile=str(a.on_pre_wfile), k=k_pre, rows_w0=int((w_ == 0).sum()),
+                             group_share=group_shares(pw_pre, wp_["grp"]) if "grp" in wp_.files else None,
+                             mode_share=group_shares(pw_pre, tbp_["mode"]) if "mode" in tbp_.files else None)
+    if a.on_mix_log:                                                  # monitoring only
+        from jevdrive.common import data_dir as _dm
+        self_np = np.load(_dm() / "runs/op_parity/cache" / a.on / "tab.npz")["mode"].astype(str) == "self"
+        if pw is not None:
+            caprec["mode_share"] = group_shares(pw, self_np.astype(int))
     TW = None
     if a.twin:                                                        # HARM-MIX (round7): twin (Harmonizer ON) tokens of pool rows at p; off: nothing added
         import twin_tokens
@@ -1098,7 +1124,8 @@ def cmd_train(a):
     ndraw = [0]                                                       # --on-start: batches drawn so far (draw() runs once per step, in order)
 
     def draw():
-        ko = k_on if ndraw[0] >= a.on_start else 0                    # POOL-PILOT: before step T the pool slots are normal rows, orng untouched
+        pre = ndraw[0] < a.on_start
+        ko = k_on if not pre else k_pre                               # POOL-PILOT: before step T the pool slots are normal rows, orng untouched
         ndraw[0] += 1
         nN = ns.nN + k_on - ko
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN) if nw is None else rng.choice(tr_o, nN, replace=True, p=nw)
@@ -1106,7 +1133,11 @@ def cmd_train(a):
             r = np.concatenate([r, rng.choice(tr_t, k_yr, replace=False)])
         an = rng.random(nB - k_ho - ko) < cfg.d_frac
         an[nN:] = False
-        if ko:
+        if ko and pre:                                                # NTV1 step 1: the pre-T pool rows on their own stream
+            i = prerng.choice(ns.n_on, ko, replace=True, p=pw_pre)
+            sha.update(i.astype("<i8").tobytes())
+            r, an = np.concatenate([r, ns.on0 + i]), np.concatenate([an, np.zeros(ko, bool)])
+        elif ko:
             i = (orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None and onx is None
                  else onx[orng.choice(len(onx), k_on, replace=len(onx) < k_on)] if pw is None
                  else orng.choice(upre, k_on, replace=upre < k_on) if upre else orng.choice(ns.n_on, k_on, replace=True, p=pw))
@@ -1623,6 +1654,8 @@ def cmd_train(a):
                 ST.update(Ls, step)
             if a.on_start:                                            # POOL-PILOT: pool rows in this batch (0 before T, k_on after)
                 Ls["on/batch_pool_rows"] = float((r >= ns.on0).sum())
+            if a.on_mix_log:                                          # monitoring only: S rows of the batch
+                Ls["on/batch_self_rows"] = float(self_np[r[r >= ns.on0] - ns.on0].sum())
             hist.append({q: float(v) for q, v in Ls.items()})
             if (step + 1) % 25 == 0 or step + 1 == cfg.steps:
                 keys = sorted({q for h in hist for q in h})
@@ -1765,6 +1798,9 @@ if __name__ == "__main__":
         p.add_argument("--on-start", type=int, default=0, help="POOL-PILOT: the pool rows enter the batches from step T (before: normal rows "
                        "in their slots, the pool stream untouched; no lr restart). 0 (default) = from the start, as before")
         p.add_argument("--on-mode", default="", choices=("",) + OT.ALL_MODES)
+        p.add_argument("--on-pre-k", type=int, default=0, help="NTV1 step 1: pool rows per batch before --on-start, drawn with --on-pre-wfile (0 = off)")
+        p.add_argument("--on-pre-wfile", default="", help="NTV1 step 1: per-row draw weights of the pre-T pool rows (npz names, w)")
+        p.add_argument("--on-mix-log", action="store_true", help="monitoring only: log on/batch_self_rows (S rows of the batch)")
         p.add_argument("--on-split", default="")
         p.add_argument("--on-lon", default="")
         p.add_argument("--on-lon-lam", type=float, default=10.0)
