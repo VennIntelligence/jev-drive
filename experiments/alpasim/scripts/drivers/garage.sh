@@ -7,7 +7,8 @@
 GK=$DATA_DIR/models/garage/resnet34_v0.1.0
 cwd=$out/driver-tmp
 cmd="exec env PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HOME=$out/driver-tmp \
-TMPDIR=$out/driver-tmp TORCH_HOME=$out/driver-tmp/torch MPLCONFIGDIR=$out/driver-tmp/matplotlib OMP_NUM_THREADS=8 \
+TMPDIR=$out/driver-tmp TORCH_HOME=$out/driver-tmp/torch MPLCONFIGDIR=$out/driver-tmp/matplotlib OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 NUMEXPR_NUM_THREADS=8 NUMBA_NUM_THREADS=8 \
+POLARS_MAX_THREADS=8 RAYON_NUM_THREADS=8 OPENCV_FOR_THREADS_NUM=8 \
 ALPASIM_DRIVER_LOG_DIR=$out/driver-logs $DATA_DIR/envs/garage/bin/python $here/../../alpasim_proxy/scripts/garage_driver.py \
 hydra.run.dir=$out/driver-tmp/alpasim_driver policy_config.evaluation_checkpoint_file=$GK/model_0014.pth \
 policy_config.evaluation_sensor_rig_file=$GK/${GARAGE_RIG:-sensor_rig_0.yaml} git_hash=288d34c host=\${ALPASIM_DRIVER_HOST:-0.0.0.0} port=\${ALPASIM_DRIVER_PORT:-6789}"
