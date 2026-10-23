@@ -6,6 +6,7 @@
 # garage into AlpaSim's venv) is NOT run: the live checkout stays untouched, and none of the three patches is needed by the driver
 # (experiments/alpasim/results/garage_v020/README.md). Then a GPU-free startup check: the driver on CPU on a free port, get_version over gRPC.
 # Usage (box, repo root): scripts/tmux_run.sh garage020-setup bash experiments/alpasim/scripts/setup_garage020.sh
+# Downloads go direct (HF_BASE); if slow, rerun under `source /etc/network_turbo`, then `proxy_on` (docs/network-proxy.md); resumable.
 # Needs the v0.2.0 source at $G (copied from a clone; GitHub is often unreachable from the box).
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd); source "$HERE/env.sh"
@@ -16,7 +17,7 @@ OUT=$DATA_DIR/runs/alpasim/garage_v020/setup; mkdir -p "$OUT" "$CK"; rm -f "$OUT
 exec > >(tee -a "$OUT/log.txt") 2>&1
 trap 'echo "failed at line $LINENO" > "$OUT/ERROR"' ERR
 PIP="uv pip install --python $ENV/bin/python --default-index https://mirrors.aliyun.com/pypi/simple"
-HF=https://hf-mirror.com/kesai-labs/py123d_garage_pretrained_checkpoints/resolve/$REV/v0.2.0/ltf-base-joint64-68M
+HF=${HF_BASE:-https://huggingface.co}/kesai-labs/py123d_garage_pretrained_checkpoints/resolve/$REV/v0.2.0/ltf-base-joint64-68M
 
 [[ $(git -C "$G" describe --tags --exact-match) == "$TAG" && -z $(git -C "$G" status --porcelain) ]]
 git -C "$G" log -1 --format='garage %h %ad %s' --date=short
