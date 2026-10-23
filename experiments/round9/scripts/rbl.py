@@ -19,11 +19,14 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
+from jevdrive import stats  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 
 DD = data_dir()
 RUNS = DD / "runs/op_parity/runs"
 LINE_HI, LINE_LO = 0.72, 0.67
+OLD_RBF, OLD_NTV0 = 0.650, 0.744                 # the registered old-scorer anchors
+SHARE_HI, SHARE_LO = [(x - OLD_RBF) / (OLD_NTV0 - OLD_RBF) for x in (LINE_HI, LINE_LO)]   # the lines as shares of the RB0-F -> NTV0 gap
 
 
 def dump(p, obj):
@@ -97,6 +100,29 @@ def dev_ade(tag, step=None):
     return float(v[-1]) if v else None
 
 
+def sv2(o):
+    """New scorer (scorer_v2, decision 453): the arm rescored vs the stored new-scorer RB0-F-s0 / NTV0-L18-s0; RPC scenes of any of the three dropped."""
+    import pandas as pd
+    f = o / "sv2/new/rollouts.csv"
+    if not f.exists():
+        return None
+    arm = pd.read_csv(f).drop_duplicates("scene", keep="last").set_index("scene").score
+    P = pd.read_csv(DD / "runs/alpasim/scorer_v2/report/per_scene.csv", header=[0, 1], index_col=0)["new"]
+    rpc = set()
+    for fa in ("RB0L-F-s0-281ag", "RB0-F-s0-281ag", "NTV0-L18-s0-281ag"):
+        x = pd.read_csv(DD / "runs/pai_fix/facts" / f"{fa}.csv")
+        rpc |= set(x.scene[x.rpc.fillna(False).astype(bool)])
+    rb, nt = P["RB0-F-s0-ag"], P["NTV0-L18-s0-ag"]
+    sc = sorted(set(arm.dropna().index) & set(rb.dropna().index) & set(nt.dropna().index) - rpc)
+    u, b, n = (x.reindex(sc).to_numpy(float) for x in (arm, rb, nt))
+    share = (u.mean() - b.mean()) / (n.mean() - b.mean())
+    line = ("a longer offline single run nearly matches NTV0" if share >= SHARE_HI else "more offline steps do not give NTV0's gain" if share <= SHARE_LO
+            else "undecided")
+    return dict(scenes=len(sc), arm_mean_all=float(arm.mean()), arm=float(u.mean()), rbf=float(b.mean()), ntv0=float(n.mean()),
+                zeros=dict(arm=int((u == 0).sum()), rbf=int((b == 0).sum()), ntv0=int((n == 0).sum())),
+                d_rbf=stats.paired(u, b), d_ntv0=stats.paired(u, n), share=float(share), line=line)
+
+
 def f3(d):
     return "%+.3f [%+.3f, %+.3f]" % (d["mean"], d["lo"], d["hi"]) if d else "-"
 
@@ -130,9 +156,21 @@ def cmd_verdict(a):
         L.append(f"| {k} | {r['mean']:.3f} | " + " | ".join(str(r[c]) for c in cls) + " |")
     L += ["", "drift / lane change = zero-other + side; rear-ended / slow = partials (0 < score < 0.98); launch = launched / launch scenes.", "",
           "| navtrain dev ADE | m |", "|:--|--:|"] + [f"| {k} | {v:.4f} |" if v is not None else f"| {k} | - |" for k, v in ade.items()]
+    sv = sv2(o)
+    if sv:
+        L += ["", "## New scorer (scorer_v2, decision 453; reported next to the registered old-scorer line)", "",
+              f"{sv['scenes']} scenes common to the three new-scorer reads without RPC error (RB0L rescored mean over all its scenes "
+              f"{sv['arm_mean_all']:.3f}). RB0L {sv['arm']:.3f}, RB0-F-s0 {sv['rbf']:.3f}, NTV0-L18-s0 {sv['ntv0']:.3f}; zeros "
+              f"{sv['zeros']['arm']} / {sv['zeros']['rbf']} / {sv['zeros']['ntv0']}.", "",
+              f"- RB0L - RB0-F-s0: {f3(sv['d_rbf'])}; RB0L - NTV0-L18-s0: {f3(sv['d_ntv0'])}",
+              f"- share of the RB0-F -> NTV0 gap: **{sv['share']:.0%}**; the registered lines as shares: >= {SHARE_HI:.0%} / <= {SHARE_LO:.0%} -> "
+              f"**{sv['line']}**",
+              f"- old and new scorer {'land on the same line' if sv['line'].split(' (')[0] == line.split(' (')[0] else 'land on DIFFERENT lines'}"]
+    else:
+        L += ["", "New scorer: not available (see sv2.log)."]
     Path(f"{a.out}.md").write_text("\n".join(L) + "\n")
     dump(f"{a.out}.json", dict(mean=m, line=line, lines=[LINE_HI, LINE_LO], scenes=R["scenes"], pairs={k: P[k]["mean"] for k in P},
-                               ns=RN and dict(scenes=RN["scenes"], pair=RN["pairs"]["RB0L-ag:NTV0NS-ag"]["mean"]), reads=reads, dev_ade=ade))
+                               ns=RN and dict(scenes=RN["scenes"], pair=RN["pairs"]["RB0L-ag:NTV0NS-ag"]["mean"]), reads=reads, dev_ade=ade, sv2=sv))
     print("\n".join(L))
 
 

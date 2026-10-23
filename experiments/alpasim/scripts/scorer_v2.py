@@ -74,6 +74,7 @@ READS = {
     "R7J-L18-s0-ag": ("round7/joint/pai281/R7J-L18-s0-ag", "R7J-L18-s0-281ag"),
     "R7J-L18-s0-agH": ("round7/joint/pai281/R7J-L18-s0-agH", "R7J-L18-s0-281agH"),
     "NTV0NS-L18-s0-ag": ("round9/ntv0_nos/pai281/NTV0NS-L18-s0-ag", "NTV0NS-L18-s0-281ag"),   # round9 ntv0_nos (scored with --reads only)
+    "RB0L-F-s0-ag": ("round9/rb0_long/pai281/RB0L-F-s0-ag", "RB0L-F-s0-281ag"),   # round9 rb0_long (scored with --reads only)
     "R7J-L18-s1-ag": ("round7/joint/pai281/R7J-L18-s1-ag", "R7J-L18-s1-281ag"),
     "R7J-L18-s1-agH": ("round7/joint/pai281/R7J-L18-s1-agH", "R7J-L18-s1-281agH"),
     "R9DL-L18-s0-ag": ("round9/dag_lane/pai281/R9DL-L18-s0-ag", "R9DL-L18-s0-281ag"),

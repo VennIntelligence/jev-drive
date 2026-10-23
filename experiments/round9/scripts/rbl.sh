@@ -85,6 +85,9 @@ report)
     $TR $E r281 --read RB0L-ag=$F_/$T-281ag.csv NTV0NS-ag=$F_/NTV0NS-L18-s0-281ag.csv RB0F-ag=$F_/RB0-F-s0-281ag.csv NTV0s0-ag=$F_/NTV0-L18-s0-281ag.csv \
         --pairs RB0L-ag:NTV0NS-ag --out $O/results/pai281_ns.md \
         --title "PAI 281, ACC + GAP, Harmonizer OFF: RB0L-F-s0 vs NTV0NS-L18-s0 (NTV0 without S rows)" || die "r281 ns"; fi
+  rm -rf $O/sv2; NEW=$DATA_DIR/third_party/alpasim-e2e-1b024f0/src/eval/src; AP=$DATA_DIR/third_party/alpasim/.venv/bin/python   # new scorer (decision 453)
+  PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2 --reads $T-ag --workers 8 > $O/sv2.log 2>&1 \
+    || echo "$(date '+%F %T') scorer_v2 new failed (log $O/sv2.log); verdict without it" | tee -a $O/stages.txt
   $V $PY verdict --dir $O --out $O/results/verdict || die verdict
   date '+%F %T' > $O/DONE ;;
 wait)
