@@ -1,0 +1,13 @@
+{
+ "src": "runs/defect_fix/w/JT00S.npz",
+ "pool": "on1_JT",
+ "part": "rb0 (on1_L18RB0 = RB0-F-s0's default-serve roll, pool_design.md)",
+ "rows": 169606,
+ "nonzero": 13793,
+ "nonzero_parts": [
+  "rb0"
+ ],
+ "weights": [
+  1.450557739450819e-05
+ ]
+}

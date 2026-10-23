@@ -1,0 +1,117 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-RB0L-F-s0/20261023-190549",
+ "upto": 25,
+ "steps": [
+  0,
+  25
+ ],
+ "scalars_compared": 12,
+ "identical": 12,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/cons@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [
+  "loss/act/nav_drivable",
+  "loss/agent",
+  "loss/agent_pos",
+  "loss/grad/clip",
+  "loss/grad/global",
+  "loss/imit/hinge_mean",
+  "loss/imit/hinge_pos",
+  "loss/imit/hinge_posmean",
+  "loss/on/batch_pool_rows",
+  "pool_fit/agent_mean",
+  "pool_fit/agent_pos",
+  "pool_fit/arc4_bias",
+  "pool_fit/arc4_bias_brake",
+  "pool_fit/arc4_bias_cruise",
+  "pool_fit/arc4_bias_launch",
+  "pool_fit/arc4_bias_still",
+  "pool_fit/arc4_bias_stop",
+  "pool_fit/fast12",
+  "pool_fit/lat_onc_mean",
+  "pool_fit/lat_onc_pos",
+  "pool_fit/lat_side_mean",
+  "pool_fit/lat_side_pos",
+  "pool_fit/lat_soft_mean",
+  "pool_fit/lat_soft_pos",
+  "pool_fit/n_brake",
+  "pool_fit/n_cruise",
+  "pool_fit/n_launch",
+  "pool_fit/n_still",
+  "pool_fit/n_stop",
+  "pool_fit/road_mean",
+  "pool_fit/road_pos",
+  "pool_fit/slow08",
+  "pool_held/agent_mean",
+  "pool_held/agent_pos",
+  "pool_held/arc4_bias",
+  "pool_held/arc4_bias_brake",
+  "pool_held/arc4_bias_cruise",
+  "pool_held/arc4_bias_launch",
+  "pool_held/arc4_bias_still",
+  "pool_held/arc4_bias_stop",
+  "pool_held/fast12",
+  "pool_held/lat_onc_mean",
+  "pool_held/lat_onc_pos",
+  "pool_held/lat_side_mean",
+  "pool_held/lat_side_pos",
+  "pool_held/lat_soft_mean",
+  "pool_held/lat_soft_pos",
+  "pool_held/n_brake",
+  "pool_held/n_cruise",
+  "pool_held/n_launch",
+  "pool_held/n_still",
+  "pool_held/n_stop",
+  "pool_held/road_mean",
+  "pool_held/road_pos",
+  "pool_held/slow08",
+  "probe_launch/ade",
+  "probe_launch/arc4",
+  "probe_launch/human_arc4",
+  "probe_launch/stay1m",
+  "probe_stand_r/ade",
+  "probe_stand_r/arc4",
+  "probe_stand_r/human_arc4",
+  "probe_stand_r/stay1m"
+ ],
+ "allow_new": true,
+ "bit_identical": true,
+ "tag": "PCLT30-F-s0",
+ "ref": "RB0L-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-PCLT30-F-s0/20261023-210524",
+ "trainer_rc_before_stop": null
+}

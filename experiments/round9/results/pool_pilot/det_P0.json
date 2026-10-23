@@ -1,0 +1,58 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-PCL0SM2-L18-s0/20261023-210712",
+ "upto": null,
+ "steps": [
+  0,
+  25,
+  50,
+  60
+ ],
+ "scalars_compared": 254,
+ "identical": 254,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade@60",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@60",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@60",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@60",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "a": "PCL0SM-L18-s0",
+ "b": "PCL0SM2-L18-s0",
+ "on_hash_60": {
+  "a": "ea56c5a89800ee12",
+  "b": "ea56c5a89800ee12",
+  "equal": true
+ }
+}
