@@ -50,8 +50,9 @@ REF = "NTV0-L18-s0-ag"
 CUTS = (1961, 1772, 1441)
 BAND = ["RSG-L18-s0-ag", "NTV0-L18-s0-ag"]                                       # d392 band reads, complete under the new scorer
 BAND_LB = ["NTV0-L18-s1-ag", "JTN-L18-s0-ag", "JTN-L18-s1-ag", "BNC2K-L18-s1-ag", "JTXS-L18-s1-ag", "NTVX-L18-s0-ag", "NTVXS-L18-s0-ag"]
+# no `dedup` variant: one row per subject is 4 rows (garage, go-straight, 2 band reads), below the fit guard of S + 5 N cells
 VARIANTS = {"v2": 42, "v2-s1": 1, "v2-s2": 2, "garagex0.5": 42, "garagex2": 42, "bandx0.5": 42, "bandx2": 42, "gsx0.5": 42, "gsx2": 42,
-            "low-as-gs": 42, "dedup": 42, "lb": 42, "allag": 42, "oldcuts": 42, "v2-1pl": 42}
+            "low-as-gs": 42, "lb": 42, "allag": 42, "oldcuts": 42, "v2-1pl": 42}
 
 
 def bands(board, cuts=CUTS):
@@ -143,7 +144,8 @@ def pool(sc, part, name, nb):
     if name == "lb":
         band += BAND_LB
     if name == "allag":                                              # every complete ACC + GAP (Harmonizer off) read we have
-        band = [s for s in sc.index if s.endswith("-ag") and not part.get(s, True)]
+        it = d392_items()
+        band = [s for s in sc.index if s.endswith("-ag") and not part.get(s, True) and sc.loc[s, it].notna().all()]
     if name == "dedup":
         return ["garage", "go-straight"] + band
     return ["garage"] * k["garage"] + ["go-straight"] * k["gs"] + spread(band, k["band"])
@@ -163,7 +165,7 @@ def cmd_fit(a):
     for v in ([] if a.variants == "-" else a.variants.split(",") if a.variants else VARIANTS):
         nb = bands(board, (1940, 1750, 1440) if v == "oldcuts" else CUTS)
         subs = pool(sc, part, "v2" if v == "oldcuts" else base_of(v), nb)
-        miss = sc.loc[sorted(set(subs)), items].isna().sum(1)
+        miss = sc.loc[sorted(set(subs)), items].isna().sum(axis=1)
         assert not miss.any(), f"{v}: pool subjects with NaN on the d392 items: {miss[miss > 0].to_dict()}"
         M, names = matrix(sc, subs, items)
         assert guard(M), v

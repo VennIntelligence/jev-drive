@@ -61,6 +61,8 @@ keep the arena mean, add the frozen board-mix PCS (`pcs_local.py score`) as the 
 
 PAI-PCS-LOCAL (d392): [results/pai_pcs_local.md](results/pai_pcs_local.md), `scripts/pai_pcs_local.py`: local garage 0014 / go-straight PAI 281 reads + zoib ruler with board-band weights and 3 private anchors (RMSE 25); NTV0-s0 + ACC + GAP predicted 2195 [2138, 2299] (extrapolated above the 2089 anchor), full B 2150.
 
+PAI-PCS-V2 (d455): [results/pai_pcs_v2/README.md](results/pai_pcs_v2/README.md), `scripts/pai_pcs_v2.py`: the d392 ruler refit under the fixed corridor scorer (PR #215) and the 10-23 board; p1021a predicted 2265 against 2251 and NTV0 - RSG +44 against +62. With a 2-read band it cannot rank the R6DAG / R8K family against NTV0 (default -110 to -330, pool variants +100 to +300).
+
 ## EASY-ITEMS: what we lose on the windows the garage aces (2026-10-19, d387)
 
 [results/easy_items.md](results/easy_items.md); code `scripts/easy_items.py` (box `extract` of per-step metrics, Mac `report` / `pai`).
