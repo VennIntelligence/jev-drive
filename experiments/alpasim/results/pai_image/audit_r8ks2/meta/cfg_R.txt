@@ -1,0 +1,1 @@
+Cmd=["python","/app/serve.py"] Entrypoint=null User=10001:10001 WorkingDir=/app Ports={"6789/tcp":{}} Stop=SIGTERM Labels=null Author=

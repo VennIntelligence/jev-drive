@@ -1,0 +1,17 @@
+2026-10-23 21:15:42 build in /data/runs/alpasim/pai_image/audit_r8ks2/wt_build (b251b657 + closure.txt of 95aaf308)
+2026-10-23 21:16:16 built jev-alpasim:r8k-l18-s2-b251b657-pai-vc1.0-lead-acc-gap0.7_2.7 sha256:63adee3b5831334cfaea1107b5fcf057d4cbb0e1b7a8ce578af62646b61dce87 8110825512
+2026-10-23 21:16:16 CPU-only start (no --gpus, test.sh flags, --network none)
+2026-10-23 21:16:21 CPU-only start: {"result": "exited", "seconds": 5, "exit_code_after_sigterm": 1}
+2026-10-23 21:38:51 test.sh card 0
+2026-10-23 21:38:51 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_on_c007 (GPU 1, HARMONIZER=1)
+test rc=0
+2026-10-23 21:39:38 replicas.sh card 0
+replicas rc=0
+2026-10-23 21:41:15 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c000 (GPU 0, HARMONIZER=0)
+2026-10-23 22:11:58 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c000 done: containerised: n 36, mean scene score 0.7660, zeros 8, at 1 25
+2026-10-23 22:11:58 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c001 (GPU 0, HARMONIZER=0)
+2026-10-23 22:42:14 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c001 done: containerised: n 36, mean scene score 0.8154, zeros 6, at 1 27
+2026-10-23 22:42:14 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c007 (GPU 0, HARMONIZER=0)
+2026-10-23 23:08:35 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_off_c007 done: containerised: n 29, mean scene score 0.6865, zeros 9, at 1 19
+2026-10-23 23:19:23 smoke /data/runs/alpasim/pai_image/audit_r8ks2/smoke_on_c007 FAILED
+2026-10-23 23:19:23 all done: card0 rc 0 card1 rc 1

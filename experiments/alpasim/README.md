@@ -28,7 +28,7 @@ expired on 10-20, so `limits` was not re-read. Current candidates: nuPlan native
 native reads, decision 371). PAI **NTV0-L18-s0 + ACC + GAP** (decisions 366 / 370 / 392). Neither has an image yet. Built but never
 submitted: RSG + stop3 ([results/image_rsg_stop3.md](results/image_rsg_stop3.md)), RSG + leash3
 ([results/image_rsg_leash3.md](results/image_rsg_leash3.md)), RSG / V2 nuPlan ([results/tokyo_image_rsg_v2.md](results/tokyo_image_rsg_v2.md)).
-Submitted image records: [results/pai_image.md](results/pai_image.md), [results/image_jtn_s1.md](results/image_jtn_s1.md). Pushing and
+Submitted image records: [results/pai_image.md](results/pai_image.md), [results/image_jtn_s1.md](results/image_jtn_s1.md), [results/pai_image_ntv0.md](results/pai_image_ntv0.md); built and audited, not submitted: [results/pai_image_r8k_s2.md](results/pai_image_r8k_s2.md) (R8K-L18-s2, vennai-org `p1023a`, decision 458). Pushing and
 submitting are the user's actions, unless the user hands a named probe to a session. That happened for the PAI probe on 10-18.
 
 **How to run.** [docs/alpasim.md](../../docs/alpasim.md#running-it-on-our-box-measured-2026-10-08-decision-184): `scripts/setup_env.sh`,
