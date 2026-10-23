@@ -1,0 +1,55 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-RB0-F-s0/20261013-002546",
+ "upto": 75,
+ "steps": [
+  0,
+  25,
+  50,
+  75
+ ],
+ "scalars_compared": 22,
+ "identical": 22,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/cons@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "tag": "P1LID0-F-s0",
+ "ref": "RB0-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-P1LID0-F-s0/20261023-232713",
+ "trainer_rc_before_stop": null
+}

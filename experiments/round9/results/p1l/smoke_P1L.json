@@ -1,0 +1,46 @@
+{
+ "tag": "P1LSM-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-P1LSM-F-s0/20261023-232755",
+ "checks": {
+  "done": true,
+  "scalars": 234,
+  "finite": true,
+  "last_logged_step": 60,
+  "final": true,
+  "batch": [
+   "83",
+   "13",
+   "32",
+   "mixed"
+  ],
+  "batch_want": [
+   "83",
+   "13",
+   "32",
+   "mixed"
+  ],
+  "snapshot": true,
+  "pool_rows": {
+   "25": 0.0,
+   "50": 25.6,
+   "60": 32.0
+  },
+  "want": {
+   "25": 0.0,
+   "50": 25.6,
+   "60": 32.0
+  },
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  }
+ },
+ "pass_": true
+}
