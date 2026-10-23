@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROUND9 CMD-PILOT gates and report (plans/2026-10-23-command-design.md section 5; lane scripts/cpl.sh). Box, repo root, repo venv.
   cpl.py smoke --tag T --out J       60-step smoke with --cmd-rule heading-all: DONE, every scalar finite, last logged step 60; G5: the trainer's
-                                     per-part change share vs cmdd.py's rows.parquet (ok rows; <= 0.5 pt); G0: the command fed per sampled row
+                                     per-part change share vs cmdd.py's rows.parquet (rows with a valid slot; <= 0.5 pt); G0: the command fed per sampled row
                                      (runs/route_mem/cmd_rule/T.npz) == cmdd.py's own recomputation (rule_h(20, 40) on the stored feat file;
                                      no valid slot -> the stored command), and == rows.parquet's h20_40 on the navtrain rows
   cpl.py verdict --dir O --out P     the registered reading lines (design section 5), paired CIs (old and new scorer), lateral zeros, D_new,
@@ -63,8 +63,9 @@ def cmd_smoke(a):
     rec = cmd_rec(a.tag)
     assert rec and rec["rule"] == "heading-all", "no heading-all record in the log"
     # G5: per-part change shares against cmdd.py's rows (ok rows only: the trainer keeps the stored command where the memory is empty)
-    R = pd.read_parquet(ROWS, columns=["part", "stored", "ok", "h20_40"])
-    ref = (R.ok & (R.stored != R.h20_40)).groupby(R.part).mean()
+    R = pd.read_parquet(ROWS, columns=["part", "stored", "ok", "nval", "h20_40"])
+    R["mem"] = R.ok & (R.nval > 0)                # a valid slot in the fed memory; else the trainer keeps the stored command (design 3 (1))
+    ref = (R.mem & (R.stored != R.h20_40)).groupby(R.part).mean()
     g5 = {}
     for g, p in rec["parts"].items():
         k = "navtrain" if g == "navtrain_full" else g
@@ -95,7 +96,7 @@ def cmd_smoke(a):
     assert len(navr) == sum(nav_sizes.values()), "rows.parquet navtrain rows != the 12 shards"
     mn = np.isin(Z["dir"], list(nav_sizes))
     pos = np.array([off[x] for x in Z["dir"][mn]]) + Z["idx"][mn]
-    okn = navr.ok.to_numpy()[pos]
+    okn = navr.mem.to_numpy()[pos]
     hn = np.where(okn, navr.h20_40.to_numpy()[pos], navr.stored.to_numpy()[pos])
     agree = dict(rows=int(len(exp)), fed_vs_cmdd_rule=float((exp == Z["new"]).mean()), stored_vs_tab=float((old_ref == Z["old"]).mean()),
                  navtrain_rows=int(mn.sum()), fed_vs_rows_parquet=float((hn == Z["new"][mn]).mean()) if mn.any() else None,
