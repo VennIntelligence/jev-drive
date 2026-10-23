@@ -68,6 +68,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <figure><img src="figs/fig8_dagger_pilot.png" alt="重投影 DAgger pilot"><figcaption>重投影短程 rollout 上的首轮 DAgger：偏离修回 S10 0.93 → 0.24，但 HUGSIM 8/11 场景曲率抖动、早期碰撞 4 对 2（文本结论，图里没有；决策 132，单 seed）。</figcaption></figure>
 </div>
 
+<figure><img src="figs/p1_usage.png" alt="用量探针：保留方向数与驾驶分"><figcaption>用量探针（论文决定 PD5、PD6、PD10）：在规划器读入嫁接表征的地方只保留前 k 个主方向，看 EPDMS 保住多少（阴影为按 log 聚类的 95 % 置信区间，虚线为 95 %）。看三处：(a) ReCogDrive 按语言模型隐状态取主方向要 512 维，恢复模长不改变，随机子空间要满宽；换成规划器自己经 Linear(1536, 384) 读入的空间（绿线），64 维就保住 95 %，128 维与不投影无差。(b) DriveVLA-W0 32 层同时砍到 2048 维仍掉分，恢复模长只救回一部分；但只砍第 16 层或最后一层到 64 维（4096 的 1.6 %）完全不掉分，依赖分散在各层之间。(c) WA-JEPA 64 / 512 维保住 95 %。脚本 experiments/wm_surplus/scripts/fig_p1_usage.py。</figcaption></figure>
 <h3>3.2 要我们自己产出的（公平对比做不了，改测「用了多少」）</h3>
 <div class="running"><b>2026-10-23 更新（论文决定 PD7）：</b>跨模型比分两头都不公平，关榜前不做；P2 改为第三方模型的 HUGSIM 能力画像（转弯 / 变道 / 路口 × 失败类型）加「知道 vs 做到」探针，下面 P2 的「追平」只作 10-31 后「同配方换学生」的候选。</div>
 <p>我们不可能为了对比再训一个基础世界模型；论点也不是「世界模型没用」，而是「驾驶现在用不上它里面的大部分东西」。所以 C2 用两半证据闭环：</p>
