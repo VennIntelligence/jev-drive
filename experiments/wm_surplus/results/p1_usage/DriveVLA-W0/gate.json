@@ -1,0 +1,30 @@
+{
+ "model": "DriveVLA-W0",
+ "n": 24,
+ "exact_site": false,
+ "s_per_token_plain": 1.81682092944781,
+ "s_per_token_hooked_sweeps": 2.4832796355088553,
+ "G1_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G5_sweep_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G3_sweep_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": false,
+  "max_abs_diff": 0.036520957946777344,
+  "mean_abs_xy_m": 0.002659277990460396
+ },
+ "G3_tol_mean_abs_xy_m": 0.01,
+ "passed": true
+}

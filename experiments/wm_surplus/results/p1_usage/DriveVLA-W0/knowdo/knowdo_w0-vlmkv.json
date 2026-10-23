@@ -1,0 +1,31 @@
+{
+ "name": "w0-vlmkv",
+ "tokens": 12146,
+ "balanced_accuracy": {
+  "blind": 0.5183564217868345,
+  "feat": 0.7496866129523976,
+  "feat+blind": 0.7499874177894046,
+  "plan": 0.8297205247062222
+ },
+ "regression_r2": {
+  "dyaw_deg": {
+   "blind": 0.7514712669840536,
+   "feat+blind": 0.9418238009869779,
+   "plan": 0.9596363037483635
+  },
+  "lat_4s_m": {
+   "blind": 0.8162776310216793,
+   "feat+blind": 0.9372767345762731,
+   "plan": 0.95831952562796
+  }
+ },
+ "verdicts": {
+  "straight": "does what it sees",
+  "left turn": "does what it sees",
+  "curve": "does what it sees",
+  "launch": "unclear",
+  "right turn": "does what it sees",
+  "stop": "unclear",
+  "lane change": "unclear"
+ }
+}

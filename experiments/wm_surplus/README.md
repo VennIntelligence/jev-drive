@@ -148,7 +148,12 @@ execution check only). The LiDAR subjects (hustvl DiffusionDrive, WoTE) are disa
 - **Gate** (`scripts/p0_repro.py submit --model M`): smoke on `navsim/p0-smoke-logs` (8 logs, 540 tokens; >= published - 3) ->
   full navtest; `verdict` -> `results/p0_subjects/<M>_full.json`, reproduced iff |PDMS - published| <= 0.5. Not tuned on failure.
 - **P1 on the subjects** (`scripts/p1_agent.py`, P1 hook `lib/usage_probe.Probe`, outputs `$DATA_DIR/runs/wm_surplus/p1_agents/<M>/`):
-  ReCogDrive site = the LM's last hidden state handed to the DiT. **PCA fit differs from WA-JEPA's**: navtrain cameras are gone,
+  ReCogDrive site = the LM's last hidden state handed to the DiT. DriveVLA-W0 (not a NAVSIM agent; built in-process as their
+  inference script, `W0` / `W0Site`) sites f0..f31 = the input-normed Emu3 hidden state of every layer at the positions its
+  Pi0-style action expert attends to (K / V are linear in it), all 32 projected at once; flow noise seeded per token from our
+  side; its hooked path re-implements their sampling loop (VLM once, their `forward_with_cache`), so its gate allows 0.01 m mean
+  |xy| for the off arm (measured 0.0027) while G1 / G4 / G5 stay bit-identical. Lane: `DIM=4096 VRAM=45 PCPU=8 V1=1
+  scripts/p1_agent_lane.sh DriveVLA-W0 w0-vlmkv` (`V1=1`: readout also scores v1.1 PDMS per arm). **PCA fit differs from WA-JEPA's**: navtrain cameras are gone,
   so the PCA is cross-fitted within navtest, 2 folds of whole logs (sorted navtest log names, `i % 2`; a token is projected
   with the other fold's PCA). The `off` pass also stores pooled features + 20 blind inputs (`knowdo_feats.npz`) for
   `scripts/p1_knowdo.py`. **Request to the P1 lane**: for comparability, also refit WA-JEPA with the same 2 log folds
@@ -157,7 +162,10 @@ execution check only). The LiDAR subjects (hustvl DiffusionDrive, WoTE) are disa
 Results (PD6): reproduced within 0.5 v1 PDMS on all 12 146 navtest tokens: ReCogDrive-2B-RL 90.52 (published 90.8; EPDMS 82.70),
 AutoVLA 89.53 (89.11; 89.24), DriveVLA-W0 87.04 (87.2; 87.00); SimScale-LTF / -DD 87.28 / 87.35 (EPDMS 87.84 / 86.28; no published
 number). P1 on ReCogDrive (cross-fitted PCA of the LM hidden state, 1536-d): k95 = 512, k99 = 1024; knows-vs-does: stop = sees but
-does not do (0.442 vs 0.152), turns / straight = does what it sees. Tables: `results/p0_subjects/*_full.json`,
+does not do (0.442 vs 0.152), turns / straight = does what it sees. P1 on DriveVLA-W0 (32 Emu3 layer states x 4096-d the action
+expert reads): k95 = k99 = 4096 (full width; k2048 keeps 93.7 % EPDMS, -5.45 [-6.50, -4.31]; v1 PDMS the same); knows-vs-does: the
+plan matches or beats the probe in every class, no sees-but-does-not-do (stop / launch / lane change unclear),
+[results/p1_usage/DriveVLA-W0/](results/p1_usage/DriveVLA-W0/results/p1_readout.md). Tables: `results/p0_subjects/*_full.json`,
 [results/p0_subjects/p1_recogdrive/p1_readout.md](results/p0_subjects/p1_recogdrive/p1_readout.md),
 [knowdo_recog-lmh.md](results/p0_subjects/p1_recogdrive/knowdo_recog-lmh.md).
 
