@@ -1,0 +1,25 @@
+{
+ "tag": "NTV0NSSM-L18-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NTV0NSSM-L18-s0/20261023-185434",
+ "checks": {
+  "done": true,
+  "scalars": 151,
+  "finite": true,
+  "batch": [
+   "115",
+   "13",
+   "0",
+   "mixed"
+  ],
+  "batch_want": [
+   "115",
+   "13",
+   "0",
+   "mixed"
+  ],
+  "last_logged_step": 60,
+  "s_terms_max_abs": {},
+  "nan_in_log": false
+ },
+ "pass_": true
+}

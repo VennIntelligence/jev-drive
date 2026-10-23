@@ -1,0 +1,49 @@
+{
+ "tag": "NTV0IDSM-L18-s0",
+ "ref": "NTV0-L18-s0",
+ "scalars_compared": 86,
+ "only_new": [],
+ "only_ref": [],
+ "identical": 31,
+ "max_abs_diff": 0.11846170822779278,
+ "worst": [
+  [
+   "loss/grad/global@50",
+   0.11846170822779278
+  ],
+  [
+   "loss/grad/global@25",
+   0.03229848198268748
+  ],
+  [
+   "loss/on/lat_onc_posmean@50",
+   0.011428721994161672
+  ],
+  [
+   "loss/on/lat_side_posmean@50",
+   0.004690091943025193
+  ],
+  [
+   "loss/on/lat_onc_posmean@25",
+   0.0039145201444625854
+  ],
+  [
+   "loss/imit@50",
+   0.0025124311447143333
+  ],
+  [
+   "loss/act/pool_road@50",
+   0.0012500000000000011
+  ],
+  [
+   "loss/on/road_pos@50",
+   0.0012500000000000011
+  ]
+ ],
+ "on_hash_60": {
+  "new": "08f1b4fbeccdae85",
+  "ref": "08f1b4fbeccdae85",
+  "equal": true
+ },
+ "bit_identical": false
+}

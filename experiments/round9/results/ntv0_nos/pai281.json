@@ -1,0 +1,391 @@
+{
+ "scenes": 278,
+ "reads": {
+  "NTV0NS-ag": {
+   "n": 278,
+   "mean": 0.6238108372432313,
+   "zeros": 93,
+   "z_overshoot": 23,
+   "z_route-turn": 20,
+   "z_offroad": 21,
+   "z_AF-front": 14,
+   "z_side": 2,
+   "z_zero-other": 13,
+   "p_rear-hit": 24,
+   "p_slow": 6,
+   "p_hit": 0,
+   "launch": "32/37"
+  },
+  "NTV0s0-ag": {
+   "n": 278,
+   "mean": 0.7425529296340805,
+   "zeros": 59,
+   "z_overshoot": 23,
+   "z_route-turn": 15,
+   "z_offroad": 12,
+   "z_AF-front": 3,
+   "z_side": 0,
+   "z_zero-other": 6,
+   "p_rear-hit": 25,
+   "p_slow": 11,
+   "p_hit": 0,
+   "launch": "33/37"
+  },
+  "RB0F-ag": {
+   "n": 278,
+   "mean": 0.6459832887634954,
+   "zeros": 88,
+   "z_overshoot": 22,
+   "z_route-turn": 21,
+   "z_offroad": 19,
+   "z_AF-front": 8,
+   "z_side": 4,
+   "z_zero-other": 14,
+   "p_rear-hit": 22,
+   "p_slow": 8,
+   "p_hit": 0,
+   "launch": "32/37"
+  }
+ },
+ "pairs": {
+  "NTV0NS-ag:NTV0s0-ag": {
+   "mean": {
+    "n": 278,
+    "units": 278,
+    "mean": -0.11874209239084918,
+    "lo": -0.1595817142379955,
+    "hi": -0.0812074776997512,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.6238108372432313,
+    "mean_b": 0.7425529296340805
+   },
+   "zeros": {
+    "a": 93,
+    "b": 59,
+    "diff": 34.0,
+    "lo": 23.0,
+    "hi": 46.0,
+    "new": 35,
+    "fixed": 1
+   },
+   "overshoot": {
+    "a": 23,
+    "b": 23,
+    "diff": 0.0,
+    "lo": -4.0,
+    "hi": 4.0,
+    "new": 2,
+    "fixed": 2
+   },
+   "route-turn": {
+    "a": 20,
+    "b": 15,
+    "diff": 5.0,
+    "lo": -2.0,
+    "hi": 12.0,
+    "new": 9,
+    "fixed": 4
+   },
+   "offroad": {
+    "a": 21,
+    "b": 12,
+    "diff": 9.0,
+    "lo": 3.0,
+    "hi": 16.0,
+    "new": 10,
+    "fixed": 1
+   },
+   "AF-front": {
+    "a": 14,
+    "b": 3,
+    "diff": 11.0,
+    "lo": 4.0,
+    "hi": 18.0,
+    "new": 12,
+    "fixed": 1
+   },
+   "side": {
+    "a": 2,
+    "b": 0,
+    "diff": 2.0,
+    "lo": 0.0,
+    "hi": 5.0,
+    "new": 2,
+    "fixed": 0
+   },
+   "zero-other": {
+    "a": 13,
+    "b": 6,
+    "diff": 7.0,
+    "lo": 2.0,
+    "hi": 13.0,
+    "new": 8,
+    "fixed": 1
+   },
+   "rear-hit": {
+    "a": 24,
+    "b": 25,
+    "diff": -1.0,
+    "lo": -6.0,
+    "hi": 4.0,
+    "new": 3,
+    "fixed": 4
+   },
+   "slow": {
+    "a": 6,
+    "b": 11,
+    "diff": -5.0,
+    "lo": -10.0,
+    "hi": -1.0,
+    "new": 0,
+    "fixed": 5
+   },
+   "hit": {
+    "a": 0,
+    "b": 0,
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "new": 0,
+    "fixed": 0
+   },
+   "launched (of launch scenes)": {
+    "a": 32,
+    "b": 33,
+    "diff": -1.0,
+    "lo": -5.0,
+    "hi": 2.0,
+    "new": 1,
+    "fixed": 2
+   }
+  },
+  "NTV0NS-ag:RB0F-ag": {
+   "mean": {
+    "n": 278,
+    "units": 278,
+    "mean": -0.022172451520264133,
+    "lo": -0.05113930922474396,
+    "hi": 0.006016071325290618,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.6238108372432313,
+    "mean_b": 0.6459832887634954
+   },
+   "zeros": {
+    "a": 93,
+    "b": 88,
+    "diff": 5.0,
+    "lo": -3.0,
+    "hi": 13.0,
+    "new": 11,
+    "fixed": 6
+   },
+   "overshoot": {
+    "a": 23,
+    "b": 22,
+    "diff": 1.0,
+    "lo": -3.0,
+    "hi": 5.0,
+    "new": 3,
+    "fixed": 2
+   },
+   "route-turn": {
+    "a": 20,
+    "b": 21,
+    "diff": -1.0,
+    "lo": -6.0,
+    "hi": 4.0,
+    "new": 3,
+    "fixed": 4
+   },
+   "offroad": {
+    "a": 21,
+    "b": 19,
+    "diff": 2.0,
+    "lo": -3.0,
+    "hi": 8.0,
+    "new": 5,
+    "fixed": 3
+   },
+   "AF-front": {
+    "a": 14,
+    "b": 8,
+    "diff": 6.0,
+    "lo": -1.0,
+    "hi": 14.0,
+    "new": 10,
+    "fixed": 4
+   },
+   "side": {
+    "a": 2,
+    "b": 4,
+    "diff": -2.0,
+    "lo": -6.0,
+    "hi": 2.0,
+    "new": 1,
+    "fixed": 3
+   },
+   "zero-other": {
+    "a": 13,
+    "b": 14,
+    "diff": -1.0,
+    "lo": -6.0,
+    "hi": 3.0,
+    "new": 2,
+    "fixed": 3
+   },
+   "rear-hit": {
+    "a": 24,
+    "b": 22,
+    "diff": 2.0,
+    "lo": 0.0,
+    "hi": 5.0,
+    "new": 2,
+    "fixed": 0
+   },
+   "slow": {
+    "a": 6,
+    "b": 8,
+    "diff": -2.0,
+    "lo": -5.0,
+    "hi": 0.0,
+    "new": 0,
+    "fixed": 2
+   },
+   "hit": {
+    "a": 0,
+    "b": 0,
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "new": 0,
+    "fixed": 0
+   },
+   "launched (of launch scenes)": {
+    "a": 32,
+    "b": 32,
+    "diff": 0.0,
+    "lo": -3.0,
+    "hi": 3.0,
+    "new": 1,
+    "fixed": 1
+   }
+  },
+  "NTV0s0-ag:RB0F-ag": {
+   "mean": {
+    "n": 278,
+    "units": 278,
+    "mean": 0.09656964087058506,
+    "lo": 0.06032019308758939,
+    "hi": 0.1360464608679446,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7425529296340805,
+    "mean_b": 0.6459832887634954
+   },
+   "zeros": {
+    "a": 59,
+    "b": 88,
+    "diff": -29.0,
+    "lo": -40.0,
+    "hi": -19.0,
+    "new": 2,
+    "fixed": 31
+   },
+   "overshoot": {
+    "a": 23,
+    "b": 22,
+    "diff": 1.0,
+    "lo": -4.0,
+    "hi": 6.0,
+    "new": 4,
+    "fixed": 3
+   },
+   "route-turn": {
+    "a": 15,
+    "b": 21,
+    "diff": -6.0,
+    "lo": -12.0,
+    "hi": -1.0,
+    "new": 1,
+    "fixed": 7
+   },
+   "offroad": {
+    "a": 12,
+    "b": 19,
+    "diff": -7.0,
+    "lo": -13.0,
+    "hi": -2.0,
+    "new": 1,
+    "fixed": 8
+   },
+   "AF-front": {
+    "a": 3,
+    "b": 8,
+    "diff": -5.0,
+    "lo": -11.0,
+    "hi": 1.0,
+    "new": 2,
+    "fixed": 7
+   },
+   "side": {
+    "a": 0,
+    "b": 4,
+    "diff": -4.0,
+    "lo": -8.0,
+    "hi": -1.0,
+    "new": 0,
+    "fixed": 4
+   },
+   "zero-other": {
+    "a": 6,
+    "b": 14,
+    "diff": -8.0,
+    "lo": -14.0,
+    "hi": -2.0,
+    "new": 1,
+    "fixed": 9
+   },
+   "rear-hit": {
+    "a": 25,
+    "b": 22,
+    "diff": 3.0,
+    "lo": -2.0,
+    "hi": 8.0,
+    "new": 5,
+    "fixed": 2
+   },
+   "slow": {
+    "a": 11,
+    "b": 8,
+    "diff": 3.0,
+    "lo": -1.0,
+    "hi": 8.0,
+    "new": 4,
+    "fixed": 1
+   },
+   "hit": {
+    "a": 0,
+    "b": 0,
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "new": 0,
+    "fixed": 0
+   },
+   "launched (of launch scenes)": {
+    "a": 33,
+    "b": 32,
+    "diff": 1.0,
+    "lo": -2.0,
+    "hi": 5.0,
+    "new": 2,
+    "fixed": 1
+   }
+  }
+ }
+}

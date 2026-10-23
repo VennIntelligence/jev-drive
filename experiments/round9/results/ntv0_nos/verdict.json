@@ -1,0 +1,167 @@
+{
+ "mean": 0.6238108372432313,
+ "line": "the S rows carry the gain",
+ "lines": [
+  0.72,
+  0.67
+ ],
+ "scenes": 278,
+ "pair_ntv0s0": {
+  "n": 278,
+  "units": 278,
+  "mean": -0.11874209239084918,
+  "lo": -0.1595817142379955,
+  "hi": -0.0812074776997512,
+  "n_boot": 10000,
+  "seed": 0,
+  "alpha": 0.05,
+  "mean_a": 0.6238108372432313,
+  "mean_b": 0.7425529296340805
+ },
+ "reads": {
+  "NTV0NS-L18-s0": {
+   "n": 278,
+   "mean": 0.6238108372432313,
+   "zeros": 93,
+   "z_overshoot": 23,
+   "z_route-turn": 20,
+   "z_offroad": 21,
+   "z_AF-front": 14,
+   "z_side": 2,
+   "z_zero-other": 13,
+   "p_rear-hit": 24,
+   "p_slow": 6,
+   "p_hit": 0,
+   "launch": "32/37"
+  },
+  "NTV0-L18-s0": {
+   "n": 278,
+   "mean": 0.7425529296340805,
+   "zeros": 59,
+   "z_overshoot": 23,
+   "z_route-turn": 15,
+   "z_offroad": 12,
+   "z_AF-front": 3,
+   "z_side": 0,
+   "z_zero-other": 6,
+   "p_rear-hit": 25,
+   "p_slow": 11,
+   "p_hit": 0,
+   "launch": "33/37"
+  },
+  "NTV0-L18-s1": {
+   "n": 278,
+   "mean": 0.7365363256624232,
+   "zeros": 62,
+   "z_overshoot": 22,
+   "z_route-turn": 17,
+   "z_offroad": 14,
+   "z_AF-front": 3,
+   "z_side": 1,
+   "z_zero-other": 5,
+   "p_rear-hit": 24,
+   "p_slow": 11,
+   "p_hit": 0,
+   "launch": "33/37"
+  },
+  "RB0-F-s0": {
+   "n": 278,
+   "mean": 0.6459832887634954,
+   "zeros": 88,
+   "z_overshoot": 22,
+   "z_route-turn": 21,
+   "z_offroad": 19,
+   "z_AF-front": 8,
+   "z_side": 4,
+   "z_zero-other": 14,
+   "p_rear-hit": 22,
+   "p_slow": 8,
+   "p_hit": 0,
+   "launch": "32/37"
+  }
+ },
+ "dev_ade": {
+  "NTV0NS-L18-s0": 0.5287251472473145,
+  "NTV0-L18-s0": 0.5362182855606079,
+  "NTV0-L18-s1": 0.5354385375976562,
+  "RB0-F-s0": 0.5275979042053223
+ },
+ "sv2": {
+  "arm_mean_all": 0.6968437733104599,
+  "arm_scenes": 279,
+  "pairs": {
+   "NTV0-L18-s0-ag": {
+    "scenes": 278,
+    "arm": 0.6957532832863967,
+    "ref": 0.814494964028777,
+    "diff": {
+     "n": 278,
+     "units": 278,
+     "mean": -0.1187416807423802,
+     "lo": -0.15913081247178162,
+     "hi": -0.08075332564721066,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.6957532832863967,
+     "mean_b": 0.814494964028777
+    },
+    "zeros_arm": 73,
+    "zeros_ref": 39,
+    "partial_ref": false
+   },
+   "RB0-F-s0-ag": {
+    "scenes": 279,
+    "arm": 0.6968437733104599,
+    "ref": 0.715352329749104,
+    "diff": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.01850855643864408,
+     "lo": -0.04786430290420198,
+     "hi": 0.01008793397858518,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.6968437733104599,
+     "mean_b": 0.715352329749104
+    },
+    "zeros_arm": 73,
+    "zeros_ref": 69,
+    "partial_ref": false
+   },
+   "NTV0-L18-s1-ag": {
+    "scenes": 279,
+    "arm": 0.6968437733104599,
+    "ref": 0.7482344086021504,
+    "diff": {
+     "n": 279,
+     "units": 279,
+     "mean": -0.051390635291690676,
+     "lo": -0.10097732773535698,
+     "hi": -0.002976856563545239,
+     "n_boot": 10000,
+     "seed": 0,
+     "alpha": 0.05,
+     "mean_a": 0.6968437733104599,
+     "mean_b": 0.7482344086021504
+    },
+    "zeros_arm": 73,
+    "zeros_ref": 59,
+    "partial_ref": true
+   }
+  },
+  "lines": {
+   "scenes": 278,
+   "arm": 0.6957532832863967,
+   "ntv0": 0.814494964028777,
+   "rb0f": 0.7143284172661871,
+   "share_hi": 0.7446808510638295,
+   "share_lo": 0.21276595744680876,
+   "line_hi": 0.7889205265574775,
+   "line_lo": 0.7356404484922701,
+   "arm_gap_share": -0.1854424913321242,
+   "line": "the S rows carry the gain"
+  }
+ }
+}

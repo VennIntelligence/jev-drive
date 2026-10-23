@@ -1,0 +1,49 @@
+{
+ "tag": "NTV0IDSM2-L18-s0",
+ "ref": "NTV0IDSM-L18-s0",
+ "scalars_compared": 86,
+ "only_new": [],
+ "only_ref": [],
+ "identical": 86,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@50",
+   0.0
+  ],
+  [
+   "loss/act/pool_agent@25",
+   0.0
+  ],
+  [
+   "loss/act/pool_agent@50",
+   0.0
+  ],
+  [
+   "loss/act/pool_lat_onc@25",
+   0.0
+  ],
+  [
+   "loss/act/pool_lat_onc@50",
+   0.0
+  ],
+  [
+   "loss/act/pool_lat_side@25",
+   0.0
+  ],
+  [
+   "loss/act/pool_lat_side@50",
+   0.0
+  ]
+ ],
+ "on_hash_60": {
+  "new": "08f1b4fbeccdae85",
+  "ref": "08f1b4fbeccdae85",
+  "equal": true
+ },
+ "bit_identical": true
+}
