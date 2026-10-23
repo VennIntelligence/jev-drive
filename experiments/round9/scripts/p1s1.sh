@@ -43,7 +43,7 @@ sys.exit(0 if ok else 1)
 PY
   ;;
 all)
-  $0 dry || die "argv differs"
+  bash $ME dry || die "argv differs"
   for X in $TAG ${TAG}x10000 PCL1SM-F-s1 PCL1SM-F-s1x30; do
     [[ ! -e $RUNS/$X && -z $(ls -d $DATA_DIR/runs/route_mem/train-$X 2>/dev/null) ]] || die "$X exists"; done
   [[ ! -e $O/DONE && ! -e $O/jobs.txt ]] || die "already ran"
