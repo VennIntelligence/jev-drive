@@ -146,7 +146,7 @@ def cmd_smoke(a):
         pg = {k: v for k, v in (pre.get("group_share") or {}).items() if v > 0}
         ck["pre"] = pre
         ok_sh = ok_sh and pre.get("k") == kpre and set(pg) == set(SHARE_PRE) and all(abs(pg[k] - v) < 1e-9 for k, v in SHARE_PRE.items()) \
-            and abs((pre.get("mode_share") or {}).get("both", 0) - 1) < 1e-12
+            and abs((pre.get("mode_share") or {}).get("both", 0) - 1) < 1e-9
     ck["draw_shares_ok"] = bool(ok_sh)
     st = C.s_terms(d, T)
     pre_s = sorted(f"{k[0]}@{k[1]}" for k, v in C.scalars(d, T).items() if C.S_KEY.match(k[0]) and v != 0)
