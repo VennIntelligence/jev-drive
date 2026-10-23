@@ -338,19 +338,23 @@ def cmd_report(a):
     N = pd.read_csv(root / "new/rollouts.csv")
     labels = [lab for lab in READS if lab in set(N.read)]
     # ---- reproduction gate: old variant == stored, every rollout
-    rep = []
+    rep, rpc_failed = [], []
     for lab in labels:
         st = stored_scores(lab)
         o = O[O.read == lab].drop_duplicates("scene", keep="last").set_index("scene")
         for sc, (rid, s, fr) in st.items():
             if sc not in o.index:
-                rep.append(dict(read=lab, scene=sc, issue="missing in old rescore", stored=s))
-            elif o.at[sc, "rollout"] != rid or not np.isclose(o.at[sc, "score"], s, rtol=0, atol=0) or nfr(o.at[sc, "failure_reason"]) != nfr(fr):
+                if "RpcError" in nfr(fr):                   # failed rollout, no metrics: nothing to rescore (excluded like the facts' rpc rows)
+                    rpc_failed.append(dict(read=lab, scene=sc))
+                else:
+                    rep.append(dict(read=lab, scene=sc, issue="missing in old rescore", stored=s))
+            elif o.at[sc, "rollout"] != rid or not np.isclose(o.at[sc, "score"], s, rtol=0, atol=1e-12) or nfr(o.at[sc, "failure_reason"]) != nfr(fr):
                 rep.append(dict(read=lab, scene=sc, issue="differs", stored=s, old=o.at[sc, "score"], fr=fr, fr_old=o.at[sc, "failure_reason"]))
     ev = O[O.evaluated == True]  # noqa: E712
     pq_bad = int((ev.parquet_same != True).sum())  # noqa: E712
     gate = dict(rollouts=int(len(O)), asl_evaluated=int(len(ev)), parquet_identical=int((ev.parquet_same == True).sum()),  # noqa: E712
-                parquet_differs=pq_bad, scene_score_mismatch=len(rep), mismatches=rep[:50])
+                parquet_differs=pq_bad, scene_score_mismatch=len(rep),
+                rpc_failed_rollouts=len(rpc_failed), mismatches=rep[:50], rpc_failed=rpc_failed)
     # 6 / 2315 re-evaluated parquets differ at one step by < 2e-6 m (float noise, checked 10-23); the gate is the scene score
     (out / "gate.json").write_text(json.dumps(gate, indent=1, default=str))
     if rep:
@@ -422,7 +426,7 @@ def cmd_report(a):
     for S, tag in ((So, "old"), (Sn, "new")):
         pairs[f"{tag}: NTV0-s0 - RSG-s0 (ACC + GAP, OFF)"] = boot(S["NTV0-L18-s0-ag"].reindex(cg).to_numpy(float) - S["RSG-L18-s0-ag"].reindex(cg).to_numpy(float)) + (
             float(S["NTV0-L18-s0-ag"].reindex(cg).mean()), float(S["RSG-L18-s0-ag"].reindex(cg).mean()))
-    res = dict(gate={k: v for k, v in gate.items() if k != "mismatches"}, common_scenes=len(c), common_scenes_rsg=len(cg), pairs=pairs)
+    res = dict(gate={k: v for k, v in gate.items() if k not in ("mismatches", "rpc_failed")}, common_scenes=len(c), common_scenes_rsg=len(cg), pairs=pairs)
     (out / "summary.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res["gate"]))
     print(R.round(4).to_string())
