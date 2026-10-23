@@ -711,7 +711,7 @@ def cmd_vsweep(a):
             for c0 in range(0, len(idx), a.chunk):
                 part = [i for i in idx[c0:c0 + a.chunk] if fo[logs[i]] == g]
                 f_out = d / f"g{g}_c{c0:06d}.npz"
-                if not part or f_out.exists():
+                if not part or f_out.exists() or (c0 // a.chunk) % a.part[1] != a.part[0]:
                     continue
                 T = [toks[i] for i in part]
                 L = loader(c, cfg, agent, T, [logs[i] for i in part])
@@ -738,7 +738,8 @@ def cmd_vsweep(a):
                 print(f"[vsweep] fold {g} chunk {c0}: {n}/{len(idx)} {(time.time() - t0) / max(n, 1):.2f} s/token", flush=True)
         for p in probes:
             p.__exit__()
-    (d / "DONE").write_text(json.dumps(dict(tokens=len(idx), wall_s=time.time() - t0)))
+    if a.part[1] == 1:
+        (d / "DONE").write_text(json.dumps(dict(tokens=len(idx), wall_s=time.time() - t0)))
 
 
 def cmd_vmerge(a):
@@ -795,9 +796,174 @@ def cmd_vmerge(a):
         sys.exit("variant run's off arm differs from the original sweep's off arm")
 
 
+# ---------------------------------------------------------------- DriveVLA-W0 controls (prereg addendum A)
+# On the fixed token subset navsim/p1-w0-ctl: 32-layer projection with the raw norm restored per row (V2 `norm`), and a
+# single layer projected (original projection, the other 31 layers untouched). Same cross-fitted PCAs, folds and per-token
+# noise seed as `sweep`; outputs under <out_dir>/controls/; bench arms PROBE-w0-vlmkv-<arm> (subset tokens only).
+W0_SPLIT = "navsim/p1-w0-ctl"
+W0_CTL = (("norm", 64), ("norm", 512), ("norm", 2048), ("L16", 64), ("L16", 512), ("L31", 64), ("L31", 512))
+
+
+def norm_project(b: "UP._Basis", x: torch.Tensor, k: int) -> torch.Tensor:
+    """Projector('norm') on a _Basis: mu + c U_k U_k^T in fp32, rescaled to the row's original ||x||, cast back."""
+    xf = x.float()
+    U = b.U[:, :k]
+    y = ((xf - b.mu) @ U) @ U.T + b.mu
+    return (y * (xf.norm(dim=-1, keepdim=True) / y.norm(dim=-1, keepdim=True).clamp_min(1e-12))).to(x.dtype)
+
+
+def w0_arms(probes, ctl) -> list:
+    """[(name, [fn or None per layer probe])]; probes' current bases (the fold's PCA) are read at call time."""
+    arms = []
+    for v, k in ctl:
+        if v == "norm":
+            fns = [lambda x, p=p, k=k: norm_project(p.basis, x, min(k, p.basis.U.shape[0])) for p in probes]
+        else:
+            fns = [None] * len(probes)
+            p = probes[int(v[1:])]
+            fns[int(v[1:])] = lambda x, p=p, k=k: p.basis.project(x, min(k, p.basis.U.shape[0]))
+        arms.append((f"{v}-k{k}", fns))
+    return arms
+
+
+def w0_subset():
+    from jevdrive.data import splits
+    toks, logs = navtest_tokens()
+    keep = set(splits.load(W0_SPLIT))
+    sel = [i for i, t in enumerate(toks) if t in keep]
+    assert len(sel) == len(keep)
+    return toks, logs, sel
+
+
+def cmd_wcgate(a):
+    """Identity gate of the W0 controls on --n subset tokens: G4 plain twice, G5 sweep off twice (bit-identical), G3 sweep
+    off vs plain (mean |xy| <= G3_TOL_M), R full-rank control arms vs sweep off (mean |xy| <= G3_TOL_M), O off vs the
+    original sweep's off plans (reported)."""
+    from jevdrive.bench.models import resolve
+    from jevdrive.bench.navsim import pred_file
+    c, cfg, agent = build(a.model)
+    toks, logs, sel = w0_subset()
+    sel = sel[:: max(1, len(sel) // a.n)][: a.n]
+    T = [toks[i] for i in sel]
+    fo = fold_of_logs(logs)
+    plain, again, swept, swept2 = [], [], [], []
+    for t in T:
+        plain.append(call(agent, L=None, tok=t))
+        again.append(call(agent, L=None, tok=t))
+    S = site(a.model, agent)
+    full = [("norm", 4096), ("L16", 4096), ("L31", 4096)]
+    R = {f"{v}-k{k}": [] for v, k in full}
+    t0 = time.time()
+    with S:
+        probes = [UP.Probe(S, f"f{i}").__enter__() for i in range(S.n)]
+        cur = None
+        for i, t in zip(sel, T):
+            g = fo[logs[i]]
+            if g != cur:
+                for p, q in zip(probes, load_pcas(a.model, (g + 1) % FOLDS)):
+                    p.use_pca(q, "cuda")
+                cur = g
+            r = sweep(probes, S, lambda: call(agent, None, t), [None] + w0_arms(probes, full))
+            swept.append(r[None])
+            for n_ in R:
+                R[n_].append(r[n_])
+            swept2.append(sweep(probes, S, lambda: call(agent, None, t), [None])[None])
+        for p in probes:
+            p.__exit__()
+    xy = lambda A, B: float(np.mean([np.abs(np.asarray(x)[:, :2] - np.asarray(y)[:, :2]).mean() for x, y in zip(A, B)]))  # noqa: E731
+    z0 = np.load(pred_file(resolve(f"PROBE-{TAGS[a.model]}-off"), "navtest"))
+    pos = {t: j for j, t in enumerate(z0["tokens"].tolist())}
+    orig = [z0["poses"][pos[t]] for t in T]
+    g = dict(model=a.model, split=W0_SPLIT, n=len(T), s_per_token_sweep=(time.time() - t0) / len(T),
+             G4_determinism=UP.identity_gate(plain, again), G5_sweep_determinism=UP.identity_gate(swept, swept2),
+             G3_sweep_off_vs_nohook=UP.identity_gate(plain, swept), O_sweep_off_vs_original_off=UP.identity_gate(orig, swept),
+             R={n_: dict(max_abs_m=max(UP.max_abs_diff(x, y) for x, y in zip(swept, v)), mean_abs_xy_m=xy(swept, v)) for n_, v in R.items()},
+             tol_mean_abs_xy_m=G3_TOL_M)
+    g["G3_sweep_off_vs_nohook"]["mean_abs_xy_m"] = xy(plain, swept)
+    g["O_sweep_off_vs_original_off"]["mean_abs_xy_m"] = xy(orig, swept)
+    g["passed"] = g["G4_determinism"]["bit_identical"] and g["G5_sweep_determinism"]["bit_identical"] \
+        and g["G3_sweep_off_vs_nohook"]["mean_abs_xy_m"] <= G3_TOL_M and all(v["mean_abs_xy_m"] <= G3_TOL_M for v in g["R"].values())
+    d = out_dir(a.model) / "controls"
+    d.mkdir(exist_ok=True)
+    (d / "gate.json").write_text(json.dumps(g, indent=1))
+    print(json.dumps(g, indent=1))
+    if not g["passed"]:
+        sys.exit("W0 control identity gate failed")
+
+
+def cmd_wcsweep(a):
+    """Subset shard I of N: off + the control arms; a token of fold g uses the other fold's PCA (as `sweep`)."""
+    c, cfg, agent = build(a.model)
+    toks, logs, sel = w0_subset()
+    fo = fold_of_logs(logs)
+    idx = sel[a.shard[0]:: a.shard[1]]
+    d = out_dir(a.model) / "controls" / "sweep" / f"s{a.shard[0]}of{a.shard[1]}"
+    d.mkdir(parents=True, exist_ok=True)
+    S = site(a.model, agent)
+    t0, n = time.time(), 0
+    with S:
+        probes = [UP.Probe(S, f"f{i}").__enter__() for i in range(S.n)]
+        arms = w0_arms(probes, W0_CTL)
+        names = ["ctl-off"] + [n_ for n_, _ in arms]
+        for g in range(FOLDS):
+            loaded = False
+            for c0 in range(0, len(idx), a.chunk):
+                part = [i for i in idx[c0:c0 + a.chunk] if fo[logs[i]] == g]
+                f_out = d / f"g{g}_c{c0:06d}.npz"
+                if not part or f_out.exists():
+                    continue
+                if not loaded:
+                    for p, q in zip(probes, load_pcas(a.model, (g + 1) % FOLDS)):
+                        p.use_pca(q, "cuda")
+                    loaded = True
+                T = [toks[i] for i in part]
+                P = []
+                for t in T:
+                    r = sweep(probes, S, lambda: call(agent, None, t), [None] + arms)
+                    P.append(np.stack([r[None]] + [r[n_] for n_ in names[1:]]))
+                n += len(T)
+                np.savez(d / "tmp.npz", tokens=np.array(T), fold=g, poses=np.stack(P, 1), arms=np.array(names))
+                os.replace(d / "tmp.npz", f_out)
+                print(f"[wcsweep] fold {g} chunk {c0}: {n}/{len(idx)} {(time.time() - t0) / max(n, 1):.2f} s/token", flush=True)
+        for p in probes:
+            p.__exit__()
+    (d / "DONE").write_text(json.dumps(dict(tokens=len(idx), wall_s=time.time() - t0)))
+
+
+def cmd_wcmerge(a):
+    """-> bench pred files PROBE-w0-vlmkv-<arm> (subset tokens), controls/ev.json (plan shift vs the original off, off identity)."""
+    from jevdrive.bench.models import resolve
+    from jevdrive.bench.navsim import pred_file
+    d = out_dir(a.model) / "controls"
+    toks, _, sel = w0_subset()
+    zs = [np.load(f) for f in sorted((d / "sweep").glob("s*of*/g*_c*.npz"))]
+    names = [str(x) for x in zs[0]["arms"]]
+    T = np.concatenate([z["tokens"] for z in zs])
+    P = np.concatenate([z["poses"] for z in zs], 1)
+    assert len(set(T)) == len(T) == len(sel) and set(T) == {toks[i] for i in sel}, f"{len(T)} plans for {len(sel)} subset tokens"
+    o = np.argsort(T)
+    T, P = T[o], P[:, o]
+    z0 = np.load(pred_file(resolve(f"PROBE-{TAGS[a.model]}-off"), "navtest"))
+    pos = {t: j for j, t in enumerate(z0["tokens"].tolist())}
+    off0 = z0["poses"][[pos[t] for t in T]]
+    for i, nm in enumerate(names):
+        pf = pred_file(resolve(f"PROBE-{TAGS[a.model]}-{nm}"), "navtest")
+        pf.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(pf, tokens=T, poses=P[i])
+    shift = {nm: float(np.linalg.norm(P[i][..., :2] - off0[..., :2], axis=-1).mean()) for i, nm in enumerate(names)}
+    for k in ("k64", "k512", "k2048"):
+        zk = np.load(pred_file(resolve(f"PROBE-{TAGS[a.model]}-{k}"), "navtest"))
+        pk = {t: j for j, t in enumerate(zk["tokens"].tolist())}
+        shift[k] = float(np.linalg.norm(zk["poses"][[pk[t] for t in T]][..., :2] - off0[..., :2], axis=-1).mean())
+    ev = dict(model=a.model, split=W0_SPLIT, tokens=len(T), arms=names, ctl_off_equals_original_off=bool(np.array_equal(P[0], off0)),
+              ctl_off_max_abs_m=float(np.abs(P[0] - off0).max()), plan_shift_vs_off_m=shift)
+    (d / "ev.json").write_text(json.dumps(ev, indent=1))
+    print(json.dumps(ev, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["gate", "fit", "pca", "sweep", "merge", "vgate", "vsweep", "vmerge"])
+    ap.add_argument("cmd", choices=["gate", "fit", "pca", "sweep", "merge", "vgate", "vsweep", "vmerge", "wcgate", "wcsweep", "wcmerge"])
     ap.add_argument("--variants", nargs="+", default=list(VAR_DEFAULT), choices=list(UP.VARIANTS[1:]))
     ap.add_argument("--model", required=True, choices=sorted(TAGS))
     ap.add_argument("--n", type=int, default=24)
@@ -806,9 +972,11 @@ def main():
     ap.add_argument("--shard", type=int, nargs=2, default=(0, 1))
     ap.add_argument("--max", type=int, default=3000, help="fit tokens per fold (spread over the fold's logs)")
     ap.add_argument("--chunk", type=int, default=128)
+    ap.add_argument("--part", type=int, nargs=2, default=(0, 1), help="vsweep: only chunks j of every m of the shard (same files)")
     a = ap.parse_args()
     from jevdrive.run import Run
-    tag = f"p1a-{TAGS[a.model]}-{a.cmd}" + (f"-f{a.fold}" if a.cmd == "fit" else "") + (f"-s{a.shard[0]}of{a.shard[1]}" if a.cmd in ("fit", "sweep", "vsweep") else "")
+    tag = f"p1a-{TAGS[a.model]}-{a.cmd}" + (f"-f{a.fold}" if a.cmd == "fit" else "") + (f"-s{a.shard[0]}of{a.shard[1]}" if a.cmd in ("fit", "sweep", "vsweep", "wcsweep") else "") \
+        + (f"-p{a.part[0]}of{a.part[1]}" if a.part[1] > 1 else "")
     with Run("wm_surplus", tag, config=vars(a)) as run:
         from jevdrive.data import splits
         run.use_split(splits.load("navsim/navtest"))

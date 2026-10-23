@@ -29,17 +29,18 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--priority", type=float, default=0.0)
     ap.add_argument("--v1", action="store_true", help="also v1.1 PDMS per arm, paired vs the reference arm")
+    ap.add_argument("--subset", default="", help="score and pair on a jevdrive.data.splits subset of navtest only (subset bench runs)")
     a = ap.parse_args()
     spec = {x: f"PROBE-{a.tag}-{x}" for x in a.arms}
     if a.ref_spec:
         spec[a.ref] = a.ref_spec
-    dirs = [bench.run(s, "navtest", priority=a.priority) for s in spec.values()]
+    dirs = [bench.run(s, "navtest", priority=a.priority, subset=a.subset) for s in spec.values()]
     if not bench.wait(dirs):
         raise SystemExit("a scoring run failed: " + ", ".join(str(d) for d in dirs if (d / "ERROR").exists()))
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     arms = [f"{x}={s}" for x, s in spec.items() if x != a.ref]
-    res = bench.report("navtest", arms, vs=[f"{a.ref}={spec[a.ref]}"], out=str(out))
+    res = bench.report("navtest", arms, vs=[f"{a.ref}={spec[a.ref]}"], out=str(out), subset=a.subset)
     A = res["arms"].set_index("arm") if "arm" in res["arms"] else pd.read_csv(out / "navtest_arms.csv").set_index("arm")
     P = pd.read_csv(out / "navtest_paired.csv")
     P["arm"] = P.pair.str.split(" - ").str[0]
@@ -88,7 +89,7 @@ def main():
                 ("NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC")}, ev=ev)
     T.to_csv(out / "p1_readout.csv", index=False)
     (out / "p1_readout.json").write_text(json.dumps(summ, indent=1))
-    lines = [f"# P1 usage read-out: {a.tag} (ref arm `{a.ref}` EPDMS {base:.2f})", "",
+    lines = [f"# P1 usage read-out: {a.tag} (ref arm `{a.ref}` EPDMS {base:.2f})" + (f"; subset {a.subset}" if a.subset else ""), "",
              "| arm | EPDMS | retained | d vs off [95 % CI] | NC | DAC | DDC | TLC | EP | TTC | LK | HC | EC | EV navtrain | EV navtest | plan shift m |"
              + (" EV read-in | norm ratio |" if extra else ""),
              "|---|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|" + ("--:|--:|" if extra else "")]
@@ -125,12 +126,13 @@ def v1_table(a, spec: dict, out: Path) -> pd.DataFrame:
     from jevdrive.bench.models import resolve
     from jevdrive.bench.navsim import pred_file, score_v1
     from jevdrive.bench.sets import navsim_tokens
-    toks, logs = navsim_tokens("navtest")
+    toks, logs = navsim_tokens("navtest", a.subset)
     sc = {}
     for arm, s in spec.items():
         f = out / "v1" / arm / "pdms.csv"
         if not f.exists():
-            score_v1(pred_file(resolve(s), "navtest"), f"probe_{a.tag}_{arm}", f.parent, "navtest")
+            score_v1(pred_file(resolve(s), "navtest"), f"probe_{a.tag}_{arm}" + (f"_{a.subset.replace('/', '-')}" if a.subset else ""),
+                     f.parent, "navtest", a.subset)
         t = pd.read_csv(f)
         t = t[~t.token.astype(str).str.startswith("average")].set_index("token")
         sc[arm] = t.score.fillna(0).reindex(toks.tolist()).to_numpy(float)

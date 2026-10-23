@@ -4,7 +4,8 @@
 #   vgate (GPU) -> vsweep shards (GPU, one per card: compute-bound, VRAM declared so two never share a card) -> vmerge (CPU)
 #   -> readout (CPU: bench navtest scoring of every variant arm, the protocol's arms reused, v1.1 PDMS, paired vs off)
 # Usage (box, repo root): experiments/wm_surplus/scripts/p1_variants_lane.sh <model> [<tag>]     e.g. ReCogDrive-2B-RL recog-lmh
-# Env: GATE_ONLY=1 submits the gate only; NS sweep shards (default: cards), PRIO (default -1), VRAM (default 45), DIM (1536).
+# Env: GATE_ONLY=1 submits the gate only; NS sweep shards (default: cards), PARTS jobs per shard (default 1: a resumed run splits
+#      each shard's remaining chunks over PARTS jobs, same chunk files), SCPU cores per sweep job (4), PRIO (-1), VRAM (45), DIM (1536).
 # Wait for $O/variants/results/DONE with one blocking waiter (the readout job writes it), never a polling loop.
 set -euo pipefail
 : "${DATA_DIR:?}"
@@ -22,16 +23,16 @@ print(' '.join(f'{k}={shlex.quote(v)}' for k, v in agent_env(c).items()), str(da
 PY=${ENV##* }; ENV=${ENV% *}
 ME=experiments/wm_surplus/scripts/p1_agent.py
 cards=$(nvidia-smi -L | wc -l)
-NS=${NS:-$cards}; PRIO=${PRIO:--1}; VRAM=${VRAM:-45}
+NS=${NS:-$cards}; PARTS=${PARTS:-1}; SCPU=${SCPU:-4}; PRIO=${PRIO:--1}; VRAM=${VRAM:-45}
 sub() { local n=$1; shift; .venv/bin/python -m jevdrive.cl submit --owner p0-subjects --priority "$PRIO" --log-dir "$V/pool/$n" --name "p1v-$TAG-$n" "$@" | awk '{print $NF}'; }
 join() { local IFS=,; echo "$*"; }
 if [ -f "$V/gate.json" ] && grep -q '"passed": true' "$V/gate.json"; then G=""; else
   G=$(sub vgate --vram "$VRAM" --cpu 4 --ram 24 -- env $ENV "$PY" $ME vgate --model "$M" --n 24); fi
 [ -n "${GATE_ONLY:-}" ] && { echo "vgate $G"; exit 0; }
 AFT=(); [ -n "$G" ] && AFT=(--after "$G")
-S=(); for i in $(seq 0 $((NS - 1))); do
-  S+=($(sub vsweep-s$i "${AFT[@]}" --vram "$VRAM" --cpu 4 --ram 32 -- env $ENV "$PY" $ME vsweep --model "$M" --shard "$i" "$NS"))
-done
+S=(); for i in $(seq 0 $((NS - 1))); do for j in $(seq 0 $((PARTS - 1))); do
+  S+=($(sub vsweep-s$i-p$j "${AFT[@]}" --vram "$VRAM" --cpu "$SCPU" --ram 32 -- env $ENV "$PY" $ME vsweep --model "$M" --shard "$i" "$NS" --part "$j" "$PARTS"))
+done; done
 MG=$(sub vmerge --after "$(join "${S[@]}")" --vram 0.1 --cpu 2 --ram 16 -- env $ENV "$PY" $ME vmerge --model "$M")
 ARMS=$(.venv/bin/python - "${DIM:-1536}" "$V/gate.json" <<'PY'
 import json, sys
