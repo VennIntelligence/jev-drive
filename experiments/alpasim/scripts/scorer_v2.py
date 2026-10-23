@@ -239,7 +239,7 @@ def cmd_score(a):
     done, pending = {}, sorted(tasks, key=lambda t: t[2])
     for attempt in range(4):                                # a worker killed by a native panic breaks the pool: redo what is left
         try:
-            with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver"), max_tasks_per_child=50) as ex:
+            with ProcessPoolExecutor(workers, mp_context=mp.get_context("forkserver")) as ex:   # no max_tasks_per_child: worker replacement hung (3.12, 10-23)
                 for f in as_completed([ex.submit(eval_one, t) for t in pending]):
                     r = f.result()
                     done[r["asl"]] = r
