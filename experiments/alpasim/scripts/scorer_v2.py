@@ -228,6 +228,26 @@ def run_shards(cmd, items, key_in, key_out, wdir, workers, attempts=3):
     return res
 
 
+def cmd_endshape(a):
+    """GT end shape of every scene from its usdz (the runtime's GT is `artifact.rig.trajectory`) -> <root>/end_shape.csv."""
+    import yaml
+    import pandas as pd
+    from alpasim_utils.artifact import Artifact
+    globs = set()
+    for lab in READS:
+        for ch in chunks(lab):
+            wz = yaml.safe_load((ch / "sim/wizard-config.yaml").read_text())["scenes"]
+            globs.add(str(Path(wz["scene_cache"]) / wz["sceneset_path"] / "*.usdz"))
+    paths = {os.path.realpath(p) for g in globs for p in glob.glob(g)}
+    rows = []
+    for p in sorted(paths):
+        art = Artifact(p)
+        last, ang = _end_shape(art.rig.trajectory)
+        rows.append(dict(scene=art.scene_id, gt_last_seg_m=last, end_dir_change_deg=ang))
+    pd.DataFrame(rows).drop_duplicates("scene").to_csv(Path(a.root) / "end_shape.csv", index=False)
+    print(f"{len(rows)} usdz -> {Path(a.root) / 'end_shape.csv'}")
+
+
 def cmd_shard(a):
     fn = {"eval-shard": eval_one, "agg-shard": agg_one}[a.cmd]
     with open(a.out, "a") as f:
@@ -380,7 +400,9 @@ def cmd_report(a):
         d = sn - so
         rpc = prim[lab].rpc.reindex(sc).fillna(False).astype(bool) if lab in prim else pd.Series(False, sc)
         risk = N[(N.read == lab) & (N.score > 0) & (~N.evaluated.fillna(False).astype(bool)) & N.ev_plain.notna()]
-        rows.append(dict(read=lab, scenes=len(sc), old_mean=so.mean(), new_mean=sn.mean(), new_minus_old=d.mean(), old_zeros=int((so == 0).sum()),
+        zo = O[(O.read == lab)].drop_duplicates("scene", keep="last")
+        zo = zo[zo.score == 0]
+        rows.append(dict(read=lab, partial=bool((~zo.has_asl.astype(bool)).any()), zeros_with_asl=f"{int(zo.has_asl.sum())}/{len(zo)}", scenes=len(sc), old_mean=so.mean(), new_mean=sn.mean(), new_minus_old=d.mean(), old_zeros=int((so == 0).sum()),
                          new_zeros=int((sn == 0).sum()), flipped_up=int(((so == 0) & (sn > 0)).sum()), worse=int((d < 0).sum()),
                          changed=int((d != 0).sum()), unverified_nonzero_with_trunc=len(risk), rpc_scenes=int(rpc.sum())))
         for s in sc[(d != 0).to_numpy()]:
@@ -426,7 +448,15 @@ def cmd_report(a):
     for S, tag in ((So, "old"), (Sn, "new")):
         pairs[f"{tag}: NTV0-s0 - RSG-s0 (ACC + GAP, OFF)"] = boot(S["NTV0-L18-s0-ag"].reindex(cg).to_numpy(float) - S["RSG-L18-s0-ag"].reindex(cg).to_numpy(float)) + (
             float(S["NTV0-L18-s0-ag"].reindex(cg).mean()), float(S["RSG-L18-s0-ag"].reindex(cg).mean()))
-    res = dict(gate={k: v for k, v in gate.items() if k not in ("mismatches", "rpc_failed")}, common_scenes=len(c), common_scenes_rsg=len(cg), pairs=pairs)
+    # Can a nonzero rollout without an ASL get worse? Only at its kept truncation step (plain GT distance first >= 4 m), and only if
+    # the new lateral there reaches 4 m while the old one was < 4 m. Rate of that crossing over the re-evaluated rollouts:
+    J = O.merge(N, on=["read", "scene", "rollout"], suffixes=("_o", "_n"))
+    x = J[J.evaluated_o.fillna(False).astype(bool)].dropna(subset=["ev_lateral_o"])
+    cross = dict(evaluated_with_event_old_below_4m=int((x.ev_lateral_o < CORRIDOR_M).sum()),
+                 of_which_new_at_or_above_4m=int(((x.ev_lateral_o < CORRIDOR_M) & (x.ev_lateral_n >= CORRIDOR_M)).sum()),
+                 evaluated_max_lateral_up=int((J.lateral_n > J.lateral_o + 1e-6)[J.evaluated_o.fillna(False).astype(bool)].sum()),
+                 unverified_nonzero_with_event=int(len(risk)))
+    res = dict(crossing=cross, gate={k: v for k, v in gate.items() if k not in ("mismatches", "rpc_failed")}, common_scenes=len(c), common_scenes_rsg=len(cg), pairs=pairs)
     (out / "summary.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res["gate"]))
     print(R.round(4).to_string())
@@ -445,6 +475,8 @@ def main():
     q.add_argument("--reads", default="")
     q.add_argument("--limit", type=int, default=None, help="evaluate only the first N ASLs (smoke)")
     q.add_argument("--workers", type=int, default=0)
+    q = s.add_parser("endshape")
+    q.add_argument("--root", required=True)
     for c in ("eval-shard", "agg-shard"):
         q = s.add_parser(c)
         q.add_argument("inp")
@@ -453,7 +485,7 @@ def main():
     q.add_argument("--root", required=True)
     q.add_argument("--out", required=True)
     a = p.parse_args()
-    {"score": cmd_score, "report": cmd_report, "eval-shard": cmd_shard, "agg-shard": cmd_shard}[a.cmd](a)
+    {"score": cmd_score, "report": cmd_report, "eval-shard": cmd_shard, "agg-shard": cmd_shard, "endshape": cmd_endshape}[a.cmd](a)
 
 
 if __name__ == "__main__":
