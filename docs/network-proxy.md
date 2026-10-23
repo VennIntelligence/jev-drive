@@ -16,7 +16,7 @@ below holds — see the network section of [tokyo-box.md](tokyo-box.md).
 Try in this order. Never use both in one shell.
 1. `source /etc/network_turbo`: AutoDL's built-in proxy, GitHub and HuggingFace only.
    Undo: `unset http_proxy https_proxy`.
-2. `proxy_on`: Clash in global mode, auto-picks a Japan/Singapore node. Undo: `proxy_off`.
+2. `proxy_on`: Clash in global mode, auto-picks a Japan/Singapore node; use a 0.1x node first. Undo: `proxy_off`.
 
 ## Picking a Clash node
 
