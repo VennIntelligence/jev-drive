@@ -1044,13 +1044,19 @@ def cmd_train(a):
         AW = AWR.AwrSet(a, S, ns.on0, dev)
         wrng = np.random.default_rng([cfg.seed, 0, AWR.STREAM])
 
+    assert not a.on_start or (k_on and not (lc_on or k_d1 or a.diag_infl)), "--on-start: needs --on; not with --lc-cf / --d1-k / --diag-infl"
+    ndraw = [0]                                                       # --on-start: batches drawn so far (draw() runs once per step, in order)
+
     def draw():
+        ko = k_on if ndraw[0] >= a.on_start else 0                    # POOL-PILOT: before step T the pool slots are normal rows, orng untouched
+        ndraw[0] += 1
+        nN = ns.nN + k_on - ko
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN) if nw is None else rng.choice(tr_o, nN, replace=True, p=nw)
         if k_yr:
             r = np.concatenate([r, rng.choice(tr_t, k_yr, replace=False)])
-        an = rng.random(nB - k_ho - k_on) < cfg.d_frac
+        an = rng.random(nB - k_ho - ko) < cfg.d_frac
         an[nN:] = False
-        if k_on:
+        if ko:
             i = (orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None and onx is None
                  else onx[orng.choice(len(onx), k_on, replace=len(onx) < k_on)] if pw is None
                  else orng.choice(upre, k_on, replace=upre < k_on) if upre else orng.choice(ns.n_on, k_on, replace=True, p=pw))
@@ -1557,6 +1563,8 @@ def cmd_train(a):
                 Ls |= {ACT[q]: Ls[q] for q in ACT if q in Ls}
             if ST is not None:
                 ST.update(Ls, step)
+            if a.on_start:                                            # POOL-PILOT: pool rows in this batch (0 before T, k_on after)
+                Ls["on/batch_pool_rows"] = float((r >= ns.on0).sum())
             hist.append({q: float(v) for q, v in Ls.items()})
             if (step + 1) % 25 == 0 or step + 1 == cfg.steps:
                 keys = sorted({q for h in hist for q in h})
@@ -1695,6 +1703,8 @@ if __name__ == "__main__":
         p.add_argument("--allow-init", action="store_true", help="permit an --init other than tonight's RB-F / RB0-F")
         OT.recipe_args(p)
         p.add_argument("--on-k", type=int, default=13)
+        p.add_argument("--on-start", type=int, default=0, help="POOL-PILOT: the pool rows enter the batches from step T (before: normal rows "
+                       "in their slots, the pool stream untouched; no lr restart). 0 (default) = from the start, as before")
         p.add_argument("--on-mode", default="", choices=("",) + OT.ALL_MODES)
         p.add_argument("--on-split", default="")
         p.add_argument("--on-lon", default="")
