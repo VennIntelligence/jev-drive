@@ -24,10 +24,13 @@
 #   HUMAN_PREFETCH (0 | 1, resident only; README "Scene-to-scene gap"): the runtime runs two rollouts at once (n_concurrent_rollouts 2 on
 #   renderer / physics / controller / driver, runtime.nr_workers 2 so each rollout has its own worker process, nre_cache_size 3), the
 #   feeder keeps two requests in flight (HUMAN_PIPE 2) and the driver shows one session while the next loads and holds at its hand-off.
+#   HUMAN_GPUS (auto): the render cards. auto = with prefetch, $HUMAN_GPU plus the first other card that is idle at the stack start
+#   (no compute process, >= HUMAN_MIN_FREE_MB free): renderer and physics get one container per card and one rollout each, so the shown
+#   scene and the prefetched one render on different cards; otherwise $HUMAN_GPU alone. A list ("0 1", "0") forces the cards.
 # HUMAN_SERVE=1 (scripts/human_loop.py): a resident stack. The runtime runs in AlpaSim's shipped daemon mode (wizard.run_mode=SERVER,
-#   runtime port HUMAN_BASEPORT + 4); after `compose up -d` the services and the driver stay up and scripts/human_feed.py (in the
-#   driver image) sends one simulate request per scene from <out>/feed/req/ until <out>/feed/stop, SIGTERM, a dead service or
-#   HUMAN_IDLE_S (1200) with no client. <scenes> = every scene the stack may serve. Progress: <out>/phase.json {phase, msg, t0, t}.
+#   runtime port HUMAN_BASEPORT + 9, clear of the services, which take baseport upwards, 2 more with a second card); after
+#   `compose up -d` the services and the driver stay up and scripts/human_feed.py (in the driver image) sends one simulate request
+#   per scene from <out>/feed/req/ until <out>/feed/stop, SIGTERM, a dead service or HUMAN_IDLE_S (1200) with no client. <scenes> = every scene the stack may serve. Progress: <out>/phase.json {phase, msg, t0, t}.
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, run.json, usage.jsonl (card VRAM, 2 s), driver/{drive,start}.jsonl, driver.log,
 #   sim/ (aggregate/results-summary.json, rollouts/, txt-logs/), results.md / results.json (human_results.py)}.
 set -uo pipefail
@@ -47,7 +50,7 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
     echo "card $GPU runs CARLA (a B2D exam?)"; launcher refused "card $GPU runs CARLA" ""; exit 1; }
   (( free < ${HUMAN_MIN_FREE_MB:-8000} )) && { echo "card $GPU has $free MiB free"; launcher refused "card $GPU has only $free MiB free" ""; exit 1; }
   P0=${HUMAN_BASEPORT:-6700}
-  for p in $P0 $((P0 + 1)) $((P0 + 2)) $((P0 + 3)) $((P0 + 4)) ${HUMAN_DRV_PORT:-6790}; do
+  for p in $(seq $P0 $((P0 + 9))) ${HUMAN_DRV_PORT:-6790}; do
     ss -ltn | grep -q ":$p " && { echo "port $p is taken (another human run?)"; launcher refused "port $p taken" ""; exit 1; }
   done
   # the model-mode driver container (<prefix>-model, scripts/model_driver.sh) is not a stack: a leftover one of another track must not block
@@ -73,9 +76,16 @@ IMG=${HUMAN_IMG:-jev-alpasim:p2h10-f-s0-6f3d05d1}
 BASE=${BASE:-alpasim-base:$(sed -n 's/^version = "\(.*\)"/\1/p' "$SRC/pyproject.toml" | head -1)}
 P0=${HUMAN_BASEPORT:-6700}; DPORT=${HUMAN_DRV_PORT:-6790}; MODE=${HUMAN_MODE:-fast}
 NAME=$PFX-$(basename "$OUT" | tr -c 'a-zA-Z0-9\n' '-' | tr 'A-Z' 'a-z'); N=$NAME-drv; R=$OUT/sim
-SERVE=${HUMAN_SERVE:-0}; RT=$((P0 + 4)); T0=$(date +%s.%N)
+SERVE=${HUMAN_SERVE:-0}; RT=$((P0 + 9)); T0=$(date +%s.%N)
 PRE=0; [[ $SERVE == 1 && ${HUMAN_PREFETCH:-0} == 1 ]] && PRE=1
 NC=$((PRE + 1)); NW=$((PRE + 1)); NRE_CACHE=$((PRE + 2))       # concurrent rollouts, runtime workers, NRE scene backends
+idle() { local u; u=$(nvidia-smi -i "$1" --query-gpu=uuid --format=csv,noheader)
+         ! nvidia-smi --query-compute-apps=gpu_uuid --format=csv,noheader | grep -q "^$u" &&
+         (( $(nvidia-smi -i "$1" --query-gpu=memory.free --format=csv,noheader,nounits) >= ${HUMAN_MIN_FREE_MB:-8000} )); }
+GPUS=${HUMAN_GPUS:-auto}
+if [[ $GPUS == auto ]]; then GPUS=$GPU; (( PRE )) && for g in $(nvidia-smi --query-gpu=index --format=csv,noheader); do
+  [[ $g != "$GPU" ]] && idle "$g" && { GPUS="$GPU $g"; break; }; done; fi
+GL=$(echo $GPUS | tr ' ' ,); NG=$(echo $GPUS | wc -w); NCG=$(( (NC + NG - 1) / NG ))   # render cards; rollouts per card
 rm -f "$OUT"/{DONE,ERROR,.stop}; mkdir -p "$R" "$OUT/driver" "$LIVE"; exec > >(tee -a "$OUT/log.txt") 2>&1; echo $$ > "$OUT/pid"
 st() { echo "$(date '+%F %T') $*" | tee "$OUT/STATUS"; }
 phase() { python3 -c 'import json,sys,time; print(json.dumps(dict(phase=sys.argv[1], msg=sys.argv[2], t0=float(sys.argv[3]), t=time.time())))' \
@@ -101,8 +111,8 @@ lever=()
 if [[ $TRACK == pai ]]; then
   HOLD=1.7 SIM=20; FI=${HUMAN_FI_MS:-$([[ $HARM == 1 ]] && echo 200 || echo 100)}
   wiz=(+e2e_challenge=dev "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "scenes.scene_cache=$NUREC"
-       "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" "services.renderer.gpus=[$GPU]"
-       "services.physics.gpus=[$GPU]" runtime.endpoints.physics.n_concurrent_rollouts=$NC)
+       "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" "services.renderer.gpus=[$GL]"
+       "services.physics.gpus=[$GL]" runtime.endpoints.physics.n_concurrent_rollouts=$NCG)
   (( PRE )) && wiz+=(runtime.nr_workers=$NW)
   cam="{logical_id:camera_front_wide_120fov,height:$H,width:$W,frame_interval_us:$((FI * 1000)),shutter_duration_us:30000}"
   [[ $PHYS == 0 && $MODE == fast ]] && lever+=(runtime.simulation_config.physics_update_mode=NONE)
@@ -110,7 +120,7 @@ if [[ $TRACK == pai ]]; then
 else
   HOLD=0.5 SIM=5.5; FI=${HUMAN_FI_MS:-500}
   cap=$(nvidia-smi -i "$GPU" --query-gpu=compute_cap --format=csv,noheader)
-  wiz=(+e2e_challenge_nuplan=full runtime.nr_workers=$NW "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "services.renderer.gpus=[$GPU]")
+  wiz=(+e2e_challenge_nuplan=full runtime.nr_workers=$NW "scenes.scene_ids=[$quoted]" scenes.limit_to_first_n=0 "services.renderer.gpus=[$GL]")
   (( PRE )) && wiz+=(runtime.endpoints.physics.n_concurrent_rollouts=$NC)
   # gsplat's shipped arch list (8.9;9.0+PTX) has no kernel for an RTX 3090 (sm_86): the card's own arch, as docker/smoke.sh does
   [[ $(echo "$cap < 8.9" | bc) == 1 ]] && wiz+=("services.renderer.environments=[\"UV_LINK_MODE=copy\",\"TORCH_CUDA_ARCH_LIST=$cap\"]")
@@ -121,14 +131,14 @@ if [[ $MODE == fast ]]; then
   [[ $CAMS == front ]] && lever+=("runtime.simulation_config.cameras=[$cam]")
   lever+=("eval.video.render_video=$([[ $VIDEO == 1 ]] && echo true || echo false)")
 fi
-wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_rollouts=$NC runtime.endpoints.driver.n_concurrent_rollouts=$NC
+wiz=(uv run alpasim_wizard "${wiz[@]}" runtime.endpoints.renderer.n_concurrent_rollouts=$NCG runtime.endpoints.driver.n_concurrent_rollouts=$NC
      runtime.endpoints.controller.n_concurrent_rollouts=$NC defines.nre_cache_size=$NRE_CACHE "wizard.baseport=$P0" wizard.run_method=NONE
      "wizard.log_dir=$R" "${lever[@]}" "$@")
 [[ ${HUMAN_GT:-1} == 1 ]] && wiz+=(runtime.simulation_config.send_recording_ground_truth=true)
 [[ $SERVE == 1 ]] && wiz+=(wizard.run_mode=SERVER "wizard.runtime_server_port=$RT")
 
 phase driver "starting the driver container"
-st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM, prefetch $PRE"
+st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DPORT, $n scenes, track $TRACK, mode $MODE, harmonizer $HARM, prefetch $PRE, cards $GL"
 docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
@@ -141,11 +151,11 @@ until docker logs "$N" 2>&1 | grep -q "listening on"; do
   [[ $(docker inspect -f '{{.State.Running}}' "$N") == true ]] || die "driver exited before listening"; (( $(date +%s) - t0 > 60 )) && die "driver not listening"; sleep 0.5
 done
 ( peak=0; while [[ ! -f $OUT/.stop ]]; do
-    u=$(nvidia-smi -i "$GPU" --query-gpu=memory.used --format=csv,noheader,nounits); (( u > peak )) && peak=$u
+    u=$(nvidia-smi -i "$GL" --query-gpu=memory.used --format=csv,noheader,nounits | sort -n | tail -1); (( u > peak )) && peak=$u
     echo "{\"t\": $(date +%s), \"card_mib\": $u, \"peak_mib\": $peak}" >> "$OUT/usage.jsonl"; sleep 2; done ) & sampler=$!
 
 phase wizard "wizard: writing the configs for $n scenes"
-st "wizard in $BASE (run_method NONE), render card $GPU, baseport $P0"
+st "wizard in $BASE (run_method NONE), render cards $GL, baseport $P0"
 printf '%q ' "${wiz[@]}" > "$OUT/wizard_cmd.txt"; echo >> "$OUT/wizard_cmd.txt"
 docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" "${mounts[@]}" -e "PYTHONPATH=$SRC/src/wizard:$SRC/src/utils" -e HF_HUB_OFFLINE=1 \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e "ALPASIM_NUPLAN_ROOT=$NUPLAN" "$BASE" \
@@ -178,7 +188,7 @@ for k, s in d["services"].items():
                                                            "TORCH_EXTENSIONS_DIR=/jitcache/torch_extensions", "TORCHINDUCTOR_CACHE_DIR=/jitcache/inductor"]
 yaml.safe_dump(d, open(f, "w"), sort_keys=False)
 PY
-grep -A1 "device_ids:" "$R/docker-compose.yaml" | grep -E "^ *- '[0-9]+'" | grep -vq "'$GPU'" && die "compose puts a service on a card other than $GPU"
+grep -A1 "device_ids:" "$R/docker-compose.yaml" | grep -E "^ *- '[0-9]+'" | grep -vqE "'(${GL//,/|})'" && die "compose puts a service on a card other than $GL"
 
 if [[ $SERVE == 1 ]]; then                                         # resident: services up, scenes come one request at a time
   dc() { docker compose -p "$NAME" -f "$R/docker-compose.yaml" "$@"; }
@@ -232,7 +242,7 @@ stop_all; wait "$sampler"; rm -f "$OUT/.stop"; trap - INT TERM
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
 python3 -c 'import json,sys; k=sys.argv[1::2]; v=sys.argv[2::2]; print(json.dumps(dict(zip(k, v))))' track "$TRACK" mode "$MODE" scenes "$n" wall_s "$wall" \
-  gpu "$GPU" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" harm_res "$HRES" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" gt "${HUMAN_GT:-1}" image "$IMG" base "$BASE" \
+  gpu "$GL" cams "$CAMS" h "$H" w "$W" fi_ms "$FI" harm_res "$HRES" video "$VIDEO" nre "$NRE" phys "$PHYS" harmonizer "$HARM" gt "${HUMAN_GT:-1}" image "$IMG" base "$BASE" \
   peak_mib "$(tail -1 "$OUT/usage.jsonl" | python3 -c 'import json,sys; print(json.load(sys.stdin)["peak_mib"])')" > "$OUT/run.json"
 python3 "$here/human_results.py" "$OUT" || st "results table failed"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"; launcher finished "$n scenes done: $OUT/results.md" "$OUT"

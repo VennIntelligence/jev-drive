@@ -60,7 +60,8 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
     `--network host` and the repo mounted read-only. That way it reaches the phone's UDP on loopback, and the compose
     services (host network) reach it at 127.0.0.1:6790. It needs no GPU.
   - Stack: the wizard runs inside `alpasim-base` (`run_method=NONE`), then `docker compose -p hum-<name> up`. Renderer and
-    physics are pinned to card 0; the launcher refuses card 1 and stops if the compose file puts a service on another card.
+    physics are pinned to card 0 (`HUMAN_GPU`); the launcher refuses card 1 as the main card and stops if the compose file puts a
+    service on a card it did not choose. With prefetch, an idle second card joins (`HUMAN_GPUS`, see "Scene-to-scene gap").
     Baseport is 6700 (the PAI chain uses 6500). There is 1 concurrent rollout and 1 worker, so scenes run one at a time in one
     stack.
   - tmux `human`: windows `alpa-viewer` and `alpa-drive`. Files: STATUS, DONE / ERROR, log.txt, run.json, usage.jsonl
@@ -183,6 +184,11 @@ Overrides, read at loop start: `HUMAN_PREFETCH=1` or the flag file `/data/runs/a
 drivers, and `HUMAN_PREFETCH=0` forces it off. AlpaSim is unchanged; only the wizard settings and our scripts change. The resident runtime runs two rollouts at once:
 `n_concurrent_rollouts` 2 on renderer / physics / controller / driver; `runtime.nr_workers` 2, so each rollout has its own worker
 process and one rollout's load or metrics never blocks the other's loop; `nre_cache_size` 3. The feeder keeps two requests in flight.
+Two cards (2026-10-23): when another card is idle at the stack start (no compute process, >= `HUMAN_MIN_FREE_MB` free),
+renderer and physics get one container on each card with one rollout each (`HUMAN_GPUS`, default auto; `HUMAN_GPUS=0` keeps one
+card), so the shown scene and the prefetched one no longer share a renderer. The runtime daemon port moved to baseport + 9 (6709),
+because the second card's renderer and physics take two more service ports. Checked: the wizard's compose for `[0,1]` (renderer /
+physics 0 on card 0, 1 on card 1, ports 6700-6704); the effect on stutter and wall / sim is not measured yet.
 The loop requests the next scene of the playlist (or the double-clicked one) once the current scene's session exists.
 
 The driver shows one session at a time. The other one loads and runs its run-up unseen: no state.json, no JPEGs, no camera.json, and
