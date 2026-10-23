@@ -100,6 +100,7 @@ class Backend(object):
     batch_extra = None             # title of an extra column of the batch list (batch_info "extra"), or None
     record = False                 # the loop honours control "record" (practice mode); the web panel hides the toggle otherwise
     option_help = {}               # name -> (what it does, when it applies): one plain line each for the web panel's settings
+    close_stops = False            # closing the web panel stops the drive too (shutdown() even while driving), as a window app does
     pinned = ()                    # toggle options the web panel also shows as a big switch in its header (always visible)
     selected = None                # the batch the panel shows (set by the panel); None = default_run()
 
@@ -144,6 +145,9 @@ class Backend(object):
             except (OSError, ValueError):
                 pass
         return "driving view closed" if pids else ""
+
+    def shutdown(self, side=True):  # the web panel closed: stop what it started (here only the viewer, when `side`); message
+        return self.stop_side() if side else ""
 
     def driving(self):             # something drives (the panel loop, a terminal run): the web panel then never closes the viewer
         return bool(self.loop_run())

@@ -253,13 +253,16 @@ panel is the web page `lib/exam_web.py` (port 8770; `http://100.108.238.8:8770/`
 Windows (2026-10-22 night; the user closes windows and nothing reopens on its own): the viewer runs once, with no respawn loop
 (until then a `while true` loop in tmux `human:alpa-viewer` reopened it 3 s after every close). Closing it closes it; the header
 button "Show driving view" (orange while the viewer is not running) opens it again (`/api/show_view`, `Backend.show_view()`).
-Closing the panel window closes what is not driving: the page sends a bye on pagehide; when no page has polled the server for 20 s
-after a bye, or 120 s without one (Chrome throttles a hidden page's timers to about one a minute), and nothing drives (no panel loop,
-no `hum-*` terminal stack: `driving()`), the server closes the viewer and exits, releasing its lock (`lib/exam_web.py` watchdog;
-`EXAM_IDLE_S` / `EXAM_BYE_S`). While a loop runs it leaves everything alone and checks again; the wheel daemon (shared with the B2D
-panel) stays up. Tested on a throwaway instance (`HUMAN_LIVE`, `HUMAN_RUNS`, `EXAM_TMUX`, `EXAM_DISPLAY` = an Xvfb display): server and
-viewer gone 41 s after the last poll (timeout 40 s) and 12 s after a bye (10 s), both kept 77 s with a loop running and gone 10 s
-after it ended; the lock was free afterwards; a closed viewer was not reopened.
+Closing the panel window closes everything the panel started, as a window app does (since 2026-10-23; before, a running loop and the
+warm stack stayed up): the page sends a bye on pagehide; when no page has polled the server for 20 s after a bye, or 120 s without one
+(Chrome throttles a hidden page's timers to about one a minute), the server calls `AlpaSimExam.shutdown()` and exits, releasing its
+lock (`lib/exam_web.py` watchdog; `EXAM_IDLE_S` / `EXAM_BYE_S`). Shutdown stops the panel loop (a scene being driven is aborted,
+unscored), the resident render stack (`resident.json`'s pid gets SIGTERM, its trap takes compose down) and every leftover `hres-*`
+container (the model driver), then the viewer. A page still open elsewhere (the phone) keeps it all up; a reload is not a close (its
+poll comes within the 20 s). A `hum-*` stack started from a terminal and the wheel daemon (shared with the B2D panel) stay up. The
+B2D panel keeps the old rule (it closes only its viewer, and only when nothing drives). The next panel start pays the stack start
+again (about 45 s to a minute). First tested on a throwaway instance (`HUMAN_LIVE`, `HUMAN_RUNS`, `EXAM_TMUX`, `EXAM_DISPLAY` = an
+Xvfb display) under the old rule: server and viewer gone 41 s after the last poll (timeout 40 s) and 12 s after a bye (10 s).
 Layout (2026-10-22 evening redesign, a music player; the user could not read the batch / loop / item version):
 - Playlists (left column; at phone width a separate view with "All playlists" to go back) = batches. Each card: name, played /
   total with a bar, your mean, created, disk, badges (track, harmonizer on / off / mixed, model drivers that drove in it), NOW

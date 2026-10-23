@@ -15,6 +15,7 @@ Plain python3 (stdlib).
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -381,6 +382,7 @@ class AlpaSimExam(Backend):
                "shadow": ("Shadow: human log", False)}                         # human_stack.sh's pairing; the viewer only (display; G there too)
     batch_extra = "harmonizer"
     record = True                                                     # human_loop.py honours control "record" (practice)
+    close_stops = True                                                # a window app: closing the panel stops the loop and the stack (shutdown)
     pinned = ("shadow",)                                              # the user wants Shadow at hand, not in the drawer (G in the viewer too)
     option_help = {
         "driver": ("Who drives: you with the phone, or a model checkpoint that drives by itself while you watch. Model scores are kept "
@@ -552,6 +554,39 @@ class AlpaSimExam(Backend):
         if not self.viewer_pids():
             msgs.append(self.show_view())
         return "\n".join(msgs)
+
+    def shutdown(self, side=True):
+        """The panel closed (lib/exam_web.py): stop the loop (the scene being driven is aborted, unscored), the resident render stack
+        (SIGTERM to human_stack.sh; its trap takes compose down) and the model driver, then the viewer. A stack started from a
+        terminal (hum-*) is not the panel's and stays."""
+        msgs = []
+        if self.loop_alive():
+            Control(self.live).act("stop")
+            for _ in range(90):
+                if not self.loop_alive():
+                    break
+                time.sleep(1)
+            msgs.append("panel loop stopped")
+        res = read_json(Path(self.live) / "resident.json", {}) or {}
+        pid = res.get("pid")
+        if pid and os.path.exists("/proc/%s" % pid):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+            for _ in range(60):
+                if not os.path.exists("/proc/%s" % pid):
+                    break
+                time.sleep(1)
+            msgs.append("render stack stopped")
+        pfx = res.get("prefix") or os.environ.get("HUMAN_PREFIX", "hres")
+        left = sh("docker ps -a --format '{{.Names}}' | grep '^%s-'" % pfx).split()    # the model driver; a stack the trap missed
+        if left:
+            sh("docker rm -f %s >/dev/null 2>&1" % " ".join(left))
+            msgs.append("removed %s" % ", ".join(left))
+        if side:
+            msgs.append(self.stop_side())
+        return "; ".join(m for m in msgs if m)
 
     def driving(self):
         return self.loop_alive() or bool(sh("docker ps --format '{{.Names}}' | grep '^hum-'").strip())

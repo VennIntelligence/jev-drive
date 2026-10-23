@@ -17,9 +17,10 @@ POST /api/control {paused | playlist | record | option + value}, /api/act {kind,
 continue / play_start / reload (and new_batch with start) answer {"confirm": text} when backend.busy_other() reports
 another run; the page asks and posts again with force (stop_other() first), as the Tk panel does.
 The shown batch is per request (?run=), so the desktop window and a phone can look at different batches.
-Closing the panel closes what is not driving: once no page has polled /api/state for IDLE_S (120 s; Chrome throttles a hidden
-page's timers to about one a minute) or BYE_S (20 s) after a page said bye, and backend.driving() is false, the server closes the
-viewer (backend.stop_side()) and exits (its lock goes with it). While something drives it leaves everything alone and checks again.
+Closing the panel: once no page has polled /api/state for IDLE_S (120 s; Chrome throttles a hidden page's timers to about one a
+minute) or BYE_S (20 s) after a page said bye, the server calls backend.shutdown() and exits (its lock goes with it). A backend with
+close_stops (AlpaSim) stops its loop and stack there too, as closing a window app does; otherwise (B2D) shutdown() only closes the
+viewer and is not called while backend.driving(), which the server then leaves alone and checks again.
 """
 import json
 import os
@@ -279,18 +280,18 @@ class App(object):
         return quiet if quiet > limit else 0
 
     def watchdog(self, servers):
-        """No page open and nothing driving: close the viewer and stop serving (serve() returns, the process exits)."""
+        """No page open (and nothing driving, unless the backend's close_stops): shut the backend down and stop serving (serve() returns,
+        the process exits)."""
         while True:
             time.sleep(5)
             try:
-                if not self.idle() or self.b.driving():
+                if not self.idle() or (self.b.driving() and not self.b.close_stops):
                     continue
-                msg = self.b.stop_side() if self.side else ""
+                msg = self.b.shutdown(self.side)
             except Exception as e:  # noqa: BLE001
                 print("watchdog: %r" % e, flush=True)
                 continue
-            print("%s no page for %.0f s and nothing drives: %s; server exits" % (time.strftime("%F %T"), self.idle(), msg or
-                                                                                  "no viewer to close"), flush=True)
+            print("%s no page for %.0f s: %s; server exits" % (time.strftime("%F %T"), self.idle(), msg or "nothing to close"), flush=True)
             for s in servers:
                 s.shutdown()
             return
