@@ -3,6 +3,7 @@
 # the build when an import needs a file that is not listed. + sh30_hold.py / static_hold.py (JEV_HOLD, serve.py runs sh30_hold.py when it is
 # set; static_hold imports serve_fix only for JEV_HOLD=lead), 2026-10-18. Not in the image (imported only when their switch is set, none served):
 # intent_hold.py (JEV_INTENT_HOLD), tts.py (JEV_TTS), reflex.py / reflex_mem.py (a STACK checkpoint), body1 (JEV_STOP / JEV_REPLAN).
+# + jevdrive/tokens.py (2026-10-23): pp_train.py imports it at module level since 381488ba (zero-copy pools; stdlib + numpy only).
 jevdrive/__init__.py
 jevdrive/common.py
 jevdrive/navsim_zs.py
@@ -12,6 +13,7 @@ jevdrive/op_torch.py
 jevdrive/openpilot/__init__.py
 jevdrive/openpilot/frames.py
 jevdrive/openpilot/lead_long.py
+jevdrive/tokens.py
 lib/parity_adapter.py
 experiments/op_adapt_l/lib/op_adapt_l.py
 experiments/op_adapt_r2/lib/op_adapt_r2.py

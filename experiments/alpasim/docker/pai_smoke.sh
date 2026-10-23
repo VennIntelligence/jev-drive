@@ -12,7 +12,8 @@
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/), BASE (trusted image), GPU (card of renderer + physics + driver,
 #   default 1), CONC (concurrent rollouts, default 4), WIZ (wizard overrides, space separated, e.g.
 #   "controller.gains.rel_front_steering_angle_weight=10"), DRV_ENV ("K=V ..." for the driver; empty = the image's baked defaults, which is
-#   what a submission serves), PAI_BASEPORT (default 6700; pai_eval.sh uses 6400 / 6500).
+#   what a submission serves), PAI_BASEPORT (default 6700; pai_eval.sh uses 6400 / 6500), HARMONIZER (0 = the ec2 preset, flag removed;
+#   1 = the dev preset's `--enable-harmonizer` kept, weights mounted from $NUREC/harmonizer, as pai_run.sh / the box's HARMONIZER=1 reads).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, cmd.txt, wizard_cmd.txt, smoke.json, compare.md, drive.jsonl, driver.log, driver-logs/, run.json}
 # and the run under <out>/sim (aggregate/results-summary.json, rollouts/, txt-logs/). Mp4s are dropped at the end.
 set -uo pipefail
@@ -62,12 +63,15 @@ docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" -v "$NUREC:$NUREC" -e "PYTH
   -e "ALPASIM_DRIVER_HOST=$ip" -e ALPASIM_DRIVER_PORT=6789 "$BASE" \
   bash -c 'umask 0000; git config --global --add safe.directory "*"; cd /repo && "$@"' wizard "${wiz[@]}" > "$OUT/wizard.log" 2>&1 || die "wizard failed, see wizard.log"
 [[ -f $R/docker-compose.yaml ]] || die "no docker-compose.yaml"
-python3 - "$R/docker-compose.yaml" <<'PY' || die "compose patch"
-import sys, yaml                                    # the ec2 preset's renderer: no harmonizer (dev preset as shipped enables it)
-f = sys.argv[1]; d = yaml.safe_load(open(f))
+python3 - "$R/docker-compose.yaml" "${HARMONIZER:-0}" "$NUREC/harmonizer" <<'PY' || die "compose patch"
+import sys, yaml                                    # default the ec2 preset's renderer: no harmonizer (dev preset as shipped enables it)
+f, harm, cache = sys.argv[1:]; d = yaml.safe_load(open(f))
 for k, s in d["services"].items():
     if k.startswith("renderer"):
-        s["command"] = [c.replace(" --enable-harmonizer", "") for c in s["command"]]
+        if harm == "1":
+            s["volumes"].append(f"{cache}:/home/.cache/nre/harmonizer")
+        else:
+            s["command"] = [c.replace(" --enable-harmonizer", "") for c in s["command"]]
 yaml.safe_dump(d, open(f, "w"), sort_keys=False)
 PY
 
@@ -82,7 +86,7 @@ find "$R/rollouts" -name '*.mp4' -delete 2>/dev/null
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
 ver=$(grep -m1 -o 'serve: driver.*' "$OUT/driver.log")
-echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"image\": \"$IMG\", \"base\": \"$BASE\", \"wiz\": \"${WIZ:-}\", \"drv_env\": \"${DRV_ENV:-}\"}" > "$OUT/run.json"
+echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"image\": \"$IMG\", \"base\": \"$BASE\", \"wiz\": \"${WIZ:-}\", \"drv_env\": \"${DRV_ENV:-}\", \"harmonizer\": ${HARMONIZER:-0}}" > "$OUT/run.json"
 python3 "$here/compare.py" "$R/aggregate/results-summary.json" ${REF:+--ref "$REF"} $( [[ -s $OUT/drive.jsonl ]] && echo "--drive $OUT/drive.jsonl" ) \
   --label "$(basename "$OUT")" --meta "image=$IMG" "base=$BASE" "wall_s=$wall" "driver_gpu_peak_mib=$peak" "tmp_peak_bytes=$tmp" "serve=$ver" "wiz=${WIZ:-}" \
   --out "$OUT" || die "compare"
