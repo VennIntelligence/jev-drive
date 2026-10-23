@@ -165,7 +165,11 @@ number). P1 on ReCogDrive (cross-fitted PCA of the LM hidden state, 1536-d): k95
 does not do (0.442 vs 0.152), turns / straight = does what it sees. P1 on DriveVLA-W0 (32 Emu3 layer states x 4096-d the action
 expert reads): k95 = k99 = 4096 (full width; k2048 keeps 93.7 % EPDMS, -5.45 [-6.50, -4.31]; v1 PDMS the same); knows-vs-does: the
 plan matches or beats the probe in every class, no sees-but-does-not-do (stop / launch / lane change unclear),
-[results/p1_usage/DriveVLA-W0/](results/p1_usage/DriveVLA-W0/results/p1_readout.md). Tables: `results/p0_subjects/*_full.json`,
+[results/p1_usage/DriveVLA-W0/](results/p1_usage/DriveVLA-W0/results/p1_readout.md). Projection-artifact controls (PD10, prereg addendum A;
+`scripts/p1_w0ctl_lane.sh`, fixed stratified 3 000-token subset `navsim/p1-w0-ctl`): restoring the row norm leaves k64 unchanged and
+recovers part of k512 / k2048 (k2048 -2.74 vs -6.51); projecting a single layer (16 or 31) at k64 costs nothing (+0.14 / +0.02,
+CIs span 0), so W0's full-width reading comes from projecting all 32 layers at once, not from any one layer reading a wide subspace
+([controls/p1_readout.md](results/p1_usage/DriveVLA-W0/controls/p1_readout.md)). ReCogDrive variants: running. Tables: `results/p0_subjects/*_full.json`,
 [results/p0_subjects/p1_recogdrive/p1_readout.md](results/p0_subjects/p1_recogdrive/p1_readout.md),
 [knowdo_recog-lmh.md](results/p0_subjects/p1_recogdrive/knowdo_recog-lmh.md).
 

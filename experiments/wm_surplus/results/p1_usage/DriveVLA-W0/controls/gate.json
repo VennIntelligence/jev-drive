@@ -1,0 +1,44 @@
+{
+ "model": "DriveVLA-W0",
+ "split": "navsim/p1-w0-ctl",
+ "n": 24,
+ "s_per_token_sweep": 2.380554219086965,
+ "G4_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G5_sweep_determinism": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0
+ },
+ "G3_sweep_off_vs_nohook": {
+  "n": 24,
+  "bit_identical": false,
+  "max_abs_diff": 0.04861736297607422,
+  "mean_abs_xy_m": 0.003127496922388673
+ },
+ "O_sweep_off_vs_original_off": {
+  "n": 24,
+  "bit_identical": true,
+  "max_abs_diff": 0.0,
+  "mean_abs_xy_m": 0.0
+ },
+ "R": {
+  "norm-k4096": {
+   "max_abs_m": 0.02627086639404297,
+   "mean_abs_xy_m": 0.00250228145159781
+  },
+  "L16-k4096": {
+   "max_abs_m": 0.03653717041015625,
+   "mean_abs_xy_m": 0.001880016759969294
+  },
+  "L31-k4096": {
+   "max_abs_m": 0.0,
+   "mean_abs_xy_m": 0.0
+  }
+ },
+ "tol_mean_abs_xy_m": 0.01,
+ "passed": true
+}
