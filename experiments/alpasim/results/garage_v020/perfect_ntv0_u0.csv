@@ -1,0 +1,9 @@
+read,n,new_zeros,new_partials,classes
+GARAGE020,184,39,29,"AF-front 12, zero-other 9, route-turn 8, offroad 7, overshoot 2, side 1"
+NTV0-ag,184,0,0,
+R6DAG-s0-ag,184,12,9,"offroad 6, zero-other 2, side 2, AF-front 1, overshoot 1"
+R6DAG-s1-ag,184,5,5,"offroad 3, side 1, zero-other 1"
+R6DAG-s2-ag,184,9,6,"offroad 5, zero-other 1, overshoot 1, AF-front 1, side 1"
+R8K-s0-ag,184,11,5,"offroad 5, AF-front 3, zero-other 1, side 1, route-turn 1"
+R8K-s1-ag,184,9,7,"offroad 5, AF-front 2, zero-other 1, route-turn 1"
+R8K-s2-ag,184,10,5,"AF-front 3, offroad 3, side 2, zero-other 1, overshoot 1"
