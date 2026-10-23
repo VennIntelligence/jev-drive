@@ -263,6 +263,8 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             net / old adapter at their on_train lr x S with warm-up W, the route branch (and --rx) at its own unscaled lr and warm-up, one
             cosine to F x base. Optimizer state and GradScaler carry on (no reset). With the flag the trainer logs lr/g<i> (the lr of the
             step before each log). 0 (default) = off: no operation added.
+            --lr2-groups net,adapter|route|...  (round9 P1L-SPLIT, plans/2026-10-24-p1l-split.md) only the named groups (net, adapter,
+            route, rx) take the second schedule from T; the others keep the first. '' (default) = every group, as above.
 
 Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-17-compile-prereg.md):
   --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
@@ -944,11 +946,17 @@ def cmd_train(a):
         import reflex as RX
         nr_ = RM.EGO_DIM + model.adapter.route.dim
     opt = torch.optim.AdamW(groups, weight_decay=cfg.wd)
+    assert a.lr2_at or not a.lr2_groups, "--lr2-groups needs --lr2-at"
     if a.lr2_at:                                                      # P1L: the second schedule's base lr / warm-up per group (docstring)
         assert 0 < a.lr2_at < cfg.steps and not a.diag_freeze and 0 <= a.lr2_floor < 1, "--lr2-at in (0, steps), not with --diag-freeze"
         b2 = [(cfg.lr * a.lr2_scale, a.lr2_warmup), (cfg.lr_new * a.lr2_scale, a.lr2_warmup), (a.rm_lr, a.rm_warmup)] + ([(a.rx_lr, a.rx_warmup)] if ns.rx else [])
         for g, (b_, w_) in zip(opt.param_groups, b2, strict=True):
             g["base2"], g["wu2"] = b_, w_
+        if a.lr2_groups:                                              # P1L-SPLIT: the unnamed groups keep the first schedule after T
+            nm2 = ["net", "adapter", "route", "rx"][:len(opt.param_groups)]
+            assert set(a.lr2_groups.split(",")) <= set(nm2), f"--lr2-groups: names from {nm2}"
+            for g, nm in zip(opt.param_groups, nm2):
+                g["keep1"] = nm not in a.lr2_groups.split(",")
     ST = None
     if a.dual or a.cons or a.imit_drop or a.pref > 0 or ns.rx:      # STACK terms (lib/stack_train.py)
         import stack_train
@@ -1422,7 +1430,8 @@ def cmd_train(a):
             run.info("pool slices @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
         if a.lr2_at:
             run.info(f"lr2 from step {a.lr2_at}: " + ", ".join(f"g{i} {g['base2']:.3g} wu {g['wu2']}" for i, g in enumerate(opt.param_groups))
-                     + f", cosine over {cfg.steps - a.lr2_at} steps to floor {a.lr2_floor}")
+                     + f", cosine over {cfg.steps - a.lr2_at} steps to floor {a.lr2_floor}"
+                     + (f"; only groups {a.lr2_groups} (the rest keep the first schedule)" if a.lr2_groups else ""))
         if a.lr_floor or a.diag:
             run.info(f"lr floor {a.lr_floor}; diag {a.diag} (per-term gradients every {a.diag_every} steps)")
         if TW is not None:
@@ -1477,6 +1486,8 @@ def cmd_train(a):
                 s2 = step - a.lr2_at
                 cos2 = a.lr2_floor + (1.0 - a.lr2_floor) * 0.5 * (1 + np.cos(np.pi * s2 / (cfg.steps - a.lr2_at)))
                 for g in opt.param_groups:
+                    if a.lr2_groups and g["keep1"]:
+                        continue
                     g["lr"] = g["base2"] * min(1.0, (s2 + 1) / g["wu2"]) * cos2
             ego = S.ego[rows] * (~anchor)[:, None].float()
             if lc_on:
@@ -1922,6 +1933,8 @@ if __name__ == "__main__":
         p.add_argument("--lr2-scale", type=float, default=0.1, help="--lr2-at: net / old adapter lr x this (the route branch keeps --rm-lr)")
         p.add_argument("--lr2-warmup", type=int, default=500, help="--lr2-at: warm-up of the net / old adapter groups (the branch keeps --rm-warmup)")
         p.add_argument("--lr2-floor", type=float, default=0.1, help="--lr2-at: cosine floor of the second schedule")
+        p.add_argument("--lr2-groups", default="", help="--lr2-at: comma list of the groups (net, adapter, route, rx) that take the second "
+                       "schedule; the rest keep the first ('' = all)")
         p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
         p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
         p.add_argument("--si-top", type=float, default=0.1, help="SELF-ITER: top share of each set oversampled (--si-mode top)")
