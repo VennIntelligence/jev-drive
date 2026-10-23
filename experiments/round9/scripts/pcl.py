@@ -37,8 +37,8 @@ RUNS = DD / "runs/op_parity/runs"
 O_ = DD / "runs/round9/pool_pilot"
 WFILE = "runs/round9/pool_pilot/w/JT00S-rb0.npz"
 TAGS = dict(P1="PCL1-F-s0", P1B="PCL1B-F-s0", P0="PCL0-L18-s0")
-BASE = dict(P1="RB0L-F-s0", P1B="RB0-F-s0", P0="NTV0-L18-s0", RB0F="RB0-F-s0")
-T_ON = dict(P1=10000, P1B=5000, P0=0)
+BASE = dict(P1="RB0L-F-s0", P1B="RB0-F-s0", P0="NTV0-L18-s0", RB0F="RB0-F-s0", P1L="RB0L-F-s0")
+T_ON = dict(P1=10000, P1B=5000, P0=0, P1L=10000)
 OFFREF = dict(P1="RB0L-F-s0", P1B="RB0-F-s0")             # each arm's offline counterpart (its argv without the S flags)
 S_FLAGS = ["--on", "--on-k", "--on-mode", "--on-wfile", "--on-hold-pct", "--lat-onc", "--lat-soft", "--lat-side", "--lat-file", "--lat-depth",
            "--lat-soft-depth", "--lat-buf", "--on-arc", "--on-arc-rows", "--on-split"]
@@ -85,6 +85,10 @@ def last_val(a, k):
 
 
 def build_argv(arm, tag, steps=None, on_start=None, save_at=None):
+    if arm == "P1L":                                          # round9 P1L (plans/2026-10-24-p1l.md): P1's argv + NTV0-L18's schedule from T
+        a, n = build_argv("P1", tag, steps, on_start, save_at), stored_argv("NTV0-L18-s0")
+        return a + ["--lr2-at", last_val(a, "--on-start"), "--lr2-scale", last_val(n, "--lr-scale"), "--lr2-warmup", last_val(n, "--warmup"),
+                    "--lr2-floor", last_val(n, "--lr-floor")]
     a = list(stored_argv(BASE[arm]))
     put(a, "--tag", tag)
     if arm in ("P1", "P1B"):                                  # the offline argv + NTV0's S flags (effective values), wfile -> rb0 only
@@ -133,7 +137,7 @@ def cmd_argv(a):
 
 def cmd_diff(a):
     b = stored_argv(BASE[a.arm])
-    x = build_argv(a.arm, TAGS[a.arm])
+    x = build_argv(a.arm, TAGS.get(a.arm, "PCL1L-F-s0"))
     print(" ".join(x))
     for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, b, x, autojunk=False).get_opcodes():
         if op != "equal":
@@ -528,10 +532,10 @@ def main():
     s = ap.add_subparsers(dest="sub", required=True)
     s.add_parser("wfile")
     p = s.add_parser("argv")
-    p.add_argument("arm", choices=("P1", "P1B", "P0", "RB0F")), p.add_argument("tag")
+    p.add_argument("arm", choices=("P1", "P1B", "P0", "RB0F", "P1L")), p.add_argument("tag")
     p.add_argument("--steps", type=int), p.add_argument("--on-start", type=int), p.add_argument("--save-at")
     p = s.add_parser("diff")
-    p.add_argument("arm", choices=("P1", "P1B", "P0"))
+    p.add_argument("arm", choices=("P1", "P1B", "P0", "P1L"))
     p = s.add_parser("ident")
     p.add_argument("--tag", required=True), p.add_argument("--ref", required=True), p.add_argument("--upto", type=int, required=True)
     p.add_argument("--stop", type=int, required=True), p.add_argument("--allow-new", action="store_true"), p.add_argument("--out", required=True)

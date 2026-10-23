@@ -253,6 +253,11 @@ operation for operation (identity: experiments/defect_fix/results/identity_nr1hv
             --diag-freeze: every group's lr is 0 each step (the weights stay at the init, Adam's moments accumulate). Off: no operation added.
   --lr-floor F      the cosine decays to F x base lr instead of 0 (lr = base x warm-up x (F + (1 - F) cos)); 0 (default) = the plain cosine.
             The warm-up length is the existing --warmup.
+  --lr2-at T [--lr2-scale 0.1 --lr2-warmup 500 --lr2-floor 0.1]   (round9 P1L, plans/2026-10-24-p1l.md) from step T every group's lr
+            follows a second schedule over the remaining steps - T, the one a fresh run with --lr-scale S --warmup W --lr-floor F gives:
+            net / old adapter at their on_train lr x S with warm-up W, the route branch (and --rx) at its own unscaled lr and warm-up, one
+            cosine to F x base. Optimizer state and GradScaler carry on (no reset). With the flag the trainer logs lr/g<i> (the lr of the
+            step before each log). 0 (default) = off: no operation added.
 
 Speed (2026-10-17, docs/speed.md; validation experiments/cl_infra/plans/2026-10-17-compile-prereg.md):
   --compile   the main training forward of every step runs through torch.compile(model, dynamic=False) (inductor; pp_train --compile's
@@ -934,6 +939,11 @@ def cmd_train(a):
         import reflex as RX
         nr_ = RM.EGO_DIM + model.adapter.route.dim
     opt = torch.optim.AdamW(groups, weight_decay=cfg.wd)
+    if a.lr2_at:                                                      # P1L: the second schedule's base lr / warm-up per group (docstring)
+        assert 0 < a.lr2_at < cfg.steps and not a.diag_freeze and 0 <= a.lr2_floor < 1, "--lr2-at in (0, steps), not with --diag-freeze"
+        b2 = [(cfg.lr * a.lr2_scale, a.lr2_warmup), (cfg.lr_new * a.lr2_scale, a.lr2_warmup), (a.rm_lr, a.rm_warmup)] + ([(a.rx_lr, a.rx_warmup)] if ns.rx else [])
+        for g, (b_, w_) in zip(opt.param_groups, b2, strict=True):
+            g["base2"], g["wu2"] = b_, w_
     ST = None
     if a.dual or a.cons or a.imit_drop or a.pref > 0 or ns.rx:      # STACK terms (lib/stack_train.py)
         import stack_train
@@ -1379,6 +1389,9 @@ def cmd_train(a):
             pe = pool_ev()
             run.scalars(pe, 0)
             run.info("pool slices @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in pe.items()))
+        if a.lr2_at:
+            run.info(f"lr2 from step {a.lr2_at}: " + ", ".join(f"g{i} {g['base2']:.3g} wu {g['wu2']}" for i, g in enumerate(opt.param_groups))
+                     + f", cosine over {cfg.steps - a.lr2_at} steps to floor {a.lr2_floor}")
         if a.lr_floor or a.diag:
             run.info(f"lr floor {a.lr_floor}; diag {a.diag} (per-term gradients every {a.diag_every} steps)")
         if TW is not None:
@@ -1429,6 +1442,11 @@ def cmd_train(a):
                 g["lr"] = g["base"] * min(1.0, (step + 1) / g["wu"]) * cosf
                 if a.diag_freeze:                                     # LAUNCH-DIAG: the weights stay at the init (Adam state still accumulates)
                     g["nom"], g["lr"] = g["base"], 0.0
+            if a.lr2_at and step >= a.lr2_at:                         # P1L: from step T the second schedule (no optimizer reset)
+                s2 = step - a.lr2_at
+                cos2 = a.lr2_floor + (1.0 - a.lr2_floor) * 0.5 * (1 + np.cos(np.pi * s2 / (cfg.steps - a.lr2_at)))
+                for g in opt.param_groups:
+                    g["lr"] = g["base2"] * min(1.0, (s2 + 1) / g["wu2"]) * cos2
             ego = S.ego[rows] * (~anchor)[:, None].float()
             if lc_on:
                 keep = torch.as_tensor(mrng.random(n_main) >= a.rm_drop, device=dev) | is_pool[rows[:n_main]]
@@ -1612,7 +1630,8 @@ def cmd_train(a):
                 hist = []
                 el = time.time() - t0
                 rn = float(model.adapter.route.out.weight.norm())
-                run.scalars({f"loss/{q}": v for q, v in mm.items()} | {"throughput/steps_per_s": (step + 1) / el, "route/out_norm": rn}, step + 1)
+                run.scalars({f"loss/{q}": v for q, v in mm.items()} | {"throughput/steps_per_s": (step + 1) / el, "route/out_norm": rn}
+                            | ({f"lr/g{i}": g["lr"] for i, g in enumerate(opt.param_groups)} if a.lr2_at else {}), step + 1)
                 if a.ego_drop_open and a.ego_drop_speed > 0 and ((step + 1) % 500 == 0 or step + 1 == cfg.steps):
                     dd = drop_rec(dacc, a.ego_drop_speed)
                     run.info(f"ego-drop-open after {step + 1} steps: {json.dumps(dd)}")
@@ -1863,6 +1882,10 @@ if __name__ == "__main__":
         p.add_argument("--diag-freeze", action="store_true", help="LAUNCH-DIAG: every group's lr is 0 (the weights stay at the init; Adam "
                        "state accumulates; --diag-infl uses the base lr)")
         p.add_argument("--lr-floor", type=float, default=0.0, help="cosine floor as a share of each group's base lr (0 = the plain cosine)")
+        p.add_argument("--lr2-at", type=int, default=0, help="P1L: from step T a second lr schedule over the rest (docstring); 0 = off")
+        p.add_argument("--lr2-scale", type=float, default=0.1, help="--lr2-at: net / old adapter lr x this (the route branch keeps --rm-lr)")
+        p.add_argument("--lr2-warmup", type=int, default=500, help="--lr2-at: warm-up of the net / old adapter groups (the branch keeps --rm-warmup)")
+        p.add_argument("--lr2-floor", type=float, default=0.1, help="--lr2-at: cosine floor of the second schedule")
         p.add_argument("--si-scan", default="", help="SELF-ITER: per-row error scan npz (si.py scan; '' = off)")
         p.add_argument("--si-mode", default="top", choices=("top", "rank"), help="SELF-ITER: top-share oversampling or rank^gamma weights")
         p.add_argument("--si-top", type=float, default=0.1, help="SELF-ITER: top share of each set oversampled (--si-mode top)")
