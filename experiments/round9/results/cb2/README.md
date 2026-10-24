@@ -17,8 +17,8 @@ Plan (Chinese, registration): [../../plans/2026-10-25-cb2.md](../../plans/2026-1
 
 **Correction (plan amendment 2, 10-25).** The static-row drop was an error in the coordinator's brief, not a user decision; B2 kept its
 practice-start static rows. The P1N above stays as the "no-static" reference. P1N' (`CB2P1NB-F-s0`) uses B2's S-row rule on the same
-pool (every live self row equal, static rows kept): STAND-firing rows are 23.3 % of the S draw, 7.45 a batch (B2 14.5 % / 4.65). Results
-of that lane are added below when they land.
+pool (every live self row equal, static rows kept): STAND-firing rows are 23.3 % of the S draw, 7.45 a batch (B2 14.5 % / 4.65). Results:
+see "P1N' (amendment 2)" below.
 
 **Box sync incident.** During the first records sync I ran `git checkout -- .` in the box repo. It reverted an uncommitted local change
 to `experiments/round9/scripts/diag.sh` (not mine, owner unknown); that change is lost. The box is synced with `git pull` only from now
@@ -80,3 +80,30 @@ lane stopped before the D1N read it was registered for).
   them, which decision 377 named as the alternative fix for the lateral push), or B2's STAND-R rolling rows. Not run; needs the user.
 - Cost: 35.7 GPU job-h + 1.4 CPU job-h (practice roll 46 blocks, B2 re-reads 2 x 24 blocks, P1N training and 24 read blocks); disk
   about 160 GB kept (roll dumps, on1_CBR0-6 / on1_JTPR, reads with ASLs).
+
+## P1N' (amendment 2): B2's S-row rule, `CB2P1NB-F-s0`
+
+Same pool and argv as P1N except the draw file CB2SB (static practice rows kept). Gates: argv diff = tag + wfile only
+([diffB.json](diffB.json)), smoke ([smoke1B.json](smoke1B.json)), gradient ratio 0.403, post passed. STAND-firing rows: 23.3 % of the
+S draw, 7.45 a batch (B2 14.5 % / 4.65) ([w_CB2SB.json](w_CB2SB.json)).
+
+| read | scorer | P1N' | B2-s1 re-read | P1N' - B2-s1 [95 % CI] | zeros P1N' / B2-s1 |
+|:--|:--|--:|--:|--:|--:|
+| arena held 2 228, native | fixed (primary) | 0.9424 | 0.9412 | +0.0012 [-0.0057, +0.0091] | 78 / 89 |
+| arena held 2 228, native | old | 0.9366 | 0.9358 | +0.0008 [-0.0055, +0.0077] | 91 / 101 |
+| held 460 @18 | fixed (primary) | 0.8282 | 0.8549 | -0.0267 [-0.0489, -0.0060] | 42 / 40 |
+| held 460 @18 | old | 0.8238 | 0.8527 | -0.0289 [-0.0496, -0.0098] | 44 / 41 |
+
+Against B2-s0 (fixed): arena -0.0007 [-0.0056, +0.0045], held 460 -0.0179 [-0.041, +0.004]. Against the stored NTV0 / D3 (old):
+arena +0.167 / +0.149. Frozen PCS (old scorer, reference only): 1350 (B2-s1 1398, B2-s0 1369, P1N 1131). Arena zeros (fixed):
+corridor 18 (B2-s1 25), offroad 48 (53), AF-front 4 (2), new corridor zeros under the fix 4 (6). Held 460 zeros: offroad 22 / 19,
+corridor 5 / 8, AF-front 5 / 3, AF-side 2 / 0; the held 460 loss is mostly partial scores, not zeros. Tables: [arena_v2_s1B.md](arena_v2_s1B.md),
+[held460_v2_s1B.md](held460_v2_s1B.md) (+ `_old_`), windows `arena_windows_*_s1B.csv.gz`.
+
+So STAND does transfer once it has B2's rows: the clean single run P1N' is level with B2 on the arena (both seeds, CI spans 0), with a
+held 460 loss of about 0.02-0.03 in partials. E1 passed and stage 2 was submitted.
+
+**Stage 2 stopped at a gate.** P1N''s own practice-start shards fail the registered pool gate R1: clause (c) compares against a
+wrong-seed checkpoint `CB2P1NB-F-s1`, which does not exist in a one-seed lane (control = nan) ([gate_CBPB0.txt](gate_CBPB0.txt) ..
+[gate_CBPB4.txt](gate_CBPB4.txt)); CBPB2-4 also miss (a) at 0.986-0.988 (< 0.99, the fp16-ulp issue nuplan_dag amended for B2's fast plans).
+The onpol-train pool fails the same (c) in its pool gate. D1N' was not trained; the gate lines were not changed (plan amendment 3).

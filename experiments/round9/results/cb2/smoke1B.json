@@ -1,0 +1,39 @@
+{
+ "tag": "CB2SM1B-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-CB2SM1B-F-s0/20261025-025847",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "batch": [
+   "83",
+   "13",
+   "32"
+  ],
+  "batch_want": [
+   "83",
+   "13",
+   "32"
+  ],
+  "shares": {
+   "S": [
+    0.2822848020956459,
+    0.28228480209564577
+   ],
+   "S_pr": [
+    0.7177151979046555,
+    0.7177151979046552
+   ]
+  },
+  "lon_terms": {
+   "lon_stand": {
+    "n": 16,
+    "finite": true
+   },
+   "lon_free": {
+    "n": 16,
+    "finite": true
+   }
+  }
+ },
+ "pass_": true
+}

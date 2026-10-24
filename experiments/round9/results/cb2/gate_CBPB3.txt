@@ -1,0 +1,1 @@
+R1 False False True False mu_share 0.9872302950242184 control nan R2 True ego_max 0.025913513954373208 act_share 0.9996549768132723
