@@ -592,6 +592,8 @@ def cmd_tok(a):
             zero: an empty memory instead, the diagnostic that the branch is live)."""
             return torch.cat([ego[r], torch.zeros_like(rmem[r]) if zero else rmem[r]], 1) if branch[t] else ego[r]
 
+        ULPR = {}
+
         @torch.no_grad()
         def diff(t, rows, zero=False):
             """Per row, trainer forward against served: max |difference| over (0) the first 15 plan points (x, y); (1) the 8 poses (x, y), the
@@ -608,6 +610,10 @@ def cmd_tok(a):
                 ex = np.stack([I.to_rear(q[:, 0:3], q[:, 11], I.T_IDXS, c[:2], Z.T_OUT, "lever") for q, c in zip(pn, tab["cam"][r].astype(np.float64))])
                 d = np.abs(ex[..., :2] - M["poses"][r][..., :2]).max(2)
                 out[0].append((p[:, :15, :2] - mu[:, :15, :2]).abs().amax((1, 2)).cpu().numpy())
+                if os.environ.get("ON_R1_ULP") and not zero:                                  # off by default: |diff| in fp16 steps at each point's magnitude
+                    mg = torch.maximum(p[:, :15, :2].abs(), mu[:, :15, :2].abs()).float()
+                    ulp = torch.where(mg < 2.0 ** -14, torch.full_like(mg, 2.0 ** -24), torch.exp2(torch.floor(torch.log2(mg.clamp_min(2.0 ** -14))) - 10))
+                    ULPR.setdefault(t, []).append(((p[:, :15, :2] - mu[:, :15, :2]).abs() / ulp).amax((1, 2)).cpu().numpy())
                 out[1].append(d.max(1))
                 out[2].append(np.where(np.abs(M["poses"][r][..., 0]) < 32.0, d, 0.0).max(1))
                 for j, q in ((3, p), (4, mu)):
@@ -645,6 +651,10 @@ def cmd_tok(a):
                                  rear_formula_max=float(df.max()), single_n=int(len(d1)) if a.single else 0, single_identical=float((d1 == 0).mean()), single_max=float(d1.max()),
                                  control_mu_share=float((cm <= TOL_M).mean()) if other in models else np.nan, control_pose_share=float((cp <= TOL_M).mean()) if other in models else np.nan,
                                  control_pose_median=float(np.median(cp)))
+            if t in ULPR:                                                                      # ON_R1_ULP: per-point fp16-step check of clause (a)
+                ur = np.concatenate(ULPR.pop(t))
+                r1["tags"][t] |= dict(ulp_ratio_max=float(ur.max()), rows_over_1ulp=int((ur > 1.0).sum()), ulp_ratio_p999=float(np.percentile(ur, 99.9)))
+            ULPR.clear()
             if branch[t]:                                                                      # diagnostic: the same clause with an empty route memory fed
                 r1["tags"][t] |= dict(rmem_zero_mu_share_one_ulp=float((diff(t, rows, True)[0] <= 0.03126).mean()))
             q = r1["tags"][t]

@@ -161,6 +161,8 @@ PY
   rc=$?; cat $O/stage/$N/gate.txt; (( rc == 0 )) || { touch $O/stage/$N/GATE_FAIL; echo "$(date '+%F %T') $N fails R1 / R2: not merged" | tee -a $O/stages.txt; }; true ;;
 proute|panchor)  # rm_build pool / anchor on the shard's rows with its own scene loader (EV_CFG); skipped for a GATE_FAIL shard
   N=$2; [[ -e $O/stage/$N/GATE_FAIL ]] && { echo "$N GATE_FAIL: skipped"; exit 0; }
+  [[ $1 == proute && -f $CR/on1_$N/route.npz ]] && { echo "$N route done"; exit 0; }
+  [[ $1 == panchor && -f $DATA_DIR/runs/route_mem/feat/on1_$N.a.npz ]] && { echo "$N anchor done"; exit 0; }
   c=$(python3 -c "import json; print(json.load(open('$O/stage/$N/manifest.json')).popitem()[1][0])")
   if [[ $1 == proute ]]; then EV_CFG=$c/generated-user-config-0.yaml $AP $RB pool --name $N --workers 8 || die "rm_build pool rc $?"
   else EV_CFG=$c/generated-user-config-0.yaml $AP $RB anchor --pool $N --workers 8 || die "rm_build anchor rc $?"; fi ;;
@@ -269,9 +271,9 @@ s2)
 retok)   # plan amendment 4: retok <rows> <practice|onpol>: R1 re-run (tokens / teacher from the cache) with the CB2P1N-F-s0 control -> cb2.py rgate
   N=$2; k=$3; [[ $k == practice ]] && sp=alpasim_nuplan/practice-starts || sp=alpasim_nuplan/onpol-train
   [[ -f $CR/on1_$N@warp/front.npy ]] || die "no tokens for $N"
-  ON_SPLIT=$sp ON_R1_CONTROL=CB2P1N-F-s0 $TR $ON tok --name $N --control $([[ $k == practice ]] && echo smoke10e || echo smoke10eY) || die "on_rows tok rc $?"
+  ON_SPLIT=$sp ON_R1_CONTROL=CB2P1N-F-s0 ON_R1_ULP=${CB2_ULP:-} $TR $ON tok --name $N --control $([[ $k == practice ]] && echo smoke10e || echo smoke10eY) || die "on_rows tok rc $?"
   [[ $k == onpol ]] && { $TR experiments/onpol_long/scripts/ol_labels.py gate --name $N --out $W/rows/$N; echo "ol_labels gate rc $? (informational: cb2.py rgate is the line)"; }
-  $V $PY rgate --name $N --kind $k --out $O/results/rgate_$N.json; rc=$?
+  $V $PY rgate --name $N --kind $k --out $O/results/rgate_$N${CB2_ULP:+_a6}.json; rc=$?
   if [[ $k == practice ]]; then
     if (( rc == 0 )); then rm -f $O/stage/$N/GATE_FAIL; else touch $O/stage/$N/GATE_FAIL; echo "$(date '+%F %T') $N fails R1 / R2 (amendment 4): not merged" | tee -a $O/stages.txt; fi
     exit 0; fi
@@ -298,6 +300,19 @@ PY
   lo=$(sub cb2-olab-L18CBP$X --after $rt --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab L18CBP$X) || exit 1
   L=($lo); for k_ in $(shards); do N=CBP$X$k_
     r=$(sub cb2-retok-$N --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME retok $N practice) || exit 1
+    a=$(sub cb2-proute-$N --after $r --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME proute $N) || exit 1
+    b=$(sub cb2-panchor-$N --after $a --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME panchor $N) || exit 1
+    L+=($(sub cb2-olab-$N --after $b --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab $N)) || exit 1; done
+  bash $ME s2tail $(csv ${L[@]}) || exit 1 ;;
+s2r6)    # plan amendment 6: R1 re-run with the per-point fp16-step check for all 8 pools -> labels where missing -> s2tail -> s2pai
+  [[ $X == B && -e $O/S2R$X && ! -e $O/S2R6$X ]] || die "s2r6 needs CB2V=B after s2r, once"
+  h=$(git rev-parse --short HEAD); echo "$h s2r6" >> $O/code.txt; date > $O/S2R6$X
+  wc -l < $O/jobs.txt > $O/relat$X.start; rm -f $O/STOP$X; rm -rf $O/pai281/$D1N-ag $O/pai281/$D1N-ag.submit.txt
+  export CB2_ULP=1
+  rt=$(sub cb2-retok6-L18CBP$X --vram 16 --cpu 16 --ram 64 --timeout-h 2 --env CB2_ULP=1 -- bash $ME retok L18CBP$X onpol) || exit 1
+  lo=$(sub cb2-olab-L18CBP$X --after $rt --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab L18CBP$X) || exit 1
+  L=($lo); for k_ in $(shards); do N=CBP$X$k_
+    r=$(sub cb2-retok6-$N --vram 16 --cpu 16 --ram 64 --timeout-h 2 --env CB2_ULP=1 -- bash $ME retok $N practice) || exit 1
     a=$(sub cb2-proute-$N --after $r --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME proute $N) || exit 1
     b=$(sub cb2-panchor-$N --after $a --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME panchor $N) || exit 1
     L+=($(sub cb2-olab-$N --after $b --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab $N)) || exit 1; done
@@ -331,6 +346,7 @@ s2pai)   # s2pai <post id> <v2 ids>: D1N's PAI 281 side read + tax + scorer_v2, 
   echo "$(date '+%F %T') s2pai: pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
 olab)    # olab <rows>: b3 teacher -> nd_teach label (T2 / T4, dagger.npz) -> cb2.py dlabel (R3, tab.fut, G0 on these rows); GATE_FAIL shards skipped
   N=$2; [[ -e $O/stage/$N/GATE_FAIL ]] && { echo "$N GATE_FAIL: skipped"; exit 0; }
+  [[ -f $CR/on1_$N/LABELLED && -f $O/res/dlabel_$N.json ]] && { echo "$N already labelled (amendment 4 run): kept"; exit 0; }
   "${EA[@]}" $AP $NT teach --name $N --out $O/teach/$N.npz --workers 16 || die "teach $N"
   $TR $NT label --name $N --teach $O/teach/$N.npz --res $O/res || die "label $N"
   $V $PY dlabel --name $N --teach $O/teach/$N.npz --res $O/res || die "dlabel $N (G0)" ;;

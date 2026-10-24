@@ -502,7 +502,10 @@ def cmd_rgate(a):
     rows = DD / "runs/onpol_nuplan/rows" / a.name
     r1, r2 = (json.loads((rows / f).read_text()) for f in ("r1.json", "r2.json"))
     q = next(iter(r1["tags"].values()))
-    a_ulp = q["mu_share_one_ulp"] >= 0.99 and q["mu_max"] <= 0.047                 # nuplan_dag amendment 2 (nd.sh tok)
+    if "ulp_ratio_max" in q:                                                     # plan amendment 6: every point within one fp16 step of its own magnitude
+        a_ulp = q["mu_share_one_ulp"] >= 0.99 and q["ulp_ratio_max"] <= 1.0
+    else:
+        a_ulp = q["mu_share_one_ulp"] >= 0.99 and q["mu_max"] <= 0.047             # nuplan_dag amendment 2 (nd.sh tok), amendment 4
     ra = bool(q["mu_share"] >= 0.99 or a_ulp)
     if a.kind == "practice":                                                     # pn.sh's amended lines
         rc = bool(r1["c"] or q["control_mu_share"] <= q["mu_share"] - 0.2)
@@ -513,6 +516,7 @@ def cmd_rgate(a):
     rec = dict(name=a.name, kind=a.kind, control=q.get("control"), n=q["n"], mu_share=q["mu_share"], mu_share_one_ulp=q["mu_share_one_ulp"], mu_max=q["mu_max"],
                a_plain=bool(q["mu_share"] >= 0.99), a=ra, a_only_by_ulp=bool(ra and q["mu_share"] < 0.99),
                rows_passing_only_by_ulp=int(round(q["n"] * (q["mu_share_one_ulp"] - q["mu_share"]))), b=bool(r1["b"]),
+               ulp_ratio_max=q.get("ulp_ratio_max"), rows_over_1ulp=q.get("rows_over_1ulp"),
                control_mu_share=q.get("control_mu_share"), control_pose_share=q.get("control_pose_share"), c=rc, R2=bool(r2ok),
                R2_vals={k: r2.get(k) for k in ("ego_max_m", "frame_err_max_m", "act_share_within", "act_median_m")})
     if a.kind == "onpol":
