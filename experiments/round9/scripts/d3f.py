@@ -390,7 +390,7 @@ def stat_table(T, lab_a, lab_b):
 
 
 def card(i, c, cap):
-    look = cap.get(c["id"][:24], cap.get(c["id"], ""))
+    look = cap.get(Path(c["file"]).stem, "")
     sides = "；".join(f"{'左' if j == 0 else '右'} {SHORT[y['tag']]} 得分 {y['score']:.2f}"
                      + ("（存档 rollout，离线渲染）" if y["src"] == "stored" else f"（重读，重读旧分 {y.get('rerun_old', float('nan')):.2f} / 存档 {y['stored_old']:.2f}）")
                      for j, y in enumerate(c["sides"]))
@@ -413,10 +413,10 @@ def cmd_page(a):
             x = json.loads(f.read_text())
             J["clips"] += x["clips"]
             J["rerun_mismatch"] += x["rerun_mismatch"]
-    st = json.loads((D / "media" / ("nu" if (D / "media/nu/stats.json").exists() else "pai") / "stats.json").read_text())
     cap = json.loads((D / "captions.json").read_text()) if (D / "captions.json").exists() else {}
     body = json.loads((D / "body.json").read_text()) if (D / "body.json").exists() else {}
-    clips = [c for c in J["clips"] if "clip" in c]
+    st = json.loads((D / "media" / ("nu" if (D / "media/nu/stats.json").exists() else "pai") / "stats.json").read_text())
+    clips = [c for c in J["clips"] if "clip" in c and Path(c["file"]).stem not in body.get("skip", [])]   # skip: near-duplicate windows
     cards = "".join(card(i, c, cap) for i, c in enumerate(clips, 1))
     tabs = []
     for k, la, lb, ttl in (("pai", "D3", "R8K-s2", "PAI 281（新评分器）"), ("arena", "D3", "B2", "nuPlan 大考场 held 原生"),

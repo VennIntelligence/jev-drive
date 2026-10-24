@@ -1,0 +1,582 @@
+{
+ "clips": [
+  {
+   "i": 1,
+   "track": "pai",
+   "cls": "offroad",
+   "id": "clipgt-1a69f757-4f33-4fd7-98a6-3a026c88b571",
+   "file": "media/pai/00_pai_offroad.mp4",
+   "mb": 1.36,
+   "rate": 2.0,
+   "t_ev": 16.8,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 2,
+   "track": "pai",
+   "cls": "offroad",
+   "id": "clipgt-4e4a2a51-db91-43d1-90b4-d9cd7aeba6e8",
+   "file": "media/pai/01_pai_offroad.mp4",
+   "mb": 0.74,
+   "rate": 2.0,
+   "t_ev": 4.3,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 3,
+   "track": "pai",
+   "cls": "AF-front",
+   "id": "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+   "file": "media/pai/02_pai_AF-front.mp4",
+   "mb": 1.01,
+   "rate": 2.0,
+   "t_ev": 11.9,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 4,
+   "track": "pai",
+   "cls": "overshoot",
+   "id": "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+   "file": "media/pai/03_pai_overshoot.mp4",
+   "mb": 1.03,
+   "rate": 2.0,
+   "t_ev": 4.6,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    }
+   ]
+  },
+  {
+   "i": 5,
+   "track": "pai",
+   "cls": "route-turn",
+   "id": "clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226",
+   "file": "media/pai/04_pai_route-turn.mp4",
+   "mb": 1.48,
+   "rate": 2.0,
+   "t_ev": 7.1,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 6,
+   "track": "pai",
+   "cls": "zero-other",
+   "id": "clipgt-26004ca8-cf2f-4f1e-b7aa-07761e139d7e",
+   "file": "media/pai/05_pai_zero-other.mp4",
+   "mb": 0.89,
+   "rate": 2.0,
+   "t_ev": 7.4,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "stored",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": null
+    }
+   ]
+  },
+  {
+   "i": 7,
+   "track": "pai",
+   "cls": "rear-hit",
+   "id": "clipgt-fd01e9ab-05d6-445a-b974-02a33793ab49",
+   "file": "media/pai/06_pai_rear-hit.mp4",
+   "mb": 0.82,
+   "rate": 2.0,
+   "t_ev": 17.9,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.4717592765276289,
+     "stored_old": 0.4717592765276289,
+     "rerun_old": 0.4717592765276289
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 8,
+   "track": "pai",
+   "cls": "slow",
+   "id": "clipgt-b44a4a44-0d00-4795-8a66-7acb0fdf46a2",
+   "file": "media/pai/08_pai_slow.mp4",
+   "mb": 1.48,
+   "rate": 3.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.8817858874425318,
+     "stored_old": 0.8817858874425318,
+     "rerun_old": 0.8817858874425318
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 9,
+   "track": "pai",
+   "cls": "slow",
+   "id": "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+   "file": "media/pai/09_pai_slow.mp4",
+   "mb": 2.34,
+   "rate": 3.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.8969335278728569,
+     "stored_old": 0.8969335278728569,
+     "rerun_old": 0.8969335278728569
+    },
+    {
+     "tag": "R8K-L18-s2",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 10,
+   "track": "arena",
+   "cls": "corridor",
+   "id": "2021.05.25.17.54.41_veh-35_01654_01850-5aef80ec207e5133",
+   "file": "media/nu/00_arena_corridor.mp4",
+   "mb": 0.27,
+   "rate": 2.0,
+   "t_ev": 4.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 11,
+   "track": "arena",
+   "cls": "offroad",
+   "id": "2021.05.25.17.54.41_veh-35_01905_02121-e54ecb898022502c",
+   "file": "media/nu/02_arena_offroad.mp4",
+   "mb": 0.54,
+   "rate": 2.0,
+   "t_ev": 3.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 12,
+   "track": "arena",
+   "cls": "offroad",
+   "id": "2021.05.25.17.54.41_veh-35_02723_02902-67ab82ddc14e5a42",
+   "file": "media/nu/03_arena_offroad.mp4",
+   "mb": 0.41,
+   "rate": 2.0,
+   "t_ev": 4.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 13,
+   "track": "arena",
+   "cls": "AF-front",
+   "id": "2021.09.16.15.47.30_veh-45_01199_01391-b2339a8a2d335cbf",
+   "file": "media/nu/04_arena_AF-front.mp4",
+   "mb": 0.18,
+   "rate": 2.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 14,
+   "track": "arena",
+   "cls": "AF-front+corridor",
+   "id": "2021.09.16.19.49.00_veh-42_00990_01609-5a7f68728cb2547f",
+   "file": "media/nu/05_arena_AF-front_corridor.mp4",
+   "mb": 0.2,
+   "rate": 2.0,
+   "t_ev": 4.0,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 15,
+   "track": "arena",
+   "cls": "rear-hit",
+   "id": "2021.06.03.17.06.58_veh-35_02943_03220-a05b6633cd455f14",
+   "file": "media/nu/06_arena_rear-hit.mp4",
+   "mb": 0.55,
+   "rate": 2.0,
+   "t_ev": 4.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.8239113919971759,
+     "stored_old": 0.8239113919971759,
+     "rerun_old": 0.8224317461351732
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 16,
+   "track": "arena",
+   "cls": "slow",
+   "id": "2021.09.16.15.47.30_veh-45_01199_01391-bf397a245a1d5984",
+   "file": "media/nu/07_arena_slow.mp4",
+   "mb": 0.3,
+   "rate": 2.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.6027785471889713,
+     "stored_old": 0.6027785471889713,
+     "rerun_old": 0.6027785471889713
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 17,
+   "track": "arena",
+   "cls": "creep",
+   "id": "2021.10.06.08.16.17_veh-52_01949_02501-b79a2f8224be5552",
+   "file": "media/nu/08_arena_creep.mp4",
+   "mb": 0.24,
+   "rate": 2.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.37231870325261346,
+     "stored_old": 0.37231870325261346,
+     "rerun_old": 0.37231870325261346
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 0.027940172337911857,
+     "stored_old": 0.027940172337911857,
+     "rerun_old": 0.027940172337911857
+    }
+   ]
+  },
+  {
+   "i": 18,
+   "track": "held",
+   "cls": "offroad",
+   "id": "2021.09.16.19.49.00_veh-42_00990_01609-c687799dac8d5aa2",
+   "file": "media/nu/09_held_offroad.mp4",
+   "mb": 0.64,
+   "rate": 2.0,
+   "t_ev": 6.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 19,
+   "track": "held",
+   "cls": "AF-front",
+   "id": "2021.06.28.15.02.02_veh-38_02398_02848-b49e63992eee56b1",
+   "file": "media/nu/10_held_AF-front.mp4",
+   "mb": 0.52,
+   "rate": 2.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 20,
+   "track": "held",
+   "cls": "corridor",
+   "id": "2021.05.25.17.54.41_veh-35_02723_02902-f42258b638fc5b64",
+   "file": "media/nu/11_held_corridor.mp4",
+   "mb": 0.5,
+   "rate": 2.0,
+   "t_ev": 8.5,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.0,
+     "stored_old": 0.0,
+     "rerun_old": 0.0
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 21,
+   "track": "held",
+   "cls": "rear-hit",
+   "id": "2021.06.03.12.02.06_veh-35_03526_03712-da53dac7558e563d",
+   "file": "media/nu/12_held_rear-hit.mp4",
+   "mb": 0.82,
+   "rate": 2.0,
+   "t_ev": 5.0,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.5307941289093695,
+     "stored_old": 0.5307941289093695,
+     "rerun_old": 0.5307941289093695
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  },
+  {
+   "i": 22,
+   "track": "held",
+   "cls": "slow",
+   "id": "2021.10.06.08.16.17_veh-52_01590_01725-dd2d7e23754e58d3",
+   "file": "media/nu/13_held_slow.mp4",
+   "mb": 0.61,
+   "rate": 2.0,
+   "t_ev": null,
+   "sides": [
+    {
+     "tag": "NT4D3-F-s0",
+     "src": "rerun",
+     "score": 0.5606570178825214,
+     "stored_old": 0.5606570178825214,
+     "rerun_old": 0.5606570178825214
+    },
+    {
+     "tag": "STANDFMXH-L18-s1",
+     "src": "rerun",
+     "score": 1.0,
+     "stored_old": 1.0,
+     "rerun_old": 1.0
+    }
+   ]
+  }
+ ],
+ "rerun_mismatch": [
+  "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39|NT4D3-F-s0: rerun 0.000 stored 0.487",
+  "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39|NT4D3-F-s0: rerun side has no controller trace (alpasim_controller_762c3742-cf9e-11f1-ac8a-45a20779f5c6.csv)",
+  "2021.06.03.17.06.58_veh-35_02943_03220-a05b6633cd455f14|NT4D3-F-s0: rerun 0.822 stored 0.824"
+ ],
+ "videos": "media/*.mp4 (gitignored; box: runs/round9/d3_fail/clips)"
+}

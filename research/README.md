@@ -33,6 +33,7 @@
 - [jtn-diag/](jtn-diag/index.html)：JTN-L18-s0（决策 353）的零分 / 低分视频诊断，每窗并排同一 serve 下的 RSG-L18-s0（arena held stop3、held 460、不加 hold 三组，470 段重跑，视频不入库）：JTN 独有零分少（arena 20、held 11），多是弯道里更快、跑宽出路；共享零分基本是同一轨迹；stop3 下的低分大多是 serve 的 3 m leash；不加 hold 时 JTN 在静止窗原地不动。
 - [round5/offroad_videos/](round5/offroad_videos/index.html)：MV 系配方（R3MV / R5LC，含 PAI 人类行）在 PAI 281（ACC + GAP）上新增的出路零分视频页，每个事件并排同一场景的 NTV0-L18-s0（21 个事件、13 段代表视频，重读 42 个 rollout 得分全部与存档相同，视频不入库）：多数是同速下的侧向漂移 / 出弯不回正；另一类是计划收短、减速后低速转出路面；5 个事件是 NTV0 自己零分（路线转弯 / 冲过停车点）处 MV 转了却出路。
 - [round7/loss_diag/](round7/loss_diag/index.html)：R6DAG（当前最好的 PAI 臂）在 PAI 281（ACC + GAP）上还在哪里丢分（决策 436）：失分地图（按类的丢分、两种子稳定性、我们已有读数能否解、尺子权重、杠杆与估计收益）+ 每类 1–2 段代表视频（14 段，零分用存档 asl 离线渲染，视频不入库）：最大一块是停车点冲过但提交 serve 下无正例；最值得做的是转弯切内侧（DAgger 迭代）和无故减速部分分（尺子上的全部差距）。
+- [d3-failures/](d3-failures/index.html)：D3（NT4D3-F-s0，干净 PAI 配方）在 PAI 281 与 nuPlan（大考场原生、held 460）上丢分在哪（决策 476）：按类的零分 / 部分分与丢分，对 R8K-s2 与 B2 / NTV0；每类一段视频（22 段，视频不入库）：nuPlan 大头是静止窗不会等，部分分来自偏慢，PAI 多出的是无前车自发减速后被追尾。
 
 ## 记录与工具
 - [paper/decisions.md](paper/decisions.md)：论文决定表（2026-10-23 起与打榜总表分开）：主线、标题、被测对象、论文实验结论、投稿事务，编号 PD N。

@@ -23,4 +23,4 @@ Route-branch CPU check (2026-10-22): [results/route_check/README.md](results/rou
 [plans/](plans/) 1 live plans
 <!-- files:end -->
 
-Layout: `scripts/` entry points (live), `results/` small result files, `plans/` live plan notes.
+Layout: `scripts/` entry points (live), `results/` small result files, `plans/` live plan notes. D3-NUPLAN (2026-10-24, decision 476): D3 on nuPlan with decision 444's readout: arena native 0.788, +0.018 [+0.003, +0.036] vs NTV0 (PCS 1116 vs 1104) but -0.148 vs B2 (static windows); held 460 0.865, -0.023 vs NTV0 (offroad): [results/d3_nuplan/README.md](results/d3_nuplan/README.md), lane `scripts/d3nu.sh`; failure statistics and video page `scripts/d3f.py` -> [research/d3-failures/](../../research/d3-failures/index.html).

@@ -1,0 +1,5 @@
+NT4D3-F-s0: windows 2106 / 2106, mean 0.7906, PCS 1116
+NTV0-L18-s0: windows 2106 / 2106, mean 0.7720, PCS 1104
+R6DAG-L18-s1: windows 2106 / 2106, mean 0.7686, PCS 1100
+R8K-L18-s2: windows 2106 / 2106, mean 0.7643, PCS 1099
+STANDFMXH-L18-s1: windows 2106 / 2106, mean 0.9365, PCS 1398
