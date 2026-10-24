@@ -1,0 +1,39 @@
+{
+ "files": [
+  "runs/round9/ntv1_snu/w/NSNU.npz",
+  "runs/round9/ntv1_snu/w/NSNUZ.npz"
+ ],
+ "ref": "runs/round9/ntv1_step4/w/NTV1D2.npz",
+ "checks": {
+  "names": true,
+  "s_rows": 13932,
+  "s_rows_rule": 13932,
+  "s_ids_rule": true,
+  "s_parts": [
+   "d3s"
+  ],
+  "s_modes": [
+   "self"
+  ],
+  "s_uniform": true,
+  "s_held_zero": true,
+  "share_s": 0.8000000000000003,
+  "dag_bitwise": true,
+  "dag_rows_equal_ntv1d2": true,
+  "ntv1d2_nonzero_outside_rb0_and_dag": 0,
+  "other_zero": true,
+  "share_pd": 0.09953758965921439,
+  "share_pd2": 0.10046241034078571,
+  "share_pd_ntv1d2": 0.09953758965921432,
+  "share_pd2_ntv1d2": 0.10046241034078564,
+  "total": 0.9999999999999997,
+  "fut_finite": true,
+  "z_prefix_bitwise": true,
+  "z_tail_zero": true,
+  "z_grp_prefix": true,
+  "z_tail_part": [
+   "d3s"
+  ]
+ },
+ "pass_": true
+}

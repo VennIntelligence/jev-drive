@@ -1,0 +1,58 @@
+{
+ "new": "/root/autodl-tmp/ujs/runs/onpol_long/roll/NT4D3-F-s0/c0/run",
+ "ref": "/root/autodl-tmp/ujs/runs/onpol_long/roll/RB0-F-s0/c0/run",
+ "same": {
+  "driver-config.yaml": true,
+  "controller-config.yaml": true,
+  "eval-config.yaml": true,
+  "trafficsim-config.yaml": true
+ },
+ "loose": {
+  "generated-user-config-0.yaml": {
+   "changed_lines": 8,
+   "allowed": [
+    "n_concurrent_rollouts:",
+    "sensorsim_cache_size:"
+   ],
+   "bad": []
+  },
+  "wizard-config.yaml": {
+   "changed_lines": 16,
+   "allowed": [
+    "- --cache-size=5",
+    "- --cache-size=9",
+    "- localhost:53503",
+    "- localhost:55987",
+    "baseport:",
+    "n_concurrent_rollouts:",
+    "nre_cache_size:",
+    "sensorsim_cache_size:"
+   ],
+   "bad": []
+  }
+ },
+ "scenes_listed": 172,
+ "rollouts": 172,
+ "scored": 172,
+ "listed_scored": 172,
+ "sim_pkl": true,
+ "mean_new": 0.8631884810341369,
+ "mean_rb0": 0.8015489121412667,
+ "fail_new": {
+  "None": 160,
+  "collision_at_fault": 6,
+  "left_corridor_laterally": 2,
+  "offroad": 2,
+  "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+  "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1
+ },
+ "fail_rb0": {
+  "None": 149,
+  "collision_at_fault": 4,
+  "offroad": 11,
+  "left_corridor_laterally": 6,
+  "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+  "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1
+ },
+ "pass_": true
+}

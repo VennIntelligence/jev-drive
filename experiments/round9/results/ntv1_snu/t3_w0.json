@@ -1,0 +1,135 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5NUT3A-F-s0/20261024-175731",
+ "upto": 60,
+ "steps": [
+  0,
+  25,
+  50,
+  60
+ ],
+ "scalars_compared": 153,
+ "identical": 153,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade@60",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@60",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@60",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@60",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "excluded": {
+  "prefixes": [
+   "pool_held/",
+   "pool_fit/"
+  ],
+  "tags": [
+   "pool_fit/agent_mean",
+   "pool_fit/agent_pos",
+   "pool_fit/arc4_bias",
+   "pool_fit/arc4_bias_brake",
+   "pool_fit/arc4_bias_cruise",
+   "pool_fit/arc4_bias_launch",
+   "pool_fit/arc4_bias_still",
+   "pool_fit/arc4_bias_stop",
+   "pool_fit/fast12",
+   "pool_fit/lat_onc_mean",
+   "pool_fit/lat_onc_pos",
+   "pool_fit/lat_side_mean",
+   "pool_fit/lat_side_pos",
+   "pool_fit/lat_soft_mean",
+   "pool_fit/lat_soft_pos",
+   "pool_fit/n_brake",
+   "pool_fit/n_cruise",
+   "pool_fit/n_launch",
+   "pool_fit/n_still",
+   "pool_fit/n_stop",
+   "pool_fit/road_mean",
+   "pool_fit/road_pos",
+   "pool_fit/slow08",
+   "pool_held/agent_mean",
+   "pool_held/agent_pos",
+   "pool_held/arc4_bias",
+   "pool_held/arc4_bias_brake",
+   "pool_held/arc4_bias_cruise",
+   "pool_held/arc4_bias_launch",
+   "pool_held/arc4_bias_still",
+   "pool_held/arc4_bias_stop",
+   "pool_held/fast12",
+   "pool_held/lat_onc_mean",
+   "pool_held/lat_onc_pos",
+   "pool_held/lat_side_mean",
+   "pool_held/lat_side_pos",
+   "pool_held/lat_soft_mean",
+   "pool_held/lat_soft_pos",
+   "pool_held/n_brake",
+   "pool_held/n_cruise",
+   "pool_held/n_launch",
+   "pool_held/n_still",
+   "pool_held/n_stop",
+   "pool_held/road_mean",
+   "pool_held/road_pos",
+   "pool_held/slow08"
+  ],
+  "n_new": 92,
+  "n_ref": 92,
+  "differ": 92,
+  "differ_sample": [
+   "pool_fit/agent_mean@0",
+   "pool_fit/agent_mean@60",
+   "pool_fit/agent_pos@0",
+   "pool_fit/agent_pos@60",
+   "pool_fit/arc4_bias@0",
+   "pool_fit/arc4_bias@60",
+   "pool_fit/arc4_bias_brake@0",
+   "pool_fit/arc4_bias_brake@60",
+   "pool_fit/arc4_bias_cruise@0",
+   "pool_fit/arc4_bias_cruise@60",
+   "pool_fit/arc4_bias_launch@0",
+   "pool_fit/arc4_bias_launch@60"
+  ],
+  "only_new": 0,
+  "only_ref": 0
+ },
+ "a": "NT5NUT3A-F-s0",
+ "b": "NT5NUT3B-F-s0",
+ "run_a": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5NUT3A-F-s0/20261024-175731",
+ "run_b": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5NUT3B-F-s0/20261024-185500",
+ "pool_rows_b": {
+  "25": 0.0,
+  "50": 32.0,
+  "60": 40.0
+ },
+ "pool_drawn": true,
+ "pass_": true
+}

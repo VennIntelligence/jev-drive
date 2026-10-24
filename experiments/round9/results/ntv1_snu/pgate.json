@@ -1,0 +1,91 @@
+{
+ "poolgate": {
+  "pool": "L18D3",
+  "rows": 17590,
+  "feat_ok": 1.0,
+  "route_ok": 0.9997725980670835,
+  "cov20": 0.47453098351335987,
+  "route0_share_005": 0.9931779420125071,
+  "route0_med": 3.814697265625e-06,
+  "pass": true
+ },
+ "poolgate_rc": 0,
+ "poolgate_rb0": {
+  "pool": "L18RB0",
+  "rows": 17429,
+  "feat_ok": 1.0,
+  "route_ok": 0.999885248723392,
+  "cov20": 0.46112800504905616,
+  "route0_share_005": 0.9944345630845143,
+  "route0_med": 3.814697265625e-06,
+  "pass": true
+ },
+ "R1": {
+  "a_one_ulp": {
+   "NT4D3-F-s0": 0.9992609437180217
+  },
+  "b_control": [
+   [
+    100,
+    1.0
+   ]
+  ],
+  "c_wrong_seed": {
+   "NT4D3-F-s0": 0.0036384309266628764
+  },
+  "written_pass": false
+ },
+ "R2": {
+  "ego_max_m": 0.01821028797820944,
+  "act_share_within": 0.999984102338546,
+  "act_max_m": 0.8567580277289265,
+  "act_n": 377414,
+  "rollouts": 1031,
+  "with_sim": 1020,
+  "frame_excluded": [
+   {
+    "scene": "2021.09.09.17.18.51_veh-48_00657_00876-798842f0b1c253b4",
+    "tag": "NT4D3-F-s0",
+    "frame_err": 2.1068653683766074,
+    "t0_rel": -2.0
+   }
+  ]
+ },
+ "R1_rb0": {
+  "a_one_ulp": {
+   "RB0-F-s0": 0.9987377359573125
+  },
+  "b_control": [
+   [
+    100,
+    1.0
+   ]
+  ],
+  "c_wrong_seed": {
+   "RB0-F-s0": 0.013770153192954271
+  },
+  "written_pass": false
+ },
+ "R2_rb0": {
+  "ego_max_m": 0.01821028797820944,
+  "act_share_within": 0.999984102338546,
+  "act_max_m": 0.8567580277289265,
+  "act_n": 377414,
+  "rollouts": 1031,
+  "with_sim": 1020,
+  "frame_excluded": [
+   {
+    "scene": "2021.09.09.17.18.51_veh-48_00657_00876-798842f0b1c253b4",
+    "tag": "RB0-F-s0",
+    "frame_err": 2.1068653683766074,
+    "t0_rel": -2.0
+   }
+  ]
+ },
+ "K0_items": [
+  "kcorr"
+ ],
+ "fail": [],
+ "r1_r2_fail": [],
+ "pass_": true
+}

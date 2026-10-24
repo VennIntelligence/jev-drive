@@ -1,0 +1,53 @@
+{
+ "scenes_new": 1031,
+ "scenes_rb0": 1031,
+ "common": 1031,
+ "mean_new": 0.8544122075755483,
+ "mean_rb0": 0.7876813048976178,
+ "paired": {
+  "n": 1031,
+  "units": 1031,
+  "mean": 0.0667309026779305,
+  "lo": 0.04676589054438115,
+  "hi": 0.08772064490030272,
+  "n_boot": 10000,
+  "seed": 0,
+  "alpha": 0.05,
+  "mean_a": 0.8544122075755483,
+  "mean_b": 0.7876813048976178
+ },
+ "zeros_new": 88,
+ "zeros_rb0": 146,
+ "full_new": 653,
+ "full_rb0": 576,
+ "fail_new": {
+  "None": 943,
+  "collision_at_fault": 24,
+  "left_corridor_laterally": 15,
+  "offroad": 39,
+  "Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg": 2,
+  "Waypoint 11 fails sanity check: route folds back on itself with angle 179.16 deg": 1,
+  "Waypoint 47 fails sanity check: route folds back on itself with angle 180.00 deg": 1,
+  "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+  "Waypoint 23 fails sanity check: route folds back on itself with angle 178.18 deg": 1,
+  "Waypoint 67 fails sanity check: route folds back on itself with angle 179.45 deg": 1,
+  "Waypoint 17 fails sanity check: route folds back on itself with angle 179.39 deg": 1,
+  "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1,
+  "Waypoint 9 fails sanity check: route folds back on itself with angle 179.26 deg": 1
+ },
+ "fail_rb0": {
+  "None": 885,
+  "collision_at_fault": 29,
+  "offroad": 60,
+  "left_corridor_laterally": 47,
+  "Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg": 2,
+  "Waypoint 11 fails sanity check: route folds back on itself with angle 179.16 deg": 1,
+  "Waypoint 47 fails sanity check: route folds back on itself with angle 180.00 deg": 1,
+  "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+  "Waypoint 23 fails sanity check: route folds back on itself with angle 178.18 deg": 1,
+  "Waypoint 67 fails sanity check: route folds back on itself with angle 179.45 deg": 1,
+  "Waypoint 17 fails sanity check: route folds back on itself with angle 179.39 deg": 1,
+  "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1,
+  "Waypoint 9 fails sanity check: route folds back on itself with angle 179.26 deg": 1
+ }
+}

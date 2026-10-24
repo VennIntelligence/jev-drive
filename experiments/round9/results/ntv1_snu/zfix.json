@@ -1,0 +1,35 @@
+{
+ "pool": "on1_JTSNUZ",
+ "ref": "on1_JTDC2",
+ "ref_rows": 395547,
+ "rows": 413137,
+ "parts": {
+  "d3s": 17590,
+  "pd": 112620,
+  "pd2": 113321,
+  "rb0": 17429,
+  "rtb1": 17489,
+  "tv": 82594,
+  "y": 17306,
+  "ys": 34788
+ },
+ "agent_ok_fixed": 0,
+ "new_rows_mode": [
+  "self"
+ ],
+ "new_agent_ok": 17590,
+ "mismatch": [],
+ "parts_want": {
+  "pd": 112620,
+  "pd2": 113321,
+  "rb0": 17429,
+  "rtb1": 17489,
+  "tv": 82594,
+  "y": 17306,
+  "ys": 34788,
+  "d3s": 17590
+ },
+ "parts_ok": true,
+ "tail_mode_ok": true,
+ "pass_": true
+}

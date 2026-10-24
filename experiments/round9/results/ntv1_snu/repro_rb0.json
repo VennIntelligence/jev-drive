@@ -1,0 +1,140 @@
+{
+ "scratch": "L18RB0X",
+ "ref": "L18RB0",
+ "compared": {
+  "rows/meta.npz": {
+   "D": 1.0,
+   "D_reg": 1.0,
+   "Lr": 1.0,
+   "anchor": 1.0,
+   "d_anchor": 1.0,
+   "dump": 1.0,
+   "e0": 1.0,
+   "gpath": 1.0,
+   "k": 1.0,
+   "lead": 1.0,
+   "log": 1.0,
+   "logfut": 1.0,
+   "logu": 1.0,
+   "mu": 1.0,
+   "n_act": 1.0,
+   "n_keys": 1.0,
+   "names": 1.0,
+   "path_ext": 1.0,
+   "pose_map": 1.0,
+   "poses": 1.0,
+   "psi_e": 1.0,
+   "rmem": 1.0,
+   "rmem_ok": 1.0,
+   "run": 1.0,
+   "s0": 1.0,
+   "scene": 1.0,
+   "seed": 1.0,
+   "speed": 1.0,
+   "t_log_us": 1.0,
+   "t_us": 1.0,
+   "tag": 1.0,
+   "v_log": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "rows/all.npz": {
+   "e0": 1.0,
+   "excl": 1.0,
+   "k": 1.0,
+   "lead": 1.0,
+   "row": 1.0,
+   "scene": 1.0,
+   "seed": 1.0,
+   "t_us": 1.0,
+   "tag": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "rows/active.npz": {
+   "missing": [
+    "/root/autodl-tmp/ujs/runs/onpol_nuplan/rows/L18RB0X/active.npz"
+   ]
+  },
+  "rows/lon.npz": {
+   "missing": [
+    "/root/autodl-tmp/ujs/runs/onpol_nuplan/rows/L18RB0X/lon.npz"
+   ]
+  },
+  "pool/tab.npz": {
+   "acc": 1.0,
+   "cam": 1.0,
+   "cmd": 1.0,
+   "ego": 1.0,
+   "fut": 1.0,
+   "fut_reg": 1.0,
+   "lht": 1.0,
+   "log": 1.0,
+   "names": 1.0,
+   "pose": 1.0,
+   "served": 1.0,
+   "speed": 1.0,
+   "vel": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "pool/agent.npz": {
+   "box": 1.0,
+   "classes": 1.0,
+   "cls": 1.0,
+   "log": 1.0,
+   "ok": 1.0,
+   "tokens": 1.0,
+   "valid": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "pool/road.npz": {
+   "layers": 1.0,
+   "log": 1.0,
+   "ok": 1.0,
+   "pose_global": 1.0,
+   "res": 1.0,
+   "sdf": 1.0,
+   "tokens": 1.0,
+   "x0": 1.0,
+   "y0": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "pool/drivable.npz": {
+   "layers": 1.0,
+   "log": 1.0,
+   "ok": 1.0,
+   "pose_global": 1.0,
+   "res": 1.0,
+   "sdf": 1.0,
+   "tokens": 1.0,
+   "x0": 1.0,
+   "y0": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "pool/route.npz": {
+   "cov20": 1.0,
+   "dz": 1.0,
+   "ok": 1.0,
+   "poly": 0.9990819897871364,
+   "seglen": 0.9990819897871364,
+   "tokens": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  },
+  "feat": {
+   "f": 0.9994262436169602,
+   "k": 1.0,
+   "names": 1.0,
+   "ok": 1.0,
+   "route0_d": 1.0,
+   "_only_a": [],
+   "_only_b": []
+  }
+ },
+ "below_099": [],
+ "pass_": true
+}

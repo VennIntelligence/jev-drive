@@ -1,0 +1,20 @@
+{
+ "pool": "on1_JTSNU",
+ "rows": 395708,
+ "s_rows": 13932,
+ "s_held_rows": 18095,
+ "total": 0.9999999999999997,
+ "group_share": {
+  "S": 0.8,
+  "pd": 0.09953758965921439,
+  "pd2": 0.10046241034078571
+ },
+ "rule_on_rb0": {
+  "rows": 13793,
+  "ntv1d2_rows": 13793,
+  "same_rows": true,
+  "rel_dev": 4.440892098500626e-16,
+  "held": 3636
+ },
+ "out": "runs/round9/ntv1_snu/w/NSNU.npz"
+}

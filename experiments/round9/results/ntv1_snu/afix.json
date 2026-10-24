@@ -1,0 +1,20 @@
+{
+ "pool": "on1_JTSNU",
+ "rows": 395708,
+ "parts": {
+  "d3s": 17590,
+  "pd": 112620,
+  "pd2": 113321,
+  "rtb1": 17489,
+  "tv": 82594,
+  "y": 17306,
+  "ys": 34788
+ },
+ "ref": "on1_JTDC2",
+ "ref_rb0_rows": 17429,
+ "d3s_rows": 17590,
+ "rb0_agent_ok_equals_part": true,
+ "d3s_agent_ok": 1.0,
+ "mismatch": [],
+ "pass_": true
+}
