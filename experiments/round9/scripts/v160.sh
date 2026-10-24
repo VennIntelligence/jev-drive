@@ -42,7 +42,7 @@ report)
 allx)  # extension (V160_O=.../val160b V160_TAGS="NT3D1-F-s1 INTP75-NR"): reads + report job (scorer_v2 on the new reads, then v160x.py on both dirs)
   [[ ! -e $O/DONE && ! -e $O/jobs.txt ]] || die "already ran"
   X=($(bash $ME reads)) && [[ ${#X[@]} == ${#TAGS[@]} ]] || die "reads"
-  rp=$(sub v160b-report --after $(IFS=,; echo "${X[*]}") --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME reportx) || exit 1
+  rp=$(sub v160b-report --after $(IFS=,; echo "${X[*]}") --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- env V160_O=$O V160_TAGS="${TAGS[*]}" bash $ME reportx) || exit 1
   echo "$(date '+%F %T') allx: tax ${X[*]} report $rp" | tee -a $O/stages.txt ;;
 reportx)
   rm -rf $O/sv2

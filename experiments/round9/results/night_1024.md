@@ -92,3 +92,8 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
   DAgger rows distill_ho is needed (opposite of 464 without DAgger). Highway: not slow by speed (median 1.00).
 - Night ends 11:20 (box). Summary for the user in the conversation; open calls: submission (1 vennai-org slot left),
   DAgger iteration 2, method direction.
+- 11:25 Cards idle after step 3; under the standing "iterate to a stronger clean model" authorisation started step 4
+  = DAgger iteration 2 (roll D1-s0 on the 719 train scenes, same round-1 teacher, aggregate with iteration 1, D3 from
+  shipped weights; plans/2026-10-24-ntv1-step4.md). Candidate rule: D3 >= 0.875 -> seed 1 + val160.
+- 12:38 Step 4a in its CPU cache build; cards idle. Added val160 reads of D1-s1 and INTP75-NR (submission-relevant:
+  D1 2-seed and INTP75 vs R8K-s2 on the second exam).

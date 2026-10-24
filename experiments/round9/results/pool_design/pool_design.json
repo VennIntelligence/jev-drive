@@ -1,0 +1,566 @@
+{
+ "nuplan": {
+  "rb0": {
+   "roller": [
+    "RB0-F-s0"
+   ],
+   "rows": 17429,
+   "live": 13793,
+   "scenes": 1020,
+   "rows_per_scene": 17.1,
+   "draws_per_live_row_k32": 22.0,
+   "speed": {
+    "<0.5": 0.0445,
+    "0.5-3": 0.2361,
+    "3-8": 0.5335,
+    "8-13": 0.1752,
+    "13-20": 0.0107,
+    ">20": 0.0
+   },
+   "standing": 0.0445,
+   "logreplay_k01": 0.1172,
+   "kband": {
+    "k0-5": 0.3514,
+    "k6-11": 0.3442,
+    "k12-17": 0.3044
+   },
+   "sit": {
+    "free/other": 0.4921,
+    "lead<20m": 0.403,
+    "turn>30deg": 0.0603,
+    "standing": 0.0445
+   },
+   "outcome_rows": {
+    "full": 0.5658,
+    "partial": 0.3052,
+    "zero": 0.1291
+   },
+   "source_scene": {
+    "mean": 0.7952,
+    "zero": 0.1333,
+    "full": 0.5402
+   },
+   "act_roller_served": 0.224,
+   "act_rb0": 0.2242,
+   "la_rb0": 0.1038,
+   "act_ntv0": 0.264,
+   "la_ntv0": 0.1492,
+   "act_ntv0_by_term": {
+    "agent": 0.066,
+    "road": 0.1393,
+    "lat_onc": 0.0204,
+    "lat_soft": 0.0421,
+    "lat_side": 0.0447
+   },
+   "mass_share_of_pool": 0.2105,
+   "la_mass_share": 0.3781,
+   "la_ntv0_above13": 0.00109,
+   "lat_rasters": true,
+   "la_by_speed": {
+    "<0.5": 0.0993,
+    "0.5-3": 0.1827,
+    "3-8": 0.1567,
+    "8-13": 0.0968,
+    "13-20": 0.102,
+    ">20": null
+   }
+  },
+  "rtb1": {
+   "roller": [
+    "RTB1-F-s0"
+   ],
+   "rows": 17489,
+   "live": 13854,
+   "scenes": 1020,
+   "rows_per_scene": 17.1,
+   "draws_per_live_row_k32": 21.9,
+   "speed": {
+    "<0.5": 0.0667,
+    "0.5-3": 0.1996,
+    "3-8": 0.5234,
+    "8-13": 0.2005,
+    "13-20": 0.0098,
+    ">20": 0.0
+   },
+   "standing": 0.0667,
+   "logreplay_k01": 0.1166,
+   "kband": {
+    "k0-5": 0.3499,
+    "k6-11": 0.3408,
+    "k12-17": 0.3093
+   },
+   "sit": {
+    "free/other": 0.4982,
+    "lead<20m": 0.3803,
+    "turn>30deg": 0.0549,
+    "standing": 0.0667
+   },
+   "outcome_rows": {
+    "full": 0.6336,
+    "partial": 0.2724,
+    "zero": 0.094
+   },
+   "source_scene": {
+    "mean": 0.8136,
+    "zero": 0.1049,
+    "full": 0.599
+   },
+   "act_roller_served": 0.2055,
+   "act_rb0": 0.2043,
+   "la_rb0": 0.0939,
+   "act_ntv0": 0.2484,
+   "la_ntv0": 0.1418,
+   "act_ntv0_by_term": {
+    "agent": 0.0559,
+    "road": 0.1317,
+    "lat_onc": 0.0204,
+    "lat_soft": 0.0435,
+    "lat_side": 0.0371
+   },
+   "mass_share_of_pool": 0.1784,
+   "la_mass_share": 0.432,
+   "la_ntv0_above13": 0.00123,
+   "lat_rasters": true,
+   "la_by_speed": {
+    "<0.5": 0.1342,
+    "0.5-3": 0.1432,
+    "3-8": 0.1612,
+    "8-13": 0.0929,
+    "13-20": 0.125,
+    ">20": null
+   }
+  },
+  "y": {
+   "roller": [
+    "YR10m10-F-s0"
+   ],
+   "rows": 17306,
+   "live": 13717,
+   "scenes": 1020,
+   "rows_per_scene": 17.0,
+   "draws_per_live_row_k32": 22.2,
+   "speed": {
+    "<0.5": 0.0406,
+    "0.5-3": 0.2415,
+    "3-8": 0.5407,
+    "8-13": 0.1669,
+    "13-20": 0.0102,
+    ">20": 0.0
+   },
+   "standing": 0.0406,
+   "logreplay_k01": 0.1178,
+   "kband": {
+    "k0-5": 0.3534,
+    "k6-11": 0.345,
+    "k12-17": 0.3016
+   },
+   "sit": {
+    "free/other": 0.4795,
+    "lead<20m": 0.4138,
+    "turn>30deg": 0.0661,
+    "standing": 0.0406
+   },
+   "outcome_rows": {
+    "full": 0.5323,
+    "partial": 0.3216,
+    "zero": 0.146
+   },
+   "source_scene": {
+    "mean": 0.7647,
+    "zero": 0.1647,
+    "full": 0.5049
+   },
+   "act_roller_served": 0.2586,
+   "act_rb0": 0.2414,
+   "la_rb0": 0.119,
+   "act_ntv0": 0.2288,
+   "la_ntv0": 0.1107,
+   "act_ntv0_by_term": {
+    "agent": 0.0708,
+    "road": 0.1492,
+    "lat_onc": 0.0,
+    "lat_soft": 0.0,
+    "lat_side": 0.0451
+   },
+   "mass_share_of_pool": 0.2074,
+   "la_mass_share": 0.3103,
+   "la_ntv0_above13": 0.00066,
+   "lat_rasters": false,
+   "la_by_speed": {
+    "<0.5": 0.1041,
+    "0.5-3": 0.1597,
+    "3-8": 0.1083,
+    "8-13": 0.052,
+    "13-20": 0.0643,
+    ">20": null
+   }
+  },
+  "ys": {
+   "roller": [
+    "YS-L18-s0",
+    "YS-L18-s1"
+   ],
+   "rows": 34788,
+   "live": 27575,
+   "scenes": 1020,
+   "rows_per_scene": 34.1,
+   "draws_per_live_row_k32": 11.0,
+   "speed": {
+    "<0.5": 0.0396,
+    "0.5-3": 0.2543,
+    "3-8": 0.5303,
+    "8-13": 0.1664,
+    "13-20": 0.0094,
+    ">20": 0.0
+   },
+   "standing": 0.0396,
+   "logreplay_k01": 0.1172,
+   "kband": {
+    "k0-5": 0.3515,
+    "k6-11": 0.3431,
+    "k12-17": 0.3055
+   },
+   "sit": {
+    "free/other": 0.4896,
+    "lead<20m": 0.4105,
+    "turn>30deg": 0.0602,
+    "standing": 0.0396
+   },
+   "outcome_rows": {
+    "full": 0.5464,
+    "partial": 0.3635,
+    "zero": 0.0901
+   },
+   "source_scene": {
+    "mean": 0.8239,
+    "zero": 0.0971,
+    "full": 0.5176
+   },
+   "act_roller_served": 0.1956,
+   "act_rb0": 0.2092,
+   "la_rb0": 0.1159,
+   "act_ntv0": 0.2025,
+   "la_ntv0": 0.1128,
+   "act_ntv0_by_term": {
+    "agent": 0.0727,
+    "road": 0.1132,
+    "lat_onc": 0.0,
+    "lat_soft": 0.0,
+    "lat_side": 0.0471
+   },
+   "mass_share_of_pool": 0.4036,
+   "la_mass_share": 0.3197,
+   "la_ntv0_above13": 0.00058,
+   "lat_rasters": false,
+   "la_by_speed": {
+    "<0.5": 0.0833,
+    "0.5-3": 0.1628,
+    "3-8": 0.1107,
+    "8-13": 0.0532,
+    "13-20": 0.062,
+    ">20": null
+   }
+  },
+  "all": {
+   "roller": [
+    "RB0-F-s0",
+    "RTB1-F-s0",
+    "YR10m10-F-s0",
+    "YS-L18-s0",
+    "YS-L18-s1"
+   ],
+   "rows": 87012,
+   "live": 68939,
+   "scenes": 1020,
+   "rows_per_scene": 85.3,
+   "draws_per_live_row_k32": 4.4,
+   "speed": {
+    "<0.5": 0.0462,
+    "0.5-3": 0.2371,
+    "3-8": 0.5316,
+    "8-13": 0.1751,
+    "13-20": 0.0099,
+    ">20": 0.0
+   },
+   "standing": 0.0462,
+   "logreplay_k01": 0.1172,
+   "kband": {
+    "k0-5": 0.3515,
+    "k6-11": 0.3432,
+    "k12-17": 0.3053
+   },
+   "sit": {
+    "free/other": 0.4898,
+    "lead<20m": 0.4036,
+    "turn>30deg": 0.0603,
+    "standing": 0.0462
+   },
+   "outcome_rows": {
+    "full": 0.565,
+    "partial": 0.3252,
+    "zero": 0.1098
+   },
+   "source_scene": {
+    "mean": 0.7952,
+    "zero": 0.1333,
+    "full": 0.5402
+   },
+   "act_roller_served": 0.2158,
+   "act_rb0": 0.2176,
+   "la_rb0": 0.1097,
+   "act_ntv0": 0.2293,
+   "la_ntv0": 0.1255,
+   "act_ntv0_by_term": {
+    "agent": 0.0676,
+    "road": 0.1293,
+    "lat_onc": 0.0082,
+    "lat_soft": 0.0172,
+    "lat_side": 0.0442
+   },
+   "mass_share_of_pool": 1.0,
+   "la_mass_share": 0.3501,
+   "la_ntv0_above13": 0.00083,
+   "lat_rasters": true,
+   "la_by_speed": {
+    "<0.5": 0.1048,
+    "0.5-3": 0.1628,
+    "3-8": 0.1294,
+    "8-13": 0.0708,
+    "13-20": 0.0837,
+    ">20": null
+   }
+  },
+  "rb0_filters": {
+   "standing": {
+    "rows": 614,
+    "share": 0.0445,
+    "mass_share": 0.0305
+   },
+   "off_t0": {
+    "rows": 270,
+    "share": 0.0196,
+    "mass_share": 0.355
+   },
+   "logreplay": {
+    "rows": 1616,
+    "share": 0.1172,
+    "mass_share": 0.0179
+   },
+   "unlearnable_ntv0": {
+    "rows": 1584,
+    "share": 0.1148,
+    "mass_share": 0.6219
+   }
+  },
+  "rb0_kept": {
+   "rows": 12922,
+   "draws_per_row_k32": 23.5,
+   "la_ntv0": 0.1545,
+   "act_ntv0": 0.2524
+  },
+  "rb0_vs_rest": {
+   "act_r_rb0": 0.2242,
+   "act_r_rest": 0.216,
+   "la_r_rb0": 0.1038,
+   "la_r_rest": 0.1112,
+   "act_n_rb0": 0.264,
+   "act_n_rest": 0.2206,
+   "la_n_rb0": 0.1492,
+   "la_n_rest": 0.1196
+  },
+  "rb0_rollouts": {
+   "scenes": 1031,
+   "mean": 0.7877,
+   "zero": 146,
+   "full": 552,
+   "atfault": 29,
+   "offroad": 60,
+   "corridor": 50
+  },
+  "rb0_route": {
+   "ok": 0.9999,
+   "length_m_p5_p50_p95": [
+    82.0,
+    98.0,
+    100.0
+   ],
+   "x_far_m_p50": 83.8,
+   "points": 51
+  }
+ },
+ "pai": {
+  "on1_PAID": {
+   "rows": 110981,
+   "scenes": 718,
+   "rows_per_scene": 154.6,
+   "speed": {
+    "<0.5": 0.1049,
+    "0.5-3": 0.1001,
+    "3-8": 0.2758,
+    "8-13": 0.2512,
+    "13-20": 0.1402,
+    ">20": 0.1278
+   },
+   "standing": 0.1049,
+   "src": {
+    "dagger": 110981
+   },
+   "above13": 0.268,
+   "above20": 0.1278,
+   "dk_mode": 1,
+   "dv_lag1_median": 0.076,
+   "dv_lag5_median": 0.377,
+   "rows_2hz": 22440
+  },
+  "on1_PAIH": {
+   "rows": 135793,
+   "scenes": 851,
+   "rows_per_scene": 159.6,
+   "speed": {
+    "<0.5": 0.1369,
+    "0.5-3": 0.111,
+    "3-8": 0.2693,
+    "8-13": 0.2289,
+    "13-20": 0.1366,
+    ">20": 0.1174
+   },
+   "standing": 0.1369,
+   "src": {
+    "human": 135793
+   },
+   "above13": 0.254,
+   "above20": 0.1174
+  },
+  "test281_RB0-F-s0": {
+   "steps": 8305,
+   "speed": {
+    "<0.5": 0.0772,
+    "0.5-3": 0.0973,
+    "3-8": 0.2262,
+    "8-13": 0.2763,
+    "13-20": 0.1636,
+    ">20": 0.1593
+   },
+   "standing": 0.0772,
+   "above13": 0.3229,
+   "above20": 0.1593,
+   "cls": {
+    "urban": 0.685,
+    "arterial": 0.1163,
+    "highway": 0.1902,
+    "ramp": 0.0084
+   }
+  },
+  "test281_NTV0-L18-s0": {
+   "steps": 8667,
+   "speed": {
+    "<0.5": 0.0755,
+    "0.5-3": 0.099,
+    "3-8": 0.2385,
+    "8-13": 0.2882,
+    "13-20": 0.1455,
+    ">20": 0.1533
+   },
+   "standing": 0.0755,
+   "above13": 0.2988,
+   "above20": 0.1533,
+   "cls": {
+    "urban": 0.6933,
+    "arterial": 0.113,
+    "highway": 0.1856,
+    "ramp": 0.0081
+   }
+  },
+  "test281_human_stations": {
+   "stations": 59694,
+   "speed": {
+    "<0.5": 0.0011,
+    "0.5-3": 0.0155,
+    "3-8": 0.1206,
+    "8-13": 0.2552,
+    "13-20": 0.1938,
+    ">20": 0.4138
+   },
+   "cls": {
+    "urban": 0.4859,
+    "arterial": 0.1578,
+    "highway": 0.3501,
+    "ramp": 0.0062
+   },
+   "fallback": 0.3185
+  }
+ },
+ "road": {
+  "train": {
+   "scenes": 719,
+   "errors": 0,
+   "lon_missing": 0,
+   "km": 137.7,
+   "stations": {
+    "urban": 0.6055,
+    "arterial": 0.1403,
+    "highway": 0.2466,
+    "ramp": 0.0076
+   },
+   "fallback": 0.3402,
+   "fallback_by_cls": {
+    "urban": 0.2837,
+    "arterial": 0.5047,
+    "highway": 0.3959,
+    "ramp": 0.0
+   },
+   "scene_majority": {
+    "urban": 543,
+    "highway": 87,
+    "arterial": 85,
+    "ramp": 4
+   },
+   "speed": {
+    "<0.5": 0.0015,
+    "0.5-3": 0.0173,
+    "3-8": 0.154,
+    "8-13": 0.2563,
+    "13-20": 0.2245,
+    ">20": 0.3463
+   },
+   "v_median_by_cls": {
+    "urban": 10.91,
+    "arterial": 16.61,
+    "highway": 27.75,
+    "ramp": 17.88
+   }
+  },
+  "test281": {
+   "scenes": 281,
+   "km": 59.7,
+   "stations": {
+    "urban": 0.4859,
+    "arterial": 0.1578,
+    "highway": 0.3501,
+    "ramp": 0.0062
+   },
+   "fallback": 0.3185,
+   "scene_majority": {
+    "urban": 197,
+    "highway": 49,
+    "arterial": 34,
+    "ramp": 1
+   },
+   "speed": {
+    "<0.5": 0.0011,
+    "0.5-3": 0.0155,
+    "3-8": 0.1206,
+    "8-13": 0.2552,
+    "13-20": 0.1938,
+    ">20": 0.4138
+   },
+   "v_median_by_cls": {
+    "urban": 10.6,
+    "arterial": 18.23,
+    "highway": 27.06,
+    "ramp": 21.45
+   }
+  },
+  "errors": []
+ }
+}
