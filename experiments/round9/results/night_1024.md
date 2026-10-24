@@ -136,3 +136,4 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
 
 - 22:13 S-NU closed (d478, hurts). Rule -> final NTV1 = S-PAI; seed 1 (NT5SP-F-s1) dispatched to an Opus agent (plan plans/2026-10-24-ntv1-final.md). Duplicate hourly cron removed.
 - 10-25 00:09 Final NTV1 = S-PAI 2-seed (d479): 281 0.867 / val160 0.862; ties R8K-s2, INTP75, D3 (all CIs span 0); offroad down, route-turn zeros up in both seeds. Line complete; no further GPU work planned.
+- 10-25 00:19 User: CB2 (clean nuPlan B2) = evidenced parts only (own S rows + DAgger iter 1 + STAND + FREE-M H), rolled by native RB0-F, tie with B2 = adopt. Dispatched CB2 lane (Opus, plan plans/2026-10-25-cb2.md) and a board-scorer check (Opus).
