@@ -113,6 +113,30 @@ rest)
   echo "$(date '+%F %T') rest (code $h): rolls ${ro[*]} tails ${w[*]} rasters ${ras[*]} link $l cache $ca pool $po index $ix label $lb fwd $fw r1in $gi" \
        "merge $m weights $wt wcheck $wc diff $df_ w0 $wb $wp pre-T $gp smoke $sm tax $tx build $bd train $tr ratio $ra post $pt 281 ${y[*]} v160 $v" \
        "report $rp" | tee -a $O/stages.txt ;;
+resume)  # amendment 1 (plan): the drivable_hinge geom fix -> gcode / gw0 / pre-T / smoke again on this code, then the tail (attempt 1's gw0 failed)
+  rev=${2:?old rev}; h=$(git rev-parse --short HEAD); echo "$h resume" >> $O/code.txt
+  for X in NT5CO-F-s0 NT5CN-F-s0 NT5W0-F-s0 NT5IDP-F-s0 NT5SM-F-s0 NT5BA-F-s0 NT5BB-F-s0; do rm -rf $RUNS/$X $DATA_DIR/runs/route_mem/train-$X; done
+  for d in $O/pai281/$SP-ag $O/v160/reads/$SP-ag; do [[ ! -e $d/runs ]] || die "$d has runs"; rm -rf $d $d.submit.txt; done
+  mkdir -p $O/results/attempt1; mv $O/results/{gcode,gw0,gpre_SP,smoke_SP,smoke_SP.json.dgc,smoke_lr_SP}.json $O/results/attempt1/ 2>/dev/null
+  co=$(sub sp-crun-old "${FE[@]}" --timeout-h 1 -- bash $ME crun old $rev) || exit 1
+  cn=$(sub sp-crun-new "${FE[@]}" --timeout-h 1 -- bash $ME crun new) || exit 1
+  cc=$(sub sp-gcode --after $co,$cn --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $V $PY pair --a NT5CO-F-s0 --b NT5CN-F-s0 --upto 60 --strict \
+       --out $O/results/gcode.json) || exit 1
+  wb=$(sub sp-w0run "${FE[@]}" --timeout-h 1 -- bash $ME w0run) || exit 1
+  wp=$(sub sp-gw0 --after $wb,$cn --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $V $PY pair --a NT5CN-F-s0 --b NT5W0-F-s0 --upto 60 --out $O/results/gw0.json) || exit 1
+  gp=$(sub sp-gpre "${FE[@]}" --timeout-h 1 -- bash $ME ident gpre_SP NT5IDP-F-s0 SP) || exit 1
+  sm=$(sub sp-smoke "${FE[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1
+  GA=$(csv $cc $wp $gp $sm)
+  bd=$(sub sp-build --after $GA --vram 0.1 --cpu 4 --ram 16 --timeout-h 1 -- $V $PY build) || exit 1
+  tr=$(sub sp-train-$SP --after $GA "${FE[@]}" --timeout-h 5 -- bash $ME train) || exit 1
+  ra=$(sub sp-ratio --after $GA --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $SP --on-start $TON --train-id $tr \
+       --out $O/results/ratio_SP.json) || exit 1
+  pt=$(sub sp-post --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post) || exit 1
+  y=($(read281 $SP $pt)); [[ ${#y[@]} == 9 ]] || die "read281 $SP"
+  v=$(V160_O=$O/v160 V160_TAGS=$SP V160_AFTER=$pt PRIO=$PRIO bash $VS reads | tail -1) && [[ -n $v ]] || die "v160 $SP"
+  rp=$(sub sp-report --after ${y[-1]},$v --vram 0.1 --cpu 16 --ram 48 --timeout-h 3 -- bash $ME report) || exit 1
+  echo "$(date '+%F %T') resume (code $h): code pair $co $cn $cc w0 $wb $wp pre-T $gp smoke $sm build $bd train $tr ratio $ra post $pt 281 ${y[*]} v160 $v report $rp" \
+    | tee -a $O/stages.txt ;;
 raster) "${EA[@]}" $AP $PY raster --chunk $2 --rows $O/rows/$2 --cfg-glob "$O/roll/runs/${L}_$2/sim/generated-user-config-0.yaml" --workers 8 ;;
 merge)
   [[ ! -e $CR/on1_$NM ]] || die "on1_$NM exists: never overwritten"

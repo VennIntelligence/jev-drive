@@ -110,15 +110,15 @@ class Hinge:
 
     def _sample(self, xy, rows):
         """xy (B, K, 2) corner positions -> (B, K) SDF of each row's raster (bilinear, border clamp; a `geom` canvas: +20 outside it)."""
-        if self.geo is None:
-            g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)[:, :, None]
-            return torch.nn.functional.grid_sample(self.sdf[rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
-        G = self.geo[self.src[rows]][:, None]                                     # (B, 1, 5)
-        gx = (xy[..., 0] - G[..., 0]) / (G[..., 2] * (NH / 2)) - 1.0
-        gy = (xy[..., 1] - G[..., 1]) / (G[..., 3] * (NW / 2)) - 1.0
-        v = torch.nn.functional.grid_sample(self.sdf[rows].float(), torch.stack([gy, gx], -1)[:, :, None], mode="bilinear", padding_mode="border",
-                                            align_corners=False)[:, 0, :, 0]
-        return v.masked_fill(((gx.abs() > 1) | (gy.abs() > 1)) & (G[..., 4] > 0), 20.0)
+        g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)
+        if self.geo is not None:                                                 # rows of a `geom` source take its canvas; every other row keeps the
+            G = self.geo[self.src[rows]][:, None]                                # expression above bit for bit (CUDA divides by a Python scalar as a
+            gx = (xy[..., 0] - G[..., 0]) / (G[..., 2] * (NH / 2)) - 1.0         # float32 reciprocal multiply: a tensor divisor moves those points by an ulp)
+            gy = (xy[..., 1] - G[..., 1]) / (G[..., 3] * (NW / 2)) - 1.0
+            m = G[..., 4] > 0
+            g = torch.where(m[..., None], torch.stack([gy, gx], -1), g)
+        v = torch.nn.functional.grid_sample(self.sdf[rows].float(), g[:, :, None], mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
+        return v if self.geo is None else v.masked_fill(((gx.abs() > 1) | (gy.abs() > 1)) & m, 20.0)
 
     def margins(self, x, y, psi, rows):
         """x, y, psi (B, 8) -> sdf at the interpolated footprint corners (B, 164)."""
