@@ -133,3 +133,5 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
   Highest clean single read on both exams so far. DAgger iteration-3 pool on1_PAIDC3 built and kept.
 - User agreed: wait for S-NU; if S-NU helps -> final NTV1 = D3 recipe + S-PAI + S-NU, 2 seeds; else final = S-PAI,
   add its seed 1. Reads 281 + val160 for the final.
+
+- 22:13 S-NU closed (d478, hurts). Rule -> final NTV1 = S-PAI; seed 1 (NT5SP-F-s1) dispatched to an Opus agent (plan plans/2026-10-24-ntv1-final.md). Duplicate hourly cron removed.
