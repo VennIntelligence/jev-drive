@@ -130,6 +130,9 @@ READS = {
     # round9 NTV1 S-PAI (D3 + S rows on its own PAI states; scored with --reads only)
     "NT5SP-F-s0-ag": ("round9/ntv1_spai/pai281/NT5SP-F-s0-ag", "NT5SP-F-s0-281ag"),
     "NT5SP-F-s0-v160": ("round9/ntv1_spai/v160/reads/NT5SP-F-s0-ag", "NT5SP-F-s0-v160ag"),
+    # round9 NTV1 S-NU (D3's recipe, S pool from D3's own nuPlan rollouts; scored with --reads only)
+    "NT5SNU-F-s0-ag": ("round9/ntv1_snu/pai281/NT5SNU-F-s0-ag", "NT5SNU-F-s0-281ag"),
+    "NT5SNU-F-s0-v160": ("round9/ntv1_snu/v160/reads/NT5SNU-F-s0-ag", "NT5SNU-F-s0-v160ag"),
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
