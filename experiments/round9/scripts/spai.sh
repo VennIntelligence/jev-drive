@@ -29,6 +29,7 @@ PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:se
 EA=(env JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD)
 export DAG_O=$O DAG_T=$T DAG_NP=$NP DAG_RES=$RES DAG_TV=$TV
 DENV=(--env DAG_O=$O --env DAG_T=$T --env DAG_NP=$NP --env DAG_RES=$RES --env DAG_TV=$TV)
+[[ $SEED == 0 ]] || DENV+=(--env SPAI_SEED=$SEED)    # job bodies of the final lane must see the seed (attempt 1 ran them as the s0 lane)
 FE=(--train --vram 40 --cpu 6 --ram 48 --env CL_HIST_KEY=rm-train --env JEV_RM_EAGER=1)                    # eager, as D3
 GT="NT5CO-F-s0 NT5CN-F-s0 NT5W0-F-s0 NT5IDP-F-s0 NT5SM-F-s0"
 mkdir -p $O/pool $O/checks $O/w $O/tax $O/results $O/pai281 $RES
