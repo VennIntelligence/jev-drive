@@ -497,6 +497,36 @@ def cmd_sum(a):
     print(json.dumps({k: rec.get(k) for k in ("E1", "ADOPT", "repro_exact", "pai281_new")}, indent=1, default=float))
 
 
+# ---------------------------------------------------------------- plan amendment 4: R1 with the CB2P1N-F-s0 control and nuplan_dag's one-ulp (a)
+def cmd_rgate(a):
+    rows = DD / "runs/onpol_nuplan/rows" / a.name
+    r1, r2 = (json.loads((rows / f).read_text()) for f in ("r1.json", "r2.json"))
+    q = next(iter(r1["tags"].values()))
+    a_ulp = q["mu_share_one_ulp"] >= 0.99 and q["mu_max"] <= 0.047                 # nuplan_dag amendment 2 (nd.sh tok)
+    ra = bool(q["mu_share"] >= 0.99 or a_ulp)
+    if a.kind == "practice":                                                     # pn.sh's amended lines
+        rc = bool(r1["c"] or q["control_mu_share"] <= q["mu_share"] - 0.2)
+        r2ok = r2["ego_max_m"] <= 0.3 and r2["frame_err_max_m"] <= 0.1 and r2["act_share_within"] >= 0.995 and r2["act_median_m"] <= 0.05
+    else:                                                                        # ol_labels gate's lines
+        rc = bool(q["control_pose_share"] < 0.2)
+        r2ok = r2["ego_max_m"] <= 0.3 and r2["act_share_within"] >= 0.9999
+    rec = dict(name=a.name, kind=a.kind, control=q.get("control"), n=q["n"], mu_share=q["mu_share"], mu_share_one_ulp=q["mu_share_one_ulp"], mu_max=q["mu_max"],
+               a_plain=bool(q["mu_share"] >= 0.99), a=ra, a_only_by_ulp=bool(ra and q["mu_share"] < 0.99),
+               rows_passing_only_by_ulp=int(round(q["n"] * (q["mu_share_one_ulp"] - q["mu_share"]))), b=bool(r1["b"]),
+               control_mu_share=q.get("control_mu_share"), control_pose_share=q.get("control_pose_share"), c=rc, R2=bool(r2ok),
+               R2_vals={k: r2.get(k) for k in ("ego_max_m", "frame_err_max_m", "act_share_within", "act_median_m")})
+    if a.kind == "onpol":
+        AP = DD / "third_party/alpasim/.venv/bin/python"
+        p = subprocess.run([str(AP), str(DD / "runs/route_follow/poolgate.py"), a.name], capture_output=True, text=True)
+        pg = json.loads(p.stdout.strip().splitlines()[-1]) if p.stdout.strip() else None
+        rec["poolgate"] = pg
+        rec["poolgate_pass"] = bool(p.returncode == 0 and pg and pg.get("pass"))
+    rec["pass_"] = bool(ra and rec["b"] and rc and r2ok and rec.get("poolgate_pass", True))
+    Path(a.out).write_text(json.dumps(rec, indent=1, default=float))
+    print(json.dumps(rec, indent=1, default=float))
+    sys.exit(0 if rec["pass_"] else 2)
+
+
 def main():
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -513,8 +543,10 @@ def main():
     q = sp.add_parser("smoke"); q.add_argument("--tag", required=True); q.add_argument("--wfile", required=True); q.add_argument("--k", type=int, required=True)
     q.add_argument("--out", required=True)
     q = sp.add_parser("sum"); q.add_argument("--stage", type=int, required=True)
+    q = sp.add_parser("rgate"); q.add_argument("--name", required=True); q.add_argument("--kind", choices=("practice", "onpol"), required=True)
+    q.add_argument("--out", required=True)
     a = p.parse_args()
-    dict(sum=cmd_sum, creep=cmd_creep, c0chk=cmd_c0chk, pgate=cmd_pgate, wfile=cmd_wfile, argv=cmd_argv, diff=cmd_diff, dlabel=cmd_dlabel, dweights=cmd_dweights,
+    dict(rgate=cmd_rgate, sum=cmd_sum, creep=cmd_creep, c0chk=cmd_c0chk, pgate=cmd_pgate, wfile=cmd_wfile, argv=cmd_argv, diff=cmd_diff, dlabel=cmd_dlabel, dweights=cmd_dweights,
          smoke=cmd_smoke)[a.cmd](a)
 
 

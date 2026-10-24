@@ -262,7 +262,48 @@ s2)
   for j in $(seq 0 45); do sub cb2-proll-$P1N-c$j "${RO[@]}" -- bash $ME proll $P1N $j > /dev/null || exit 1; done
   ch=($(pchains $P1N CBP$X cp "")) || exit 1
   L=(); for k_ in $(shards); do L+=($(sub cb2-olab-CBP$X$k_ --after $(csv ${ch[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab CBP$X$k_)) || exit 1; done
-  dg=$(sub cb2-dgate$X --after $lo,$(csv ${L[@]}) --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME dgate) || exit 1
+  bash $ME s2tail $lo,$(csv ${L[@]}) || exit 1
+  echo "$(date '+%F %T') s2 (code $h, free $free GB): onpol rolls ${o[*]} c0chk $k geo $g tok $t strip $st pool $po anchor $an pgate $pg olab $lo;" \
+       "practice chains ${ch[*]} olab ${L[*]}; dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]}" \
+       "pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
+retok)   # plan amendment 4: retok <rows> <practice|onpol>: R1 re-run (tokens / teacher from the cache) with the CB2P1N-F-s0 control -> cb2.py rgate
+  N=$2; k=$3; [[ $k == practice ]] && sp=alpasim_nuplan/practice-starts || sp=alpasim_nuplan/onpol-train
+  [[ -f $CR/on1_$N@warp/front.npy ]] || die "no tokens for $N"
+  ON_SPLIT=$sp ON_R1_CONTROL=CB2P1N-F-s0 $TR $ON tok --name $N --control $([[ $k == practice ]] && echo smoke10e || echo smoke10eY) || die "on_rows tok rc $?"
+  [[ $k == onpol ]] && { $TR experiments/onpol_long/scripts/ol_labels.py gate --name $N --out $W/rows/$N; echo "ol_labels gate rc $? (informational: cb2.py rgate is the line)"; }
+  $V $PY rgate --name $N --kind $k --out $O/results/rgate_$N.json; rc=$?
+  if [[ $k == practice ]]; then
+    if (( rc == 0 )); then rm -f $O/stage/$N/GATE_FAIL; else touch $O/stage/$N/GATE_FAIL; echo "$(date '+%F %T') $N fails R1 / R2 (amendment 4): not merged" | tee -a $O/stages.txt; fi
+    exit 0; fi
+  exit $rc ;;
+s2r)     # plan amendment 4: the stage-2 tail again from the R1 gates (cancels this variant's never-run tail first; rolls / rows / tokens reused)
+  [[ $X == B && -e $O/S2$X && ! -e $O/S2R$X ]] || die "s2r needs CB2V=B after s2, once"
+  h=$(git rev-parse --short HEAD); echo "$h s2r" >> $O/code.txt; date > $O/S2R$X
+  $V - $O/jobs.txt <<'PY' > $O/s2r_cancel.txt || die "cancel list"
+import sys
+from jevdrive.cl import pool as P
+jobs = P.snapshot()[0]["jobs"]
+keep = ("cb2-otokB", "cb2-ostripB", "cb2-opoolB", "cb2-oanchorB")
+for l in open(sys.argv[1]):
+    s = l.split()
+    if len(s) > 1 and jobs.get(s[0], {}).get("state") == "queued" and s[0] > "1025-0459" and s[1] not in keep:
+        print(s[0], s[1])
+PY
+  while read -r i n; do $V -m jevdrive.cl cancel $i > /dev/null || die "cancel $i"; done < $O/s2r_cancel.txt
+  echo "$(date '+%F %T') s2r: cancelled $(wc -l < $O/s2r_cancel.txt) never-run tail jobs ($O/s2r_cancel.txt)" | tee -a $O/stages.txt
+  wc -l < $O/jobs.txt > $O/relat$X.start
+  rm -f $O/STOP$X; rm -rf $O/pai281/$D1N-ag $O/pai281/$D1N-ag.submit.txt
+  ot=$(awk '$2 == "cb2-otokB" {i = $1} END {print i}' $O/jobs.txt); oa=$(awk '$2 == "cb2-oanchorB" {i = $1} END {print i}' $O/jobs.txt)
+  rt=$(sub cb2-retok-L18CBP$X --after $ot,$oa --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME retok L18CBP$X onpol) || exit 1
+  lo=$(sub cb2-olab-L18CBP$X --after $rt --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab L18CBP$X) || exit 1
+  L=($lo); for k_ in $(shards); do N=CBP$X$k_
+    r=$(sub cb2-retok-$N --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME retok $N practice) || exit 1
+    a=$(sub cb2-proute-$N --after $r --vram 0.1 --cpu 8 --ram 48 --timeout-h 2 -- bash $ME proute $N) || exit 1
+    b=$(sub cb2-panchor-$N --after $a --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME panchor $N) || exit 1
+    L+=($(sub cb2-olab-$N --after $b --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab $N)) || exit 1; done
+  bash $ME s2tail $(csv ${L[@]}) || exit 1 ;;
+s2tail)  # s2tail <after ids>: dgate -> append -> dweights -> pair / smoke -> D1N -> reads, PAI 281, sum2 (part of s2; s2r reuses it)
+  dg=$(sub cb2-dgate$X --after $1 --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME dgate) || exit 1
   ap=$(sub cb2-append$X --after $dg --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
   dw=$(sub cb2-dweights$X --after $ap --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME dweights) || exit 1
   pa=$(sub cb2-pair-a$X --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME pair a) || exit 1
@@ -283,9 +324,7 @@ s2)
   pv=$(sub cb2-pai-v2$X --after $tx --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash -c "rm -rf $O/sv2$X; PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py \
        score --variant new --root $O/sv2$X --reads $D1N-ag --workers 16") || exit 1
   su=$(sub cb2-sum2$X --after $(csv ${v[@]} $pv $st) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 2) || exit 1
-  echo "$(date '+%F %T') s2 (code $h, free $free GB): onpol rolls ${o[*]} c0chk $k geo $g tok $t strip $st pool $po anchor $an pgate $pg olab $lo;" \
-       "practice chains ${ch[*]} olab ${L[*]}; dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]}" \
-       "pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
+  echo "$(date '+%F %T') s2tail: dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]} pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
 olab)    # olab <rows>: b3 teacher -> nd_teach label (T2 / T4, dagger.npz) -> cb2.py dlabel (R3, tab.fut, G0 on these rows); GATE_FAIL shards skipped
   N=$2; [[ -e $O/stage/$N/GATE_FAIL ]] && { echo "$N GATE_FAIL: skipped"; exit 0; }
   "${EA[@]}" $AP $NT teach --name $N --out $O/teach/$N.npz --workers 16 || die "teach $N"
@@ -317,7 +356,10 @@ wait)
 import sys
 from jevdrive.cl import pool as P
 last = {}
-for l in open(sys.argv[1]):
+import os
+s0 = sys.argv[1].replace("jobs.txt", f"relat{os.environ.get('CB2V', '')}.start")
+k0 = int(open(s0).read()) if os.path.exists(s0) else 0                # amendment 4: the cancelled tail before s2r is history
+for l in open(sys.argv[1]).readlines()[k0:]:
     if l.split():
         last[l.split()[1]] = l.split()[0]
 jobs = P.snapshot()[0]["jobs"]

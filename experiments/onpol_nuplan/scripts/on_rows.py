@@ -625,14 +625,15 @@ def cmd_tok(a):
                 d.append(float(np.abs(p - M["mu"][i]).max()))
             return np.array(d)
         have = lambda t: t == "P0" or t.endswith("-init") or (T.proot("runs", t) / "ckpt-final.pt").exists()  # noqa: E731
-        models = {t: RM.load_pmodel(t, dev) for t in sorted(set(tags) | {t[:-1] + str(1 - int(t[-1])) for t in tags}) if have(t)}
+        other_of = lambda t: os.environ.get("ON_R1_CONTROL") or t[:-1] + str(1 - int(t[-1]))  # noqa: E731  (ON_R1_CONTROL: the R1 (c) control, default off)
+        models = {t: RM.load_pmodel(t, dev) for t in sorted(set(tags) | {other_of(t) for t in tags}) if have(t)}
         branch |= {t: RM.has_branch(t) for t in models}
         if any(branch.values()):
             run.info(f"ROUTE-MEM branch: {sorted(t for t, b in branch.items() if b)}; fed route memory logged on {M['rmem_ok'].mean() if 'rmem_ok' in M else 0.0:.4f} of the rows")
         r1, lines = dict(tol_m=TOL_M, need=0.99, tags={}), []
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
-            other = t[:-1] + str(1 - int(t[-1]))
+            other = other_of(t)
             slow = np.abs(M["mu"][rows][:, :15, 0]).max(1) < 16.0                              # plan points below 16 m: one fp16 ulp <= 0.008 m
             (dm, dp, dn, dr, df) = diff(t, rows)
             cm, cp, _, _, _ = diff(other, rows) if other in models else (np.full(1, np.nan),) * 5     # no wrong-seed checkpoint: clause (c) not met
