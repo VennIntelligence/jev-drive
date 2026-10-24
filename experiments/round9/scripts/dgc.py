@@ -8,7 +8,7 @@ Lane helpers for dgc.sh (box, repo root, .venv unless noted; the roll -> rows ->
   weights --k-dag K --out NAME     JT00S-rb0 on the merged pool's on1_JT prefix (K = 0: unchanged, the identity file) + K / (32 + K) uniform
                                    over the drawable DAgger rows -> $O/w/NAME.npz, results w_NAME.json
   pair --a TAG --b TAG --upto N --out F    every scalar <= N of two runs bit for bit (T3 b)
-  smoke --var a|b --tag TAG --on-start T --out F    composition of a 60-step T = 30 run
+  smoke --var a|b --tag TAG --on-start T --out F [--want W]    composition of a 60-step T = 30 run (W: the draw file's w_*.json)
   cmdf                             the command-rule fields the DAgger rows carry and rmem.cmd_heading on them -> results cmd_fields.json
   report                           rollout scores (facts), pool size, gates, disk, cost -> results build.{json,md}
 """
@@ -132,7 +132,7 @@ def cmd_smoke(a):
             post_n += npost * kon
         prev = s
     ck |= dict(windows=win, self_share_after_T=self_post / post_n if post_n else None, self_rows_before_T=self_pre)
-    want = json.loads((RES / "w_NTV1D.json").read_text())["group_share"]
+    want = json.loads(Path(a.want or RES / "w_NTV1D.json").read_text())["group_share"]   # --want: another draw file's summary (step 4: w_NTV1D2.json)
     gs = {k: v for k, v in (dr.get("group_share") or {}).items() if v > 0}
     ck |= dict(draw_group_share=gs, draw_group_share_want=want, draw_shares_ok=set(gs) == set(want) and all(abs(gs[k] - v) < 1e-9 for k, v in want.items()))
     st = C.s_terms(d, T)
@@ -289,7 +289,7 @@ def main():
     p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--upto", type=int, required=True), p.add_argument("--out", required=True)
     p = s.add_parser("smoke")
     p.add_argument("--var", choices=("a", "b"), required=True), p.add_argument("--tag", required=True), p.add_argument("--on-start", type=int, required=True)
-    p.add_argument("--out", required=True)
+    p.add_argument("--out", required=True), p.add_argument("--want", help="draw-file summary json (default results/ntv1_step2/w_NTV1D.json)")
     s.add_parser("cmdf")
     s.add_parser("mfix")
     s.add_parser("report")

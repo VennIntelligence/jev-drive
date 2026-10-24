@@ -116,6 +116,10 @@ READS = {
     "NT3D1-F-s0-v160": ("round9/val160/reads/NT3D1-F-s0-ag", "NT3D1-F-s0-v160ag"),
     "R8K-L18-s2-v160": ("round9/val160/reads/R8K-L18-s2-ag", "R8K-L18-s2-v160ag"),
     "PCL1L-F-s0-v160": ("round9/val160/reads/PCL1L-F-s0-ag", "PCL1L-F-s0-v160ag"),
+    # round9 NTV1 step 4 (DAgger iteration 2; scored with --reads only; s1 / v160 = the candidate tail)
+    "NT4D3-F-s0-ag": ("round9/ntv1_step4/pai281/NT4D3-F-s0-ag", "NT4D3-F-s0-281ag"),
+    "NT4D3-F-s0-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s0-ag", "NT4D3-F-s0-v160ag"),
+    "NT4D3-F-s1-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s1-ag", "NT4D3-F-s1-v160ag"),
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
