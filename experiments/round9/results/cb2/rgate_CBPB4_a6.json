@@ -1,0 +1,27 @@
+{
+ "name": "CBPB4",
+ "kind": "practice",
+ "control": "CB2P1N-F-s0",
+ "n": 6256,
+ "mu_share": 0.9862531969309463,
+ "mu_share_one_ulp": 0.9993606138107417,
+ "mu_max": 0.0625,
+ "a_plain": false,
+ "a": false,
+ "a_only_by_ulp": false,
+ "rows_passing_only_by_ulp": 82,
+ "b": true,
+ "ulp_ratio_max": 3726.0,
+ "rows_over_1ulp": 6235,
+ "control_mu_share": 0.057065217391304345,
+ "control_pose_share": 0.002237851662404092,
+ "c": true,
+ "R2": true,
+ "R2_vals": {
+  "ego_max_m": 0.05983032978645927,
+  "frame_err_max_m": 0.07305735087224276,
+  "act_share_within": 0.9998231678420111,
+  "act_median_m": 0.012687656078667486
+ },
+ "pass_": false
+}

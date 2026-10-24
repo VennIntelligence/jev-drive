@@ -133,3 +133,22 @@ The adoption rule (registered for D1N): arena held native paired CI vs B2-s1 wit
 P1N' meets both lines: arena +0.001 [-0.006, +0.009] vs B2-s1 (-0.001 [-0.006, +0.005] vs s0), held 460 zeros 42 vs 40 (line 44).
 But its held 460 mean is lower: -0.027 [-0.049, -0.006] vs B2-s1 and -0.018 [-0.041, +0.004] vs B2-s0, mostly partial scores. One
 seed, and it was not registered as an adoption arm. D1N' does not exist yet, so the user's choice today is P1N' or B2.
+
+## Amendment 6 (per-point fp16-step cap): R1 fails on every pool
+
+Literal rule (every point |diff| <= one fp16 step at its own magnitude): all 8 pools fail, max 3 300-4 000 steps, almost every row
+has a point above one step ([rgate_*_a6.json](.)). Near-zero points (lateral y about 0) have steps of about 1e-4 m, while the trainer's
+fp32 forward and the served compiled fp16 network differ by about 1e-3 m anyway; the registered share line always used a fixed 0.03126 m.
+Diagnostic only ([r1diag_*.json](.)): with an allowance of max(0.03126 m, the point's own step) per point, the max ratio is 1.5-2.0 and
+2-7 rows per practice shard (0 on CBPB6) and 42 rows of L18CBPB exceed it. So the 0.0625 m differences sit on points inside 64 m: they are
+not one fp16 step beyond 64 m. Chain stopped again, D1N' not trained (plan amendment 7).
+
+## Side by side (scorer_v2 primary; one seed each; D1N' does not exist)
+
+| model | arena held native | vs B2-s1 [95 % CI] | arena zeros | held 460 | vs B2-s1 [95 % CI] | held 460 zeros | frozen PCS (old, reference) |
+|:--|--:|--:|--:|--:|--:|--:|--:|
+| B2-s1 re-read (`STANDFMXH-L18-s1`) | 0.9412 | - | 89 | 0.8549 | - | 40 | 1398 |
+| B2-s0 re-read | 0.9431 | +0.002 | 79 | 0.8461 | -0.009 | 40 | 1369 |
+| P1N' `CB2P1NB-F-s0` (clean, B2's S-row rule) | 0.9424 | +0.001 [-0.006, +0.009] | 78 | 0.8282 | -0.027 [-0.049, -0.006] | 42 | 1350 |
+| P1N `CB2P1N-F-s0` (no static rows) | 0.7844 | -0.157 [-0.217, -0.099] | 474 | 0.8976 | +0.043 [+0.018, +0.073] | 44 | 1131 |
+| D1N' | not trained (stage-2 pool gate R1) | | | | | | |

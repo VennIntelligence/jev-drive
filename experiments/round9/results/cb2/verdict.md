@@ -34,3 +34,13 @@ D1N' not trained. P1N' itself is level with B2 on the arena (+0.001 [-0.006, +0.
 D1N' not trained. P1N' against the adoption rule: arena tie (+0.001 [-0.006, +0.009] vs B2-s1), held 460 zeros 42 <= 44, so both
 registered lines are met; held 460 mean -0.027 [-0.049, -0.006] vs B2-s1, -0.018 [-0.041, +0.004] vs B2-s0. One seed, not a registered
 adoption arm.
+
+## Amendment 6: R1 with the per-point fp16-step cap
+
+| gate | value | line | result |
+|:--|--:|--:|:--|
+| R1 (a), 8 pools | max 3 300-4 000 fp16 steps; nearly every row over one step | every point <= one step at its own magnitude, share >= 0.99 | **FAIL** (all 8) |
+| diagnostic: max(0.03126 m, own step) | max ratio 1.5-2.0; 0-7 rows per practice shard, 42 rows onpol | (not a gate) | - |
+
+D1N' not trained. Final standing: P1N' ties B2 on the arena and is 0.027 below B2-s1 on held 460; D1N' could not be built under any of
+the three registered versions of R1 (a).
