@@ -310,6 +310,37 @@ def cmd_latgate(a):
     sys.exit(0 if rec["pass_"] else 2)
 
 
+def cmd_latdiag(a):
+    """latchk failure diagnosis (CPU, AlpaSim venv): the rtb1 rows whose soft raster differs from L18NR1v2's, rebuilt with df_lat.work into a
+    scratch dir (this process's PYTHONHASHSEED); -> per row: equal to the stored new raster / to the old one."""
+    import os
+    sys.path[:0] = [str(REPO / "experiments/defect_fix/scripts")]
+    import df_lat as LT
+    ta = np.load(CR / POOLA / "tab.npz")
+    pa = ta["pool"].astype(str)
+    n0, n1 = int((pa == PRE).sum()), int((pa == "rtb1").sum())
+    nr = int((np.load(CR / POOL2 / "tab.npz")["pool"].astype(str) == "rb0").sum())
+    x, y = np.load(LATA / "soft.npy", mmap_mode="r"), np.load(LAT_OLD / "soft.npy", mmap_mode="r")
+    bad = [i for i in range(n1) if not np.array_equal(x[n0 + i], y[nr + i])]
+    M = LT.merged_meta(POOLA, f"{N}:{PRE},L18RTB1:rtb1", True)
+    g = np.array(bad) + n0
+    out = DD / f"tmp/snu_latdiag/{os.environ.get('PYTHONHASHSEED', 'none')}"
+    out.mkdir(parents=True, exist_ok=True)
+    for k in ("onc", "soft"):
+        mm = np.lib.format.open_memmap(out / f"{k}.npy", "w+", np.float16, (len(g), len(LT.BINS), LT.NH, LT.NW))
+        mm[:] = 20.0
+        mm.flush()
+        del mm
+    keys = sorted(set(zip(M["run"][g].astype(str).tolist(), M["scene"][g].astype(str).tolist())))
+    for run, sc in keys:
+        jj = np.flatnonzero((M["run"][g].astype(str) == run) & (M["scene"][g].astype(str) == sc))
+        LT.work((str(Path(run) / "generated-user-config-0.yaml"), sc, jj, M["anchor"][g][jj], M["t_us"][g][jj], str(out), 6.0))
+    z = np.load(out / "soft.npy")
+    rec = dict(hashseed=os.environ.get("PYTHONHASHSEED"), rows=bad, scenes=[k[1] for k in keys],
+               eq_new=[bool(np.array_equal(z[j], x[n0 + i])) for j, i in enumerate(bad)], eq_old=[bool(np.array_equal(z[j], y[nr + i])) for j, i in enumerate(bad)])
+    out_json(f"latdiag_{rec['hashseed']}", rec)
+
+
 # ---------------------------------------------------------------- draw files
 def s_rule(tb, part):
     """JT00S's S rule (jt.py weights): self rows of `part` whose log is not held out (crc32(log) % 100 < 15 over the self rows' logs)."""
@@ -574,7 +605,7 @@ def main():
     p.add_argument("arm", choices=("D3", "S", "Z")), p.add_argument("tag")
     p.add_argument("--steps", type=int), p.add_argument("--on-start", type=int), p.add_argument("--save-at"), p.add_argument("--seed", type=int)
     p.add_argument("--mix", action="store_true")
-    for k in ("diff", "c0chk", "repro", "pgate", "afix", "zfix", "latchk", "latgate", "weights", "rollstats", "rowstats", "build"):
+    for k in ("latdiag", "diff", "c0chk", "repro", "pgate", "afix", "zfix", "latchk", "latgate", "weights", "rollstats", "rowstats", "build"):
         s.add_parser(k)
     s.add_parser("wcheck").add_argument("--out", required=True)
     p = s.add_parser("ident")
@@ -589,7 +620,7 @@ def main():
     if a.sub == "ident":
         a.cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
         assert a.cmd, "ident needs the trainer command after --"
-    dict(argv=cmd_argv, diff=cmd_diff, c0chk=cmd_c0chk, repro=cmd_repro, pgate=cmd_pgate, afix=cmd_afix, zfix=cmd_zfix, latchk=cmd_latchk,
+    dict(argv=cmd_argv, diff=cmd_diff, c0chk=cmd_c0chk, repro=cmd_repro, pgate=cmd_pgate, afix=cmd_afix, zfix=cmd_zfix, latchk=cmd_latchk, latdiag=cmd_latdiag,
          latgate=cmd_latgate, weights=cmd_weights, wcheck=cmd_wcheck, ident=cmd_ident, pair=cmd_pair, rollstats=cmd_rollstats, rowstats=cmd_rowstats,
          verdict=cmd_verdict, vverdict=cmd_vverdict, build=cmd_build)[a.sub](a)
 
