@@ -613,7 +613,8 @@ def cmd_tok(a):
                 if os.environ.get("ON_R1_ULP") and not zero:                                  # off by default: |diff| in fp16 steps at each point's magnitude
                     mg = torch.maximum(p[:, :15, :2].abs(), mu[:, :15, :2].abs()).float()
                     ulp = torch.where(mg < 2.0 ** -14, torch.full_like(mg, 2.0 ** -24), torch.exp2(torch.floor(torch.log2(mg.clamp_min(2.0 ** -14))) - 10))
-                    ULPR.setdefault(t, []).append(((p[:, :15, :2] - mu[:, :15, :2]).abs() / ulp).amax((1, 2)).cpu().numpy())
+                    dd = (p[:, :15, :2] - mu[:, :15, :2]).abs()
+                    ULPR.setdefault(t, []).append(torch.stack([(dd / ulp).amax((1, 2)), (dd / ulp.clamp_min(0.03126)).amax((1, 2))], 1).cpu().numpy())
                 out[1].append(d.max(1))
                 out[2].append(np.where(np.abs(M["poses"][r][..., 0]) < 32.0, d, 0.0).max(1))
                 for j, q in ((3, p), (4, mu)):
@@ -652,8 +653,9 @@ def cmd_tok(a):
                                  control_mu_share=float((cm <= TOL_M).mean()) if other in models else np.nan, control_pose_share=float((cp <= TOL_M).mean()) if other in models else np.nan,
                                  control_pose_median=float(np.median(cp)))
             if t in ULPR:                                                                      # ON_R1_ULP: per-point fp16-step check of clause (a)
-                ur = np.concatenate(ULPR.pop(t))
-                r1["tags"][t] |= dict(ulp_ratio_max=float(ur.max()), rows_over_1ulp=int((ur > 1.0).sum()), ulp_ratio_p999=float(np.percentile(ur, 99.9)))
+                ur = np.concatenate(ULPR.pop(t))                                               # [:, 0] own-magnitude step, [:, 1] max(0.03126 m, own step)
+                r1["tags"][t] |= dict(ulp_ratio_max=float(ur[:, 0].max()), rows_over_1ulp=int((ur[:, 0] > 1.0).sum()), ulp_ratio_p999=float(np.percentile(ur[:, 0], 99.9)),
+                                      floor_ratio_max=float(ur[:, 1].max()), rows_over_floor=int((ur[:, 1] > 1.0).sum()))
             ULPR.clear()
             if branch[t]:                                                                      # diagnostic: the same clause with an empty route memory fed
                 r1["tags"][t] |= dict(rmem_zero_mu_share_one_ulp=float((diff(t, rows, True)[0] <= 0.03126).mean()))

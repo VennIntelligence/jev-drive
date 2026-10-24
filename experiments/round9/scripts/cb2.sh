@@ -317,6 +317,10 @@ s2r6)    # plan amendment 6: R1 re-run with the per-point fp16-step check for al
     b=$(sub cb2-panchor-$N --after $a --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- bash $ME panchor $N) || exit 1
     L+=($(sub cb2-olab-$N --after $b --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab $N)) || exit 1; done
   bash $ME s2tail $(csv ${L[@]}) || exit 1 ;;
+r1diag)  # r1diag <rows> <practice|onpol>: amendment 6 diagnostic only (no gate, no GATE_FAIL change): R1 with the per-point step stats -> results/r1diag_<N>.json
+  N=$2; k=$3; [[ $k == practice ]] && sp=alpasim_nuplan/practice-starts || sp=alpasim_nuplan/onpol-train
+  ON_SPLIT=$sp ON_R1_CONTROL=CB2P1N-F-s0 ON_R1_ULP=1 $TR $ON tok --name $N --control $([[ $k == practice ]] && echo smoke10e || echo smoke10eY) || die "on_rows tok rc $?"
+  python3 -c "import json; q = next(iter(json.load(open('$DATA_DIR/runs/onpol_nuplan/rows/$N/r1.json'))['tags'].values())); print(json.dumps({k: q.get(k) for k in ('n', 'mu_share', 'mu_share_one_ulp', 'mu_max', 'ulp_ratio_max', 'rows_over_1ulp', 'ulp_ratio_p999', 'floor_ratio_max', 'rows_over_floor')}))" > $O/results/r1diag_$N.json ;;
 s2tail)  # s2tail <after ids>: dgate -> append -> dweights -> pair / smoke -> D1N -> reads, PAI 281, sum2 (part of s2; s2r reuses it)
   dg=$(sub cb2-dgate$X --after $1 --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME dgate) || exit 1
   ap=$(sub cb2-append$X --after $dg --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
