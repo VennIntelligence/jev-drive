@@ -60,6 +60,7 @@ NH, NW, FINE, PAD = 128, 96, 0.25, 8.0
 CX0, CY0 = GEOM[0] - PAD, GEOM[1] - PAD
 NX, NY = int((NH * GEOM[2] + 2 * PAD) / FINE), int((NW * GEOM[3] + 2 * PAD) / FINE)
 BX, BY = int(GEOM[2] / FINE), int(GEOM[3] / FINE)       # fine cells per stored cell (5 x 2)
+BANDS = ((0, 320, 0), (256, 576, 288), (512, 704, 544))      # fine-canvas rows (x = -16 + 0.25 r): (lo, hi, rows from here on taken from this band)
 EDGE_R = MAP_R = 170.0                                   # road edges / lanes within reach of the stretched canvas
 EDGE_DZ, MARGIN, B_OUT = 3.0, 0.3, -0.5
 HZ = 5                                                   # 10 Hz decisions -> 2 Hz: k % 5 == crc32(scene) % 5
@@ -110,7 +111,9 @@ def _sdf(ins):
 
 def raster(g, pose):
     """road_pai.pai_raster's rule (the evaluator's PAI offroad surface: the box centre's component among cells no same-level road edge
-    crosses, plus the lane union) on the stretched canvas -> (NH, NW) float16, inside share, edges kept."""
+    crosses, plus the lane union) on the stretched canvas -> (NH, NW) float16, inside share, edges kept. The component is grown in 80 m bands
+    (BANDS, each the stock canvas's length): on one 176 m canvas it escapes through any gap in the road edges (a junction 140 m ahead made
+    a narrow road 99 % `inside` in the smoke), the stock canvas closed such strips at its border."""
     import cv2
     from scipy.ndimage import label
     P, pid, tr = g["P"], g["pid"], g["traj"]
@@ -125,12 +128,20 @@ def raster(g, pose):
         keep = q[first][~(np.abs(zq[first] - z_ego) > EDGE_DZ)].tolist()
         if keep:
             cv2.polylines(bar, [_ring(g["E"][i], pose) for i in keep], False, 1, shift=4)
-    lab, _ = label(bar == 0)
+    free = bar == 0
+    lab, _ = label(free[:BANDS[0][1]])                           # band 0 = the stock road_pai canvas (x -16..64): its rule unchanged
     i0, j0 = int((g["xc"] - CX0) / FINE), int(-CY0 / FINE)
     w = lab[i0 - 8:i0 + 9, j0 - 8:j0 + 9]
     ii, jj = np.nonzero(w)
     seed = w[ii, jj][np.argmin((ii - 8) ** 2 + (jj - 8) ** 2)] if len(ii) else 0
-    ins = (lab == seed) if seed else np.zeros_like(bar, bool)
+    comp = (lab == seed) if seed else np.zeros(lab.shape, bool)
+    ins = np.zeros_like(free)
+    ins[:BANDS[0][1]] = comp
+    for (plo, phi, _), (lo, hi, take) in zip(BANDS, BANDS[1:]):  # each further 80 m band: the components its overlap with the previous
+        lab, _ = label(free[lo:hi])                               # band's component touches (no leak through gaps outside the band)
+        ids = np.unique(lab[:phi - lo][comp[lo - plo:]])
+        comp = np.isin(lab, ids[ids > 0])
+        ins[take:hi] = comp[take - lo:]
     if g["U"] is not None:
         ins |= _fill(g["U"], pose) > 0
     sdf = np.full((NH, NW), 20.0, np.float32) if ins.all() else np.clip(_sdf(ins), -20, 20)
@@ -378,8 +389,9 @@ def cmd_weights(a):
     if sh > STAND_MAX:                                           # standing rows down to STAND_MAX of the ps draws (d377: shape-only hinges push them sideways)
         cw[st] *= STAND_MAX * (1 - sh) / (sh * (1 - STAND_MAX))
     w1 = W["w"].astype(np.float64)
-    s_part = np.isin(W["grp"].astype(str), ["rb0"])
-    assert abs(w1[s_part].sum() - K_ON / (K_ON + K_DAG)) < 1e-9, "NTV1D2: rb0 share 0.8"
+    s_part = W["grp"].astype(str) == "S"                         # NTV1D2's S group = the 13 793 live rb0 rows
+    assert abs(w1[s_part].sum() - K_ON / (K_ON + K_DAG)) < 1e-9 and set(tb["pool"].astype(str)[:n2][s_part & (w1 > 0)].tolist()) == {"rb0"}, \
+        "NTV1D2: S group = rb0 rows, share 0.8"
     w = np.zeros(len(names))
     w[:n2] = np.where(s_part, w1 * (K_ON - K_PS) / K_ON, w1)      # rb0 16 / 40 (scaled), DAgger 8 / 40 as NTV1D2
     w[pos] = cw / cw.sum() * K_PS / (K_ON + K_DAG)
@@ -428,20 +440,20 @@ def cmd_wcheck(a):
     ps = part == "ps"
     held = {g for g in set(logs[mode == "self"].tolist()) if zlib.crc32(g.encode()) % 100 < HOLD_PCT}
     rb0 = np.zeros(len(w), bool)
-    rb0[:n2] = W["grp"].astype(str) == "rb0"
+    rb0[:n2] = W["grp"].astype(str) == "S"
     ck = dict(names_equal=bool(np.array_equal(N["names"].astype(str), names) and np.array_equal(Z["names"].astype(str), names)),
               prefix_names=bool(np.array_equal(names[:n2], W["names"].astype(str))),
               z_prefix_bitwise=bool(wz.dtype == w1.dtype and np.array_equal(wz[:n2], w1)), z_tail_zero=bool(not wz[n2:].any()),
               dagger_bitwise=bool(np.array_equal(w[:n2][~rb0[:n2]], w1[~rb0[:n2]].astype(w.dtype))),
               rb0_scaled=bool(np.allclose(w[:n2][rb0[:n2]], w1[rb0[:n2]] * 0.5, rtol=0, atol=1e-15)),
               ps_modes=sorted(set(mode[ps & (w > 0)])), ps_held_drawn=int((ps & (w > 0) & np.isin(logs, list(held))).sum()),
-              share_rb0=sh(rb0), share_ps=sh(ps), share_pd=sh(part == "pd"), share_pd2=sh(part == "pd2"),
+              share_rb0=sh(rb0), share_rb0_parts=sorted(set(part[rb0 & (w > 0)])), share_ps=sh(ps), share_pd=sh(part == "pd"), share_pd2=sh(part == "pd2"),
               share_pd_ntv1d2=float(w1[W["grp"].astype(str) == "pd"].sum()), share_pd2_ntv1d2=float(w1[W["grp"].astype(str) == "pd2"].sum()),
               drawn_parts=sorted(set(part[w > 0])))
     ok = (ck["names_equal"] and ck["prefix_names"] and ck["z_prefix_bitwise"] and ck["z_tail_zero"] and ck["dagger_bitwise"] and ck["rb0_scaled"]
           and ck["ps_modes"] == ["self"] and ck["ps_held_drawn"] == 0 and abs(ck["share_rb0"] - 0.4) < 1e-9 and abs(ck["share_ps"] - 0.4) < 1e-9
           and abs(ck["share_pd"] - ck["share_pd_ntv1d2"]) < 1e-9 and abs(ck["share_pd2"] - ck["share_pd2_ntv1d2"]) < 1e-9
-          and ck["drawn_parts"] == ["pd", "pd2", "ps", "rb0"])
+          and ck["drawn_parts"] == ["pd", "pd2", "ps", "rb0"] and ck["share_rb0_parts"] == ["rb0"])
     rec = dict(checks=ck, pass_=bool(ok))
     C.dump(a.out, rec)
     print(json.dumps(rec, indent=1))
