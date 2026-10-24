@@ -97,3 +97,39 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
   shipped weights; plans/2026-10-24-ntv1-step4.md). Candidate rule: D3 >= 0.875 -> seed 1 + val160.
 - 12:38 Step 4a in its CPU cache build; cards idle. Added val160 reads of D1-s1 and INTP75-NR (submission-relevant:
   D1 2-seed and INTP75 vs R8K-s2 on the second exam).
+- 13:30 User: no submission; the binding diagnosis waits; keep hourly checks; finish the clean line. Dispatched D1-K
+  (R8K's pacing floor: b5 relabel + F2 on own DAgger rows) and D1-H (Harmonizer twin token; twins for on1_PAIDC only
+  if <= ~4 card-h), plans/2026-10-24-ntv1-kh.md. These are exactly what R8K adds over R6DAG.
+- 14:20 D1-H dropped (user): twins for own DAgger rows need ~7-10 card-h + an inexact replay driver (rollouts deleted
+  after step 2a); the board does not run the Harmonizer (d458). D1-K continues.
+- 15:17 (box) D3 (DAgger iteration 2, aggregated) s0: 0.879 new / 0.799 old (D1-s0 0.867 / 0.798, R8K-s2 0.872 /
+  0.803): new-scorer gain over D1-s0 +0.012 (old +0.001). Candidate rule (>= 0.875) fired: D3 seed 1 training, then
+  val160 for both seeds. D1-K reads running.
+- Step 4 done (decision 473): D3 s0 0.879 new (D3 - D1-s0 +0.012, neutral; - D1 2-seed +0.027 [+0.002, +0.052];
+  - R8K-s2 +0.007 [-0.023, +0.039]); val160 D3 2-seed 0.853 = R8K-s2 (-0.000). Highest clean read. Dispatched the
+  D3-s1 281 read (Harmonizer off) for the 2-seed estimate.
+- Cleanup (user-approved SAFE list): 62 GB freed (cache/uv 32 GB skipped while uv run processes are live; redo when
+  idle). Opus audit of the big ASK items running. User approved the S refresh (S-NU: re-roll nuPlan S pool with the
+  student; S-PAI: S rows on the student's own PAI states with road rasters) after D3-s1's 281 read picks D1 vs D3.
+- D1-K done (decision 474): neutral. 0.868 new off = D1-s0; on -0.005; slow / rear-hit partials down 4-6 but zeros
+  +3 (offroad +4). The pacing floor does not explain R8K's small on - off gap. D1-H dropped (user).
+- Cleanup round 2 (user): delete the audit's confident groups E, G, F, B1, D, C1 (~335 GB) + cache/uv if idle; keep
+  everything else (group A anchors, nuPlan reads, optional checkpoints, models).
+- 17:05 (box) All cards idle; D3-s1 281 reads done, tax / report running. Dispatched S-NU (re-roll nuPlan S pool with
+  the student, plans/2026-10-24-ntv1-snu.md) and S-PAI (S rows on the student's own PAI states, half the S slots,
+  plans/2026-10-24-ntv1-spai.md). Student rule: D3 unless its 2-seed 281 mean < D1's 0.852.
+- D3-s1 281 (decision 475): 0.840 new; D3 2-seed 0.859 (s0 0.879 was the lucky seed); vs D1 2-seed +0.008, vs R8K-s2
+  -0.012 [-0.042, +0.018], vs P1L +0.048. Student rule -> D3 (0.859 >= 0.852) for S-NU / S-PAI.
+- S-NU stopped at latchk: df_lat build soft mask depends on Python string-hash order (19 rtb1 rows, 3 scenes). Main
+  session chose (b): rebuild the raster with PYTHONHASHSEED=1 (reproduces the old one), rerun latchk, resume. D3 on
+  nuPlan onpol-train 0.854 vs RB0-F 0.788 (+0.067). S-PAI resumed after its own trainer-change fix (gw0 caught it).
+- 19:25 Dispatched D3 nuPlan read (arena held native + held 460 vs B2 / NTV0, decision-444 readout) and a D3 failure
+  page (zero / deduction stats on PAI + nuPlan, ~20-30 rendered windows, research/d3-failures/), rendering <= half a card.
+- D3 nuPlan (decision 476): arena native 0.788 (vs NTV0 +0.018 [+0.003, +0.036], first PAI-trained model above NTV0;
+  vs B2 -0.148; 365 of 456 zeros in static windows); held 460 0.865 (vs B2 +0.012, vs NTV0 -0.023). Not a nuPlan
+  candidate. Failure page research/d3-failures/ (22 clips).
+- S-PAI done (decision 477): NT5SP 0.883 new on 281 (vs D3-s0 +0.004, neutral; vs D3 2-seed +0.024 [-0.002, +0.049];
+  vs R8K-s2 +0.011); offroad zeros 13 -> 6 [-13, -2], route-turn +3; val160 0.867 (vs D3-s0 +0.025, offroad 6 -> 1).
+  Highest clean single read on both exams so far. DAgger iteration-3 pool on1_PAIDC3 built and kept.
+- User agreed: wait for S-NU; if S-NU helps -> final NTV1 = D3 recipe + S-PAI + S-NU, 2 seeds; else final = S-PAI,
+  add its seed 1. Reads 281 + val160 for the final.
