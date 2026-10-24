@@ -59,6 +59,8 @@ strong subject's partial score on a window the strong pool aces costs more than 
 the human on moving windows, 0.008 of mean) cost about 145-220 PCS, all its zeros 23-40, launch hold partials 18-27, static windows 0. Selector:
 keep the arena mean, add the frozen board-mix PCS (`pcs_local.py score`) as the tie-break and PCS readout.
 
+ARENA-V2 (d481): [results/arena_v2_check.md](results/arena_v2_check.md), `scripts/arena_v2.{sh,py}`: the d355 anchors + JTN-L18-s1 native / stop3 re-read on 6 arena held blocks, old vs fixed (1b024f0) scorer; arena order unchanged (new-vs-new tau-b 0.87 / 0.93, only go-straight / YR, a tie), the fix's per-subject move tracks the board (r 0.91); frozen d382 items on new-scorer rows are unreliable (garage -91 PCS), refit needed before use.
+
 PAI-PCS-LOCAL (d392): [results/pai_pcs_local.md](results/pai_pcs_local.md), `scripts/pai_pcs_local.py`: local garage 0014 / go-straight PAI 281 reads + zoib ruler with board-band weights and 3 private anchors (RMSE 25); NTV0-s0 + ACC + GAP predicted 2195 [2138, 2299] (extrapolated above the 2089 anchor), full B 2150.
 
 PAI-PCS-V2 (d455): [results/pai_pcs_v2/README.md](results/pai_pcs_v2/README.md), `scripts/pai_pcs_v2.py`: the d392 ruler refit under the fixed corridor scorer (PR #215) and the 10-23 board; p1021a predicted 2265 against 2251 and NTV0 - RSG +44 against +62. With a 2-read band it cannot rank the R6DAG / R8K family against NTV0 (default -110 to -330, pool variants +100 to +300).
