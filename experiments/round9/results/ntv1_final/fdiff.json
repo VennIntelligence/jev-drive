@@ -1,0 +1,39 @@
+{
+ "s0_equals_stored": true,
+ "diff": [
+  [
+   "--tag",
+   "NT5SP-F-s0",
+   "NT5SP-F-s1"
+  ],
+  [
+   "--seed",
+   "0",
+   "1"
+  ]
+ ],
+ "want": {
+  "--tag": "NT5SP-F-s1",
+  "--seed": "1"
+ },
+ "argv": "experiments/route_mem/scripts/rm_train.py train --tag NT5SP-F-s1 --steps 19500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --seed 1 --save-at 10000 --on on1_JTDC2S --on-k 40 --on-mode mixed --on-wfile runs/round9/ntv1_spai/w/NTV1D2S.npz --on-hold-pct 15 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file /root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 --lat-soft-depth 0.0 --lat-buf 0.4 --on-arc 0 --on-arc-rows brake --on-split alpasim_nuplan/onpol-train --on-lon-all --on-normal --lat-host --diag --on-start 10000 --lr2-at 10000 --lr2-scale 0.1 --lr2-warmup 500 --lr2-floor 0.1 --on-road-pai /root/autodl-tmp/ujs/runs/round9/ntv1_spai/spai/road_spai.npz",
+ "s0_train_start": "2026-10-24 18:54:41",
+ "files": {
+  "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_JTDC2S/tab.npz": {
+   "sha256": "40e87a50e2709ef8657130e1506f01b12f250bf49328a255e20b06bde9343ace",
+   "mtime": "2026-10-24 18:41:05",
+   "before_s0": true
+  },
+  "/root/autodl-tmp/ujs/runs/round9/ntv1_spai/w/NTV1D2S.npz": {
+   "sha256": "a96cc3a7d12e05733e0aa97ff73ff41645a1803d9a5597297cac292f599b465e",
+   "mtime": "2026-10-24 18:42:36",
+   "before_s0": true
+  },
+  "/root/autodl-tmp/ujs/runs/round9/ntv1_spai/spai/road_spai.npz": {
+   "sha256": "1fd6f4926ade3364573274ed640ac6077055d52bed022ea972a03ea52c6abdbb",
+   "mtime": "2026-10-24 18:40:49",
+   "before_s0": true
+  }
+ },
+ "pass_": true
+}

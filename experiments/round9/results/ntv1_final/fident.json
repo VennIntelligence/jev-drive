@@ -1,0 +1,52 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5SP-F-s0/20261024-185441",
+ "upto": 100,
+ "scalars_compared": 85,
+ "identical": 85,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "monitor_slices": {
+  "compared": 46,
+  "identical": 46,
+  "gated": false
+ },
+ "bit_identical": true,
+ "tag": "NT5FI-F-s0",
+ "ref": "NT5SP-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5FI-F-s0/20261024-212706",
+ "trainer_rc_before_stop": null
+}
