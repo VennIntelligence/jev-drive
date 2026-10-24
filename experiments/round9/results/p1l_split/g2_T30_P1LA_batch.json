@@ -1,0 +1,28 @@
+{
+ "tag": "P1SAT-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-P1SAT-F-s0/20261024-062528",
+ "on_start": 30,
+ "pool_rows": {
+  "25": 0.0,
+  "50": 25.6,
+  "75": 32.0
+ },
+ "want": {
+  "25": 0.0,
+  "50": 25.6,
+  "75": 32.0
+ },
+ "s_terms_after": {
+  "tags": [
+   "loss/agent_ho",
+   "loss/on/lat_onc_ho",
+   "loss/on/lat_side_ho",
+   "loss/on/lat_soft_ho",
+   "loss/road_ho"
+  ],
+  "finite": true,
+  "nonzero": true
+ },
+ "s_terms_before": [],
+ "pass_": true
+}

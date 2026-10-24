@@ -1,0 +1,55 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-P1LT30-F-s0/20261023-232736",
+ "upto": 75,
+ "steps": [
+  0,
+  25,
+  50,
+  75
+ ],
+ "scalars_compared": 170,
+ "identical": 170,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/ot_ade@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_off@0",
+   0.0
+  ],
+  [
+   "dev/ot_drift_on@0",
+   0.0
+  ],
+  [
+   "loss/act/nav_drivable@25",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "tag": "P1SID2-F-s0",
+ "ref": "P1LT30-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-P1SID2-F-s0/20261024-062507",
+ "trainer_rc_before_stop": null
+}
