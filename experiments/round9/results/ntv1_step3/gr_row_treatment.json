@@ -1,0 +1,207 @@
+{
+ "r6dag_argv": "experiments/route_mem/scripts/rm_train.py train --tag R6DAG-L18-s0 --init NTV0-L18-s0 --allow-init --warmup 1 --eval-every 500 --yr-mass 0.095 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --lr-scale 0.1 --on-k 13 --on-mode self --on on1_JTPHD --on-k 72 --on-mode mixed --on-lon-all --on-normal --on-wfile /root/autodl-tmp/ujs/runs/round6/dag/w/R6DAG.npz --on-hold-pct 15 --ego-scale-speed 0.5 --ego-scale-max 0.2 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file /root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 --lat-soft-depth 0.0 --lat-buf 0.4 --lat-host --on-arc 0 --diag --warmup 500 --lr-floor 0.1 --on-arc-rows brake --steps 9500 --seed 0 --batch 136 --save-at 2500,5000,7500",
+ "d1_argv": "experiments/route_mem/scripts/rm_train.py train --tag NT3D1-F-s0 --steps 19500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --seed 0 --save-at 10000 --on on1_JTDC --on-k 40 --on-mode mixed --on-wfile runs/round9/ntv1_step2/w/NTV1D.npz --on-hold-pct 15 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file /root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 --lat-soft-depth 0.0 --lat-buf 0.4 --on-arc 0 --on-arc-rows brake --on-split alpasim_nuplan/onpol-train --on-lon-all --on-normal --lat-host --diag --on-start 10000 --lr2-at 10000 --lr2-scale 0.1 --lr2-warmup 500 --lr2-floor 0.1",
+ "per_row_flags": {
+  "--on-mode": {
+   "R6DAG": "mixed",
+   "D1": "mixed"
+  },
+  "--on-lon-all": {
+   "R6DAG": true,
+   "D1": true
+  },
+  "--on-normal": {
+   "R6DAG": true,
+   "D1": true
+  },
+  "--ho-w": {
+   "R6DAG": "3",
+   "D1": "3"
+  },
+  "--agent-lam": {
+   "R6DAG": "10",
+   "D1": "10"
+  },
+  "--agent-on-only": {
+   "R6DAG": true,
+   "D1": true
+  },
+  "--shape": {
+   "R6DAG": true,
+   "D1": true
+  },
+  "--lat-onc": {
+   "R6DAG": "0.5",
+   "D1": "0.5"
+  },
+  "--lat-soft": {
+   "R6DAG": "0.1",
+   "D1": "0.1"
+  },
+  "--lat-side": {
+   "R6DAG": "0.5",
+   "D1": "0.5"
+  },
+  "--lat-file": {
+   "R6DAG": "/root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2",
+   "D1": "/root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2"
+  },
+  "--lat-depth": {
+   "R6DAG": "0.0",
+   "D1": "0.0"
+  },
+  "--lat-soft-depth": {
+   "R6DAG": "0.0",
+   "D1": "0.0"
+  },
+  "--lat-buf": {
+   "R6DAG": "0.4",
+   "D1": "0.4"
+  },
+  "--lat-host": {
+   "R6DAG": true,
+   "D1": true
+  },
+  "--on-arc": {
+   "R6DAG": "0",
+   "D1": "0"
+  },
+  "--on-arc-rows": {
+   "R6DAG": "brake",
+   "D1": "brake"
+  },
+  "--on-hold-pct": {
+   "R6DAG": "15",
+   "D1": "15"
+  },
+  "--ho-distill": {
+   "R6DAG": null,
+   "D1": null
+  },
+  "--label-bank": {
+   "R6DAG": true,
+   "D1": true
+  }
+ },
+ "per_row_differences": {},
+ "other_argv_differences": {
+  "--allow-init": {
+   "R6DAG": true,
+   "D1": null
+  },
+  "--batch": {
+   "R6DAG": "136",
+   "D1": null
+  },
+  "--ego-scale-max": {
+   "R6DAG": "0.2",
+   "D1": null
+  },
+  "--ego-scale-speed": {
+   "R6DAG": "0.5",
+   "D1": null
+  },
+  "--eval-every": {
+   "R6DAG": "500",
+   "D1": null
+  },
+  "--init": {
+   "R6DAG": "NTV0-L18-s0",
+   "D1": null
+  },
+  "--lr-floor": {
+   "R6DAG": "0.1",
+   "D1": null
+  },
+  "--lr-scale": {
+   "R6DAG": "0.1",
+   "D1": null
+  },
+  "--lr2-at": {
+   "R6DAG": null,
+   "D1": "10000"
+  },
+  "--lr2-floor": {
+   "R6DAG": null,
+   "D1": "0.1"
+  },
+  "--lr2-scale": {
+   "R6DAG": null,
+   "D1": "0.1"
+  },
+  "--lr2-warmup": {
+   "R6DAG": null,
+   "D1": "500"
+  },
+  "--on": {
+   "R6DAG": "on1_JTPHD",
+   "D1": "on1_JTDC"
+  },
+  "--on-k": {
+   "R6DAG": "72",
+   "D1": "40"
+  },
+  "--on-start": {
+   "R6DAG": null,
+   "D1": "10000"
+  },
+  "--on-wfile": {
+   "R6DAG": "/root/autodl-tmp/ujs/runs/round6/dag/w/R6DAG.npz",
+   "D1": "runs/round9/ntv1_step2/w/NTV1D.npz"
+  },
+  "--save-at": {
+   "R6DAG": "2500,5000,7500",
+   "D1": "10000"
+  },
+  "--steps": {
+   "R6DAG": "9500",
+   "D1": "19500"
+  },
+  "--warmup": {
+   "R6DAG": "500",
+   "D1": null
+  },
+  "--yr-mass": {
+   "R6DAG": "0.095",
+   "D1": "0.1"
+  }
+ },
+ "dagger_rows": {
+  "R6DAG": {
+   "pool": "on1_JTPHD",
+   "rows": 110981,
+   "first_row": 528547,
+   "modes": {
+    "both": 110981
+   },
+   "drawable": 90300,
+   "draw_share": 0.11111111111111117,
+   "fut_finite_drawable": 1.0,
+   "agent_ok_all": 1.0,
+   "agent_ok_drawable": 1.0,
+   "road_ok_all": 0.0,
+   "road_ok_drawable": 0.0,
+   "lat_raster_rows": 34918,
+   "lateral_rows": 0
+  },
+  "D1": {
+   "pool": "on1_JTDC",
+   "rows": 112620,
+   "first_row": 169606,
+   "modes": {
+    "both": 112620
+   },
+   "drawable": 92561,
+   "draw_share": 0.1999999999999998,
+   "fut_finite_drawable": 1.0,
+   "agent_ok_all": 1.0,
+   "agent_ok_drawable": 1.0,
+   "road_ok_all": 0.0,
+   "road_ok_drawable": 0.0,
+   "lat_raster_rows": 34918,
+   "lateral_rows": 0
+  }
+ },
+ "note": "DAgger rows are mixed-mode `both` rows: imitation to the b3 label + distill (non-plan heads) + the pool's agent / road hinge where agent ok / road ok, 25 % route-memory drop (--on-normal); the nr1_lat raster covers the pool's first lat_raster_rows rows only; --ho-distill acts on `self` rows' distill_ho only; --ego-scale-* acts on non-pool rows only",
+ "pass_": true
+}

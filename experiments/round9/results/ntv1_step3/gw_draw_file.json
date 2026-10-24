@@ -1,0 +1,36 @@
+{
+ "file": "runs/round9/ntv1_step2/w/NTV1D.npz",
+ "base": "runs/round9/pool_pilot/w/JT00S-rb0.npz",
+ "checks": {
+  "names_equal": true,
+  "prefix_equal": true,
+  "tail_is_paidc": true,
+  "s_rows": 13793,
+  "s_ids_equal": true,
+  "s_parts": [
+   "rb0"
+  ],
+  "s_modes": [
+   "self"
+  ],
+  "s_rel_err": 0.0,
+  "s_uniform": true,
+  "d_rows": 92561,
+  "d_ids_equal_drawable": true,
+  "d_parts": [
+   "pd"
+  ],
+  "d_modes": [
+   "both"
+  ],
+  "d_uniform": true,
+  "d_fut_finite": true,
+  "share_s": 0.8000000000000002,
+  "share_pd": 0.1999999999999998,
+  "grp_prefix_equal": true,
+  "grp_tail": [
+   "pd"
+  ]
+ },
+ "pass_": true
+}

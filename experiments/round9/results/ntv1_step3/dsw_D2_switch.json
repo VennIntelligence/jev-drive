@@ -1,0 +1,28 @@
+{
+ "a": "NT3SM-D1-F-s0",
+ "b": "NT3SM-D2-F-s0",
+ "pre_T": {
+  "bit_identical": true,
+  "compared": 79,
+  "identical": 79,
+  "note": "reported, not a gate"
+ },
+ "post_T_loss_scalars_differing": 59,
+ "first_differing": [
+  "loss/act/nav_drivable@50",
+  "loss/act/nav_drivable@60",
+  "loss/act/pool_agent@50",
+  "loss/agent_ho@50",
+  "loss/agent_ho@60",
+  "loss/agent_ho_pos@50",
+  "loss/agent_pos@50",
+  "loss/agent_posmean@50",
+  "loss/agent_posmean@60",
+  "loss/cons@50"
+ ],
+ "distill_ho_logged_after_T": [
+  "loss/distill_ho@50",
+  "loss/distill_ho@60"
+ ],
+ "pass_": true
+}
