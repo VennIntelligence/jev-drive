@@ -1,0 +1,60 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5CO-F-s0/20261024-185217",
+ "upto": 60,
+ "scalars_compared": 245,
+ "identical": 245,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade@60",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@60",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@60",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@60",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "monitor_slices": {
+  "compared": 92,
+  "identical": 92,
+  "gated": true
+ },
+ "bit_identical": true,
+ "a": "NT5CO-F-s0",
+ "b": "NT5CN-F-s0",
+ "run_a": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5CO-F-s0/20261024-185217",
+ "run_b": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5CN-F-s0/20261024-185217",
+ "pool_rows_b": {
+  "25": 0.0,
+  "50": 32.0,
+  "60": 40.0
+ },
+ "pool_drawn": true,
+ "road_pai_rows_b": null,
+ "pass_": true
+}

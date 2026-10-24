@@ -1,0 +1,60 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5CN-F-s0/20261024-173117",
+ "upto": 60,
+ "scalars_compared": 153,
+ "identical": 86,
+ "worst": [
+  [
+   "loss/grad/global@50",
+   0.005702514648437074
+  ],
+  [
+   "loss/on/lat_side_posmean@60",
+   0.0019415730610489734
+  ],
+  [
+   "loss/on/lat_onc_posmean@60",
+   0.0013080902397633043
+  ],
+  [
+   "loss/act/nav_drivable@50",
+   0.0012030756473541404
+  ],
+  [
+   "loss/imit/hinge_pos@50",
+   0.0012030756473541404
+  ],
+  [
+   "loss/on/imit@60",
+   0.000980114936828258
+  ],
+  [
+   "loss/on/ade@60",
+   0.0007867574691768908
+  ],
+  [
+   "loss/on/lat_soft_posmean@60",
+   0.00044544360467366206
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "monitor_slices": {
+  "compared": 92,
+  "identical": 33,
+  "gated": false
+ },
+ "bit_identical": false,
+ "a": "NT5CN-F-s0",
+ "b": "NT5W0-F-s0",
+ "run_a": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5CN-F-s0/20261024-173117",
+ "run_b": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5W0-F-s0/20261024-184411",
+ "pool_rows_b": {
+  "25": 0.0,
+  "50": 32.0,
+  "60": 40.0
+ },
+ "pool_drawn": true,
+ "road_pai_rows_b": 21252,
+ "pass_": false
+}

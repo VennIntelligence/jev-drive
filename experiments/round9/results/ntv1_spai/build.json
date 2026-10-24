@@ -1,0 +1,292 @@
+{
+ "student": "NT4D3-F-s0",
+ "pool_iter3": {
+  "pool": "on1_PAIDC3",
+  "rows": 115032,
+  "scenes": 719,
+  "drawable": 94602,
+  "slow": 18332,
+  "no_label": {
+   "no_proj": 12,
+   "far": 8
+  },
+  "past_rec": 16665,
+  "lon_arc_err_max": 5.8752552567789005,
+  "teach_vs_pool_max": 0.0,
+  "cap": {
+   "rows_capped": 0,
+   "share": 0.0,
+   "human_window": 92010,
+   "cond_curve": 0,
+   "cond_fast": 0,
+   "cond_both": 0,
+   "capped_curve": 0,
+   "capped_fast": 0,
+   "by_cls": {
+    "stop_nolead": [
+     0,
+     19068
+    ],
+    "turn_sharp": [
+     0,
+     22105
+    ],
+    "launch": [
+     0,
+     6370
+    ],
+    "other": [
+     0,
+     47059
+    ]
+   },
+   "cut4_q": null,
+   "cut4_rel_med": null,
+   "dropped_t4_capped": 0
+  },
+  "d0_sign": {
+   "left_gt_05": 12021,
+   "right_gt_05": 9956,
+   "left_gt_1": 4941,
+   "right_gt_1": 3356,
+   "median_signed": -0.00469041196629405
+  },
+  "T4": {
+   "line": 4.0,
+   "estimator": "positions (amendment 3)",
+   "alat_p99": 5.016411690711989,
+   "curvature_read_p99": 649.5197662353756,
+   "served_pos_p99": 3.4904982198844365,
+   "served_pos_over": 0.004954489035995035,
+   "over_share": 0.021965708970212047,
+   "alat_ref_p99": 4.010916385650647,
+   "over": 2078,
+   "passed": false,
+   "fallback_rows_dropped": 2078,
+   "go_on": true
+  },
+  "classes": {
+   "stop_nolead": {
+    "rows": 25466,
+    "drawable": 19068,
+    "d0_med": 0.19451762735843658,
+    "d0_p90": 0.9777184605598445,
+    "d0_gt_05": 4546,
+    "d0_gt_1": 1838,
+    "lat4_med": 0.27651622891426086,
+    "lat4_p90": 1.2021994709968562,
+    "alat_p99": 3.270040245056147
+   },
+   "turn_sharp": {
+    "rows": 27491,
+    "drawable": 22105,
+    "d0_med": 0.29219144582748413,
+    "d0_p90": 1.1389746665954592,
+    "d0_gt_05": 6829,
+    "d0_gt_1": 2646,
+    "lat4_med": 0.4669647216796875,
+    "lat4_p90": 1.803921604156497,
+    "alat_p99": 3.7715525341033924
+   },
+   "launch": {
+    "rows": 11594,
+    "drawable": 6370,
+    "d0_med": 0.15137870609760284,
+    "d0_p90": 0.5321354746818545,
+    "d0_gt_05": 771,
+    "d0_gt_1": 212,
+    "lat4_med": 0.19235217571258545,
+    "lat4_p90": 0.7795403957366943,
+    "alat_p99": 3.48463059425354
+   },
+   "other": {
+    "rows": 50481,
+    "drawable": 47059,
+    "d0_med": 0.22188661992549896,
+    "d0_p90": 0.8324345469474795,
+    "d0_gt_05": 9831,
+    "d0_gt_1": 3601,
+    "lat4_med": 0.28059759736061096,
+    "lat4_p90": 1.079091453552248,
+    "alat_p99": 2.838596334457396
+   },
+   "all": {
+    "rows": 115032,
+    "drawable": 94602,
+    "d0_med": 0.2236422300338745,
+    "d0_p90": 0.9122998952865604,
+    "d0_gt_05": 21977,
+    "d0_gt_1": 8297,
+    "lat4_med": 0.3015249967575073,
+    "lat4_p90": 1.2874301910400392,
+    "alat_p99": 3.468564250469208
+   }
+  }
+ },
+ "roll": {
+  "D3 (NT4D3-F-s0)": {
+   "scenes": 719,
+   "mean": 0.7290245647954109,
+   "zeros": 163,
+   "zero_fclass": {
+    "overshoot": 60,
+    "side": 16,
+    "AF-front": 18,
+    "zero-other": 9,
+    "route-turn": 10,
+    "offroad": 50
+   },
+   "full": 455
+  },
+  "D1 (step 4 roll)": {
+   "scenes": 717,
+   "mean": 0.7065544895258167,
+   "zeros": 177,
+   "zero_fclass": {
+    "zero-other": 6,
+    "overshoot": 63,
+    "side": 10,
+    "offroad": 65,
+    "AF-front": 25,
+    "route-turn": 8
+   },
+   "full": 431
+  },
+  "paired D3 - D1": {
+   "n": 717,
+   "units": 717,
+   "mean": 0.021714216315048752,
+   "lo": 0.002373608095597942,
+   "hi": 0.04166203785258253,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.7282687058408653,
+   "mean_b": 0.7065544895258167,
+   "scenes": 717
+  }
+ },
+ "gates": {
+  "g13": true,
+  "g4": true,
+  "gw_draw_files": true,
+  "diff_SP": true,
+  "gcode": true,
+  "gw0": true,
+  "gpre_SP": true,
+  "smoke_SP": true
+ },
+ "g13": {
+  "G1": {
+   "line": 0.07,
+   "value": 0.0492976648474546,
+   "pass_": true,
+   "what": "human log path triggers the road hinge (margin 0.3), of primary-ok candidates"
+  },
+  "G2": {
+   "line": 0.6,
+   "value": 0.64,
+   "as_trained": 0.48,
+   "pass_": true,
+   "what": "the model plan's road hinge active at the last decision >= 2.5 s before each offroad event (raw; as trained reported)"
+  },
+  "G3": {
+   "line": 0.1,
+   "value": 0.08998077847188851,
+   "as_trained": 0.06060788082652571,
+   "pass_": true,
+   "what": "the model plan's road hinge active on 2 Hz decisions of scenes the roll scored >= 0.98 (raw; as trained reported)"
+  },
+  "fallback": {
+   "ok": 0.9241607236041051,
+   "t0_off": 0.0035223517133414505,
+   "label_out": 0.0,
+   "no_surface": 0.0,
+   "human_trig": 0.04792137763089233,
+   "no_human": 0.024395547051661158
+  },
+  "ok_share": 0.9241607236041051,
+  "candidates": 22996,
+  "by_cls": {
+   "arterial": {
+    "rows": 2528,
+    "ok": 0.9125791139240507
+   },
+   "highway": {
+    "rows": 2874,
+    "ok": 0.9589422407794015
+   },
+   "ramp": {
+    "rows": 181,
+    "ok": 0.47513812154696133
+   },
+   "urban": {
+    "rows": 17413,
+    "ok": 0.924768850858554
+   }
+  },
+  "plan_beyond_56m": 0.2255502018491991
+ },
+ "g4": {
+  "ps_candidates": 22996,
+  "ps_held_logs": 0,
+  "ps_drawn": 22996,
+  "ps_road_ok": 0.9241607236041051,
+  "ps_fast": 0.32861440496132344,
+  "ps_standing": 0.049999999999999996,
+  "rb0_fast": 0.010657579931849489,
+  "s_fast_all": 0.16963599244658648,
+  "ps_by_cls": {
+   "arterial": {
+    "rows": 2528,
+    "share": 0.13838814383638773,
+    "w": 1.13
+   },
+   "highway": {
+    "rows": 2874,
+    "share": 0.19835997938778432,
+    "w": 1.42
+   },
+   "ramp": {
+    "rows": 181,
+    "share": 0.006839401495854403,
+    "w": 0.82
+   },
+   "urban": {
+    "rows": 17413,
+    "share": 0.6564124752799734,
+    "w": 0.8
+   }
+  },
+  "G4": {
+   "line": 0.3,
+   "value": 0.32861440496132344,
+   "pass_": true,
+   "what": "share of the PAI-S draws (16 of the 32 S slots) at v0 >= 13 m/s; all S draws reported as s_fast_all"
+  },
+  "pass_": true
+ },
+ "disk_gib": {
+  "roll": 0.911236772313714,
+  "rows": 37.966352856718004,
+  "teach": 0.04304886516183615,
+  "cache": 26.228621050715446,
+  "pool": 3.542968351393938,
+  "pool_warp": 28.76149930432439,
+  "merged": 27.810905568301678,
+  "merged_warp": 3.007162883877754,
+  "feat_merged": 0.3238257644698024,
+  "spai": 0.6648463997989893,
+  "fwd": 0.022284547798335552,
+  "tax": 0.21427049301564693,
+  "w": 0.3119383901357651,
+  "total": 129.8089612480253
+ },
+ "cost": {
+  "gates": 0.6268999606370925,
+  "roll": 8.095286398993599,
+  "gpu_job_h": 8.722186359630692,
+  "wall_h": 1.3877096201313865
+ },
+ "t": "2026-10-24 18:53:34"
+}

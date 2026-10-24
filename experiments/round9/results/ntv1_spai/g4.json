@@ -1,0 +1,39 @@
+{
+ "ps_candidates": 22996,
+ "ps_held_logs": 0,
+ "ps_drawn": 22996,
+ "ps_road_ok": 0.9241607236041051,
+ "ps_fast": 0.32861440496132344,
+ "ps_standing": 0.049999999999999996,
+ "rb0_fast": 0.010657579931849489,
+ "s_fast_all": 0.16963599244658648,
+ "ps_by_cls": {
+  "arterial": {
+   "rows": 2528,
+   "share": 0.13838814383638773,
+   "w": 1.13
+  },
+  "highway": {
+   "rows": 2874,
+   "share": 0.19835997938778432,
+   "w": 1.42
+  },
+  "ramp": {
+   "rows": 181,
+   "share": 0.006839401495854403,
+   "w": 0.82
+  },
+  "urban": {
+   "rows": 17413,
+   "share": 0.6564124752799734,
+   "w": 0.8
+  }
+ },
+ "G4": {
+  "line": 0.3,
+  "value": 0.32861440496132344,
+  "pass_": true,
+  "what": "share of the PAI-S draws (16 of the 32 S slots) at v0 >= 13 m/s; all S draws reported as s_fast_all"
+ },
+ "pass_": true
+}

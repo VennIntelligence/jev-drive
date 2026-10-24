@@ -1,0 +1,102 @@
+{
+ "rasters": 23037,
+ "rows_in_pool": 23037,
+ "candidates": 22996,
+ "pool_rows": 115032,
+ "g2_rows": 50,
+ "g2_scenes": 50,
+ "offroad_scenes": 50,
+ "full_rows": 16648,
+ "station_match": 1.0,
+ "fallback": {
+  "ok": 0.9241607236041051,
+  "t0_off": 0.0035223517133414505,
+  "label_out": 0.0,
+  "no_surface": 0.0,
+  "human_trig": 0.04792137763089233,
+  "no_human": 0.024395547051661158
+ },
+ "ok_share": 0.9241607236041051,
+ "human_avail": 0.9754739954774744,
+ "plan_beyond_56m": 0.2255502018491991,
+ "G1": {
+  "line": 0.07,
+  "value": 0.0492976648474546,
+  "pass_": true,
+  "what": "human log path triggers the road hinge (margin 0.3), of primary-ok candidates"
+ },
+ "G2": {
+  "line": 0.6,
+  "value": 0.64,
+  "as_trained": 0.48,
+  "pass_": true,
+  "what": "the model plan's road hinge active at the last decision >= 2.5 s before each offroad event (raw; as trained reported)"
+ },
+ "G3": {
+  "line": 0.1,
+  "value": 0.08998077847188851,
+  "as_trained": 0.06060788082652571,
+  "pass_": true,
+  "what": "the model plan's road hinge active on 2 Hz decisions of scenes the roll scored >= 0.98 (raw; as trained reported)"
+ },
+ "by_cls": {
+  "arterial": {
+   "rows": 2528,
+   "ok": 0.9125791139240507
+  },
+  "highway": {
+   "rows": 2874,
+   "ok": 0.9589422407794015
+  },
+  "ramp": {
+   "rows": 181,
+   "ok": 0.47513812154696133
+  },
+  "urban": {
+   "rows": 17413,
+   "ok": 0.924768850858554
+  }
+ },
+ "by_speed": {
+  "0-0.5": {
+   "rows": 2246,
+   "ok": 0.9078361531611754,
+   "trig_h": 0.04363312555654497,
+   "plan_active_of_ok": 0.025993133889161354
+  },
+  "0.5-3": {
+   "rows": 2247,
+   "ok": 0.890520694259012,
+   "trig_h": 0.08055184690698709,
+   "plan_active_of_ok": 0.04397801099450275
+  },
+  "3-8": {
+   "rows": 6191,
+   "ok": 0.921014375706671,
+   "trig_h": 0.053464706832498786,
+   "plan_active_of_ok": 0.10715538407576289
+  },
+  "8-13": {
+   "rows": 6237,
+   "ok": 0.9243225909892576,
+   "trig_h": 0.05178771845438512,
+   "plan_active_of_ok": 0.08811795316565481
+  },
+  "13-20": {
+   "rows": 3106,
+   "ok": 0.9249839021249195,
+   "trig_h": 0.04797166773985834,
+   "plan_active_of_ok": 0.07274625826662026
+  },
+  "20-99": {
+   "rows": 2969,
+   "ok": 0.9673290670259347,
+   "trig_h": 0.006736274840013472,
+   "plan_active_of_ok": 0.036211699164345405
+  }
+ },
+ "readback_equal": true,
+ "file": "/root/autodl-tmp/ujs/runs/round9/ntv1_spai/spai/road_spai.npz",
+ "sdf_gib": 0.5272752046585083,
+ "pass_": true
+}

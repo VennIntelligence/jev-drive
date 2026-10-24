@@ -1,0 +1,30 @@
+{
+ "checks": {
+  "names_equal": true,
+  "prefix_names": true,
+  "z_prefix_bitwise": true,
+  "z_tail_zero": true,
+  "dagger_bitwise": true,
+  "rb0_scaled": true,
+  "ps_modes": [
+   "self"
+  ],
+  "ps_held_drawn": 0,
+  "share_rb0": 0.40000000000000036,
+  "share_rb0_parts": [
+   "rb0"
+  ],
+  "share_ps": 0.4000000000000001,
+  "share_pd": 0.09953758965921436,
+  "share_pd2": 0.10046241034078568,
+  "share_pd_ntv1d2": 0.09953758965921436,
+  "share_pd2_ntv1d2": 0.10046241034078568,
+  "drawn_parts": [
+   "pd",
+   "pd2",
+   "ps",
+   "rb0"
+  ]
+ },
+ "pass_": true
+}

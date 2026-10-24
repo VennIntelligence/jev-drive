@@ -1,0 +1,15 @@
+{
+ "base": "runs/round9/ntv1_step4/w/NTV1D2.npz",
+ "pool": "on1_JTDC2S",
+ "rows": 510579,
+ "prefix_rows": 395547,
+ "ps_rows": 115032,
+ "ps_drawn": 22996,
+ "group_share": {
+  "S": 0.40000000000000036,
+  "pd": 0.09953758965921436,
+  "pd2": 0.10046241034078568,
+  "ps": 0.4000000000000001
+ },
+ "out": "runs/round9/ntv1_spai/w/NTV1D2S.npz"
+}
