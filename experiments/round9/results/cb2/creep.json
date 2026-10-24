@@ -1,0 +1,362 @@
+{
+ "pools": [
+  {
+   "pool": "L18RB0",
+   "rows": 17429,
+   "candidates": 10019,
+   "human_standing": 79,
+   "human_stopping": 332,
+   "standing_no_lead": 59,
+   "stopping_no_lead": 160,
+   "standing_share": 0.007885018464916658,
+   "stopping_share": 0.033137039624713045,
+   "conflict_rows": 265,
+   "conflict_rows_no_lead": 152,
+   "conflict_excess_m": 2009.5529873044597,
+   "conflict_excess_p50_p90": [
+    6.922615580951252,
+    15.683410383102858
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    4.9659774026819665,
+    16.09120219321049
+   ],
+   "ego_speed_on_hsp_p50": 2.900484085083008,
+   "moving_rows_faster_than_cap": 1956,
+   "lat_mass": 8558.75561034136,
+   "lat_rows_05": 4175,
+   "rules": {
+    "R1": {
+     "kept": 9940,
+     "keep_share": 0.9921149815350834,
+     "lat_mass_kept": 0.9780287338042002,
+     "lat_rows_05_kept": 0.9863473053892216,
+     "conflict_excess_left": 0.6136829084940041,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 9608,
+     "keep_share": 0.9589779419103703,
+     "lat_mass_kept": 0.9362949654729991,
+     "lat_rows_05_kept": 0.9559281437125748,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  },
+  {
+   "pool": "L18D3",
+   "rows": 17590,
+   "candidates": 10249,
+   "human_standing": 83,
+   "human_stopping": 383,
+   "standing_no_lead": 58,
+   "stopping_no_lead": 193,
+   "standing_share": 0.008098351058639867,
+   "stopping_share": 0.03736949946336228,
+   "conflict_rows": 310,
+   "conflict_rows_no_lead": 182,
+   "conflict_excess_m": 2511.013217940591,
+   "conflict_excess_p50_p90": [
+    7.871872527799498,
+    16.792027061139873
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    4.705634579968747,
+    19.10822204481053
+   ],
+   "ego_speed_on_hsp_p50": 3.089258909225464,
+   "moving_rows_faster_than_cap": 2330,
+   "lat_mass": 5847.567164284308,
+   "lat_rows_05": 3586,
+   "rules": {
+    "R1": {
+     "kept": 10166,
+     "keep_share": 0.9919016489413601,
+     "lat_mass_kept": 0.9817053989686981,
+     "lat_rows_05_kept": 0.984941438929169,
+     "conflict_excess_left": 0.6055451627636227,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 9783,
+     "keep_share": 0.9545321494779978,
+     "lat_mass_kept": 0.9249854476224249,
+     "lat_rows_05_kept": 0.9380925822643614,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  },
+  {
+   "pool": "PN0",
+   "rows": 6216,
+   "candidates": 740,
+   "human_standing": 48,
+   "human_stopping": 66,
+   "standing_no_lead": 46,
+   "stopping_no_lead": 23,
+   "standing_share": 0.06486486486486487,
+   "stopping_share": 0.0891891891891892,
+   "conflict_rows": 63,
+   "conflict_rows_no_lead": 53,
+   "conflict_excess_m": 1041.2915581413367,
+   "conflict_excess_p50_p90": [
+    16.414306271721138,
+    21.32474709632517
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    16.163394135140937,
+    23.67554732536107
+   ],
+   "ego_speed_on_hsp_p50": 2.692843794822693,
+   "moving_rows_faster_than_cap": 209,
+   "lat_mass": 458.4057854435814,
+   "lat_rows_05": 262,
+   "rules": {
+    "R1": {
+     "kept": 692,
+     "keep_share": 0.9351351351351351,
+     "lat_mass_kept": 0.9619910746969846,
+     "lat_rows_05_kept": 0.9618320610687023,
+     "conflict_excess_left": 0.22984955303012283,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 626,
+     "keep_share": 0.845945945945946,
+     "lat_mass_kept": 0.8969677372333701,
+     "lat_rows_05_kept": 0.9083969465648855,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  },
+  {
+   "pool": "PN1",
+   "rows": 4749,
+   "candidates": 967,
+   "human_standing": 133,
+   "human_stopping": 76,
+   "standing_no_lead": 113,
+   "stopping_no_lead": 39,
+   "standing_share": 0.1375387797311272,
+   "stopping_share": 0.07859358841778696,
+   "conflict_rows": 159,
+   "conflict_rows_no_lead": 138,
+   "conflict_excess_m": 2540.0571932039893,
+   "conflict_excess_p50_p90": [
+    17.266257305838447,
+    21.257477544355854
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    18.75796334041897,
+    25.95060398877439
+   ],
+   "ego_speed_on_hsp_p50": 2.836203098297119,
+   "moving_rows_faster_than_cap": 112,
+   "lat_mass": 455.3180924581311,
+   "lat_rows_05": 266,
+   "rules": {
+    "R1": {
+     "kept": 834,
+     "keep_share": 0.8624612202688728,
+     "lat_mass_kept": 0.8143200820598634,
+     "lat_rows_05_kept": 0.7556390977443609,
+     "conflict_excess_left": 0.07762979735729311,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 758,
+     "keep_share": 0.7838676318510859,
+     "lat_mass_kept": 0.7502308757711285,
+     "lat_rows_05_kept": 0.7142857142857143,
+     "conflict_excess_left": 0.0,
+     "pass_": false
+    }
+   }
+  },
+  {
+   "pool": "PN2",
+   "rows": 8781,
+   "candidates": 2495,
+   "human_standing": 62,
+   "human_stopping": 186,
+   "standing_no_lead": 52,
+   "stopping_no_lead": 75,
+   "standing_share": 0.024849699398797595,
+   "stopping_share": 0.07454909819639279,
+   "conflict_rows": 101,
+   "conflict_rows_no_lead": 75,
+   "conflict_excess_m": 982.6747192018153,
+   "conflict_excess_p50_p90": [
+    10.206870569072695,
+    17.206880147254463
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    0.6864185650327581,
+    18.208192044207664
+   ],
+   "ego_speed_on_hsp_p50": 2.8705509901046753,
+   "moving_rows_faster_than_cap": 518,
+   "lat_mass": 1536.9119440148352,
+   "lat_rows_05": 735,
+   "rules": {
+    "R1": {
+     "kept": 2433,
+     "keep_share": 0.9751503006012024,
+     "lat_mass_kept": 0.9542593460632023,
+     "lat_rows_05_kept": 0.9537414965986395,
+     "conflict_excess_left": 0.18142651416996566,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 2247,
+     "keep_share": 0.9006012024048096,
+     "lat_mass_kept": 0.9200663656547398,
+     "lat_rows_05_kept": 0.9183673469387755,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  },
+  {
+   "pool": "PN3",
+   "rows": 6800,
+   "candidates": 2286,
+   "human_standing": 121,
+   "human_stopping": 133,
+   "standing_no_lead": 109,
+   "stopping_no_lead": 63,
+   "standing_share": 0.052930883639545054,
+   "stopping_share": 0.05818022747156605,
+   "conflict_rows": 155,
+   "conflict_rows_no_lead": 128,
+   "conflict_excess_m": 2064.237128437897,
+   "conflict_excess_p50_p90": [
+    12.883018376617166,
+    17.490430011072462
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    15.085604349498793,
+    19.955101175007517
+   ],
+   "ego_speed_on_hsp_p50": 2.960649013519287,
+   "moving_rows_faster_than_cap": 603,
+   "lat_mass": 1586.047673015677,
+   "lat_rows_05": 883,
+   "rules": {
+    "R1": {
+     "kept": 2165,
+     "keep_share": 0.947069116360455,
+     "lat_mass_kept": 0.94127793829884,
+     "lat_rows_05_kept": 0.9139297848244621,
+     "conflict_excess_left": 0.21491535526994462,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 2032,
+     "keep_share": 0.8888888888888888,
+     "lat_mass_kept": 0.9019911472780079,
+     "lat_rows_05_kept": 0.8776896942242356,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  },
+  {
+   "pool": "PN4",
+   "rows": 6251,
+   "candidates": 483,
+   "human_standing": 83,
+   "human_stopping": 35,
+   "standing_no_lead": 39,
+   "stopping_no_lead": 29,
+   "standing_share": 0.17184265010351968,
+   "stopping_share": 0.07246376811594203,
+   "conflict_rows": 92,
+   "conflict_rows_no_lead": 47,
+   "conflict_excess_m": 1509.2657937422566,
+   "conflict_excess_p50_p90": [
+    16.970993429137913,
+    20.88228671364219
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    20.136099451316746,
+    25.487251507103963
+   ],
+   "ego_speed_on_hsp_p50": 3.4602197408676147,
+   "moving_rows_faster_than_cap": 151,
+   "lat_mass": 391.988393176347,
+   "lat_rows_05": 207,
+   "rules": {
+    "R1": {
+     "kept": 400,
+     "keep_share": 0.8281573498964804,
+     "lat_mass_kept": 0.6485971749531357,
+     "lat_rows_05_kept": 0.6570048309178744,
+     "conflict_excess_left": 0.035012756070329776,
+     "pass_": false
+    },
+    "R2": {
+     "kept": 365,
+     "keep_share": 0.7556935817805382,
+     "lat_mass_kept": 0.5633396340450559,
+     "lat_rows_05_kept": 0.6038647342995169,
+     "conflict_excess_left": 0.0,
+     "pass_": false
+    }
+   }
+  },
+  {
+   "pool": "PN5",
+   "rows": 8989,
+   "candidates": 1670,
+   "human_standing": 47,
+   "human_stopping": 131,
+   "standing_no_lead": 38,
+   "stopping_no_lead": 49,
+   "standing_share": 0.0281437125748503,
+   "stopping_share": 0.0784431137724551,
+   "conflict_rows": 72,
+   "conflict_rows_no_lead": 41,
+   "conflict_excess_m": 691.999465973942,
+   "conflict_excess_p50_p90": [
+    10.84799538880662,
+    17.519444225589726
+   ],
+   "served_vs_human_4s_on_hsp_p50_p90": [
+    0.4751808019799033,
+    18.960163375725962
+   ],
+   "ego_speed_on_hsp_p50": 2.6367883682250977,
+   "moving_rows_faster_than_cap": 234,
+   "lat_mass": 1084.7369386549835,
+   "lat_rows_05": 605,
+   "rules": {
+    "R1": {
+     "kept": 1623,
+     "keep_share": 0.9718562874251497,
+     "lat_mass_kept": 0.9028471228064684,
+     "lat_rows_05_kept": 0.9371900826446281,
+     "conflict_excess_left": 0.07168827816686395,
+     "pass_": true
+    },
+    "R2": {
+     "kept": 1492,
+     "keep_share": 0.8934131736526946,
+     "lat_mass_kept": 0.8627543886644552,
+     "lat_rows_05_kept": 0.912396694214876,
+     "conflict_excess_left": 0.0,
+     "pass_": true
+    }
+   }
+  }
+ ],
+ "gate": {
+  "keep": 0.8,
+  "lat": 0.8,
+  "conflict_left": 0.1
+ },
+ "pick": null
+}
