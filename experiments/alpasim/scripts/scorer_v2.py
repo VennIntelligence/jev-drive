@@ -112,6 +112,10 @@ READS = {
     "RB0-P30-s0-ag": ("round9/pai_base/pai281/RB0-P30-s0-ag", "RB0-P30-s0-281ag"),
     "RB0-P50-s0-ag": ("round9/pai_base/pai281/RB0-P50-s0-ag", "RB0-P50-s0-281ag"),
     "RB0-P70-s0-ag": ("round9/pai_base/pai281/RB0-P70-s0-ag", "RB0-P70-s0-281ag"),
+    # round9 VAL160 (152 PAI val160 scenes, ACC + GAP, Harmonizer off; scored with --reads only)
+    "NT3D1-F-s0-v160": ("round9/val160/reads/NT3D1-F-s0-ag", "NT3D1-F-s0-v160ag"),
+    "R8K-L18-s2-v160": ("round9/val160/reads/R8K-L18-s2-ag", "R8K-L18-s2-v160ag"),
+    "PCL1L-F-s0-v160": ("round9/val160/reads/PCL1L-F-s0-ag", "PCL1L-F-s0-v160ag"),
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
