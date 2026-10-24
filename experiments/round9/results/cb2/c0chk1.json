@@ -1,0 +1,30 @@
+{
+ "new": "/root/autodl-tmp/ujs/runs/round9/cb2/proll/RB0-F-s0/c0/run",
+ "ref": "/root/autodl-tmp/ujs/runs/practice_nuplan/roll/JTN-L18-s0/c0/run",
+ "same": {
+  "driver-config.yaml": true,
+  "controller-config.yaml": true,
+  "eval-config.yaml": true,
+  "trafficsim-config.yaml": true
+ },
+ "loose": {
+  "generated-user-config-0.yaml": {
+   "changed_lines": 0,
+   "bad": []
+  },
+  "wizard-config.yaml": {
+   "changed_lines": 4,
+   "bad": []
+  }
+ },
+ "listed": 105,
+ "rollouts": 105,
+ "listed_scored": 105,
+ "sim_pkl": true,
+ "mean": 0.9618949855140362,
+ "fail": {
+  "None": 102,
+  "collision_at_fault": 3
+ },
+ "pass_": true
+}

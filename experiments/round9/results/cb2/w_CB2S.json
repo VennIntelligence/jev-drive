@@ -1,0 +1,21 @@
+{
+ "pool": "on1_JTPR",
+ "rows": 214702,
+ "rb0": 13793,
+ "pr_live": 35069,
+ "pr_moving": 21937,
+ "pr_static_dropped": 13132,
+ "pr_held": 10027,
+ "pr_share": 0.6139658550237896,
+ "pr_parts": {
+  "pr0": 1672,
+  "pr1": 2234,
+  "pr2": 5339,
+  "pr3": 4714,
+  "pr4": 980,
+  "pr5": 3853,
+  "pr6": 3145
+ },
+ "draws_per_row_9500": 8.508256367198433,
+ "cb2s0_equals_jt00s_rb0": true
+}

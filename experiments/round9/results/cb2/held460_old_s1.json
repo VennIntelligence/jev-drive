@@ -1,0 +1,129 @@
+{
+ "CB2P1N-F-s0-cb2|STANDFMXH-L18-s1-cb2": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.8527025592852288,
+  "mean": 0.03834655572301421,
+  "lo": 0.014996758980323365,
+  "hi": 0.06813599526268177,
+  "zeros_a": 47,
+  "zeros_b": 41,
+  "lat_a": 34,
+  "lat_b": 30
+ },
+ "CB2P1N-F-s0-cb2|STANDFMXH-L18-s0-cb2": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.843886888532835,
+  "mean": 0.04716222647540804,
+  "lo": 0.0245819071459061,
+  "hi": 0.07477320031097726,
+  "zeros_a": 47,
+  "zeros_b": 41,
+  "lat_a": 34,
+  "lat_b": 27
+ },
+ "CB2P1N-F-s0-cb2|STANDFMXH-L18-s1": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.8527025592852288,
+  "mean": 0.03834655572301421,
+  "lo": 0.014996758980323365,
+  "hi": 0.06813599526268177,
+  "zeros_a": 47,
+  "zeros_b": 41,
+  "lat_a": 34,
+  "lat_b": 30
+ },
+ "CB2P1N-F-s0-cb2|STANDFMXH-L18-s0": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.8439000363145175,
+  "mean": 0.04714907869372559,
+  "lo": 0.024638052399334025,
+  "hi": 0.07488113667582567,
+  "zeros_a": 47,
+  "zeros_b": 41,
+  "lat_a": 34,
+  "lat_b": 27
+ },
+ "CB2P1N-F-s0-cb2|NTV0-L18-s0": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.8875693851814622,
+  "mean": 0.003479729826780918,
+  "lo": -0.027410293125887338,
+  "hi": 0.03854472250726812,
+  "zeros_a": 47,
+  "zeros_b": 32,
+  "lat_a": 34,
+  "lat_b": 20
+ },
+ "CB2P1N-F-s0-cb2|NT4D3-F-s0": {
+  "n": 460,
+  "a": 0.8910491150082431,
+  "b": 0.8650304913988578,
+  "mean": 0.026018623609385248,
+  "lo": 0.00024709915238138716,
+  "hi": 0.05473626597547715,
+  "zeros_a": 47,
+  "zeros_b": 43,
+  "lat_a": 34,
+  "lat_b": 30
+ },
+ "zeros": {
+  "CB2P1N-F-s0-cb2": {
+   "AF-front": 5,
+   "offroad": 20,
+   "route-fail": 8,
+   "corridor": 13,
+   "AF-side": 1
+  },
+  "STANDFMXH-L18-s1-cb2": {
+   "AF-front": 3,
+   "corridor": 9,
+   "offroad": 19,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "STANDFMXH-L18-s0-cb2": {
+   "AF-front": 6,
+   "corridor": 8,
+   "offroad": 17,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "STANDFMXH-L18-s1": {
+   "AF-front": 3,
+   "corridor": 9,
+   "offroad": 19,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "STANDFMXH-L18-s0": {
+   "AF-front": 6,
+   "corridor": 8,
+   "offroad": 17,
+   "route-fail": 8,
+   "AF-front+corridor": 1,
+   "offroad+corridor": 1
+  },
+  "NTV0-L18-s0": {
+   "AF-front": 4,
+   "corridor": 4,
+   "offroad": 15,
+   "route-fail": 8,
+   "AF-side": 1
+  },
+  "NT4D3-F-s0": {
+   "corridor": 6,
+   "AF-front": 5,
+   "offroad": 22,
+   "route-fail": 8,
+   "AF-side": 2
+  }
+ }
+}
