@@ -219,7 +219,9 @@ def cmd_table(a):
             return X
         d = V[k]
         new = d.score.reindex(X.index)
-        assert new.notna().all(), f"{key}: {int(new.isna().sum())} windows without a rescored value"
+        miss = new.isna()                                   # windows with no scored rollout dir (route-fail): nothing to rescore, stored value kept
+        assert (X.ftype[miss] == "route-fail").all(), f"{key}: {int(miss.sum())} windows without a rescored value, not all route-fail"
+        new = new.where(~miss, X.score)
         ft = X.ftype.where(~((new == 0) & (X.score > 0)), "corridor-v2").where(~((new > 0) & (X.score == 0)), "")
         return X.assign(score=new.to_numpy(float), ftype=ft)
     F.scores = scores
@@ -227,13 +229,14 @@ def cmd_table(a):
 
 
 def cmd_rows(a):
+    import numpy as np
     import pandas as pd
     V = _v2map(a.v2)
     R = pd.read_csv(a.rows)
     for k, d in V.items():
         m = R.tag == k
-        R.loc[m, "score"] = d.score.reindex(R.id[m]).to_numpy(float)
-        assert R.loc[m, "score"].notna().all(), k
+        v = d.score.reindex(R.id[m]).to_numpy(float)
+        R.loc[m, "score"] = np.where(np.isnan(v), R.loc[m, "score"].to_numpy(float), v)   # route-fail windows: stored value
     R.to_csv(a.out, index=False)
 
 
