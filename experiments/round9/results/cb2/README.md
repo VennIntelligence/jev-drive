@@ -15,6 +15,15 @@ rolls out of static windows like NTV0 / D3 (arena corridor zeros 363 vs 25).
 Plan (Chinese, registration): [../../plans/2026-10-25-cb2.md](../../plans/2026-10-25-cb2.md). Lane: [cb2.sh](../../scripts/cb2.sh),
 [cb2.py](../../scripts/cb2.py), [cb2v2.py](../../scripts/cb2v2.py). Box: `$DATA_DIR/runs/round9/cb2/`. Verdict: [verdict.md](verdict.md).
 
+**Correction (plan amendment 2, 10-25).** The static-row drop was an error in the coordinator's brief, not a user decision; B2 kept its
+practice-start static rows. The P1N above stays as the "no-static" reference. P1N' (`CB2P1NB-F-s0`) uses B2's S-row rule on the same
+pool (every live self row equal, static rows kept): STAND-firing rows are 23.3 % of the S draw, 7.45 a batch (B2 14.5 % / 4.65). Results
+of that lane are added below when they land.
+
+**Box sync incident.** During the first records sync I ran `git checkout -- .` in the box repo. It reverted an uncommitted local change
+to `experiments/round9/scripts/diag.sh` (not mine, owner unknown); that change is lost. The box is synced with `git pull` only from now
+on (`git stash` if it ever has local changes; never `checkout -- .` or `reset --hard`).
+
 ## Step 0 (offline, before registration): DAgger rows on human-standing states
 
 The b3 teacher's longitudinal is the student's own served arc. Measured on existing nuPlan rows (RB0-F-s0 onpol-train, D3, JTN
