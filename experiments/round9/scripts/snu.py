@@ -55,7 +55,7 @@ IGN = ("pool_held/", "pool_fit/")
 AP = DD / "third_party/alpasim/.venv/bin/python"
 CFG_SAME = ("driver-config.yaml", "controller-config.yaml", "eval-config.yaml", "trafficsim-config.yaml")
 CFG_LOOSE = ("generated-user-config-0.yaml", "wizard-config.yaml")
-CFG_OK = re.compile(r"^\s*(-\s*)?(n_concurrent_rollouts|sensorsim_cache_size|nre_cache_size|log_dir|baseport):|^\s*-\s*localhost:\d+\s*$")
+CFG_OK = re.compile(r"^\s*(-\s*)?(n_concurrent_rollouts|sensorsim_cache_size|nre_cache_size|log_dir|baseport):|^\s*-\s*localhost:\d+\s*$|^\s*-\s*--cache-size=\d+\s*$")
 
 
 def ld(p):
@@ -104,7 +104,7 @@ def cmd_c0chk(a):
     for f in CFG_SAME:
         rec["same"][f] = (new / f).read_bytes() == (ref / f).read_bytes()
     for f in CFG_LOOSE:
-        x, y = (ref / f).read_text().splitlines(), (new / f).read_text().splitlines()
+        x, y = ((d / f).read_text().replace(str(d), "<RUN>").splitlines() for d in (ref, new))      # the run's own dir (mounts, log dir) normalised
         ch = [ln for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, x, y, autojunk=False).get_opcodes() if op != "equal" for ln in x[i1:i2] + y[j1:j2]]
         bad = [ln for ln in ch if not CFG_OK.match(ln)]
         rec["loose"][f] = dict(changed_lines=len(ch), allowed=sorted({CFG_OK.match(ln).group(0).strip() for ln in ch if CFG_OK.match(ln)}), bad=bad[:20])
