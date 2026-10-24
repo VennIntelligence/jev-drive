@@ -209,6 +209,10 @@ def cmd_table(a):
     orig = F.scores
 
     def scores(bench, key):
+        if "+" in key:                                       # the mean of two reads (two seeds), window by window
+            X1, X2 = (scores(bench, k_) for k_ in key.split("+"))
+            ids = X1.index.intersection(X2.index)
+            return X1.loc[ids].assign(score=(X1.score.loc[ids].to_numpy(float) + X2.score.loc[ids].to_numpy(float)) / 2)
         X = orig(bench, key)
         k = key.split("@")[0] if bench == "arena" and key.endswith("@off") and key.split("@")[0] in V else key
         if k not in V:
