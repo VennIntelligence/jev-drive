@@ -116,6 +116,9 @@ READS = {
     "NT3D1-F-s0-v160": ("round9/val160/reads/NT3D1-F-s0-ag", "NT3D1-F-s0-v160ag"),
     "R8K-L18-s2-v160": ("round9/val160/reads/R8K-L18-s2-ag", "R8K-L18-s2-v160ag"),
     "PCL1L-F-s0-v160": ("round9/val160/reads/PCL1L-F-s0-ag", "PCL1L-F-s0-v160ag"),
+    # round9 VAL160 extension (D1 seed 1, INTP75-NR; job dir val160b)
+    "NT3D1-F-s1-v160": ("round9/val160b/reads/NT3D1-F-s1-ag", "NT3D1-F-s1-v160ag"),
+    "INTP75-NR-v160": ("round9/val160b/reads/INTP75-NR-ag", "INTP75-NR-v160ag"),
     # round9 NTV1 step 4 (DAgger iteration 2; scored with --reads only; s1 / v160 = the candidate tail)
     "NT4D3-F-s0-ag": ("round9/ntv1_step4/pai281/NT4D3-F-s0-ag", "NT4D3-F-s0-281ag"),
     "NT4D3-F-s0-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s0-ag", "NT4D3-F-s0-v160ag"),

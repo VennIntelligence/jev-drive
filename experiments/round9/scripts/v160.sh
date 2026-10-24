@@ -39,6 +39,16 @@ report)
   PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2 --reads ${TAGS[0]}-v160,${TAGS[1]}-v160,${TAGS[2]}-v160 \
       --workers 16 > $O/sv2.log 2>&1 || die "scorer_v2 new (log $O/sv2.log)"
   PYTHONPATH=. $V $PY report --dir $O --out $O/results || die "report"; date '+%F %T' > $O/DONE ;;
+allx)  # extension (V160_O=.../val160b V160_TAGS="NT3D1-F-s1 INTP75-NR"): reads + report job (scorer_v2 on the new reads, then v160x.py on both dirs)
+  [[ ! -e $O/DONE && ! -e $O/jobs.txt ]] || die "already ran"
+  X=($(bash $ME reads)) && [[ ${#X[@]} == ${#TAGS[@]} ]] || die "reads"
+  rp=$(sub v160b-report --after $(IFS=,; echo "${X[*]}") --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME reportx) || exit 1
+  echo "$(date '+%F %T') allx: tax ${X[*]} report $rp" | tee -a $O/stages.txt ;;
+reportx)
+  rm -rf $O/sv2
+  PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2 --reads $(IFS=,; for t in "${TAGS[@]}"; do printf '%s-v160,' $t; done | sed 's/,$//') \
+      --workers 16 > $O/sv2.log 2>&1 || die "scorer_v2 new (log $O/sv2.log)"
+  PYTHONPATH=. $V experiments/round9/scripts/v160x.py --dir $O --old-dir $DATA_DIR/runs/round9/val160 --out $O/results || die "report"; date '+%F %T' > $O/DONE ;;
 wait)
   until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
