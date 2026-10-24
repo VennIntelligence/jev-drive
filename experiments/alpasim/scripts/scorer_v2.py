@@ -123,6 +123,9 @@ READS = {
     "NT4D3-F-s0-ag": ("round9/ntv1_step4/pai281/NT4D3-F-s0-ag", "NT4D3-F-s0-281ag"),
     "NT4D3-F-s0-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s0-ag", "NT4D3-F-s0-v160ag"),
     "NT4D3-F-s1-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s1-ag", "NT4D3-F-s1-v160ag"),
+    # round9 NTV1 K / H (D1 + the pacing floor; scored with --reads only)
+    "NTK1-F-s0-ag": ("round9/ntv1_kh/pai281/NTK1-F-s0-ag", "NTK1-F-s0-281ag"),
+    "NTK1-F-s0-agH": ("round9/ntv1_kh/pai281/NTK1-F-s0-agH", "NTK1-F-s0-281agH"),
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),
