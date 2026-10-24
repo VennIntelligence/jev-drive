@@ -140,3 +140,4 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
 - 10-25 00:28 d480: both boards rescored with the corridor fix -> scorer_v2 primary for nuPlan; CB2 told to re-read B2-s0/s1 with KEEP_ASL as the v2 baseline.
 - 10-25 01:40 User asleep. Night plan: CB2 chain (B2 v2 re-reads -> P1N roll/train/read -> D1N roll/train/read; D1N s1 only if it ties B2). Hourly check fills gaps; morning summary in this log.
 - 10-25 02:55 d481: arena held still orders board anchors under scorer_v2 (tau-b +0.87 / +0.93); frozen d382 PCS unreliable on v2 rows (CB2 told). Wave 2 (12 blocks) not run, to keep cards for CB2.
+- 10-25 03:53 CB2 P1N stopped at E1 (d482): arena v2 0.784 vs B2-s1 0.941 (-0.157); cause = static rows dropped by the main-session brief (my error; B2 kept them, STAND had 0.06 rows/batch vs 4.65). Amended: P1N-prime with B2-identical static-row selection, then D1N if E1 passes. Box diag.sh uncommitted change lost by an agent git checkout.
