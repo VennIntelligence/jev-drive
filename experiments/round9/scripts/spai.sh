@@ -116,7 +116,7 @@ rest)
 resume)  # amendment 1 (plan): the drivable_hinge geom fix -> gcode / gw0 / pre-T / smoke again on this code, then the tail (attempt 1's gw0 failed)
   rev=${2:?old rev}; h=$(git rev-parse --short HEAD); echo "$h resume" >> $O/code.txt
   for X in NT5CO-F-s0 NT5CN-F-s0 NT5W0-F-s0 NT5IDP-F-s0 NT5SM-F-s0 NT5BA-F-s0 NT5BB-F-s0; do rm -rf $RUNS/$X $DATA_DIR/runs/route_mem/train-$X; done
-  for d in $O/pai281/$SP-ag $O/v160/reads/$SP-ag; do [[ -z $(find $d/runs -type f 2>/dev/null | head -1) ]] || die "$d has run files"; rm -rf $d $d.submit.txt; done
+  for d in $O/pai281/$SP-ag $O/v160/reads/$SP-ag; do [[ -z $(find $d/runs -path "*/sim/*" -type f 2>/dev/null | head -1) ]] || die "$d has run files"; rm -rf $d $d.submit.txt; done
   mkdir -p $O/results/attempt1; mv $O/results/{gcode,gw0,gpre_SP,smoke_SP,smoke_SP.json.dgc,smoke_lr_SP}.json $O/results/attempt1/ 2>/dev/null
   co=$(sub sp-crun-old "${FE[@]}" --timeout-h 1 -- bash $ME crun old $rev) || exit 1
   cn=$(sub sp-crun-new "${FE[@]}" --timeout-h 1 -- bash $ME crun new) || exit 1
