@@ -107,3 +107,29 @@ held 460 loss of about 0.02-0.03 in partials. E1 passed and stage 2 was submitte
 wrong-seed checkpoint `CB2P1NB-F-s1`, which does not exist in a one-seed lane (control = nan) ([gate_CBPB0.txt](gate_CBPB0.txt) ..
 [gate_CBPB4.txt](gate_CBPB4.txt)); CBPB2-4 also miss (a) at 0.986-0.988 (< 0.99, the fp16-ulp issue nuplan_dag amended for B2's fast plans).
 The onpol-train pool fails the same (c) in its pool gate. D1N' was not trained; the gate lines were not changed (plan amendment 3).
+
+## Stage 2 with amendment 4 (R1 control CB2P1N-F-s0, nuplan_dag's one-ulp (a)): stopped again
+
+R1 re-run from the cached tokens (no re-roll), per pool ([rgate_*.json](.)):
+
+| pool | rows | 0.03 m share | one-ulp share | max diff m | rows passing only by the ulp rule | (c) control pose share | R1 |
+|:--|--:|--:|--:|--:|--:|--:|:--|
+| CBPB0 | 6 216 | 0.9916 | 0.9995 | 0.047 | 49 | 0.005 | pass |
+| CBPB1 | 4 750 | 0.9903 | 0.9994 | 0.047 | 43 | 0.002 | pass |
+| CBPB2 | 8 797 | 0.9877 | 0.9992 | 0.047 | 101 | 0.003 | pass (ulp) |
+| CBPB3 | 6 813 | 0.9872 | 0.9997 | 0.047 | 85 | 0.003 | pass (ulp) |
+| CBPB4 | 6 256 | 0.9863 | 0.9994 | **0.0625** | 82 | 0.002 | **fail** |
+| CBPB5 | 8 997 | 0.9950 | 0.9997 | 0.047 | 42 | 0.003 | pass |
+| CBPB6 | 3 535 | 0.9895 | 1.0000 | 0.031 | 37 | 0.001 | pass (ulp) |
+| L18CBPB (onpol-train) | 17 653 | 0.9610 | 0.9976 | **0.0625** | 646 | 0.005 | **fail** |
+
+The two failures are the 0.047 m cap of the registered one-ulp rule: plan points beyond 64 m, where one fp16 ulp is 0.0625 m. The
+onpol-train pool is a required part of the DAgger set, so the chain stops; D1N' was not trained (plan amendment 5). A lane-script
+fault on the way (the cancelled PAI jobs recreated their log dir) was fixed by splitting the PAI side read into `s2pai`.
+
+## Where P1N' stands against the adoption rule
+
+The adoption rule (registered for D1N): arena held native paired CI vs B2-s1 with upper bound >= 0, and held 460 zeros <= B2-s1 + 4.
+P1N' meets both lines: arena +0.001 [-0.006, +0.009] vs B2-s1 (-0.001 [-0.006, +0.005] vs s0), held 460 zeros 42 vs 40 (line 44).
+But its held 460 mean is lower: -0.027 [-0.049, -0.006] vs B2-s1 and -0.018 [-0.041, +0.004] vs B2-s0, mostly partial scores. One
+seed, and it was not registered as an adoption arm. D1N' does not exist yet, so the user's choice today is P1N' or B2.

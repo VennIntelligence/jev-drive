@@ -1,0 +1,25 @@
+{
+ "name": "CBPB6",
+ "kind": "practice",
+ "control": "CB2P1N-F-s0",
+ "n": 3535,
+ "mu_share": 0.9895332390381896,
+ "mu_share_one_ulp": 1.0,
+ "mu_max": 0.03125,
+ "a_plain": false,
+ "a": true,
+ "a_only_by_ulp": true,
+ "rows_passing_only_by_ulp": 37,
+ "b": true,
+ "control_mu_share": 0.08147100424328148,
+ "control_pose_share": 0.0008486562942008486,
+ "c": true,
+ "R2": true,
+ "R2_vals": {
+  "ego_max_m": 0.022748539964692352,
+  "frame_err_max_m": 0.09900075747627764,
+  "act_share_within": 0.9989686164726683,
+  "act_median_m": 0.02472273638557452
+ },
+ "pass_": true
+}

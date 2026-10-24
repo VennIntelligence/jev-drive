@@ -21,3 +21,16 @@ rows that the static-row rule removes). Numbers: [README.md](README.md), [sum1.j
 
 D1N' not trained. P1N' itself is level with B2 on the arena (+0.001 [-0.006, +0.009] fixed scorer) and 0.027 below on held 460
 (zeros 42 vs 40, inside the registered +4 band); it was not registered as an adoption arm.
+
+## Amendment 4: stage 2 R1 re-run
+
+| gate | value | line | result |
+|:--|--:|--:|:--|
+| R1 (a) onpol-train L18CBPB | one-ulp share 0.9976, max 0.0625 m | one-ulp share >= 0.99 and max <= 0.047 m (nuplan_dag amendment 2) | **FAIL** |
+| R1 (a) practice CBPB4 | 0.9994, max 0.0625 m | same | **FAIL** |
+| R1 (a) practice CBPB0-3, 5, 6 | | same | pass |
+| R1 (c) all pools, control CB2P1N-F-s0 | pose share 0.001-0.005 | < 0.20 | pass |
+
+D1N' not trained. P1N' against the adoption rule: arena tie (+0.001 [-0.006, +0.009] vs B2-s1), held 460 zeros 42 <= 44, so both
+registered lines are met; held 460 mean -0.027 [-0.049, -0.006] vs B2-s1, -0.018 [-0.041, +0.004] vs B2-s0. One seed, not a registered
+adoption arm.

@@ -1,0 +1,36 @@
+{
+ "name": "L18CBPB",
+ "kind": "onpol",
+ "control": "CB2P1N-F-s0",
+ "n": 17653,
+ "mu_share": 0.9610264544270096,
+ "mu_share_one_ulp": 0.9976208009969977,
+ "mu_max": 0.0625,
+ "a_plain": false,
+ "a": false,
+ "a_only_by_ulp": false,
+ "rows_passing_only_by_ulp": 646,
+ "b": true,
+ "control_mu_share": 0.11125587718801337,
+ "control_pose_share": 0.005154931173171699,
+ "c": true,
+ "R2": true,
+ "R2_vals": {
+  "ego_max_m": 0.01821028797820944,
+  "frame_err_max_m": 0.06520535901499742,
+  "act_share_within": 0.999984102338546,
+  "act_median_m": 0.013458946726086506
+ },
+ "poolgate": {
+  "pool": "L18CBPB",
+  "rows": 17653,
+  "feat_ok": 1.0,
+  "route_ok": 0.9997734096187617,
+  "cov20": 0.48303404520478105,
+  "route0_share_005": 0.9932589361581601,
+  "route0_med": 3.814697265625e-06,
+  "pass": true
+ },
+ "poolgate_pass": true,
+ "pass_": false
+}
