@@ -9,7 +9,8 @@
 # Box, repo root; every job through the pool; ids in $O/jobs.txt (+ $O/v160/jobs.txt), stages in $O/stages.txt.
 #   snu.sh chain     preflight + R0 reproduction + roll c0 -> c0chk -> rest (submits everything else)
 #   snu.sh wait      one run_in_background waiter: $O/DONE or a failed / cancelled job of this lane
-#   job bodies: rest | repro | merge A|Z | ident | t3run a|b | t3cmp | smoke | train | post | report
+#   snu.sh relat     plan note 2: attempt 1's raster aside, raster rebuilt with PYTHONHASHSEED=1 -> latchk / latgate -> the registered tail
+#   job bodies: rest | lat | repro | merge A|Z | ident | t3run a|b | t3cmp | smoke | train | post | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round9/ntv1_snu; O4=$DATA_DIR/runs/round9/ntv1_step4; ME=experiments/round9/scripts/snu.sh; PY=experiments/round9/scripts/snu.py
 OL=experiments/onpol_long/scripts/ol_chain.sh; ONR=experiments/onpol_nuplan/scripts/on_rows.py; RB=experiments/route_mem/scripts/rm_build.py
@@ -71,8 +72,7 @@ rest)
   af=$(sub snu-afix --after $mA --vram 0.1 --cpu 4 --ram 120 --timeout-h 2 -- $TR $PY afix) || exit 1
   zf=$(sub snu-zfix --after $mZ --vram 0.1 --cpu 4 --ram 120 --timeout-h 2 -- $TR $PY zfix) || exit 1
   rw=$(sub snu-rowstats --after $mA --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $V $PY rowstats) || exit 1
-  lb=$(sub snu-lat --after $af --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-       POLARS_MAX_THREADS=1 RAYON_NUM_THREADS=1 $AP $LT build --pool $PA --rows $N:d3s,L18RTB1:rtb1 --out $LATA --workers 64 --dilate 6 --points ra --prefix) || exit 1
+  lb=$(sub snu-lat --after $af --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- bash $ME lat) || exit 1
   lc=$(sub snu-latchk --after $lb --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- $V $PY latchk) || exit 1
   lg=$(sub snu-latgate --after $lb --vram 0.1 --cpu 16 --ram 200 --timeout-h 2 -- $TR $PY latgate) || exit 1
   wt=$(sub snu-weights --after $af,$zf --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- $V $PY weights) || exit 1
@@ -94,6 +94,36 @@ rest)
   echo "$(date '+%F %T') rest (code $h): rolls ${ro[*]} rollstats $rs geo $g tok $k strip $st pool $po pgate $pg merge $mA / $mZ afix $af zfix $zf" \
        "rowstats $rw lat $lb latchk $lc latgate $lg weights $wt wcheck $wc diff $df_ g0b $gb t3 $pa $pb $tc smoke $sm train $tr ratio $ra post $pt" \
        "281 ${y[*]} v160 $v report $rp" | tee -a $O/stages.txt ;;
+lat)  # the lateral raster SNUv2 (df_lat build as L18NR1v2); PYTHONHASHSEED=1 (plan note 2: the build's own-lane pick follows the string-hash order on
+      # a few rows; seed 1 reproduces L18NR1v2's rtb1 rows bit for bit)
+  [[ ! -e $LATA ]] || die "$LATA exists"
+  env PYTHONHASHSEED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 POLARS_MAX_THREADS=1 RAYON_NUM_THREADS=1 \
+    $AP $LT build --pool $PA --rows $N:d3s,L18RTB1:rtb1 --out $LATA --workers 64 --dilate 6 --points ra --prefix ;;
+relat)  # plan note 2: attempt 1's raster (built without a fixed hash seed; latchk failed) and its never-run read dirs go to $O/attempt1, then the
+        # raster rebuilt (lat, PYTHONHASHSEED=1) -> latchk / latgate unchanged -> the registered tail (G0b, smoke, train, ratio, post, 281, val160, report)
+  [[ ! -e $O/attempt1 ]] || die "$O/attempt1 exists"
+  for id in $(awk '$2 ~ /^(snu-g0b|snu-smoke|snu-train-|snu-post|pai-nt5snu|pai_fix-tax-NT5SNU)/ {print $1}' $O/jobs.txt $O/v160/jobs.txt); do
+    st=$($V -c "from jevdrive.cl import pool as P; print(P.snapshot()[0]['jobs'].get('$id', {}).get('state'))"); [[ $st == failed ]] || die "job $id is $st"; done
+  mkdir -p $O/attempt1/v160 $O/attempt1/results
+  mv $LATA $O/attempt1/SNUv2; mv $O/pai281/$ARM-ag $O/pai281/$ARM-ag.submit.txt $O/attempt1/; mv $O/v160/reads $O/attempt1/v160/
+  cp $O/results/latchk.json $O/attempt1/results/latchk_attempt1.json; rm -f $O/results/latchk.json $O/results/latgate.json
+  h=$(git rev-parse --short HEAD); echo "$h relat" >> $O/code.txt
+  wc -l < $O/jobs.txt > $O/relat.start; wc -l < $O/v160/jobs.txt > $O/v160/relat.start      # wait: only the jobs submitted from here on
+  lb=$(sub snu-lat2 --vram 0.1 --cpu 64 --ram 160 --timeout-h 2 -- bash $ME lat) || exit 1
+  lc=$(sub snu-latchk2 --after $lb --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- $V $PY latchk) || exit 1
+  lg=$(sub snu-latgate2 --after $lb --vram 0.1 --cpu 16 --ram 200 --timeout-h 2 -- $TR $PY latgate) || exit 1
+  gb=$(sub snu-g0b --after $lc "${FE[@]}" --timeout-h 1 -- bash $ME ident) || exit 1
+  sm=$(sub snu-smoke --after $lc "${FE[@]}" --timeout-h 1 -- bash $ME smoke) || exit 1
+  GA=$(csv $lc $lg $gb $sm)
+  tr=$(sub snu-train-$ARM --after $GA "${FE[@]}" --timeout-h 5 -- bash $ME train) || exit 1
+  ra=$(sub snu-ratio --after $GA --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $ARM --on-start $TON --train-id $tr \
+       --out $O/results/ratio_arm.json) || exit 1
+  pt=$(sub snu-post --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post) || exit 1
+  y=($(read281 $ARM $pt)); [[ ${#y[@]} == 9 ]] || die "read281 $ARM"
+  v=$(V160_O=$O/v160 V160_TAGS=$ARM V160_AFTER=$pt PRIO=$PRIO bash $VS reads | tail -1) && [[ -n $v ]] || die "v160 $ARM"
+  rp=$(sub snu-report --after ${y[-1]},$v --vram 0.1 --cpu 16 --ram 48 --timeout-h 3 -- bash $ME report) || exit 1
+  echo "$(date '+%F %T') relat (code $h): lat $lb latchk $lc latgate $lg g0b $gb smoke $sm train $tr ratio $ra post $pt 281 ${y[*]} v160 $v report $rp" \
+    | tee -a $O/stages.txt ;;
 repro)  # R0: today's on_rows geo + rm_build pool on RB0-F-s0's own stored roll (scratch name L18RB0X) vs the stored L18RB0 files
   $NAV $ONR geo --name $X --roll $W/roll/RB0-F-s0 --workers 48 || die "repro geo"
   $AP $RB pool --name $X --workers 32 || die "repro rm_build pool"
@@ -151,7 +181,9 @@ import os, sys
 from jevdrive.cl import pool as P
 last = {}
 for f in sys.argv[1:]:
-    for l in (open(f) if os.path.exists(f) else []):
+    s0 = os.path.join(os.path.dirname(f), "relat.start")          # plan note 2: attempt 1's failed tail is history
+    k0 = int(open(s0).read()) if os.path.exists(s0) else 0
+    for l in (open(f).readlines()[k0:] if os.path.exists(f) else []):
         if len(l.split()) > 1:
             last[f + ":" + l.split()[1]] = l.split()[0]
 jobs = P.snapshot()[0]["jobs"]
