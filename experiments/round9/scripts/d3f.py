@@ -246,11 +246,15 @@ EV = [("offroad", "出路"), ("collision_at_fault", "碰撞"), ("left_corridor_l
 
 
 def t_event(x, st):
+    """PAI: the facts' own event of the failure class (pai_fix t_ev_s / rear_t_s), else the first scorer metric onset (nuPlan: always)."""
+    if st is not None:
+        for k in ("t_ev_s", "rear_t_s"):
+            v = st.get(k)
+            if v not in (None, "") and v == v:
+                return float(v), str(st.get("fclass") or "event")
     for k, w in EV:
         if k in x["on"]:
             return x["on"][k], k
-    if st is not None and st.get("t_ev_s") not in (None, "") and st["t_ev_s"] == st["t_ev_s"]:   # NaN: no event
-        return float(st["t_ev_s"]), "event"
     return None, ""
 
 
