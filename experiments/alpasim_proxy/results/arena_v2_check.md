@@ -93,3 +93,6 @@ bash experiments/alpasim_proxy/scripts/arena_v2.sh wait w1                      
 .venv/bin/python experiments/alpasim_proxy/scripts/arena_v2.py sum
 tmp/pcs_local/.venv/bin/python experiments/alpasim_proxy/scripts/pcs_local.py score --rows rows_new.csv.gz --subset   # Mac
 ```
+
+## Addendum: full arena (wave 2, main session, 10-25 04:16)
+All 18 blocks (2 228 windows) read; [arena_v2/summary_full.md](arena_v2/summary_full.md). Same conclusion: arena order identical under both scorers; new scorer vs new board tau-b +0.867 (6 anchors) / +0.929 (8), r 0.853 / 0.932; only go-straight / YR disagree (arena −0.039 [−0.109, +0.039], tie). Old scorer reproduces every stored read (DD +0.0075, sampling).
