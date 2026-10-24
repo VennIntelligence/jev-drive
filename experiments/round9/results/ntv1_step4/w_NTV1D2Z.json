@@ -1,0 +1,21 @@
+{
+ "base": "runs/round9/ntv1_step2/w/NTV1D.npz",
+ "pool": "on1_JTDC2",
+ "rows": 395547,
+ "prefix_rows": 282226,
+ "s_rows": 13793,
+ "pd_drawable": 92561,
+ "pd2_rows": 113321,
+ "pd2_drawable": 93421,
+ "pd2_by_cls": {
+  "stop_nolead": 18643,
+  "turn_sharp": 21767,
+  "launch": 6328,
+  "other": 46683
+ },
+ "group_share": {
+  "S": 0.8000000000000002,
+  "pd": 0.1999999999999998
+ },
+ "out": "runs/round9/ntv1_step4/w/NTV1D2Z.npz"
+}

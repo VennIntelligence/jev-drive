@@ -1,0 +1,54 @@
+{
+ "files": [
+  "runs/round9/ntv1_step4/w/NTV1D2Z.npz",
+  "runs/round9/ntv1_step4/w/NTV1D2.npz"
+ ],
+ "ref": "runs/round9/ntv1_step2/w/NTV1D.npz",
+ "checks": {
+  "names_equal": true,
+  "prefix_names_equal_ntv1d": true,
+  "z_prefix_bitwise": true,
+  "z_tail_zero": true,
+  "z_grp_prefix": true,
+  "s_bitwise_ntv1d": true,
+  "s_rows": 13793,
+  "s_parts": [
+   "rb0"
+  ],
+  "s_modes": [
+   "self"
+  ],
+  "d_ids_equal_drawable": true,
+  "d_parts": [
+   "pd",
+   "pd2"
+  ],
+  "d_modes": [
+   "both"
+  ],
+  "d_uniform": true,
+  "d_fut_finite": true,
+  "pd_drawable": 92561,
+  "pd2_drawable": 93421,
+  "share_s": 0.8000000000000004,
+  "share_pd": 0.09953758965921432,
+  "share_pd2": 0.10046241034078564,
+  "share_pd_want": 0.09953758965921433,
+  "share_pd2_want": 0.10046241034078567,
+  "grp_tail": {
+   "pd": [
+    "pd"
+   ],
+   "pd2": [
+    "pd2"
+   ]
+  },
+  "pd2_rows": 113321,
+  "pd2_modes": {
+   "both": 113321
+  },
+  "pd2_agent_ok": 1.0,
+  "pd2_road_ok": 0.0
+ },
+ "pass_": true
+}

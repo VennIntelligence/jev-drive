@@ -1,0 +1,15 @@
+{
+ "t1_passed": {
+  "all": true,
+  "turn_inspect": false
+ },
+ "t2_in_canvas": {
+  "events": 65,
+  "teacher_inside": 62,
+  "served_inside": 55,
+  "beyond": 20,
+  "share": 0.9538461538461539,
+  "passed": true
+ },
+ "pass_": true
+}

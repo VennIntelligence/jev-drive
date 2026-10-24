@@ -1,0 +1,27 @@
+{
+ "d1_equals_stored": true,
+ "d3_diff": [
+  [
+   "--tag",
+   "NT3D1-F-s0",
+   "NT4D3-F-s0"
+  ],
+  [
+   "--on",
+   "on1_JTDC",
+   "on1_JTDC2"
+  ],
+  [
+   "--on-wfile",
+   "runs/round9/ntv1_step2/w/NTV1D.npz",
+   "runs/round9/ntv1_step4/w/NTV1D2.npz"
+  ]
+ ],
+ "want": {
+  "--tag": "NT4D3-F-s0",
+  "--on": "on1_JTDC2",
+  "--on-wfile": "runs/round9/ntv1_step4/w/NTV1D2.npz"
+ },
+ "d3_argv": "experiments/route_mem/scripts/rm_train.py train --tag NT4D3-F-s0 --steps 19500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --seed 0 --save-at 10000 --on on1_JTDC2 --on-k 40 --on-mode mixed --on-wfile runs/round9/ntv1_step4/w/NTV1D2.npz --on-hold-pct 15 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file /root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 --lat-soft-depth 0.0 --lat-buf 0.4 --on-arc 0 --on-arc-rows brake --on-split alpasim_nuplan/onpol-train --on-lon-all --on-normal --lat-host --diag --on-start 10000 --lr2-at 10000 --lr2-scale 0.1 --lr2-warmup 500 --lr2-floor 0.1",
+ "pass_": true
+}

@@ -1,0 +1,728 @@
+{
+ "student": "NT3D1-F-s0",
+ "teacher": "b3",
+ "pools": {
+  "on1_PAIDC2": {
+   "rows": 113321,
+   "drawable": 93421,
+   "scenes": 717,
+   "slow": 17830,
+   "no_label": {
+    "no_proj": 8,
+    "far": 10
+   },
+   "d0_sign": {
+    "left_gt_05": 11841,
+    "right_gt_05": 10241,
+    "left_gt_1": 4664,
+    "right_gt_1": 3586,
+    "median_signed": -0.002820763736963272
+   },
+   "T4": {
+    "line": 4.0,
+    "estimator": "positions (amendment 3)",
+    "alat_p99": 5.049988174438475,
+    "curvature_read_p99": 662.050344238281,
+    "served_pos_p99": 3.5563915218158515,
+    "served_pos_over": 0.00505902192242833,
+    "over_share": 0.021965082797229744,
+    "alat_ref_p99": 3.939234876632691,
+    "over": 2052,
+    "passed": false,
+    "fallback_rows_dropped": 2052,
+    "go_on": true
+   },
+   "classes": {
+    "stop_nolead": 18643,
+    "turn_sharp": 21767,
+    "launch": 6328,
+    "other": 46683
+   }
+  },
+  "on1_PAIDC": {
+   "rows": 112620,
+   "drawable": 92561,
+   "scenes": 719,
+   "slow": 17571,
+   "no_label": {
+    "heading": 4,
+    "no_proj": 8,
+    "far": 27
+   },
+   "d0_sign": {
+    "left_gt_05": 18059,
+    "right_gt_05": 13166,
+    "left_gt_1": 9450,
+    "right_gt_1": 7103,
+    "median_signed": 0.032897718250751495
+   },
+   "T4": {
+    "line": 4.0,
+    "estimator": "positions (amendment 3)",
+    "alat_p99": 5.300007901191715,
+    "curvature_read_p99": 705.7037457275394,
+    "served_pos_p99": 3.5308683229570024,
+    "served_pos_over": 0.005020524155352068,
+    "over_share": 0.02645822754723912,
+    "alat_ref_p99": 3.8288030147552488,
+    "over": 2449,
+    "passed": false,
+    "fallback_rows_dropped": 2449,
+    "go_on": true
+   },
+   "classes": {
+    "stop_nolead": 18703,
+    "turn_sharp": 20609,
+    "launch": 6547,
+    "other": 46702
+   }
+  }
+ },
+ "w": {
+  "NTV1D2": {
+   "base": "runs/round9/ntv1_step2/w/NTV1D.npz",
+   "pool": "on1_JTDC2",
+   "rows": 395547,
+   "prefix_rows": 282226,
+   "s_rows": 13793,
+   "pd_drawable": 92561,
+   "pd2_rows": 113321,
+   "pd2_drawable": 93421,
+   "pd2_by_cls": {
+    "stop_nolead": 18643,
+    "turn_sharp": 21767,
+    "launch": 6328,
+    "other": 46683
+   },
+   "group_share": {
+    "S": 0.8000000000000004,
+    "pd": 0.09953758965921432,
+    "pd2": 0.10046241034078564
+   },
+   "out": "runs/round9/ntv1_step4/w/NTV1D2.npz"
+  },
+  "NTV1D2Z": {
+   "base": "runs/round9/ntv1_step2/w/NTV1D.npz",
+   "pool": "on1_JTDC2",
+   "rows": 395547,
+   "prefix_rows": 282226,
+   "s_rows": 13793,
+   "pd_drawable": 92561,
+   "pd2_rows": 113321,
+   "pd2_drawable": 93421,
+   "pd2_by_cls": {
+    "stop_nolead": 18643,
+    "turn_sharp": 21767,
+    "launch": 6328,
+    "other": 46683
+   },
+   "group_share": {
+    "S": 0.8000000000000002,
+    "pd": 0.1999999999999998
+   },
+   "out": "runs/round9/ntv1_step4/w/NTV1D2Z.npz"
+  }
+ },
+ "roll": {
+  "D1 (NT3D1-F-s0)": {
+   "scenes": 717,
+   "mean": 0.7065544895258167,
+   "zeros": 177,
+   "zero_fclass": {
+    "zero-other": 6,
+    "overshoot": 63,
+    "side": 10,
+    "offroad": 65,
+    "AF-front": 25,
+    "route-turn": 8
+   },
+   "full": 431
+  },
+  "P1L (step 2a roll)": {
+   "scenes": 719,
+   "mean": 0.6740696016950263,
+   "zeros": 198,
+   "zero_fclass": {
+    "zero-other": 19,
+    "overshoot": 65,
+    "side": 12,
+    "route-turn": 29,
+    "AF-front": 17,
+    "offroad": 56
+   },
+   "full": 396
+  },
+  "paired D1 - P1L": {
+   "n": 717,
+   "units": 717,
+   "mean": 0.033394038174737274,
+   "lo": 0.0056530810250327405,
+   "hi": 0.061774025981876216,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.7065544895258167,
+   "mean_b": 0.6731604513510793,
+   "scenes": 717
+  }
+ },
+ "gates": {
+  "chk1": true,
+  "t12": true,
+  "T4": {
+   "p99": 5.049988174438475,
+   "passed": false,
+   "fallback_rows": 2052,
+   "go_on": true
+  },
+  "r1in": true,
+  "mfix": true,
+  "wcheck": true,
+  "diff": true,
+  "t3a_D1": true,
+  "t3b_w0": true,
+  "g0b_D3": true,
+  "smoke": true,
+  "smoke_lr": true
+ },
+ "gates_full": {
+  "chk1": {
+   "listed": 6,
+   "scored": 6,
+   "rows": 6,
+   "teach": 6,
+   "decisions": 1193,
+   "fast": 759,
+   "teacher_ok_of_fast": 1.0,
+   "alat_p99": 195.02089508055735,
+   "d0_abs_med": 0.09848479926586151,
+   "d0_abs_p90": 0.3360443294048311,
+   "s_per_scene": 50.18621778488159,
+   "card_h_projected": 3.3411009803083207,
+   "ok": true,
+   "why": []
+  },
+  "t12": {
+   "t1_passed": {
+    "all": true,
+    "turn_inspect": false
+   },
+   "t2_in_canvas": {
+    "events": 65,
+    "teacher_inside": 62,
+    "served_inside": 55,
+    "beyond": 20,
+    "share": 0.9538461538461539,
+    "passed": true
+   },
+   "pass_": true
+  },
+  "T4": {
+   "line": 4.0,
+   "estimator": "positions (amendment 3)",
+   "alat_p99": 5.049988174438475,
+   "curvature_read_p99": 662.050344238281,
+   "served_pos_p99": 3.5563915218158515,
+   "served_pos_over": 0.00505902192242833,
+   "over_share": 0.021965082797229744,
+   "alat_ref_p99": 3.939234876632691,
+   "over": 2052,
+   "passed": false,
+   "fallback_rows_dropped": 2052,
+   "go_on": true
+  },
+  "r1in": {
+   "pool": "on1_PAIDC2",
+   "tag": "NT3D1-F-s0",
+   "control": "RB0-F-s1",
+   "model": {
+    "share_over": 0.03851889764474369,
+    "median_m": 0.011426925659179688,
+    "p99_m": 0.07975769042968761,
+    "rows": 113321,
+    "missing": 0
+   },
+   "wrong": {
+    "share_over": 0.9993469877604327,
+    "median_m": 1.1590347290039062,
+    "p99_m": 19.88169555664064,
+    "rows": 113321,
+    "missing": 0
+   },
+   "ok": true
+  },
+  "mfix": {
+   "pool": "on1_JTDC2",
+   "ref": "on1_JTDC",
+   "ref_rows": 282226,
+   "rows": 395547,
+   "parts": {
+    "pd": 112620,
+    "pd2": 113321,
+    "rb0": 17429,
+    "rtb1": 17489,
+    "tv": 82594,
+    "y": 17306,
+    "ys": 34788
+   },
+   "agent_ok_fixed": 0,
+   "new_rows_mode": [
+    "both"
+   ],
+   "new_agent_ok": 113321,
+   "mismatch": [],
+   "parts_want": {
+    "pd": 112620,
+    "rb0": 17429,
+    "rtb1": 17489,
+    "tv": 82594,
+    "y": 17306,
+    "ys": 34788,
+    "pd2": 113321
+   },
+   "parts_ok": true
+  },
+  "wcheck": {
+   "files": [
+    "runs/round9/ntv1_step4/w/NTV1D2Z.npz",
+    "runs/round9/ntv1_step4/w/NTV1D2.npz"
+   ],
+   "ref": "runs/round9/ntv1_step2/w/NTV1D.npz",
+   "checks": {
+    "names_equal": true,
+    "prefix_names_equal_ntv1d": true,
+    "z_prefix_bitwise": true,
+    "z_tail_zero": true,
+    "z_grp_prefix": true,
+    "s_bitwise_ntv1d": true,
+    "s_rows": 13793,
+    "s_parts": [
+     "rb0"
+    ],
+    "s_modes": [
+     "self"
+    ],
+    "d_ids_equal_drawable": true,
+    "d_parts": [
+     "pd",
+     "pd2"
+    ],
+    "d_modes": [
+     "both"
+    ],
+    "d_uniform": true,
+    "d_fut_finite": true,
+    "pd_drawable": 92561,
+    "pd2_drawable": 93421,
+    "share_s": 0.8000000000000004,
+    "share_pd": 0.09953758965921432,
+    "share_pd2": 0.10046241034078564,
+    "share_pd_want": 0.09953758965921433,
+    "share_pd2_want": 0.10046241034078567,
+    "grp_tail": {
+     "pd": [
+      "pd"
+     ],
+     "pd2": [
+      "pd2"
+     ]
+    },
+    "pd2_rows": 113321,
+    "pd2_modes": {
+     "both": 113321
+    },
+    "pd2_agent_ok": 1.0,
+    "pd2_road_ok": 0.0
+   },
+   "pass_": true
+  },
+  "diff": {
+   "d1_equals_stored": true,
+   "d3_diff": [
+    [
+     "--tag",
+     "NT3D1-F-s0",
+     "NT4D3-F-s0"
+    ],
+    [
+     "--on",
+     "on1_JTDC",
+     "on1_JTDC2"
+    ],
+    [
+     "--on-wfile",
+     "runs/round9/ntv1_step2/w/NTV1D.npz",
+     "runs/round9/ntv1_step4/w/NTV1D2.npz"
+    ]
+   ],
+   "want": {
+    "--tag": "NT4D3-F-s0",
+    "--on": "on1_JTDC2",
+    "--on-wfile": "runs/round9/ntv1_step4/w/NTV1D2.npz"
+   },
+   "d3_argv": "experiments/route_mem/scripts/rm_train.py train --tag NT4D3-F-s0 --steps 19500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --seed 0 --save-at 10000 --on on1_JTDC2 --on-k 40 --on-mode mixed --on-wfile runs/round9/ntv1_step4/w/NTV1D2.npz --on-hold-pct 15 --lat-onc 0.5 --lat-soft 0.1 --lat-side 0.5 --lat-file /root/autodl-tmp/ujs/runs/defect_fix/lat/L18NR1v2 --lat-depth 0.0 --lat-soft-depth 0.0 --lat-buf 0.4 --on-arc 0 --on-arc-rows brake --on-split alpasim_nuplan/onpol-train --on-lon-all --on-normal --lat-host --diag --on-start 10000 --lr2-at 10000 --lr2-scale 0.1 --lr2-warmup 500 --lr2-floor 0.1",
+   "pass_": true
+  },
+  "t3a_D1": {
+   "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT3D1-F-s0/20261024-050922",
+   "upto": 100,
+   "steps": [
+    0,
+    25,
+    50,
+    75,
+    100
+   ],
+   "scalars_compared": 131,
+   "identical": 131,
+   "max_abs_diff": 0.0,
+   "worst": [
+    [
+     "dev/ade@0",
+     0.0
+    ],
+    [
+     "dev/ade_nomem@0",
+     0.0
+    ],
+    [
+     "dev/drift_off@0",
+     0.0
+    ],
+    [
+     "dev/drift_on@0",
+     0.0
+    ],
+    [
+     "dev/ot_ade@0",
+     0.0
+    ],
+    [
+     "dev/ot_drift_off@0",
+     0.0
+    ],
+    [
+     "dev/ot_drift_on@0",
+     0.0
+    ],
+    [
+     "loss/act/nav_drivable@25",
+     0.0
+    ]
+   ],
+   "only_ref": [],
+   "only_new_tags": [],
+   "allow_new": false,
+   "bit_identical": true,
+   "tag": "NT4ID1-F-s0",
+   "ref": "NT3D1-F-s0",
+   "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4ID1-F-s0/20261024-121622",
+   "trainer_rc_before_stop": null
+  },
+  "t3b_w0": {
+   "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4T3A-F-s0/20261024-121705",
+   "upto": 60,
+   "steps": [
+    0,
+    25,
+    50,
+    60
+   ],
+   "scalars_compared": 245,
+   "identical": 245,
+   "max_abs_diff": 0.0,
+   "worst": [
+    [
+     "dev/ade@0",
+     0.0
+    ],
+    [
+     "dev/ade@60",
+     0.0
+    ],
+    [
+     "dev/ade_nomem@0",
+     0.0
+    ],
+    [
+     "dev/ade_nomem@60",
+     0.0
+    ],
+    [
+     "dev/drift_off@0",
+     0.0
+    ],
+    [
+     "dev/drift_off@60",
+     0.0
+    ],
+    [
+     "dev/drift_on@0",
+     0.0
+    ],
+    [
+     "dev/drift_on@60",
+     0.0
+    ]
+   ],
+   "only_ref": [],
+   "only_new_tags": [],
+   "allow_new": false,
+   "bit_identical": true,
+   "a": "NT4T3A-F-s0",
+   "b": "NT4T3B-F-s0",
+   "run_a": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4T3A-F-s0/20261024-121705",
+   "run_b": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4T3B-F-s0/20261024-131113",
+   "pool_rows_b": {
+    "25": 0.0,
+    "50": 32.0,
+    "60": 40.0
+   },
+   "pool_drawn": true,
+   "pass_": true
+  },
+  "g0b_D3": {
+   "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT3D1-F-s0/20261024-050922",
+   "upto": 100,
+   "steps": [
+    0,
+    25,
+    50,
+    75,
+    100
+   ],
+   "scalars_compared": 131,
+   "identical": 131,
+   "max_abs_diff": 0.0,
+   "worst": [
+    [
+     "dev/ade@0",
+     0.0
+    ],
+    [
+     "dev/ade_nomem@0",
+     0.0
+    ],
+    [
+     "dev/drift_off@0",
+     0.0
+    ],
+    [
+     "dev/drift_on@0",
+     0.0
+    ],
+    [
+     "dev/ot_ade@0",
+     0.0
+    ],
+    [
+     "dev/ot_drift_off@0",
+     0.0
+    ],
+    [
+     "dev/ot_drift_on@0",
+     0.0
+    ],
+    [
+     "loss/act/nav_drivable@25",
+     0.0
+    ]
+   ],
+   "only_ref": [],
+   "only_new_tags": [],
+   "allow_new": false,
+   "bit_identical": true,
+   "tag": "NT4ID3-F-s0",
+   "ref": "NT3D1-F-s0",
+   "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4ID3-F-s0/20261024-131113",
+   "trainer_rc_before_stop": null
+  },
+  "smoke": {
+   "var": "b",
+   "tag": "NT4SM-F-s0",
+   "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4SM-F-s0/20261024-131113",
+   "checks": {
+    "done": true,
+    "finite": true,
+    "last_logged_step": 60,
+    "batch": [
+     "75",
+     "13",
+     "40",
+     "mixed"
+    ],
+    "batch_want": [
+     "75",
+     "13",
+     "40",
+     "mixed"
+    ],
+    "windows": {
+     "25": {
+      "pool": 0.0,
+      "want": 0.0,
+      "self": 0.0
+     },
+     "50": {
+      "pool": 32.0,
+      "want": 32.0,
+      "self": 25.96
+     },
+     "60": {
+      "pool": 40.0,
+      "want": 40.0,
+      "self": 32.7
+     }
+    },
+    "self_share_after_T": 0.8133333333333334,
+    "self_rows_before_T": 0.0,
+    "draw_group_share": {
+     "S": 0.7999999999999461,
+     "pd": 0.09953758965903109,
+     "pd2": 0.10046241034059983
+    },
+    "draw_group_share_want": {
+     "S": 0.8000000000000004,
+     "pd": 0.09953758965921432,
+     "pd2": 0.10046241034078564
+    },
+    "draw_shares_ok": true,
+    "s_terms_after": {
+     "tags": [
+      "loss/agent_ho",
+      "loss/on/lat_onc_ho",
+      "loss/on/lat_side_ho",
+      "loss/on/lat_soft_ho",
+      "loss/road_ho"
+     ],
+     "finite": true,
+     "nonzero": true
+    },
+    "s_terms_before_nonzero": [],
+    "cmd_rule": null
+   },
+   "pass_": true
+  },
+  "smoke_lr": {
+   "tag": "NT4SM-F-s0",
+   "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT4SM-F-s0/20261024-131113",
+   "on_start": 30,
+   "steps": 60,
+   "horizon_after_T": 30,
+   "ntv0_steps": 9500,
+   "flags_vs_ntv0": {
+    "scale": [
+     0.1,
+     0.1
+    ],
+    "warmup": [
+     500,
+     500
+    ],
+    "floor": [
+     0.1,
+     0.1
+    ]
+   },
+   "groups_pre": [
+    [
+     3e-05,
+     300
+    ],
+    [
+     0.0003,
+     300
+    ],
+    [
+     0.0003,
+     100
+    ]
+   ],
+   "groups_post_ntv0": [
+    [
+     3e-06,
+     500
+    ],
+    [
+     2.9999999999999997e-05,
+     500
+    ],
+    [
+     0.0003,
+     100
+    ]
+   ],
+   "logged_points": 3,
+   "max_rel_err": 0.0,
+   "points": {
+    "25": {
+     "got": [
+      1.6362712429686842e-06,
+      1.6362712429686842e-05,
+      4.908813728906053e-05
+     ],
+     "want": [
+      1.6362712429686842e-06,
+      1.6362712429686842e-05,
+      4.908813728906053e-05
+     ],
+     "rel": 0.0
+    },
+    "50": {
+     "got": [
+      4.4036221273906803e-08,
+      4.4036221273906794e-07,
+      2.2018110636953397e-05
+     ],
+     "want": [
+      4.4036221273906803e-08,
+      4.4036221273906794e-07,
+      2.2018110636953397e-05
+     ],
+     "rel": 0.0
+    },
+    "60": {
+     "got": [
+      1.8443726475169855e-08,
+      1.8443726475169855e-07,
+      9.221863237584928e-06
+     ],
+     "want": [
+      1.8443726475169855e-08,
+      1.8443726475169855e-07,
+      9.221863237584928e-06
+     ],
+     "rel": 0.0
+    }
+   },
+   "pass_": true
+  }
+ },
+ "disk_gib": {
+  "roll": 0.9084647307172418,
+  "rows": 37.84786532074213,
+  "teach": 0.04292882326990366,
+  "cache": 26.15555191040039,
+  "pool": 3.490269949659705,
+  "pool_warp": 28.333697445690632,
+  "merged": 21.545189402997494,
+  "merged_warp": 2.329660595394671,
+  "feat": 0.06722886580973864,
+  "feat_merged": 0.25086894165724516,
+  "fwd": 0.0219531012699008,
+  "tax": 0.21558263525366783,
+  "w": 0.24165986478328705,
+  "total": 121.45092158764601
+ },
+ "cost": {
+  "roll": 8.103493924538293,
+  "build": 0.3939363048473994,
+  "gates": 0.14498857372336918,
+  "gpu_job_h": 8.642418803109061,
+  "wall_h": 1.368093229730924,
+  "roll_stack_h": 7.809007139404614,
+  "roll_card_h": 2.6030023798015383,
+  "roll_chunks": 30
+ },
+ "t": "2026-10-24 13:12:11"
+}

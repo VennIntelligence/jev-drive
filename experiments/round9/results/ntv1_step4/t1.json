@@ -1,0 +1,82 @@
+{
+ "scenes": 719,
+ "scenes_ok": 719,
+ "failed": {},
+ "states": 18745,
+ "why": {
+  "ok": 18745
+ },
+ "table": {
+  "all": {
+   "states": 18745,
+   "labelled": 18745,
+   "e2_med": 0.299,
+   "e4_med": 0.369,
+   "e2_p90": 1.924,
+   "e4_p90": 2.4892000000000043,
+   "d0_med": 0.37,
+   "e2h_med": 0.075,
+   "e4h_med": 0.089
+  },
+  "turn": {
+   "states": 2197,
+   "labelled": 2197,
+   "e2_med": 0.475,
+   "e4_med": 0.522,
+   "e2_p90": 1.6888,
+   "e4_p90": 1.8484000000000007,
+   "d0_med": 0.508,
+   "e2h_med": 0.239,
+   "e4h_med": 0.223
+  },
+  "lane-change": {
+   "states": 1923,
+   "labelled": 1923,
+   "e2_med": 0.352,
+   "e4_med": 0.407,
+   "e2_p90": 2.6319999999999997,
+   "e4_p90": 3.195599999999999,
+   "d0_med": 0.408,
+   "e2h_med": 0.06,
+   "e4h_med": 0.057
+  },
+  "other": {
+   "states": 14625,
+   "labelled": 14625,
+   "e2_med": 0.267,
+   "e4_med": 0.341,
+   "e2_p90": 1.8948000000000012,
+   "e4_p90": 2.4782000000000006,
+   "d0_med": 0.343,
+   "e2h_med": 0.058,
+   "e4h_med": 0.074
+  },
+  "all but lane-change": {
+   "states": 16822,
+   "labelled": 16822,
+   "e2_med": 0.293,
+   "e4_med": 0.365,
+   "e2_p90": 1.8518999999999997,
+   "e4_p90": 2.3649,
+   "d0_med": 0.365,
+   "e2h_med": 0.077,
+   "e4h_med": 0.093
+  }
+ },
+ "passed": {
+  "all": true,
+  "turn_inspect": false
+ },
+ "route": {
+  "switch_scenes": 119,
+  "switches": 165,
+  "steps_med": 3.4389891805365096,
+  "gen_vs_lanes_max": 3.145679951185349e-05,
+  "ext_points_med": 56.0,
+  "h_clip_share_med": 0.3369397217928903,
+  "h_clip_share_mean": 0.38611537010227515,
+  "h_clip_left_mean": 0.28120332111915475,
+  "h_clip_right_mean": 0.10491204898312037,
+  "h_offset_med": 0.15767054269433495
+ }
+}
