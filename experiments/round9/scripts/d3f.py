@@ -249,7 +249,7 @@ def t_event(x, st):
     for k, w in EV:
         if k in x["on"]:
             return x["on"][k], k
-    if st is not None and st.get("t_ev_s") not in (None, ""):
+    if st is not None and st.get("t_ev_s") not in (None, "") and st["t_ev_s"] == st["t_ev_s"]:   # NaN: no event
         return float(st["t_ev_s"]), "event"
     return None, ""
 
