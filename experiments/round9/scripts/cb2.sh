@@ -315,16 +315,20 @@ s2tail)  # s2tail <after ids>: dgate -> append -> dweights -> pair / smoke -> D1
        --out $O/results/ratio_$D1N.json) || exit 1
   pt=$(sub cb2-post-$D1N --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post $D1N) || exit 1
   v=($(reads $D1N $pt)) || exit 1
+  bash $ME s2pai $pt $(csv ${v[@]}) || exit 1
+  echo "$(date '+%F %T') s2tail: dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]} pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
+s2pai)   # s2pai <post id> <v2 ids>: D1N's PAI 281 side read + tax + scorer_v2, then sum2 (part of s2tail; amendment 4: re-run after the cancelled
+         # tail's log dirs were cleared)
   R=$O/pai281/$D1N-ag; mkdir -p $O/pai281; [[ ! -e $R ]] || die "$R exists"
-  AFTER=$pt CHUNKS_FROM=$CH SERVE="$SERVE_PAI" WIZ=$WIZ_PAI CONC=4 ALPASIM_FAST=1 PRIO=$PRIO bash experiments/alpasim/scripts/pai_box.sh submit $R $D1N \
+  AFTER=$2 CHUNKS_FROM=$CH SERVE="$SERVE_PAI" WIZ=$WIZ_PAI CONC=4 ALPASIM_FAST=1 PRIO=$PRIO bash experiments/alpasim/scripts/pai_box.sh submit $R $D1N \
     > $R.submit.txt || die "pai submit"
   ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt); [[ $(wc -w <<< "$ids") == 8 ]] || die "not 8 PAI chunks"; awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt >> $O/jobs.txt
   tx=$(PRIO=$PRIO AFTER=$(paste -sd, <<< "$ids") bash experiments/pai_fix/scripts/pai_fix.sh tax $D1N-281ag $R | tail -1) && [[ -n $tx ]] || die "tax"
   echo "$tx pai_fix-tax-$D1N-281ag" >> $O/jobs.txt
   pv=$(sub cb2-pai-v2$X --after $tx --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash -c "rm -rf $O/sv2$X; PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py \
        score --variant new --root $O/sv2$X --reads $D1N-ag --workers 16") || exit 1
-  su=$(sub cb2-sum2$X --after $(csv ${v[@]} $pv $st) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 2) || exit 1
-  echo "$(date '+%F %T') s2tail: dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]} pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
+  su=$(sub cb2-sum2$X --after $3,$pv --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 2) || exit 1
+  echo "$(date '+%F %T') s2pai: pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
 olab)    # olab <rows>: b3 teacher -> nd_teach label (T2 / T4, dagger.npz) -> cb2.py dlabel (R3, tab.fut, G0 on these rows); GATE_FAIL shards skipped
   N=$2; [[ -e $O/stage/$N/GATE_FAIL ]] && { echo "$N GATE_FAIL: skipped"; exit 0; }
   "${EA[@]}" $AP $NT teach --name $N --out $O/teach/$N.npz --workers 16 || die "teach $N"
