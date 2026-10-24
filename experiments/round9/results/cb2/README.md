@@ -152,3 +152,10 @@ not one fp16 step beyond 64 m. Chain stopped again, D1N' not trained (plan amend
 | P1N' `CB2P1NB-F-s0` (clean, B2's S-row rule) | 0.9424 | +0.001 [-0.006, +0.009] | 78 | 0.8282 | -0.027 [-0.049, -0.006] | 42 | 1350 |
 | P1N `CB2P1N-F-s0` (no static rows) | 0.7844 | -0.157 [-0.217, -0.099] | 474 | 0.8976 | +0.043 [+0.018, +0.073] | 44 | 1131 |
 | D1N' | not trained (stage-2 pool gate R1) | | | | | | |
+
+## R1 tail diagnosis (after amendment 7; diagnostic only)
+
+[r1_tail_diag.md](r1_tail_diag.md): the 0.04-0.06 m rows come from the served policy pass being `torch.compile`d while the trainer's is
+eager (both fp16). The error is relative, ~1-4 fp16 eps, on far longitudinal points of fast rows, and it is the same on every pool and
+lineage (B2's own pools included). The compiled policy pass removes it on all tail rows. Labels are not affected. A relative-tolerance
+R1 (a) line is recommended (not applied).
