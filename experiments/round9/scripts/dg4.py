@@ -337,6 +337,39 @@ def cmd_vverdict(a):
     print("\n".join(L))
 
 
+def cmd_s1verdict(a):
+    """D3-s1 on PAI 281 (new scorer primary, old reported): s1, the D3 2-seed mean, paired vs R8K-s2 / D1 2-seed mean / P1L / INTP75, s1 - s0, classes, flips."""
+    from jevdrive import stats
+    o = Path(a.dir)
+    labs = [D3S1, D3, D1, D1S1, P1L, NT, R8, IP]
+    OLD = {t: T_.facts(f"{t}-281ag") for t in labs}
+    NEW = T_.ref_new()
+    NEW[D1] = T_.new_series(O3 / "sv2/new/rollouts.csv", f"{D1}-ag")
+    NEW[D1S1] = T_.new_series(O3 / "sv2c/new/rollouts.csv", f"{D1S1}-ag")
+    NEW[D3] = T_.new_series(o / "sv2/new/rollouts.csv", f"{D3}-ag")
+    NEW[D3S1] = T_.new_series(o / "sv2s1/new/rollouts.csv", f"{D3S1}-ag")
+    nm = {D3S1: "D3-s1", D3: "D3-s0", D1: "D1-s0", D1S1: "D1-s1", P1L: "P1L", NT: "NTV0-s0", R8: "R8K-s2", IP: "INTP75-NR (ref.)"}
+    pairs = [(D3S1, D3), (D3S1, D1), (D3S1, R8), (D3S1, P1L), (D3S1, IP)]
+    res = T_.score_block(labs, OLD, NEW, pairs, nm)
+    S = res["_S"]
+    m2 = {sc: (S[sc][D3] + S[sc][D3S1]) / 2 for sc in ("new", "old")}
+    d1m = {sc: (S[sc][D1] + S[sc][D1S1]) / 2 for sc in ("new", "old")}
+    res["d3_2seed_mean"] = {sc: float(m2[sc].mean()) for sc in m2}
+    ref = {"R8K-s2": {sc: S[sc][R8] for sc in m2}, "D1 2-seed mean": d1m, "P1L": {sc: S[sc][P1L] for sc in m2}, "INTP75-NR": {sc: S[sc][IP] for sc in m2}}
+    res["d3_2seed_vs"] = {k: {sc: stats.paired(m2[sc], y[sc]) for sc in m2} for k, y in ref.items()}
+    res["cost"] = cost(o)
+    L = ["# NTV1 step 4: D3 seed 1 on PAI 281 (ACC + GAP, Harmonizer OFF, D3-s0's serve and chunk lists)", ""]
+    L += T_.md_block(res, nm, "Reads")
+    L += ["", f"D3 2-seed mean (s0 + s1) / 2: new {m2['new'].mean():.3f}, old {m2['old'].mean():.3f}; D1 2-seed mean: new {d1m['new'].mean():.3f}, old {d1m['old'].mean():.3f}.",
+          "", "| D3 2-seed mean minus | new scorer | old scorer |", "|:--|--:|--:|"]
+    L += [f"| {k} | {C.f3(v['new'])} | {C.f3(v['old'])} |" for k, v in res["d3_2seed_vs"].items()]
+    L += ["", "Zeros: " + ", ".join(f"{nm[t]} {res['reads'][t]['new_zeros']} new / {res['reads'][t]['old']['zeros']} old" for t in (D3S1, D3)), "",
+          f"GPU job-hours (lane total): {res['cost']['gpu_job_h']:.1f}."]
+    Path(f"{a.out}.md").write_text("\n".join(L) + "\n")
+    C.dump(f"{a.out}.json", T_.strip(res))
+    print("\n".join(L))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     s = ap.add_subparsers(dest="sub", required=True)
@@ -350,12 +383,12 @@ def main():
         s.add_parser(k)
     p = s.add_parser("bs")
     p.add_argument("--out", required=True), p.add_argument("--tags", required=True), p.add_argument("--workers", type=int, default=16)
-    for k in ("verdict", "vverdict"):
+    for k in ("verdict", "vverdict", "s1verdict"):
         p = s.add_parser(k)
         p.add_argument("--dir", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
     dict(argv=cmd_argv, diff=cmd_diff, mfix=cmd_mfix, weights=cmd_weights, wcheck=cmd_wcheck, t12=cmd_t12, build=cmd_build, bs=cmd_bs,
-         verdict=cmd_verdict, vverdict=cmd_vverdict)[a.sub](a)
+         verdict=cmd_verdict, vverdict=cmd_vverdict, s1verdict=cmd_s1verdict)[a.sub](a)
 
 
 if __name__ == "__main__":

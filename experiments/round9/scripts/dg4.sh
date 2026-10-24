@@ -9,6 +9,7 @@
 #     (Harmonizer off, P1L's serve) -> report (r281, scorer_v2 new, behavior_stats, verdict) -> cand (D3 new >= 0.875: seed 1 + val160 of both seeds).
 # Box, repo root; every job through the pool; ids in $O/jobs.txt (+ $O/v160/jobs.txt), stages in $O/stages.txt.
 #   dg4.sh chain     preflight + lists check + T1 / T2 + c000 (6 scenes) roll -> rows -> teach / clean -> chk1 -> rest (submits all the rest)
+#   dg4.sh s1        seed 1's PAI 281 read (D3-s0's serve and chunk lists) -> report, one chain; dg4.sh s1wait blocks on $O/S1DONE or a failed job
 #   dg4.sh wait      one run_in_background waiter: $O/DONE, $O/VERDICT or a failed / cancelled job of this lane
 #   job bodies: rest | merge | ident | t3run | t3cmp | smoke | tax | train | post | report | cand | vreport
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
@@ -171,6 +172,28 @@ vreport)
   PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/v160/sv2 --reads $D3-v160,$D3S1-v160 --workers 16 \
       > $O/v160/sv2.log 2>&1 || die "scorer_v2 new val160 (log $O/v160/sv2.log)"
   $V $PY vverdict --dir $O --out $O/results/cand_v160 > $O/vverdict.log 2>&1 || die "vverdict (log $O/vverdict.log)"; date '+%F %T' > $O/DONE ;;
+s1)  # D3 seed 1 on PAI 281 (ACC + GAP, Harmonizer off, D3-s0's serve and chunk lists): read -> tax -> s1report
+  [[ -f $RUNS/$D3S1/ckpt-final.pt ]] || die "no $D3S1"; [[ ! -e $O/S1DONE ]] || die "S1DONE exists"
+  wc -l < $O/jobs.txt > $O/s1.start
+  y=($(read281 $D3S1 "")); [[ ${#y[@]} == 9 ]] || die "read281 $D3S1"
+  r=$(sub dg4-s1report --after ${y[8]} --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME s1report) || exit 1
+  echo "$(date '+%F %T') s1 (code $(git rev-parse --short HEAD)): read281 $D3S1 ${y[*]}; s1report $r" | tee -a $O/stages.txt ;;
+s1report)
+  rm -rf $O/sv2s1
+  PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2s1 --reads $D3S1-ag --workers 16 > $O/sv2s1.log 2>&1 \
+    || die "scorer_v2 new s1 (log $O/sv2s1.log)"
+  $V $PY s1verdict --dir $O --out $O/results/s1_pai281 > $O/s1verdict.log 2>&1 || die "s1verdict (log $O/s1verdict.log)"; date '+%F %T' > $O/S1DONE ;;
+s1wait)
+  until [[ -f $O/S1DONE ]] || ! tail -n +$(( $(cat $O/s1.start) + 1 )) $O/jobs.txt | $V -c "
+import sys
+from jevdrive.cl import pool as P
+jobs = P.snapshot()[0]['jobs']
+bad = [l.split()[1] + ' ' + l.split()[0] for l in sys.stdin if len(l.split()) > 1 and jobs.get(l.split()[0], {}).get('state') in ('failed', 'cancelled')]
+if bad:
+    print('failed:', *bad, sep=chr(10) + '  ', file=sys.stderr)
+sys.exit(1 if bad else 0)"
+  do sleep 300; done
+  if [[ -f $O/S1DONE ]]; then echo "S1DONE $(cat $O/S1DONE)"; cat $O/results/s1_pai281.md; else echo "FAILED"; tail -3 $O/stages.txt; fi; true ;;
 wait)
   until [[ -f $O/VERDICT || -f $O/DONE ]] || ! $V - $O/jobs.txt $O/v160/jobs.txt <<'PY'
 import os, sys

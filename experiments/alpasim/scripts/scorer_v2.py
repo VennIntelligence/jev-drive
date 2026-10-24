@@ -121,6 +121,7 @@ READS = {
     "INTP75-NR-v160": ("round9/val160b/reads/INTP75-NR-ag", "INTP75-NR-v160ag"),
     # round9 NTV1 step 4 (DAgger iteration 2; scored with --reads only; s1 / v160 = the candidate tail)
     "NT4D3-F-s0-ag": ("round9/ntv1_step4/pai281/NT4D3-F-s0-ag", "NT4D3-F-s0-281ag"),
+    "NT4D3-F-s1-ag": ("round9/ntv1_step4/pai281/NT4D3-F-s1-ag", "NT4D3-F-s1-281ag"),
     "NT4D3-F-s0-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s0-ag", "NT4D3-F-s0-v160ag"),
     "NT4D3-F-s1-v160": ("round9/ntv1_step4/v160/reads/NT4D3-F-s1-ag", "NT4D3-F-s1-v160ag"),
     # round9 NTV1 K / H (D1 + the pacing floor; scored with --reads only)
