@@ -174,3 +174,26 @@ Disk on the box is about **121 GiB**, all kept:
 | roll / tax / feat / w | about 1.7 |
 
 The frame dumps and rollout.asl files were deleted per chunk, each only after that chunk's row-file tags checked equal to NT3D1-F-s0. No staging dir is left.
+
+## D3 seed 1 on PAI 281 (authorised read-only follow-up, 2026-10-24)
+
+NT4D3-F-s1 read on PAI 281 with exactly D3-s0's serve (ACC + GAP, Harmonizer OFF) and chunk lists (`dg4.sh s1`, `s1report`; `dg4.py s1verdict`). Full table: [s1_pai281.md](s1_pai281.md). 276 common scenes, new scorer primary.
+
+| read | new | old | zeros new / old |
+|:--|--:|--:|--:|
+| D3-s1 | 0.840 | 0.767 | 32 / 52 |
+| D3-s0 | 0.879 | 0.799 | 23 / 45 |
+| **D3 2-seed mean** | **0.859** | 0.783 | |
+
+| paired difference | new scorer | old scorer |
+|:--|--:|--:|
+| D3-s1 − D3-s0 | −0.039 [−0.071, −0.008] | −0.032 [−0.065, +0.001] |
+| D3 2-seed mean − R8K-s2 | −0.012 [−0.042, +0.018] | −0.019 [−0.051, +0.012] |
+| D3 2-seed mean − D1 2-seed mean (0.852) | +0.008 [−0.014, +0.029] | +0.004 [−0.019, +0.027] |
+| D3 2-seed mean − P1L | +0.048 [+0.014, +0.083] | +0.052 [+0.017, +0.088] |
+| D3 2-seed mean − INTP75-NR | −0.019 [−0.048, +0.010] | −0.026 [−0.056, +0.003] |
+
+- Zero classes, D3-s1 − D3-s0 (old scorer, all CIs contain 0 except route-turn [0, +3]): overshoot −2, offroad +4, route-turn +1, AF-front +1, side +2, zero-other +1, rear-hit partial +3. Lateral zeros 22 vs 15.
+- Negative flips on NTV0-s0's full-score scenes: D3-s1 A 16 / B 8 (D3-s0 12 / 5). R8K-s2's fixes kept 24 / 40 (s0 30 / 40).
+- Reading: seed variance is as large as the iteration effect (D1 seeds differ by 0.030, D3 seeds by 0.039). The 2-seed D3 is above P1L, level with D1 and R8K-s2, and does not beat them. The s0 result of 0.879 was the favourable seed.
+- Cost: this read about 3.2 GPU job-hours; lane total 20.8.
