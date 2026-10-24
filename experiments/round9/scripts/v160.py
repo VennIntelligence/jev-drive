@@ -29,7 +29,7 @@ def main(a):
     fa = {k: pd.read_csv(F_ / f"{t}-v160ag.csv").set_index("scene") for k, t in ARMS.items()}
     nr = pd.read_csv(d / "sv2/new/rollouts.csv")
     nw = {k: nr[nr.read == f"{t}-v160"].drop_duplicates("scene", keep="last").set_index("scene").score for k, t in ARMS.items()}
-    sub = {c.stem[0]: s for c in sorted(SCENES.glob("*.txt")) for s in c.read_text().split()}
+    sub = {s: c.stem[0] for c in sorted(SCENES.glob("*.txt")) for s in c.read_text().split()}
     common = set.intersection(*[set(f.index) & set(nw[k].dropna().index) for k, f in fa.items()])
     for f in fa.values():
         common -= set(f.index[f.rpc.fillna(False).astype(bool)])

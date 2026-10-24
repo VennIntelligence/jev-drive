@@ -34,7 +34,7 @@ report)
   rm -rf $O/sv2
   PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2 --reads ${TAGS[0]}-v160,${TAGS[1]}-v160,${TAGS[2]}-v160 \
       --workers 16 > $O/sv2.log 2>&1 || die "scorer_v2 new (log $O/sv2.log)"
-  $V $PY report --dir $O --out $O/results || die "report"; date '+%F %T' > $O/DONE ;;
+  PYTHONPATH=. $V $PY report --dir $O --out $O/results || die "report"; date '+%F %T' > $O/DONE ;;
 wait)
   until [[ -f $O/DONE ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
