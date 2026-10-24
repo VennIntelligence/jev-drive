@@ -138,3 +138,4 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
 - 10-25 00:09 Final NTV1 = S-PAI 2-seed (d479): 281 0.867 / val160 0.862; ties R8K-s2, INTP75, D3 (all CIs span 0); offroad down, route-turn zeros up in both seeds. Line complete; no further GPU work planned.
 - 10-25 00:19 User: CB2 (clean nuPlan B2) = evidenced parts only (own S rows + DAgger iter 1 + STAND + FREE-M H), rolled by native RB0-F, tie with B2 = adopt. Dispatched CB2 lane (Opus, plan plans/2026-10-25-cb2.md) and a board-scorer check (Opus).
 - 10-25 00:28 d480: both boards rescored with the corridor fix -> scorer_v2 primary for nuPlan; CB2 told to re-read B2-s0/s1 with KEEP_ASL as the v2 baseline.
+- 10-25 01:40 User asleep. Night plan: CB2 chain (B2 v2 re-reads -> P1N roll/train/read -> D1N roll/train/read; D1N s1 only if it ties B2). Hourly check fills gaps; morning summary in this log.
