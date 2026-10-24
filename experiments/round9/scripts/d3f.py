@@ -336,12 +336,18 @@ def cmd_collect(a):
             else:
                 v = O / "videos" / f"pai_{s['id']}_{tag}.mp4"
                 y["video"] = str(v) if v.exists() else None
-            y.update(side_facts(sim, s["id"], rid))
+            try:
+                y.update(side_facts(sim, s["id"], rid))
+            except FileNotFoundError as e:                     # a rerun rollout that died (no controller trace): no clip for this scene
+                bad.append(f"{s['id']}|{tag}: {x['src']} side has no controller trace ({Path(e.filename).name})")
+                y["video"] = None
+                sides.append(y)
+                continue
             y["ev"] = t_event(y, st)
             y["stored_facts"] = {kk: (None if str(vv) == "nan" else vv) for kk, vv in (st or {}).items() if kk in ("fclass", "t_ev_s", "rear_t_s", "speed_ratio", "stratum", "turn_deg")}
             sides.append(y)
         s = dict(s, sides=[{kk: vv for kk, vv in y.items() if kk not in ("t", "v")} for y in sides])
-        if all(y.get("video") for y in sides):
+        if all(y.get("video") and "t" in y for y in sides):
             te = next((y["ev"][0] for y in sides if y["ev"][0] is not None and y["score"] < 0.98), None)
             name = f"{k:02d}_{s['track']}_{s['cls'].replace('+', '_')}.mp4"
             s["clip"] = compose(sides, O / "clips" / name, te)
