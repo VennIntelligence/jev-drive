@@ -135,3 +135,4 @@ deletions. Target to beat: R8K-L18-s2, PAI 281 ACC + GAP Harmonizer off, 0.874 n
   add its seed 1. Reads 281 + val160 for the final.
 
 - 22:13 S-NU closed (d478, hurts). Rule -> final NTV1 = S-PAI; seed 1 (NT5SP-F-s1) dispatched to an Opus agent (plan plans/2026-10-24-ntv1-final.md). Duplicate hourly cron removed.
+- 10-25 00:09 Final NTV1 = S-PAI 2-seed (d479): 281 0.867 / val160 0.862; ties R8K-s2, INTP75, D3 (all CIs span 0); offroad down, route-turn zeros up in both seeds. Line complete; no further GPU work planned.
