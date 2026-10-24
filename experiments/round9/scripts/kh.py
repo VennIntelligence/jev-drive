@@ -181,7 +181,8 @@ def cmd_twincov(a):
     W = np.load(DD / NTV1D)["w"]
     rec = dict(store="on1_PAIHTW", store_rows=len(tw), pool=BASE, pool_rows=len(nm), matched=int(hit.sum()),
                matched_by_part={p: int((hit & (part == p)).sum()) for p in sorted(set(part))}, matched_draw_mass=float(W[hit].sum()),
-               store_prefixes=sorted({x.split(":")[0] for x in tw}), pool_prefixes=sorted({x.split(":")[0] for x in nm}),
+               store_prefixes=sorted({x.split(":")[0] for x in tw}),
+               pool_prefixes={p: sorted({x.split(":")[0] for x, q in zip(nm, part) if q == p and ":" in x})[:5] for p in sorted(set(part))},
                note="R8K's --twin swaps only drawn pool rows whose name has a twin; D1's pool has S rows (rb0 ...) and P1L's DAgger rows (paidc), "
                     "PAIHTW holds PAI human rows (paih / paih05 / paih15)")
     C.dump(RESD / "twin_cover.json", rec)
