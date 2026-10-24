@@ -1,0 +1,7 @@
+{
+ "base": "runs/round9/ntv1_step2/w/NTV1D.npz",
+ "group_share": {
+  "S": 0.7999999999999454,
+  "pd": 0.1999999999998132
+ }
+}

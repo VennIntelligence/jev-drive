@@ -1,0 +1,24 @@
+{
+ "a": "NTKSM-D1-F-s0",
+ "b": "NTKSM-K-F-s0",
+ "pre_T": {
+  "bit_identical": true,
+  "compared": 79,
+  "identical": 79,
+  "note": "reported, not a gate"
+ },
+ "post_T_loss_scalars_differing": 67,
+ "first_differing": [
+  "loss/act/nav_drivable@50",
+  "loss/act/nav_drivable@60",
+  "loss/act/pool_agent@50",
+  "loss/act/pool_lat_side@50",
+  "loss/act/pool_lat_side@60",
+  "loss/act/pool_lat_soft@50",
+  "loss/agent_ho@50",
+  "loss/agent_ho@60",
+  "loss/agent_ho_pos@50",
+  "loss/agent_pos@50"
+ ],
+ "pass_": true
+}

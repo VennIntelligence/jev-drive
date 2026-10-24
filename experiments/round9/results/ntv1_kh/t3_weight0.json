@@ -1,0 +1,62 @@
+{
+ "ref_run": "/root/autodl-tmp/ujs/runs/route_mem/train-NTKT3C-F-s0/20261024-132944",
+ "upto": 60,
+ "steps": [
+  0,
+  25,
+  50,
+  60
+ ],
+ "scalars_compared": 231,
+ "identical": 231,
+ "max_abs_diff": 0.0,
+ "worst": [
+  [
+   "dev/ade@0",
+   0.0
+  ],
+  [
+   "dev/ade@60",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@0",
+   0.0
+  ],
+  [
+   "dev/ade_nomem@60",
+   0.0
+  ],
+  [
+   "dev/drift_off@0",
+   0.0
+  ],
+  [
+   "dev/drift_off@60",
+   0.0
+  ],
+  [
+   "dev/drift_on@0",
+   0.0
+  ],
+  [
+   "dev/drift_on@60",
+   0.0
+  ]
+ ],
+ "only_ref": [],
+ "only_new_tags": [],
+ "allow_new": false,
+ "bit_identical": true,
+ "a": "NTKT3C-F-s0",
+ "b": "NTKT3D-F-s0",
+ "run_a": "/root/autodl-tmp/ujs/runs/route_mem/train-NTKT3C-F-s0/20261024-132944",
+ "run_b": "/root/autodl-tmp/ujs/runs/route_mem/train-NTKT3D-F-s0/20261024-133132",
+ "pool_rows_b": {
+  "25": 0.0,
+  "50": 32.0,
+  "60": 40.0
+ },
+ "pool_drawn": true,
+ "pass_": true
+}

@@ -1,0 +1,23 @@
+{
+ "file": "runs/round9/ntv1_kh/w/NTV1K.npz",
+ "checks": {
+  "names_equal": true,
+  "s_weights_bit_equal": true,
+  "grp_equal": true,
+  "pd_nonzero": 86501,
+  "pd_nonzero_is_drawable_minus_f2": true,
+  "pd_uniform": true,
+  "pd_modes": [
+   "both"
+  ],
+  "pd_fut_finite": true,
+  "share_s": 0.8000000000000002,
+  "share_pd": 0.1999999999999998,
+  "k_tab_other_keys_equal": true,
+  "k_fut_prefix_equal": true,
+  "k_fut_changed_rows": 17515,
+  "k_fut_changed_is_floored": true,
+  "i_tab_equal": true
+ },
+ "pass_": true
+}

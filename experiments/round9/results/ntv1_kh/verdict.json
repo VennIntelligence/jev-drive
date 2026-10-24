@@ -1,0 +1,1719 @@
+{
+ "blocks": {
+  "OFF": {
+   "scenes": 278,
+   "rpc": {
+    "NTK1-F-s0": 0,
+    "NT3D1-F-s0": 0,
+    "PCL1L-F-s0": 0,
+    "NTV0-L18-s0": 0,
+    "R8K-L18-s2": 0
+   },
+   "reads": {
+    "NTK1-F-s0": {
+     "old": {
+      "n": 278,
+      "mean": 0.7921635083951606,
+      "zeros": 49,
+      "z_overshoot": 22,
+      "z_route-turn": 2,
+      "z_offroad": 19,
+      "z_AF-front": 4,
+      "z_side": 0,
+      "z_zero-other": 2,
+      "p_rear-hit": 18,
+      "p_slow": 3,
+      "p_hit": 0,
+      "launch": "34/37"
+     },
+     "new_mean": 0.8677030767404843,
+     "new_zeros": 28,
+     "lateral": 21,
+     "route_turn": 2,
+     "af_front": 4,
+     "dev_ade": 0.5336177349090576
+    },
+    "NT3D1-F-s0": {
+     "old": {
+      "n": 278,
+      "mean": 0.7992462503026931,
+      "zeros": 46,
+      "z_overshoot": 20,
+      "z_route-turn": 3,
+      "z_offroad": 15,
+      "z_AF-front": 5,
+      "z_side": 0,
+      "z_zero-other": 3,
+      "p_rear-hit": 22,
+      "p_slow": 7,
+      "p_hit": 0,
+      "launch": "36/37"
+     },
+     "new_mean": 0.8675915740437004,
+     "new_zeros": 27,
+     "lateral": 18,
+     "route_turn": 3,
+     "af_front": 5,
+     "dev_ade": 0.5296937227249146
+    },
+    "PCL1L-F-s0": {
+     "old": {
+      "n": 278,
+      "mean": 0.7335889901814551,
+      "zeros": 61,
+      "z_overshoot": 24,
+      "z_route-turn": 10,
+      "z_offroad": 14,
+      "z_AF-front": 4,
+      "z_side": 3,
+      "z_zero-other": 6,
+      "p_rear-hit": 27,
+      "p_slow": 11,
+      "p_hit": 0,
+      "launch": "32/37"
+     },
+     "new_mean": 0.8127256808289371,
+     "new_zeros": 39,
+     "lateral": 23,
+     "route_turn": 10,
+     "af_front": 4,
+     "dev_ade": 0.5250239372253418
+    },
+    "NTV0-L18-s0": {
+     "old": {
+      "n": 278,
+      "mean": 0.7424374332291124,
+      "zeros": 59,
+      "z_overshoot": 23,
+      "z_route-turn": 15,
+      "z_offroad": 12,
+      "z_AF-front": 3,
+      "z_side": 0,
+      "z_zero-other": 6,
+      "p_rear-hit": 26,
+      "p_slow": 11,
+      "p_hit": 0,
+      "launch": "33/37"
+     },
+     "new_mean": 0.8143794964028777,
+     "new_zeros": 39,
+     "lateral": 18,
+     "route_turn": 15,
+     "af_front": 3,
+     "dev_ade": 0.5362182855606079
+    },
+    "R8K-L18-s2": {
+     "old": {
+      "n": 278,
+      "mean": 0.8041016442876343,
+      "zeros": 47,
+      "z_overshoot": 20,
+      "z_route-turn": 2,
+      "z_offroad": 14,
+      "z_AF-front": 5,
+      "z_side": 2,
+      "z_zero-other": 4,
+      "p_rear-hit": 18,
+      "p_slow": 4,
+      "p_hit": 0,
+      "launch": "35/37"
+     },
+     "new_mean": 0.8724467625899279,
+     "new_zeros": 28,
+     "lateral": 20,
+     "route_turn": 2,
+     "af_front": 5,
+     "dev_ade": 0.5577544569969177
+    }
+   },
+   "pairs": {
+    "NTK1-F-s0:NT3D1-F-s0": {
+     "new": {
+      "n": 278,
+      "units": 278,
+      "mean": 0.00011150269678394223,
+      "lo": -0.021629599129624383,
+      "hi": 0.02160966095377086,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8677030767404843,
+      "mean_b": 0.8675915740437004
+     },
+     "old": {
+      "n": 278,
+      "units": 278,
+      "mean": -0.007082741907532605,
+      "lo": -0.03137403463386118,
+      "hi": 0.01646459312388873,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7921635083951606,
+      "mean_b": 0.7992462503026931
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 20,
+       "diff": 2.0,
+       "lo": 0.0,
+       "hi": 5.0
+      },
+      "route-turn": {
+       "a": 2,
+       "b": 3,
+       "diff": -1.0,
+       "lo": -3.0,
+       "hi": 0.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 15,
+       "diff": 4.0,
+       "lo": 0.0,
+       "hi": 9.0
+      },
+      "AF-front": {
+       "a": 4,
+       "b": 5,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 2.0
+      },
+      "side": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zero-other": {
+       "a": 2,
+       "b": 3,
+       "diff": -1.0,
+       "lo": -3.0,
+       "hi": 0.0
+      },
+      "rear-hit": {
+       "a": 18,
+       "b": 22,
+       "diff": -4.0,
+       "lo": -9.0,
+       "hi": 0.0
+      },
+      "slow": {
+       "a": 3,
+       "b": 7,
+       "diff": -4.0,
+       "lo": -8.0,
+       "hi": -1.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 49,
+       "b": 46,
+       "diff": 3.0,
+       "lo": -3.0,
+       "hi": 10.0
+      },
+      "lateral": {
+       "a": 21,
+       "b": 18,
+       "diff": 3.0,
+       "lo": -2.0,
+       "hi": 8.0
+      }
+     }
+    },
+    "NTK1-F-s0:PCL1L-F-s0": {
+     "new": {
+      "n": 278,
+      "units": 278,
+      "mean": 0.054977395911547114,
+      "lo": 0.017619934508420095,
+      "hi": 0.09353814114356984,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8677030767404843,
+      "mean_b": 0.8127256808289371
+     },
+     "old": {
+      "n": 278,
+      "units": 278,
+      "mean": 0.058574518213705386,
+      "lo": 0.0194668035656239,
+      "hi": 0.09924593851784866,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7921635083951606,
+      "mean_b": 0.7335889901814551
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 24,
+       "diff": -2.0,
+       "lo": -8.0,
+       "hi": 3.0
+      },
+      "route-turn": {
+       "a": 2,
+       "b": 10,
+       "diff": -8.0,
+       "lo": -14.0,
+       "hi": -3.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 14,
+       "diff": 5.0,
+       "lo": -3.0,
+       "hi": 13.0
+      },
+      "AF-front": {
+       "a": 4,
+       "b": 4,
+       "diff": 0.0,
+       "lo": -5.0,
+       "hi": 5.0
+      },
+      "side": {
+       "a": 0,
+       "b": 3,
+       "diff": -3.0,
+       "lo": -7.0,
+       "hi": 0.0
+      },
+      "zero-other": {
+       "a": 2,
+       "b": 6,
+       "diff": -4.0,
+       "lo": -9.0,
+       "hi": 0.0
+      },
+      "rear-hit": {
+       "a": 18,
+       "b": 27,
+       "diff": -9.0,
+       "lo": -18.0,
+       "hi": 0.0
+      },
+      "slow": {
+       "a": 3,
+       "b": 11,
+       "diff": -8.0,
+       "lo": -14.0,
+       "hi": -3.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 49,
+       "b": 61,
+       "diff": -12.0,
+       "lo": -23.0,
+       "hi": -1.0
+      },
+      "lateral": {
+       "a": 21,
+       "b": 23,
+       "diff": -2.0,
+       "lo": -12.0,
+       "hi": 7.024999999999636
+      }
+     }
+    },
+    "NTK1-F-s0:NTV0-L18-s0": {
+     "new": {
+      "n": 278,
+      "units": 278,
+      "mean": 0.05332358033760665,
+      "lo": 0.011536516936273392,
+      "hi": 0.09635453599769733,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8677030767404843,
+      "mean_b": 0.8143794964028777
+     },
+     "old": {
+      "n": 278,
+      "units": 278,
+      "mean": 0.04972607516604823,
+      "lo": 0.004378571925095899,
+      "hi": 0.09526770967974203,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7921635083951606,
+      "mean_b": 0.7424374332291124
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 23,
+       "diff": -1.0,
+       "lo": -6.0,
+       "hi": 4.0
+      },
+      "route-turn": {
+       "a": 2,
+       "b": 15,
+       "diff": -13.0,
+       "lo": -20.0,
+       "hi": -6.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 12,
+       "diff": 7.0,
+       "lo": 0.0,
+       "hi": 14.0
+      },
+      "AF-front": {
+       "a": 4,
+       "b": 3,
+       "diff": 1.0,
+       "lo": -3.0,
+       "hi": 5.0
+      },
+      "side": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zero-other": {
+       "a": 2,
+       "b": 6,
+       "diff": -4.0,
+       "lo": -9.0,
+       "hi": 0.0
+      },
+      "rear-hit": {
+       "a": 18,
+       "b": 26,
+       "diff": -8.0,
+       "lo": -17.0,
+       "hi": 1.0
+      },
+      "slow": {
+       "a": 3,
+       "b": 11,
+       "diff": -8.0,
+       "lo": -14.0,
+       "hi": -3.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 49,
+       "b": 59,
+       "diff": -10.0,
+       "lo": -22.0,
+       "hi": 2.0
+      },
+      "lateral": {
+       "a": 21,
+       "b": 18,
+       "diff": 3.0,
+       "lo": -5.0,
+       "hi": 12.0
+      }
+     }
+    },
+    "NTK1-F-s0:R8K-L18-s2": {
+     "new": {
+      "n": 278,
+      "units": 278,
+      "mean": -0.004743685849443705,
+      "lo": -0.039028167804662686,
+      "hi": 0.02994156274664519,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8677030767404843,
+      "mean_b": 0.8724467625899279
+     },
+     "old": {
+      "n": 278,
+      "units": 278,
+      "mean": -0.011938135892473693,
+      "lo": -0.048923107475777404,
+      "hi": 0.024851537532169652,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7921635083951606,
+      "mean_b": 0.8041016442876343
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 20,
+       "diff": 2.0,
+       "lo": -2.0,
+       "hi": 6.0
+      },
+      "route-turn": {
+       "a": 2,
+       "b": 2,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 14,
+       "diff": 5.0,
+       "lo": -2.0,
+       "hi": 12.0
+      },
+      "AF-front": {
+       "a": 4,
+       "b": 5,
+       "diff": -1.0,
+       "lo": -6.0,
+       "hi": 4.0
+      },
+      "side": {
+       "a": 0,
+       "b": 2,
+       "diff": -2.0,
+       "lo": -5.0,
+       "hi": 0.0
+      },
+      "zero-other": {
+       "a": 2,
+       "b": 4,
+       "diff": -2.0,
+       "lo": -5.0,
+       "hi": 0.0
+      },
+      "rear-hit": {
+       "a": 18,
+       "b": 18,
+       "diff": 0.0,
+       "lo": -9.0,
+       "hi": 9.0
+      },
+      "slow": {
+       "a": 3,
+       "b": 4,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 2.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 49,
+       "b": 47,
+       "diff": 2.0,
+       "lo": -8.0,
+       "hi": 12.0
+      },
+      "lateral": {
+       "a": 21,
+       "b": 20,
+       "diff": 1.0,
+       "lo": -7.0,
+       "hi": 9.0
+      }
+     }
+    }
+   },
+   "flips": {
+    "NTK1-F-s0": {
+     "full_a": 202,
+     "neg_a": 14,
+     "neg_a_zero": 9,
+     "neg_a_pts": 11.772050440037662,
+     "full_b": 182,
+     "neg_b": 9,
+     "fixed": 41,
+     "keeps_r8k_fixes": 33,
+     "r8k_fixes": 40,
+     "neg_scenes": [
+      "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+      "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+      "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+      "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+      "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+      "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+      "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+      "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+     ]
+    },
+    "NT3D1-F-s0": {
+     "full_a": 202,
+     "neg_a": 14,
+     "neg_a_zero": 8,
+     "neg_a_pts": 10.400387758352355,
+     "full_b": 182,
+     "neg_b": 8,
+     "fixed": 34,
+     "keeps_r8k_fixes": 28,
+     "r8k_fixes": 40,
+     "neg_scenes": [
+      "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+      "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+      "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+      "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+      "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+      "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+      "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+      "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44",
+      "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+      "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+     ]
+    },
+    "PCL1L-F-s0": {
+     "full_a": 202,
+     "neg_a": 16,
+     "neg_a_zero": 13,
+     "neg_a_pts": 13.938231422437507,
+     "full_b": 182,
+     "neg_b": 12,
+     "fixed": 15,
+     "keeps_r8k_fixes": 10,
+     "r8k_fixes": 40,
+     "neg_scenes": [
+      "clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c",
+      "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+      "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+      "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+      "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+      "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+      "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798",
+      "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+      "clipgt-be0d3628-098d-4ac7-a52c-36b71c50e293",
+      "clipgt-c7956ed6-0be6-44f2-8066-da068a6352b4",
+      "clipgt-d2a7ae02-b6ed-4ffc-b245-be1b4b676c8f",
+      "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+      "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+     ]
+    },
+    "R8K-L18-s2": {
+     "full_a": 202,
+     "neg_a": 14,
+     "neg_a_zero": 9,
+     "neg_a_pts": 10.5302,
+     "full_b": 182,
+     "neg_b": 9,
+     "fixed": 40,
+     "keeps_r8k_fixes": 40,
+     "r8k_fixes": 40,
+     "neg_scenes": [
+      "clipgt-0feb3afa-28c0-4a48-b74c-636676892966",
+      "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+      "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+      "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+      "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+      "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+      "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9",
+      "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90",
+      "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+      "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+      "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+      "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+     ]
+    }
+   }
+  },
+  "ON": {
+   "scenes": 279,
+   "rpc": {
+    "NTK1-F-s0": 0,
+    "NT3D1-F-s0": 0,
+    "PCL1L-F-s0": 0,
+    "NTV0-L18-s0": 0,
+    "R8K-L18-s2": 0
+   },
+   "reads": {
+    "NTK1-F-s0": {
+     "old": {
+      "n": 279,
+      "mean": 0.7708539160808912,
+      "zeros": 55,
+      "z_overshoot": 22,
+      "z_route-turn": 3,
+      "z_offroad": 19,
+      "z_AF-front": 6,
+      "z_side": 2,
+      "z_zero-other": 3,
+      "p_rear-hit": 22,
+      "p_slow": 4,
+      "p_hit": 0,
+      "launch": "33/37"
+     },
+     "new_mean": 0.8461227332851923,
+     "new_zeros": 34,
+     "lateral": 24,
+     "route_turn": 3,
+     "af_front": 6,
+     "dev_ade": 0.5336177349090576
+    },
+    "NT3D1-F-s0": {
+     "old": {
+      "n": 279,
+      "mean": 0.7723390928809486,
+      "zeros": 52,
+      "z_overshoot": 23,
+      "z_route-turn": 3,
+      "z_offroad": 18,
+      "z_AF-front": 3,
+      "z_side": 3,
+      "z_zero-other": 2,
+      "p_rear-hit": 28,
+      "p_slow": 5,
+      "p_hit": 0,
+      "launch": "33/37"
+     },
+     "new_mean": 0.8511921394759306,
+     "new_zeros": 30,
+     "lateral": 23,
+     "route_turn": 3,
+     "af_front": 3,
+     "dev_ade": 0.5296937227249146
+    },
+    "PCL1L-F-s0": {
+     "old": {
+      "n": 279,
+      "mean": 0.7327547517354492,
+      "zeros": 61,
+      "z_overshoot": 22,
+      "z_route-turn": 6,
+      "z_offroad": 18,
+      "z_AF-front": 7,
+      "z_side": 1,
+      "z_zero-other": 7,
+      "p_rear-hit": 27,
+      "p_slow": 10,
+      "p_hit": 0,
+      "launch": "31/37"
+     },
+     "new_mean": 0.8044393395490693,
+     "new_zeros": 41,
+     "lateral": 26,
+     "route_turn": 6,
+     "af_front": 7,
+     "dev_ade": 0.5250239372253418
+    },
+    "NTV0-L18-s0": {
+     "old": {
+      "n": 279,
+      "mean": 0.7448867581271774,
+      "zeros": 58,
+      "z_overshoot": 21,
+      "z_route-turn": 9,
+      "z_offroad": 17,
+      "z_AF-front": 5,
+      "z_side": 0,
+      "z_zero-other": 6,
+      "p_rear-hit": 27,
+      "p_slow": 9,
+      "p_hit": 0,
+      "launch": "33/37"
+     },
+     "new_mean": 0.8094028673835125,
+     "new_zeros": 40,
+     "lateral": 23,
+     "route_turn": 9,
+     "af_front": 5,
+     "dev_ade": 0.5362182855606079
+    },
+    "R8K-L18-s2": {
+     "old": {
+      "n": 279,
+      "mean": 0.7944844345050314,
+      "zeros": 47,
+      "z_overshoot": 21,
+      "z_route-turn": 2,
+      "z_offroad": 15,
+      "z_AF-front": 4,
+      "z_side": 1,
+      "z_zero-other": 4,
+      "p_rear-hit": 20,
+      "p_slow": 7,
+      "p_hit": 0,
+      "launch": "32/37"
+     },
+     "new_mean": 0.8661691756272402,
+     "new_zeros": 27,
+     "lateral": 20,
+     "route_turn": 2,
+     "af_front": 4,
+     "dev_ade": 0.5577544569969177
+    }
+   },
+   "pairs": {
+    "NTK1-F-s0:NT3D1-F-s0": {
+     "new": {
+      "n": 279,
+      "units": 279,
+      "mean": -0.005069406190738223,
+      "lo": -0.028367877617217017,
+      "hi": 0.01766484146719393,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8461227332851923,
+      "mean_b": 0.8511921394759306
+     },
+     "old": {
+      "n": 279,
+      "units": 279,
+      "mean": -0.0014851768000572188,
+      "lo": -0.027886276440908252,
+      "hi": 0.02448019364662768,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7708539160808912,
+      "mean_b": 0.7723390928809486
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 23,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 2.0
+      },
+      "route-turn": {
+       "a": 3,
+       "b": 3,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 18,
+       "diff": 1.0,
+       "lo": -4.0,
+       "hi": 6.000000000000001
+      },
+      "AF-front": {
+       "a": 6,
+       "b": 3,
+       "diff": 3.0000000000000004,
+       "lo": 0.0,
+       "hi": 7.0
+      },
+      "side": {
+       "a": 2,
+       "b": 3,
+       "diff": -1.0,
+       "lo": -4.0,
+       "hi": 2.0
+      },
+      "zero-other": {
+       "a": 3,
+       "b": 2,
+       "diff": 1.0,
+       "lo": 0.0,
+       "hi": 3.0000000000000004
+      },
+      "rear-hit": {
+       "a": 22,
+       "b": 28,
+       "diff": -6.000000000000001,
+       "lo": -12.000000000000002,
+       "hi": -1.0
+      },
+      "slow": {
+       "a": 4,
+       "b": 5,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 2.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 55,
+       "b": 52,
+       "diff": 3.0000000000000004,
+       "lo": -4.0,
+       "hi": 10.0
+      },
+      "lateral": {
+       "a": 24,
+       "b": 23,
+       "diff": 1.0,
+       "lo": -6.000000000000001,
+       "hi": 7.024999999999636
+      }
+     }
+    },
+    "NTK1-F-s0:PCL1L-F-s0": {
+     "new": {
+      "n": 279,
+      "units": 279,
+      "mean": 0.04168339373612296,
+      "lo": 0.0018879021759375583,
+      "hi": 0.08117214478999517,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8461227332851923,
+      "mean_b": 0.8044393395490693
+     },
+     "old": {
+      "n": 279,
+      "units": 279,
+      "mean": 0.03809916434544196,
+      "lo": -0.0022784654565112528,
+      "hi": 0.07826792723757983,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7708539160808912,
+      "mean_b": 0.7327547517354492
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 22,
+       "diff": 0.0,
+       "lo": -5.0,
+       "hi": 5.0
+      },
+      "route-turn": {
+       "a": 3,
+       "b": 6,
+       "diff": -3.0000000000000004,
+       "lo": -8.0,
+       "hi": 1.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 18,
+       "diff": 1.0,
+       "lo": -7.0,
+       "hi": 9.0
+      },
+      "AF-front": {
+       "a": 6,
+       "b": 7,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 3.0000000000000004
+      },
+      "side": {
+       "a": 2,
+       "b": 1,
+       "diff": 1.0,
+       "lo": -2.0,
+       "hi": 4.0
+      },
+      "zero-other": {
+       "a": 3,
+       "b": 7,
+       "diff": -4.0,
+       "lo": -9.0,
+       "hi": 0.0
+      },
+      "rear-hit": {
+       "a": 22,
+       "b": 27,
+       "diff": -5.0,
+       "lo": -13.0,
+       "hi": 3.0000000000000004
+      },
+      "slow": {
+       "a": 4,
+       "b": 10,
+       "diff": -6.000000000000001,
+       "lo": -12.000000000000002,
+       "hi": -1.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 55,
+       "b": 61,
+       "diff": -6.000000000000001,
+       "lo": -17.0,
+       "hi": 5.0
+      },
+      "lateral": {
+       "a": 24,
+       "b": 26,
+       "diff": -2.0,
+       "lo": -11.0,
+       "hi": 7.0
+      }
+     }
+    },
+    "NTK1-F-s0:NTV0-L18-s0": {
+     "new": {
+      "n": 279,
+      "units": 279,
+      "mean": 0.036719865901679756,
+      "lo": -0.003854839170972783,
+      "hi": 0.07607432095333883,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8461227332851923,
+      "mean_b": 0.8094028673835125
+     },
+     "old": {
+      "n": 279,
+      "units": 279,
+      "mean": 0.025967157953713686,
+      "lo": -0.016721758079761992,
+      "hi": 0.06753878870383671,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7708539160808912,
+      "mean_b": 0.7448867581271774
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 21,
+       "diff": 1.0,
+       "lo": -4.0,
+       "hi": 6.000000000000001
+      },
+      "route-turn": {
+       "a": 3,
+       "b": 9,
+       "diff": -6.000000000000001,
+       "lo": -12.000000000000002,
+       "hi": -1.0
+      },
+      "offroad": {
+       "a": 19,
+       "b": 17,
+       "diff": 2.0,
+       "lo": -5.0,
+       "hi": 9.0
+      },
+      "AF-front": {
+       "a": 6,
+       "b": 5,
+       "diff": 1.0,
+       "lo": -4.0,
+       "hi": 6.000000000000001
+      },
+      "side": {
+       "a": 2,
+       "b": 0,
+       "diff": 2.0,
+       "lo": 0.0,
+       "hi": 5.0
+      },
+      "zero-other": {
+       "a": 3,
+       "b": 6,
+       "diff": -3.0000000000000004,
+       "lo": -8.0,
+       "hi": 1.0
+      },
+      "rear-hit": {
+       "a": 22,
+       "b": 27,
+       "diff": -5.0,
+       "lo": -14.0,
+       "hi": 4.0
+      },
+      "slow": {
+       "a": 4,
+       "b": 9,
+       "diff": -5.0,
+       "lo": -11.0,
+       "hi": 1.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 55,
+       "b": 58,
+       "diff": -3.0000000000000004,
+       "lo": -14.0,
+       "hi": 8.0
+      },
+      "lateral": {
+       "a": 24,
+       "b": 23,
+       "diff": 1.0,
+       "lo": -8.0,
+       "hi": 10.0
+      }
+     }
+    },
+    "NTK1-F-s0:R8K-L18-s2": {
+     "new": {
+      "n": 279,
+      "units": 279,
+      "mean": -0.020046442342047843,
+      "lo": -0.05539915301181082,
+      "hi": 0.014608891054216045,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.8461227332851923,
+      "mean_b": 0.8661691756272402
+     },
+     "old": {
+      "n": 279,
+      "units": 279,
+      "mean": -0.023630518424140084,
+      "lo": -0.06107654379990965,
+      "hi": 0.01293382809734412,
+      "n_boot": 10000,
+      "seed": 0,
+      "alpha": 0.05,
+      "mean_a": 0.7708539160808912,
+      "mean_b": 0.7944844345050314
+     },
+     "classes": {
+      "overshoot": {
+       "a": 22,
+       "b": 21,
+       "diff": 1.0,
+       "lo": -2.0,
+       "hi": 5.0
+      },
+      "route-turn": {
+       "a": 3,
+       "b": 2,
+       "diff": 1.0,
+       "lo": 0.0,
+       "hi": 3.0000000000000004
+      },
+      "offroad": {
+       "a": 19,
+       "b": 15,
+       "diff": 4.0,
+       "lo": -4.0,
+       "hi": 12.000000000000002
+      },
+      "AF-front": {
+       "a": 6,
+       "b": 4,
+       "diff": 2.0,
+       "lo": -3.0000000000000004,
+       "hi": 7.0
+      },
+      "side": {
+       "a": 2,
+       "b": 1,
+       "diff": 1.0,
+       "lo": -2.0,
+       "hi": 4.0
+      },
+      "zero-other": {
+       "a": 3,
+       "b": 4,
+       "diff": -1.0,
+       "lo": -5.0,
+       "hi": 2.0
+      },
+      "rear-hit": {
+       "a": 22,
+       "b": 20,
+       "diff": 2.0,
+       "lo": -6.000000000000001,
+       "hi": 10.0
+      },
+      "slow": {
+       "a": 4,
+       "b": 7,
+       "diff": -3.0000000000000004,
+       "lo": -8.0,
+       "hi": 1.0
+      },
+      "hit": {
+       "a": 0,
+       "b": 0,
+       "diff": 0.0,
+       "lo": 0.0,
+       "hi": 0.0
+      },
+      "zeros": {
+       "a": 55,
+       "b": 47,
+       "diff": 8.0,
+       "lo": -2.0,
+       "hi": 18.0
+      },
+      "lateral": {
+       "a": 24,
+       "b": 20,
+       "diff": 4.0,
+       "lo": -5.0,
+       "hi": 13.0
+      }
+     }
+    }
+   },
+   "flips": {
+    "NTK1-F-s0": {
+     "full_a": 203,
+     "neg_a": 18,
+     "neg_a_zero": 11,
+     "neg_a_pts": 13.23598675585148,
+     "full_b": 185,
+     "neg_b": 11,
+     "fixed": 34,
+     "keeps_r8k_fixes": 24,
+     "r8k_fixes": 33,
+     "neg_scenes": [
+      "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+      "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+      "clipgt-404cc92f-193e-4948-b600-77ddc425dcf0",
+      "clipgt-5266c7c9-e038-4555-b0b1-407521a5ec51",
+      "clipgt-593ebf97-e555-4571-bb85-49ba33432b97",
+      "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+      "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+      "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+      "clipgt-9827beca-da31-4711-bc94-9a807091c0b9",
+      "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-b4a3c975-340a-4a0d-9d28-d96b4bc7dc23",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+      "clipgt-df99cdc4-fef4-43c8-9b16-008239e04c82",
+      "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd"
+     ]
+    },
+    "NT3D1-F-s0": {
+     "full_a": 203,
+     "neg_a": 18,
+     "neg_a_zero": 10,
+     "neg_a_pts": 12.519390022186109,
+     "full_b": 185,
+     "neg_b": 10,
+     "fixed": 31,
+     "keeps_r8k_fixes": 24,
+     "r8k_fixes": 33,
+     "neg_scenes": [
+      "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+      "clipgt-2c0ef536-8175-462d-8268-cbaa62ec6f99",
+      "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+      "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+      "clipgt-5266c7c9-e038-4555-b0b1-407521a5ec51",
+      "clipgt-593ebf97-e555-4571-bb85-49ba33432b97",
+      "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+      "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+      "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+      "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+      "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+      "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+      "clipgt-fda39805-f188-4751-81cb-9de1c5071b5d"
+     ]
+    },
+    "PCL1L-F-s0": {
+     "full_a": 203,
+     "neg_a": 17,
+     "neg_a_zero": 14,
+     "neg_a_pts": 14.761499997372685,
+     "full_b": 185,
+     "neg_b": 13,
+     "fixed": 15,
+     "keeps_r8k_fixes": 12,
+     "r8k_fixes": 33,
+     "neg_scenes": [
+      "clipgt-00fabf60-8aa0-48b3-b7c8-eb3d7e8df1e3",
+      "clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c",
+      "clipgt-2c0ef536-8175-462d-8268-cbaa62ec6f99",
+      "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+      "clipgt-404cc92f-193e-4948-b600-77ddc425dcf0",
+      "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798",
+      "clipgt-593ebf97-e555-4571-bb85-49ba33432b97",
+      "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839",
+      "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+      "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+      "clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd",
+      "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d",
+      "clipgt-abd45a30-146a-40c0-9f78-9ce697ac3ade",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-dd0f84df-9be3-4e13-91ad-28b83a8669a3"
+     ]
+    },
+    "R8K-L18-s2": {
+     "full_a": 203,
+     "neg_a": 11,
+     "neg_a_zero": 8,
+     "neg_a_pts": 9.5166,
+     "full_b": 185,
+     "neg_b": 8,
+     "fixed": 33,
+     "keeps_r8k_fixes": 33,
+     "r8k_fixes": 33,
+     "neg_scenes": [
+      "clipgt-5266c7c9-e038-4555-b0b1-407521a5ec51",
+      "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3",
+      "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231",
+      "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+      "clipgt-7dc59d0d-7582-48b2-a6f9-2d7288b2c556",
+      "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+      "clipgt-a2b415d5-2d72-4cc2-a77d-868248d0ba22",
+      "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+      "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+      "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+      "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8"
+     ]
+    }
+   }
+  }
+ },
+ "lines": {
+  "Harmonizer OFF, new scorer": {
+   "diff": {
+    "n": 278,
+    "units": 278,
+    "mean": 0.00011150269678394223,
+    "lo": -0.021629599129624383,
+    "hi": 0.02160966095377086,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8677030767404843,
+    "mean_b": 0.8675915740437004
+   },
+   "verdict": "neutral",
+   "registered": true
+  },
+  "Harmonizer OFF, old scorer": {
+   "diff": {
+    "n": 278,
+    "units": 278,
+    "mean": -0.007082741907532605,
+    "lo": -0.03137403463386118,
+    "hi": 0.01646459312388873,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7921635083951606,
+    "mean_b": 0.7992462503026931
+   },
+   "verdict": "neutral",
+   "registered": false
+  },
+  "Harmonizer ON, new scorer": {
+   "diff": {
+    "n": 279,
+    "units": 279,
+    "mean": -0.005069406190738223,
+    "lo": -0.028367877617217017,
+    "hi": 0.01766484146719393,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8461227332851923,
+    "mean_b": 0.8511921394759306
+   },
+   "verdict": "neutral",
+   "registered": false
+  },
+  "Harmonizer ON, old scorer": {
+   "diff": {
+    "n": 279,
+    "units": 279,
+    "mean": -0.0014851768000572188,
+    "lo": -0.027886276440908252,
+    "hi": 0.02448019364662768,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7708539160808912,
+    "mean_b": 0.7723390928809486
+   },
+   "verdict": "neutral",
+   "registered": false
+  }
+ },
+ "gap": {
+  "new": {
+   "scenes": 277,
+   "k": -0.022213764430635375,
+   "d1": -0.016995850795538264,
+   "per_read": {
+    "NTK1-F-s0": -0.022213764430635375,
+    "NT3D1-F-s0": -0.016995850795538264,
+    "PCL1L-F-s0": -0.009022251033408691,
+    "NTV0-L18-s0": -0.005682671480144406,
+    "R8K-L18-s2": -0.0067833935018050545
+   },
+   "k_minus_d1": {
+    "n": 277,
+    "units": 277,
+    "mean": -0.005217913635097111,
+    "lo": -0.03549298619354773,
+    "hi": 0.024059214620292778,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": -0.022213764430635375,
+    "mean_b": -0.016995850795538264
+   }
+  },
+  "old": {
+   "scenes": 277,
+   "k": -0.022213764430635375,
+   "d1": -0.027826175705285557,
+   "per_read": {
+    "NTK1-F-s0": -0.022213764430635375,
+    "NT3D1-F-s0": -0.027826175705285557,
+    "PCL1L-F-s0": -0.0018020344269104917,
+    "NTV0-L18-s0": 0.0015371807934631435,
+    "R8K-L18-s2": -0.010393862400933578
+   },
+   "k_minus_d1": {
+    "n": 277,
+    "units": 277,
+    "mean": 0.00561241127465018,
+    "lo": -0.028270833537065967,
+    "hi": 0.0391853494739463,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": -0.022213764430635375,
+    "mean_b": -0.027826175705285557
+   }
+  }
+ },
+ "labels": {
+  "rule": {
+   "floor": "arc_j = max(student served, min(human from the matched station, v0 t + 2.0 t^2 / 2)) iff the human's 8 arcs exist, the human keeps >= 1.0 m/s over t_h .. t_h + 6.0 s, |student clock - t_h| <= 3.0 s, that floor's 4 s arc exceeds the student's by > 0.05 m and no object leads on the floored label path (r5 LEAD rule, t0 boxes); floored labels over the T4 line (4 m/s^2) revert to b3",
+   "f2": "F2 on the final labels: v0 >= 4, 0.5 <= v_end < 0.6 v0, max |heading| < 20 deg, no lead -> weight 0"
+  },
+  "reasons": {
+   "drawable": 92561,
+   "teach_found": 92561,
+   "no_window": 12541,
+   "human_slows": 7742,
+   "lag": 9421,
+   "not_slower": 33183,
+   "candidates": 35579,
+   "lead": 16829,
+   "t4_revert": 1235,
+   "floored": 17515
+  },
+  "share_floored": 0.18922656410367217,
+  "arc4_increase_q": [
+   0.78,
+   5.64,
+   18.42
+  ],
+  "by_class": {
+   "launch": [
+    561,
+    6547
+   ],
+   "other": [
+    10213,
+    46702
+   ],
+   "stop_nolead": [
+    1941,
+    18703
+   ],
+   "turn_sharp": [
+    4800,
+    20609
+   ]
+  },
+  "by_speed": {
+   "2-5": [
+    1661,
+    14347
+   ],
+   "5-10": [
+    6024,
+    33538
+   ],
+   "10-15": [
+    4618,
+    21947
+   ],
+   "15-20": [
+    2360,
+    8965
+   ],
+   "20-25": [
+    1008,
+    5320
+   ],
+   ">=25": [
+    1844,
+    8444
+   ]
+  },
+  "straight": {
+   "floored": 11372,
+   "drawable": 63599,
+   "inc_q": [
+    0.77,
+    5.64,
+    20.51
+   ]
+  },
+  "f2_pd": 6060,
+  "f2_pd_b3": 9862,
+  "G1a": {
+   "max_abs_m": 0.0,
+   "coverage": 1.0
+  },
+  "G1b": {
+   "min_arc_change": -0.0008720667474122479,
+   "max_change_over_floor": 0.004212534538964974,
+   "max_floor_over_human": 0.0,
+   "b3_start_offset_rows": 997
+  },
+  "G1c": {
+   "k0_rows": 665,
+   "median_abs_lag_s": 2.0124912847307996e-09,
+   "lag_q_all": [
+    -1.82,
+    0.0,
+    1.38
+   ]
+  },
+  "T4": {
+   "p99_b5": 3.7176264214578416,
+   "p99_b3": 3.567583837513488,
+   "over": 0
+  },
+  "gates": {
+   "G1a": true,
+   "G1b": true,
+   "G1c": true,
+   "T4": true
+  },
+  "passed": true
+ },
+ "weights": {
+  "out": "runs/round9/ntv1_kh/w/NTV1K.npz",
+  "base": "runs/round9/ntv1_step2/w/NTV1D.npz",
+  "pool": "on1_JTDCK",
+  "pd_drawable_before": 92561,
+  "pd_drawable_after": 86501,
+  "f2_removed": 6060,
+  "floored_drawable": 17515,
+  "floored_still_drawn": 17233,
+  "share_s": 0.8000000000000007,
+  "share_pd": 0.19999999999999993,
+  "group_share": {
+   "S": 0.7999999999999454,
+   "pd": 0.19999999999963364
+  }
+ },
+ "twin_cover": {
+  "store": "on1_PAIHTW",
+  "store_rows": 103904,
+  "pool": "on1_JTDC",
+  "pool_rows": 282226,
+  "matched": 0,
+  "matched_by_part": {
+   "pd": 0,
+   "rb0": 0,
+   "rtb1": 0,
+   "tv": 0,
+   "y": 0,
+   "ys": 0
+  },
+  "matched_draw_mass": 0.0,
+  "store_prefixes": [
+   "paih",
+   "paih05",
+   "paih15"
+  ],
+  "pool_prefixes": {
+   "pd": [
+    "paidc"
+   ],
+   "rb0": [
+    "2021.05.25.14.16.10_veh-35_00083_00485-0c318d7923d15b78",
+    "2021.05.25.14.16.10_veh-35_00083_00485-24567f5ad57455c4",
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+    "2021.05.25.14.16.10_veh-35_00083_00485-431ae29947e95c26",
+    "2021.05.25.14.16.10_veh-35_00083_00485-45e8b10f95925c47"
+   ],
+   "rtb1": [
+    "2021.05.25.14.16.10_veh-35_00083_00485-0c318d7923d15b78",
+    "2021.05.25.14.16.10_veh-35_00083_00485-24567f5ad57455c4",
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+    "2021.05.25.14.16.10_veh-35_00083_00485-431ae29947e95c26",
+    "2021.05.25.14.16.10_veh-35_00083_00485-45e8b10f95925c47"
+   ],
+   "tv": [],
+   "y": [
+    "2021.05.25.14.16.10_veh-35_00083_00485-0c318d7923d15b78",
+    "2021.05.25.14.16.10_veh-35_00083_00485-24567f5ad57455c4",
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+    "2021.05.25.14.16.10_veh-35_00083_00485-431ae29947e95c26",
+    "2021.05.25.14.16.10_veh-35_00083_00485-45e8b10f95925c47"
+   ],
+   "ys": [
+    "2021.05.25.14.16.10_veh-35_00083_00485-0c318d7923d15b78",
+    "2021.05.25.14.16.10_veh-35_00083_00485-24567f5ad57455c4",
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+    "2021.05.25.14.16.10_veh-35_00083_00485-431ae29947e95c26",
+    "2021.05.25.14.16.10_veh-35_00083_00485-45e8b10f95925c47"
+   ]
+  },
+  "note": "R8K's --twin swaps only drawn pool rows whose name has a twin; D1's pool has S rows (rb0 ...) and P1L's DAgger rows (paidc), PAIHTW holds PAI human rows (paih / paih05 / paih15)"
+ },
+ "ratio": {
+  "tag": "NTK1-F-s0",
+  "on_start": 10000,
+  "window": [
+   10000,
+   10500
+  ],
+  "band": [
+   0.21,
+   1.04
+  ],
+  "band_from_ntv0_measured": [
+   0.3,
+   0.8
+  ],
+  "design_band": [
+   0.22399999999999998,
+   0.5980000000000001
+  ],
+  "in_design_band": true,
+  "steps": [
+   10100,
+   10200,
+   10300,
+   10400,
+   10500
+  ],
+  "pool": [
+   5.95603084564209,
+   3.60256028175354,
+   2.8065526485443115,
+   0.9666646718978882,
+   2.8474128246307373
+  ],
+  "imit": [
+   7.294787883758545,
+   8.390154838562012,
+   18.450551986694336,
+   7.3359246253967285,
+   4.498058795928955
+  ],
+  "per_step": [
+   0.8164775920219522,
+   0.429379475238741,
+   0.15211212383067263,
+   0.1317713473433638,
+   0.633031481760051
+  ],
+  "ratio": 0.3519557308567753,
+  "pass_": true
+ },
+ "ade": {
+  "NTK1-F-s0": {
+   "at_10000": 0.5439934730529785,
+   "end": 0.5336177349090576
+  },
+  "NT3D1-F-s0": {
+   "at_10000": 0.5439934730529785,
+   "end": 0.5296937227249146
+  }
+ },
+ "gates": {
+  "d1_argv_vs_stored_D1": true,
+  "gw_draw_file": true,
+  "k_preT_vs_stored_D1": true,
+  "ksw_K_switch": true,
+  "lr_full_K": true,
+  "post_K": true,
+  "ratio_K": true,
+  "rows": true,
+  "smoke_D1": true,
+  "smoke_K": true,
+  "smoke_lr_D1": true,
+  "smoke_lr_K": true,
+  "t3_switch_off": true,
+  "t3_weight0": true,
+  "teach": null,
+  "twin_cover": null,
+  "verdict": null,
+  "w_NTV1D": null,
+  "w_NTV1K": null
+ },
+ "cost": {
+  "train_h": 1.3759907616509333,
+  "read_h": 12.656979455550513,
+  "gate_h": 0.20026183300548128,
+  "gpu_job_h": 14.233232050206926,
+  "wall_h": 3.079283281101121
+ }
+}
