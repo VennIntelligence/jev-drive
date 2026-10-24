@@ -232,9 +232,7 @@ def off_hinge(cfg, names, off, dev, bank=False):
             cx = d[..., :1] + c * C[:, None, :, 0] - s * C[:, None, :, 1]
             cy = d[..., 1:2] + s * C[:, None, :, 0] + c * C[:, None, :, 1]
             xy = torch.stack([cx, cy], -1).reshape(len(P), -1, 2)
-            from drivable_hinge import X0, Y0
-            g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)[:, :, None]
-            return torch.nn.functional.grid_sample(self.sdf[rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
+            return self._sample(xy, rows)                                                  # Hinge's sampling (a label file's own canvas)
     h = OffHinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint), **({"bank": True} if bank else {}))
     h.off = torch.as_tensor(off, dtype=torch.float32, device=dev)
     return h
