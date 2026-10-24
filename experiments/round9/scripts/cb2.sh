@@ -20,7 +20,8 @@ OL=experiments/onpol_long/scripts/ol_chain.sh; RF=experiments/route_follow/scrip
 S=$DATA_DIR/runs/practice_nuplan/select; AC=$DATA_DIR/datasets/alpasim_nuplan_arena/v1; KEY=runtime.scene_provider.trajdata
 J=$DATA_DIR/runs/defect_fix/jt; AH=$DATA_DIR/runs/alpasim_proxy/arena/hold; HR=$DATA_DIR/runs/route_mem/read; W=$DATA_DIR/runs/onpol_long
 LC=$DATA_DIR/datasets/alpasim_nuplan_long/after160; CK=$DATA_DIR/runs/op_parity/runs; CR=$DATA_DIR/runs/op_parity/cache; F_=$DATA_DIR/runs/pai_fix/facts
-RB0=RB0-F-s0; P1N=CB2P1N-F-s0; D1N=CB2D1N-F-s0; D1N1=CB2D1N-F-s1; B2S1=STANDFMXH-L18-s1; B2S0=STANDFMXH-L18-s0; T_ON=10000
+X=${CB2V:-}; export CB2V=$X   # plan amendment 2: B = P1N' (B2's S-row rule)
+RB0=RB0-F-s0; P1N=CB2P1N${X}-F-s0; D1N=CB2D1N${X}-F-s0; D1N1=CB2D1N${X}-F-s1; B2S1=STANDFMXH-L18-s1; B2S0=STANDFMXH-L18-s0; T_ON=10000
 JTPARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both"   # on1_JT's parts in order (pn.sh)
 JTA="on1_L18RB0:rb0,on1_L18RTB1:rtb1,on1_L18YS:ys,on1_L18Y:y,on1_NR1TV:tv"
 PRIO=${PRIO:-14}
@@ -31,7 +32,7 @@ SERVE_PAI="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ_PAI=controll
 CH=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks
 mkdir -p $O/pool $O/results $O/res $O/teach $O/stage $RES
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
-sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round9-cb2 --name "$name" --tries ${TRIES:-1} --priority $PRIO --no-check \
+sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round9-cb2 --name "$name" --tries ${TRIES:-1} --priority $PRIO --no-check ${X:+--env CB2V=$X} \
      --log-dir $O/pool/$name "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 csv() { local IFS=,; echo "$*"; }
 nch() { python3 -c "import json; print(len(json.load(open('$S/meta.json'))['chunks']))"; }
@@ -103,6 +104,20 @@ s1rest)
   v=($(reads $P1N $p)) || exit 1
   su=$(sub cb2-sum1 --after $(csv ${v[@]} $(cat $O/b2v2.ids)) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 1) || exit 1
   echo "$(date '+%F %T') s1rest (code $h): chains ${ch[*]} merge $m diff $d ident $i smoke $s train $t ratio $ra post $p v2 ${v[*]} sum1 $su" | tee -a $O/stages.txt ;;
+s1b)    # plan amendment 2: P1N' = P1N with CB2SB (B2's S-row rule on the same pool); wfile + STAND share -> diff, smoke -> train -> reads -> sum 1
+  [[ $X == B && ! -e $O/S1$X ]] || die "s1b needs CB2V=B, once"
+  for x in $P1N CB2SM1$X-F-s0; do [[ ! -e $CK/$x && -z $(ls -d $DATA_DIR/runs/route_mem/train-$x 2>/dev/null) ]] || die "$x exists"; done
+  h=$(git rev-parse --short HEAD); echo "$h s1b" >> $O/code.txt; date > $O/S1$X
+  w=$(sub cb2-wfile$X --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- $V $PY wfile) || exit 1
+  d=$(sub cb2-diff$X --after $w --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- $V $PY diff) || exit 1
+  s=$(sub cb2-smoke1$X --after $w "${FE[@]}" --timeout-h 1 -- bash $ME smoke 1) || exit 1
+  t=$(sub cb2-train-$P1N --after $d,$s "${FE[@]}" --timeout-h 5 -- bash $ME train P1N $P1N) || exit 1
+  ra=$(sub cb2-ratio-$P1N --after $d,$s --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $P1N --on-start $T_ON --train-id $t \
+       --out $O/results/ratio_$P1N.json) || exit 1
+  p=$(sub cb2-post-$P1N --after $t,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post $P1N) || exit 1
+  v=($(reads $P1N $p)) || exit 1
+  su=$(sub cb2-sum1$X --after $(csv ${v[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 1) || exit 1
+  echo "$(date '+%F %T') s1b (code $h): wfile $w diff $d smoke $s train $t ratio $ra post $p v2 ${v[*]} sum1 $su" | tee -a $O/stages.txt ;;
 proll)  # proll <policy> <chunk>: pn.sh roll's body (shard arena cache, sh30 no hold, frame dumps, c1_extract, prune), lane dir
   T=$2; j=$3; L=$S/lists/c$j.txt; k=$(shard_of $j); D=$O/proll/$T/c$j/run
   [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
@@ -181,12 +196,12 @@ ident1)  # G1: P1L's argv on on1_JTPR / CB2S0 (STAND / FREE off) to step 125, ev
   echo "$(date '+%F %T') ident1 (code $(git rev-parse --short HEAD)): ${A[*]}" | tee -a $O/stages.txt
   $V $SNU ident --tag $tag --ref PCL1L-F-s0 --upto 100 --stop 125 --out $O/results/g1_ident.json -- $TR "${A[@]}"; r=$?; rm -rf $CK/$tag; exit $r ;;
 smoke)   # smoke 1 (P1N on CB2S, k 32) | 2 (D1N on CB2D, k 40): 60 steps, T = 30
-  if [[ $2 == 1 ]]; then tag=CB2SM1-F-s0 arm=P1N wf=CB2S k=32; else tag=CB2SM2-F-s0 arm=D1N wf=CB2D k=40; fi
+  if [[ $2 == 1 ]]; then tag=CB2SM1$X-F-s0 arm=P1N wf=CB2S$X k=32; else tag=CB2SM2$X-F-s0 arm=D1N wf=CB2D$X k=40; fi
   mapfile -t A < <($V $PY argv $arm $tag --steps 60 --on-start 30 --save-at none); [[ ${#A[@]} -gt 5 ]] || die "argv"
   echo "$(date '+%F %T') smoke $2 (code $(git rev-parse --short HEAD)): ${A[*]}" | tee -a $O/stages.txt
   $TR "${A[@]}" > $O/smoke$2.log 2>&1 || die "smoke $2 trainer (log $O/smoke$2.log)"
-  $V $PY smoke --tag $tag --wfile runs/round9/cb2/w/$wf.npz --k $k --out $O/results/smoke$2.json; r1=$?
-  $V $PL lrcheck --tag $tag --on-start 30 --out $O/results/smoke${2}_lr.json; r2=$?
+  $V $PY smoke --tag $tag --wfile runs/round9/cb2/w/$wf.npz --k $k --out $O/results/smoke$2$X.json; r1=$?
+  $V $PL lrcheck --tag $tag --on-start 30 --out $O/results/smoke$2${X}_lr.json; r2=$?
   rm -rf $CK/$tag; exit $(( r1 || r2 )) ;;
 train)   # train <arm> <tag> [seed]
   mapfile -t A < <($V $PY argv $2 $3 ${4:+--seed $4}); [[ ${#A[@]} -gt 5 ]] || die "argv"
@@ -222,38 +237,38 @@ v2)      # v2 <arena|held460> <key>: rescore the read; old variant must reproduc
 sum)     # sum <1|2|3>: tables (old scorer = facts cache, new = cb2v2 table), extracts, the stage's registered line
   $V $PY sum --stage $2 || die "sum $2"
   if [[ $2 == 1 ]]; then
-    if [[ -f $O/results/E1_PASS ]]; then bash $ME s2 || die "s2 submit"; else echo "$(date '+%F %T') E1 fails: stop" | tee -a $O/stages.txt; date > $O/STOP; fi
+    if [[ -f $O/results/E1_PASS$X ]]; then bash $ME s2 || die "s2 submit"; else echo "$(date '+%F %T') E1 fails ($P1N): stop" | tee -a $O/stages.txt; date > $O/STOP$X; fi
   elif [[ $2 == 2 ]]; then
-    if [[ -f $O/results/ADOPT_PASS ]]; then bash $ME s3 || die "s3 submit"; else date > $O/DONE; fi
-  else date > $O/DONE; fi ;;
+    if [[ -f $O/results/ADOPT_PASS$X ]]; then bash $ME s3 || die "s3 submit"; else date > $O/DONE$X; fi
+  else date > $O/DONE$X; fi ;;
 # ------------------------------------------------------------------------------------------------------------------------------ stage 2
 s2)
-  [[ ! -e $O/S2 ]] || die "stage 2 already submitted"; [[ -s $CK/$P1N/ckpt-final.pt ]] || die "no $P1N"
-  for p in $W/roll/$P1N $CR/on1_L18CBP $DATA_DIR/runs/onpol_nuplan/rows/L18CBP $W/rows/L18CBP; do [[ ! -e $p ]] || die "$p exists"; done
+  [[ ! -e $O/S2$X ]] || die "stage 2 already submitted"; [[ -s $CK/$P1N/ckpt-final.pt ]] || die "no $P1N"
+  for p in $W/roll/$P1N $CR/on1_L18CBP$X $DATA_DIR/runs/onpol_nuplan/rows/L18CBP$X $W/rows/L18CBP$X; do [[ ! -e $p ]] || die "$p exists"; done
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 200 )) || die "free $free GB < 200 GB"
-  h=$(git rev-parse --short HEAD); echo "$h s2" >> $O/code.txt; date > $O/S2
-  o=(); for i in 0 1 2 3 4 5; do o+=($(sub cb2-oroll-c$i --vram 32 --cpu 8 --ram 60 --timeout-h 3 -- bash $OL roll1 $P1N $i)) || exit 1; done
-  k=$(sub cb2-c0chk2 --after ${o[0]} --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $V $PY c0chk --new $W/roll/$P1N/c0/run --ref $W/roll/$RB0/c0/run \
-      --list $W/lists/c0.txt --out $O/results/c0chk2.json) || exit 1
-  g=$(sub cb2-ogeo --after $(csv ${o[@]}),$k --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $OL geo $P1N L18CBP) || exit 1
-  t=$(sub cb2-otok --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash -c "bash $OL tok L18CBP smoke10eY; echo tok-and-gate rc \$?; \
-      test -f $CR/on1_L18CBP@warp/front.npy -a -f $W/rows/L18CBP/gates.json") || exit 1
-  st=$(sub cb2-ostrip --after $t --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $OL strip $P1N L18CBP) || exit 1
-  po=$(sub cb2-opool --after $t --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $AP $RB pool --name L18CBP --workers 32) || exit 1
-  an=$(sub cb2-oanchor --after $po --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- \
-       env EV_CFG=$W/roll/$P1N/c0/run/generated-user-config-0.yaml $AP $RB anchor --pool L18CBP --workers 8) || exit 1
-  pg=$(sub cb2-opgate --after $po --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $V $PY pgate --name L18CBP --out $O/results/pgate_L18CBP.json) || exit 1
-  lo=$(sub cb2-olab-L18CBP --after $an,$pg --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab L18CBP) || exit 1
+  h=$(git rev-parse --short HEAD); echo "$h s2" >> $O/code.txt; date > $O/S2$X
+  o=(); for i in 0 1 2 3 4 5; do o+=($(sub cb2-oroll$X-c$i --vram 32 --cpu 8 --ram 60 --timeout-h 3 -- bash $OL roll1 $P1N $i)) || exit 1; done
+  k=$(sub cb2-c0chk2$X --after ${o[0]} --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- $V $PY c0chk --new $W/roll/$P1N/c0/run --ref $W/roll/$RB0/c0/run \
+      --list $W/lists/c0.txt --out $O/results/c0chk2$X.json) || exit 1
+  g=$(sub cb2-ogeo$X --after $(csv ${o[@]}),$k --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $OL geo $P1N L18CBP$X) || exit 1
+  t=$(sub cb2-otok$X --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash -c "bash $OL tok L18CBP$X smoke10eY; echo tok-and-gate rc \$?; \
+      test -f $CR/on1_L18CBP$X@warp/front.npy -a -f $W/rows/L18CBP$X/gates.json") || exit 1
+  st=$(sub cb2-ostrip$X --after $t --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $OL strip $P1N L18CBP$X) || exit 1
+  po=$(sub cb2-opool$X --after $t --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $AP $RB pool --name L18CBP$X --workers 32) || exit 1
+  an=$(sub cb2-oanchor$X --after $po --vram 0.1 --cpu 8 --ram 80 --timeout-h 2 -- \
+       env EV_CFG=$W/roll/$P1N/c0/run/generated-user-config-0.yaml $AP $RB anchor --pool L18CBP$X --workers 8) || exit 1
+  pg=$(sub cb2-opgate$X --after $po --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- $V $PY pgate --name L18CBP$X --out $O/results/pgate_L18CBP$X.json) || exit 1
+  lo=$(sub cb2-olab-L18CBP$X --after $an,$pg --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab L18CBP$X) || exit 1
   for j in $(seq 0 45); do sub cb2-proll-$P1N-c$j "${RO[@]}" -- bash $ME proll $P1N $j > /dev/null || exit 1; done
-  ch=($(pchains $P1N CBP cp "")) || exit 1
-  L=(); for k_ in $(shards); do L+=($(sub cb2-olab-CBP$k_ --after $(csv ${ch[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab CBP$k_)) || exit 1; done
-  dg=$(sub cb2-dgate --after $lo,$(csv ${L[@]}) --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME dgate) || exit 1
-  ap=$(sub cb2-append --after $dg --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
-  dw=$(sub cb2-dweights --after $ap --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME dweights) || exit 1
-  pa=$(sub cb2-pair-a --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME pair a) || exit 1
-  pb=$(sub cb2-pair-b --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME pair b) || exit 1
-  pc=$(sub cb2-paircmp --after $pa,$pb --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME paircmp) || exit 1
-  sm=$(sub cb2-smoke2 --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME smoke 2) || exit 1
+  ch=($(pchains $P1N CBP$X cp "")) || exit 1
+  L=(); for k_ in $(shards); do L+=($(sub cb2-olab-CBP$X$k_ --after $(csv ${ch[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME olab CBP$X$k_)) || exit 1; done
+  dg=$(sub cb2-dgate$X --after $lo,$(csv ${L[@]}) --vram 0.1 --cpu 2 --ram 16 --timeout-h 1 -- bash $ME dgate) || exit 1
+  ap=$(sub cb2-append$X --after $dg --vram 0.1 --cpu 4 --ram 160 --timeout-h 3 -- bash $ME append) || exit 1
+  dw=$(sub cb2-dweights$X --after $ap --vram 0.1 --cpu 2 --ram 32 --timeout-h 1 -- bash $ME dweights) || exit 1
+  pa=$(sub cb2-pair-a$X --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME pair a) || exit 1
+  pb=$(sub cb2-pair-b$X --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME pair b) || exit 1
+  pc=$(sub cb2-paircmp$X --after $pa,$pb --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME paircmp) || exit 1
+  sm=$(sub cb2-smoke2$X --after $dw "${FE[@]}" --timeout-h 1 -- bash $ME smoke 2) || exit 1
   tr=$(sub cb2-train-$D1N --after $pc,$sm "${FE[@]}" --timeout-h 5 -- bash $ME train D1N $D1N) || exit 1
   ra=$(sub cb2-ratio-$D1N --after $pc,$sm --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $D1N --on-start $T_ON --train-id $tr \
        --out $O/results/ratio_$D1N.json) || exit 1
@@ -265,9 +280,9 @@ s2)
   ids=$(awk '$2 ~ /^pai-/ {print $1}' $R.submit.txt); [[ $(wc -w <<< "$ids") == 8 ]] || die "not 8 PAI chunks"; awk '$2 ~ /^pai-/ {print $1, $2}' $R.submit.txt >> $O/jobs.txt
   tx=$(PRIO=$PRIO AFTER=$(paste -sd, <<< "$ids") bash experiments/pai_fix/scripts/pai_fix.sh tax $D1N-281ag $R | tail -1) && [[ -n $tx ]] || die "tax"
   echo "$tx pai_fix-tax-$D1N-281ag" >> $O/jobs.txt
-  pv=$(sub cb2-pai-v2 --after $tx --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash -c "rm -rf $O/sv2; PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py \
-       score --variant new --root $O/sv2 --reads $D1N-ag --workers 16") || exit 1
-  su=$(sub cb2-sum2 --after $(csv ${v[@]} $pv $st) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 2) || exit 1
+  pv=$(sub cb2-pai-v2$X --after $tx --vram 0.1 --cpu 16 --ram 48 --timeout-h 2 -- bash -c "rm -rf $O/sv2$X; PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py \
+       score --variant new --root $O/sv2$X --reads $D1N-ag --workers 16") || exit 1
+  su=$(sub cb2-sum2$X --after $(csv ${v[@]} $pv $st) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 2) || exit 1
   echo "$(date '+%F %T') s2 (code $h, free $free GB): onpol rolls ${o[*]} c0chk $k geo $g tok $t strip $st pool $po anchor $an pgate $pg olab $lo;" \
        "practice chains ${ch[*]} olab ${L[*]}; dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]}" \
        "pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
@@ -277,28 +292,28 @@ olab)    # olab <rows>: b3 teacher -> nd_teach label (T2 / T4, dagger.npz) -> cb
   $TR $NT label --name $N --teach $O/teach/$N.npz --res $O/res || die "label $N"
   $V $PY dlabel --name $N --teach $O/teach/$N.npz --res $O/res || die "dlabel $N (G0)" ;;
 dgate)   # T2 / T4 pooled over the DAgger pools (nd_teach gates); every pool's G0 passed in dlabel
-  P=(on1_L18CBP); for k in $(shards); do [[ -e $O/stage/CBP$k/GATE_FAIL ]] || P+=(on1_CBP$k); done; echo "${P[*]}" > $O/dpools.txt
+  P=(on1_L18CBP$X); for k in $(shards); do [[ -e $O/stage/CBP$X$k/GATE_FAIL ]] || P+=(on1_CBP$X$k); done; echo "${P[*]}" > $O/dpools$X.txt
   $TR $NT gates --res $O/res --pools ${P[@]} || die "T2 / T4 pooled" ;;
 append)  # on1_JTPRD = on1_JTPR + the DAgger pools (mode both, prefix cd)
   free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 120 )) || die "free $free GB < 120 GB"
-  $TR $NT append --base on1_JTPR --add "$(cat $O/dpools.txt)" --out on1_JTPRD --prefix cd --res $O/res || die append ;;
-dweights) $V $PY dweights --pools $(sed 's/on1_//g' $O/dpools.txt) || die dweights ;;
+  $TR $NT append --base on1_JTPR --add "$(cat $O/dpools$X.txt)" --out on1_JTPRD$X --prefix cd --res $O/res || die append ;;
+dweights) $V $PY dweights --pools $(sed 's/on1_//g' $O/dpools$X.txt) || die dweights ;;
 pair)    # weight-0 pair: P1N's argv, 60 steps, T = 30; a on on1_JTPR / CB2S, b on on1_JTPRD / CB2D0
-  [[ $2 == a ]] && { X=CB2PA-F-s0; arm=P1N; } || { X=CB2PB-F-s0; arm=P1NZ; }
-  mapfile -t A < <($V $PY argv $arm $X --steps 60 --on-start 30 --save-at none); [[ ${#A[@]} -gt 5 ]] || die "argv"
-  echo "$(date '+%F %T') pair $2: ${A[*]}" | tee -a $O/stages.txt; $TR "${A[@]}" > $O/pair_$2.log 2>&1 || die "pair $2 (log $O/pair_$2.log)" ;;
-paircmp) $V $SNU pair --a CB2PA-F-s0 --b CB2PB-F-s0 --upto 60 --out $O/results/pair_w0.json; r=$?; rm -rf $CK/CB2PA-F-s0 $CK/CB2PB-F-s0; exit $r ;;
+  [[ $2 == a ]] && { Y=CB2PA$X-F-s0; arm=P1N; } || { Y=CB2PB$X-F-s0; arm=P1NZ; }
+  mapfile -t A < <($V $PY argv $arm $Y --steps 60 --on-start 30 --save-at none); [[ ${#A[@]} -gt 5 ]] || die "argv"
+  echo "$(date '+%F %T') pair $2: ${A[*]}" | tee -a $O/stages.txt; $TR "${A[@]}" > $O/pair_$2$X.log 2>&1 || die "pair $2 (log $O/pair_$2$X.log)" ;;
+paircmp) $V $SNU pair --a CB2PA$X-F-s0 --b CB2PB$X-F-s0 --upto 60 --out $O/results/pair_w0$X.json; r=$?; rm -rf $CK/CB2PA$X-F-s0 $CK/CB2PB$X-F-s0; exit $r ;;
 # ------------------------------------------------------------------------------------------------------------------------------ stage 3
 s3)
-  [[ ! -e $O/S3 ]] || die "stage 3 already submitted"; date > $O/S3; h=$(git rev-parse --short HEAD); echo "$h s3" >> $O/code.txt
+  [[ ! -e $O/S3$X ]] || die "stage 3 already submitted"; date > $O/S3$X; h=$(git rev-parse --short HEAD); echo "$h s3" >> $O/code.txt
   tr=$(sub cb2-train-$D1N1 "${FE[@]}" --timeout-h 5 -- bash $ME train D1N $D1N1 1) || exit 1
   ra=$(sub cb2-ratio-$D1N1 --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $D1N1 --on-start $T_ON --train-id $tr --out $O/results/ratio_$D1N1.json) || exit 1
   pt=$(sub cb2-post-$D1N1 --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post $D1N1) || exit 1
   v=($(reads $D1N1 $pt)) || exit 1
-  su=$(sub cb2-sum3 --after $(csv ${v[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 3) || exit 1
+  su=$(sub cb2-sum3$X --after $(csv ${v[@]}) --vram 0.1 --cpu 16 --ram 64 --timeout-h 3 -- bash $ME sum 3) || exit 1
   echo "$(date '+%F %T') s3 (code $h): train $tr ratio $ra post $pt v2 ${v[*]} sum3 $su" | tee -a $O/stages.txt ;;
 wait)
-  until [[ -f $O/DONE || -f $O/STOP ]] || ! $V - $O/jobs.txt <<'PY'
+  until [[ -f $O/DONE$X || -f $O/STOP$X ]] || ! $V - $O/jobs.txt <<'PY'
 import sys
 from jevdrive.cl import pool as P
 last = {}
@@ -312,6 +327,6 @@ if bad:
 sys.exit(1 if bad else 0)
 PY
   do sleep 300; done
-  for m in DONE STOP; do [[ -f $O/$m ]] && echo "$m $(cat $O/$m)"; done; tail -4 $O/stages.txt; true ;;
+  for m in DONE$X STOP$X; do [[ -f $O/$m ]] && echo "$m $(cat $O/$m)"; done; tail -4 $O/stages.txt; true ;;
 *) sed -n 2,14p "$0"; exit 2 ;;
 esac

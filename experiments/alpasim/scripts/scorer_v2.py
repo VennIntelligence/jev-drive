@@ -138,6 +138,7 @@ READS = {
     "NT5SNU-F-s0-v160": ("round9/ntv1_snu/v160/reads/NT5SNU-F-s0-ag", "NT5SNU-F-s0-v160ag"),
     # round9 CB2 (clean B2 on nuPlan; D1N's PAI 281 side read; scored with --reads only)
     "CB2D1N-F-s0-ag": ("round9/cb2/pai281/CB2D1N-F-s0-ag", "CB2D1N-F-s0-281ag"),
+    "CB2D1NB-F-s0-ag": ("round9/cb2/pai281/CB2D1NB-F-s0-ag", "CB2D1NB-F-s0-281ag"),   # amendment 2 (P1N' lineage)
     # PAI-PCS-V2 anchor re-reads (third-party drivers, zero ASLs kept): garage model_0014 and the starter-kit go-straight
     "G0014-v2": ("alpasim_proxy/pai_pcs_v2/G0014", ""),
     "GS-v2": ("alpasim_proxy/pai_pcs_v2/GS", ""),

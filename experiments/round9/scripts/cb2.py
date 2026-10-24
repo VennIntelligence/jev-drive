@@ -35,7 +35,11 @@ O = DD / "runs/round9/cb2"
 WD, WREL = O / "w", "runs/round9/cb2/w"
 P1L, B2 = "PCL1L-F-s0", "STANDFMXH-L18-s1"
 STAND = ["--on-stand", "0.0068", "--on-stand-margin", "1.0", "--on-free", "0.001", "--on-free-mode", "move", "--on-free-frac", "0.95"]
-POOL1, POOL2 = "on1_JTPR", "on1_JTPRD"
+import os  # noqa: E402
+VAR = os.environ.get("CB2V", "")                 # plan amendment 2: "" = P1N (static practice rows dropped), "B" = P1N' (B2's S-row rule)
+POOL1, POOL2 = "on1_JTPR", f"on1_JTPRD{VAR}"
+SW, DW, DW0 = f"CB2S{VAR}", f"CB2D{VAR}", f"CB2D0{VAR}"
+TP1, TD1, TD11 = f"CB2P1N{VAR}-F-s0", f"CB2D1N{VAR}-F-s0", f"CB2D1N{VAR}-F-s1"
 K_S, K_D = 32, 8
 CR, ROWS = DD / "runs/op_parity/cache", DD / "runs/onpol_nuplan/rows"
 V_ROW, K_MIN = 2.0, 2                      # nd_teach.py's drawable rule
@@ -212,17 +216,32 @@ def cmd_wfile(a):
     assert (part[rb0] == "rb0").all() and rb0.sum() == 13793 and not held[rb0].any()
     pr = (np.arange(len(names)) >= n0) & (mode == "self") & ~held
     pr_mov, pr_st = pr & (tb["speed"] >= 0.5), pr & (tb["speed"] < 0.5)
-    s = rb0 | pr_mov
+    s = rb0 | (pr if VAR == "B" else pr_mov)                                    # B: JTX00's S rule, every live self row equal
+    fr = tb["fut_reg"].astype(np.float64)
+    stand = (mode == "self") & (tb["speed"] < 0.5) & (cum_arc(np.nan_to_num(fr))[:, 7] < H_STAND)
     w = np.where(s, 1.0 / s.sum(), 0.0)
-    grp = np.where(rb0, "S", np.where(pr_mov, "S_pr", np.where(pr_st, "S_pr_static0", np.where(held & (mode == "self"), "S_held", "")))).astype("U12")
+    if VAR == "B":
+        grp = np.where(rb0, "S", np.where(pr, "S_pr", np.where(held & (mode == "self"), "S_held", ""))).astype("U12")
+    else:
+        grp = np.where(rb0, "S", np.where(pr_mov, "S_pr", np.where(pr_st, "S_pr_static0", np.where(held & (mode == "self"), "S_held", "")))).astype("U12")
     WD.mkdir(parents=True, exist_ok=True)
-    np.savez(WD / "CB2S0.npz", names=tb["names"], w=w0, grp=g0)
-    np.savez(WD / "CB2S.npz", names=tb["names"], w=w, grp=grp)
+    if not VAR:
+        np.savez(WD / "CB2S0.npz", names=tb["names"], w=w0, grp=g0)
+    assert not (WD / f"{SW}.npz").exists(), f"{SW} exists"
+    np.savez(WD / f"{SW}.npz", names=tb["names"], w=w, grp=grp)
+    # STAND-firing rows (visited < 0.5 m/s, human 4 s arc < 0.5 m) in this draw vs B2's JTX00 (plan amendment 2: report)
+    tx, wx = np.load(CR / "on1_JTX/tab.npz"), np.load(DD / "runs/defect_fix/w/JTX00.npz")
+    sx = (tx["mode"].astype(str) == "self") & (tx["speed"] < 0.5) & (cum_arc(np.nan_to_num(tx["fut_reg"].astype(np.float64)))[:, 7] < H_STAND)
+    mx = (tx["mode"].astype(str) == "self")
+    stand_rec = dict(this_share_of_S=float(w[stand].sum() / w[s].sum()), this_per_batch=float(K_S * w[stand].sum() / w[s].sum()),
+                     b2_share_of_S=float(wx["w"][sx].sum() / wx["w"][mx].sum()), b2_per_batch=float(32 * wx["w"][sx].sum() / wx["w"][mx].sum()),
+                     this_by_part={p: float(w[stand & (part == p)].sum() / w[s].sum()) for p in sorted(set(part[stand])) if w[stand & (part == p)].sum() > 0})
     rec = dict(pool=POOL1, rows=len(names), rb0=int(rb0.sum()), pr_live=int(pr.sum()), pr_moving=int(pr_mov.sum()), pr_static_dropped=int(pr_st.sum()),
                pr_held=int(((np.arange(len(names)) >= n0) & held).sum()), pr_share=float(w[pr_mov].sum()),
                pr_parts={p: int((pr_mov & (part == p)).sum()) for p in sorted(set(part[n0:]))},
-               draws_per_row_9500=float(K_S * 9500 / s.sum()), cb2s0_equals_jt00s_rb0=bool(np.array_equal(w0[:n0], ref["w"]) and not w0[n0:].any()))
-    (WD / "CB2S.json").write_text(json.dumps(rec, indent=1))
+               draws_per_row_9500=float(K_S * 9500 / s.sum()), cb2s0_equals_jt00s_rb0=bool(np.array_equal(w0[:n0], ref["w"]) and not w0[n0:].any()),
+               pr_static_kept=int((pr_st & s).sum()), stand=stand_rec, variant=VAR or "nostatic")
+    (WD / f"{SW}.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec, indent=1))
 
 
@@ -238,12 +257,12 @@ def build(arm, tag, steps=None, on_start=None, save_at=None, seed=None):
     C.put(a, "--tag", tag)
     if arm in ("P1LZ", "P1N", "P1NZ", "D1N"):
         C.put(a, "--on", POOL1)
-        C.put(a, "--on-wfile", f"{WREL}/{'CB2S0' if arm == 'P1LZ' else 'CB2S'}.npz")
+        C.put(a, "--on-wfile", f"{WREL}/{'CB2S0' if arm == 'P1LZ' else SW}.npz")
     if arm in ("P1N", "P1NZ", "D1N"):
         a += STAND
     if arm in ("P1NZ", "D1N"):
         C.put(a, "--on", POOL2)
-        C.put(a, "--on-wfile", f"{WREL}/{'CB2D0' if arm == 'P1NZ' else 'CB2D'}.npz")
+        C.put(a, "--on-wfile", f"{WREL}/{DW0 if arm == 'P1NZ' else DW}.npz")
     if arm == "D1N":
         C.put(a, "--on-k", str(K_S + K_D))
     for k, v in (("--steps", steps), ("--on-start", on_start), ("--lr2-at", on_start), ("--seed", seed)):
@@ -266,20 +285,30 @@ def tokdiff(x, y):
     return [(op, x[i1:i2], y[j1:j2]) for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, x, y, autojunk=False).get_opcodes() if op != "equal"]
 
 
+def _p1n0():
+    import pcl as C
+    a = build("P1N", "CB2P1N-F-s0")
+    C.put(a, "--on-wfile", f"{WREL}/CB2S.npz")
+    return a
+
+
 def cmd_diff(a):
     b = stored(P1L)
-    p1n, d1n = build("P1N", "CB2P1N-F-s0"), build("D1N", "CB2D1N-F-s0")
+    p1n, d1n = build("P1N", TP1), build("D1N", TD1)
     d1, d2 = tokdiff(b, p1n), tokdiff(p1n, d1n)
-    want1 = [("replace", ["PCL1L-F-s0"], ["CB2P1N-F-s0"]), ("replace", ["on1_JT"], [POOL1]),
-             ("replace", ["runs/round9/pool_pilot/w/JT00S-rb0.npz"], [f"{WREL}/CB2S.npz"]), ("insert", [], STAND)]
+    want1 = [("replace", ["PCL1L-F-s0"], [TP1]), ("replace", ["on1_JT"], [POOL1]),
+             ("replace", ["runs/round9/pool_pilot/w/JT00S-rb0.npz"], [f"{WREL}/{SW}.npz"]), ("insert", [], STAND)]
     want2 = [("replace", ["CB2P1N"], ["CB2D1N"]), ("replace", [POOL1], [POOL2]), ("replace", ["32"], ["40"]), ("replace", [f"{WREL}/CB2S.npz"], [f"{WREL}/CB2D.npz"])]
     k1 = sorted(map(str, d1)) == sorted(map(str, want1))
     tok2 = Counter(t for x in d2 for t in x[1] + x[2])
-    k2 = all(t in ("CB2P1N-F-s0", "CB2D1N-F-s0", POOL1, POOL2, "32", "40", f"{WREL}/CB2S.npz", f"{WREL}/CB2D.npz") for t in tok2)
+    k2 = all(t in (TP1, TD1, POOL1, POOL2, "32", "40", f"{WREL}/{SW}.npz", f"{WREL}/{DW}.npz") for t in tok2)
+    if VAR:                                                                    # amendment 2: P1N' differs from P1N only in tag / wfile
+        d0 = tokdiff(_p1n0(), p1n)
+        k1 = k1 and sorted(t for x in d0 for t in x[1] + x[2]) == sorted(["CB2P1N-F-s0", TP1, f"{WREL}/CB2S.npz", f"{WREL}/{SW}.npz"])
     rec = dict(p1n_vs_p1l=[list(map(str, x)) for x in d1], d1n_vs_p1n=[list(map(str, x)) for x in d2], p1n=" ".join(p1n), d1n=" ".join(d1n),
                p1n_ok=bool(k1), d1n_ok=bool(k2 and len(d2) <= 4), pass_=bool(k1 and k2 and len(d2) <= 4))
     (O / "results").mkdir(parents=True, exist_ok=True)
-    (O / "results/diff.json").write_text(json.dumps(rec, indent=1))
+    (O / f"results/diff{VAR}.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec, indent=1))
     _ = want2
     sys.exit(0 if rec["pass_"] else 2)
@@ -317,7 +346,7 @@ def cmd_dlabel(a):
 def cmd_dweights(a):
     tb = np.load(CR / POOL2 / "tab.npz")
     names, logs = tb["names"].astype(str), tb["log"].astype(str)
-    B = np.load(WD / "CB2S.npz")
+    B = np.load(WD / f"{SW}.npz")
     n0 = len(B["names"])
     assert np.array_equal(names[:n0], B["names"].astype(str)), "on1_JTPRD prefix != on1_JTPR"
     Xs = [np.load(CR / f"on1_{p}/dagger.npz") for p in a.pools]
@@ -336,15 +365,15 @@ def cmd_dweights(a):
     w0 = np.zeros(len(names))
     w0[:n0] = B["w"]
     assert abs(w.sum() - 1) < 1e-9 and abs(w0.sum() - 1) < 1e-9
-    np.savez(WD / "CB2D.npz", names=tb["names"], w=w, grp=grp)
-    np.savez(WD / "CB2D0.npz", names=tb["names"], w=w0, grp=np.concatenate([B["grp"].astype("U12"), np.full(len(names) - n0, "dag0w", "U12")]))
+    np.savez(WD / f"{DW}.npz", names=tb["names"], w=w, grp=grp)
+    np.savez(WD / f"{DW0}.npz", names=tb["names"], w=w0, grp=np.concatenate([B["grp"].astype("U12"), np.full(len(names) - n0, "dag0w", "U12")]))
     gs = Counter()
     for g_, x in zip(grp, w):
         gs[str(g_)] += x
     rec = dict(pool=POOL2, rows=len(names), dag_rows=int(len(dr)), dag_held=int((draw & np.isin(logs[n0:], sorted(hl))).sum()),
                group_share={k: float(v) for k, v in gs.items() if v > 0}, dag_draws_per_row=float(K_D * 9500 / len(dr)),
                dag_by_pool={p: int((np.concatenate([np.full(len(x["names"]), p) for p, x in zip(a.pools, Xs)])[dr] == p).sum()) for p in a.pools})
-    (WD / "CB2D.json").write_text(json.dumps(rec, indent=1))
+    (WD / f"{DW}.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec, indent=1))
 
 
@@ -394,25 +423,26 @@ def cmd_sum(a):
     import shutil
     AP, V = DD / "third_party/alpasim/.venv/bin/python", REPO / ".venv/bin/python"
     st = a.stage
-    arms = {1: ["CB2P1N-F-s0"], 2: ["CB2D1N-F-s0", "CB2P1N-F-s0"], 3: ["CB2D1N-F-s1", "CB2D1N-F-s0", "CB2P1N-F-s0"]}[st]
+    arms = {1: [TP1], 2: [TD1, TP1], 3: [TD11, TD1, TP1]}[st] + (["CB2P1N-F-s0"] if VAR else [])   # amendment 2: P1N kept as the no-static reference
+    sx = f"{st}{VAR}"
     b2 = [B2, "STANDFMXH-L18-s0"]
     R = O / "results"
-    log = R / f"sum{st}.log"
+    log = R / f"sum{sx}.log"
     rec = dict(stage=st)
     for b in ("arena", "held460"):
         new = [k_(b, t) for t in arms + b2]
         old = [k_(b, t, False) for t in b2 + REF_OLD[b]]
         run([AP, "-m", "jevdrive.facts", "fill", "--bench", b, "--keys", *new, *old], log)
-        mean = [f"{k_(b, 'CB2D1N-F-s0')}+{k_(b, 'CB2D1N-F-s1')}"] if st == 3 else []
+        mean = [f"{k_(b, TD1)}+{k_(b, TD11)}"] if st == 3 else []
         # old scorer: arms vs the B2 re-reads and the stored references; the B2 re-reads vs the stored B2 reads (reproduction)
         run([V, "-m", "jevdrive.facts", "table", "--bench", b, "--tags", *[k_(b, t) for t in arms], "--refs", *[k_(b, t) for t in b2], *old,
-             "--out", R / f"{b}_old_s{st}.md", "--title", f"CB2 stage {st}, {b}, old scorer"], log)
+             "--out", R / f"{b}_old_s{sx}.md", "--title", f"CB2 stage {st}, {b}, old scorer"], log)
         run([V, "-m", "jevdrive.facts", "table", "--bench", b, "--tags", *[k_(b, t) for t in b2], "--refs", *[k_(b, t, False) for t in b2],
              "--out", R / f"{b}_repro_b2.md", "--title", f"B2 native re-reads vs the stored reads, {b}, old scorer"], log)
         v2 = [f"{k}={O}/v2/{b}/{k}/new/rollouts.csv" for k in new]
         run([AP, REPO / "experiments/round9/scripts/cb2v2.py", "table", "--bench", b, "--v2", *v2, "--tags", *[k_(b, t) for t in arms], *mean,
-             "--refs", *[k_(b, t) for t in b2], "--out", R / f"{b}_v2_s{st}.md", "--title", f"CB2 stage {st}, {b}, fixed scorer (1b024f0)"], log)
-        rec[b] = dict(old=json.loads((R / f"{b}_old_s{st}.json").read_text()), v2=json.loads((R / f"{b}_v2_s{st}.json").read_text()),
+             "--refs", *[k_(b, t) for t in b2], "--out", R / f"{b}_v2_s{sx}.md", "--title", f"CB2 stage {st}, {b}, fixed scorer (1b024f0)"], log)
+        rec[b] = dict(old=json.loads((R / f"{b}_old_s{sx}.json").read_text()), v2=json.loads((R / f"{b}_v2_s{sx}.json").read_text()),
                       repro=json.loads((R / f"{b}_repro_b2.json").read_text()))
         rec[b]["v2_summaries"] = {k: json.loads((O / f"v2/{b}/{k}/{v}/summary.json").read_text()) for k in new for v in ("old", "new")
                                   if (O / f"v2/{b}/{k}/{v}/summary.json").exists()}
@@ -429,40 +459,40 @@ def cmd_sum(a):
             rec["repro_exact"][f"{b}:{t}"] = dict(n=len(ids), equal=int((d < 1e-9).sum()), max_abs=float(d.max()), mean_diff=float((x.score.loc[ids] - y.score.loc[ids]).mean()))
     A, H = rec["arena"]["v2"], rec["held460"]["v2"]
     if st == 1:
-        p = A[f"CB2P1N-F-s0@cb2|{B2}@cb2"]
-        z = H[f"CB2P1N-F-s0-cb2|{B2}-cb2"]["zeros_a"]
+        p = A[f"{TP1}@cb2|{B2}@cb2"]
+        z = H[f"{TP1}-cb2|{B2}-cb2"]["zeros_a"]
         ok = p["a"] >= p["b"] - 0.060 and z <= 60
         rec["E1"] = dict(arena_p1n=p["a"], arena_b2s1=p["b"], line=p["b"] - 0.060, held_zeros_p1n=z, held_line=60, pass_=bool(ok))
-        (R / "E1_PASS").write_text("pass\n") if ok else None
+        (R / f"E1_PASS{VAR}").write_text("pass\n") if ok else None
     if st in (2, 3):
-        tag = "CB2D1N-F-s0" if st == 2 else "CB2D1N-F-s0+CB2D1N-F-s1"
-        ka = f"{tag}@cb2" if st == 2 else "CB2D1N-F-s0@cb2+CB2D1N-F-s1@cb2"
-        kh = f"{tag}-cb2" if st == 2 else "CB2D1N-F-s0-cb2+CB2D1N-F-s1-cb2"
+        tag = TD1 if st == 2 else f"{TD1}+{TD11}"
+        ka = f"{tag}@cb2" if st == 2 else f"{TD1}@cb2+{TD11}@cb2"
+        kh = f"{tag}-cb2" if st == 2 else f"{TD1}-cb2+{TD11}-cb2"
         p, q = A[f"{ka}|{B2}@cb2"], H[f"{kh}|{B2}-cb2"]
         ok = p["hi"] >= 0 and q["zeros_a"] <= q["zeros_b"] + 4
         rec["ADOPT"] = dict(arm=tag, arena=p, held=q, held_zero_line=q["zeros_b"] + 4, pass_=bool(ok))
         if st == 2 and ok:
-            (R / "ADOPT_PASS").write_text("pass\n")
+            (R / f"ADOPT_PASS{VAR}").write_text("pass\n")
     if st == 2:                                                             # PAI 281 side read (new scorer from the scorer_v2 mirror, old from the facts)
         F_ = DD / "runs/pai_fix/facts"
-        run([DD / "envs/op-train/bin/python", REPO / "experiments/round2/scripts/r2.py", "r281", "--read", f"D1N={F_}/CB2D1N-F-s0-281ag.csv",
+        run([DD / "envs/op-train/bin/python", REPO / "experiments/round2/scripts/r2.py", "r281", "--read", f"D1N={F_}/{TD1}-281ag.csv",
              f"D3s0={F_}/NT4D3-F-s0-281ag.csv", f"D1s0={F_}/NT3D1-F-s0-281ag.csv", f"R8Ks2={F_}/R8K-L18-s2-281ag.csv", "--pairs", "D1N:D3s0", "D1N:D1s0",
-             "D1N:R8Ks2", "--out", R / "pai281_old.md", "--title", "PAI 281 ACC + GAP, Harmonizer OFF (old scorer): D1N side read"], log)
-        sv = pd.read_csv(O / "sv2/new/rollouts.csv")
+             "D1N:R8Ks2", "--out", R / f"pai281_old{VAR}.md", "--title", "PAI 281 ACC + GAP, Harmonizer OFF (old scorer): D1N side read"], log)
+        sv = pd.read_csv(O / f"sv2{VAR}/new/rollouts.csv")
         rec["pai281_new"] = dict(mean=float(sv.drop_duplicates("scene").score.mean()), zeros=int((sv.drop_duplicates("scene").score == 0).sum()),
                                  scenes=int(sv.scene.nunique()))
     # extracts for the Mac (frozen PCS, easy items): native_gap-format ext of every cb2 arena read, windows tables old / v2
     ext = [f"{t}={k_('arena', t)}" for t in arms + b2]
-    run([AP, "-m", "jevdrive.facts", "ext", "--read", *ext, "--out", O / f"ext_s{st}"], log)
-    w = pd.read_parquet(O / f"ext_s{st}/win.parquet")
-    w[["tag", "id", "score", "type"]].to_csv(R / f"arena_windows_old_s{st}.csv.gz", index=False)
+    run([AP, "-m", "jevdrive.facts", "ext", "--read", *ext, "--out", O / f"ext_s{sx}"], log)
+    w = pd.read_parquet(O / f"ext_s{sx}/win.parquet")
+    w[["tag", "id", "score", "type"]].to_csv(R / f"arena_windows_old_s{sx}.csv.gz", index=False)
     run([AP, REPO / "experiments/round9/scripts/cb2v2.py", "rows", "--v2", *[f"{t}={O}/v2/arena/{k_('arena', t)}/new/rollouts.csv" for t in arms + b2],
-         "--rows", R / f"arena_windows_old_s{st}.csv.gz", "--out", R / f"arena_windows_v2_s{st}.csv.gz"], log)
-    (R / f"sum{st}.json").write_text(json.dumps(rec, indent=1, default=float))
+         "--rows", R / f"arena_windows_old_s{sx}.csv.gz", "--out", R / f"arena_windows_v2_s{sx}.csv.gz"], log)
+    (R / f"sum{sx}.json").write_text(json.dumps(rec, indent=1, default=float))
     RES = REPO / "experiments/round9/results/cb2"
     RES.mkdir(parents=True, exist_ok=True)
     for f in R.glob("*"):
-        if f.suffix in (".md", ".json", ".gz") and not f.name.startswith("sum") or f.name == f"sum{st}.json":
+        if f.suffix in (".md", ".json", ".gz") and not f.name.startswith("sum") or f.name == f"sum{sx}.json":
             shutil.copy2(f, RES / f.name)
     print(json.dumps({k: rec.get(k) for k in ("E1", "ADOPT", "repro_exact", "pai281_new")}, indent=1, default=float))
 
