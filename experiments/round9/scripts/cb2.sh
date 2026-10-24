@@ -331,7 +331,7 @@ s2tail)  # s2tail <after ids>: dgate -> append -> dweights -> pair / smoke -> D1
   pt=$(sub cb2-post-$D1N --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post $D1N) || exit 1
   v=($(reads $D1N $pt)) || exit 1
   bash $ME s2pai $pt $(csv ${v[@]}) || exit 1
-  echo "$(date '+%F %T') s2tail: dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]} pai $ids tax $tx v2 $pv sum2 $su" | tee -a $O/stages.txt ;;
+  echo "$(date '+%F %T') s2tail: dgate $dg append $ap dweights $dw pair $pa $pb $pc smoke $sm train $tr ratio $ra post $pt v2 ${v[*]}" | tee -a $O/stages.txt ;;
 s2pai)   # s2pai <post id> <v2 ids>: D1N's PAI 281 side read + tax + scorer_v2, then sum2 (part of s2tail; amendment 4: re-run after the cancelled
          # tail's log dirs were cleared)
   R=$O/pai281/$D1N-ag; mkdir -p $O/pai281; [[ ! -e $R ]] || die "$R exists"
