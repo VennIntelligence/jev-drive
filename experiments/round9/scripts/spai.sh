@@ -10,6 +10,10 @@
 #   spai.sh chain <old rev>   preflight + lists + code-identity pair (old rev worktree vs HEAD) + c000 roll -> rows -> teach / clean / raster -> chk1 -> rest
 #   spai.sh wait              one run_in_background waiter: $O/DONE, $O/VERDICT or a failed / cancelled job of this lane
 #   job bodies: rest | raster <c> | merge | ident | crun <old|new> | w0run | smoke | tax | train | post | report
+# Final arm (plans/2026-10-24-ntv1-final.md): SPAI_SEED=1 -> SP = NT5SP-F-s1, O = runs/round9/ntv1_final; the same pool / draw file / raster, seed only.
+#   SPAI_SEED=1 spai.sh final   fdiff + fident gates -> train -> ratio / post -> PAI 281 + val160 -> freport (scorer_v2, behavior_stats, fverdict) -> $O/DONE
+#   SPAI_SEED=1 spai.sh wait    the same waiter on the final lane; job bodies: fident | train | post | freport
+# SPAI_SEED unset / 0: every path, tag and argv of the s0 lane exactly as before.
 set -uo pipefail; cd "$(dirname "$0")/../../.."; DATA_DIR=${DATA_DIR:-/root/autodl-tmp/ujs}; export DATA_DIR
 O=$DATA_DIR/runs/round9/ntv1_spai; O4=$DATA_DIR/runs/round9/ntv1_step4; O2=$DATA_DIR/runs/round9/ntv1_step2; ME=experiments/round9/scripts/spai.sh
 DS=experiments/round6/scripts/dag.sh; DG=experiments/round6/scripts/dag.py; PY=experiments/round9/scripts/spai.py; PC=experiments/round9/scripts/pcl.py
@@ -18,6 +22,8 @@ V=.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; AS=$DATA_DIR/third_pa
 CR=$DATA_DIR/runs/op_parity/cache; RUNS=$DATA_DIR/runs/op_parity/runs; F_=$DATA_DIR/runs/pai_fix/facts; CH=$DATA_DIR/runs/defect_fix/pai_accgap/NTV0-L18-s0/chunks
 NEW=$DATA_DIR/third_party/alpasim-e2e-1b024f0/src/eval/src; RES=experiments/round9/results/ntv1_spai
 T=NT4D3-F-s0; L=${T,,}; NP=PAIDC3; NM=JTDC2S; TV=b3; SP=NT5SP-F-s0; TON=10000; PRIO=${PRIO:-14}
+SEED=${SPAI_SEED:-0}; SEEDA=(); SP0=$SP
+if [[ $SEED != 0 ]]; then SP=NT5SP-F-s$SEED; SEEDA=(--seed $SEED); O=$DATA_DIR/runs/round9/ntv1_final; RES=experiments/round9/results/ntv1_final; fi
 SERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_ACC=1 JEV_GAP=0.7,2.7"; WIZ=controller.gains.rel_front_steering_angle_weight=10   # = dgc.sh / dg4.sh / D3's read
 PARTS="on1_L18RB0:rb0:self on1_L18RTB1:rtb1:self on1_L18YS:ys:self on1_L18Y:y:self on1_NR1TV:tv:both on1_PAIDC:pd:both on1_PAIDC2:pd2:both"  # = on1_JTDC2
 EA=(env JEV_REPO=$PWD PYTHONPATH=$AS/src/utils:$PWD)
@@ -27,7 +33,7 @@ FE=(--train --vram 40 --cpu 6 --ram 48 --env CL_HIST_KEY=rm-train --env JEV_RM_E
 GT="NT5CO-F-s0 NT5CN-F-s0 NT5W0-F-s0 NT5IDP-F-s0 NT5SM-F-s0"
 mkdir -p $O/pool $O/checks $O/w $O/tax $O/results $O/pai281 $RES
 die() { echo "$(date '+%F %T') ERROR $*" | tee -a $O/stages.txt >&2; exit 1; }
-sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round9-spai --name "$name" --tries 1 --priority $PRIO --no-check \
+sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner round9-spai$([[ $SEED != 0 ]] && echo -final) --name "$name" --tries 1 --priority $PRIO --no-check \
      --log-dir $O/pool/$name "${DENV[@]}" "$@" < /dev/null | awk '{print $NF}') && [[ -n $id ]] || die "submit $name failed"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 csv() { local IFS=,; echo "$*"; }
 roll() {  # -> "<id> <chunk>" lines of the chunks submitted now (= dg4.sh roll)
@@ -167,7 +173,7 @@ tax)  # 719 train-scene scores of D3's roll (= dg4.sh tax)
   $AP $RF/rf_tax.py extract --runs $(ls -d $O/roll/runs/*/sim) --out $O/tax/roll.pkl --workers 16 > $O/tax/roll.log 2>&1 || die "extract"
   $V experiments/pai_fix/scripts/pai_fix.py facts --pkl $O/tax/roll.pkl --runs $O/roll --out $O/tax/roll.csv >> $O/tax/roll.log 2>&1 || die "facts" ;;
 train)
-  mapfile -t A < <($V $PY argv SP $SP); [[ ${#A[@]} -gt 5 ]] || die "argv"
+  mapfile -t A < <($V $PY argv SP $SP "${SEEDA[@]}"); [[ ${#A[@]} -gt 5 ]] || die "argv"
   echo "$(date '+%F %T') train $SP (code $(git rev-parse --short HEAD), eager ${JEV_RM_EAGER:-0}): ${A[*]}" | tee -a $O/stages.txt
   exec $TR "${A[@]}" ;;
 post)
@@ -182,6 +188,42 @@ report)
   $V $PY bs --out $O/bs --tags $SP > $O/bs.log 2>&1 \
     || echo "$(date '+%F %T') behavior_stats failed (log $O/bs.log); verdict without the arm's highway row" | tee -a $O/stages.txt
   $V $PY verdict --dir $O --out $O/results/verdict > $O/verdict.log 2>&1 || die "verdict (log $O/verdict.log)"
+  date '+%F %T' > $O/DONE ;;
+final)  # the final arm (SPAI_SEED != 0): gates -> train -> ratio / post -> reads -> freport
+  [[ $SEED != 0 ]] || die "final needs SPAI_SEED != 0"
+  [[ ! -e $O/DONE && ! -s $O/jobs.txt ]] || die "$O has a chain: never overwritten"
+  [[ -f $RUNS/$SP0/ckpt-final.pt && -f $DATA_DIR/runs/round9/ntv1_spai/DONE ]] || die "no $SP0"
+  for X in $SP NT5FI-F-s0; do [[ ! -e $RUNS/$X && -z $(ls -d $DATA_DIR/runs/route_mem/train-$X 2>/dev/null) ]] || die "$X exists"; done
+  for f in $F_/$SP0-281ag.csv $F_/$SP0-v160ag.csv $DATA_DIR/runs/round9/ntv1_spai/sv2/new/rollouts.csv $DATA_DIR/runs/round9/ntv1_spai/v160/sv2/new/rollouts.csv \
+           $DATA_DIR/runs/round9/ntv1_spai/bs/steps_$SP0.parquet $F_/INTP75-NR-v160ag.csv $DATA_DIR/runs/round9/val160b/sv2/new/rollouts.csv; do
+    [[ -s $f ]] || die "no $f"; done
+  free=$(df -BG --output=avail $DATA_DIR | tail -1 | tr -dc 0-9); (( free >= 100 )) || die "free $free GB < 100 GB"
+  h=$(git rev-parse --short HEAD); echo "$h final seed $SEED" >> $O/code.txt
+  fd=$(sub fin-fdiff --vram 0.1 --cpu 1 --ram 4 --timeout-h 1 -- $V $PY fdiff --tag $SP --seed $SEED --out $O/results/fdiff.json) || exit 1
+  fi_=$(sub fin-fident "${FE[@]}" --timeout-h 1 -- bash $ME fident) || exit 1
+  GA=$(csv $fd $fi_)
+  tr=$(sub fin-train-$SP --after $GA "${FE[@]}" --timeout-h 5 -- bash $ME train) || exit 1
+  ra=$(sub fin-ratio --after $GA --vram 0.1 --cpu 1 --ram 4 --timeout-h 8 -- $V $PC ratio --tag $SP --on-start $TON --train-id $tr \
+       --out $O/results/ratio_SP.json) || exit 1
+  pt=$(sub fin-post --after $tr,$ra --vram 0.1 --cpu 2 --ram 8 --timeout-h 1 -- bash $ME post) || exit 1
+  y=($(read281 $SP $pt)); [[ ${#y[@]} == 9 ]] || die "read281 $SP"
+  v=$(V160_O=$O/v160 V160_TAGS=$SP V160_AFTER=$pt PRIO=$PRIO bash $VS reads | tail -1) && [[ -n $v ]] || die "v160 $SP"
+  rp=$(sub fin-report --after ${y[-1]},$v --vram 0.1 --cpu 16 --ram 48 --timeout-h 3 -- bash $ME freport) || exit 1
+  echo "$(date '+%F %T') final (code $h, seed $SEED): fdiff $fd fident $fi_ train $tr ratio $ra post $pt 281 ${y[*]} v160 $v report $rp" | tee -a $O/stages.txt ;;
+fident)  # S-PAI-s0's own argv (seed 0, a throwaway tag) on this code to step 125: every scalar <= 100 vs the stored NT5SP-F-s0 bit for bit
+  tag=NT5FI-F-s0; mapfile -t A < <($V $PY argv SP $tag); [[ ${#A[@]} -gt 5 ]] || die "argv"
+  echo "$(date '+%F %T') fident (code $(git rev-parse --short HEAD), eager ${JEV_RM_EAGER:-0}): ${A[*]}" | tee -a $O/stages.txt
+  $V $PY ident --tag $tag --ref $SP0 --upto 100 --stop 125 --out $O/results/fident.json -- $TR "${A[@]}"; r=$?
+  rm -rf $RUNS/$tag $DATA_DIR/runs/route_mem/train-$tag; exit $r ;;
+freport)
+  rm -rf $O/sv2 $O/v160/sv2
+  PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/sv2 --reads $SP-ag --workers 16 > $O/sv2.log 2>&1 \
+    || die "scorer_v2 new (log $O/sv2.log)"
+  PYTHONPATH=$NEW $AP experiments/alpasim/scripts/scorer_v2.py score --variant new --root $O/v160/sv2 --reads $SP-v160 --workers 16 > $O/v160/sv2.log 2>&1 \
+    || die "scorer_v2 new val160 (log $O/v160/sv2.log)"
+  $V $PY bs --out $O/bs --tags $SP > $O/bs.log 2>&1 \
+    || echo "$(date '+%F %T') behavior_stats failed (log $O/bs.log); verdict without the arm's highway row" | tee -a $O/stages.txt
+  $V $PY fverdict --dir $O --tag $SP --out $O/results/verdict > $O/verdict.log 2>&1 || die "fverdict (log $O/verdict.log)"
   date '+%F %T' > $O/DONE ;;
 wait)
   until [[ -f $O/VERDICT || -f $O/DONE ]] || ! $V - $O/jobs.txt $O/v160/jobs.txt <<'PY'

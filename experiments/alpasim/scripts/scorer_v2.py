@@ -130,6 +130,9 @@ READS = {
     # round9 NTV1 S-PAI (D3 + S rows on its own PAI states; scored with --reads only)
     "NT5SP-F-s0-ag": ("round9/ntv1_spai/pai281/NT5SP-F-s0-ag", "NT5SP-F-s0-281ag"),
     "NT5SP-F-s0-v160": ("round9/ntv1_spai/v160/reads/NT5SP-F-s0-ag", "NT5SP-F-s0-v160ag"),
+    # round9 NTV1 final (S-PAI seed 1; scored with --reads only)
+    "NT5SP-F-s1-ag": ("round9/ntv1_final/pai281/NT5SP-F-s1-ag", "NT5SP-F-s1-281ag"),
+    "NT5SP-F-s1-v160": ("round9/ntv1_final/v160/reads/NT5SP-F-s1-ag", "NT5SP-F-s1-v160ag"),
     # round9 NTV1 S-NU (D3's recipe, S pool from D3's own nuPlan rollouts; scored with --reads only)
     "NT5SNU-F-s0-ag": ("round9/ntv1_snu/pai281/NT5SNU-F-s0-ag", "NT5SNU-F-s0-281ag"),
     "NT5SNU-F-s0-v160": ("round9/ntv1_snu/v160/reads/NT5SNU-F-s0-ag", "NT5SNU-F-s0-v160ag"),

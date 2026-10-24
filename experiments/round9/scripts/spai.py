@@ -24,6 +24,11 @@ hinge-only `self` rows (part `ps`) of on1_JTDC2S = on1_JTDC2's parts + ps, with 
   build              build summary (pool, rows, rasters, gates, disk) -> results/build.json
   bs --out DIR --tags T,..                         behavior_stats (dgt.py bs)
   verdict --dir O --out P                          PAI 281 (new + old), val160, classes, flips, highway, lines, cost -> P.{md,json}
+  final arm (plans/2026-10-24-ntv1-final.md; spai.sh final with SPAI_SEED):
+  fdiff --tag T --seed S --out J                   S-PAI-s0's built argv == stored; T's differs only in --tag / --seed; pool / draw / raster files untouched since
+                                                   S-PAI-s0's training started (mtime) + their sha256
+  fverdict --dir O --tag T --out P                 S-PAI 2-seed mean (s0 + T) on PAI 281 + val160 vs R8K-s2, INTP75-NR, D3 2-seed mean; per seed; classes, flips,
+                                                   highway, gates, cost -> P.{md,json}
 """
 import argparse
 import json
@@ -461,9 +466,9 @@ def cmd_wcheck(a):
 
 
 # ---------------------------------------------------------------- argv / identity / smoke
-def build(arm, tag, steps=None, on_start=None, save_at=None, mix=False):
+def build(arm, tag, steps=None, on_start=None, save_at=None, mix=False, seed=None):
     import dg4
-    a = dg4.build("D3", tag, steps, on_start, save_at, None, mix)
+    a = dg4.build("D3", tag, steps, on_start, save_at, seed, mix)       # seed None = the stored --seed 0, token for token
     if arm in ("SP", "SPZ"):
         C.put(a, "--on", POOLS)
         C.put(a, "--on-wfile", f"{WREL}/{'NTV1D2S' if arm == 'SP' else 'NTV1D2SZ'}.npz")
@@ -472,7 +477,7 @@ def build(arm, tag, steps=None, on_start=None, save_at=None, mix=False):
 
 
 def cmd_argv(a):
-    print("\n".join(build(a.arm, a.tag, a.steps, a.on_start, a.save_at, a.mix)))
+    print("\n".join(build(a.arm, a.tag, a.steps, a.on_start, a.save_at, a.mix, a.seed)))
 
 
 def cmd_diff(a):
@@ -670,6 +675,113 @@ def cmd_verdict(a):
     print("\n".join(L))
 
 
+# ---------------------------------------------------------------- final arm: S-PAI seed 1 (plans/2026-10-24-ntv1-final.md)
+def cmd_fdiff(a):
+    import hashlib
+    b = C.stored_argv(SP)
+    s0, x = build("SP", SP), build("SP", a.tag, seed=a.seed)
+    d = [(b[i - 1], b[i], x[i]) for i in range(len(b)) if b[i] != x[i]] if len(x) == len(b) else None
+    want = {"--tag": a.tag, "--seed": str(a.seed)}
+    t0 = min(time.mktime(time.strptime(d.name, "%Y%m%d-%H%M%S")) for d in C.run_dirs(SP))    # run dir name = the run's start
+    files = {}
+    for f in (CR / POOLS / "tab.npz", DD / WREL / "NTV1D2S.npz", DD / RIDX):
+        h = hashlib.sha256()
+        with open(f, "rb") as fh:
+            for blk in iter(lambda: fh.read(1 << 24), b""):
+                h.update(blk)
+        files[str(f)] = dict(sha256=h.hexdigest(), mtime=time.strftime("%F %T", time.localtime(f.stat().st_mtime)), before_s0=f.stat().st_mtime < t0)
+    ok = s0 == b and d is not None and {q[0]: q[2] for q in d} == want and len(d) == len(want) and all(v["before_s0"] for v in files.values())
+    rec = dict(s0_equals_stored=s0 == b, diff=[list(q) for q in d] if d is not None else "length differs", want=want, argv=" ".join(x),
+               s0_train_start=time.strftime("%F %T", time.localtime(t0)), files=files, pass_=bool(ok))
+    C.dump(a.out, rec)
+    print(json.dumps(rec, indent=1))
+    sys.exit(0 if ok else 1)
+
+
+def cmd_fverdict(a):
+    import dg4
+    import dgt as T_
+    from jevdrive import stats
+    o, S1 = Path(a.dir), a.tag
+    P1L, NT, R8, IP = T_.P1L, T_.NT, T_.R8, T_.IP
+    labs = [S1, SP, D3, D3S1, NT, R8, IP]
+    nm = {S1: "S-PAI-s1", SP: "S-PAI-s0", D3: "D3-s0", D3S1: "D3-s1", NT: "NTV0-s0", R8: "R8K-s2", IP: "INTP75-NR (ref.)"}
+    OLD = {t: T_.facts(f"{t}-281ag") for t in labs}
+    NEW = T_.ref_new()
+    NEW = {NT: NEW[NT], R8: NEW[R8], IP: NEW[IP]}
+    NEW[D3] = T_.new_series(O4 / "sv2/new/rollouts.csv", f"{D3}-ag")
+    NEW[D3S1] = T_.new_series(O4 / "sv2s1/new/rollouts.csv", f"{D3S1}-ag")
+    NEW[SP] = T_.new_series(O / "sv2/new/rollouts.csv", f"{SP}-ag")
+    NEW[S1] = T_.new_series(o / "sv2/new/rollouts.csv", f"{S1}-ag")
+    ref = (R8, IP, D3, D3S1)
+
+    def block(labs, OLD, NEW):
+        res = T_.score_block(labs, OLD, NEW, [(S1, SP)] + [(x, y) for x in (S1, SP) for y in ref], nm)
+        S = res["_S"]
+        mean = {sc: (S[sc][SP] + S[sc][S1]) / 2 for sc in ("new", "old")}
+        d3m = {sc: (S[sc][D3] + S[sc][D3S1]) / 2 for sc in ("new", "old")}
+        res["mean2"] = dict(new=float(mean["new"].mean()), old=float(mean["old"].mean()),
+                            zeros_new=float(((S["new"][SP] == 0).sum() + (S["new"][S1] == 0).sum()) / 2),
+                            zeros_old=float(((S["old"][SP] == 0).sum() + (S["old"][S1] == 0).sum()) / 2),
+                            d3_new=float(d3m["new"].mean()), d3_old=float(d3m["old"].mean()),
+                            vs={k: {sc: stats.paired(mean[sc], f(sc)) for sc in ("new", "old")}
+                                for k, f in ((nm[R8], lambda sc: S[sc][R8]), (nm[IP], lambda sc: S[sc][IP]), ("D3 2-seed mean", lambda sc: d3m[sc]))})
+        return res
+
+    def verdict_words(q):
+        return "higher (CI excludes 0)" if q["lo"] > 0 else "lower (CI excludes 0)" if q["hi"] < 0 else "no established difference (CI includes 0)"
+
+    def mean_md(res, title):
+        m = res["mean2"]
+        L = ["", f"### {title}: S-PAI 2-seed mean (per scene (s0 + s1) / 2, {res['scenes']} common scenes)", "",
+             f"S-PAI 2-seed mean: new {m['new']:.3f}, old {m['old']:.3f}; zeros (mean of the two seeds) new {m['zeros_new']:.1f}, old {m['zeros_old']:.1f}. "
+             f"D3 2-seed mean on the same scenes: new {m['d3_new']:.3f}, old {m['d3_old']:.3f}.", "",
+             "| S-PAI 2-seed mean - | new scorer | old scorer | reading (new) |", "|:--|--:|--:|:--|"]
+        for k, q in m["vs"].items():
+            L.append(f"| {k} | {C.f3(q['new'])} | {C.f3(q['old'])} | {verdict_words(q['new'])} |")
+        return L
+
+    res = block(labs, OLD, NEW)
+    hw = T_.highway([(S1, o / "bs", f"{S1}-281ag"), (SP, O / "bs", f"{SP}-281ag"), (D3, O4 / "bs", f"{D3}-281ag")]
+                    + [(t, DD / "runs/pai_av/behavior_stats/out", f"{t}-281ag") for t in (NT, R8)], NEW)
+    res["highway"] = hw
+    OVB = DD / "runs/round9/val160b"
+    vs = {S1: (o / "v160/sv2/new/rollouts.csv", f"{S1}-v160"), SP: (O / "v160/sv2/new/rollouts.csv", f"{SP}-v160"),
+          D3: (O4 / "v160/sv2/new/rollouts.csv", f"{D3}-v160"), D3S1: (O4 / "v160/sv2/new/rollouts.csv", f"{D3S1}-v160"),
+          R8: (OV / "sv2/new/rollouts.csv", f"{R8}-v160"), IP: (OVB / "sv2/new/rollouts.csv", f"{IP}-v160")}
+    VOLD = {t: T_.facts(f"{t}-v160ag") for t in vs}
+    VNEW = {t: T_.new_series(f, r) for t, (f, r) in vs.items()}
+    vres = block(list(vs), VOLD, VNEW)
+    res["val160"] = T_.strip(vres)
+    res["gates"] = T_.gates(o)
+    rf = o / "results/ratio_SP.json"
+    if rf.exists():
+        r = json.loads(rf.read_text())
+        res["ratio"] = dict(r500=r["ratio"], pass_=r["pass_"], after_T=C.grad_ratio(C.run_dirs(S1)[-1], 10000, 19500)["ratio"],
+                            s0_after_T=C.grad_ratio(C.run_dirs(SP)[-1], 10000, 19500)["ratio"])
+    res["ade"] = {t: dict(at_10000=C.dev_ade(t, 10000), end=C.dev_ade(t)) for t in (S1, SP, D3, D3S1)}
+    res["cost"] = dg4.cost(o)
+    L = ["# NTV1 final: S-PAI seed 1 and the S-PAI 2-seed mean (PAI 281 + val160, ACC + GAP, Harmonizer OFF)", "",
+         "Seed spread on this exam is 0.03-0.04: no claim beyond the CIs (plans/2026-10-24-ntv1-final.md section 4)."]
+    L += mean_md(res, "PAI 281") + mean_md(vres, "val160")
+    L += [""] + T_.md_block(res, nm, "PAI 281 (per read)")
+    L += T_.hw_md(hw, nm)
+    L += [""] + T_.md_block(vres, nm, "val160 (per read)")
+    L += ["", "## Gates", ""] + [f"- {k}: {v}" for k, v in res["gates"].items()]
+    if "ratio" in res:
+        r = res["ratio"]
+        L.append(f"- S / imit gradient ratio: 500 steps after T {r['r500']:.3f} (band {C.RATIO_BAND[0]:.2f}-{C.RATIO_BAND[1]:.2f}, "
+                 f"{'pass' if r['pass_'] else 'FAIL'}); whole post-T segment {r['after_T']:.3f} (S-PAI-s0 {r['s0_after_T']:.3f})")
+    L += ["", "| navtrain dev ADE | step 10 000 | end |", "|:--|--:|--:|"] + [
+        f"| {nm.get(t, t)} | {v['at_10000'] or float('nan'):.4f} | {v['end'] or float('nan'):.4f} |" for t, v in res["ade"].items()]
+    cs = res["cost"]
+    L += ["", "## Cost", "", "GPU job-hours: " + ", ".join(f"{k} {v:.2f}" for k, v in cs.items() if k not in ("gpu_job_h", "wall_h"))
+          + f"; total {cs['gpu_job_h']:.1f}; wall {cs['wall_h']:.1f} h."]
+    Path(f"{a.out}.md").write_text("\n".join(L) + "\n")
+    C.dump(f"{a.out}.json", T_.strip(res))
+    print("\n".join(L))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     s = ap.add_subparsers(dest="sub", required=True)
@@ -683,6 +795,11 @@ def main():
     p = s.add_parser("argv")
     p.add_argument("arm", choices=("D3", "SP", "SPZ")), p.add_argument("tag")
     p.add_argument("--steps", type=int), p.add_argument("--on-start", type=int), p.add_argument("--save-at"), p.add_argument("--mix", action="store_true")
+    p.add_argument("--seed", type=int)
+    p = s.add_parser("fdiff")
+    p.add_argument("--tag", required=True), p.add_argument("--seed", type=int, required=True), p.add_argument("--out", required=True)
+    p = s.add_parser("fverdict")
+    p.add_argument("--dir", required=True), p.add_argument("--tag", required=True), p.add_argument("--out", required=True)
     p = s.add_parser("ident")
     p.add_argument("--tag", required=True), p.add_argument("--ref", required=True), p.add_argument("--upto", type=int, required=True)
     p.add_argument("--stop", type=int, required=True), p.add_argument("--out", required=True), p.add_argument("cmd", nargs=argparse.REMAINDER)
@@ -699,7 +816,7 @@ def main():
     if a.sub == "ident" and a.cmd and a.cmd[0] == "--":
         a.cmd = a.cmd[1:]
     dict(raster=cmd_raster, index=cmd_index, weights=cmd_weights, wcheck=cmd_wcheck, argv=cmd_argv, diff=cmd_diff, ident=cmd_ident, pair=cmd_pair,
-         smoke=cmd_smoke, build=cmd_build, bs=cmd_bs, verdict=cmd_verdict)[a.sub](a)
+         smoke=cmd_smoke, build=cmd_build, bs=cmd_bs, verdict=cmd_verdict, fdiff=cmd_fdiff, fverdict=cmd_fverdict)[a.sub](a)
 
 
 if __name__ == "__main__":
