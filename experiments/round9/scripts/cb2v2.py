@@ -73,7 +73,7 @@ def eval_one(task):
         st = pl.read_parquet(stored)
         new_names = set(df["name"].unique().to_list())
         keep = st.filter(~pl.col("name").is_in(list(new_names)))
-        assert set(keep["name"].unique().to_list()) <= set(MAP_METRICS), sorted(set(keep["name"].unique().to_list()))
+        assert all(n.startswith(MAP_METRICS) for n in keep["name"].unique().to_list()), sorted(set(keep["name"].unique().to_list()))
         out = pl.concat([keep, df.select(st.columns)], how="vertical_relaxed").sort(["name", "timestamps_us"])
         out.write_parquet(Path(asl).parent / "metrics.parquet")
         key = ["name", "timestamps_us"]

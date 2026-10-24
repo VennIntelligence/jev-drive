@@ -17,12 +17,16 @@ sub() { local name=$1; shift; local id; id=$($V -m jevdrive.cl submit --owner ro
 csv() { local IFS=,; echo "$*"; }
 case ${1:-} in
 step0)
-  [[ ! -e $O/STEP0 ]] || die "step 0 already ran"; mkdir -p $O/step0/teach
+  [[ ! -e $O/STEP0 || -n ${RERUN_CREEP:-} ]] || die "step 0 already ran"; mkdir -p $O/step0/teach
   echo "$(git rev-parse --short HEAD) step0" >> $O/code.txt; P0="L18RB0 L18D3 PN0 PN1 PN2 PN3 PN4 PN5"; ids=()
   for n in $P0; do ids+=($(sub cb2-s0-teach-$n --vram 0.1 --cpu 16 --ram 64 --timeout-h 2 -- bash $ME teach $n $O/step0/teach)) || exit 1; done
   c=$(sub cb2-s0-creep --after $(csv ${ids[@]}) --vram 0.1 --cpu 2 --ram 48 --timeout-h 1 -- \
       bash -c "$V $PY creep --pools $P0 --teach-dir $O/step0/teach --out $O/step0/creep && cp $O/step0/creep.json $O/step0/creep.md $RES/ && date > $O/STEP0") || exit 1
   echo "$(date '+%F %T') step0 (code $(git rev-parse --short HEAD)): teach ${ids[*]} creep $c" | tee -a $O/stages.txt ;;
+creep)  # step 0 amendment (before registration): creep re-run with rule R3 added (teacher files unchanged)
+  c=$(sub cb2-s0-creep2 --vram 0.1 --cpu 2 --ram 48 --timeout-h 1 -- \
+      bash -c "$V $PY creep --pools L18RB0 L18D3 PN0 PN1 PN2 PN3 PN4 PN5 --teach-dir $O/step0/teach --out $O/step0/creep2 && cp $O/step0/creep2.json $O/step0/creep2.md $RES/ && date > $O/STEP0B") || exit 1
+  echo "$(date '+%F %T') creep2 (code $(git rev-parse --short HEAD)): $c" | tee -a $O/stages.txt ;;
 teach)  # teach <rows> <dir>: nd_teach.py teach (b3, unedited) on runs/onpol_nuplan/rows/<rows> -> <dir>/<rows>.npz
   [[ ! -e $3/$2.npz ]] || die "$3/$2.npz exists"; "${EA[@]}" $AP $NT teach --name $2 --out $3/$2.npz --workers 16 ;;
 wait)

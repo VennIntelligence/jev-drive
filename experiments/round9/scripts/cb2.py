@@ -34,6 +34,27 @@ def cum_arc(P):
     return np.cumsum(np.hypot(*np.diff(P, axis=1).transpose(2, 0, 1)), 1)
 
 
+def replace_at(lab, arcs):
+    """R3: a label polyline (n, 8, 3; row frame, from the origin) re-sampled at new arc lengths (n, 8) along its own chord length; past
+    its last pose straight along the last pose's heading; yaw interpolated (unwrapped). The path (lateral shape) is unchanged."""
+    lab = np.asarray(lab, np.float64)
+    P = np.concatenate([np.zeros((len(lab), 1, 3)), lab], 1)
+    P[:, :, 2] = np.unwrap(P[:, :, 2], axis=1)
+    s = np.concatenate([np.zeros((len(lab), 1)), np.cumsum(np.hypot(*np.diff(P[:, :, :2], axis=1).transpose(2, 0, 1)), 1)], 1)
+    out = np.empty_like(lab)
+    for i in range(len(lab)):
+        t, si = np.asarray(arcs[i], np.float64), s[i]
+        for d in range(3):
+            out[i, :, d] = np.interp(t, si, P[i, :, d])
+        ex = t > si[-1]
+        if ex.any():
+            h = P[i, -1, 2]
+            out[i, ex, 0] = P[i, -1, 0] + (t[ex] - si[-1]) * np.cos(h)
+            out[i, ex, 1] = P[i, -1, 1] + (t[ex] - si[-1]) * np.sin(h)
+            out[i, ex, 2] = h
+    return out
+
+
 def creep_pool(name, teach):
     tb, z = np.load(CR / f"on1_{name}/tab.npz"), np.load(ROWS / name / "meta.npz")
     names = tb["names"].astype(str)
@@ -60,7 +81,13 @@ def creep_pool(name, teach):
     c = cand & ~held                                                            # the rows a draw file could use
     hsp = hs | hp
     conf = c & hsp & (exc > 0)
-    rules = dict(R1=hs, R2=hsp)
+    rules = dict(R1=hs, R2=hsp, R3=None)
+    fut_t = np.nan_to_num(T["fut"]).astype(np.float64)
+    j = np.flatnonzero(c & hsp)
+    lab3 = fut_t.copy()
+    lab3[j] = replace_at(fut_t[j], cum_arc(tb["fut"][j]))                       # R3: HS / HP rows re-placed at the reachable human profile
+    lat3 = np.abs(lab3[:, 7, 1] - sv[:, 7, 1])
+    exc3 = np.maximum(cum_arc(lab3)[:, 7] - (np.maximum(a_f, a_h) + MARGIN), 0)
     out = dict(pool=name, rows=len(names), candidates=int(c.sum()), human_standing=int((c & hs).sum()), human_stopping=int((c & hp).sum()),
                standing_no_lead=int((c & hs & ~lead).sum()), stopping_no_lead=int((c & hp & ~lead).sum()),
                standing_share=float((c & hs).sum() / max(c.sum(), 1)), stopping_share=float((c & hp).sum() / max(c.sum(), 1)),
@@ -68,13 +95,16 @@ def creep_pool(name, teach):
                conflict_excess_p50_p90=[float(np.percentile(exc[conf], q)) for q in (50, 90)] if conf.any() else None,
                served_vs_human_4s_on_hsp_p50_p90=[float(np.percentile((a_lab - a_h)[c & hsp], q)) for q in (50, 90)] if (c & hsp).any() else None,
                ego_speed_on_hsp_p50=float(np.median(v0[c & hsp])) if (c & hsp).any() else None,
+               ego_minus_human_station_on_hsp_p10_p50_p90=[float(np.nanpercentile(z["lead"][c & hsp], q)) for q in (10, 50, 90)] if (c & hsp).any() else None,
                moving_rows_faster_than_cap=int((c & ~hsp & (exc > 0)).sum()),
                lat_mass=float(lat[c].sum()), lat_rows_05=int((c & (lat > 0.5)).sum()), rules={})
     for r, m in rules.items():
-        kp = c & ~m
-        g = dict(kept=int(kp.sum()), keep_share=float(kp.sum() / max(c.sum(), 1)), lat_mass_kept=float(lat[kp].sum() / max(lat[c].sum(), 1e-9)),
-                 lat_rows_05_kept=float((kp & (lat > 0.5)).sum() / max((c & (lat > 0.5)).sum(), 1)),
-                 conflict_excess_left=float(exc[kp & conf].sum() / max(exc[conf].sum(), 1e-9)) if conf.any() else 0.0)
+        kp, lt, ex = (c & ~m, lat, exc) if m is not None else (c, lat3, exc3)
+        g = dict(kept=int(kp.sum()), keep_share=float(kp.sum() / max(c.sum(), 1)), lat_mass_kept=float(lt[kp].sum() / max(lat[c].sum(), 1e-9)),
+                 lat_rows_05_kept=float((kp & (lt > 0.5)).sum() / max((c & (lat > 0.5)).sum(), 1)),
+                 conflict_excess_left=float(ex[kp & conf].sum() / max(exc[conf].sum(), 1e-9)) if conf.any() else 0.0)
+        if m is None:
+            g["arc_drop_on_hsp_p50_p90"] = [float(np.percentile((a_lab - cum_arc(lab3)[:, 7])[j], q)) for q in (50, 90)] if len(j) else None
         g["pass_"] = bool(g["keep_share"] >= G0_KEEP and g["lat_mass_kept"] >= G0_LAT and g["lat_rows_05_kept"] >= G0_LAT and g["conflict_excess_left"] <= G0_CONF)
         out["rules"][r] = g
     return out
@@ -82,21 +112,22 @@ def creep_pool(name, teach):
 
 def cmd_creep(a):
     res = [creep_pool(p, Path(a.teach_dir) / f"{p}.npz") for p in a.pools]
-    pick = next((r for r in ("R1", "R2") if all(x["rules"][r]["pass_"] for x in res)), None)
+    pick = next((r for r in ("R1", "R2", "R3") if all(x["rules"][r]["pass_"] for x in res)), None)
     rec = dict(pools=res, gate=dict(keep=G0_KEEP, lat=G0_LAT, conflict_left=G0_CONF), pick=pick)
     Path(a.out + ".json").write_text(json.dumps(rec, indent=1, default=float) + "\n")
     L = ["# CB2 step 0: b3 DAgger candidates on human-standing / -stopping states (cb2.py creep)", "",
          "Candidates = k >= 2, fed >= 2 m/s, teacher label, not in the 15 % held-out logs. HS = the human's logged 4 s arc < 0.5 m; HP = not HS and "
          "his end speed < 0.5 m/s (stops within 4 s). Conflict = HS / HP rows whose b3 label (longitudinal = the served arc) ends beyond the STAND cap "
-         "max(his arcs) + 1 m. Lead = a logged vehicle at t0 within |y| < 2 m ahead (no lead = line stop: red light / stop sign proxy).", "",
+         "max(his arcs) + 1 m. R1 drops HS rows, R2 drops HS + HP rows, R3 keeps every row and re-places the label of HS + HP rows at the arc "
+         "lengths of tab `fut` (the human's speed profile made reachable from the visited state, nr1_lon), path unchanged. Lead = a logged vehicle at t0 within |y| < 2 m ahead (no lead = line stop: red light / stop sign proxy).", "",
          "| pool | cand | HS | HP | HS no lead | HP no lead | conflict rows (no lead) | excess m p50 / p90 | served - human 4 s p50 / p90 on HS+HP | "
-         "R1 keep / lat / lat>0.5 / conflict left | R2 keep / lat / lat>0.5 / conflict left |", "|:--|" + "--:|" * 10]
+         "R1 keep / lat / lat>0.5 / conflict left | R2 (same) | R3 (same) |", "|:--|" + "--:|" * 11]
     f = lambda g: f"{g['keep_share']:.3f} / {g['lat_mass_kept']:.3f} / {g['lat_rows_05_kept']:.3f} / {g['conflict_excess_left']:.3f} {'PASS' if g['pass_'] else 'FAIL'}"  # noqa: E731
     for x in res:
         q = lambda v: "-" if v is None else " / ".join(f"{t:.2f}" for t in v)  # noqa: E731
         L.append(f"| {x['pool']} | {x['candidates']} | {x['human_standing']} | {x['human_stopping']} | {x['standing_no_lead']} | {x['stopping_no_lead']} | "
                  f"{x['conflict_rows']} ({x['conflict_rows_no_lead']}) | {q(x['conflict_excess_p50_p90'])} | {q(x['served_vs_human_4s_on_hsp_p50_p90'])} | "
-                 f"{f(x['rules']['R1'])} | {f(x['rules']['R2'])} |")
+                 f"{f(x['rules']['R1'])} | {f(x['rules']['R2'])} | {f(x['rules']['R3'])} |")
     L += ["", f"G0 lines: keep >= {G0_KEEP}, lateral mass and rows > 0.5 m kept >= {G0_LAT}, conflict excess left <= {G0_CONF}. "
           f"Simplest rule passing on every pool: **{pick or 'none'}**."]
     Path(a.out + ".md").write_text("\n".join(L) + "\n")
