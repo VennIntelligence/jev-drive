@@ -1,0 +1,35 @@
+{
+ "build": {
+  "rows": 35079,
+  "ok": 35079,
+  "own_found": 0.9836369337780438,
+  "errors": 0,
+  "err_sample": [],
+  "junction_cell_share": 0.15846174955368042
+ },
+ "names_ok": true,
+ "rtb1_segment_bitwise": {
+  "ok": true,
+  "own_found": true,
+  "junction_share": true,
+  "onc": true,
+  "soft": false
+ },
+ "meta_same": {
+  "points": true,
+  "dilate": true
+ },
+ "d3s": {
+  "rows": 17590,
+  "ok": 1.0,
+  "own_found": 0.9885730528709494,
+  "junction": 0.15898019075393677
+ },
+ "rb0": {
+  "rows": 17429,
+  "ok": 1.0,
+  "own_found": 0.9785415112743129,
+  "junction": 0.15953342616558075
+ },
+ "pass_": false
+}

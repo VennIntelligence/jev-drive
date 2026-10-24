@@ -13,7 +13,7 @@
   "own_found": true,
   "junction_share": true,
   "onc": true,
-  "soft": false
+  "soft": true
  },
  "meta_same": {
   "points": true,
@@ -31,5 +31,5 @@
   "own_found": 0.9785415112743129,
   "junction": 0.15953342616558075
  },
- "pass_": false
+ "pass_": true
 }

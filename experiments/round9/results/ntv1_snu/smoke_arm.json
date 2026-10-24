@@ -1,0 +1,66 @@
+{
+ "var": "b",
+ "tag": "NT5NUSM-F-s0",
+ "run": "/root/autodl-tmp/ujs/runs/route_mem/train-NT5NUSM-F-s0/20261024-191320",
+ "checks": {
+  "done": true,
+  "finite": true,
+  "last_logged_step": 60,
+  "batch": [
+   "75",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "batch_want": [
+   "75",
+   "13",
+   "40",
+   "mixed"
+  ],
+  "windows": {
+   "25": {
+    "pool": 0.0,
+    "want": 0.0,
+    "self": 0.0
+   },
+   "50": {
+    "pool": 32.0,
+    "want": 32.0,
+    "self": 25.96
+   },
+   "60": {
+    "pool": 40.0,
+    "want": 40.0,
+    "self": 32.7
+   }
+  },
+  "self_share_after_T": 0.8133333333333334,
+  "self_rows_before_T": 0.0,
+  "draw_group_share": {
+   "S": 0.799999999999717,
+   "pd": 0.099537589659031,
+   "pd2": 0.10046241034059974
+  },
+  "draw_group_share_want": {
+   "S": 0.8,
+   "pd": 0.09953758965921439,
+   "pd2": 0.10046241034078571
+  },
+  "draw_shares_ok": true,
+  "s_terms_after": {
+   "tags": [
+    "loss/agent_ho",
+    "loss/on/lat_onc_ho",
+    "loss/on/lat_side_ho",
+    "loss/on/lat_soft_ho",
+    "loss/road_ho"
+   ],
+   "finite": true,
+   "nonzero": true
+  },
+  "s_terms_before_nonzero": [],
+  "cmd_rule": null
+ },
+ "pass_": true
+}

@@ -1,0 +1,1353 @@
+{
+ "scenes": 276,
+ "rpc": {
+  "NT5SNU-F-s0": 0,
+  "NT4D3-F-s0": 0,
+  "NT4D3-F-s1": 0,
+  "NT3D1-F-s0": 0,
+  "NT3D1-F-s1": 0,
+  "PCL1L-F-s0": 0,
+  "NTV0-L18-s0": 0,
+  "R8K-L18-s2": 0,
+  "INTP75-NR": 0
+ },
+ "reads": {
+  "NT5SNU-F-s0": {
+   "old": {
+    "n": 276,
+    "mean": 0.7625277157304475,
+    "zeros": 56,
+    "z_overshoot": 23,
+    "z_route-turn": 9,
+    "z_offroad": 11,
+    "z_AF-front": 7,
+    "z_side": 2,
+    "z_zero-other": 4,
+    "p_rear-hit": 20,
+    "p_slow": 5,
+    "p_hit": 0,
+    "launch": "32/37"
+   },
+   "new_mean": 0.8422378606579839,
+   "new_zeros": 34,
+   "lateral": 17,
+   "route_turn": 9,
+   "af_front": 7,
+   "dev_ade": 0.529344379901886
+  },
+  "NT4D3-F-s0": {
+   "old": {
+    "n": 276,
+    "mean": 0.7991351373382932,
+    "zeros": 45,
+    "z_overshoot": 23,
+    "z_route-turn": 3,
+    "z_offroad": 13,
+    "z_AF-front": 4,
+    "z_side": 0,
+    "z_zero-other": 2,
+    "p_rear-hit": 23,
+    "p_slow": 6,
+    "p_hit": 0,
+    "launch": "36/37"
+   },
+   "new_mean": 0.8788452822658294,
+   "new_zeros": 23,
+   "lateral": 15,
+   "route_turn": 3,
+   "af_front": 4,
+   "dev_ade": 0.5304482579231262
+  },
+  "NT4D3-F-s1": {
+   "old": {
+    "n": 276,
+    "mean": 0.7674131929640569,
+    "zeros": 52,
+    "z_overshoot": 21,
+    "z_route-turn": 4,
+    "z_offroad": 17,
+    "z_AF-front": 5,
+    "z_side": 2,
+    "z_zero-other": 3,
+    "p_rear-hit": 26,
+    "p_slow": 6,
+    "p_hit": 0,
+    "launch": "33/37"
+   },
+   "new_mean": 0.8398769610799989,
+   "new_zeros": 32,
+   "lateral": 22,
+   "route_turn": 4,
+   "af_front": 5,
+   "dev_ade": 0.535905659198761
+  },
+  "NT3D1-F-s0": {
+   "old": {
+    "n": 276,
+    "mean": 0.797791512986046,
+    "zeros": 46,
+    "z_overshoot": 20,
+    "z_route-turn": 3,
+    "z_offroad": 15,
+    "z_AF-front": 5,
+    "z_side": 0,
+    "z_zero-other": 3,
+    "p_rear-hit": 22,
+    "p_slow": 7,
+    "p_hit": 0,
+    "launch": "36/37"
+   },
+   "new_mean": 0.8666320926961909,
+   "new_zeros": 27,
+   "lateral": 18,
+   "route_turn": 3,
+   "af_front": 5,
+   "dev_ade": 0.5296937227249146
+  },
+  "NT3D1-F-s1": {
+   "old": {
+    "n": 276,
+    "mean": 0.7607862111915786,
+    "zeros": 52,
+    "z_overshoot": 22,
+    "z_route-turn": 3,
+    "z_offroad": 15,
+    "z_AF-front": 7,
+    "z_side": 0,
+    "z_zero-other": 5,
+    "p_rear-hit": 31,
+    "p_slow": 6,
+    "p_hit": 0,
+    "launch": "34/37"
+   },
+   "new_mean": 0.8368731677133177,
+   "new_zeros": 31,
+   "lateral": 20,
+   "route_turn": 3,
+   "af_front": 7,
+   "dev_ade": 0.5369839072227478
+  },
+  "PCL1L-F-s0": {
+   "old": {
+    "n": 276,
+    "mean": 0.7316584756175526,
+    "zeros": 61,
+    "z_overshoot": 24,
+    "z_route-turn": 10,
+    "z_offroad": 14,
+    "z_AF-front": 4,
+    "z_side": 3,
+    "z_zero-other": 6,
+    "p_rear-hit": 27,
+    "p_slow": 11,
+    "p_hit": 0,
+    "launch": "32/37"
+   },
+   "new_mean": 0.8113686205450888,
+   "new_zeros": 39,
+   "lateral": 23,
+   "route_turn": 10,
+   "af_front": 4,
+   "dev_ade": 0.5250239372253418
+  },
+  "NTV0-L18-s0": {
+   "old": {
+    "n": 276,
+    "mean": 0.7405710378177291,
+    "zeros": 59,
+    "z_overshoot": 23,
+    "z_route-turn": 15,
+    "z_offroad": 12,
+    "z_AF-front": 3,
+    "z_side": 0,
+    "z_zero-other": 6,
+    "p_rear-hit": 26,
+    "p_slow": 11,
+    "p_hit": 0,
+    "launch": "33/37"
+   },
+   "new_mean": 0.813034420289855,
+   "new_zeros": 39,
+   "lateral": 18,
+   "route_turn": 15,
+   "af_front": 3,
+   "dev_ade": 0.5362182855606079
+  },
+  "R8K-L18-s2": {
+   "old": {
+    "n": 276,
+    "mean": 0.8026820909853708,
+    "zeros": 47,
+    "z_overshoot": 20,
+    "z_route-turn": 2,
+    "z_offroad": 14,
+    "z_AF-front": 5,
+    "z_side": 2,
+    "z_zero-other": 4,
+    "p_rear-hit": 18,
+    "p_slow": 4,
+    "p_hit": 0,
+    "launch": "35/37"
+   },
+   "new_mean": 0.8715224637681159,
+   "new_zeros": 28,
+   "lateral": 20,
+   "route_turn": 2,
+   "af_front": 5,
+   "dev_ade": 0.5577544569969177
+  },
+  "INTP75-NR": {
+   "old": {
+    "n": 276,
+    "mean": 0.8093642682322272,
+    "zeros": 45,
+    "z_overshoot": 20,
+    "z_route-turn": 3,
+    "z_offroad": 10,
+    "z_AF-front": 5,
+    "z_side": 2,
+    "z_zero-other": 5,
+    "p_rear-hit": 18,
+    "p_slow": 4,
+    "p_hit": 0,
+    "launch": "36/37"
+   },
+   "new_mean": 0.8782048479423721,
+   "new_zeros": 26,
+   "lateral": 17,
+   "route_turn": 3,
+   "af_front": 5,
+   "dev_ade": 0.5577544569969177
+  }
+ },
+ "pairs": {
+  "NT5SNU-F-s0:NT4D3-F-s0": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.03660742160784557,
+    "lo": -0.07061649394007971,
+    "hi": -0.003586384086172329,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8788452822658294
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.03660742160784557,
+    "lo": -0.07384833975246645,
+    "hi": -0.0007895056215213603,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.7991351373382932
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 23,
+     "diff": 0.0,
+     "lo": -4.0,
+     "hi": 4.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 3,
+     "diff": 6.0,
+     "lo": 2.0,
+     "hi": 10.999999999999998
+    },
+    "offroad": {
+     "a": 11,
+     "b": 13,
+     "diff": -2.0,
+     "lo": -8.0,
+     "hi": 4.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 4,
+     "diff": 3.0,
+     "lo": -2.0,
+     "hi": 8.0
+    },
+    "side": {
+     "a": 2,
+     "b": 0,
+     "diff": 2.0,
+     "lo": 0.0,
+     "hi": 5.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 2,
+     "diff": 2.0,
+     "lo": 0.0,
+     "hi": 5.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 23,
+     "diff": -3.0,
+     "lo": -8.0,
+     "hi": 2.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 6,
+     "diff": -1.0,
+     "lo": -3.0,
+     "hi": 0.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 45,
+     "diff": 10.999999999999998,
+     "lo": 1.0,
+     "hi": 21.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 15,
+     "diff": 2.0,
+     "lo": -5.0,
+     "hi": 9.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:NT4D3-F-s1": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": 0.002360899577985096,
+    "lo": -0.03624141513909873,
+    "hi": 0.04195175703883187,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8398769610799989
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.004885477233609107,
+    "lo": -0.044645006906109744,
+    "hi": 0.03493130003851254,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.7674131929640569
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 21,
+     "diff": 2.0,
+     "lo": 0.0,
+     "hi": 5.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 4,
+     "diff": 5.0,
+     "lo": 1.0,
+     "hi": 10.0
+    },
+    "offroad": {
+     "a": 11,
+     "b": 17,
+     "diff": -6.0,
+     "lo": -14.0,
+     "hi": 2.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 5,
+     "diff": 2.0,
+     "lo": -3.0,
+     "hi": 8.0
+    },
+    "side": {
+     "a": 2,
+     "b": 2,
+     "diff": 0.0,
+     "lo": -4.0,
+     "hi": 4.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 3,
+     "diff": 1.0,
+     "lo": 0.0,
+     "hi": 3.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 26,
+     "diff": -6.0,
+     "lo": -13.0,
+     "hi": 1.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 6,
+     "diff": -1.0,
+     "lo": -5.0,
+     "hi": 3.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 52,
+     "diff": 4.0,
+     "lo": -7.0,
+     "hi": 15.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 22,
+     "diff": -5.0,
+     "lo": -14.0,
+     "hi": 4.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:NT3D1-F-s0": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.024394232038207123,
+    "lo": -0.05968796010912815,
+    "hi": 0.01044954476753057,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8666320926961909
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.03526379725559843,
+    "lo": -0.0725127295406051,
+    "hi": 0.0010656893064181897,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.797791512986046
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 20,
+     "diff": 3.0,
+     "lo": 0.0,
+     "hi": 7.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 3,
+     "diff": 6.0,
+     "lo": 2.0,
+     "hi": 10.999999999999998
+    },
+    "offroad": {
+     "a": 11,
+     "b": 15,
+     "diff": -4.0,
+     "lo": -10.0,
+     "hi": 2.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 5,
+     "diff": 2.0,
+     "lo": -3.0,
+     "hi": 8.0
+    },
+    "side": {
+     "a": 2,
+     "b": 0,
+     "diff": 2.0,
+     "lo": 0.0,
+     "hi": 5.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 3,
+     "diff": 1.0,
+     "lo": 0.0,
+     "hi": 3.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 22,
+     "diff": -2.0,
+     "lo": -9.0,
+     "hi": 5.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 7,
+     "diff": -2.0,
+     "lo": -6.0,
+     "hi": 2.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 46,
+     "diff": 10.0,
+     "lo": 0.0,
+     "hi": 20.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 18,
+     "diff": -1.0,
+     "lo": -8.0,
+     "hi": 6.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:R8K-L18-s2": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.02928460311013208,
+    "lo": -0.0662748168109333,
+    "hi": 0.007091794688524896,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8715224637681159
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.04015437525492315,
+    "lo": -0.0806057068106831,
+    "hi": -0.00026084162257085245,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.8026820909853708
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 20,
+     "diff": 3.0,
+     "lo": -1.0,
+     "hi": 8.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 2,
+     "diff": 7.0,
+     "lo": 2.0,
+     "hi": 12.0
+    },
+    "offroad": {
+     "a": 11,
+     "b": 14,
+     "diff": -3.0,
+     "lo": -10.0,
+     "hi": 3.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 5,
+     "diff": 2.0,
+     "lo": -3.0,
+     "hi": 7.0
+    },
+    "side": {
+     "a": 2,
+     "b": 2,
+     "diff": 0.0,
+     "lo": -4.0,
+     "hi": 4.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 4,
+     "diff": 0.0,
+     "lo": -3.0,
+     "hi": 3.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 18,
+     "diff": 2.0,
+     "lo": -5.0,
+     "hi": 10.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 4,
+     "diff": 1.0,
+     "lo": -2.0,
+     "hi": 5.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 47,
+     "diff": 9.0,
+     "lo": -2.0,
+     "hi": 20.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 20,
+     "diff": -3.0,
+     "lo": -10.999999999999998,
+     "hi": 5.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:PCL1L-F-s0": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": 0.03086924011289491,
+    "lo": -0.012225006544270303,
+    "hi": 0.07384713484701197,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8113686205450888
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": 0.03086924011289491,
+    "lo": -0.011480240300691752,
+    "hi": 0.07388432775612712,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.7316584756175526
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 24,
+     "diff": -1.0,
+     "lo": -6.0,
+     "hi": 3.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 10,
+     "diff": -1.0,
+     "lo": -7.0,
+     "hi": 5.0
+    },
+    "offroad": {
+     "a": 11,
+     "b": 14,
+     "diff": -3.0,
+     "lo": -10.0,
+     "hi": 4.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 4,
+     "diff": 3.0,
+     "lo": -3.0,
+     "hi": 9.0
+    },
+    "side": {
+     "a": 2,
+     "b": 3,
+     "diff": -1.0,
+     "lo": -5.0,
+     "hi": 3.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 6,
+     "diff": -2.0,
+     "lo": -8.0,
+     "hi": 3.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 27,
+     "diff": -7.0,
+     "lo": -15.0,
+     "hi": 1.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 11,
+     "diff": -6.0,
+     "lo": -10.999999999999998,
+     "hi": -2.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 61,
+     "diff": -5.0,
+     "lo": -17.0,
+     "hi": 6.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 23,
+     "diff": -6.0,
+     "lo": -16.0,
+     "hi": 4.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:NTV0-L18-s0": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": 0.029203440368128792,
+    "lo": -0.011927292473968834,
+    "hi": 0.07096250020564122,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.813034420289855
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": 0.021956677912718495,
+    "lo": -0.02077333578973708,
+    "hi": 0.06495364895411433,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.7405710378177291
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 23,
+     "diff": 0.0,
+     "lo": -4.0,
+     "hi": 4.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 15,
+     "diff": -6.0,
+     "lo": -14.0,
+     "hi": 2.0
+    },
+    "offroad": {
+     "a": 11,
+     "b": 12,
+     "diff": -1.0,
+     "lo": -8.0,
+     "hi": 5.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 3,
+     "diff": 4.0,
+     "lo": -1.0,
+     "hi": 10.0
+    },
+    "side": {
+     "a": 2,
+     "b": 0,
+     "diff": 2.0,
+     "lo": 0.0,
+     "hi": 5.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 6,
+     "diff": -2.0,
+     "lo": -7.0,
+     "hi": 3.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 26,
+     "diff": -6.0,
+     "lo": -14.0,
+     "hi": 2.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 11,
+     "diff": -6.0,
+     "lo": -12.0,
+     "hi": -1.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 59,
+     "diff": -3.0,
+     "lo": -15.0,
+     "hi": 9.0
+    },
+    "lateral": {
+     "a": 17,
+     "b": 18,
+     "diff": -1.0,
+     "lo": -10.0,
+     "hi": 7.0
+    }
+   }
+  },
+  "NT5SNU-F-s0:INTP75-NR": {
+   "new": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.035966987284388206,
+    "lo": -0.07304770075514078,
+    "hi": 0.000941202034269845,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8782048479423721
+   },
+   "old": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.04683655250177951,
+    "lo": -0.08541873656446106,
+    "hi": -0.00856607127506993,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.8093642682322272
+   },
+   "classes": {
+    "overshoot": {
+     "a": 23,
+     "b": 20,
+     "diff": 3.0,
+     "lo": 0.0,
+     "hi": 7.0
+    },
+    "route-turn": {
+     "a": 9,
+     "b": 3,
+     "diff": 6.0,
+     "lo": 1.0,
+     "hi": 12.0
+    },
+    "offroad": {
+     "a": 11,
+     "b": 10,
+     "diff": 1.0,
+     "lo": -5.0,
+     "hi": 7.0
+    },
+    "AF-front": {
+     "a": 7,
+     "b": 5,
+     "diff": 2.0,
+     "lo": -3.0,
+     "hi": 8.0
+    },
+    "side": {
+     "a": 2,
+     "b": 2,
+     "diff": 0.0,
+     "lo": -3.0,
+     "hi": 3.0
+    },
+    "zero-other": {
+     "a": 4,
+     "b": 5,
+     "diff": -1.0,
+     "lo": -5.0,
+     "hi": 2.0
+    },
+    "rear-hit": {
+     "a": 20,
+     "b": 18,
+     "diff": 2.0,
+     "lo": -4.0,
+     "hi": 8.0
+    },
+    "slow": {
+     "a": 5,
+     "b": 4,
+     "diff": 1.0,
+     "lo": -2.0,
+     "hi": 5.0
+    },
+    "hit": {
+     "a": 0,
+     "b": 0,
+     "diff": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "zeros": {
+     "a": 56,
+     "b": 45,
+     "diff": 10.999999999999998,
+     "lo": 0.0,
+     "hi": 21.999999999999996
+    },
+    "lateral": {
+     "a": 17,
+     "b": 17,
+     "diff": 0.0,
+     "lo": -7.0,
+     "hi": 7.0
+    }
+   }
+  }
+ },
+ "flips": {
+  "NT5SNU-F-s0": {
+   "full_a": 200,
+   "neg_a": 16,
+   "neg_a_zero": 11,
+   "neg_a_pts": 12.661087279742343,
+   "full_b": 180,
+   "neg_b": 11,
+   "fixed": 33,
+   "keeps_r8k_fixes": 28,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-8a143cb2-4805-452c-97a2-8461062def2d",
+    "clipgt-a2b415d5-2d72-4cc2-a77d-868248d0ba22",
+    "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44",
+    "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+    "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90",
+    "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+    "clipgt-f8ee31cb-cf0f-45ef-bce5-1b43bd6a4d25"
+   ]
+  },
+  "NT4D3-F-s0": {
+   "full_a": 200,
+   "neg_a": 12,
+   "neg_a_zero": 5,
+   "neg_a_pts": 7.822097323170096,
+   "full_b": 180,
+   "neg_b": 5,
+   "fixed": 36,
+   "keeps_r8k_fixes": 30,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+    "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+    "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+    "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+   ]
+  },
+  "NT4D3-F-s1": {
+   "full_a": 200,
+   "neg_a": 16,
+   "neg_a_zero": 8,
+   "neg_a_pts": 11.363435639681402,
+   "full_b": 180,
+   "neg_b": 8,
+   "fixed": 28,
+   "keeps_r8k_fixes": 24,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-0b72d117-bf5c-4999-b625-09f4d8e51911",
+    "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0",
+    "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+    "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+    "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633",
+    "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+    "clipgt-ca7accbc-3505-4fe3-9ef8-ad1e5a5041e4",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+    "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+   ]
+  },
+  "NT3D1-F-s0": {
+   "full_a": 200,
+   "neg_a": 14,
+   "neg_a_zero": 8,
+   "neg_a_pts": 10.400387758352355,
+   "full_b": 180,
+   "neg_b": 8,
+   "fixed": 34,
+   "keeps_r8k_fixes": 28,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+    "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+    "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44",
+    "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+   ]
+  },
+  "NT3D1-F-s1": {
+   "full_a": 200,
+   "neg_a": 21,
+   "neg_a_zero": 11,
+   "neg_a_pts": 15.097746996450445,
+   "full_b": 180,
+   "neg_b": 11,
+   "fixed": 29,
+   "keeps_r8k_fixes": 24,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-0b72d117-bf5c-4999-b625-09f4d8e51911",
+    "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0",
+    "clipgt-1089758a-8d07-48f8-9e9d-49f9a6bd18bd",
+    "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-52bd89ce-db30-4525-9fa1-b0c0dd72f5f4",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-7b5c9fd6-3bbb-4843-b9bd-5429ea0c2c39",
+    "clipgt-8b25a6ac-50af-4b55-a856-7f899ea35e26",
+    "clipgt-a6941bb6-6c7f-4842-8134-ac84bd95fe44",
+    "clipgt-b5f5259f-03a9-4853-a0cc-884d74722657",
+    "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-c92137b4-0ce7-4d65-a44c-414d7c104b76",
+    "clipgt-ca481583-5812-4288-ad42-82643cfb7097",
+    "clipgt-ca7accbc-3505-4fe3-9ef8-ad1e5a5041e4",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-cbd87234-9d85-48cc-a65c-726c75c7d11b",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+   ]
+  },
+  "PCL1L-F-s0": {
+   "full_a": 200,
+   "neg_a": 16,
+   "neg_a_zero": 13,
+   "neg_a_pts": 13.938231422437507,
+   "full_b": 180,
+   "neg_b": 12,
+   "fixed": 15,
+   "keeps_r8k_fixes": 10,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-1a050ead-6fcd-4676-ac5a-2355300a909c",
+    "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e",
+    "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2",
+    "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+    "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798",
+    "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839",
+    "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd",
+    "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+    "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc",
+    "clipgt-be0d3628-098d-4ac7-a52c-36b71c50e293",
+    "clipgt-c7956ed6-0be6-44f2-8066-da068a6352b4",
+    "clipgt-d2a7ae02-b6ed-4ffc-b245-be1b4b676c8f",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+    "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+   ]
+  },
+  "R8K-L18-s2": {
+   "full_a": 200,
+   "neg_a": 14,
+   "neg_a_zero": 9,
+   "neg_a_pts": 10.5302,
+   "full_b": 180,
+   "neg_b": 9,
+   "fixed": 40,
+   "keeps_r8k_fixes": 40,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-0feb3afa-28c0-4a48-b74c-636676892966",
+    "clipgt-22fa5c92-6e6f-4f4e-bbfa-9a1490f9cd38",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-382a7247-1cfa-44ec-90aa-509d9d585b78",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+    "clipgt-bbc53aa8-7009-4139-b7c9-38d71ecfac7f",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9",
+    "clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d",
+    "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+    "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8",
+    "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+   ]
+  },
+  "INTP75-NR": {
+   "full_a": 200,
+   "neg_a": 8,
+   "neg_a_zero": 6,
+   "neg_a_pts": 6.732815061802355,
+   "full_b": 180,
+   "neg_b": 6,
+   "fixed": 36,
+   "keeps_r8k_fixes": 33,
+   "r8k_fixes": 40,
+   "neg_scenes": [
+    "clipgt-0feb3afa-28c0-4a48-b74c-636676892966",
+    "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde",
+    "clipgt-4cb05d65-b2b9-48fc-8f14-d0507d6cda9e",
+    "clipgt-a1b166cc-b0a6-491b-98eb-2880a57e8677",
+    "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3",
+    "clipgt-cbb22323-0b4b-4364-8fc5-4a47357d4df8",
+    "clipgt-cdf95fd1-c0eb-490c-b0a1-42f3244b1bf1",
+    "clipgt-de9db5dc-0175-42d4-8b83-f0dc9b3ca23d"
+   ]
+  }
+ },
+ "d3_2seed_mean": {
+  "new": 0.8593611216729141,
+  "old": 0.783274165151175
+ },
+ "arm_vs_d3_mean": {
+  "new": {
+   "n": 276,
+   "units": 276,
+   "mean": -0.017123261014930235,
+   "lo": -0.05018321674109336,
+   "hi": 0.014787969300960045,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.8422378606579839,
+   "mean_b": 0.8593611216729141
+  },
+  "old": {
+   "n": 276,
+   "units": 276,
+   "mean": -0.02074644942072734,
+   "lo": -0.056232462636018214,
+   "hi": 0.013061888433904191,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.7625277157304475,
+   "mean_b": 0.783274165151175
+  }
+ },
+ "lines": {
+  "new": {
+   "arm_d3": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.03660742160784557,
+    "lo": -0.07061649394007971,
+    "hi": -0.003586384086172329,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.8422378606579839,
+    "mean_b": 0.8788452822658294
+   },
+   "line": "fresh own S hurts",
+   "registered": true
+  },
+  "old": {
+   "arm_d3": {
+    "n": 276,
+    "units": 276,
+    "mean": -0.03660742160784557,
+    "lo": -0.07384833975246645,
+    "hi": -0.0007895056215213603,
+    "n_boot": 10000,
+    "seed": 0,
+    "alpha": 0.05,
+    "mean_a": 0.7625277157304475,
+    "mean_b": 0.7991351373382932
+   },
+   "line": "fresh own S hurts",
+   "registered": false
+  }
+ },
+ "highway": [
+  {
+   "read": "NT5SNU-F-s0",
+   "steps": 672,
+   "median": 1.0157004659737008,
+   "p10": 0.9298453477490068,
+   "lt85": 0.07738095238095238,
+   "gt110": 0.29910714285714285,
+   "dv": 0.959750118402733,
+   "slow_rear_pts": 0.970112318107955,
+   "slow": false,
+   "scenes_below_090": 1,
+   "scenes_with_steps": 34
+  },
+  {
+   "read": "NT4D3-F-s0",
+   "steps": 711,
+   "median": 1.0139070038850853,
+   "p10": 0.9109482024513781,
+   "lt85": 0.0759493670886076,
+   "gt110": 0.29254571026722925,
+   "dv": 0.8999116400902805,
+   "slow_rear_pts": 0.9773680535824577,
+   "slow": false,
+   "scenes_below_090": 1,
+   "scenes_with_steps": 32
+  },
+  {
+   "read": "NTV0-L18-s0",
+   "steps": 803,
+   "median": 0.9975991003007674,
+   "p10": 0.8720145146567243,
+   "lt85": 0.08841843088418432,
+   "gt110": 0.062266500622665005,
+   "dv": -0.6185056527595728,
+   "slow_rear_pts": 1.0621999999999998,
+   "slow": false,
+   "scenes_below_090": 3,
+   "scenes_with_steps": 32
+  },
+  {
+   "read": "R8K-L18-s2",
+   "steps": 767,
+   "median": 1.0048947498949303,
+   "p10": 0.8253212562173082,
+   "lt85": 0.10951760104302477,
+   "gt110": 0.2138200782268579,
+   "dv": -0.110676721213841,
+   "slow_rear_pts": 0.19889999999999997,
+   "slow": false,
+   "scenes_below_090": 2,
+   "scenes_with_steps": 33
+  }
+ ],
+ "gates": {
+  "afix": true,
+  "c0chk": true,
+  "diff_arm": true,
+  "g0b_arm_preT": true,
+  "gw_draw_files": true,
+  "latchk": true,
+  "latdiag_0": null,
+  "latdiag_1": null,
+  "latdiag_None": null,
+  "latgate": true,
+  "lr_full_arm": true,
+  "pai281": null,
+  "pgate": true,
+  "post_arm": true,
+  "ratio_arm": true,
+  "repro_rb0": true,
+  "rollstats": null,
+  "rowstats": null,
+  "smoke_arm": true,
+  "smoke_lr_arm": true,
+  "t3_w0": true,
+  "w_NSNU": null,
+  "w_NSNUZ": null,
+  "zfix": true
+ },
+ "ratio": {
+  "r500": 0.43785535275527726,
+  "pass_": true,
+  "after_T": 0.3344373952106285,
+  "d3_after_T": 0.41906506179946285
+ },
+ "ade": {
+  "NT5SNU-F-s0": {
+   "at_10000": 0.5439934730529785,
+   "end": 0.529344379901886
+  },
+  "NT4D3-F-s0": {
+   "at_10000": 0.5439934730529785,
+   "end": 0.5304482579231262
+  }
+ },
+ "cost": {
+  "roll": 2.5982103310690987,
+  "build": 0.05645676003562079,
+  "gates": 0.1263117903470993,
+  "train": 1.322607085638576,
+  "read281": 3.0892057925462724,
+  "val160": 1.7404513286219703,
+  "gpu_job_h": 8.933243088258639,
+  "wall_h": 3.588508499463399
+ }
+}

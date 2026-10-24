@@ -1,0 +1,183 @@
+{
+ "student": "NT4D3-F-s0",
+ "arm": "NT5SNU-F-s0",
+ "roll": {
+  "scenes_new": 1031,
+  "scenes_rb0": 1031,
+  "common": 1031,
+  "mean_new": 0.8544122075755483,
+  "mean_rb0": 0.7876813048976178,
+  "paired": {
+   "n": 1031,
+   "units": 1031,
+   "mean": 0.0667309026779305,
+   "lo": 0.04676589054438115,
+   "hi": 0.08772064490030272,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.8544122075755483,
+   "mean_b": 0.7876813048976178
+  },
+  "zeros_new": 88,
+  "zeros_rb0": 146,
+  "full_new": 653,
+  "full_rb0": 576,
+  "fail_new": {
+   "None": 943,
+   "collision_at_fault": 24,
+   "left_corridor_laterally": 15,
+   "offroad": 39,
+   "Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg": 2,
+   "Waypoint 11 fails sanity check: route folds back on itself with angle 179.16 deg": 1,
+   "Waypoint 47 fails sanity check: route folds back on itself with angle 180.00 deg": 1,
+   "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+   "Waypoint 23 fails sanity check: route folds back on itself with angle 178.18 deg": 1,
+   "Waypoint 67 fails sanity check: route folds back on itself with angle 179.45 deg": 1,
+   "Waypoint 17 fails sanity check: route folds back on itself with angle 179.39 deg": 1,
+   "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1,
+   "Waypoint 9 fails sanity check: route folds back on itself with angle 179.26 deg": 1
+  },
+  "fail_rb0": {
+   "None": 885,
+   "collision_at_fault": 29,
+   "offroad": 60,
+   "left_corridor_laterally": 47,
+   "Waypoint 1 fails sanity check: route folds back on itself with angle 179.97 deg": 2,
+   "Waypoint 11 fails sanity check: route folds back on itself with angle 179.16 deg": 1,
+   "Waypoint 47 fails sanity check: route folds back on itself with angle 180.00 deg": 1,
+   "Waypoint 12 fails sanity check: route folds back on itself with angle 179.65 deg": 1,
+   "Waypoint 23 fails sanity check: route folds back on itself with angle 178.18 deg": 1,
+   "Waypoint 67 fails sanity check: route folds back on itself with angle 179.45 deg": 1,
+   "Waypoint 17 fails sanity check: route folds back on itself with angle 179.39 deg": 1,
+   "Waypoint 56 fails sanity check: route folds back on itself with angle 179.96 deg": 1,
+   "Waypoint 9 fails sanity check: route folds back on itself with angle 179.26 deg": 1
+  }
+ },
+ "rows": {
+  "L18D3": {
+   "rows": 17590,
+   "scenes": 1020,
+   "logs": 97,
+   "speed_q": [
+    1.2534902095794678,
+    5.235436916351318,
+    9.290165424346924
+   ],
+   "static_lt05": 0.04280841387151791,
+   "fast_gt13": 0.013189312109152928,
+   "e0_gt1": 0.07447413303013076,
+   "e0_med": 0.1341462918956787,
+   "decisions": 18352,
+   "excluded": {
+    "": 17590,
+    "overlap": 587,
+    "log_future": 143,
+    "corridor": 19,
+    "frame": 13
+   },
+   "drawable": 13932,
+   "held": 3658
+  },
+  "L18RB0": {
+   "rows": 17429,
+   "scenes": 1020,
+   "logs": 97,
+   "speed_q": [
+    1.1845036506652833,
+    4.833314418792725,
+    9.148893928527835
+   ],
+   "static_lt05": 0.045785759366572955,
+   "fast_gt13": 0.009409604681852085,
+   "e0_gt1": 0.09621894543576798,
+   "e0_med": 0.12358841970149005,
+   "decisions": 18352,
+   "excluded": {
+    "": 17429,
+    "overlap": 639,
+    "corridor": 121,
+    "log_future": 150,
+    "frame": 13
+   },
+   "drawable": 13793,
+   "held": 3636
+  }
+ },
+ "w": {
+  "pool": "on1_JTSNU",
+  "rows": 395708,
+  "s_rows": 13932,
+  "s_held_rows": 18095,
+  "total": 0.9999999999999997,
+  "group_share": {
+   "S": 0.8,
+   "pd": 0.09953758965921439,
+   "pd2": 0.10046241034078571
+  },
+  "rule_on_rb0": {
+   "rows": 13793,
+   "ntv1d2_rows": 13793,
+   "same_rows": true,
+   "rel_dev": 4.440892098500626e-16,
+   "held": 3636
+  },
+  "out": "runs/round9/ntv1_snu/w/NSNU.npz"
+ },
+ "gates": {
+  "afix": true,
+  "c0chk": true,
+  "diff_arm": true,
+  "g0b_arm_preT": true,
+  "gw_draw_files": true,
+  "latchk": true,
+  "latdiag_0": null,
+  "latdiag_1": null,
+  "latdiag_None": null,
+  "latgate": true,
+  "lr_full_arm": true,
+  "pai281": null,
+  "pgate": true,
+  "post_arm": true,
+  "ratio_arm": true,
+  "repro_rb0": true,
+  "rollstats": null,
+  "rowstats": null,
+  "smoke_arm": true,
+  "smoke_lr_arm": true,
+  "t3_w0": true,
+  "v160": null,
+  "verdict": null,
+  "w_NSNU": null,
+  "w_NSNUZ": null,
+  "zfix": true
+ },
+ "disk_gib": {
+  "roll": 9.114653271622956,
+  "rows": 0.09808568563312292,
+  "rows_long": 0.00037296395748853683,
+  "pool": 1.5759434811770916,
+  "pool_warp": 4.398046215064824,
+  "feat": 0.0108951386064291,
+  "arm_pool": 21.553958931937814,
+  "arm_feat": 0.2509710527956486,
+  "id_pool": 0.0,
+  "id_feat": 0.0,
+  "lat": 11.24961293488741,
+  "w": 0.24708233028650284,
+  "reads": 4.7736076870933175,
+  "v160": 2.856702171266079,
+  "total": 56.12993186432868
+ },
+ "cost": {
+  "roll": 2.5982103310690987,
+  "build": 0.05645676003562079,
+  "gates": 0.1263117903470993,
+  "train": 1.322607085638576,
+  "read281": 3.0892057925462724,
+  "val160": 1.7404513286219703,
+  "gpu_job_h": 8.933243088258639,
+  "wall_h": 3.588508499463399
+ },
+ "t": "2026-10-24 21:05:42"
+}
